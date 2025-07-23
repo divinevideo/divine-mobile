@@ -37,11 +37,10 @@ class NostrEventBuilder {
 
   /// Build the Event instance
   Event build() => Event(
-        pubkey,
+        id,
         kind,
         tags,
         content,
-        createdAt: createdAt,
       );
 
   /// Create a profile event (Kind 0)
