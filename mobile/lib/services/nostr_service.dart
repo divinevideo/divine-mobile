@@ -459,11 +459,23 @@ class NostrService implements INostrService {
       _isInitialized = false;
       await initialize();
     }
-    
+
     if (!_isInitialized) throw StateError('NostrService not initialized');
     if (_embeddedRelay == null) {
       throw StateError('Embedded relay not initialized');
     }
+
+    // Log broadcast attempt
+    Log.info('🚀 Broadcasting event ${event.id} (kind ${event.kind})',
+        name: 'NostrService', category: LogCategory.relay);
+    Log.info('📊 Relay Status:',
+        name: 'NostrService', category: LogCategory.relay);
+    Log.info('   - Embedded relay initialized: ${_embeddedRelay!.isInitialized}',
+        name: 'NostrService', category: LogCategory.relay);
+    Log.info('   - Configured relays: ${_configuredRelays.join(", ")}',
+        name: 'NostrService', category: LogCategory.relay);
+    Log.info('   - Connected relays: ${_embeddedRelay!.connectedRelays.join(", ")}',
+        name: 'NostrService', category: LogCategory.relay);
 
     final results = <String, bool>{};
     final errors = <String, String>{};
@@ -514,8 +526,14 @@ class NostrService implements INostrService {
       bool success = false;
       try {
         // Publish to embedded relay - it will automatically forward to external relays
+        Log.info('📤 Publishing to embedded relay...',
+            name: 'NostrService', category: LogCategory.relay);
         success = await _embeddedRelay!.publish(embeddedEvent);
+        Log.info('✅ Embedded relay publish result: $success',
+            name: 'NostrService', category: LogCategory.relay);
       } catch (e) {
+        Log.error('❌ Embedded relay publish error: $e',
+            name: 'NostrService', category: LogCategory.relay);
         // Check if the error is due to stream closure
         if (e.toString().contains('Cannot add new events after calling close') ||
             e.toString().contains('Bad state')) {
@@ -560,24 +578,35 @@ class NostrService implements INostrService {
       if (success) {
         // Mark local and connected external relays as successful
         results['local'] = true;
+        Log.info('✅ Local embedded relay: SUCCESS',
+            name: 'NostrService', category: LogCategory.relay);
 
         // The embedded relay handles external relay publishing
         for (final relayUrl in _configuredRelays) {
           final isConnected =
               _embeddedRelay!.connectedRelays.contains(relayUrl);
           results[relayUrl] = isConnected;
-          if (!isConnected) {
+          if (isConnected) {
+            Log.info('✅ External relay $relayUrl: CONNECTED (event forwarded)',
+                name: 'NostrService', category: LogCategory.relay);
+          } else {
+            Log.warning('⚠️  External relay $relayUrl: NOT CONNECTED',
+                name: 'NostrService', category: LogCategory.relay);
             errors[relayUrl] = 'Relay not connected';
           }
         }
       } else {
         results['local'] = false;
         errors['local'] = 'Event rejected by embedded relay';
+        Log.error('❌ Local embedded relay: REJECTED',
+            name: 'NostrService', category: LogCategory.relay);
 
         // Mark all external relays as failed too
         for (final relayUrl in _configuredRelays) {
           results[relayUrl] = false;
           errors[relayUrl] = 'Local relay publish failed';
+          Log.error('❌ External relay $relayUrl: FAILED (local publish rejected)',
+              name: 'NostrService', category: LogCategory.relay);
         }
       }
     } catch (e) {
@@ -592,6 +621,17 @@ class NostrService implements INostrService {
     }
 
     final successCount = results.values.where((success) => success).length;
+
+    Log.info('📊 Broadcast Summary:',
+        name: 'NostrService', category: LogCategory.relay);
+    Log.info('   - Success: $successCount/${results.length} relays',
+        name: 'NostrService', category: LogCategory.relay);
+    Log.info('   - Results: $results',
+        name: 'NostrService', category: LogCategory.relay);
+    if (errors.isNotEmpty) {
+      Log.info('   - Errors: $errors',
+          name: 'NostrService', category: LogCategory.relay);
+    }
 
     return NostrBroadcastResult(
       event: event,
@@ -766,9 +806,9 @@ class NostrService implements INostrService {
       throw StateError('Embedded relay not initialized');
     }
 
-    // Create filter for video events
+    // Create filter for video events - using NIP-71 video kinds + reposts
     final filter = embedded.Filter(
-      kinds: [32222], // Video events
+      kinds: [34236, 34235, 22, 21, 6], // Video event kinds + repost (kind 6)
       authors: authors,
       since: since != null ? (since.millisecondsSinceEpoch ~/ 1000) : null,
       until: until != null ? (until.millisecondsSinceEpoch ~/ 1000) : null,
