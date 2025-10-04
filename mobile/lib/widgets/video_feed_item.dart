@@ -43,6 +43,7 @@ class VideoFeedItem extends ConsumerStatefulWidget {
 
 class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
   int _playbackGeneration = 0; // Prevents race conditions with rapid state changes
+  ActiveVideoNotifier? _activeVideoNotifier; // Cached for use in dispose()
 
   /// Translate error messages to user-friendly text
   static String _getErrorMessage(String? errorDescription) {
@@ -73,6 +74,9 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
   void initState() {
     super.initState();
 
+    // Cache the active video notifier for use in dispose()
+    _activeVideoNotifier = ref.read(activeVideoProvider.notifier);
+
     // Listen for active state changes to control playback
     // Widget is responsible for play/pause, NOT the provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -99,24 +103,22 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
 
   @override
   void dispose() {
-    // CRITICAL: Always pause video when widget is disposed
+    // CRITICAL: Always clear active video when widget is disposed
     // This ensures videos don't play in background tabs
     try {
-      final controllerParams = VideoControllerParams(
-        videoId: widget.video.id,
-        videoUrl: widget.video.videoUrl!,
-        videoEvent: widget.video,
-      );
-      final controller = ref.read(individualVideoControllerProvider(controllerParams));
+      final videoIdDisplay = widget.video.id.length > 8 ? widget.video.id.substring(0, 8) : widget.video.id;
 
-      if (controller.value.isPlaying) {
-        final videoIdDisplay = widget.video.id.length > 8 ? widget.video.id.substring(0, 8) : widget.video.id;
-        Log.info('⏸️ Pausing video $videoIdDisplay... on widget dispose',
+      // Clear active video if this was the active one
+      // We use the cached notifier since we can't use ref in dispose()
+      if (_activeVideoNotifier != null) {
+        Log.info('🔄 Clearing active video $videoIdDisplay... on widget dispose',
             name: 'VideoFeedItem', category: LogCategory.ui);
-        controller.pause(); // Fire and forget - widget is disposing
+        _activeVideoNotifier!.clearActiveVideo();
       }
+
+      // The controller will be disposed by Riverpod's autoDispose when no longer needed
     } catch (e) {
-      Log.error('❌ Error pausing video on dispose: $e',
+      Log.error('❌ Error clearing active video on dispose: $e',
           name: 'VideoFeedItem', category: LogCategory.ui);
     }
 
