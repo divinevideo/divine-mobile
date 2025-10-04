@@ -76,8 +76,11 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
     // Listen for active state changes to control playback
     // Widget is responsible for play/pause, NOT the provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final videoIdDisplay = widget.video.id.length > 8 ? widget.video.id.substring(0, 8) : widget.video.id;
       // Check initial state and start playback if already active
       final isActive = ref.read(isVideoActiveProvider(widget.video.id));
+      Log.info('🎬 VideoFeedItem.initState postFrameCallback: videoId=$videoIdDisplay, isActive=$isActive',
+          name: 'VideoFeedItem', category: LogCategory.video);
       if (isActive) {
         _handlePlaybackChange(true);
       }
@@ -85,7 +88,11 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
       // Listen for future changes
       ref.listenManual(
         isVideoActiveProvider(widget.video.id),
-        (prev, next) => _handlePlaybackChange(next),
+        (prev, next) {
+          Log.info('🔄 VideoFeedItem active state changed: videoId=$videoIdDisplay, prev=$prev → next=$next',
+              name: 'VideoFeedItem', category: LogCategory.video);
+          _handlePlaybackChange(next);
+        },
       );
     });
   }
@@ -121,6 +128,10 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
     final gen = ++_playbackGeneration;
     final videoIdDisplay = widget.video.id.length > 8 ? widget.video.id.substring(0, 8) : widget.video.id;
 
+    // Get stack trace to understand why playback is changing
+    final stackTrace = StackTrace.current;
+    final stackLines = stackTrace.toString().split('\n').take(5).join('\n');
+
     try {
       final controllerParams = VideoControllerParams(
         videoId: widget.video.id,
@@ -130,9 +141,12 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
       final controller = ref.read(individualVideoControllerProvider(controllerParams));
 
       if (shouldPlay) {
+        Log.info('▶️ PLAY REQUEST for video $videoIdDisplay | gen=$gen | initialized=${controller.value.isInitialized} | isPlaying=${controller.value.isPlaying}\nCalled from:\n$stackLines',
+            name: 'VideoFeedItem', category: LogCategory.video);
+
         if (controller.value.isInitialized && !controller.value.isPlaying) {
           // Controller ready - play immediately
-          Log.info('▶️ Widget starting video $videoIdDisplay...',
+          Log.info('▶️ Widget starting video $videoIdDisplay... (controller already initialized)',
               name: 'VideoFeedItem', category: LogCategory.ui);
           controller.play().then((_) {
             if (gen != _playbackGeneration) {
@@ -178,8 +192,8 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
           });
         }
       } else if (!shouldPlay && controller.value.isPlaying) {
-        Log.info('⏸️ Widget pausing video $videoIdDisplay...',
-            name: 'VideoFeedItem', category: LogCategory.ui);
+        Log.info('⏸️ PAUSE REQUEST for video $videoIdDisplay | gen=$gen | initialized=${controller.value.isInitialized} | isPlaying=${controller.value.isPlaying}\nCalled from:\n$stackLines',
+            name: 'VideoFeedItem', category: LogCategory.video);
         controller.pause().then((_) {
           if (gen != _playbackGeneration) {
             Log.debug('⏭️ Ignoring stale pause() completion for $videoIdDisplay...',
@@ -254,26 +268,36 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
         }
       },
       child: GestureDetector(
-        behavior: HitTestBehavior.deferToChild,
+        behavior: HitTestBehavior.translucent,
         onTap: () {
           Log.debug('📱 Tap detected on VideoFeedItem for $videoIdDisplay...',
               name: 'VideoFeedItem', category: LogCategory.ui);
           try {
+            final controllerParams = VideoControllerParams(
+              videoId: video.id,
+              videoUrl: video.videoUrl!,
+              videoEvent: video,
+            );
+            final controller = ref.read(individualVideoControllerProvider(controllerParams));
+
+            Log.debug('📱 Tap state: isActive=$isActive, isPlaying=${controller.value.isPlaying}, isInitialized=${controller.value.isInitialized}',
+                name: 'VideoFeedItem', category: LogCategory.ui);
+
             if (isActive) {
               // Toggle play/pause only if currently active
-              final controllerParams = VideoControllerParams(
-                videoId: video.id,
-                videoUrl: video.videoUrl!,
-                videoEvent: video,
-              );
-              final controller = ref.read(individualVideoControllerProvider(controllerParams));
               if (controller.value.isPlaying) {
+                Log.info('⏸️ Tap pausing video $videoIdDisplay...',
+                    name: 'VideoFeedItem', category: LogCategory.ui);
                 controller.pause();
               } else if (controller.value.isInitialized) {
+                Log.info('▶️ Tap playing video $videoIdDisplay...',
+                    name: 'VideoFeedItem', category: LogCategory.ui);
                 controller.play();
               }
             } else {
               // Make this video active when tapped
+              Log.info('🎯 Tap activating video $videoIdDisplay...',
+                  name: 'VideoFeedItem', category: LogCategory.ui);
               ref.read(activeVideoProvider.notifier).setActiveVideo(video.id);
             }
             widget.onTap?.call();
@@ -484,9 +508,13 @@ class VideoOverlayActions extends ConsumerWidget {
               children: [
                 GestureDetector(
                   onTap: () {
+                    Log.info('👤 User tapped profile: videoId=${video.id.substring(0, 8)}, authorPubkey=${video.pubkey.substring(0, 8)}',
+                        name: 'VideoFeedItem', category: LogCategory.ui);
                     try {
                       mainNavigationKey.currentState?.navigateToProfile(video.pubkey);
-                    } catch (_) {}
+                    } catch (e) {
+                      Log.error('Failed to navigate to profile: $e', name: 'VideoFeedItem', category: LogCategory.ui);
+                    }
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

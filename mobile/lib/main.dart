@@ -962,10 +962,15 @@ class MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
 
     // When tapping the profile tab directly, always show current user's profile
     if (index == 3) {
+      Log.info('👆 Profile tab tapped - resetting to own profile', name: 'MainNavigation', category: LogCategory.ui);
       // Reset to current user's profile when tapping the tab
       _viewingProfilePubkey = null;
       setState(() {
-        _screens[3] = profile.ProfileScreenScrollable(key: _profileScreenKey, profilePubkey: null);
+        // MUST use _profileScreenKey to allow didUpdateWidget to fire
+        _screens[3] = profile.ProfileScreenScrollable(
+          key: _profileScreenKey,
+          profilePubkey: null
+        );
       });
     }
 
@@ -1053,18 +1058,26 @@ class MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   /// Navigate to a user's profile
   /// Called from other screens to view a specific user's profile
   void navigateToProfile(String? profilePubkey) {
+    Log.info('🚀 navigateToProfile called: pubkey=${profilePubkey?.substring(0, 8) ?? 'own'}, currentIndex=$_currentIndex, currentViewingPubkey=${_viewingProfilePubkey?.substring(0, 8) ?? 'null'}',
+        name: 'MainNavigation', category: LogCategory.ui);
+
     // IMMEDIATELY pause current video on profile navigation
     final container = ProviderScope.containerOf(context);
     // Clear active video when navigating away from feed content
     container.read(activeVideoProvider.notifier).clearActiveVideo();
-    Log.info('⏸️ Paused current video when navigating to profile',
-        name: 'Main', category: LogCategory.system);
 
     setState(() {
       _viewingProfilePubkey = profilePubkey;
-      _screens[3] = profile.ProfileScreenScrollable(key: _profileScreenKey, profilePubkey: _viewingProfilePubkey);
+      // ALWAYS use the same GlobalKey - Flutter will call didUpdateWidget instead of recreating
+      _screens[3] = profile.ProfileScreenScrollable(
+        key: _profileScreenKey,
+        profilePubkey: _viewingProfilePubkey,
+      );
       _currentIndex = 3;
     });
+
+    Log.info('✅ navigateToProfile complete: switched to profile tab with pubkey=${_viewingProfilePubkey?.substring(0, 8) ?? 'own'}',
+        name: 'MainNavigation', category: LogCategory.ui);
   }
 
   /// Navigate to search functionality within explore
@@ -1132,7 +1145,7 @@ class MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     Widget titleWidget;
     switch (_currentIndex) {
       case 0:
-        title = 'Feed';
+        title = 'diVine';
         titleWidget = Text(
           title,
           style: const TextStyle(

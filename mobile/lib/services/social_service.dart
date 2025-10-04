@@ -13,6 +13,7 @@ import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:openvine/constants/nip71_migration.dart';
 
 /// Represents a follow set (NIP-51 Kind 30000)
 class FollowSet {
@@ -1291,12 +1292,12 @@ class SocialService {
       final completer = Completer<int>();
       var videoCount = 0;
 
-      // Subscribe to user's video events (Kind 32222)
+      // Subscribe to user's video events using NIP-71 compliant kinds
       final subscription = _nostrService.subscribeToEvents(
         filters: [
           Filter(
             authors: [pubkey],
-            kinds: [32222], // NIP-32222 addressable short video events
+            kinds: NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video kinds: 22, 21, 34236, 34235
           ),
         ],
       );
@@ -1344,7 +1345,7 @@ class SocialService {
         filters: [
           Filter(
             authors: [pubkey],
-            kinds: [32222], // NIP-32222 addressable short video events
+            kinds: NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video kinds: 22, 21, 34236, 34235
           ),
         ],
       );

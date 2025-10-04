@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/pure/search_screen_pure.dart';
-import 'package:openvine/screens/pure/profile_screen_pure.dart';
+import 'package:openvine/screens/profile_screen_scrollable.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 
 // Mock VideoEvents stream provider
@@ -94,11 +94,11 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      // Assert: Verify ProfileScreenPure is pushed with correct pubkey
-      expect(find.byType(ProfileScreenPure), findsOneWidget);
+      // Assert: Verify ProfileScreenScrollable is pushed with correct pubkey
+      expect(find.byType(ProfileScreenScrollable), findsOneWidget);
 
       final profileScreen =
-          tester.widget<ProfileScreenPure>(find.byType(ProfileScreenPure));
+          tester.widget<ProfileScreenScrollable>(find.byType(ProfileScreenScrollable));
       expect(profileScreen.profilePubkey, equals('user123'));
     });
 

@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/video_events_providers.dart';
-import 'package:openvine/screens/pure/profile_screen_pure.dart';
+import 'package:openvine/screens/profile_screen_scrollable.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/pure/video_grid_widget.dart';
@@ -405,7 +405,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
               Log.info('🔍 SearchScreenPure: Tapped user: $userPubkey', category: LogCategory.video);
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => ProfileScreenPure(profilePubkey: userPubkey),
+                  builder: (context) => ProfileScreenScrollable(profilePubkey: userPubkey),
                 ),
               );
             },

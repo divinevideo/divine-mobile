@@ -134,13 +134,25 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
 
   /// Load videos for a specific user with real-time streaming
   Future<void> loadVideosForUser(String pubkey) async {
+    Log.debug(
+        '🔍 loadVideosForUser called for ${pubkey.substring(0, 8)} | _currentPubkey=${_currentPubkey?.substring(0, 8)} | hasVideos=${state.hasVideos} | hasError=${state.hasError} | videos.length=${state.videos.length}',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui);
+
     if (_currentPubkey == pubkey && state.hasVideos && !state.hasError) {
-      // Already loaded for this user
+      Log.debug(
+          '⏭️ Early return: already loaded for ${pubkey.substring(0, 8)} with ${state.videos.length} videos',
+          name: 'ProfileVideosProvider',
+          category: LogCategory.ui);
       return;
     }
 
     // Prevent concurrent loads for the same user
     if (_loadingCompleter != null && _currentPubkey == pubkey) {
+      Log.debug(
+          '⏭️ Early return: already loading for ${pubkey.substring(0, 8)}',
+          name: 'ProfileVideosProvider',
+          category: LogCategory.ui);
       return _loadingCompleter!.future;
     }
 
@@ -149,7 +161,16 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
 
     // Check cache first
     final cached = _getCachedProfileVideos(pubkey);
+    Log.debug(
+        '💾 Cache check for ${pubkey.substring(0, 8)}: ${cached?.length ?? 0} videos',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui);
+
     if (cached != null) {
+      Log.debug(
+          '✅ Using cache: returning ${cached.length} videos for ${pubkey.substring(0, 8)}',
+          name: 'ProfileVideosProvider',
+          category: LogCategory.ui);
       // Defer state modification to avoid modifying provider during build
       await Future.microtask(() {
         state = state.copyWith(
@@ -163,6 +184,11 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
       _loadingCompleter = null;
       return;
     }
+
+    Log.debug(
+        '🌐 No cache found, starting streaming load for ${pubkey.substring(0, 8)}',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui);
 
     // Defer state modification to avoid modifying provider during build
     await Future.microtask(() {
@@ -209,9 +235,16 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
 
       state = state.copyWith(
         videos: sortedCached,
+        isLoading: false, // Mark as not loading since we're showing cached content
         lastTimestamp:
             sortedCached.isNotEmpty ? sortedCached.last.createdAt : null,
       );
+
+      Log.info(
+          '✅ Displaying ${cachedVideos.length} cached videos immediately for ${pubkey.substring(0, 8)}',
+          name: 'ProfileVideosProvider',
+          category: LogCategory.ui);
+      // Continue to relay query to supplement with any missing/new videos
     }
 
     final filter = Filter(
@@ -221,7 +254,7 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     );
 
     Log.info(
-        '📱 Starting streaming query for videos: authors=[${pubkey.substring(0, 16)}], kinds=${NIP71VideoKinds.getAllVideoKinds()}, limit=$_profileVideosPageSize',
+        '📱 Starting streaming query for videos: authors=[${pubkey.length > 16 ? pubkey.substring(0, 16) : pubkey}], kinds=${NIP71VideoKinds.getAllVideoKinds()}, limit=$_profileVideosPageSize',
         name: 'ProfileVideosProvider',
         category: LogCategory.ui);
 
@@ -312,6 +345,11 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
   /// Update UI state immediately when each video arrives during streaming
   void _updateUIWithStreamingVideo(
       VideoEvent newVideo, List<VideoEvent> allReceived) {
+    // Check if provider is still mounted after async gap
+    if (!ref.mounted) {
+      return;
+    }
+
     // Add the new video to current state, maintaining sort order
     final currentVideos = List<VideoEvent>.from(state.videos);
     currentVideos.add(newVideo);
@@ -334,6 +372,15 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
 
   /// Finalize the streaming load and update cache
   void _finalizeStreamingLoad(String pubkey, List<VideoEvent> allVideos) {
+    // Check if provider is still mounted after async gap
+    if (!ref.mounted) {
+      Log.debug(
+          '📱 Streaming finalized skipped - provider disposed for ${pubkey.substring(0, 8)}',
+          name: 'ProfileVideosProvider',
+          category: LogCategory.ui);
+      return;
+    }
+
     // Final sort using loops-first policy
     allVideos.sort(VideoEvent.compareByLoopsThenTime);
 
@@ -471,6 +518,11 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
 
   /// Update UI state immediately when each additional video arrives during load more streaming
   void _updateUIWithAdditionalVideo(VideoEvent newVideo) {
+    // Check if provider is still mounted after async gap
+    if (!ref.mounted) {
+      return;
+    }
+
     // Add the new video to current state
     final currentVideos = List<VideoEvent>.from(state.videos);
     currentVideos.add(newVideo);
@@ -493,6 +545,11 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
 
   /// Finalize the load more streaming and update cache
   void _finalizeLoadMoreStreaming(List<VideoEvent> newVideos) {
+    // Check if provider is still mounted after async gap
+    if (!ref.mounted) {
+      return;
+    }
+
     final hasMore = newVideos.length >= _profileVideosPageSize;
 
     // Update final state
@@ -511,11 +568,16 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
   }
 
   /// Refresh videos by clearing cache and reloading
-  Future<void> refreshVideos() async {
-    if (_currentPubkey != null) {
-      _clearProfileVideosCache(_currentPubkey!);
-      await loadVideosForUser(_currentPubkey!);
-    }
+  Future<void> refreshVideos(String pubkey) async {
+    _clearProfileVideosCache(pubkey);
+    // Reset state to force reload
+    state = state.copyWith(
+      videos: [],
+      isLoading: false,
+      hasMore: true,
+      error: null,
+    );
+    await loadVideosForUser(pubkey);
   }
 
   /// Clear error state

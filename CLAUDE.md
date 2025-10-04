@@ -44,6 +44,11 @@ Before making any assumptions or changes, YOU MUST verify:
 - **Dependencies**: Confirm versions, availability, and compatibility
 - **Environment variables**: Check existence and values
 - **Configuration files**: Validate syntax and required fields
+- **Duplicate implementations**: Before editing any class/component, search for similar implementations with related names (e.g., `UserProfile`, `UserProfilePure`, `ProfileScreen`, `ProfileScreenScrollable`). Verify you're editing the correct one by:
+  1. Searching for the class name to find all implementations
+  2. Checking which files import/use each implementation
+  3. Confirming which implementation is actually being used in the problematic code path
+  4. If multiple similar implementations exist, document this in your journal and ask which to consolidate
 
 ### Learning and Adaptation System
 1. **Search journal first**: Before starting complex tasks, search the journal for relevant past experiences and lessons learned

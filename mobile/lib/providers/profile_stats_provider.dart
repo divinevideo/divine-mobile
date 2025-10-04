@@ -48,43 +48,6 @@ class ProfileStats {
       'ProfileStats(videos: $videoCount, likes: $totalLikes, followers: $followers, following: $following, views: $totalViews)';
 }
 
-/// State for profile statistics provider
-class ProfileStatsState {
-  const ProfileStatsState({
-    required this.stats,
-    required this.isLoading,
-    required this.error,
-    required this.lastUpdated,
-  });
-
-  final ProfileStats? stats;
-  final bool isLoading;
-  final String? error;
-  final DateTime? lastUpdated;
-
-  ProfileStatsState copyWith({
-    ProfileStats? stats,
-    bool? isLoading,
-    String? error,
-    DateTime? lastUpdated,
-  }) =>
-      ProfileStatsState(
-        stats: stats ?? this.stats,
-        isLoading: isLoading ?? this.isLoading,
-        error: error,
-        lastUpdated: lastUpdated ?? this.lastUpdated,
-      );
-
-  static const initial = ProfileStatsState(
-    stats: null,
-    isLoading: false,
-    error: null,
-    lastUpdated: null,
-  );
-
-  bool get hasData => stats != null;
-  bool get hasError => error != null;
-}
 
 // SQLite-based persistent cache
 final _cacheService = ProfileStatsCacheService();
@@ -111,11 +74,6 @@ Future<void> _cacheProfileStats(String pubkey, ProfileStats stats) async {
       name: 'ProfileStatsProvider', category: LogCategory.ui);
 }
 
-/// Clear cache for a specific user
-Future<void> _clearProfileStatsCache(String pubkey) async {
-  await _cacheService.clearStats(pubkey);
-}
-
 /// Clear all cached stats
 Future<void> clearAllProfileStatsCache() async {
   await _cacheService.clearAll();
@@ -133,7 +91,7 @@ Future<ProfileStats> fetchProfileStats(Ref ref, String pubkey) async {
   }
 
   // Get the social service from app providers
-  final socialService = ref.watch(socialServiceProvider);
+  final socialService = ref.read(socialServiceProvider);
 
   Log.debug('Loading profile stats for: ${pubkey.substring(0, 8)}...',
       name: 'ProfileStatsProvider', category: LogCategory.ui);
@@ -171,48 +129,6 @@ Future<ProfileStats> fetchProfileStats(Ref ref, String pubkey) async {
   }
 }
 
-/// Notifier for managing profile stats state
-@riverpod
-class ProfileStatsNotifier extends _$ProfileStatsNotifier {
-  @override
-  ProfileStatsState build() {
-    return ProfileStatsState.initial;
-  }
-
-  /// Load profile stats for a user
-  Future<void> loadStats(String pubkey) async {
-    // Defer state modification to avoid modifying provider during build
-    await Future.microtask(() {
-      state = state.copyWith(isLoading: true, error: null);
-    });
-
-    try {
-      final stats = await ref.read(fetchProfileStatsProvider(pubkey).future);
-      state = state.copyWith(
-        stats: stats,
-        isLoading: false,
-        lastUpdated: DateTime.now(),
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
-    }
-  }
-
-  /// Refresh stats by clearing cache and reloading
-  Future<void> refreshStats(String pubkey) async {
-    await _clearProfileStatsCache(pubkey);
-    ref.invalidate(fetchProfileStatsProvider(pubkey));
-    await loadStats(pubkey);
-  }
-
-  /// Clear error state
-  void clearError() {
-    state = state.copyWith(error: null);
-  }
-}
 
 /// Get a formatted string for large numbers (e.g., 1234 -> "1.2k")
 /// Delegates to StringUtils.formatCompactNumber for consistent formatting

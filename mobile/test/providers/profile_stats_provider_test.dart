@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:openvine/providers/profile_stats_provider.dart';
@@ -11,6 +13,25 @@ import 'package:openvine/services/social_service.dart';
 import 'profile_stats_provider_test.mocks.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late Directory tempDir;
+
+  setUpAll(() async {
+    // Create temporary directory for Hive testing
+    tempDir = await Directory.systemTemp.createTemp('hive_test_');
+    Hive.init(tempDir.path);
+  });
+
+  tearDownAll(() async {
+    try {
+      await Hive.close();
+      await tempDir.delete(recursive: true);
+    } catch (e) {
+      // Ignore cleanup errors
+    }
+  });
+
   group('ProfileStatsProvider', () {
     late ProviderContainer container;
     late MockSocialService mockSocialService;
@@ -24,25 +45,24 @@ void main() {
       );
     });
 
-    tearDown(() {
+    tearDown(() async {
       container.dispose();
+      // Clean up Hive between tests
+      try {
+        await clearAllProfileStatsCache();
+        if (Hive.isBoxOpen('profile_stats_cache')) {
+          await Hive.box('profile_stats_cache').close();
+        }
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     });
 
-    group('Initial State', () {
-      test('should have correct initial state', () {
-        final state = container.read(profileStatsProvider);
-        expect(state.isLoading, false);
-        expect(state.stats, isNull);
-        expect(state.error, isNull);
-        expect(state.hasError, false);
-        expect(state.hasData, false);
-      });
-    });
 
-    group('Loading Profile Stats', () {
-      const testPubkey = 'test_pubkey_123';
+    group('FetchProfileStatsProvider (AsyncProvider)', () {
+      const testPubkey = 'test_pubkey_async';
 
-      test('should load profile stats successfully', () async {
+      test('should auto-fetch stats when watched', () async {
         // Mock social service responses
         when(mockSocialService.getFollowerStats(testPubkey)).thenAnswer(
           (_) async => {'followers': 100, 'following': 50},
@@ -51,49 +71,29 @@ void main() {
           (_) async => 25,
         );
 
-        // Load stats using the notifier
-        final notifier = container.read(profileStatsProvider.notifier);
-        await notifier.loadStats(testPubkey);
+        // Keep the provider alive by listening to it
+        final sub = container.listen(fetchProfileStatsProvider(testPubkey), (previous, next) {});
 
-        // Verify final state
-        final state = container.read(profileStatsProvider);
-        expect(state.isLoading, false);
-        expect(state.hasData, true);
-        expect(state.error, isNull);
+        // Wait for the future to complete
+        final asyncValue = await container.read(fetchProfileStatsProvider(testPubkey).future);
 
-        // Verify stats content
-        final stats = state.stats!;
-        expect(stats.videoCount, 25);
-        expect(stats.totalLikes, 0); // Not showing reactions for now
-        expect(stats.followers, 100);
-        expect(stats.following, 50);
-        expect(stats.totalViews, 0); // Placeholder
+        // Verify stats were fetched automatically
+        expect(asyncValue.videoCount, 25);
+        expect(asyncValue.followers, 100);
+        expect(asyncValue.following, 50);
+        expect(asyncValue.totalLikes, 0);
+        expect(asyncValue.totalViews, 0);
 
-        // Verify service calls
+        // Verify service calls happened automatically
         verify(mockSocialService.getFollowerStats(testPubkey)).called(1);
         verify(mockSocialService.getUserVideoCount(testPubkey)).called(1);
+
+        // Clean up
+        sub.close();
       });
 
-      test('should handle loading errors gracefully', () async {
-        // Mock service failure
-        when(mockSocialService.getFollowerStats(testPubkey)).thenThrow(
-          Exception('Network error'),
-        );
-
-        // Load stats using the notifier
-        final notifier = container.read(profileStatsProvider.notifier);
-        await notifier.loadStats(testPubkey);
-
-        // Verify error state
-        final state = container.read(profileStatsProvider);
-        expect(state.isLoading, false);
-        expect(state.hasError, true);
-        expect(state.error, contains('Network error'));
-        expect(state.stats, isNull);
-      });
-
-      test('should refresh stats by clearing cache', () async {
-        // First load
+      test('should use cache on subsequent watches', () async {
+        // First watch - should fetch
         when(mockSocialService.getFollowerStats(testPubkey)).thenAnswer(
           (_) async => {'followers': 100, 'following': 50},
         );
@@ -101,57 +101,21 @@ void main() {
           (_) async => 25,
         );
 
-        final notifier = container.read(profileStatsProvider.notifier);
-        await notifier.loadStats(testPubkey);
+        final stats1 = await container.read(fetchProfileStatsProvider(testPubkey).future);
+        expect(stats1.videoCount, 25);
+        expect(stats1.followers, 100);
+
+        // Clear interactions to verify no new calls
         clearInteractions(mockSocialService);
 
-        // Mock updated stats
-        when(mockSocialService.getFollowerStats(testPubkey)).thenAnswer(
-          (_) async => {'followers': 150, 'following': 75},
-        );
-        when(mockSocialService.getUserVideoCount(testPubkey)).thenAnswer(
-          (_) async => 30,
-        );
+        // Second watch - should use cache
+        final stats2 = await container.read(fetchProfileStatsProvider(testPubkey).future);
+        expect(stats2.videoCount, 25);
+        expect(stats2.followers, 100);
 
-        // Refresh stats
-        await notifier.refreshStats(testPubkey);
-
-        // Should have new stats
-        final state = container.read(profileStatsProvider);
-        expect(state.stats!.videoCount, 30);
-        expect(state.stats!.followers, 150);
-        expect(state.stats!.following, 75);
-
-        // Should have called services again
-        verify(mockSocialService.getFollowerStats(testPubkey)).called(1);
-        verify(mockSocialService.getUserVideoCount(testPubkey)).called(1);
-      });
-
-      test('should clear error state', () async {
-        // Create error state first
-        when(mockSocialService.getFollowerStats(testPubkey)).thenThrow(
-          Exception('Network error'),
-        );
-
-        final notifier = container.read(profileStatsProvider.notifier);
-        await notifier.loadStats(testPubkey);
-
-        // Verify error state
-        var state = container.read(profileStatsProvider);
-        expect(state.hasError, true);
-
-        // Clear error
-        notifier.clearError();
-
-        // Verify error cleared
-        state = container.read(profileStatsProvider);
-        expect(state.error, isNull);
-        expect(state.hasError, false);
-      });
-
-      test('should clear all cache', () {
-        clearAllProfileStatsCache();
-        // Just verify it doesn't throw - internal state is private
+        // Should NOT have called services again (cache hit)
+        verifyNever(mockSocialService.getFollowerStats(any));
+        verifyNever(mockSocialService.getUserVideoCount(any));
       });
     });
 

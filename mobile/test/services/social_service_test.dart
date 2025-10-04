@@ -853,6 +853,69 @@ void main() {
         expect(count, 0);
       });
 
+      test('should count videos using NIP-71 compliant kinds', () async {
+        // Create video events with NIP-71 kinds (22, 21, 34236, 34235)
+        final videoEvents = <Event>[
+          // Kind 22 - Short video
+          () {
+            const pk =
+                '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+            final pub = getPublicKey(pk);
+            final e = Event(pub, 22, [], 'Short Video 1');
+            e.sign(pk);
+            return e;
+          }(),
+          // Kind 34236 - Addressable short video (primary kind used by OpenVine)
+          () {
+            const pk =
+                '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+            final pub = getPublicKey(pk);
+            final e = Event(pub, 34236, [['d', 'test-video-1']], 'Addressable Short Video 1');
+            e.sign(pk);
+            return e;
+          }(),
+          // Kind 34236 - Another addressable short video
+          () {
+            const pk =
+                '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+            final pub = getPublicKey(pk);
+            final e = Event(pub, 34236, [['d', 'test-video-2']], 'Addressable Short Video 2');
+            e.sign(pk);
+            return e;
+          }(),
+          // Kind 21 - Normal video
+          () {
+            const pk =
+                '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+            final pub = getPublicKey(pk);
+            final e = Event(pub, 21, [], 'Normal Video 1');
+            e.sign(pk);
+            return e;
+          }(),
+        ];
+
+        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
+            .thenAnswer((_) => Stream.fromIterable(videoEvents));
+
+        final count = await socialService.getUserVideoCount(testUserPubkey);
+
+        // Should count all 4 NIP-71 video events
+        expect(count, 4);
+
+        // Verify subscription was called with correct NIP-71 kinds filter
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+          ),
+        ).captured.single as List<Filter>;
+
+        // Verify the filter includes NIP-71 video kinds: 22, 21, 34236, 34235
+        expect(captured.length, 1);
+        final filter = captured[0];
+        expect(filter.kinds, containsAll([22, 21, 34236, 34235]));
+        expect(filter.authors, contains(testUserPubkey));
+      });
+
       test('should fetch user total likes across all videos', () async {
         // Mock user's video events
         final videoEvents = <Event>[

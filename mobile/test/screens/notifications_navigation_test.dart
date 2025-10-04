@@ -11,7 +11,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/notifications_screen.dart';
-import 'package:openvine/screens/pure/profile_screen_pure.dart';
+import 'package:openvine/screens/profile_screen_scrollable.dart';
 import 'package:openvine/screens/pure/explore_video_screen_pure.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
 import 'package:openvine/widgets/notification_list_item.dart';
@@ -126,10 +126,10 @@ void main() {
       await tester.pump(); // State update from _initializeProfile
 
       // Assert: Should navigate to profile screen
-      expect(find.byType(ProfileScreenPure), findsOneWidget);
+      expect(find.byType(ProfileScreenScrollable), findsOneWidget);
 
       final profileScreen =
-          tester.widget<ProfileScreenPure>(find.byType(ProfileScreenPure));
+          tester.widget<ProfileScreenScrollable>(find.byType(ProfileScreenScrollable));
       expect(profileScreen.profilePubkey, equals('user456abcdef'));
 
       // Verify markAsRead was called

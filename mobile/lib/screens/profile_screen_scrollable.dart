@@ -65,9 +65,13 @@ class _ProfileScreenScrollableState
   @override
   void initState() {
     super.initState();
+    Log.info('🎬 ProfileScreenScrollable.initState: widget.profilePubkey=${widget.profilePubkey?.substring(0, 8) ?? 'null (own profile)'}, hashCode=${hashCode}',
+        name: 'ProfileScreenScrollable', category: LogCategory.ui);
     _tabController = TabController(length: 3, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      Log.info('🎯 ProfileScreenScrollable: postFrameCallback - calling _initializeProfile for ${widget.profilePubkey?.substring(0, 8) ?? 'own'}',
+          name: 'ProfileScreenScrollable', category: LogCategory.ui);
       _initializeProfile();
     });
   }
@@ -105,19 +109,23 @@ class _ProfileScreenScrollableState
       _isInitializing = false;
     });
 
+    Log.debug(
+        '🔍 initState complete | _targetPubkey=${_targetPubkey?.substring(0, 8) ?? 'null'} | widget.profilePubkey=${widget.profilePubkey?.substring(0, 8) ?? 'null'} | currentUserPubkey=${currentUserPubkey?.substring(0, 8) ?? 'null'}',
+        name: 'ProfileScreen',
+        category: LogCategory.ui);
+
     if (_targetPubkey != null) {
-      _loadProfileStats();
+      Log.debug('✅ _targetPubkey is not null, calling _loadProfileVideos()',
+          name: 'ProfileScreen', category: LogCategory.ui);
       _loadProfileVideos();
 
       if (!_isOwnProfile) {
         _loadUserProfile();
       }
+    } else {
+      Log.error('❌ _targetPubkey is null, skipping video load',
+          name: 'ProfileScreen', category: LogCategory.ui);
     }
-  }
-
-  void _loadProfileStats() {
-    if (_targetPubkey == null) return;
-    ref.read(profileStatsProvider.notifier).loadStats(_targetPubkey!);
   }
 
   void _loadProfileVideos() {
@@ -175,10 +183,13 @@ class _ProfileScreenScrollableState
   void didUpdateWidget(ProfileScreenScrollable oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    Log.info('🔄 ProfileScreenScrollable.didUpdateWidget: old=${oldWidget.profilePubkey?.substring(0, 8) ?? 'null'} → new=${widget.profilePubkey?.substring(0, 8) ?? 'null'}, hashCode=${hashCode}',
+        name: 'ProfileScreenScrollable', category: LogCategory.ui);
+
     // Check if the profilePubkey parameter has changed
     if (widget.profilePubkey != oldWidget.profilePubkey) {
-      Log.debug(
-          'Profile parameter changed from ${oldWidget.profilePubkey?.substring(0, 8) ?? 'own'} to ${widget.profilePubkey?.substring(0, 8) ?? 'own'}',
+      Log.info(
+          '✅ Profile parameter CHANGED from ${oldWidget.profilePubkey?.substring(0, 8) ?? 'own'} to ${widget.profilePubkey?.substring(0, 8) ?? 'own'} - reinitializing',
           name: 'ProfileScreenScrollable',
           category: LogCategory.ui);
 
@@ -187,11 +198,16 @@ class _ProfileScreenScrollableState
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _initializeProfile();
       });
+    } else {
+      Log.debug('⏭️ Profile parameter unchanged - no action needed',
+          name: 'ProfileScreenScrollable', category: LogCategory.ui);
     }
   }
 
   @override
   void dispose() {
+    Log.info('🗑️ ProfileScreenScrollable.dispose: profilePubkey=${widget.profilePubkey?.substring(0, 8) ?? 'null'}, hashCode=${hashCode}',
+        name: 'ProfileScreenScrollable', category: LogCategory.ui);
     _tabController.dispose();
     _scrollController.dispose();
 
@@ -233,6 +249,9 @@ class _ProfileScreenScrollableState
 
   @override
   Widget build(BuildContext context) {
+    Log.debug('🎯 ProfileScreen: build() called - _isInitializing=$_isInitializing, _targetPubkey=$_targetPubkey',
+        name: 'ProfileScreen', category: LogCategory.ui);
+
     // Show loading screen during initialization
     if (_isInitializing || _targetPubkey == null) {
       return const Center(
@@ -364,6 +383,15 @@ class _ProfileScreenScrollableState
     // Get the current user's pubkey for stats/videos
     final targetPubkey = _targetPubkey ?? authService.currentPublicKeyHex ?? '';
     final profileStatsAsync = ref.watch(fetchProfileStatsProvider(targetPubkey));
+
+    // DEBUG: Check AsyncValue state
+    Log.debug(
+        '📊 ProfileStats AsyncValue: isLoading=${profileStatsAsync.isLoading}, '
+        'hasValue=${profileStatsAsync.hasValue}, '
+        'hasError=${profileStatsAsync.hasError}, '
+        'value=${profileStatsAsync.value}',
+        name: 'ProfileScreen',
+        category: LogCategory.ui);
 
     // Watch the profile videos notifier state for reactive updates
     final profileVideosState = ref.watch(profileVideosProvider);
@@ -701,9 +729,11 @@ class _ProfileScreenScrollableState
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => ref
-                  .read(profileVideosProvider.notifier)
-                  .refreshVideos(),
+              onPressed: _targetPubkey != null
+                  ? () => ref
+                      .read(profileVideosProvider.notifier)
+                      .refreshVideos(_targetPubkey!)
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: VineTheme.vineGreen,
                 foregroundColor: VineTheme.whiteText,
@@ -751,7 +781,7 @@ class _ProfileScreenScrollableState
                   try {
                     await ref
                         .read(profileVideosProvider.notifier)
-                        .refreshVideos();
+                        .refreshVideos(_targetPubkey!);
                     Log.info('Manual refresh completed',
                         name: 'ProfileScreen', category: LogCategory.ui);
                   } catch (e) {

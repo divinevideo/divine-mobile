@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/notification_model.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/pure/explore_video_screen_pure.dart';
-import 'package:openvine/screens/pure/profile_screen_pure.dart';
+import 'package:openvine/screens/profile_screen_scrollable.dart';
 import 'package:openvine/theme/app_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/notification_list_item.dart';
@@ -408,7 +408,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     // Navigate to profile screen
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => ProfileScreenPure(profilePubkey: userPubkey),
+        builder: (context) => ProfileScreenScrollable(profilePubkey: userPubkey),
       ),
     );
   }

@@ -154,7 +154,10 @@ class VideoVisibilityManager {
   /// Pause all videos (e.g., when app goes to background)
   void pauseAllVideos() {
     _playableVideos.clear();
-    Log.info('⏸️ Paused all videos',
+    _visibilityMap.clear(); // Clear visibility map to prevent stale videos from resuming
+    _autoPlayEnabled = false; // Disable auto-play when backgrounding
+    _lastPlayingVideo = null; // Clear last playing video
+    Log.info('⏸️ Paused all videos and cleared visibility state',
         name: 'VideoVisibilityManager', category: LogCategory.video);
   }
 

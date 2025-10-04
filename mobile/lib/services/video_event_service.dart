@@ -225,9 +225,32 @@ class VideoEventService extends ChangeNotifier {
   /// Get videos by a specific author from the existing cache (searches all subscription types)
   List<VideoEvent> getVideosByAuthor(String pubkey) {
     final result = <VideoEvent>[];
-    for (final eventList in _eventLists.values) {
-      result.addAll(eventList.where((video) => video.pubkey == pubkey));
+    Log.debug(
+        '🔍 Searching for videos by author ${pubkey.substring(0, 8)} across ${_eventLists.length} subscription types',
+        name: 'VideoEventService',
+        category: LogCategory.video);
+    for (final entry in _eventLists.entries) {
+      final subscriptionType = entry.key;
+      final eventList = entry.value;
+      final matchingVideos =
+          eventList.where((video) => video.pubkey == pubkey).toList();
+      if (matchingVideos.isNotEmpty) {
+        Log.debug(
+            '  📱 Found ${matchingVideos.length} videos in ${subscriptionType.name} list (total: ${eventList.length})',
+            name: 'VideoEventService',
+            category: LogCategory.video);
+      } else {
+        Log.debug(
+            '  ⏭️  No videos in ${subscriptionType.name} list (total: ${eventList.length})',
+            name: 'VideoEventService',
+            category: LogCategory.video);
+      }
+      result.addAll(matchingVideos);
     }
+    Log.debug(
+        '✅ Total videos found for ${pubkey.substring(0, 8)}: ${result.length}',
+        name: 'VideoEventService',
+        category: LogCategory.video);
     return result;
   }
 
@@ -332,6 +355,9 @@ class VideoEventService extends ChangeNotifier {
           name: 'VideoEventService', category: LogCategory.video);
       Log.info('  - Include reposts: $includeReposts',
           name: 'VideoEventService', category: LogCategory.video);
+
+      // Store includeReposts setting for this subscription type
+      _includeReposts[subscriptionType] = includeReposts;
 
       // Create filter for NIP-71 video events
       // No artificial date constraints - let relays return their best content
