@@ -148,6 +148,33 @@ FOR EVERY NEW FEATURE OR BUGFIX, YOU MUST follow TDD:
 - If the logs are supposed to contain errors, capture and test it
 - YOU MUST NEVER implement mocks in end-to-end tests. We always use real data and real APIs
 
+### Test Execution Standards
+**CRITICAL**: NEVER add timeout parameters when running tests. Tests must run to completion regardless of how long they take.
+
+**FORBIDDEN patterns**:
+```bash
+# ❌ NEVER DO THIS
+flutter test --timeout 30s
+flutter test test/some_test.dart --timeout=2m
+dart test --timeout 60
+```
+
+**CORRECT patterns**:
+```bash
+# ✅ Run tests without timeout constraints
+flutter test
+flutter test test/some_test.dart
+dart test
+```
+
+**Why this matters**:
+- Timeouts hide real test failures and flakiness
+- Tests that take too long indicate architecture problems that need fixing, not hiding
+- CI/CD systems have their own timeout mechanisms - we don't need to add our own
+- Debugging slow tests requires seeing them complete naturally
+
+**If tests are too slow**: Fix the root cause (async issues, unnecessary delays, expensive operations), don't mask it with timeouts.
+
 ## MANDATORY TDD PROCESS
 
 **CRITICAL**: This is NON-NEGOTIABLE. Violation = immediate failure.
