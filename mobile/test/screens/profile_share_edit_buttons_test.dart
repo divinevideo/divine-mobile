@@ -4,11 +4,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/screens/profile_screen_scrollable.dart';
+import 'package:openvine/router/app_router.dart';
+import 'package:openvine/utils/nostr_encoding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  Widget shell(ProviderContainer c) => UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+      );
 
   group('Profile Screen Share and Edit Buttons', () {
     setUp(() async {
@@ -17,13 +23,17 @@ void main() {
 
     testWidgets('Share Profile and Edit Profile buttons exist on own profile',
         (tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: ProfileScreenScrollable(),
-          ),
-        ),
-      );
+      // Use a dummy pubkey for current user
+      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      // Navigate to own profile
+      c.read(goRouterProvider).go('/profile/$currentUserNpub/0');
 
       // Use pump with duration instead of pumpAndSettle to avoid timeout
       // Wait for initial frame
@@ -52,13 +62,15 @@ void main() {
     testWidgets(
         'Share Profile button should be tappable when it exists',
         (tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: ProfileScreenScrollable(),
-          ),
-        ),
-      );
+      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      c.read(goRouterProvider).go('/profile/$currentUserNpub/0');
 
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
@@ -78,13 +90,15 @@ void main() {
     testWidgets(
         'Edit Profile button should be tappable when it exists',
         (tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: ProfileScreenScrollable(),
-          ),
-        ),
-      );
+      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      c.read(goRouterProvider).go('/profile/$currentUserNpub/0');
 
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
@@ -106,16 +120,14 @@ void main() {
         (tester) async {
       const otherUserPubkey =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      final otherUserNpub = NostrEncoding.encodePublicKey(otherUserPubkey);
 
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: ProfileScreenScrollable(
-              profilePubkey: otherUserPubkey,
-            ),
-          ),
-        ),
-      );
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      c.read(goRouterProvider).go('/profile/$otherUserNpub/0');
 
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));

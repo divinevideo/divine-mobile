@@ -10,10 +10,10 @@ import 'package:openvine/models/notification_model.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/video_events_providers.dart';
-import 'package:openvine/screens/notifications_screen.dart';
-import 'package:openvine/screens/profile_screen_scrollable.dart';
+import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/pure/explore_video_screen_pure.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
+import 'package:openvine/utils/nostr_encoding.dart';
 import 'package:openvine/widgets/notification_list_item.dart';
 
 import 'notifications_navigation_test.mocks.dart';
@@ -28,6 +28,16 @@ class MockVideoEventsNoTimers extends VideoEvents {
 
 @GenerateMocks([NotificationServiceEnhanced])
 void main() {
+  Widget shell(ProviderContainer c) => UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+      );
+
+  String currentLocation(ProviderContainer c) {
+    final router = c.read(goRouterProvider);
+    return router.routeInformationProvider.value.uri.toString();
+  }
+
   group('NotificationsScreen Navigation', () {
     late MockNotificationServiceEnhanced mockNotificationService;
     late List<NotificationModel> testNotifications;
@@ -66,19 +76,20 @@ void main() {
     testWidgets('tapping notification with video shows error when video not found',
         (WidgetTester tester) async {
       // Arrange - No video event service override, so video won't be found
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            notificationServiceEnhancedProvider
-                .overrideWith((ref) => mockNotificationService),
-            // Override videoEventsProvider to prevent timer issues in tests
-            videoEventsProvider.overrideWith(() => MockVideoEventsNoTimers()),
-          ],
-          child: const MaterialApp(
-            home: NotificationsScreen(),
-          ),
-        ),
-      );
+      final c = ProviderContainer(overrides: [
+        notificationServiceEnhancedProvider
+            .overrideWith((ref) => mockNotificationService),
+        // Override videoEventsProvider to prevent timer issues in tests
+        videoEventsProvider.overrideWith(() => MockVideoEventsNoTimers()),
+      ]);
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      // Navigate to notifications
+      c.read(goRouterProvider).go('/notifications/0');
+      await tester.pump();
+      await tester.pump();
 
       await tester.pumpAndSettle();
 
@@ -98,20 +109,23 @@ void main() {
 
     testWidgets('tapping notification without video navigates to profile',
         (WidgetTester tester) async {
+      final user456Npub = NostrEncoding.encodePublicKey('user456abcdef');
+
       // Arrange
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            notificationServiceEnhancedProvider
-                .overrideWith((ref) => mockNotificationService),
-            // Override videoEventsProvider to prevent timer issues in tests
-            videoEventsProvider.overrideWith(() => MockVideoEventsNoTimers()),
-          ],
-          child: const MaterialApp(
-            home: NotificationsScreen(),
-          ),
-        ),
-      );
+      final c = ProviderContainer(overrides: [
+        notificationServiceEnhancedProvider
+            .overrideWith((ref) => mockNotificationService),
+        // Override videoEventsProvider to prevent timer issues in tests
+        videoEventsProvider.overrideWith(() => MockVideoEventsNoTimers()),
+      ]);
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      // Navigate to notifications
+      c.read(goRouterProvider).go('/notifications/0');
+      await tester.pump();
+      await tester.pump();
 
       await tester.pumpAndSettle();
 
@@ -126,11 +140,7 @@ void main() {
       await tester.pump(); // State update from _initializeProfile
 
       // Assert: Should navigate to profile screen
-      expect(find.byType(ProfileScreenScrollable), findsOneWidget);
-
-      final profileScreen =
-          tester.widget<ProfileScreenScrollable>(find.byType(ProfileScreenScrollable));
-      expect(profileScreen.profilePubkey, equals('user456abcdef'));
+      expect(currentLocation(c), contains('/profile/$user456Npub'));
 
       // Verify markAsRead was called
       verify(mockNotificationService.markAsRead('notif2')).called(1);

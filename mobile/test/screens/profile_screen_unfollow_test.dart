@@ -6,12 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
-import 'package:openvine/screens/profile_screen_scrollable.dart';
+import 'package:openvine/router/app_router.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/utils/nostr_encoding.dart';
 
 import 'profile_screen_unfollow_test.mocks.dart';
 
@@ -22,6 +23,11 @@ import 'profile_screen_unfollow_test.mocks.dart';
   SocialService,
 ])
 void main() {
+  Widget shell(ProviderContainer c) => UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+      );
+
   group('Profile Screen Unfollow Tests (TDD)', () {
     late MockINostrService mockNostrService;
     late MockAuthService mockAuthService;
@@ -41,28 +47,26 @@ void main() {
         (WidgetTester tester) async {
       const profilePubkey = 'target_user_pubkey_456';
       const currentUserPubkey = 'current_user_pubkey_123';
+      final profileNpub = NostrEncoding.encodePublicKey(profilePubkey);
 
       // Setup: User is following the target
       when(mockSocialService.isFollowing(profilePubkey)).thenReturn(true);
       when(mockAuthService.currentPublicKeyHex).thenReturn(currentUserPubkey);
       when(mockSocialService.unfollowUser(profilePubkey)).thenAnswer((_) async {});
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            socialServiceProvider.overrideWithValue(mockSocialService),
-            authServiceProvider.overrideWithValue(mockAuthService),
-            nostrServiceProvider.overrideWithValue(mockNostrService),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: ProfileScreenScrollable(
-                profilePubkey: profilePubkey,
-              ),
-            ),
-          ),
-        ),
-      );
+      final c = ProviderContainer(overrides: [
+        socialServiceProvider.overrideWithValue(mockSocialService),
+        authServiceProvider.overrideWithValue(mockAuthService),
+        nostrServiceProvider.overrideWithValue(mockNostrService),
+      ]);
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      // Navigate to profile
+      c.read(goRouterProvider).go('/profile/$profileNpub/0');
+      await tester.pump();
+      await tester.pump();
 
       // Wait for the widget to build
       await tester.pumpAndSettle();
@@ -83,28 +87,26 @@ void main() {
         (WidgetTester tester) async {
       const profilePubkey = 'target_user_pubkey_789';
       const currentUserPubkey = 'current_user_pubkey_123';
+      final profileNpub = NostrEncoding.encodePublicKey(profilePubkey);
 
       // Setup: User is NOT following the target
       when(mockSocialService.isFollowing(profilePubkey)).thenReturn(false);
       when(mockAuthService.currentPublicKeyHex).thenReturn(currentUserPubkey);
       when(mockSocialService.followUser(profilePubkey)).thenAnswer((_) async {});
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            socialServiceProvider.overrideWithValue(mockSocialService),
-            authServiceProvider.overrideWithValue(mockAuthService),
-            nostrServiceProvider.overrideWithValue(mockNostrService),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: ProfileScreenScrollable(
-                profilePubkey: profilePubkey,
-              ),
-            ),
-          ),
-        ),
-      );
+      final c = ProviderContainer(overrides: [
+        socialServiceProvider.overrideWithValue(mockSocialService),
+        authServiceProvider.overrideWithValue(mockAuthService),
+        nostrServiceProvider.overrideWithValue(mockNostrService),
+      ]);
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      // Navigate to profile
+      c.read(goRouterProvider).go('/profile/$profileNpub/0');
+      await tester.pump();
+      await tester.pump();
 
       // Wait for the widget to build
       await tester.pumpAndSettle();
@@ -125,6 +127,7 @@ void main() {
         (WidgetTester tester) async {
       const profilePubkey = 'target_user_pubkey_abc';
       const currentUserPubkey = 'current_user_pubkey_123';
+      final profileNpub = NostrEncoding.encodePublicKey(profilePubkey);
 
       // Start with user following the target
       var isFollowing = true;
@@ -137,22 +140,19 @@ void main() {
         isFollowing = false;
       });
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            socialServiceProvider.overrideWithValue(mockSocialService),
-            authServiceProvider.overrideWithValue(mockAuthService),
-            nostrServiceProvider.overrideWithValue(mockNostrService),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: ProfileScreenScrollable(
-                profilePubkey: profilePubkey,
-              ),
-            ),
-          ),
-        ),
-      );
+      final c = ProviderContainer(overrides: [
+        socialServiceProvider.overrideWithValue(mockSocialService),
+        authServiceProvider.overrideWithValue(mockAuthService),
+        nostrServiceProvider.overrideWithValue(mockNostrService),
+      ]);
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      // Navigate to profile
+      c.read(goRouterProvider).go('/profile/$profileNpub/0');
+      await tester.pump();
+      await tester.pump();
 
       // Wait for the widget to build
       await tester.pumpAndSettle();
@@ -174,28 +174,26 @@ void main() {
         (WidgetTester tester) async {
       const profilePubkey = 'target_user_pubkey_xyz';
       const currentUserPubkey = 'current_user_pubkey_123';
+      final profileNpub = NostrEncoding.encodePublicKey(profilePubkey);
 
       when(mockSocialService.isFollowing(profilePubkey)).thenReturn(true);
       when(mockAuthService.currentPublicKeyHex).thenReturn(currentUserPubkey);
       when(mockSocialService.unfollowUser(profilePubkey))
           .thenThrow(Exception('Network error'));
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            socialServiceProvider.overrideWithValue(mockSocialService),
-            authServiceProvider.overrideWithValue(mockAuthService),
-            nostrServiceProvider.overrideWithValue(mockNostrService),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: ProfileScreenScrollable(
-                profilePubkey: profilePubkey,
-              ),
-            ),
-          ),
-        ),
-      );
+      final c = ProviderContainer(overrides: [
+        socialServiceProvider.overrideWithValue(mockSocialService),
+        authServiceProvider.overrideWithValue(mockAuthService),
+        nostrServiceProvider.overrideWithValue(mockNostrService),
+      ]);
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      // Navigate to profile
+      c.read(goRouterProvider).go('/profile/$profileNpub/0');
+      await tester.pump();
+      await tester.pump();
 
       // Wait for the widget to build
       await tester.pumpAndSettle();
@@ -211,28 +209,26 @@ void main() {
     testWidgets('EDGE CASE: Cannot follow/unfollow when not authenticated',
         (WidgetTester tester) async {
       const profilePubkey = 'target_user_pubkey_def';
+      final profileNpub = NostrEncoding.encodePublicKey(profilePubkey);
 
       // Setup: User is not authenticated
       when(mockAuthService.isAuthenticated).thenReturn(false);
       when(mockAuthService.currentPublicKeyHex).thenReturn(null);
       when(mockSocialService.isFollowing(profilePubkey)).thenReturn(false);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            socialServiceProvider.overrideWithValue(mockSocialService),
-            authServiceProvider.overrideWithValue(mockAuthService),
-            nostrServiceProvider.overrideWithValue(mockNostrService),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: ProfileScreenScrollable(
-                profilePubkey: profilePubkey,
-              ),
-            ),
-          ),
-        ),
-      );
+      final c = ProviderContainer(overrides: [
+        socialServiceProvider.overrideWithValue(mockSocialService),
+        authServiceProvider.overrideWithValue(mockAuthService),
+        nostrServiceProvider.overrideWithValue(mockNostrService),
+      ]);
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      // Navigate to profile
+      c.read(goRouterProvider).go('/profile/$profileNpub/0');
+      await tester.pump();
+      await tester.pump();
 
       // Wait for the widget to build
       await tester.pumpAndSettle();

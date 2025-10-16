@@ -4,24 +4,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/screens/profile_screen_scrollable.dart';
+import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/vine_drafts_screen.dart';
+import 'package:openvine/utils/nostr_encoding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  Widget shell(ProviderContainer c) => UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+      );
+
   group('Profile menu drafts navigation integration', () {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
     });
 
     testWidgets('should have Drafts menu item in profile options menu', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: const ProfileScreenScrollable(),
-          ),
-        ),
-      );
+      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      c.read(goRouterProvider).go('/profile/$currentUserNpub/0');
+      await tester.pump();
+      await tester.pump();
 
       // Wait for profile to initialize
       await tester.pumpAndSettle();
@@ -41,13 +51,17 @@ void main() {
     });
 
     testWidgets('should navigate to VineDraftsScreen when Drafts menu item is tapped', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: const ProfileScreenScrollable(),
-          ),
-        ),
-      );
+      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      c.read(goRouterProvider).go('/profile/$currentUserNpub/0');
+      await tester.pump();
+      await tester.pump();
 
       // Wait for profile to initialize
       await tester.pumpAndSettle();
@@ -69,13 +83,17 @@ void main() {
     });
 
     testWidgets('should close menu after tapping Drafts', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: const ProfileScreenScrollable(),
-          ),
-        ),
-      );
+      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      c.read(goRouterProvider).go('/profile/$currentUserNpub/0');
+      await tester.pump();
+      await tester.pump();
 
       await tester.pumpAndSettle();
 
@@ -96,13 +114,17 @@ void main() {
     });
 
     testWidgets('should show Drafts menu item only for own profile', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: const ProfileScreenScrollable(),
-          ),
-        ),
-      );
+      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      c.read(goRouterProvider).go('/profile/$currentUserNpub/0');
+      await tester.pump();
+      await tester.pump();
 
       await tester.pumpAndSettle();
 

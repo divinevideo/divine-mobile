@@ -6,9 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/video_events_providers.dart';
-import 'package:openvine/screens/pure/search_screen_pure.dart';
-import 'package:openvine/screens/profile_screen_scrollable.dart';
-import 'package:openvine/screens/hashtag_feed_screen.dart';
+import 'package:openvine/router/app_router.dart';
+import 'package:openvine/utils/nostr_encoding.dart';
 
 // Mock VideoEvents stream provider
 class MockVideoEvents extends VideoEvents {
@@ -22,6 +21,16 @@ class MockVideoEvents extends VideoEvents {
 }
 
 void main() {
+  Widget shell(ProviderContainer c) => UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+      );
+
+  String currentLocation(ProviderContainer c) {
+    final router = c.read(goRouterProvider);
+    return router.routeInformationProvider.value.uri.toString();
+  }
+
   group('SearchScreenPure Navigation', () {
     late List<VideoEvent> testVideos;
 
@@ -55,21 +64,23 @@ void main() {
 
     testWidgets('tapping user in search results navigates to profile screen',
         (WidgetTester tester) async {
+      final user123Npub = NostrEncoding.encodePublicKey('user123');
+
       // Arrange: Setup provider override with test videos
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            videoEventsProvider.overrideWith(() => MockVideoEvents(testVideos)),
-          ],
-          child: MaterialApp(
-            home: const SearchScreenPure(),
-          ),
-        ),
-      );
+      final c = ProviderContainer(overrides: [
+        videoEventsProvider.overrideWith(() => MockVideoEvents(testVideos)),
+      ]);
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      // Navigate to explore (where search is accessible)
+      c.read(goRouterProvider).push('/explore/0');
+      await tester.pump();
+      await tester.pump();
 
       // Wait for initial build and async data
       await tester.pumpAndSettle();
-      await tester.pump();
 
       // Act: Enter search query to find users
       final searchField = find.byType(TextField);
@@ -88,37 +99,33 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      // Tap on first user - THIS SHOULD FAIL because navigation is not implemented
+      // Tap on first user
       final userTile = find.byType(ListTile).first;
       await tester.tap(userTile);
       await tester.pump();
       await tester.pump();
 
-      // Assert: Verify ProfileScreenScrollable is pushed with correct pubkey
-      expect(find.byType(ProfileScreenScrollable), findsOneWidget);
-
-      final profileScreen =
-          tester.widget<ProfileScreenScrollable>(find.byType(ProfileScreenScrollable));
-      expect(profileScreen.profilePubkey, equals('user123'));
+      // Assert: Verify router navigated to profile
+      expect(currentLocation(c), contains('/profile/$user123Npub'));
     });
 
     testWidgets('tapping hashtag in search results navigates to hashtag feed',
         (WidgetTester tester) async {
       // Arrange: Setup provider override with test videos
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            videoEventsProvider.overrideWith(() => MockVideoEvents(testVideos)),
-          ],
-          child: MaterialApp(
-            home: const SearchScreenPure(),
-          ),
-        ),
-      );
+      final c = ProviderContainer(overrides: [
+        videoEventsProvider.overrideWith(() => MockVideoEvents(testVideos)),
+      ]);
+      addTearDown(c.dispose);
+
+      await tester.pumpWidget(shell(c));
+
+      // Navigate to explore (where search is accessible)
+      c.read(goRouterProvider).push('/explore/0');
+      await tester.pump();
+      await tester.pump();
 
       // Wait for initial build and async data
       await tester.pumpAndSettle();
-      await tester.pump();
 
       // Act: Enter search query to find hashtags
       final searchField = find.byType(TextField);
@@ -137,18 +144,14 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      // Tap on first hashtag - THIS SHOULD FAIL because navigation is not implemented
+      // Tap on first hashtag
       final hashtagTile = find.byType(ListTile).first;
       await tester.tap(hashtagTile);
       await tester.pump();
       await tester.pump();
 
-      // Assert: Verify HashtagFeedScreen is pushed with correct hashtag
-      expect(find.byType(HashtagFeedScreen), findsOneWidget);
-
-      final hashtagScreen =
-          tester.widget<HashtagFeedScreen>(find.byType(HashtagFeedScreen));
-      expect(hashtagScreen.hashtag, equals('flutter'));
+      // Assert: Verify router navigated to hashtag feed
+      expect(currentLocation(c), contains('/hashtag/flutter'));
     });
   });
 }
