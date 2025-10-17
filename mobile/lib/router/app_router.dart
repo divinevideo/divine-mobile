@@ -4,19 +4,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/models/video_event.dart';
 import 'package:openvine/router/app_shell.dart';
 import 'package:openvine/screens/explore_screen.dart';
-import 'package:openvine/screens/hashtag_feed_screen.dart';
+import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/home_screen_router.dart';
 import 'package:openvine/screens/notifications_screen.dart';
-import 'package:openvine/screens/profile_screen_scrollable.dart';
+import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
 import 'package:openvine/screens/settings_screen.dart';
+import 'package:openvine/screens/video_editor_screen.dart';
 
 // Navigator keys for per-tab state preservation
 final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _homeKey = GlobalKey<NavigatorState>(debugLabel: 'home');
-final _exploreKey = GlobalKey<NavigatorState>(debugLabel: 'explore');
+final _exploreGridKey = GlobalKey<NavigatorState>(debugLabel: 'explore-grid');
+final _exploreFeedKey = GlobalKey<NavigatorState>(debugLabel: 'explore-feed');
 final _notificationsKey = GlobalKey<NavigatorState>(debugLabel: 'notifications');
 final _profileKey = GlobalKey<NavigatorState>(debugLabel: 'profile');
 
@@ -70,14 +73,30 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
 
-          // EXPLORE tab subtree
+          // EXPLORE tab subtree - grid mode (no index)
           GoRoute(
-            path: '/explore/:index',
-            name: 'explore',
+            path: '/explore',
+            name: 'explore-grid',
             pageBuilder: (ctx, st) => NoTransitionPage(
               key: st.pageKey,
               child: Navigator(
-                key: _exploreKey,
+                key: _exploreGridKey,
+                onGenerateRoute: (r) => MaterialPageRoute(
+                  builder: (_) => const ExploreScreen(),
+                  settings: const RouteSettings(name: 'explore-root'),
+                ),
+              ),
+            ),
+          ),
+
+          // EXPLORE tab subtree - feed mode (with index)
+          GoRoute(
+            path: '/explore/:index',
+            name: 'explore-feed',
+            pageBuilder: (ctx, st) => NoTransitionPage(
+              key: st.pageKey,
+              child: Navigator(
+                key: _exploreFeedKey,
                 onGenerateRoute: (r) => MaterialPageRoute(
                   builder: (_) => const ExploreScreen(),
                   settings: const RouteSettings(name: 'explore-root'),
@@ -107,15 +126,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: '/profile/:npub/:index',
             name: 'profile',
             pageBuilder: (ctx, st) {
-              final npub = st.pathParameters['npub'];
-              // "me" means current user, pass null to ProfileScreenScrollable
-              final profilePubkey = (npub == 'me' || npub == null) ? null : npub;
+              // ProfileScreenRouter gets npub from pageContext (router-driven)
               return NoTransitionPage(
                 key: st.pageKey,
                 child: Navigator(
                   key: _profileKey,
                   onGenerateRoute: (r) => MaterialPageRoute(
-                    builder: (_) => ProfileScreenScrollable(profilePubkey: profilePubkey),
+                    builder: (_) => const ProfileScreenRouter(),
                     settings: const RouteSettings(name: 'profile-root'),
                   ),
                 ),
@@ -125,7 +142,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // Non-tab routes outside the shell (camera/settings/hashtag)
+      // Non-tab routes outside the shell (camera/settings/hashtag/editor)
       GoRoute(
         path: '/camera',
         builder: (_, __) => const UniversalCameraScreenPure(),
@@ -134,13 +151,34 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         builder: (_, __) => const SettingsScreen(),
       ),
-      // Hashtag as push route (accessible from explore)
+      // Hashtag as push route (accessible from explore) - grid mode
+      GoRoute(
+        path: '/hashtag/:tag',
+        name: 'hashtag-grid',
+        builder: (ctx, st) => const HashtagScreenRouter(),
+      ),
+      // Hashtag feed mode (with index)
       GoRoute(
         path: '/hashtag/:tag/:index',
-        name: 'hashtag',
+        name: 'hashtag-feed',
+        builder: (ctx, st) => const HashtagScreenRouter(),
+      ),
+      // Video editor route (requires video passed via extra)
+      GoRoute(
+        path: '/edit-video',
+        name: 'edit-video',
         builder: (ctx, st) {
-          final tag = st.pathParameters['tag'] ?? 'trending';
-          return HashtagFeedScreen(hashtag: tag);
+          final video = st.extra as VideoEvent?;
+          if (video == null) {
+            // If no video provided, show error screen
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(
+                child: Text('No video selected for editing'),
+              ),
+            );
+          }
+          return VideoEditorScreen(video: video);
         },
       ),
     ],
