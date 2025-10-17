@@ -11,12 +11,14 @@ import 'package:openvine/providers/app_providers.dart';
 void main() {
   testWidgets('VideoFeedItem does not crash when disposed during video initialization',
       (tester) async {
+    final now = DateTime.now();
     final video = VideoEvent(
       id: 'test-video-123',
       pubkey: 'test-pubkey',
       content: 'Test video',
       videoUrl: 'https://example.com/video.mp4',
-      createdAt: DateTime.now(),
+      createdAt: now.millisecondsSinceEpoch ~/ 1000,
+      timestamp: now,
       title: 'Test',
       hashtags: [],
     );
