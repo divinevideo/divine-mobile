@@ -33,8 +33,17 @@ class LastTabPosition extends Notifier<Map<RouteType, int>> {
     };
   }
 
-  /// Get last position for a route type, defaults to 0
-  int getPosition(RouteType type) => state[type] ?? 0;
+  /// Get last position for a route type
+  /// For routes with grid/feed modes (explore, search, hashtag): defaults to null (grid mode)
+  /// For routes that always have an index (home, notifications, profile): defaults to 0
+  int? getPosition(RouteType type) {
+    // For routes that have grid/feed modes, return null for grid mode by default
+    if (type == RouteType.explore || type == RouteType.search || type == RouteType.hashtag) {
+      return state[type];  // Returns null if not set, indicating grid mode
+    }
+    // For routes that always have an index (home, notifications, profile), default to 0
+    return state[type] ?? 0;
+  }
 }
 
 final lastTabPositionProvider = NotifierProvider<LastTabPosition, Map<RouteType, int>>(() {

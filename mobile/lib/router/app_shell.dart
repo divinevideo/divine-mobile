@@ -66,20 +66,20 @@ class AppShell extends ConsumerWidget {
     // Navigate to last position in that tab
     switch (tabIndex) {
       case 0:
-        context.goHome(lastIndex);
+        context.goHome(lastIndex ?? 0);  // Home always has an index
         break;
       case 1:
-        context.goExplore(lastIndex);
+        context.goExplore(lastIndex);  // Explore can be null (grid mode)
         break;
       case 2:
-        context.goNotifications(lastIndex);
+        context.goNotifications(lastIndex ?? 0);  // Notifications always has an index
         break;
       case 3:
         // For profile, use 'me' special identifier for current user
         // Navigation system will resolve 'me' to actual npub
         final ctx = ref.read(pageContextProvider).asData?.value;
         final identifier = ctx?.npub ?? 'me';
-        context.goProfile(identifier, lastIndex);
+        context.goProfile(identifier, lastIndex ?? 0);  // Profile always has an index
         break;
     }
   }

@@ -14,7 +14,7 @@ extension NavX on BuildContext {
         RouteContext(type: RouteType.home, videoIndex: index),
       ));
 
-  void goExplore([int index = 0]) => go(buildRoute(
+  void goExplore([int? index]) => go(buildRoute(
         RouteContext(type: RouteType.explore, videoIndex: index),
       ));
 
@@ -22,7 +22,7 @@ extension NavX on BuildContext {
         RouteContext(type: RouteType.notifications, videoIndex: index),
       ));
 
-  void goHashtag(String tag, [int index = 0]) => go(buildRoute(
+  void goHashtag(String tag, [int? index]) => go(buildRoute(
         RouteContext(
           type: RouteType.hashtag,
           hashtag: tag,

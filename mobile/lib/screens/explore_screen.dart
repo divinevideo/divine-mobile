@@ -46,6 +46,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
     // Listen for tab changes - no need to clear active video (router-driven now)
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return; // Safety check: don't use ref if widget is disposed
+
       ref.listenManual(
         tabVisibilityProvider,
         (prev, next) {

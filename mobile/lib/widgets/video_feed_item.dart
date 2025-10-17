@@ -534,7 +534,7 @@ class VideoOverlayActions extends ConsumerWidget {
           right: 16,
           child: GestureDetector(
             onTap: () {
-              _showBadgeExplanationModal(context, video);
+              _showBadgeExplanationModal(context, ref, video);
             },
             child: ProofModeBadgeRow(
               video: video,
@@ -812,8 +812,9 @@ class VideoOverlayActions extends ConsumerWidget {
     );
   }
 
-  void _showBadgeExplanationModal(BuildContext context, VideoEvent video) {
+  Future<void> _showBadgeExplanationModal(BuildContext context, WidgetRef ref, VideoEvent video) async {
     // Pause video before showing modal
+    bool wasPaused = false;
     try {
       final controllerParams = VideoControllerParams(
         videoId: video.id,
@@ -822,18 +823,24 @@ class VideoOverlayActions extends ConsumerWidget {
       );
       final controller = ref.read(individualVideoControllerProvider(controllerParams));
       if (controller.value.isPlaying) {
-        controller.pause();
+        await controller.pause();
+        wasPaused = true;
+        Log.info('🎬 Paused video for badge modal',
+            name: 'VideoFeedItem', category: LogCategory.ui);
       }
     } catch (e) {
       Log.error('Failed to pause video for modal: $e',
           name: 'VideoFeedItem', category: LogCategory.ui);
     }
 
-    showDialog<void>(
+    await showDialog<void>(
       context: context,
+      barrierDismissible: true,
       builder: (context) => BadgeExplanationModal(video: video),
-    ).then((_) {
-      // Resume video after modal closes if it was playing
+    );
+
+    // Resume video after modal closes if it was playing
+    if (wasPaused) {
       try {
         final controllerParams = VideoControllerParams(
           videoId: video.id,
@@ -845,12 +852,14 @@ class VideoOverlayActions extends ConsumerWidget {
 
         // Only resume if video is still active (not scrolled away)
         if (isActive && controller.value.isInitialized && !controller.value.isPlaying) {
-          controller.play();
+          await controller.play();
+          Log.info('🎬 Resumed video after badge modal closed',
+              name: 'VideoFeedItem', category: LogCategory.ui);
         }
       } catch (e) {
         Log.error('Failed to resume video after modal: $e',
             name: 'VideoFeedItem', category: LogCategory.ui);
       }
-    });
+    }
   }
 }

@@ -27,11 +27,15 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
     super.initState();
     // Subscribe to videos with this hashtag
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return; // Safety check: don't use ref if widget is disposed
+
       print('[HASHTAG] 🏷️  Subscribing to hashtag: ${widget.hashtag}');
       final hashtagService = ref.read(hashtagServiceProvider);
       hashtagService.subscribeToHashtagVideos([widget.hashtag]).then((_) {
+        if (!mounted) return; // Safety check before async callback
         print('[HASHTAG] ✅ Successfully subscribed to hashtag: ${widget.hashtag}');
       }).catchError((error) {
+        if (!mounted) return; // Safety check before async callback
         print('[HASHTAG] ❌ Failed to subscribe to hashtag ${widget.hashtag}: $error');
       });
     });

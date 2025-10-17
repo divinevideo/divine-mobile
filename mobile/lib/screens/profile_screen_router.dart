@@ -210,10 +210,14 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                 itemBuilder: (context, index) {
                   if (index >= videos.length) return const SizedBox.shrink();
 
+                  // Convert list index to URL index for VideoFeedItem
+                  // URL index 0 = grid, 1 = first video, 2 = second video, etc.
+                  final urlIndex = index + 1;
+
                   return VideoFeedItem(
                     key: ValueKey('video-${videos[index].id}'),
                     video: videos[index],
-                    index: index,
+                    index: urlIndex,
                     hasBottomNavigation: false, // Fullscreen mode, no bottom nav
                     contextTitle: ref.read(fetchUserProfileProvider(userIdHex)).value?.displayName ?? 'Profile',
                   );
