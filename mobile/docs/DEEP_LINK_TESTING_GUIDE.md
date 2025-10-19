@@ -25,6 +25,19 @@ https://divine.video/profile/npub1abc...xyz
 https://divine.video/profile/{actual-npub}
 ```
 
+### Hashtag Links
+```
+https://divine.video/hashtag/nostr
+https://divine.video/hashtag/bitcoin
+https://divine.video/hashtag/{any-hashtag}
+```
+
+### Search Links
+```
+https://divine.video/search/bitcoin
+https://divine.video/search/{search-term}
+```
+
 ## Testing Methods
 
 ### Method 1: Send Link via Message (iOS/Android)
