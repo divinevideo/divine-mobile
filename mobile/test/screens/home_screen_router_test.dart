@@ -10,6 +10,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/home_screen_router.dart';
 import 'package:openvine/state/video_feed_state.dart';
+import '../helpers/test_provider_overrides.dart';
 
 void main() {
   group('HomeScreenRouter Router-Driven Tests', () {
@@ -52,6 +53,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          ...getStandardTestOverrides(),
           homeFeedProvider.overrideWith(() => HomeFeedMock(mockVideos)),
           userProfileProvider.overrideWith(() => mockNotifier),
         ],
@@ -88,6 +90,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          ...getStandardTestOverrides(),
           homeFeedProvider.overrideWith(() => HomeFeedMock(mockVideos)),
           userProfileProvider.overrideWith(() => mockNotifier),
         ],
@@ -124,6 +127,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          ...getStandardTestOverrides(),
           homeFeedProvider.overrideWith(() => HomeFeedMock(mockVideos)),
           userProfileProvider.overrideWith(() => mockNotifier),
         ],
@@ -164,6 +168,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          ...getStandardTestOverrides(),
           homeFeedProvider.overrideWith(() => HomeFeedMock(mockVideos)),
           userProfileProvider.overrideWith(() => mockNotifier),
         ],
@@ -228,6 +233,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          ...getStandardTestOverrides(),
           homeFeedProvider.overrideWith(() => HomeFeedMock(mockVideos)),
           userProfileProvider.overrideWith(() => mockNotifier),
         ],
@@ -272,6 +278,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          ...getStandardTestOverrides(),
           homeFeedProvider.overrideWith(() => HomeFeedMock(mockVideos)),
           userProfileProvider.overrideWith(() => mockNotifier),
         ],

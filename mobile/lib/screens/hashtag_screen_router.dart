@@ -34,7 +34,7 @@ class HashtagScreenRouter extends ConsumerWidget {
     if (videoIndex == null) {
       Log.info('HashtagScreenRouter: Showing grid for #$hashtag',
           name: 'HashtagRouter', category: LogCategory.ui);
-      return HashtagFeedScreen(hashtag: hashtag);
+      return HashtagFeedScreen(hashtag: hashtag, embedded: true);
     }
 
     // Feed mode: show video at specific index

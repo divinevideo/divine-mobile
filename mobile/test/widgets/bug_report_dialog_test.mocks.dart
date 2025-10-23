@@ -102,4 +102,55 @@ class MockBugReportService extends _i1.Mock implements _i4.BugReportService {
             ),
           )
           as _i5.Future<_i3.BugReportResult>);
+
+  @override
+  _i5.Future<_i3.BugReportResult> sendBugReportToRecipient(
+    _i2.BugReportData? data,
+    String? recipientPubkey,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#sendBugReportToRecipient, [
+              data,
+              recipientPubkey,
+            ]),
+            returnValue: _i5.Future<_i3.BugReportResult>.value(
+              _FakeBugReportResult_1(
+                this,
+                Invocation.method(#sendBugReportToRecipient, [
+                  data,
+                  recipientPubkey,
+                ]),
+              ),
+            ),
+          )
+          as _i5.Future<_i3.BugReportResult>);
+
+  @override
+  _i5.Future<_i3.BugReportResult> sendBugReportViaEmail(
+    _i2.BugReportData? data,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#sendBugReportViaEmail, [data]),
+            returnValue: _i5.Future<_i3.BugReportResult>.value(
+              _FakeBugReportResult_1(
+                this,
+                Invocation.method(#sendBugReportViaEmail, [data]),
+              ),
+            ),
+          )
+          as _i5.Future<_i3.BugReportResult>);
+
+  @override
+  _i5.Future<bool> exportLogsToFile({
+    String? currentScreen,
+    String? userPubkey,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#exportLogsToFile, [], {
+              #currentScreen: currentScreen,
+              #userPubkey: userPubkey,
+            }),
+            returnValue: _i5.Future<bool>.value(false),
+          )
+          as _i5.Future<bool>);
 }

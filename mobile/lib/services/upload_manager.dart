@@ -4,7 +4,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:openvine/models/pending_upload.dart';
@@ -17,6 +19,16 @@ import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// Get platform name for logging (web-safe)
+String _getPlatformName() {
+  if (kIsWeb) return 'web';
+  try {
+    return Platform.operatingSystem;
+  } catch (_) {
+    return 'unknown';
+  }
+}
 
 /// Upload retry configuration
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
@@ -365,6 +377,15 @@ class UploadManager {
     Log.info('🆔 Upload ID: ${upload.id}',
         name: 'UploadManager', category: LogCategory.video);
 
+    // Web platform uses different upload flow (File picker -> Blob upload)
+    if (kIsWeb) {
+      Log.warning('Web platform upload not yet implemented - skipping',
+          name: 'UploadManager', category: LogCategory.video);
+      await _handleUploadFailure(upload,
+          Exception('Web platform uploads not yet implemented'));
+      return;
+    }
+
     final startTime = DateTime.now();
     final videoFile = File(upload.localVideoPath);
 
@@ -410,10 +431,9 @@ class UploadManager {
     try {
       await AsyncUtils.retryWithBackoff(
         operation: () async {
-          // Check circuit breaker state
-          if (!_circuitBreaker.allowRequests) {
-            throw Exception('Circuit breaker is open - service unavailable');
-          }
+          // NOTE: Circuit breaker removed from upload flow - it was blocking legitimate retries
+          // Uploads already have proper retry logic with exponential backoff
+          // Users should be able to retry uploads even if previous attempts failed
 
           // Update status based on current retry count
           final currentRetry = upload.retryCount ?? 0;
@@ -441,15 +461,12 @@ class UploadManager {
 
           // Success - record metrics and complete
           await _handleUploadSuccess(upload, result);
-          _circuitBreaker.recordSuccess(upload.localVideoPath);
         },
         maxRetries: _retryConfig.maxRetries,
         baseDelay: _retryConfig.initialDelay,
         maxDelay: _retryConfig.maxDelay,
         backoffMultiplier: _retryConfig.backoffMultiplier,
         retryWhen: (error) {
-          _circuitBreaker.recordFailure(
-              upload.localVideoPath, error.toString());
           return _isRetriableError(error);
         },
         debugName: 'Upload-${upload.id}',
@@ -599,20 +616,35 @@ class UploadManager {
   Future<void> _handleUploadFailure(PendingUpload upload, dynamic error) async {
     final endTime = DateTime.now();
     final metrics = _uploadMetrics[upload.id];
-    final errorCategory = _categorizeError(error);
+
+    // Check network connectivity and categorize error
+    final connectivity = await _checkNetworkConnectivity();
+    final errorCategory = await _categorizeError(error);
+    final userMessage = _getUserFriendlyErrorMessage(errorCategory, connectivity);
 
     Log.error('Upload failed for ${upload.id}: $error',
         name: 'UploadManager', category: LogCategory.video);
     Log.error('Error category: $errorCategory',
         name: 'UploadManager', category: LogCategory.video);
+    Log.error('Network: ${_getNetworkTypeString(connectivity)}',
+        name: 'UploadManager', category: LogCategory.video);
+    Log.error('User message: $userMessage',
+        name: 'UploadManager', category: LogCategory.video);
 
-    // Send comprehensive crash report to Crashlytics
-    await _sendUploadFailureCrashReport(upload, error, errorCategory, metrics);
+    // Send comprehensive crash report to Crashlytics with network state
+    await _sendUploadFailureCrashReport(
+      upload,
+      error,
+      errorCategory,
+      metrics,
+      connectivity,
+    );
 
+    // Store user-friendly error message instead of raw exception
     await _updateUpload(
       upload.copyWith(
         status: UploadStatus.failed,
-        errorMessage: error.toString(),
+        errorMessage: userMessage,
         retryCount: upload.retryCount ?? 0,
       ),
     );
@@ -670,22 +702,153 @@ class UploadManager {
     return true;
   }
 
-  /// Categorize error for monitoring
-  String _categorizeError(dynamic error) {
+  /// Check network connectivity status
+  Future<ConnectivityResult> _checkNetworkConnectivity() async {
+    try {
+      final connectivity = Connectivity();
+      final result = await connectivity.checkConnectivity();
+
+      // connectivity_plus 7.x returns List<ConnectivityResult>
+      // Return first non-none result, or none if all are none
+      if (result is List) {
+        final resultList = result.cast<ConnectivityResult>();
+        // Prefer WiFi > Cellular > Ethernet > VPN > None
+        if (resultList.contains(ConnectivityResult.wifi)) {
+          return ConnectivityResult.wifi;
+        }
+        if (resultList.contains(ConnectivityResult.mobile)) {
+          return ConnectivityResult.mobile;
+        }
+        if (resultList.contains(ConnectivityResult.ethernet)) {
+          return ConnectivityResult.ethernet;
+        }
+        if (resultList.contains(ConnectivityResult.vpn)) {
+          return ConnectivityResult.vpn;
+        }
+        return ConnectivityResult.none;
+      }
+      // Older versions return single ConnectivityResult
+      return result as ConnectivityResult;
+    } catch (e) {
+      Log.error('Failed to check network connectivity: $e',
+          name: 'UploadManager', category: LogCategory.video);
+      return ConnectivityResult.none;
+    }
+  }
+
+  /// Get human-readable network type
+  String _getNetworkTypeString(ConnectivityResult connectivity) {
+    switch (connectivity) {
+      case ConnectivityResult.wifi:
+        return 'WiFi';
+      case ConnectivityResult.mobile:
+        return 'Cellular';
+      case ConnectivityResult.ethernet:
+        return 'Ethernet';
+      case ConnectivityResult.vpn:
+        return 'VPN';
+      case ConnectivityResult.none:
+        return 'Offline';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  /// Categorize error for monitoring with network-aware detection
+  Future<String> _categorizeError(dynamic error) async {
     final errorStr = error.toString().toLowerCase();
 
-    if (errorStr.contains('timeout')) return 'TIMEOUT';
-    if (errorStr.contains('network') || errorStr.contains('connection')) {
-      return 'NETWORK';
+    // Check network connectivity for better categorization
+    final connectivity = await _checkNetworkConnectivity();
+
+    // No internet connection
+    if (connectivity == ConnectivityResult.none) {
+      return 'NO_INTERNET';
     }
+
+    // Network-related errors
+    if (errorStr.contains('timeout')) {
+      // On cellular, timeout likely means slow connection
+      if (connectivity == ConnectivityResult.mobile) {
+        return 'SLOW_CONNECTION';
+      }
+      return 'TIMEOUT';
+    }
+
+    if (errorStr.contains('network') || errorStr.contains('connection')) {
+      return 'NETWORK_ERROR';
+    }
+
+    if (errorStr.contains('host') || errorStr.contains('dns')) {
+      return 'DNS_ERROR';
+    }
+
+    // File errors
     if (errorStr.contains('file not found')) return 'FILE_NOT_FOUND';
-    if (errorStr.contains('memory')) return 'MEMORY';
-    if (errorStr.contains('permission')) return 'PERMISSION';
-    if (errorStr.contains('auth')) return 'AUTHENTICATION';
-    if (errorStr.contains('5')) return 'SERVER_ERROR';
+    if (errorStr.contains('memory')) return 'OUT_OF_MEMORY';
+    if (errorStr.contains('permission')) return 'PERMISSION_DENIED';
+
+    // Authentication errors
+    if (errorStr.contains('auth') || errorStr.contains('unauthorized')) {
+      return 'AUTHENTICATION';
+    }
+
+    // Server errors
+    if (errorStr.contains('5') || errorStr.contains('server error')) {
+      return 'SERVER_ERROR';
+    }
+
+    // Client errors
+    if (errorStr.contains('413')) return 'FILE_TOO_LARGE';
     if (errorStr.contains('4')) return 'CLIENT_ERROR';
 
     return 'UNKNOWN';
+  }
+
+  /// Get user-friendly error message based on category
+  String _getUserFriendlyErrorMessage(
+    String category,
+    ConnectivityResult connectivity,
+  ) {
+    switch (category) {
+      case 'NO_INTERNET':
+        return 'No internet connection. Check your WiFi or cellular data and try again.';
+
+      case 'SLOW_CONNECTION':
+        return 'Upload timed out on cellular data. Try connecting to WiFi for faster uploads.';
+
+      case 'TIMEOUT':
+        return 'Upload timed out. Your connection might be slow. Try again or connect to WiFi.';
+
+      case 'NETWORK_ERROR':
+      case 'DNS_ERROR':
+        final networkType = _getNetworkTypeString(connectivity);
+        return 'Network error on $networkType. Check your connection and try again.';
+
+      case 'FILE_NOT_FOUND':
+        return 'Video file not found. Please record the video again.';
+
+      case 'FILE_TOO_LARGE':
+        return 'Video is too large to upload. Try recording a shorter video.';
+
+      case 'OUT_OF_MEMORY':
+        return 'Not enough memory to upload. Close other apps and try again.';
+
+      case 'PERMISSION_DENIED':
+        return 'Permission denied. Check app permissions in Settings.';
+
+      case 'AUTHENTICATION':
+        return 'Authentication failed. Please sign in again.';
+
+      case 'SERVER_ERROR':
+        return 'Upload server is having issues. Please try again later.';
+
+      case 'CLIENT_ERROR':
+        return 'Upload request failed. Please try again.';
+
+      default:
+        return 'Upload failed. Please check your connection and try again.';
+    }
   }
 
   /// Update upload progress
@@ -1290,6 +1453,7 @@ class UploadManager {
     dynamic error,
     String errorCategory,
     UploadMetrics? metrics,
+    ConnectivityResult connectivity,
   ) async {
     try {
       final crashReporting = CrashReportingService.instance;
@@ -1309,7 +1473,13 @@ class UploadManager {
         'cdn_url': upload.cdnUrl,
         'upload_progress': upload.uploadProgress,
         'created_at': upload.createdAt.toIso8601String(),
-        'file_exists': File(upload.localVideoPath).existsSync(),
+        'file_exists': kIsWeb ? false : File(upload.localVideoPath).existsSync(),
+        // Network connectivity information
+        'network_type': _getNetworkTypeString(connectivity),
+        'network_status': connectivity.toString(),
+        'is_offline': connectivity == ConnectivityResult.none,
+        'is_cellular': connectivity == ConnectivityResult.mobile,
+        'is_wifi': connectivity == ConnectivityResult.wifi,
       };
 
       // Add metrics if available
@@ -1328,7 +1498,7 @@ class UploadManager {
         'total_uploads': _uploadsBox?.length ?? 0,
         'active_uploads': _progressSubscriptions.length,
         'queued_uploads': _pendingSaveQueue.length,
-        'platform': Platform.operatingSystem,
+        'platform': _getPlatformName(),
         'is_initialized': _isInitialized,
         'timestamp': DateTime.now().toIso8601String(),
       });
@@ -1345,13 +1515,15 @@ class UploadManager {
       final stackTrace = StackTrace.current;
 
       // Create detailed error message
+      final fileExists = kIsWeb ? 'N/A (web)' : '${File(upload.localVideoPath).existsSync()}';
       final detailedError = '''
 Upload Failure Report:
 - Upload ID: ${upload.id}
 - Error Category: $errorCategory
 - Error: $error
+- Network: ${_getNetworkTypeString(connectivity)} (${connectivity == ConnectivityResult.none ? 'OFFLINE' : 'ONLINE'})
 - File: ${upload.localVideoPath}
-- File Exists: ${File(upload.localVideoPath).existsSync()}
+- File Exists: $fileExists
 - Upload Status: ${upload.status}
 - Retry Count: ${upload.retryCount ?? 0}
 - Can Retry: ${upload.canRetry}
@@ -1391,7 +1563,7 @@ ${metrics != null ? '- File Size: ${metrics.fileSizeMB} MB\n- Duration: ${metric
 
       // Set context for the crash report
       await crashReporting.setCustomKey('init_failure_error', error.toString());
-      await crashReporting.setCustomKey('init_failure_platform', Platform.operatingSystem);
+      await crashReporting.setCustomKey('init_failure_platform', _getPlatformName());
       await crashReporting.setCustomKey('init_failure_timestamp', DateTime.now().toIso8601String());
       await crashReporting.setCustomKey('init_failure_retry_attempts', 'multiple');
 
@@ -1399,7 +1571,7 @@ ${metrics != null ? '- File Size: ${metrics.fileSizeMB} MB\n- Duration: ${metric
       final detailedError = '''
 UploadManager Initialization Failure:
 - Error: $error
-- Platform: ${Platform.operatingSystem}
+- Platform: ${_getPlatformName()}
 - Timestamp: ${DateTime.now().toIso8601String()}
 - Context: Failed after all retry attempts in UploadInitializationHelper
 ''';
@@ -1440,8 +1612,8 @@ UploadManager Initialization Failure:
         'timeout_network_timeout_minutes': _retryConfig.networkTimeout.inMinutes,
         'timeout_retry_count': upload.retryCount ?? 0,
         'timeout_upload_status': upload.status.toString(),
-        'timeout_platform': Platform.operatingSystem,
-        'timeout_file_exists': File(upload.localVideoPath).existsSync(),
+        'timeout_platform': _getPlatformName(),
+        'timeout_file_exists': kIsWeb ? false : File(upload.localVideoPath).existsSync(),
         'timeout_timestamp': DateTime.now().toIso8601String(),
       };
 
@@ -1451,16 +1623,17 @@ UploadManager Initialization Failure:
       }
 
       // Create detailed error message
+      final fileExists = kIsWeb ? 'N/A (web)' : '${File(upload.localVideoPath).existsSync()}';
       final detailedError = '''
 Upload Timeout Failure:
 - Upload ID: ${upload.id}
 - File: ${upload.localVideoPath}
-- File Exists: ${File(upload.localVideoPath).existsSync()}
+- File Exists: $fileExists
 - Upload Target: blossomServer
 - Timeout Duration: ${_retryConfig.networkTimeout.inMinutes} minutes
 - Retry Count: ${upload.retryCount ?? 0}
 - Upload Status: ${upload.status}
-- Platform: ${Platform.operatingSystem}
+- Platform: ${_getPlatformName()}
 - Timestamp: ${DateTime.now().toIso8601String()}
 ''';
 

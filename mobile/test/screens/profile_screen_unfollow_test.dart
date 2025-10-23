@@ -15,6 +15,7 @@ import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/utils/nostr_encoding.dart';
 
 import 'profile_screen_unfollow_test.mocks.dart';
+import '../helpers/test_provider_overrides.dart';
 
 @GenerateMocks([
   INostrService,
@@ -55,6 +56,7 @@ void main() {
       when(mockSocialService.unfollowUser(profilePubkey)).thenAnswer((_) async {});
 
       final c = ProviderContainer(overrides: [
+          ...getStandardTestOverrides(),
         socialServiceProvider.overrideWithValue(mockSocialService),
         authServiceProvider.overrideWithValue(mockAuthService),
         nostrServiceProvider.overrideWithValue(mockNostrService),
@@ -95,6 +97,7 @@ void main() {
       when(mockSocialService.followUser(profilePubkey)).thenAnswer((_) async {});
 
       final c = ProviderContainer(overrides: [
+          ...getStandardTestOverrides(),
         socialServiceProvider.overrideWithValue(mockSocialService),
         authServiceProvider.overrideWithValue(mockAuthService),
         nostrServiceProvider.overrideWithValue(mockNostrService),
@@ -141,6 +144,7 @@ void main() {
       });
 
       final c = ProviderContainer(overrides: [
+          ...getStandardTestOverrides(),
         socialServiceProvider.overrideWithValue(mockSocialService),
         authServiceProvider.overrideWithValue(mockAuthService),
         nostrServiceProvider.overrideWithValue(mockNostrService),
@@ -182,6 +186,7 @@ void main() {
           .thenThrow(Exception('Network error'));
 
       final c = ProviderContainer(overrides: [
+          ...getStandardTestOverrides(),
         socialServiceProvider.overrideWithValue(mockSocialService),
         authServiceProvider.overrideWithValue(mockAuthService),
         nostrServiceProvider.overrideWithValue(mockNostrService),
@@ -217,6 +222,7 @@ void main() {
       when(mockSocialService.isFollowing(profilePubkey)).thenReturn(false);
 
       final c = ProviderContainer(overrides: [
+          ...getStandardTestOverrides(),
         socialServiceProvider.overrideWithValue(mockSocialService),
         authServiceProvider.overrideWithValue(mockAuthService),
         nostrServiceProvider.overrideWithValue(mockNostrService),

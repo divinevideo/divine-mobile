@@ -12,6 +12,7 @@ import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/theme/vine_theme.dart';
+import '../helpers/test_provider_overrides.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -548,8 +549,8 @@ Widget _buildTestWidget(
   Widget child,
 ) {
   return MaterialApp(
-    home: ProviderScope(
-      overrides: [
+    home: testProviderScope(
+      additionalOverrides: [
         userProfileServiceProvider.overrideWithValue(userProfileService),
         authServiceProvider.overrideWithValue(authService),
       ],

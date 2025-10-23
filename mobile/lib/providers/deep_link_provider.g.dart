@@ -9,17 +9,20 @@ part of 'deep_link_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 /// Provider for the deep link service
+/// Note: Does NOT auto-initialize - caller must call initialize() after setting up listeners
 
 @ProviderFor(deepLinkService)
 const deepLinkServiceProvider = DeepLinkServiceProvider._();
 
 /// Provider for the deep link service
+/// Note: Does NOT auto-initialize - caller must call initialize() after setting up listeners
 
 final class DeepLinkServiceProvider
     extends
         $FunctionalProvider<DeepLinkService, DeepLinkService, DeepLinkService>
     with $Provider<DeepLinkService> {
   /// Provider for the deep link service
+  /// Note: Does NOT auto-initialize - caller must call initialize() after setting up listeners
   const DeepLinkServiceProvider._()
     : super(
         from: null,
@@ -53,7 +56,7 @@ final class DeepLinkServiceProvider
   }
 }
 
-String _$deepLinkServiceHash() => r'423a0c9e55de8f5acc1f599dba9892d0a874859a';
+String _$deepLinkServiceHash() => r'e2448d07877558d988a553741b688eeeaaa32098';
 
 /// Stream provider for incoming deep links
 

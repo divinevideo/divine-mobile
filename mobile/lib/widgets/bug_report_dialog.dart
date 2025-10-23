@@ -1,5 +1,5 @@
-// ABOUTME: Dialog widget for submitting bug reports with encrypted NIP-17 messaging
-// ABOUTME: Collects user description, gathers diagnostics, and sends via encrypted message
+// ABOUTME: Dialog widget for submitting bug reports via email
+// ABOUTME: Collects user description, gathers diagnostics, and opens pre-filled email
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -64,13 +64,8 @@ class _BugReportDialogState extends State<BugReportDialog> {
         userPubkey: widget.userPubkey,
       );
 
-      // Send bug report (to self if test mode, otherwise to support)
-      final result = widget.testMode && widget.userPubkey != null
-          ? await widget.bugReportService.sendBugReportToRecipient(
-              reportData,
-              widget.userPubkey!, // Send to yourself for testing
-            )
-          : await widget.bugReportService.sendBugReport(reportData);
+      // Send bug report via email
+      final result = await widget.bugReportService.sendBugReportViaEmail(reportData);
 
       if (!_isDisposed && mounted) {
         setState(() {
@@ -78,15 +73,15 @@ class _BugReportDialogState extends State<BugReportDialog> {
           _isSuccess = result.success;
           if (result.success) {
             _resultMessage =
-                'Bug report sent successfully! Thank you for helping improve the app.';
+                'File downloaded/ready! Opening email to contact@divine.video - please attach the file.';
           } else {
-            _resultMessage = 'Bug report failed to send: ${result.error}';
+            _resultMessage = 'Failed to create bug report: ${result.error}';
           }
         });
 
         // Close dialog after delay if successful
         if (result.success) {
-          _closeTimer = Timer(const Duration(seconds: 2), () {
+          _closeTimer = Timer(const Duration(seconds: 3), () {
             if (!_isDisposed && mounted) {
               Navigator.of(context).pop();
             }

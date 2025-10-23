@@ -10,6 +10,7 @@ import 'package:openvine/providers/social_providers.dart' as social;
 import 'package:openvine/screens/video_feed_screen.dart';
 import 'package:openvine/state/social_state.dart';
 import 'package:openvine/state/video_feed_state.dart';
+import '../helpers/test_provider_overrides.dart';
 
 void main() {
   group('Home Feed Display Bug', () {
@@ -44,6 +45,7 @@ void main() {
         // Create a container with mocked providers
         final container = ProviderContainer(
           overrides: [
+          ...getStandardTestOverrides(),
             // Mock social provider with following list
             social.socialProvider.overrideWith(() {
               return _TestSocialNotifier(SocialState(
@@ -107,6 +109,7 @@ void main() {
       (tester) async {
         final container = ProviderContainer(
           overrides: [
+          ...getStandardTestOverrides(),
             // Mock social provider with NO following list
             social.socialProvider.overrideWith(() {
               return _TestSocialNotifier(const SocialState(

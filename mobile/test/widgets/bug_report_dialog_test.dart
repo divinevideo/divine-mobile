@@ -11,6 +11,7 @@ import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 
 import 'bug_report_dialog_test.mocks.dart';
+import '../helpers/test_provider_overrides.dart';
 
 @GenerateMocks([BugReportService])
 void main() {
@@ -35,7 +36,7 @@ void main() {
 
       // Verify description field
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Describe the issue...'), findsOneWidget);
+      expect(find.text('Describe the issue (optional)...'), findsOneWidget);
     });
 
     testWidgets('should have Send and Cancel buttons', (tester) async {
@@ -51,7 +52,7 @@ void main() {
       expect(find.text('Cancel'), findsOneWidget);
     });
 
-    testWidgets('should disable Send button when description is empty',
+    testWidgets('should allow Send button even when description is empty',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -64,14 +65,14 @@ void main() {
       final sendButton = find.text('Send Report');
       expect(sendButton, findsOneWidget);
 
-      // Button should be disabled when empty
+      // Button should be enabled even when empty (diagnostic info is more important)
       final button = tester.widget<ElevatedButton>(
         find.ancestor(
           of: sendButton,
           matching: find.byType(ElevatedButton),
         ),
       );
-      expect(button.onPressed, isNull);
+      expect(button.onPressed, isNotNull);
     });
 
     testWidgets('should enable Send button when description is not empty',
@@ -118,10 +119,11 @@ void main() {
         additionalContext: anyNamed('additionalContext'),
       )).thenAnswer((_) async => testReportData);
 
-      when(mockBugReportService.sendBugReport(any)).thenAnswer(
-        (_) async => BugReportResult.createSuccess(
+      when(mockBugReportService.sendBugReportViaEmail(any)).thenAnswer(
+        (_) async => BugReportResult(
+          success: true,
           reportId: 'test-123',
-          messageEventId: 'test-event-id',
+          timestamp: DateTime.now(),
         ),
       );
 
@@ -149,7 +151,7 @@ void main() {
         additionalContext: anyNamed('additionalContext'),
       )).called(1);
 
-      verify(mockBugReportService.sendBugReport(any)).called(1);
+      verify(mockBugReportService.sendBugReportViaEmail(any)).called(1);
     });
 
     testWidgets('should show loading indicator while submitting',
@@ -173,7 +175,7 @@ void main() {
         );
       });
 
-      when(mockBugReportService.sendBugReport(any)).thenAnswer((_) async {
+      when(mockBugReportService.sendBugReportViaEmail(any)).thenAnswer((_) async {
         await Future.delayed(const Duration(milliseconds: 100));
         return BugReportResult.createSuccess(
           reportId: 'test-123',
@@ -218,10 +220,11 @@ void main() {
             errorCounts: {},
           ));
 
-      when(mockBugReportService.sendBugReport(any)).thenAnswer(
-        (_) async => BugReportResult.createSuccess(
+      when(mockBugReportService.sendBugReportViaEmail(any)).thenAnswer(
+        (_) async => BugReportResult(
+          success: true,
           reportId: 'test-123',
-          messageEventId: 'test-event-id',
+          timestamp: DateTime.now(),
         ),
       );
 
@@ -238,8 +241,8 @@ void main() {
       await tester.tap(find.text('Send Report'));
       await tester.pumpAndSettle();
 
-      // Should show success message
-      expect(find.textContaining('successfully'), findsOneWidget);
+      // Should show success message with email instructions
+      expect(find.textContaining('Opening email to contact@divine.video'), findsOneWidget);
     });
 
     testWidgets('should show error message on failed submission',
@@ -259,9 +262,9 @@ void main() {
             errorCounts: {},
           ));
 
-      when(mockBugReportService.sendBugReport(any)).thenAnswer(
+      when(mockBugReportService.sendBugReportViaEmail(any)).thenAnswer(
         (_) async => BugReportResult.failure(
-          'Network error',
+          'Could not create file',
           reportId: 'test-123',
         ),
       );
@@ -280,7 +283,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Should show error message
-      expect(find.textContaining('failed'), findsOneWidget);
+      expect(find.textContaining('Failed to create bug report'), findsOneWidget);
     });
 
     testWidgets('should close dialog on Cancel', (tester) async {

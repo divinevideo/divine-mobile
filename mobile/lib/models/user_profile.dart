@@ -81,6 +81,36 @@ class UserProfile {
             DateTime.fromMillisecondsSinceEpoch(json['created_at'] as int),
         eventId: json['event_id'] as String,
       );
+
+  /// Create profile from Drift database row
+  factory UserProfile.fromDrift(dynamic row) {
+    // Parse rawData from JSON string if present
+    Map<String, dynamic> parsedRawData = {};
+    if (row.rawData != null && row.rawData is String) {
+      try {
+        parsedRawData = jsonDecode(row.rawData as String) as Map<String, dynamic>;
+      } catch (e) {
+        // If JSON parsing fails, use empty map
+        parsedRawData = {};
+      }
+    }
+
+    return UserProfile(
+      pubkey: row.pubkey as String,
+      name: row.name as String?,
+      displayName: row.displayName as String?,
+      about: row.about as String?,
+      picture: row.picture as String?,
+      banner: row.banner as String?,
+      website: row.website as String?,
+      nip05: row.nip05 as String?,
+      lud16: row.lud16 as String?,
+      lud06: row.lud06 as String?,
+      rawData: parsedRawData,
+      createdAt: row.createdAt as DateTime,
+      eventId: row.eventId as String,
+    );
+  }
   @HiveField(0)
   final String pubkey;
   @HiveField(1)

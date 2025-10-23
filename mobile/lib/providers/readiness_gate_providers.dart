@@ -6,6 +6,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 part 'readiness_gate_providers.g.dart';
 
@@ -22,8 +23,14 @@ bool appReady(Ref ref) {
   final isForegrounded = ref.watch(appForegroundProvider);
   final isNostrReady = ref.watch(nostrReadyProvider);
 
+  final ready = isForegrounded && isNostrReady;
+
+  // Debug logging to track gate state changes
+  Log.debug('[GATE] 🚦 appReady: $ready (foreground: $isForegrounded, nostr: $isNostrReady)',
+      name: 'ReadinessGates', category: LogCategory.system);
+
   // App is ready when both foreground and Nostr are ready
-  return isForegrounded && isNostrReady;
+  return ready;
 }
 
 /// Provider that checks if the discovery/explore tab is currently active

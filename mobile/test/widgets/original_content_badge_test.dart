@@ -7,6 +7,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/widgets/proofmode_badge.dart';
 import 'package:openvine/widgets/proofmode_badge_row.dart';
+import '../helpers/test_provider_overrides.dart';
 
 void main() {
   group('Original Content Badge Tests (TDD)', () {

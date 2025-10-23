@@ -88,7 +88,9 @@ void main() {
       expect(sanitized.userDescription, contains('[REDACTED]'));
     });
 
-    test('should sanitize hex private keys from logs', () {
+    test('should preserve hex strings (event IDs and pubkeys) from logs', () {
+      // Hex strings could be public event IDs or pubkeys, so they should NOT be redacted
+      // Private keys should be in nsec format (which IS redacted)
       final input = BugReportData(
         reportId: 'test-123',
         timestamp: DateTime.now(),
@@ -98,15 +100,20 @@ void main() {
         recentLogs: [],
         errorCounts: {},
         additionalContext: {
-          'privateKey':
+          'eventId':
               '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          'pubkeyHex':
+              'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
         },
       );
 
       final sanitized = service.sanitizeSensitiveData(input);
 
+      // Hex event IDs and pubkeys should be preserved for debugging
       expect(sanitized.additionalContext.toString(),
-          isNot(contains('0123456789abcdef')));
+          contains('0123456789abcdef'));
+      expect(sanitized.additionalContext.toString(),
+          contains('fedcba9876543210'));
     });
 
     test('should sanitize password patterns', () {

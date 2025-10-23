@@ -673,6 +673,14 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
           as _i7.Stream<_i10.Event>);
 
   @override
+  _i7.Future<Map<String, dynamic>?> getRelayStats() =>
+      (super.noSuchMethod(
+            Invocation.method(#getRelayStats, []),
+            returnValue: _i7.Future<Map<String, dynamic>?>.value(),
+          )
+          as _i7.Future<Map<String, dynamic>?>);
+
+  @override
   _i7.Future<void> dispose() =>
       (super.noSuchMethod(
             Invocation.method(#dispose, []),

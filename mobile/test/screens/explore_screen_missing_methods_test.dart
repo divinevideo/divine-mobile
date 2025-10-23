@@ -8,6 +8,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/explore_screen.dart';
 import '../providers/test_infrastructure.dart';
+import '../helpers/test_provider_overrides.dart';
 
 // Mock class for VideoEvents provider
 class VideoEventsMock extends VideoEvents {
@@ -35,6 +36,7 @@ void main() {
       testWidgets('ExploreScreen should have onScreenHidden method that works correctly', (tester) async {
         final testContainer = ProviderContainer(
           overrides: [
+          ...getStandardTestOverrides(),
             videoEventsProvider.overrideWith(() => VideoEventsMock()),
           ],
         );
@@ -63,6 +65,7 @@ void main() {
       testWidgets('ExploreScreen should have onScreenVisible method that works correctly', (tester) async {
         final testContainer = ProviderContainer(
           overrides: [
+          ...getStandardTestOverrides(),
             videoEventsProvider.overrideWith(() => VideoEventsMock()),
           ],
         );
@@ -91,6 +94,7 @@ void main() {
       testWidgets('ExploreScreen should have exitFeedMode method that works correctly', (tester) async {
         final testContainer = ProviderContainer(
           overrides: [
+          ...getStandardTestOverrides(),
             videoEventsProvider.overrideWith(() => VideoEventsMock()),
           ],
         );
@@ -119,6 +123,7 @@ void main() {
       testWidgets('ExploreScreen should have showHashtagVideos method that works correctly', (tester) async {
         final testContainer = ProviderContainer(
           overrides: [
+          ...getStandardTestOverrides(),
             videoEventsProvider.overrideWith(() => VideoEventsMock()),
           ],
         );
@@ -147,6 +152,7 @@ void main() {
       testWidgets('ExploreScreen should have isInFeedMode getter that works correctly', (tester) async {
         final testContainer = ProviderContainer(
           overrides: [
+          ...getStandardTestOverrides(),
             videoEventsProvider.overrideWith(() => VideoEventsMock()),
           ],
         );
@@ -175,6 +181,7 @@ void main() {
       testWidgets('ExploreScreen should have playSpecificVideo method with correct signature', (tester) async {
         final testContainer = ProviderContainer(
           overrides: [
+          ...getStandardTestOverrides(),
             videoEventsProvider.overrideWith(() => VideoEventsMock()),
           ],
         );

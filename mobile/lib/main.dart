@@ -14,6 +14,8 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/deep_link_service.dart';
+import 'package:openvine/services/migration_service.dart';
+import 'package:openvine/database/app_database.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/route_normalization_provider.dart';
 import 'package:openvine/services/logging_config_service.dart';
@@ -225,6 +227,23 @@ Future<void> _startOpenVineApp() async {
   await Hive.initFlutter();
   StartupPerformanceService.instance.completePhase('hive_storage');
 
+  // Run Hive → Drift migration if needed
+  StartupPerformanceService.instance.startPhase('data_migration');
+  try {
+    final db = AppDatabase();
+    final migrationService = MigrationService(db);
+    await migrationService.runMigrations();
+    Log.info('[MIGRATION] ✅ Data migration complete',
+        name: 'Main', category: LogCategory.system);
+  } catch (e, stack) {
+    // Don't block app startup on migration failures
+    Log.error('[MIGRATION] ❌ Migration failed (non-critical): $e',
+        name: 'Main', category: LogCategory.system);
+    Log.verbose('[MIGRATION] Stack: $stack',
+        name: 'Main', category: LogCategory.system);
+  }
+  StartupPerformanceService.instance.completePhase('data_migration');
+
   // Initialize SharedPreferences for feature flags
   StartupPerformanceService.instance.startPhase('shared_preferences');
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -266,25 +285,91 @@ class DivineApp extends ConsumerStatefulWidget {
 }
 
 class _DivineAppState extends ConsumerState<DivineApp> {
+  bool _servicesInitialized = false;
+
   @override
   void initState() {
     super.initState();
     // Trigger service initialization on first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeServices();
-      _setupDeepLinkListener();
+      if (!mounted) return; // Safety check: don't access widget if disposed
+      if (!_servicesInitialized) {
+        _servicesInitialized = true;
+        _initializeServices();
+        _initializeDeepLinkService();
+      }
     });
   }
 
-  void _setupDeepLinkListener() {
-    Log.info('🔗 Setting up deep link listener...',
+  void _initializeDeepLinkService() {
+    Log.info('🔗 Initializing deep link service...',
         name: 'DeepLinkHandler', category: LogCategory.ui);
 
-    // Get service reference (don't initialize yet)
+    // Initialize the deep link service
     final service = ref.read(deepLinkServiceProvider);
+    service.initialize();
 
-    // Set up listener FIRST before initializing service
-    // This ensures we don't miss the initial deep link event
+    Log.info('✅ Deep link service initialized',
+        name: 'DeepLinkHandler', category: LogCategory.ui);
+  }
+
+  Future<void> _initializeServices() async {
+    try {
+      Log.info('[INIT] Starting service initialization...',
+          name: 'Main', category: LogCategory.system);
+
+      // Initialize key manager first (needed for NIP-17 bug reports and auth)
+      await ref.read(nostrKeyManagerProvider).initialize();
+      Log.info('[INIT] ✅ NostrKeyManager initialized',
+          name: 'Main', category: LogCategory.system);
+
+      // Initialize auth service
+      await ref.read(authServiceProvider).initialize();
+      Log.info('[INIT] ✅ AuthService initialized',
+          name: 'Main', category: LogCategory.system);
+
+      // Initialize Nostr service - THIS IS THE CRITICAL MISSING PIECE
+      await ref.read(nostrServiceProvider).initialize();
+      Log.info('[INIT] ✅ NostrService initialized',
+          name: 'Main', category: LogCategory.system);
+
+      // Initialize other services
+      await ref.read(seenVideosServiceProvider).initialize();
+      Log.info('[INIT] ✅ SeenVideosService initialized',
+          name: 'Main', category: LogCategory.system);
+
+      await ref.read(uploadManagerProvider).initialize();
+      Log.info('[INIT] ✅ UploadManager initialized',
+          name: 'Main', category: LogCategory.system);
+
+      // Initialize social provider in background
+      Future.microtask(() async {
+        try {
+          await ref.read(social_providers.socialProvider.notifier).initialize();
+          Log.info('[INIT] ✅ SocialProvider initialized (background)',
+              name: 'Main', category: LogCategory.system);
+        } catch (e) {
+          Log.warning('[INIT] SocialProvider failed (non-critical): $e',
+              name: 'Main', category: LogCategory.system);
+        }
+      });
+
+      Log.info('[INIT] ✅ All critical services initialized',
+          name: 'Main', category: LogCategory.system);
+    } catch (e, stack) {
+      Log.error('[INIT] Service initialization failed: $e',
+          name: 'Main', category: LogCategory.system);
+      Log.verbose('[INIT] Stack: $stack',
+          name: 'Main', category: LogCategory.system);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Activate route normalization at app root
+    ref.watch(routeNormalizationProvider);
+
+    // Set up deep link listener (must be in build method per Riverpod rules)
     ref.listen<AsyncValue<DeepLink>>(deepLinksProvider, (previous, next) {
       Log.info('🔗 Deep link event received - AsyncValue state: ${next.runtimeType}',
           name: 'DeepLinkHandler', category: LogCategory.ui);
@@ -395,71 +480,6 @@ class _DivineAppState extends ConsumerState<DivineApp> {
         },
       );
     });
-
-    Log.info('✅ Deep link listener setup complete, now initializing service',
-        name: 'DeepLinkHandler', category: LogCategory.ui);
-
-    // NOW initialize the service - listener is ready to receive events
-    service.initialize();
-    Log.info('✅ Deep link service initialized',
-        name: 'DeepLinkHandler', category: LogCategory.ui);
-  }
-
-  Future<void> _initializeServices() async {
-    try {
-      Log.info('[INIT] Starting service initialization...',
-          name: 'Main', category: LogCategory.system);
-
-      // Initialize key manager first (needed for NIP-17 bug reports and auth)
-      await ref.read(nostrKeyManagerProvider).initialize();
-      Log.info('[INIT] ✅ NostrKeyManager initialized',
-          name: 'Main', category: LogCategory.system);
-
-      // Initialize auth service
-      await ref.read(authServiceProvider).initialize();
-      Log.info('[INIT] ✅ AuthService initialized',
-          name: 'Main', category: LogCategory.system);
-
-      // Initialize Nostr service - THIS IS THE CRITICAL MISSING PIECE
-      await ref.read(nostrServiceProvider).initialize();
-      Log.info('[INIT] ✅ NostrService initialized',
-          name: 'Main', category: LogCategory.system);
-
-      // Initialize other services
-      await ref.read(seenVideosServiceProvider).initialize();
-      Log.info('[INIT] ✅ SeenVideosService initialized',
-          name: 'Main', category: LogCategory.system);
-
-      await ref.read(uploadManagerProvider).initialize();
-      Log.info('[INIT] ✅ UploadManager initialized',
-          name: 'Main', category: LogCategory.system);
-
-      // Initialize social provider in background
-      Future.microtask(() async {
-        try {
-          await ref.read(social_providers.socialProvider.notifier).initialize();
-          Log.info('[INIT] ✅ SocialProvider initialized (background)',
-              name: 'Main', category: LogCategory.system);
-        } catch (e) {
-          Log.warning('[INIT] SocialProvider failed (non-critical): $e',
-              name: 'Main', category: LogCategory.system);
-        }
-      });
-
-      Log.info('[INIT] ✅ All critical services initialized',
-          name: 'Main', category: LogCategory.system);
-    } catch (e, stack) {
-      Log.error('[INIT] Service initialization failed: $e',
-          name: 'Main', category: LogCategory.system);
-      Log.verbose('[INIT] Stack: $stack',
-          name: 'Main', category: LogCategory.system);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Activate route normalization at app root
-    ref.watch(routeNormalizationProvider);
 
     const bool crashProbe = bool.fromEnvironment('CRASHLYTICS_PROBE', defaultValue: false);
 
@@ -1144,6 +1164,7 @@ class _ResponsiveWrapperState extends State<ResponsiveWrapper> {
     // Force rebuilds on window resize for web
     if (kIsWeb) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return; // Safety check: don't access context if disposed
         // Listen to media query changes which includes window resizing
         MediaQuery.of(context);
       });

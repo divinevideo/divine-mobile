@@ -10,6 +10,9 @@ class BugReportConfig {
   static const String supportPubkey =
       '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
 
+  /// Email address for receiving bug reports
+  static const String supportEmail = 'contact@divine.video';
+
   /// Maximum log entries to include in bug report
   static const int maxLogEntries = 5000;
 
@@ -18,8 +21,9 @@ class BugReportConfig {
 
   /// Sensitive data patterns to sanitize
   static final List<RegExp> sensitivePatterns = [
-    RegExp(r'nsec1[a-z0-9]{58}', caseSensitive: false), // nsec keys
-    RegExp(r'[0-9a-fA-F]{64}'), // Hex private keys (64 chars)
+    RegExp(r'nsec1[a-z0-9]{58}', caseSensitive: false), // nsec private keys (bech32)
+    // Note: We do NOT redact 64-char hex strings because that would redact public event IDs and pubkeys
+    // Private keys should always be in nsec format anyway
     RegExp(r'password[:\s=]+\S+', caseSensitive: false),
     RegExp(r'token[:\s=]+\S+', caseSensitive: false),
     RegExp(r'secret[:\s=]+\S+', caseSensitive: false),

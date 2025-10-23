@@ -42,6 +42,9 @@ class VideoEvents extends _$VideoEvents {
 
   @override
   Stream<List<VideoEvent>> build() {
+    // Create stream controller first
+    _controller = StreamController<List<VideoEvent>>.broadcast();
+
     // Get services and gate states
     final videoEventService = ref.watch(videoEventServiceProvider);
     final isAppReady = ref.watch(appReadyProvider);
@@ -54,57 +57,47 @@ class VideoEvents extends _$VideoEvents {
       category: LogCategory.video,
     );
 
-    // Create stream controller
-    _controller = StreamController<List<VideoEvent>>.broadcast();
-
-    // Defensive: Don't subscribe or throw if not ready - just return empty state
-    if (!isAppReady || !isTabActive) {
-      Log.info(
-        'VideoEvents: Not ready - returning empty (will retry when gates flip)',
-        name: 'VideoEventsProvider',
-        category: LogCategory.video,
-      );
-      // Emit empty list and return
-      Future.microtask(() {
-        if (_canEmit) {
-          _controller!.add(<VideoEvent>[]);
-        }
-      });
-
-      // Setup listeners to start subscription when ready
-      _setupGateListeners(videoEventService, seenVideosState);
-
-      // Clean up on dispose
-      ref.onDispose(() {
-        _debounceTimer?.cancel();
-        _controller?.close();
-        _controller = null;
-      });
-
-      return _controller!.stream;
-    }
-
-    // App is ready and tab is active - start subscription
-    _startSubscription(videoEventService, seenVideosState);
-
-    // Setup listeners for gate changes
-    _setupGateListeners(videoEventService, seenVideosState);
-
-    // Clean up on dispose
+    // Register cleanup handler ONCE at the top
     ref.onDispose(() {
+      Log.debug('VideoEvents: Disposing provider, cleaning up resources',
+          name: 'VideoEventsProvider', category: LogCategory.video);
       _debounceTimer?.cancel();
       videoEventService.removeListener(_onVideoEventServiceChange);
       _controller?.close();
       _controller = null;
     });
 
+    // Setup listeners to react to gate changes
+    _setupGateListeners(videoEventService, seenVideosState);
+
+    // Start subscription if ready, otherwise emit empty
+    if (isAppReady && isTabActive) {
+      _startSubscription(videoEventService, seenVideosState);
+    } else {
+      Log.info(
+        'VideoEvents: Not ready - returning empty (will retry when gates flip)',
+        name: 'VideoEventsProvider',
+        category: LogCategory.video,
+      );
+      Future.microtask(() {
+        if (_canEmit) {
+          _controller!.add(<VideoEvent>[]);
+        }
+      });
+    }
+
     return _controller!.stream;
   }
 
   /// Setup listeners on gate providers to start/stop subscription
   void _setupGateListeners(VideoEventService service, SeenVideosState seenState) {
+    Log.debug('🎧 VideoEvents: Setting up gate listeners...',
+        name: 'VideoEventsProvider', category: LogCategory.video);
+
     // Listen to app ready state changes
     ref.listen<bool>(appReadyProvider, (prev, next) {
+      Log.debug('🎧 VideoEvents: appReady listener fired! prev=$prev, next=$next',
+          name: 'VideoEventsProvider', category: LogCategory.video);
       final tabActive = ref.read(isDiscoveryTabActiveProvider);
       if (next && tabActive) {
         Log.debug('VideoEvents: App ready gate flipped true - starting subscription',
@@ -120,6 +113,8 @@ class VideoEvents extends _$VideoEvents {
 
     // Listen to tab active state changes
     ref.listen<bool>(isDiscoveryTabActiveProvider, (prev, next) {
+      Log.debug('🎧 VideoEvents: tabActive listener fired! prev=$prev, next=$next',
+          name: 'VideoEventsProvider', category: LogCategory.video);
       final appReady = ref.read(appReadyProvider);
       if (next && appReady) {
         Log.debug('VideoEvents: Tab active gate flipped true - starting subscription',
@@ -132,30 +127,37 @@ class VideoEvents extends _$VideoEvents {
         _stopSubscription(service);
       }
     });
+
+    Log.debug('🎧 VideoEvents: Gate listeners installed!',
+        name: 'VideoEventsProvider', category: LogCategory.video);
   }
 
   /// Start subscription and emit initial events
   void _startSubscription(VideoEventService service, SeenVideosState seenState) {
-    // Skip if already subscribed
-    if (_isSubscribed) {
-      Log.debug('VideoEvents: Already subscribed - skipping',
-          name: 'VideoEventsProvider', category: LogCategory.video);
-      return;
-    }
-
-    Log.info('VideoEvents: Starting discovery subscription',
+    Log.debug('VideoEvents: _startSubscription called (subscribed: $_isSubscribed)',
         name: 'VideoEventsProvider', category: LogCategory.video);
 
-    // Subscribe to discovery videos (service is now defensive, won't throw)
-    service.subscribeToDiscovery(limit: 100);
-    _isSubscribed = true;
-
-    // Add listener for reactive updates
+    // Always ensure listener is attached - remove first for idempotency
+    // This prevents duplicate listeners and ensures clean state
+    service.removeListener(_onVideoEventServiceChange);
     service.addListener(_onVideoEventServiceChange);
+    Log.info('VideoEvents: Listener attached to service ${service.hashCode}, hasListeners=${service.hasListeners}',
+        name: 'VideoEventsProvider', category: LogCategory.video);
 
-    // Emit current events immediately
+    // Subscribe to discovery videos if not already subscribed
+    if (!_isSubscribed) {
+      Log.info('VideoEvents: Starting discovery subscription',
+          name: 'VideoEventsProvider', category: LogCategory.video);
+      service.subscribeToDiscovery(limit: 100);
+      _isSubscribed = true;
+    }
+
+    // Always emit current events if available
     final currentEvents = List<VideoEvent>.from(service.discoveryVideos);
     final reordered = _reorderBySeen(currentEvents, seenState);
+
+    Log.debug('VideoEvents: Emitting ${reordered.length} current events',
+        name: 'VideoEventsProvider', category: LogCategory.video);
 
     Future.microtask(() {
       if (_canEmit) {
@@ -171,11 +173,10 @@ class VideoEvents extends _$VideoEvents {
 
   /// Stop subscription and remove listeners
   void _stopSubscription(VideoEventService service) {
-    if (!_isSubscribed) return;
-
     Log.info('VideoEvents: Stopping discovery subscription',
         name: 'VideoEventsProvider', category: LogCategory.video);
 
+    // Always remove listener (idempotent - safe to call even if not attached)
     service.removeListener(_onVideoEventServiceChange);
     _isSubscribed = false;
     // Don't unsubscribe from service - keep videos cached
@@ -187,6 +188,12 @@ class VideoEvents extends _$VideoEvents {
     final seenState = ref.read(seenVideosProvider);
     final newEvents = List<VideoEvent>.from(service.discoveryVideos);
     final reordered = _reorderBySeen(newEvents, seenState);
+
+    Log.debug(
+      '🔔 VideoEvents: Listener fired! Service has ${newEvents.length} discovery videos',
+      name: 'VideoEventsProvider',
+      category: LogCategory.video,
+    );
 
     // Store pending events for debounced emission
     _pendingEvents = reordered;

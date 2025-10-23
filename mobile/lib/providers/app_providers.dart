@@ -50,6 +50,8 @@ import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/services/nip17_message_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/services/event_router.dart';
 
 part 'app_providers.g.dart';
 
@@ -239,11 +241,14 @@ VideoEventService videoEventService(Ref ref) {
   final subscriptionManager = ref.watch(subscriptionManagerProvider);
   final blocklistService = ref.watch(contentBlocklistServiceProvider);
   final userProfileService = ref.watch(userProfileServiceProvider);
+  final db = ref.watch(databaseProvider);
+  final eventRouter = EventRouter(db);
 
   final service = VideoEventService(
     nostrService,
     subscriptionManager: subscriptionManager,
     userProfileService: userProfileService,
+    eventRouter: eventRouter,
   );
   service.setBlocklistService(blocklistService);
   return service;

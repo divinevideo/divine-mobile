@@ -96,7 +96,7 @@ final class AppReadyProvider extends $FunctionalProvider<bool, bool, bool>
   }
 }
 
-String _$appReadyHash() => r'2a71a256834520485ef84bfdcbbdd3d9a709751f';
+String _$appReadyHash() => r'883600dbc8e138ca825a2b8ab49f079b0d4a5325';
 
 /// Provider that checks if the discovery/explore tab is currently active
 

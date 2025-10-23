@@ -250,6 +250,12 @@ class LogCaptureService {
       print('Failed to read log files: $e');
     }
 
+    // If no file logs available (e.g., on web), include memory buffer
+    if (allLogs.isEmpty && _memoryBuffer.isNotEmpty) {
+      print('No file logs found, using memory buffer (${_memoryBuffer.length} entries)');
+      allLogs.addAll(_memoryBuffer.map((entry) => _formatLogEntry(entry)));
+    }
+
     return allLogs;
   }
 

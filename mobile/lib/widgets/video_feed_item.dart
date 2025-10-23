@@ -560,9 +560,11 @@ class VideoOverlayActions extends ConsumerWidget {
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
                 colors: [
-                  Colors.black.withValues(alpha: 0.7),
+                  Colors.black.withValues(alpha: 0.9),
+                  Colors.black.withValues(alpha: 0.6),
                   Colors.transparent,
                 ],
+                stops: const [0.0, 0.5, 1.0],
               ),
             ),
             child: Column(
@@ -578,9 +580,14 @@ class VideoOverlayActions extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                     shadows: [
                       Shadow(
-                        offset: Offset(1, 1),
-                        blurRadius: 2,
-                        color: Colors.black54,
+                        offset: Offset(0, 0),
+                        blurRadius: 8,
+                        color: Colors.black,
+                      ),
+                      Shadow(
+                        offset: Offset(2, 2),
+                        blurRadius: 4,
+                        color: Colors.black,
                       ),
                     ],
                   ),
@@ -591,9 +598,14 @@ class VideoOverlayActions extends ConsumerWidget {
                     decoration: TextDecoration.underline,
                     shadows: const [
                       Shadow(
-                        offset: Offset(1, 1),
-                        blurRadius: 2,
-                        color: Colors.black54,
+                        offset: Offset(0, 0),
+                        blurRadius: 8,
+                        color: Colors.black,
+                      ),
+                      Shadow(
+                        offset: Offset(2, 2),
+                        blurRadius: 4,
+                        color: Colors.black,
                       ),
                     ],
                   ),
@@ -606,14 +618,19 @@ class VideoOverlayActions extends ConsumerWidget {
                   Text(
                     '🔁 ${StringUtils.formatCompactNumber(video.originalLoops!)} loops',
                     style: const TextStyle(
-                      color: Colors.white70,
+                      color: Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                       shadows: [
                         Shadow(
+                          offset: Offset(0, 0),
+                          blurRadius: 6,
+                          color: Colors.black,
+                        ),
+                        Shadow(
                           offset: Offset(1, 1),
-                          blurRadius: 2,
-                          color: Colors.black54,
+                          blurRadius: 3,
+                          color: Colors.black,
                         ),
                       ],
                     ),
@@ -669,6 +686,18 @@ class VideoOverlayActions extends ConsumerWidget {
                     color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 0),
+                        blurRadius: 6,
+                        color: Colors.black,
+                      ),
+                      Shadow(
+                        offset: Offset(1, 1),
+                        blurRadius: 3,
+                        color: Colors.black,
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -708,6 +737,18 @@ class VideoOverlayActions extends ConsumerWidget {
                     color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 0),
+                        blurRadius: 6,
+                        color: Colors.black,
+                      ),
+                      Shadow(
+                        offset: Offset(1, 1),
+                        blurRadius: 3,
+                        color: Colors.black,
+                      ),
+                    ],
                   ),
                 ),
               ],

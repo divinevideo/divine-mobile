@@ -12,4 +12,7 @@ class NostrServiceDirectWeb extends NostrServiceWeb {
 
   @override
   NostrKeyManager get keyManager => _keyManager;
+
+  @override
+  Future<Map<String, dynamic>?> getRelayStats() => super.getRelayStats();
 }

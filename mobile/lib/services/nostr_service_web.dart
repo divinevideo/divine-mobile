@@ -22,7 +22,43 @@ abstract class NostrServiceWeb implements INostrService {
   bool _isDisposed = false;
   int _subscriptionCounter = 0;
 
-  NostrServiceWeb();
+  // Event batching for compact logging
+  final Map<String, Map<int, int>> _eventBatchCounts = {}; // relayUrl -> {kind: count}
+  Timer? _batchLogTimer;
+  static const _batchLogInterval = Duration(seconds: 5);
+
+  NostrServiceWeb() {
+    _startBatchLogging();
+  }
+
+  void _startBatchLogging() {
+    _batchLogTimer = Timer.periodic(_batchLogInterval, (_) => _flushBatchedLogs());
+  }
+
+  void _flushBatchedLogs() {
+    if (_eventBatchCounts.isEmpty) return;
+
+    for (final entry in _eventBatchCounts.entries) {
+      final relayUrl = entry.key;
+      final kindCounts = entry.value;
+      final totalCount = kindCounts.values.fold(0, (sum, count) => sum + count);
+
+      if (totalCount > 0) {
+        final kindSummary = kindCounts.entries
+            .map((e) => 'kind ${e.key}: ${e.value}')
+            .join(', ');
+        Log.debug('Received $totalCount events ($kindSummary) from $relayUrl',
+            name: 'NostrServiceWeb', category: LogCategory.relay);
+      }
+    }
+
+    _eventBatchCounts.clear();
+  }
+
+  void _recordEventForBatching(String relayUrl, int kind) {
+    _eventBatchCounts.putIfAbsent(relayUrl, () => {});
+    _eventBatchCounts[relayUrl]![kind] = (_eventBatchCounts[relayUrl]![kind] ?? 0) + 1;
+  }
 
   @override
   bool get isInitialized => _isInitialized;
@@ -88,8 +124,8 @@ abstract class NostrServiceWeb implements INostrService {
         final event = sdk.Event.fromJson(eventJson);
         _eventController.add(event);
 
-        Log.debug('Received event from $relayUrl: ${event.id}',
-            name: 'NostrServiceWeb', category: LogCategory.relay);
+        // Record event for batched logging instead of logging individually
+        _recordEventForBatching(relayUrl, event.kind);
       } else if (messageType == 'EOSE' && decoded.length >= 2) {
         // End of stored events
         final subscriptionId = decoded[1] as String;
@@ -282,7 +318,14 @@ abstract class NostrServiceWeb implements INostrService {
   @override
   Future<void> dispose() async {
     if (_isDisposed) return;
-    
+
+    // Cancel batch logging timer
+    _batchLogTimer?.cancel();
+    _batchLogTimer = null;
+
+    // Flush any remaining batched logs
+    _flushBatchedLogs();
+
     // Cancel all subscriptions
     for (final subscription in _subscriptions.values) {
       await subscription.cancel();
@@ -321,6 +364,18 @@ abstract class NostrServiceWeb implements INostrService {
   String get primaryRelay => _configuredRelays.isNotEmpty
       ? _configuredRelays.first
       : 'wss://relay3.openvine.co';
+
+  @override
+  Future<Map<String, dynamic>?> getRelayStats() async {
+    if (!_isInitialized) return null;
+
+    return {
+      'connected_relays': _relayConnections.length,
+      'configured_relays': _configuredRelays.length,
+      'active_subscriptions': _activeSubscriptions.length,
+      'web_implementation': true,
+    };
+  }
 
   Map<String, dynamic> getRelayStatistics() {
     return {

@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/content_blocklist_service.dart';
@@ -16,6 +17,7 @@ import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/log_batcher.dart';
 import 'package:openvine/constants/nip71_migration.dart';
+import 'package:openvine/services/event_router.dart';
 
 /// Pagination state for tracking cursor position and loading status per subscription
 class PaginationState {
@@ -92,12 +94,15 @@ class VideoEventService extends ChangeNotifier {
     this._nostrService, {
     required SubscriptionManager subscriptionManager,
     UserProfileService? userProfileService,
+    EventRouter? eventRouter,
   })  : _subscriptionManager = subscriptionManager,
-        _userProfileService = userProfileService {
+        _userProfileService = userProfileService,
+        _eventRouter = eventRouter {
     _initializePaginationStates();
   }
   final INostrService _nostrService;
   final UserProfileService? _userProfileService;
+  final EventRouter? _eventRouter;
   final ConnectionStatusService _connectionService = ConnectionStatusService();
 
   // REFACTORED: Separate event lists per subscription type
@@ -194,9 +199,17 @@ class VideoEventService extends ChangeNotifier {
     if (_hasScheduledFrameUpdate) return;
     _hasScheduledFrameUpdate = true;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Log.debug('🔔 Scheduling frame update callback',
+        name: 'VideoEventService', category: LogCategory.video);
+
+    // Use Future.microtask instead of WidgetsBinding.addPostFrameCallback
+    // This is more reliable on web and avoids "disposed view" errors
+    Future.microtask(() {
+      if (!_hasScheduledFrameUpdate) return; // Already processed
       _hasScheduledFrameUpdate = false;
       _totalUiUpdates++;
+      Log.debug('🔔 Frame callback fired - calling notifyListeners() on instance ${hashCode} (update #$_totalUiUpdates, hasListeners=$hasListeners)',
+          name: 'VideoEventService', category: LogCategory.video);
       notifyListeners();
 
       // Log metrics periodically (every 10 updates)
@@ -393,6 +406,56 @@ class VideoEventService extends ChangeNotifier {
   /// Used to filter out deleted videos from pagination results
   bool isVideoLocallyDeleted(String videoId) {
     return _locallyDeletedVideoIds.contains(videoId);
+  }
+
+  /// Load cached events from database (cache-first strategy)
+  ///
+  /// Returns cached events matching the filter parameters for instant UI display.
+  /// This is called BEFORE relay subscription to provide immediate results.
+  ///
+  /// Returns empty list if:
+  /// - EventRouter not available (null)
+  /// - No cached events matching filters
+  Future<List<Event>> _loadCachedEvents({
+    List<int>? kinds,
+    List<String>? authors,
+    List<String>? hashtags,
+    int? since,
+    int? until,
+    int limit = 100,
+  }) async {
+    // Skip if EventRouter not available (backward compatibility)
+    if (_eventRouter == null) {
+      return [];
+    }
+
+    try {
+      final cachedEvents = await _eventRouter!.db.nostrEventsDao.getVideoEventsByFilter(
+        kinds: kinds,
+        authors: authors,
+        hashtags: hashtags,
+        since: since,
+        until: until,
+        limit: limit,
+      );
+
+      if (cachedEvents.isNotEmpty) {
+        Log.debug(
+          '💾 Cache-first: Loaded ${cachedEvents.length} cached events from database',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+      }
+
+      return cachedEvents;
+    } catch (e) {
+      Log.error(
+        'Failed to load cached events: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      return [];
+    }
   }
 
   /// Subscribe to NIP-71 video events with proper subscription type separation
@@ -654,6 +717,32 @@ class VideoEventService extends ChangeNotifier {
         Log.info('📡 Creating subscription for $subscriptionType at ${subscriptionStartTime.toIso8601String()}',
             name: 'VideoEventService', category: LogCategory.video);
 
+        // Phase 3.3: Cache-first strategy - load cached events BEFORE relay subscription
+        // This provides instant UI feedback while relay fetches fresh data
+        final cachedEvents = await _loadCachedEvents(
+          kinds: NIP71VideoKinds.getAllVideoKinds(),
+          authors: authors,
+          hashtags: lowercaseHashtags,
+          since: effectiveSince,
+          until: effectiveUntil,
+          limit: limit,
+        );
+
+        // Process cached events immediately (same flow as relay events)
+        for (final event in cachedEvents) {
+          _handleNewVideoEvent(event, subscriptionType);
+        }
+
+        // Notify UI with cached results for instant display
+        if (cachedEvents.isNotEmpty) {
+          notifyListeners();
+          Log.info(
+            '💾 Cache-first: UI updated with ${cachedEvents.length} cached events for instant display',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+        }
+
         final eventStream = _nostrService.subscribeToEvents(
           filters: filters,
           onEose: () {
@@ -676,6 +765,9 @@ class VideoEventService extends ChangeNotifier {
         final streamSubscription = eventStream.listen(
           (event) {
             eventCount++;
+
+            // Route ALL events to database immediately (Phase 3.2: Drift integration)
+            _eventRouter?.handleEvent(event);
 
             // Track first event arrival time
             if (firstEventTime == null) {
@@ -850,6 +942,15 @@ class VideoEventService extends ChangeNotifier {
 
       final event = eventData;
 
+      // Route ALL events to database first (single source of truth)
+      // Fire-and-forget: database writes shouldn't block event processing
+      if (_eventRouter != null) {
+        _eventRouter.handleEvent(event).catchError((e) {
+          Log.warning('EventRouter failed (non-critical): $e',
+              name: 'VideoEventService', category: LogCategory.video);
+        });
+      }
+
       // Fast-path de-duplication before logging and processing
       final paginationState = _paginationStates[subscriptionType];
       if (paginationState != null) {
@@ -874,8 +975,27 @@ class VideoEventService extends ChangeNotifier {
       );
 
       if (!NIP71VideoKinds.isVideoKind(event.kind) && event.kind != 6) {
-        Log.warning('⏩ Skipping non-video/repost event (kind ${event.kind})',
-            name: 'VideoEventService', category: LogCategory.video);
+        // Cache non-video events in appropriate services instead of discarding
+        if (event.kind == 0 && _userProfileService != null) {
+          // Kind 0 = profile metadata - cache it for profile display
+          try {
+            final profile = UserProfile.fromNostrEvent(event);
+            // Fire-and-forget: cache the profile asynchronously
+            _userProfileService.updateCachedProfile(profile).then((_) {
+              Log.verbose('✅ Cached profile event for ${event.pubkey.substring(0, 8)} from video subscription',
+                  name: 'VideoEventService', category: LogCategory.video);
+            }).catchError((e) {
+              Log.error('Failed to cache profile event: $e',
+                  name: 'VideoEventService', category: LogCategory.video);
+            });
+          } catch (e) {
+            Log.error('Failed to parse profile event: $e',
+                name: 'VideoEventService', category: LogCategory.video);
+          }
+        } else {
+          Log.verbose('⏩ Skipping non-video/repost event (kind ${event.kind})',
+              name: 'VideoEventService', category: LogCategory.video);
+        }
         return;
       }
 
@@ -2551,8 +2671,8 @@ class VideoEventService extends ChangeNotifier {
 
     // VideoManager integration removed - using pure Riverpod architecture
 
-    Log.verbose(
-        'Added $subscriptionType video: ${videoEvent.title ?? videoEvent.id.substring(0, 8)} (total: ${eventList.length})',
+    Log.debug(
+        '✅ Added $subscriptionType video: ${videoEvent.title ?? videoEvent.id.substring(0, 8)} (total: ${eventList.length})',
         name: 'VideoEventService',
         category: LogCategory.video);
 

@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -24,7 +25,13 @@ class UploadInitializationHelper {
   static Box<PendingUpload>? _cachedBox;
 
   /// Get app-specific storage directory (sandboxed, always writable)
-  static Future<Directory> _getAppStorageDir() async {
+  /// On web, returns null since IndexedDB is used directly
+  static Future<Directory?> _getAppStorageDir() async {
+    if (kIsWeb) {
+      // Web uses IndexedDB, no filesystem path needed
+      return null;
+    }
+
     final base = await getApplicationSupportDirectory();
     final appDir = Directory(p.join(base.path, 'openvine'));
     if (!await appDir.exists()) {
@@ -35,11 +42,22 @@ class UploadInitializationHelper {
 
   /// Check if error is a permanent permission error (don't retry these)
   static bool _isPermanentPermissionError(dynamic error) {
-    if (error is! FileSystemException) return false;
-    final code = error.osError?.errorCode;
-    // macOS/iOS: EPERM=1, EACCES=13
-    // These are permanent - no amount of retrying will help
-    return code == 1 || code == 13;
+    if (kIsWeb) {
+      // Web doesn't have FileSystemException
+      return false;
+    }
+
+    // Use dynamic type checking since FileSystemException isn't available on web
+    if (error.runtimeType.toString() != 'FileSystemException') return false;
+
+    try {
+      final code = (error as dynamic).osError?.errorCode;
+      // macOS/iOS: EPERM=1, EACCES=13
+      // These are permanent - no amount of retrying will help
+      return code == 1 || code == 13;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Robustly initialize the uploads box with retry logic
@@ -105,15 +123,23 @@ class UploadInitializationHelper {
     Exception? lastError;
 
     // Initialize Hive with proper app container directory FIRST
-    try {
-      final storageDir = await _getAppStorageDir();
-      Hive.init(storageDir.path);
-      Log.info('Hive initialized with app storage: ${storageDir.path}',
+    // Skip on web since it uses IndexedDB
+    if (!kIsWeb) {
+      try {
+        final storageDir = await _getAppStorageDir();
+        if (storageDir != null) {
+          Hive.init(storageDir.path);
+          Log.info('Hive initialized with app storage: ${storageDir.path}',
+              name: 'UploadInitHelper', category: LogCategory.video);
+        }
+      } catch (e) {
+        Log.error('Failed to get app storage directory: $e',
+            name: 'UploadInitHelper', category: LogCategory.video);
+        throw Exception('Cannot access app storage directory: $e');
+      }
+    } else {
+      Log.info('Web platform detected - using IndexedDB for storage',
           name: 'UploadInitHelper', category: LogCategory.video);
-    } catch (e) {
-      Log.error('Failed to get app storage directory: $e',
-          name: 'UploadInitHelper', category: LogCategory.video);
-      throw Exception('Cannot access app storage directory: $e');
     }
 
     for (int attempt = 0; attempt <= _maxRetries; attempt++) {
