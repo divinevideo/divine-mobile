@@ -2,6 +2,7 @@
 // ABOUTME: Writes logs continuously to rotating files, supporting hundreds of thousands of entries
 
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:io';
 import 'package:openvine/models/log_entry.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -241,7 +242,9 @@ class LogCaptureService {
 
       for (final file in files) {
         if (await file.exists()) {
-          final contents = await file.readAsString();
+          // Read with error-tolerant UTF-8 decoding to handle malformed bytes
+          final bytes = await file.readAsBytes();
+          final contents = utf8.decode(bytes, allowMalformed: true);
           final lines = contents.split('\n').where((line) => line.isNotEmpty);
           allLogs.addAll(lines);
         }
@@ -268,7 +271,9 @@ class LogCaptureService {
     for (final file in files) {
       if (await file.exists()) {
         totalSize += await file.length();
-        final contents = await file.readAsString();
+        // Read with error-tolerant UTF-8 decoding to handle malformed bytes
+        final bytes = await file.readAsBytes();
+        final contents = utf8.decode(bytes, allowMalformed: true);
         totalLines += contents.split('\n').where((line) => line.isNotEmpty).length;
       }
     }
