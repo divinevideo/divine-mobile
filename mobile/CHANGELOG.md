@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Trending Hashtags Fallback (2025-10-25)
+
+#### Bug Fixes
+- **Added fallback default hashtags when analytics API is unavailable**
+  - Root cause: Backend `/analytics/trending/hashtags` endpoint doesn't exist (returns 404)
+  - Previously returned empty list when API failed, showing no hashtags to users
+  - Now falls back to curated list from `HashtagExtractor.suggestedHashtags`
+  - Provides 20 default trending hashtags: openvine, nostr, vine, funny, art, dance, music, comedy, etc.
+  - Fallback hashtags include placeholder stats (views, video count, viral score) for consistent UI
+
+#### Files Modified
+- `lib/services/analytics_api_service.dart` - Added `_getDefaultTrendingHashtags()` fallback method
+- Changed error behavior from returning `[]` to returning default hashtags
+- Changed log level from ERROR to WARNING when API is unavailable (expected condition)
+
+#### Technical Details
+- Default hashtags generated from `HashtagExtractor.suggestedHashtags` list
+- Maintains consistent UI experience even when backend API is down
+- Stats decrease naturally (1000→550 views, 50→12 videos) to simulate trending order
+- Fallback is transparent to UI - same `TrendingHashtag` object structure
+
 ### Changed - Default Relay (2025-10-25)
 
 #### Configuration Changes

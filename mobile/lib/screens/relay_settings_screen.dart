@@ -105,9 +105,9 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
-                          onPressed: () => _retryConnection(),
-                          icon: const Icon(Icons.refresh, color: Colors.white),
-                          label: const Text('Retry Connection',
+                          onPressed: () => _showAddRelayDialog(),
+                          icon: const Icon(Icons.add, color: Colors.white),
+                          label: const Text('Add Relay',
                               style: TextStyle(color: Colors.white)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: VineTheme.vineGreen,

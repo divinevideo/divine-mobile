@@ -8,6 +8,7 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/utils/hashtag_extractor.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
@@ -267,25 +268,52 @@ class AnalyticsApiService {
       } else {
         final url =
             '$baseUrl/analytics/trending/hashtags?window=$timeWindow&limit=$limit';
-        Log.error('❌ Failed to fetch trending hashtags: ${response.statusCode}',
+        Log.warning('⚠️ Trending hashtags API unavailable (${response.statusCode}), using fallback defaults',
             name: 'AnalyticsApiService', category: LogCategory.video);
-        Log.error('   Request URL: $url',
+        Log.debug('   Request URL: $url',
             name: 'AnalyticsApiService', category: LogCategory.video);
-        Log.error(
-            '   Response body: ${response.body.substring(0, response.body.length.clamp(0, 500))}',
-            name: 'AnalyticsApiService',
-            category: LogCategory.video);
-        return [];
+
+        // Return default hashtags as fallback
+        return _getDefaultTrendingHashtags(limit);
       }
     } catch (e) {
       final url =
           '$baseUrl/analytics/trending/hashtags?window=$timeWindow&limit=$limit';
-      Log.error('❌ Error fetching trending hashtags: $e',
+      Log.warning('⚠️ Error fetching trending hashtags: $e, using fallback defaults',
           name: 'AnalyticsApiService', category: LogCategory.video);
-      Log.error('   Request URL: $url',
+      Log.debug('   Request URL: $url',
           name: 'AnalyticsApiService', category: LogCategory.video);
-      return [];
+
+      // Return default hashtags as fallback
+      return _getDefaultTrendingHashtags(limit);
     }
+  }
+
+  /// Get default trending hashtags as fallback when API is unavailable
+  List<TrendingHashtag> _getDefaultTrendingHashtags(int limit) {
+    // Use suggested hashtags from HashtagExtractor
+    final defaultTags = HashtagExtractor.suggestedHashtags.take(limit).toList();
+
+    Log.info('📊 Using ${defaultTags.length} default trending hashtags',
+        name: 'AnalyticsApiService', category: LogCategory.video);
+
+    // Convert to TrendingHashtag objects with placeholder stats
+    return defaultTags.asMap().entries.map((entry) {
+      final index = entry.key;
+      final tag = entry.value;
+
+      // Generate decreasing stats to simulate trending order
+      final views = 1000 - (index * 50);
+      final videoCount = 50 - (index * 2);
+      final avgViralScore = 0.8 - (index * 0.03);
+
+      return TrendingHashtag(
+        tag: tag,
+        views: views,
+        videoCount: videoCount,
+        avgViralScore: avgViralScore.clamp(0.0, 1.0),
+      );
+    }).toList();
   }
 
   /// Fetch top creators
