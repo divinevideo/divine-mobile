@@ -177,16 +177,22 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
               }
 
               // Sync controller when URL changes externally (back/forward/deeplink)
-              if (listIndex != _lastVideoUrlIndex && _videoController!.hasClients) {
-                _lastVideoUrlIndex = listIndex;
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted || !_videoController!.hasClients) return;
-                  final targetIndex = listIndex.clamp(0, videos.length - 1);
-                  final currentPage = _videoController!.page?.round() ?? 0;
-                  if (currentPage != targetIndex) {
-                    _videoController!.jumpToPage(targetIndex);
-                  }
-                });
+              // OR when videos list changes (e.g., provider reloads)
+              if (_videoController!.hasClients) {
+                final targetIndex = listIndex.clamp(0, videos.length - 1);
+                final currentPage = _videoController!.page?.round() ?? 0;
+
+                // Sync if URL changed OR if controller position doesn't match URL
+                if (listIndex != _lastVideoUrlIndex || currentPage != targetIndex) {
+                  _lastVideoUrlIndex = listIndex;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted || !_videoController!.hasClients) return;
+                    final currentPageNow = _videoController!.page?.round() ?? 0;
+                    if (currentPageNow != targetIndex) {
+                      _videoController!.jumpToPage(targetIndex);
+                    }
+                  });
+                }
               }
 
               // Build fullscreen video PageView

@@ -61,17 +61,23 @@ class _ExploreScreenRouterState extends ConsumerState<ExploreScreenRouter> with 
             }
 
             // Sync controller when URL changes externally (back/forward/deeplink)
+            // OR when videos list changes (e.g., provider reloads)
             // Use post-frame to avoid calling jumpToPage during build
-            if (urlIndex != _lastUrlIndex && _controller!.hasClients) {
-              _lastUrlIndex = urlIndex;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted || !_controller!.hasClients) return;
-                final safeIndex = urlIndex.clamp(0, itemCount - 1);
-                final currentPage = _controller!.page?.round() ?? 0;
-                if (currentPage != safeIndex) {
-                  _controller!.jumpToPage(safeIndex);
-                }
-              });
+            if (_controller!.hasClients) {
+              final safeIndex = urlIndex.clamp(0, itemCount - 1);
+              final currentPage = _controller!.page?.round() ?? 0;
+
+              // Sync if URL changed OR if controller position doesn't match URL
+              if (urlIndex != _lastUrlIndex || currentPage != safeIndex) {
+                _lastUrlIndex = urlIndex;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted || !_controller!.hasClients) return;
+                  final currentPageNow = _controller!.page?.round() ?? 0;
+                  if (currentPageNow != safeIndex) {
+                    _controller!.jumpToPage(safeIndex);
+                  }
+                });
+              }
             }
 
             return PageView.builder(
