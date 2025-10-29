@@ -621,6 +621,38 @@ class _UniversalCameraScreenPureState extends ConsumerState<UniversalCameraScree
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // ProofMode indicator
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.green.shade700.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.green.shade400, width: 1.5),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.verified_user,
+                  color: Colors.white,
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'ProofMode Active',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
         // Platform-specific instruction hint
         if (!recordingState.isRecording && !recordingState.hasSegments)
           Padding(

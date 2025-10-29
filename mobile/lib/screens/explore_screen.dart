@@ -168,6 +168,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     ref.read(exploreTabVideosProvider.notifier).state = videos;
 
     // Navigate to update URL - this triggers reactive video playback via router
+    // videoIndex maps directly to list index (0=first video, 1=second video)
     context.goExplore(startIndex);
 
     Log.info('🎯 ExploreScreenPure: Entered feed mode at index $startIndex with ${videos.length} videos',

@@ -49,6 +49,8 @@ import 'package:openvine/services/web_auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/services/nip17_message_service.dart';
+import 'package:openvine/services/relay_capability_service.dart';
+import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:openvine/providers/database_provider.dart';
@@ -64,6 +66,21 @@ part 'app_providers.g.dart';
 @riverpod
 ConnectionStatusService connectionStatusService(Ref ref) {
   return ConnectionStatusService();
+}
+
+/// Relay capability service for detecting NIP-11 divine extensions
+@Riverpod(keepAlive: true)
+RelayCapabilityService relayCapabilityService(Ref ref) {
+  final service = RelayCapabilityService();
+  ref.onDispose(() => service.dispose());
+  return service;
+}
+
+/// Video filter builder for constructing relay-aware filters with server-side sorting
+@riverpod
+VideoFilterBuilder videoFilterBuilder(Ref ref) {
+  final capabilityService = ref.watch(relayCapabilityServiceProvider);
+  return VideoFilterBuilder(capabilityService);
 }
 
 /// Video visibility manager for controlling video playback based on visibility
@@ -248,6 +265,7 @@ VideoEventService videoEventService(Ref ref) {
   final subscriptionManager = ref.watch(subscriptionManagerProvider);
   final blocklistService = ref.watch(contentBlocklistServiceProvider);
   final userProfileService = ref.watch(userProfileServiceProvider);
+  final videoFilterBuilder = ref.watch(videoFilterBuilderProvider);
   final db = ref.watch(databaseProvider);
   final eventRouter = EventRouter(db);
 
@@ -256,6 +274,7 @@ VideoEventService videoEventService(Ref ref) {
     subscriptionManager: subscriptionManager,
     userProfileService: userProfileService,
     eventRouter: eventRouter,
+    videoFilterBuilder: videoFilterBuilder,
   );
   service.setBlocklistService(blocklistService);
   return service;

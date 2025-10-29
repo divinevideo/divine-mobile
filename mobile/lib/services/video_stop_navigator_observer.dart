@@ -23,24 +23,13 @@ class VideoStopNavigatorObserver extends NavigatorObserver {
 
         // Delay provider modification until after widget tree build is complete
         Future(() {
-          // Check if navigating to camera screen - if so, dispose ALL controllers
-          final isCameraScreen = routeName?.contains('Camera') ?? false;
-
-          if (isCameraScreen) {
-            // Dispose all video controllers when opening camera screen
-            disposeAllVideoControllers(container);
-            Log.info(
-                '📱 Navigation $action to camera route: ${routeName ?? 'unnamed'} - disposed all video controllers',
-                name: 'VideoStopNavigatorObserver',
-                category: LogCategory.system);
-          } else {
-            // Router-driven architecture: route changes automatically pause videos via activeVideoIdProvider
-            // No manual state management needed
-            Log.info(
-                '📱 Navigation $action to route: ${routeName ?? 'unnamed'} - videos will pause automatically via router',
-                name: 'VideoStopNavigatorObserver',
-                category: LogCategory.system);
-          }
+          // Stop ALL videos on ANY route change
+          // This ensures clean transitions and prevents videos from playing in background
+          disposeAllVideoControllers(container);
+          Log.info(
+              '📱 Navigation $action to route: ${routeName ?? 'unnamed'} - stopped all videos',
+              name: 'VideoStopNavigatorObserver',
+              category: LogCategory.system);
         });
       }
     } catch (e) {

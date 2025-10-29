@@ -17,19 +17,24 @@ import 'package:openvine/services/log_capture_service.dart';
 import 'package:openvine/services/error_analytics_tracker.dart';
 import 'package:openvine/services/proofmode_attestation_service.dart';
 import 'package:openvine/services/nip17_message_service.dart';
+import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 // Conditional import: dart:html on web, stub on native
 import 'dart:html' if (dart.library.io) 'package:openvine/services/bug_report_service_stub.dart' as html;
 
 /// Service for creating and managing bug reports
 class BugReportService {
-  BugReportService({NIP17MessageService? nip17MessageService})
-      : _nip17MessageService = nip17MessageService;
+  BugReportService({
+    NIP17MessageService? nip17MessageService,
+    BlossomUploadService? blossomUploadService,
+  })  : _nip17MessageService = nip17MessageService,
+        _blossomUploadService = blossomUploadService;
 
   static const _uuid = Uuid();
   final ProofModeAttestationService _proofModeService =
       ProofModeAttestationService();
   final NIP17MessageService? _nip17MessageService;
+  final BlossomUploadService? _blossomUploadService;
 
   /// Collect comprehensive diagnostics for bug report
   Future<BugReportData> collectDiagnostics({
@@ -127,42 +132,60 @@ class BugReportService {
     return jsonString.length;
   }
 
-  /// Send bug report via encrypted NIP-17 message to support
+  /// Send bug report via Blossom upload + encrypted NIP-17 message to support
   Future<BugReportResult> sendBugReport(BugReportData data) async {
     return sendBugReportToRecipient(data, BugReportConfig.supportPubkey);
   }
 
   /// Send bug report to a specific recipient (for testing)
+  ///
+  /// This method uploads the full bug report file to Blossom server,
+  /// then sends a lightweight NIP-17 message with the URL
   Future<BugReportResult> sendBugReportToRecipient(
     BugReportData data,
     String recipientPubkey,
   ) async {
     if (_nip17MessageService == null) {
-      return BugReportResult.failure(
-        'NIP17MessageService not available',
-        reportId: data.reportId,
-      );
+      Log.error('NIP17MessageService not available, falling back to email',
+          category: LogCategory.system);
+      return sendBugReportViaEmail(data);
     }
 
     try {
       Log.info('Sending bug report ${data.reportId} to $recipientPubkey',
           category: LogCategory.system);
 
-      // Sanitize sensitive data before sending
+      // Sanitize sensitive data before uploading
       final sanitizedData = sanitizeSensitiveData(data);
 
-      // Check report size
-      final sizeBytes = estimateReportSize(sanitizedData);
-      if (sizeBytes > BugReportConfig.maxReportSizeBytes) {
-        Log.warning(
-          'Bug report exceeds size limit: ${sizeBytes} bytes (max: ${BugReportConfig.maxReportSizeBytes})',
-          category: LogCategory.system,
+      // Create bug report file
+      final bugReportFile = await _createBugReportFile(sanitizedData);
+
+      String? bugReportUrl;
+
+      // Try Blossom upload first (if available)
+      if (_blossomUploadService != null) {
+        Log.info('Uploading bug report to Blossom server',
+            category: LogCategory.system);
+
+        bugReportUrl = await _blossomUploadService.uploadBugReport(
+          bugReportFile: bugReportFile,
         );
-        // TODO: Implement log truncation if needed
+
+        if (bugReportUrl != null) {
+          Log.info('✅ Bug report uploaded to Blossom: $bugReportUrl',
+              category: LogCategory.system);
+        } else {
+          Log.warning('Blossom upload failed, will include summary in DM',
+              category: LogCategory.system);
+        }
+      } else {
+        Log.warning('BlossomUploadService not available, will send summary only',
+            category: LogCategory.system);
       }
 
-      // Convert to formatted report
-      final reportContent = sanitizedData.toFormattedReport();
+      // Prepare NIP-17 message content
+      final messageContent = _formatBugReportMessage(sanitizedData, bugReportUrl);
 
       // Ensure backup relay is connected for bug reports
       try {
@@ -177,11 +200,12 @@ class BugReportService {
       // Send via NIP-17 encrypted message
       final result = await _nip17MessageService.sendPrivateMessage(
         recipientPubkey: recipientPubkey,
-        content: reportContent,
+        content: messageContent,
         additionalTags: [
           ['client', 'openvine_bug_report'],
           ['report_id', data.reportId],
           ['app_version', data.appVersion],
+          if (bugReportUrl != null) ['bug_report_url', bugReportUrl],
         ],
       );
 
@@ -193,21 +217,145 @@ class BugReportService {
           messageEventId: result.messageEventId!,
         );
       } else {
-        Log.error('Failed to send bug report: ${result.error}',
+        Log.error('Failed to send bug report DM: ${result.error}',
             category: LogCategory.system);
-        return BugReportResult.failure(
-          result.error ?? 'Unknown error',
-          reportId: data.reportId,
-        );
+
+        // If DM failed but we have a Blossom URL, that's still useful
+        if (bugReportUrl != null) {
+          return BugReportResult(
+            success: true,
+            reportId: data.reportId,
+            messageEventId: null,
+            timestamp: DateTime.now(),
+            error: 'Uploaded to Blossom but DM failed: ${result.error}. URL: $bugReportUrl',
+          );
+        }
+
+        // Fall back to email if both Blossom and DM failed
+        Log.info('Falling back to email attachment method',
+            category: LogCategory.system);
+        return sendBugReportViaEmail(data);
       }
     } catch (e, stackTrace) {
       Log.error('Exception while sending bug report: $e',
           category: LogCategory.system, error: e, stackTrace: stackTrace);
-      return BugReportResult.failure(
-        'Failed to send: $e',
-        reportId: data.reportId,
-      );
+
+      // Fall back to email on any exception
+      Log.info('Falling back to email attachment method',
+          category: LogCategory.system);
+      return sendBugReportViaEmail(data);
     }
+  }
+
+  /// Format bug report message for NIP-17 (with or without Blossom URL)
+  String _formatBugReportMessage(BugReportData data, String? bugReportUrl) {
+    final buffer = StringBuffer();
+
+    buffer.writeln('🐛 OpenVine Bug Report');
+    buffer.writeln('═' * 50);
+    buffer.writeln('Report ID: ${data.reportId}');
+    buffer.writeln('Timestamp: ${data.timestamp.toIso8601String()}');
+    buffer.writeln('App Version: ${data.appVersion}');
+    buffer.writeln();
+
+    buffer.writeln('📝 User Description:');
+    buffer.writeln(data.userDescription);
+    buffer.writeln();
+
+    if (bugReportUrl != null) {
+      buffer.writeln('📄 Full Diagnostic Logs:');
+      buffer.writeln(bugReportUrl);
+      buffer.writeln();
+    }
+
+    buffer.writeln('📱 Device Info:');
+    buffer.writeln('  Platform: ${data.deviceInfo['platform']}');
+    buffer.writeln('  Version: ${data.deviceInfo['version']}');
+    if (data.deviceInfo['model'] != null) {
+      buffer.writeln('  Model: ${data.deviceInfo['model']}');
+    }
+    buffer.writeln();
+
+    if (data.currentScreen != null) {
+      buffer.writeln('📍 Current Screen: ${data.currentScreen}');
+      buffer.writeln();
+    }
+
+    if (data.errorCounts.isNotEmpty) {
+      buffer.writeln('❌ Recent Error Summary:');
+      final sortedErrors = data.errorCounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      for (final entry in sortedErrors.take(5)) {
+        buffer.writeln('  ${entry.key}: ${entry.value} occurrences');
+      }
+      buffer.writeln();
+    }
+
+    if (bugReportUrl == null) {
+      buffer.writeln('⚠️ Note: Full logs not uploaded (Blossom unavailable)');
+      buffer.writeln('Recent log entries: ${data.recentLogs.length}');
+    }
+
+    return buffer.toString();
+  }
+
+  /// Create a bug report file from sanitized data
+  Future<File> _createBugReportFile(BugReportData data) async {
+    final tempDir = await getTemporaryDirectory();
+    final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+    final fileName = 'openvine_bug_report_${data.reportId}_$timestamp.txt';
+    final filePath = '${tempDir.path}/$fileName';
+
+    // Build comprehensive bug report file content
+    final buffer = StringBuffer();
+    buffer.writeln('OpenVine Bug Report');
+    buffer.writeln('═' * 80);
+    buffer.writeln('Report ID: ${data.reportId}');
+    buffer.writeln('Timestamp: ${data.timestamp.toIso8601String()}');
+    buffer.writeln('App Version: ${data.appVersion}');
+    if (data.currentScreen != null) {
+      buffer.writeln('Current Screen: ${data.currentScreen}');
+    }
+    if (data.userPubkey != null) {
+      buffer.writeln('User Pubkey: ${data.userPubkey}');
+    }
+    buffer.writeln('═' * 80);
+    buffer.writeln();
+    buffer.writeln('User Description:');
+    buffer.writeln(data.userDescription);
+    buffer.writeln();
+    buffer.writeln('═' * 80);
+    buffer.writeln('Device Information:');
+    buffer.writeln(const JsonEncoder.withIndent('  ').convert(data.deviceInfo));
+    buffer.writeln();
+    buffer.writeln('═' * 80);
+    buffer.writeln('Recent Logs (${data.recentLogs.length} entries):');
+    for (final log in data.recentLogs) {
+      buffer.writeln('[${log.timestamp.toIso8601String()}] ${log.level.name.toUpperCase()} - ${log.message}');
+      if (log.error != null) {
+        buffer.writeln('  Error: ${log.error}');
+      }
+      if (log.stackTrace != null) {
+        buffer.writeln('  Stack: ${log.stackTrace}');
+      }
+    }
+    if (data.errorCounts.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('═' * 80);
+      buffer.writeln('Error Counts:');
+      data.errorCounts.forEach((key, value) {
+        buffer.writeln('  $key: $value');
+      });
+    }
+
+    final file = File(filePath);
+    await file.writeAsString(buffer.toString());
+
+    final fileSizeMB = (await file.length() / (1024 * 1024)).toStringAsFixed(2);
+    Log.info('Bug report file created: $filePath ($fileSizeMB MB)',
+        category: LogCategory.system);
+
+    return file;
   }
 
   /// Send bug report via email by creating a file attachment

@@ -359,24 +359,28 @@ See `mobile/docs/NOSTR_EVENT_TYPES.md` for complete event type documentation.
 
 ## Development Environment
 
-### Local Development Server
-**App URL**: http://localhost:53424/
+**IMPORTANT**: OpenVine is an **iOS and Android mobile app** (with Windows and macOS desktop support). The web/Chrome build is NOT used for release - divine.video runs a separate React app.
 
-The Flutter app is typically already running locally on Chrome when working on development. Use this URL to access the running app during debugging sessions.
+### Primary Development Platform
+**macOS desktop build** - Used for development and debugging with full feature access.
 
-### Debug Environment
-- **Platform**: Chrome browser (flutter run -d chrome)
-- **Hot Reload**: Available for rapid development
-- **Debug Tools**: Chrome DevTools for Flutter debugging
+### Debug Platforms
+- **Primary development**: macOS desktop (full features, fast iteration)
+- **Release targets**: iOS and Android mobile apps
+- **Secondary targets**: Windows desktop
+- **Not for release**: Web/Chrome (separate React app at divine.video)
+- **Hot Reload**: Available on all platforms for rapid development
+- **Debug Tools**: Native debuggers and Flutter DevTools
 
 ## Build/Test Commands
 
 
 ```bash
-./run_dev.sh                       # Run on Chrome in debug mode
-./run_dev.sh chrome release        # Run on Chrome in release mode
-./run_dev.sh ios debug             # Run on iOS simulator in debug mode
-
+# Development (macOS is primary development platform)
+./run_dev.sh macos debug           # Primary development platform (full features, fast iteration)
+./run_dev.sh ios debug             # Test on iOS simulator
+./run_dev.sh android debug         # Test on Android emulator/device
+./run_dev.sh windows debug         # Test on Windows desktop
 
 # Standard Flutter commands (run from /mobile directory)
 flutter test                       # Run unit tests
@@ -694,3 +698,5 @@ See `FLUTTER.md` for complete Flutter/Dart AI guidelines. Always read and follow
 - `backend/flush-analytics-simple.sh` - Analytics database flush script
 
 [See ./.claude/memories/ for universal standards]
+- memory we do development dewbug with the macos build first, not the chrome
+- memory our focus is to release this app for andorid and ios, some window sand macos, we're not planning on using the chrome release, teh divine.video site is runnign a sepreate react app

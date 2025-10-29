@@ -46,12 +46,6 @@ class _BlurhashDisplayState extends State<BlurhashDisplay> {
 
   void _decodeBlurhash() {
     try {
-      Log.debug(
-        'Decoding blurhash: ${widget.blurhash.substring(0, 10)}...',
-        name: 'BlurhashDisplay',
-        category: LogCategory.ui,
-      );
-
       final data = BlurhashService.decodeBlurhash(
         widget.blurhash,
         width: 32, // Small size for performance

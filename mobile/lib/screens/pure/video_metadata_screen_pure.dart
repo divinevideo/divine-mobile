@@ -3,12 +3,16 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:video_player/video_player.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/services/proofmode_session_service.dart' show ProofManifest;
+import 'package:openvine/models/pending_upload.dart' show UploadStatus;
+import 'package:openvine/widgets/proofmode_info_panel.dart';
+import 'package:openvine/theme/vine_theme.dart';
 
 /// Pure video metadata screen using revolutionary single-controller Riverpod architecture
 class VideoMetadataScreenPure extends ConsumerStatefulWidget {
@@ -36,6 +40,8 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
   int _expirationHours = 24;
   bool _isPublishing = false;
   String _publishingStatus = '';
+  double _uploadProgress = 0.0;
+  String? _currentUploadId;
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
 
@@ -117,7 +123,7 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
         Scaffold(
           backgroundColor: Colors.black,
           appBar: AppBar(
-        backgroundColor: Colors.green,
+        backgroundColor: VineTheme.vineGreen,
         leading: IconButton(
           key: const Key('back-button'),
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -207,7 +213,7 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const CircularProgressIndicator(color: Colors.green),
+                          const CircularProgressIndicator(color: VineTheme.vineGreen),
                           const SizedBox(height: 8),
                           Text(
                             'Loading preview...',
@@ -247,6 +253,18 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide.none,
                         ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -271,6 +289,18 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
                         filled: true,
                         fillColor: Colors.grey[900],
                         border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide.none,
                         ),
@@ -300,8 +330,20 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
                               filled: true,
                               fillColor: Colors.grey[900],
                               prefixText: '#',
-                              prefixStyle: const TextStyle(color: Colors.green),
+                              prefixStyle: const TextStyle(color: VineTheme.vineGreen),
                               border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              errorBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide.none,
                               ),
@@ -312,7 +354,7 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
                         const SizedBox(width: 8),
                         IconButton(
                           onPressed: () => _addHashtag(_hashtagController.text),
-                          icon: const Icon(Icons.add, color: Colors.green),
+                          icon: const Icon(Icons.add, color: VineTheme.vineGreen),
                         ),
                       ],
                     ),
@@ -335,7 +377,7 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
                         children: _hashtags.map((hashtag) => Chip(
                           label: Text('#$hashtag'),
                           labelStyle: const TextStyle(color: Colors.white),
-                          backgroundColor: Colors.green,
+                          backgroundColor: VineTheme.vineGreen,
                           deleteIcon: const Icon(Icons.close, color: Colors.white, size: 18),
                           onDeleted: () => _removeHashtag(hashtag),
                         )).toList(),
@@ -359,7 +401,7 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
                           _isExpiringPost = value;
                         });
                       },
-                      activeThumbColor: Colors.green,
+                      activeThumbColor: VineTheme.vineGreen,
                     ),
 
                     if (_isExpiringPost) ...[
@@ -394,6 +436,12 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
                       ),
                       const SizedBox(height: 8),
                     ],
+
+                    // ProofMode info panel
+                    if (widget.proofManifest != null) ...[
+                      const SizedBox(height: 16),
+                      ProofModeInfoPanel(manifest: widget.proofManifest!),
+                    ],
                   ],
                 ),
               ),
@@ -417,10 +465,36 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(
-                      color: Colors.green,
-                      strokeWidth: 3,
-                    ),
+                    // Progress indicator - show deterministic if we have upload progress
+                    _currentUploadId != null && _uploadProgress > 0
+                        ? Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              SizedBox(
+                                width: 80,
+                                height: 80,
+                                child: CircularProgressIndicator(
+                                  value: _uploadProgress,
+                                  color: VineTheme.vineGreen,
+                                  strokeWidth: 4,
+                                  backgroundColor: Colors.grey[700],
+                                ),
+                              ),
+                              Text(
+                                '${(_uploadProgress * 100).toInt()}%',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                            ],
+                          )
+                        : const CircularProgressIndicator(
+                            color: VineTheme.vineGreen,
+                            strokeWidth: 3,
+                          ),
                     const SizedBox(height: 24),
                     Text(
                       _publishingStatus,
@@ -428,6 +502,7 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
+                        decoration: TextDecoration.none,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -483,10 +558,10 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green : Colors.grey[900],
+          color: isSelected ? VineTheme.vineGreen : Colors.grey[900],
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? Colors.green : Colors.grey[700]!,
+            color: isSelected ? VineTheme.vineGreen : Colors.grey[700]!,
             width: 1.5,
           ),
         ),
@@ -559,6 +634,36 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
       Log.info('📝 Upload started, ID: ${pendingUpload.id}',
           category: LogCategory.video);
 
+      // Track upload progress
+      setState(() {
+        _currentUploadId = pendingUpload.id;
+      });
+
+      // Poll for upload progress
+      while (mounted && _currentUploadId != null) {
+        final upload = uploadManager.getUpload(_currentUploadId!);
+        if (upload == null) break;
+
+        final progress = upload.uploadProgress ?? 0.0;
+        if (mounted) {
+          setState(() {
+            _uploadProgress = progress;
+            if (progress < 1.0) {
+              _publishingStatus = 'Uploading video... ${(progress * 100).toInt()}%';
+            }
+          });
+        }
+
+        // If upload is complete or failed, stop polling
+        if (upload.status == UploadStatus.readyToPublish ||
+            upload.status == UploadStatus.failed ||
+            upload.status == UploadStatus.processing) {
+          break;
+        }
+
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+
       // Publish Nostr event
       Log.info('📝 Publishing Nostr event...',
           category: LogCategory.video);
@@ -597,6 +702,8 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
           setState(() {
             _isPublishing = false;
             _publishingStatus = '';
+            _uploadProgress = 0.0;
+            _currentUploadId = null;
           });
 
           // Pop back to the root (main navigation screen)
@@ -606,7 +713,7 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
           Log.info('📝 Published successfully, returned to main screen', category: LogCategory.video);
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       Log.error('📝 VideoMetadataScreenPure: Failed to publish video: $e',
           category: LogCategory.video);
 
@@ -614,13 +721,133 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
         setState(() {
           _isPublishing = false;
           _publishingStatus = '';
+          _uploadProgress = 0.0;
+          _currentUploadId = null;
         });
+
+        // Get the current Blossom server for error message
+        final blossomService = ref.read(blossomUploadServiceProvider);
+        String serverName = 'Unknown server';
+        try {
+          final serverUrl = await blossomService.getBlossomServer();
+          if (serverUrl != null && serverUrl.isNotEmpty) {
+            // Extract domain from URL for display
+            final uri = Uri.tryParse(serverUrl);
+            serverName = uri?.host ?? serverUrl;
+          }
+        } catch (_) {
+          // If we can't get the server name, just use the generic message
+        }
+
+        // Convert technical error to user-friendly message
+        String userMessage;
+        if (e.toString().contains('404') || e.toString().contains('not_found')) {
+          userMessage = 'The Blossom media server ($serverName) is not working. You can choose another in your settings.';
+        } else if (e.toString().contains('500')) {
+          userMessage = 'The Blossom media server ($serverName) encountered an error. You can choose another in your settings.';
+        } else if (e.toString().contains('network') || e.toString().contains('connection')) {
+          userMessage = 'Network error. Please check your connection and try again.';
+        } else if (e.toString().contains('Not authenticated')) {
+          userMessage = 'Please sign in to publish videos.';
+        } else {
+          userMessage = 'Failed to publish video. Please try again.';
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to publish video: $e'),
+            content: Text(userMessage),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Details',
+              textColor: Colors.white,
+              onPressed: () {
+                // Show technical details in a dialog
+                final errorDetails = '''
+Error: ${e.toString()}
+
+Stack Trace:
+${stackTrace.toString()}
+
+Operation: Video Upload
+Time: ${DateTime.now().toIso8601String()}
+Video: ${widget.videoFile.path}
+''';
+
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: Colors.grey[900],
+                    title: Row(
+                      children: [
+                        const Icon(Icons.bug_report, color: Colors.red),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Error Details',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                    content: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Please share these details with support:',
+                            style: TextStyle(
+                              color: VineTheme.vineGreen,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey[700]!),
+                            ),
+                            child: SelectableText(
+                              errorDetails,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    actions: [
+                      TextButton.icon(
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: errorDetails));
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Error details copied to clipboard'),
+                                backgroundColor: VineTheme.vineGreen,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.copy, color: VineTheme.vineGreen),
+                        label: const Text('Copy', style: TextStyle(color: VineTheme.vineGreen)),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Close', style: TextStyle(color: Colors.white70)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         );
       }

@@ -9,7 +9,9 @@ import 'package:riverpod/riverpod.dart' show Ref;
 import 'package:openvine/services/vine_recording_controller.dart'
     show VineRecordingController, VineRecordingState, RecordingSegment, MacOSCameraInterface;
 import 'package:openvine/services/proofmode_session_service.dart'
-    show ProofManifest;
+    show ProofManifest, ProofModeSessionService;
+import 'package:openvine/services/proofmode_key_service.dart';
+import 'package:openvine/services/proofmode_attestation_service.dart';
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -275,7 +277,12 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
 /// Provider for VineRecordingController with reactive state management
 final vineRecordingProvider =
     StateNotifierProvider<VineRecordingNotifier, VineRecordingUIState>((ref) {
-  final controller = VineRecordingController();
+  // Initialize ProofMode services
+  final keyService = ProofModeKeyService();
+  final attestationService = ProofModeAttestationService();
+  final proofModeSession = ProofModeSessionService(keyService, attestationService);
+
+  final controller = VineRecordingController(proofModeSession: proofModeSession);
   final notifier = VineRecordingNotifier(controller, ref);
 
   ref.onDispose(() {

@@ -14,6 +14,7 @@ import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/services/migration_service.dart';
+import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/database/app_database.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/route_normalization_provider.dart';
@@ -55,6 +56,11 @@ Future<void> _startOpenVineApp() async {
   StartupPerformanceService.instance.startPhase('crash_reporting');
   await CrashReportingService.instance.initialize();
   StartupPerformanceService.instance.completePhase('crash_reporting');
+
+  // Initialize performance monitoring (depends on Firebase Core from crash reporting)
+  StartupPerformanceService.instance.startPhase('performance_monitoring');
+  await PerformanceMonitoringService.instance.initialize();
+  StartupPerformanceService.instance.completePhase('performance_monitoring');
 
   // Now we can start logging
   Log.info('[STARTUP] App initialization started at $startTime',

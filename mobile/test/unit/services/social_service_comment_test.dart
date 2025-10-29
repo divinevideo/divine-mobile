@@ -39,9 +39,23 @@ void main() {
       mockAuthService = MockAuthService();
       mockSubscriptionManager = MockSubscriptionManager();
 
+      // Mock isAuthenticated to return false by default (tests override as needed)
+      when(mockAuthService.isAuthenticated).thenReturn(false);
+
       // Mock subscribeToEvents to prevent initialization calls
       when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
           .thenAnswer((_) => const Stream<Event>.empty());
+
+      // Mock createSubscription for fetchCommentsForEvent
+      when(mockSubscriptionManager.createSubscription(
+        name: anyNamed('name'),
+        filters: anyNamed('filters'),
+        onEvent: anyNamed('onEvent'),
+        onError: anyNamed('onError'),
+        onComplete: anyNamed('onComplete'),
+        timeout: anyNamed('timeout'),
+        priority: anyNamed('priority'),
+      )).thenAnswer((_) async => 'test_subscription_id');
 
       socialService = SocialService(
         mockNostrService,
@@ -52,6 +66,7 @@ void main() {
 
     tearDown(() {
       socialService.dispose();
+      resetMockitoState(); // Clear any pending verification state
       reset(mockNostrService);
       reset(mockAuthService);
       reset(mockSubscriptionManager);
@@ -243,9 +258,9 @@ void main() {
 
         when(
           mockAuthService.createAndSignEvent(
-            kind: any,
-            tags: any,
-            content: any,
+            kind: anyNamed('kind'),
+            tags: anyNamed('tags'),
+            content: anyNamed('content'),
           ),
         ).thenAnswer((_) async => testEvent);
 
@@ -275,9 +290,9 @@ void main() {
         when(mockAuthService.isAuthenticated).thenReturn(true);
         when(
           mockAuthService.createAndSignEvent(
-            kind: any,
-            tags: any,
-            content: any,
+            kind: anyNamed('kind'),
+            tags: anyNamed('tags'),
+            content: anyNamed('content'),
           ),
         ).thenAnswer((_) async => null);
 
@@ -315,9 +330,9 @@ void main() {
 
         when(
           mockAuthService.createAndSignEvent(
-            kind: any,
-            tags: any,
-            content: any,
+            kind: anyNamed('kind'),
+            tags: anyNamed('tags'),
+            content: anyNamed('content'),
           ),
         ).thenAnswer((_) async => testEvent);
 
@@ -369,7 +384,7 @@ void main() {
         when(
           mockAuthService.createAndSignEvent(
             kind: 1,
-            tags: any,
+            tags: anyNamed('tags'),
             content: trimmedContent,
           ),
         ).thenAnswer((_) async => testEvent);
@@ -395,7 +410,7 @@ void main() {
         verify(
           mockAuthService.createAndSignEvent(
             kind: 1,
-            tags: any,
+            tags: anyNamed('tags'),
             content: trimmedContent,
           ),
         ).called(1);
@@ -403,7 +418,7 @@ void main() {
     });
 
     group('fetchCommentsForEvent method', () {
-      test('should return stream of comment events', () {
+      test('should return stream of comment events', () async {
         // Arrange
         final testCommentEvent = Event(
           testCurrentUserPubkey,
@@ -416,35 +431,56 @@ void main() {
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
         );
 
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.fromIterable([testCommentEvent]));
+        // Mock createSubscription to call onEvent callback with test event
+        when(mockSubscriptionManager.createSubscription(
+          name: anyNamed('name'),
+          filters: anyNamed('filters'),
+          onEvent: anyNamed('onEvent'),
+          onError: anyNamed('onError'),
+          onComplete: anyNamed('onComplete'),
+          timeout: anyNamed('timeout'),
+          priority: anyNamed('priority'),
+        )).thenAnswer((invocation) async {
+          // Get the onEvent callback and call it with our test event
+          final onEvent = invocation.namedArguments[Symbol('onEvent')] as Function(Event);
+          onEvent(testCommentEvent);
+          return 'test_subscription_id';
+        });
 
         // Act
         final stream = socialService.fetchCommentsForEvent(testVideoEventId);
 
         // Assert
-        expect(stream, emits(testCommentEvent));
+        await expectLater(stream, emits(testCommentEvent));
 
-        // Verify subscription was created with correct filter
+        // Verify subscription was created
         verify(
-          mockNostrService.subscribeToEvents(
+          mockSubscriptionManager.createSubscription(
+            name: anyNamed('name'),
             filters: anyNamed('filters'),
+            onEvent: anyNamed('onEvent'),
+            onError: anyNamed('onError'),
+            onComplete: anyNamed('onComplete'),
+            timeout: anyNamed('timeout'),
+            priority: anyNamed('priority'),
           ),
         ).called(1);
       });
 
       test('should subscribe with correct filter for comments', () {
-        // Arrange
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => const Stream<Event>.empty());
-
         // Act
         socialService.fetchCommentsForEvent(testVideoEventId);
 
-        // Assert
+        // Assert - Verify createSubscription was called with correct filters
         final captured = verify(
-          mockNostrService.subscribeToEvents(
+          mockSubscriptionManager.createSubscription(
+            name: anyNamed('name'),
             filters: captureAnyNamed('filters'),
+            onEvent: anyNamed('onEvent'),
+            onError: anyNamed('onError'),
+            onComplete: anyNamed('onComplete'),
+            timeout: anyNamed('timeout'),
+            priority: anyNamed('priority'),
           ),
         ).captured;
 

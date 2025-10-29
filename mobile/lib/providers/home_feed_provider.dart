@@ -8,6 +8,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/social_providers.dart' as social;
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/state/video_feed_state.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -156,7 +157,12 @@ class HomeFeed extends _$HomeFeed {
 
     // Subscribe to home feed videos from followed authors using dedicated subscription type
     // NostrService now handles deduplication automatically
-    await videoEventService.subscribeToHomeFeed(followingPubkeys, limit: 100);
+    // Request server-side sorting by created_at (newest first) if relay supports it
+    await videoEventService.subscribeToHomeFeed(
+      followingPubkeys,
+      limit: 100,
+      sortBy: VideoSortField.createdAt, // Newest videos first (timeline order)
+    );
 
     // Wait for initial batch of videos to arrive from relay
     // Videos arrive in rapid succession, so we wait for the count to stabilize

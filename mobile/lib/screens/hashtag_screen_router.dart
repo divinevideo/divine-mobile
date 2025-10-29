@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/mixins/async_value_ui_helpers_mixin.dart';
 import 'package:openvine/providers/hashtag_feed_providers.dart';
+import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
@@ -91,6 +92,8 @@ class _HashtagScreenRouterState extends ConsumerState<HashtagScreenRouter>
           startingIndex: safeIndex,
           // Add pagination callback
           onLoadMore: () => ref.read(hashtagFeedProvider.notifier).loadMore(),
+          // Add navigation callback to keep hashtag context when swiping
+          onNavigate: (index) => context.goHashtag(hashtag, index),
         );
       },
     );

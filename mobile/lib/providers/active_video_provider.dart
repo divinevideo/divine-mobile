@@ -84,7 +84,7 @@ final activeVideoIdProvider = Provider<String?>((ref) {
     return null;
   }
 
-  // Get video at current index
+  // Get video at current index - videoIndex maps directly to list index
   final idx = ctx.videoIndex!.clamp(0, videos.length - 1);
   final activeVideoId = videos[idx].id;
 

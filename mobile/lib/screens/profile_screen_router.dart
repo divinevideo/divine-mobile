@@ -13,6 +13,7 @@ import 'package:openvine/mixins/page_controller_sync_mixin.dart';
 import 'package:openvine/mixins/video_prefetch_mixin.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/optimistic_follow_provider.dart';
 import 'package:openvine/providers/profile_feed_provider.dart';
 import 'package:openvine/providers/profile_stats_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -222,14 +223,12 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                 itemBuilder: (context, index) {
                   if (index >= videos.length) return const SizedBox.shrink();
 
-                  // Convert list index to URL index for VideoFeedItem
-                  // URL index 0 = grid, 1 = first video, 2 = second video, etc.
-                  final urlIndex = index + 1;
-
+                  // VideoFeedItem uses list index for active video detection
+                  // (URL manages 1-based indexing separately)
                   return VideoFeedItem(
                     key: ValueKey('video-${videos[index].id}'),
                     video: videos[index],
-                    index: urlIndex,
+                    index: index,  // Use list index for active video detection
                     hasBottomNavigation: false, // Fullscreen mode, no bottom nav
                     contextTitle: ref.read(fetchUserProfileProvider(userIdHex)).value?.displayName ?? 'Profile',
                   );
@@ -715,9 +714,9 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
               ),
             ] else ...[
               Expanded(
-                child: Builder(
-                  builder: (context) {
-                    final isFollowing = socialService.isFollowing(userIdHex);
+                child: Consumer(
+                  builder: (context, ref, _) {
+                    final isFollowing = ref.watch(isFollowingProvider(userIdHex));
                     return ElevatedButton(
                       onPressed: isFollowing
                           ? () => _unfollowUser(userIdHex)

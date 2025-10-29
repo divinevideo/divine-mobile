@@ -193,6 +193,65 @@ None yet - first fix worked perfectly!
 - Commit after each complete fix
 - Aim for 5-10 more test files this session
 
+### Surgical Fix #3: social_service_comment_test.dart (4/10 → 10/10 passing)
+
+**Duration**: 30 minutes
+**Initial State**: 4 passing, 6 failing
+**Final State**: All 10 tests passing ✅
+
+**Issues Fixed**:
+
+1. **Missing Mock Stubs** - Added default stubs in setUp():
+   - `isAuthenticated` returning false
+   - `subscribeToEvents` returning empty stream
+   - `createSubscription` returning `'test_subscription_id'`
+
+2. **Incorrect Mockito Argument Matchers** - Fixed 5 locations:
+   - Changed `any` to `anyNamed('kind')`, `anyNamed('tags')`, `anyNamed('content')`
+   - Mockito requires `anyNamed()` for named parameters, not `any`
+
+3. **Null Return Type** - Fixed createSubscription mock:
+   - Changed from `.thenAnswer((_) async {})` (returns null)
+   - To `.thenAnswer((_) async => 'test_subscription_id')` (returns String)
+
+4. **Mockito Verification State Pollution**:
+   - Added `resetMockitoState()` in tearDown()
+   - Clears global verification state that persists across tests when errors occur
+
+5. **Async Stream Expectation**:
+   - Changed `expect(stream, emits(...))` to `await expectLater(stream, emits(...))`
+   - Ensures async expectation completes before test ends
+
+6. **Test Implementation Mismatch** - Tests were verifying WRONG method:
+   - Tests verified `mockNostrService.subscribeToEvents()`
+   - But implementation calls `_subscriptionManager.createSubscription()`
+   - **Rewrote test 9**: Mock `createSubscription`, extract `onEvent` callback, invoke with test data
+   - **Rewrote test 10**: Verify `createSubscription` was called with correct filters
+
+**Key Technical Pattern Discovered**:
+```dart
+// When mocking SubscriptionManager.createSubscription, extract and call the onEvent callback:
+when(mockSubscriptionManager.createSubscription(
+  name: anyNamed('name'),
+  filters: anyNamed('filters'),
+  onEvent: anyNamed('onEvent'),
+  onError: anyNamed('onError'),
+  onComplete: anyNamed('onComplete'),
+  timeout: anyNamed('timeout'),
+  priority: anyNamed('priority'),
+)).thenAnswer((invocation) async {
+  final onEvent = invocation.namedArguments[Symbol('onEvent')] as Function(Event);
+  onEvent(testCommentEvent);
+  return 'test_subscription_id';
+});
+```
+
+**Test File**: `test/unit/services/social_service_comment_test.dart`
+**Lines Modified**: 42-58, 69, 260-263, 292-295, 332-335, 386, 412, 421-493
+**Result**: +1 complete test file (10 tests), +6 net tests passing
+
+**Commit**: (next)
+
 ---
 
-*Last updated: 2025-10-25 23:42 PST*
+*Last updated: 2025-10-30 09:57 PST*

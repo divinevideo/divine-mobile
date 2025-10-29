@@ -29,9 +29,12 @@ import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/content_blocklist_service.dart';
+import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
+import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/log_batcher.dart';
 import 'package:openvine/constants/nip71_migration.dart';
@@ -113,14 +116,17 @@ class VideoEventService extends ChangeNotifier {
     required SubscriptionManager subscriptionManager,
     UserProfileService? userProfileService,
     EventRouter? eventRouter,
+    VideoFilterBuilder? videoFilterBuilder,
   })  : _subscriptionManager = subscriptionManager,
         _userProfileService = userProfileService,
-        _eventRouter = eventRouter {
+        _eventRouter = eventRouter,
+        _videoFilterBuilder = videoFilterBuilder {
     _initializePaginationStates();
   }
   final INostrService _nostrService;
   final UserProfileService? _userProfileService;
   final EventRouter? _eventRouter;
+  final VideoFilterBuilder? _videoFilterBuilder;
   final ConnectionStatusService _connectionService = ConnectionStatusService();
 
   // REFACTORED: Separate event lists per subscription type
@@ -171,11 +177,6 @@ class VideoEventService extends ChangeNotifier {
   // Frame-based batching for progressive UI updates
   bool _hasScheduledFrameUpdate = false;
 
-  // Metrics tracking for progressive loading performance
-  int _totalEventsReceived = 0;
-  int _totalUiUpdates = 0;
-  DateTime? _firstEventTime;
-
   // Search state - TODO: These fields are maintained for future search state tracking
   // bool _isSearching = false;
   // String? _currentSearchQuery;
@@ -217,31 +218,12 @@ class VideoEventService extends ChangeNotifier {
     if (_hasScheduledFrameUpdate) return;
     _hasScheduledFrameUpdate = true;
 
-    Log.debug('🔔 Scheduling frame update callback',
-        name: 'VideoEventService', category: LogCategory.video);
-
     // Use Future.microtask instead of WidgetsBinding.addPostFrameCallback
     // This is more reliable on web and avoids "disposed view" errors
     Future.microtask(() {
       if (!_hasScheduledFrameUpdate) return; // Already processed
       _hasScheduledFrameUpdate = false;
-      _totalUiUpdates++;
-      Log.debug('🔔 Frame callback fired - calling notifyListeners() on instance ${hashCode} (update #$_totalUiUpdates, hasListeners=$hasListeners)',
-          name: 'VideoEventService', category: LogCategory.video);
       notifyListeners();
-
-      // Log metrics periodically (every 10 updates)
-      if (_totalUiUpdates % 10 == 0) {
-        final avgEventsPerUpdate = _totalEventsReceived / _totalUiUpdates;
-        final timeToFirstContent = _firstEventTime != null
-            ? DateTime.now().difference(_firstEventTime!).inMilliseconds
-            : 0;
-        Log.debug(
-          'Progressive loading metrics: $_totalEventsReceived events, $_totalUiUpdates updates, ${avgEventsPerUpdate.toStringAsFixed(1)} events/update, ${timeToFirstContent}ms to first content',
-          name: 'VideoEventService',
-          category: LogCategory.video,
-        );
-      }
     });
   }
 
@@ -489,6 +471,7 @@ class VideoEventService extends ChangeNotifier {
         true, // Whether to replace existing subscription for this type
     bool includeReposts =
         false, // Whether to include kind 6 reposts (disabled by default)
+    VideoSortField? sortBy, // Server-side sorting if relay supports it
   }) async {
     // NostrService now handles subscription deduplication automatically via filter hashing
     // We still track subscription types for our own state management
@@ -603,7 +586,8 @@ class VideoEventService extends ChangeNotifier {
       final lowercaseHashtags =
           hashtags?.map((tag) => tag.toLowerCase()).toList();
 
-      final videoFilter = Filter(
+      // Create base filter for NIP-71 video events
+      final baseVideoFilter = Filter(
         kinds: NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video events
         authors: authors,
         since: effectiveSince,
@@ -611,6 +595,28 @@ class VideoEventService extends ChangeNotifier {
         limit: limit, // Use full limit for video events
         t: lowercaseHashtags, // Add hashtag filtering at relay level (lowercase per NIP-24)
       );
+
+      // Use VideoFilterBuilder to add server-side sorting if requested and relay supports it
+      Filter videoFilter = baseVideoFilter;
+      if (sortBy != null && _videoFilterBuilder != null) {
+        try {
+          videoFilter = await _videoFilterBuilder!.buildFilter(
+            baseFilter: baseVideoFilter,
+            relayUrl: AppConstants.defaultRelayUrl,
+            sortBy: sortBy,
+          );
+          Log.debug(
+              'Requested server-side sorting by ${sortBy.fieldName}',
+              name: 'VideoEventService',
+              category: LogCategory.video);
+        } catch (e) {
+          Log.warning(
+              'Failed to build sorted filter: $e. Using standard filter.',
+              name: 'VideoEventService',
+              category: LogCategory.video);
+          // Fall back to base filter on error
+        }
+      }
 
       // Debug: Log when subscribing to Classic Vines
       if (authors != null &&
@@ -714,6 +720,12 @@ class VideoEventService extends ChangeNotifier {
           'includeReposts': includeReposts,
         };
 
+        // Set per-subscription loading state to show loading UI
+        final paginationState = _paginationStates[subscriptionType];
+        if (paginationState != null) {
+          paginationState.isLoading = true;
+        }
+
         // Generate deterministic subscription ID based on subscription parameters
         final subscriptionId = _generateSubscriptionId(
           subscriptionType: subscriptionType,
@@ -742,9 +754,36 @@ class VideoEventService extends ChangeNotifier {
         int eventCount = 0;
         DateTime? firstEventTime;
         bool eoseReceived = false;
+        bool timeoutReported = false;
+
+        // Start performance trace for feed loading
+        final traceName = 'feed_load_${subscriptionType.name}';
+        await PerformanceMonitoringService.instance.startTrace(traceName);
 
         Log.info('📡 Creating subscription for $subscriptionType at ${subscriptionStartTime.toIso8601String()}',
             name: 'VideoEventService', category: LogCategory.video);
+
+        // Set up timeout to detect feed loading failures (30 seconds)
+        Timer? feedLoadingTimeout;
+        feedLoadingTimeout = Timer(const Duration(seconds: 30), () {
+          if (!eoseReceived && eventCount == 0 && !timeoutReported) {
+            timeoutReported = true;
+            Log.error(
+              '⏰ TIMEOUT: No events received for $subscriptionType after 30 seconds!',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
+
+            // Report timeout to Crashlytics
+            _reportFeedLoadingTimeout(
+              subscriptionType: subscriptionType,
+              filters: filters,
+              duration: DateTime.now().difference(subscriptionStartTime),
+              relayConnected: _nostrService.connectedRelayCount > 0,
+              isOnline: _connectionService.isOnline,
+            );
+          }
+        });
 
         // Phase 3.3: Cache-first strategy - load cached events BEFORE relay subscription
         // This provides instant UI feedback while relay fetches fresh data
@@ -776,6 +815,7 @@ class VideoEventService extends ChangeNotifier {
           filters: filters,
           onEose: () {
             eoseReceived = true;
+            feedLoadingTimeout?.cancel(); // Cancel timeout - EOSE received successfully
             final eoseDuration = DateTime.now().difference(subscriptionStartTime);
             Log.info('✅ EOSE received for $subscriptionType after ${eoseDuration.inMilliseconds}ms with $eventCount events',
                 name: 'VideoEventService', category: LogCategory.video);
@@ -787,6 +827,15 @@ class VideoEventService extends ChangeNotifier {
 
               // Run automatic diagnostics for debugging empty feeds
               _runAutoDiagnostics(subscriptionType, filters);
+
+              // Report to Crashlytics - this is a critical user experience issue
+              _reportEmptyFeedToCrashlytics(
+                subscriptionType: subscriptionType,
+                filters: filters,
+                eoseDuration: eoseDuration,
+                relayConnected: _nostrService.connectedRelayCount > 0,
+                isOnline: _connectionService.isOnline,
+              );
             }
           },
         );
@@ -801,9 +850,19 @@ class VideoEventService extends ChangeNotifier {
             // Track first event arrival time
             if (firstEventTime == null) {
               firstEventTime = DateTime.now();
+              feedLoadingTimeout?.cancel(); // Cancel timeout - events are arriving successfully
               final firstEventLatency = firstEventTime!.difference(subscriptionStartTime);
               Log.info('🎯 First event for $subscriptionType arrived after ${firstEventLatency.inMilliseconds}ms',
                   name: 'VideoEventService', category: LogCategory.video);
+
+              // Stop performance trace on first event arrival
+              final traceName = 'feed_load_${subscriptionType.name}';
+              PerformanceMonitoringService.instance.setMetric(
+                traceName,
+                'event_count',
+                eventCount,
+              );
+              PerformanceMonitoringService.instance.stopTrace(traceName);
             }
 
             if (subscriptionType == SubscriptionType.homeFeed) {
@@ -1616,25 +1675,34 @@ class VideoEventService extends ChangeNotifier {
         subscriptionType: SubscriptionType.hashtag,
         hashtags: hashtags,
         limit: limit,
+        sortBy: VideoSortField.loopCount, // Sort by most looped videos
       );
 
   /// Subscribe to home feed videos (from people you follow)
-  Future<void> subscribeToHomeFeed(List<String> followingPubkeys,
-          {int limit = 100}) async =>
+  Future<void> subscribeToHomeFeed(
+    List<String> followingPubkeys, {
+    int limit = 100,
+    VideoSortField? sortBy,
+  }) async =>
       subscribeToVideoFeed(
         subscriptionType: SubscriptionType.homeFeed,
         authors: followingPubkeys,
         limit: limit,
         includeReposts: true,
+        sortBy: sortBy,
       );
 
   /// Subscribe to discovery videos (all videos for exploration)
-  Future<void> subscribeToDiscovery({int limit = 100}) async =>
+  Future<void> subscribeToDiscovery({
+    int limit = 100,
+    VideoSortField? sortBy,
+  }) async =>
       subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
         authors: null, // No author filter
         limit: limit,
         includeReposts: true,
+        sortBy: sortBy,
       );
 
   /// Subscribe to videos from a specific group (using 'h' tag)
@@ -2158,22 +2226,46 @@ class VideoEventService extends ChangeNotifier {
           category: LogCategory.video);
     }
 
+    // Detailed debug: show what hashtags are actually in the events
+    int totalEventsChecked = 0;
+    int eventsWithHashtags = 0;
+    final allHashtagsSeen = <String>{};
+
     for (final events in _eventLists.values) {
       for (final event in events) {
+        totalEventsChecked++;
+
         // Convert event hashtags to lowercase for comparison
         final eventHashtagsLower =
             event.hashtags.map((tag) => tag.toLowerCase()).toList();
+
+        if (eventHashtagsLower.isNotEmpty) {
+          eventsWithHashtags++;
+          allHashtagsSeen.addAll(eventHashtagsLower);
+        }
 
         // Check if event has any of the requested hashtags (case-insensitive)
         if (hashtagsLower.any(eventHashtagsLower.contains)) {
           if (!seenIds.contains(event.id)) {
             seenIds.add(event.id);
             result.add(event);
+            Log.debug(
+                '  ✅ Match found: video ${event.id} has hashtags: $eventHashtagsLower',
+                name: 'VideoEventService',
+                category: LogCategory.video);
           }
         }
       }
     }
 
+    Log.debug(
+        '📊 Hashtag search stats: checked $totalEventsChecked videos, $eventsWithHashtags had hashtags',
+        name: 'VideoEventService',
+        category: LogCategory.video);
+    Log.debug(
+        '📊 All unique hashtags seen: ${allHashtagsSeen.take(20).join(", ")}${allHashtagsSeen.length > 20 ? "... (${allHashtagsSeen.length} total)" : ""}',
+        name: 'VideoEventService',
+        category: LogCategory.video);
     Log.debug(
         '✅ Found ${result.length} videos with hashtags: $hashtagsLower',
         name: 'VideoEventService',
@@ -2694,10 +2786,6 @@ class VideoEventService extends ChangeNotifier {
     //     name: 'VideoEventService',
     //     category: LogCategory.video);
 
-    // Track metrics for progressive loading
-    _totalEventsReceived++;
-    _firstEventTime ??= DateTime.now();
-
     // Schedule frame-based UI update for progressive loading
     _scheduleFrameUpdate();
   }
@@ -2893,6 +2981,167 @@ class VideoEventService extends ChangeNotifier {
     eventList.sort(VideoEvent.compareByEngagementScore);
   }
 
+  /// Report empty feed condition to Crashlytics with full diagnostic context
+  void _reportEmptyFeedToCrashlytics({
+    required SubscriptionType subscriptionType,
+    required List<Filter> filters,
+    required Duration eoseDuration,
+    required bool relayConnected,
+    required bool isOnline,
+  }) {
+    try {
+      // Build comprehensive error context
+      final context = StringBuffer();
+      context.writeln('=== EMPTY FEED DIAGNOSTIC ===');
+      context.writeln('Subscription Type: ${subscriptionType.name}');
+      context.writeln('EOSE Duration: ${eoseDuration.inMilliseconds}ms');
+      context.writeln('Relay Connected: $relayConnected');
+      context.writeln('Network Online: $isOnline');
+      context.writeln('Connected Relay Count: ${_nostrService.connectedRelayCount}');
+      context.writeln('');
+      context.writeln('Filters:');
+      for (var i = 0; i < filters.length; i++) {
+        final filter = filters[i];
+        context.writeln('  Filter $i:');
+        context.writeln('    Kinds: ${filter.kinds}');
+        context.writeln('    Authors: ${filter.authors?.length ?? 0} authors');
+        if (filter.authors != null && filter.authors!.isNotEmpty) {
+          context.writeln('    First author: ${filter.authors!.first}');
+        }
+        context.writeln('    Tags: ${filter.t?.length ?? 0} tags');
+        context.writeln('    Since: ${filter.since}');
+        context.writeln('    Until: ${filter.until}');
+        context.writeln('    Limit: ${filter.limit}');
+      }
+      context.writeln('');
+      context.writeln('Current State:');
+      context.writeln('  Total videos in feed: ${getVideos(subscriptionType).length}');
+      context.writeln('  Is loading: ${isLoadingForSubscription(subscriptionType)}');
+      context.writeln('  Has subscription: ${isSubscribed(subscriptionType)}');
+
+      // Log locally
+      Log.error(
+        '🚨 EMPTY FEED - Reporting to Crashlytics:\n${context.toString()}',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+
+      // Report to Crashlytics as non-fatal error
+      CrashReportingService.instance.recordError(
+        Exception('Empty feed after EOSE: ${subscriptionType.name}'),
+        StackTrace.current,
+        reason: context.toString(),
+      );
+
+      // Set custom keys for filtering in Crashlytics
+      CrashReportingService.instance.setCustomKey(
+        'last_empty_feed_type',
+        subscriptionType.name,
+      );
+      CrashReportingService.instance.setCustomKey(
+        'last_empty_feed_relay_connected',
+        relayConnected.toString(),
+      );
+      CrashReportingService.instance.setCustomKey(
+        'last_empty_feed_online',
+        isOnline.toString(),
+      );
+      CrashReportingService.instance.setCustomKey(
+        'last_empty_feed_duration_ms',
+        eoseDuration.inMilliseconds.toString(),
+      );
+    } catch (e) {
+      Log.error('Failed to report empty feed to Crashlytics: $e',
+          name: 'VideoEventService', category: LogCategory.video);
+    }
+  }
+
+  /// Report feed loading timeout to Crashlytics with full diagnostic context
+  void _reportFeedLoadingTimeout({
+    required SubscriptionType subscriptionType,
+    required List<Filter> filters,
+    required Duration duration,
+    required bool relayConnected,
+    required bool isOnline,
+  }) {
+    try {
+      // Build comprehensive error context
+      final context = StringBuffer();
+      context.writeln('=== FEED LOADING TIMEOUT DIAGNOSTIC ===');
+      context.writeln('Subscription Type: ${subscriptionType.name}');
+      context.writeln('Timeout Duration: ${duration.inMilliseconds}ms');
+      context.writeln('Relay Connected: $relayConnected');
+      context.writeln('Network Online: $isOnline');
+      context.writeln('Connected Relay Count: ${_nostrService.connectedRelayCount}');
+      context.writeln('');
+      context.writeln('Filters:');
+      for (var i = 0; i < filters.length; i++) {
+        final filter = filters[i];
+        context.writeln('  Filter $i:');
+        context.writeln('    Kinds: ${filter.kinds}');
+        context.writeln('    Authors: ${filter.authors?.length ?? 0} authors');
+        if (filter.authors != null && filter.authors!.isNotEmpty) {
+          context.writeln('    First author: ${filter.authors!.first}');
+        }
+        context.writeln('    Tags: ${filter.t?.length ?? 0} tags');
+        context.writeln('    Since: ${filter.since}');
+        context.writeln('    Until: ${filter.until}');
+        context.writeln('    Limit: ${filter.limit}');
+      }
+      context.writeln('');
+      context.writeln('Current State:');
+      context.writeln('  Total videos in feed: ${getVideos(subscriptionType).length}');
+      context.writeln('  Is loading: ${isLoadingForSubscription(subscriptionType)}');
+      context.writeln('  Has subscription: ${isSubscribed(subscriptionType)}');
+      context.writeln('');
+      context.writeln('Likely Causes:');
+      if (!relayConnected) {
+        context.writeln('  ❌ RELAY CONNECTION FAILURE - No relays connected!');
+      }
+      if (!isOnline) {
+        context.writeln('  ❌ NETWORK OFFLINE - Device has no internet connection');
+      }
+      if (relayConnected && isOnline) {
+        context.writeln('  ⚠️ Relay may be slow to respond or filter may match no events');
+      }
+
+      // Log locally
+      Log.error(
+        '⏰ FEED TIMEOUT - Reporting to Crashlytics:\n${context.toString()}',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+
+      // Report to Crashlytics as non-fatal error
+      CrashReportingService.instance.recordError(
+        Exception('Feed loading timeout after 30s: ${subscriptionType.name}'),
+        StackTrace.current,
+        reason: context.toString(),
+      );
+
+      // Set custom keys for filtering in Crashlytics
+      CrashReportingService.instance.setCustomKey(
+        'last_timeout_feed_type',
+        subscriptionType.name,
+      );
+      CrashReportingService.instance.setCustomKey(
+        'last_timeout_relay_connected',
+        relayConnected.toString(),
+      );
+      CrashReportingService.instance.setCustomKey(
+        'last_timeout_online',
+        isOnline.toString(),
+      );
+      CrashReportingService.instance.setCustomKey(
+        'last_timeout_duration_ms',
+        duration.inMilliseconds.toString(),
+      );
+    } catch (e) {
+      Log.error('Failed to report timeout to Crashlytics: $e',
+          name: 'VideoEventService', category: LogCategory.video);
+    }
+  }
+
   @override
   void dispose() {
     // Flush any remaining batched logs
@@ -3040,8 +3289,6 @@ class VideoEventService extends ChangeNotifier {
           final videoEvent = VideoEvent.fromNostrEvent(event);
           if (_hasValidVideoUrl(videoEvent)) {
             _eventLists[SubscriptionType.search]?.add(videoEvent);
-            _totalEventsReceived++;
-            _firstEventTime ??= DateTime.now();
             _scheduleFrameUpdate(); // Progressive loading for search results
             Log.debug('✅ Added valid search result: ${videoEvent.id}',
                 name: 'VideoEventService', category: LogCategory.video);

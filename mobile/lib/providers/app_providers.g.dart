@@ -61,6 +61,112 @@ final class ConnectionStatusServiceProvider
 String _$connectionStatusServiceHash() =>
     r'996c945a4e09628f52d45da659e79a2529d58bcb';
 
+/// Relay capability service for detecting NIP-11 divine extensions
+
+@ProviderFor(relayCapabilityService)
+const relayCapabilityServiceProvider = RelayCapabilityServiceProvider._();
+
+/// Relay capability service for detecting NIP-11 divine extensions
+
+final class RelayCapabilityServiceProvider
+    extends
+        $FunctionalProvider<
+          RelayCapabilityService,
+          RelayCapabilityService,
+          RelayCapabilityService
+        >
+    with $Provider<RelayCapabilityService> {
+  /// Relay capability service for detecting NIP-11 divine extensions
+  const RelayCapabilityServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'relayCapabilityServiceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$relayCapabilityServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<RelayCapabilityService> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  RelayCapabilityService create(Ref ref) {
+    return relayCapabilityService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RelayCapabilityService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RelayCapabilityService>(value),
+    );
+  }
+}
+
+String _$relayCapabilityServiceHash() =>
+    r'4d91346a2bc7573b977898ea944d9b85fc3f1ecf';
+
+/// Video filter builder for constructing relay-aware filters with server-side sorting
+
+@ProviderFor(videoFilterBuilder)
+const videoFilterBuilderProvider = VideoFilterBuilderProvider._();
+
+/// Video filter builder for constructing relay-aware filters with server-side sorting
+
+final class VideoFilterBuilderProvider
+    extends
+        $FunctionalProvider<
+          VideoFilterBuilder,
+          VideoFilterBuilder,
+          VideoFilterBuilder
+        >
+    with $Provider<VideoFilterBuilder> {
+  /// Video filter builder for constructing relay-aware filters with server-side sorting
+  const VideoFilterBuilderProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'videoFilterBuilderProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$videoFilterBuilderHash();
+
+  @$internal
+  @override
+  $ProviderElement<VideoFilterBuilder> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  VideoFilterBuilder create(Ref ref) {
+    return videoFilterBuilder(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(VideoFilterBuilder value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<VideoFilterBuilder>(value),
+    );
+  }
+}
+
+String _$videoFilterBuilderHash() =>
+    r'fa2390a9274ddcc619886531d6cfa0671b545d1a';
+
 /// Video visibility manager for controlling video playback based on visibility
 
 @ProviderFor(videoVisibilityManager)
@@ -969,7 +1075,7 @@ final class VideoEventServiceProvider
   }
 }
 
-String _$videoEventServiceHash() => r'5cba5e41b184715313d83fbb4bf8524517daceed';
+String _$videoEventServiceHash() => r'bf3701481febc3bfc9485c4aa43bac0c1b503b1f';
 
 /// Hashtag service depends on Video event service and cache service
 

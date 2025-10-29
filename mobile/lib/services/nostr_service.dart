@@ -27,9 +27,14 @@ class NostrService implements INostrService {
     embedded.EmbeddedNostrRelay? embeddedRelay,
     void Function()? onInitialized,
   }) : _onInitialized = onInitialized {
+    UnifiedLogger.info('🏗️  NostrService CONSTRUCTOR called - creating NEW instance', name: 'NostrService');
+    UnifiedLogger.info('   Initial relay count: ${_configuredRelays.length}', name: 'NostrService');
+    UnifiedLogger.warning('⚠️  This is a new instance - any previously added relays are LOST!', name: 'NostrService');
+
     // Allow injecting an embedded relay for testing
     if (embeddedRelay != null) {
       _embeddedRelay = embeddedRelay;
+      UnifiedLogger.info('   Embedded relay injected (testing mode)', name: 'NostrService');
     }
   }
 
@@ -55,7 +60,14 @@ class NostrService implements INostrService {
   Future<void> initialize(
       {List<String>? customRelays, bool enableP2P = true}) async {
     if (_isDisposed) throw StateError('NostrService is disposed');
-    if (_isInitialized) return; // Already initialized
+    if (_isInitialized) {
+      UnifiedLogger.info('🔄 initialize() called but service is already initialized', name: 'NostrService');
+      return; // Already initialized
+    }
+
+    UnifiedLogger.info('🚀 initialize() called - starting NostrService initialization', name: 'NostrService');
+    UnifiedLogger.info('   customRelays parameter: ${customRelays ?? "null (will use default)"}', name: 'NostrService');
+    UnifiedLogger.info('   enableP2P: $enableP2P', name: 'NostrService');
 
     Log.info('Starting initialization with embedded relay',
         name: 'NostrService', category: LogCategory.relay);
@@ -66,6 +78,12 @@ class NostrService implements INostrService {
     if (!relaysToAdd.contains(defaultRelay)) {
       relaysToAdd.add(defaultRelay);
     }
+
+    UnifiedLogger.info('📋 Relays to be loaded at startup:', name: 'NostrService');
+    for (var relay in relaysToAdd) {
+      UnifiedLogger.info('   - $relay', name: 'NostrService');
+    }
+    UnifiedLogger.warning('⚠️  NOTE: Only these relays will be loaded. Any relays added via UI are NOT persisted!', name: 'NostrService');
 
     try {
       // Skip embedded relay initialization on web platform
@@ -146,13 +164,29 @@ class NostrService implements INostrService {
             } else {
               Log.error('❌ External relay FAILED to connect: $relayUrl (${connectDuration.inMilliseconds}ms) - not in connectedRelays list!',
                   name: 'NostrService', category: LogCategory.relay);
+
+              // Report relay connection failure to Crashlytics
+              CrashReportingService.instance.recordError(
+                Exception('Relay connection failed: $relayUrl'),
+                StackTrace.current,
+                reason: 'Relay not in connected list after ${connectDuration.inMilliseconds}ms\n'
+                    'Configured relays: ${_configuredRelays.length}\n'
+                    'Connected relays: ${connectedRelays.length}',
+              );
             }
 
             Log.info('📊 Connected relays: ${connectedRelays.length}/${_configuredRelays.length} total',
                 name: 'NostrService', category: LogCategory.relay);
-          } catch (e) {
+          } catch (e, stackTrace) {
             Log.error('❌ Failed to add relay $relayUrl: $e',
                 name: 'NostrService', category: LogCategory.relay);
+
+            // Report relay add exception to Crashlytics
+            CrashReportingService.instance.recordError(
+              Exception('Exception adding relay: $relayUrl - $e'),
+              stackTrace,
+              reason: 'Configured relays: ${_configuredRelays.length}',
+            );
           }
         }
 
@@ -163,6 +197,27 @@ class NostrService implements INostrService {
         if (finalConnected.isEmpty && _configuredRelays.isNotEmpty) {
           Log.error('⚠️ WARNING: No external relays connected! App will have limited functionality.',
               name: 'NostrService', category: LogCategory.relay);
+
+          // Report complete relay connection failure to Crashlytics
+          // This is the most critical case - user won't see any content
+          CrashReportingService.instance.recordError(
+            Exception('CRITICAL: No relays connected'),
+            StackTrace.current,
+            reason: 'All relay connections failed\n'
+                'Configured relays: ${_configuredRelays.join(", ")}\n'
+                'Attempted: ${_configuredRelays.length} relays\n'
+                'Connected: 0 relays',
+          );
+
+          // Set custom keys for filtering
+          CrashReportingService.instance.setCustomKey(
+            'zero_relays_connected',
+            'true',
+          );
+          CrashReportingService.instance.setCustomKey(
+            'configured_relay_count',
+            _configuredRelays.length.toString(),
+          );
         }
       }
 
@@ -354,6 +409,11 @@ class NostrService implements INostrService {
     final seenEventIds = <String>{};
     // Track replaceable events (kind, pubkey) -> (eventId, timestamp) for deduplication
     final replaceableEvents = <String, (String, int)>{};
+
+    // Pre-initialize replaceableEvents map from database to avoid re-processing on every startup
+    // Fire-and-forget - map will be populated asynchronously
+    _preInitializeReplaceableEvents(replaceableEvents, filters);
+
     _subscriptions[id] = controller;
     Log.debug('Total active subscriptions: ${_subscriptions.length}',
         name: 'NostrService', category: LogCategory.relay);
@@ -437,9 +497,7 @@ class NostrService implements INostrService {
               seenEventIds.remove(oldEventId); // Clean up old ID
               seenEventIds.add(event.id);
             } else {
-              // Old event is newer - drop this one
-              Log.debug('Dropping older ${event.kind} event (ts:${event.createdAt}) - already have newer (ts:$oldTimestamp)',
-                  name: 'NostrService', category: LogCategory.relay);
+              // Old event is newer - drop this one (silent - correct behavior)
               return;
             }
           } else {
@@ -539,6 +597,73 @@ class NostrService implements INostrService {
     };
 
     return controller.stream;
+  }
+
+  /// Pre-initialize the replaceable events map from database to avoid re-processing on startup
+  /// This prevents logging "dropping older event" messages for events already in the database
+  Future<void> _preInitializeReplaceableEvents(
+    Map<String, (String, int)> replaceableEvents,
+    List<nostr.Filter> filters,
+  ) async {
+    try {
+      // Create filter for just replaceable events matching the subscription filters
+      final replaceableFilters = filters.map((f) {
+        // Extract kinds from filter that are replaceable
+        final kindsToQuery = f.kinds?.where((k) =>
+          k == 0 || k == 3 || (k >= 10000 && k < 20000) || (k >= 30000 && k < 40000)
+        ).toList();
+
+        if (kindsToQuery == null || kindsToQuery.isEmpty) return null;
+
+        // Create new filter with only replaceable kinds
+        return nostr.Filter(
+          kinds: kindsToQuery,
+          authors: f.authors,
+          limit: 1000, // Limit to avoid loading too much
+        );
+      }).whereType<nostr.Filter>().toList();
+
+      if (replaceableFilters.isEmpty) return; // No replaceable events to query
+
+      final existingEvents = await getEvents(
+        filters: replaceableFilters,
+        limit: 1000,
+      );
+
+      // Populate the map with existing events
+      for (final event in existingEvents) {
+        String replaceKey = '${event.kind}:${event.pubkey}';
+
+        // For parameterized replaceable events, include d-tag
+        if (event.kind >= 30000 && event.kind < 40000) {
+          try {
+            final dTag = event.tags.firstWhere(
+              (tag) => tag.isNotEmpty && tag[0] == 'd',
+              orElse: () => ['d', ''],
+            );
+            replaceKey += ':${dTag.length > 1 ? dTag[1] : ''}';
+          } catch (e) {
+            // No d-tag, use empty string
+            replaceKey += ':';
+          }
+        }
+
+        replaceableEvents[replaceKey] = (event.id, event.createdAt);
+      }
+
+      Log.debug(
+        'Pre-initialized ${replaceableEvents.length} replaceable events from database',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
+    } catch (e) {
+      Log.warning(
+        'Failed to pre-initialize replaceable events: $e',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
+      // Non-fatal - subscription will still work, just may log duplicates
+    }
   }
 
   @override
@@ -746,20 +871,26 @@ class NostrService implements INostrService {
 
   @override
   Future<bool> addRelay(String relayUrl) async {
+    UnifiedLogger.info('🔌 addRelay() called for: $relayUrl', name: 'NostrService');
+    UnifiedLogger.info('   Current relay count: ${_configuredRelays.length}', name: 'NostrService');
+    UnifiedLogger.info('   Current relays: $_configuredRelays', name: 'NostrService');
+
     if (_configuredRelays.contains(relayUrl)) {
+      UnifiedLogger.warning('⚠️  Relay already in configuration: $relayUrl', name: 'NostrService');
       return false; // Already added
     }
 
     // Add to configured list even if embedded relay isn't ready
     _configuredRelays.add(relayUrl);
-    UnifiedLogger.info('Added relay to configuration: $relayUrl',
-        name: 'NostrService');
+    UnifiedLogger.info('✅ Added relay to IN-MEMORY configuration: $relayUrl', name: 'NostrService');
+    UnifiedLogger.warning('⚠️  WARNING: Relay is NOT persisted to storage! Will be lost on app restart.', name: 'NostrService');
+    UnifiedLogger.info('   New relay count: ${_configuredRelays.length}', name: 'NostrService');
 
     // Try to connect if embedded relay is available
     if (_embeddedRelay != null) {
       try {
         await _embeddedRelay!.addExternalRelay(relayUrl);
-        UnifiedLogger.info('Connected to relay: $relayUrl',
+        UnifiedLogger.info('🔗 Connected to relay: $relayUrl',
             name: 'NostrService');
 
         // Notify auth state listeners
@@ -768,10 +899,11 @@ class NostrService implements INostrService {
 
         return true;
       } catch (e) {
-        UnifiedLogger.error('Failed to connect relay (will retry): $e',
+        UnifiedLogger.error('❌ Failed to connect relay (will retry): $e',
             name: 'NostrService');
       }
     } else {
+      UnifiedLogger.warning('⚠️  Embedded relay not ready, will retry initialization', name: 'NostrService');
       // Try to initialize embedded relay again
       await retryInitialization();
     }
@@ -872,19 +1004,25 @@ class NostrService implements INostrService {
 
   @override
   Future<void> removeRelay(String relayUrl) async {
+    UnifiedLogger.info('🔌 removeRelay() called for: $relayUrl', name: 'NostrService');
+    UnifiedLogger.info('   Current relay count: ${_configuredRelays.length}', name: 'NostrService');
+    UnifiedLogger.info('   Current relays: $_configuredRelays', name: 'NostrService');
+
     if (_embeddedRelay != null) {
       try {
         await _embeddedRelay!.removeExternalRelay(relayUrl);
+        UnifiedLogger.info('🔗 Disconnected from embedded relay: $relayUrl', name: 'NostrService');
       } catch (e) {
-        UnifiedLogger.error('Failed to remove relay $relayUrl: $e',
+        UnifiedLogger.error('❌ Failed to remove relay from embedded relay: $e',
             name: 'NostrService');
       }
     }
 
     _configuredRelays.remove(relayUrl);
     _relayAuthStates.remove(relayUrl);
-    UnifiedLogger.info('Removed external relay: $relayUrl',
-        name: 'NostrService');
+    UnifiedLogger.info('✅ Removed relay from IN-MEMORY configuration: $relayUrl', name: 'NostrService');
+    UnifiedLogger.warning('⚠️  WARNING: Removal is NOT persisted to storage! Relay may reappear on app restart.', name: 'NostrService');
+    UnifiedLogger.info('   New relay count: ${_configuredRelays.length}', name: 'NostrService');
   }
 
   @override

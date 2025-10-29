@@ -8,6 +8,7 @@ import 'package:dio/dio.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/utils/hash_util.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -86,6 +87,7 @@ class BlossomUploadService {
     required String method,
     required String fileHash,
     required int fileSize,
+    String contentDescription = 'Upload video to Blossom server',
   }) async {
     try {
       // Blossom requires these tags (BUD-01):
@@ -104,13 +106,10 @@ class BlossomUploadService {
         ['x', fileHash], // SHA-256 hash of the file
       ];
 
-      // Create human-readable content explaining the action
-      const content = 'Upload video to Blossom server';
-
       // Use AuthService to create and sign the event (established pattern)
       final signedEvent = await authService.createAndSignEvent(
         kind: 24242, // Blossom auth event kind
-        content: content,
+        content: contentDescription,
         tags: tags,
       );
 
@@ -147,6 +146,9 @@ class BlossomUploadService {
     String? proofManifestJson,
     void Function(double)? onProgress,
   }) async {
+    // Start performance trace for video upload
+    await PerformanceMonitoringService.instance.startTrace('video_upload');
+
     try {
       // Check if Blossom is enabled and configured
       final isEnabled = await isBlossomEnabled();
@@ -204,14 +206,21 @@ class BlossomUploadService {
       // Report initial progress
       onProgress?.call(0.1);
 
-      // Use Blossom spec: PUT with raw bytes and proper auth headers
-      Log.info('Uploading using Blossom spec (PUT with raw bytes)',
+      // Use Blossom spec: POST with raw bytes
+      Log.info('Uploading using Blossom spec (POST with raw bytes)',
           name: 'BlossomUploadService', category: LogCategory.video);
 
       // Read file bytes
       final fileBytes = await videoFile.readAsBytes();
       final fileSize = fileBytes.length;
       final fileHash = HashUtil.sha256Hash(fileBytes);
+
+      // Add file size metric to performance trace
+      PerformanceMonitoringService.instance.setMetric(
+        'video_upload',
+        'file_size_bytes',
+        fileSize,
+      );
 
       Log.info('File hash: $fileHash, size: $fileSize bytes',
           name: 'BlossomUploadService', category: LogCategory.video);
@@ -221,7 +230,7 @@ class BlossomUploadService {
       // Create Blossom auth event (kind 24242)
       final authEvent = await _createBlossomAuthEvent(
         url: '$serverUrl/upload',
-        method: 'PUT',
+        method: 'POST',
         fileHash: fileHash,
         fileSize: fileSize,
       );
@@ -238,25 +247,24 @@ class BlossomUploadService {
       final authHeader = 'Nostr ${base64.encode(utf8.encode(authEventJson))}';
 
       // Add ProofMode headers if manifest is provided
-      final headers = {
+      final headers = <String, dynamic>{
         'Authorization': authHeader,
         'Content-Type': 'video/mp4',
-        'Content-Length': '$fileSize',
       };
 
       if (proofManifestJson != null && proofManifestJson.isNotEmpty) {
         _addProofModeHeaders(headers, proofManifestJson);
       }
 
-      Log.info('Sending PUT request with raw video bytes',
+      Log.info('Sending POST request with raw bytes',
           name: 'BlossomUploadService', category: LogCategory.video);
       Log.info('  URL: $serverUrl/upload',
           name: 'BlossomUploadService', category: LogCategory.video);
       Log.info('  File size: $fileSize bytes',
           name: 'BlossomUploadService', category: LogCategory.video);
 
-      // PUT request with raw bytes (Blossom spec)
-      final response = await dio.put(
+      // POST request with raw bytes (Blossom spec - NOT multipart/form-data)
+      final response = await dio.post(
         '$serverUrl/upload',
         data: fileBytes,
         options: Options(
@@ -357,11 +365,14 @@ class BlossomUploadService {
     } catch (e) {
       Log.error('Blossom upload error: $e',
           name: 'BlossomUploadService', category: LogCategory.video);
-      
+
       return BlossomUploadResult(
         success: false,
         errorMessage: 'Blossom upload failed: $e',
       );
+    } finally {
+      // Stop performance trace
+      await PerformanceMonitoringService.instance.stopTrace('video_upload');
     }
   }
 
@@ -426,7 +437,7 @@ class BlossomUploadService {
       // Create Blossom auth event
       final authEvent = await _createBlossomAuthEvent(
         url: '$serverUrl/upload',
-        method: 'PUT',
+        method: 'POST',
         fileHash: fileHash,
         fileSize: fileSize,
       );
@@ -442,18 +453,17 @@ class BlossomUploadService {
       final authEventJson = jsonEncode(authEvent.toJson());
       final authHeader = 'Nostr ${base64.encode(utf8.encode(authEventJson))}';
 
-      Log.info('📤 Blossom Image Upload: PUT with raw bytes to $serverUrl/upload',
+      Log.info('📤 Blossom Image Upload: POST with raw bytes to $serverUrl/upload',
           name: 'BlossomUploadService', category: LogCategory.video);
 
-      // Blossom spec: PUT with raw bytes
-      final response = await dio.put(
+      // Blossom spec: POST with raw bytes (NOT multipart/form-data)
+      final response = await dio.post(
         '$serverUrl/upload',
         data: fileBytes,
         options: Options(
           headers: {
             'Authorization': authHeader,
             'Content-Type': mimeType,
-            'Content-Length': '$fileSize',
           },
           validateStatus: (status) => status != null && status < 500,
         ),
@@ -568,6 +578,166 @@ class BlossomUploadService {
       default:
         // Default to no extension for unknown types
         return '';
+    }
+  }
+
+  /// Upload a bug report file (text/plain) to the configured Blossom server
+  ///
+  /// Returns the URL to the uploaded bug report file
+  Future<String?> uploadBugReport({
+    required File bugReportFile,
+    void Function(double)? onProgress,
+  }) async {
+    try {
+      // Check if Blossom is enabled and configured
+      final isEnabled = await isBlossomEnabled();
+      if (!isEnabled) {
+        Log.error('Blossom upload is not enabled',
+            name: 'BlossomUploadService', category: LogCategory.system);
+        return null;
+      }
+
+      final serverUrl = await getBlossomServer();
+      if (serverUrl == null || serverUrl.isEmpty) {
+        Log.error('No Blossom server configured',
+            name: 'BlossomUploadService', category: LogCategory.system);
+        return null;
+      }
+
+      // Parse and validate server URL
+      final uri = Uri.tryParse(serverUrl);
+      if (uri == null) {
+        Log.error('Invalid Blossom server URL: $serverUrl',
+            name: 'BlossomUploadService', category: LogCategory.system);
+        return null;
+      }
+
+      // Check authentication
+      if (!authService.isAuthenticated) {
+        Log.error('Not authenticated - cannot upload bug report',
+            name: 'BlossomUploadService', category: LogCategory.system);
+        return null;
+      }
+
+      Log.info('Uploading bug report to Blossom server: $serverUrl',
+          name: 'BlossomUploadService', category: LogCategory.system);
+
+      // Report initial progress
+      onProgress?.call(0.1);
+
+      // Calculate file hash and size
+      final fileBytes = await bugReportFile.readAsBytes();
+      final fileHash = HashUtil.sha256Hash(fileBytes);
+      final fileSize = fileBytes.length;
+
+      Log.info('Bug report file hash: $fileHash, size: $fileSize bytes',
+          name: 'BlossomUploadService', category: LogCategory.system);
+
+      onProgress?.call(0.2);
+
+      // Create Blossom auth event (kind 24242)
+      final authEvent = await _createBlossomAuthEvent(
+        url: '$serverUrl/upload',
+        method: 'POST',
+        fileHash: fileHash,
+        fileSize: fileSize,
+        contentDescription: 'Upload bug report to Blossom server',
+      );
+
+      if (authEvent == null) {
+        Log.error('Failed to create Blossom authentication',
+            name: 'BlossomUploadService', category: LogCategory.system);
+        return null;
+      }
+
+      // Prepare headers following Blossom spec
+      final authEventJson = jsonEncode(authEvent.toJson());
+      final authHeader = 'Nostr ${base64.encode(utf8.encode(authEventJson))}';
+
+      final headers = <String, dynamic>{
+        'Authorization': authHeader,
+        'Content-Type': 'text/plain', // Bug reports are plain text
+      };
+
+      Log.info('Sending POST request for bug report',
+          name: 'BlossomUploadService', category: LogCategory.system);
+      Log.info('  URL: $serverUrl/upload',
+          name: 'BlossomUploadService', category: LogCategory.system);
+      Log.info('  File size: $fileSize bytes',
+          name: 'BlossomUploadService', category: LogCategory.system);
+
+      // POST request with raw bytes (Blossom spec)
+      final response = await dio.post(
+        '$serverUrl/upload',
+        data: fileBytes,
+        options: Options(
+          headers: headers,
+          validateStatus: (status) => status != null && status < 500,
+        ),
+        onSendProgress: (sent, total) {
+          if (total > 0) {
+            // Progress from 20% to 90% during upload
+            final progress = 0.2 + (sent / total) * 0.7;
+            onProgress?.call(progress);
+          }
+        },
+      );
+
+      Log.info('Blossom server response: ${response.statusCode}',
+          name: 'BlossomUploadService', category: LogCategory.system);
+      Log.info('Response data: ${response.data}',
+          name: 'BlossomUploadService', category: LogCategory.system);
+
+      // Handle successful responses
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = response.data;
+
+        if (responseData is Map) {
+          final urlRaw = responseData['url'];
+          final cdnUrl = urlRaw?.toString();
+
+          if (cdnUrl != null && cdnUrl.isNotEmpty) {
+            onProgress?.call(1.0);
+
+            Log.info('✅ Bug report upload successful',
+                name: 'BlossomUploadService', category: LogCategory.system);
+            Log.info('  URL: $cdnUrl',
+                name: 'BlossomUploadService', category: LogCategory.system);
+
+            return cdnUrl;
+          }
+        }
+
+        // Response didn't have expected URL
+        Log.error('❌ Response missing URL field: $responseData',
+            name: 'BlossomUploadService', category: LogCategory.system);
+        return null;
+      }
+
+      // Handle 409 Conflict - file already exists (construct URL from hash)
+      if (response.statusCode == 409) {
+        // Blossom servers return the file via hash, construct URL
+        // Format varies by server, but typically: https://server/$hash or https://cdn.server/$hash.txt
+        final existingUrl = '$serverUrl/$fileHash.txt';
+        Log.info('✅ Bug report already exists on server: $existingUrl',
+            name: 'BlossomUploadService', category: LogCategory.system);
+
+        onProgress?.call(1.0);
+        return existingUrl;
+      }
+
+      // Handle other error responses
+      Log.error('❌ Bug report upload failed: ${response.statusCode} - ${response.data}',
+          name: 'BlossomUploadService', category: LogCategory.system);
+      return null;
+    } on DioException catch (e) {
+      Log.error('Bug report upload network error: ${e.message}',
+          name: 'BlossomUploadService', category: LogCategory.system);
+      return null;
+    } catch (e) {
+      Log.error('Bug report upload error: $e',
+          name: 'BlossomUploadService', category: LogCategory.system);
+      return null;
     }
   }
 

@@ -4,14 +4,15 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i6;
-import 'dart:ui' as _i8;
+import 'dart:ui' as _i9;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i4;
-import 'package:nostr_sdk/event.dart' as _i7;
+import 'package:nostr_sdk/event.dart' as _i8;
 import 'package:openvine/models/video_event.dart' as _i3;
 import 'package:openvine/services/content_blocklist_service.dart' as _i5;
 import 'package:openvine/services/video_event_service.dart' as _i2;
+import 'package:openvine/services/video_filter_builder.dart' as _i7;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -265,6 +266,7 @@ class MockVideoEventService extends _i1.Mock implements _i2.VideoEventService {
     int? limit = 200,
     bool? replace = true,
     bool? includeReposts = false,
+    _i7.VideoSortField? sortBy,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#subscribeToVideoFeed, [], {
@@ -277,6 +279,7 @@ class MockVideoEventService extends _i1.Mock implements _i2.VideoEventService {
               #limit: limit,
               #replace: replace,
               #includeReposts: includeReposts,
+              #sortBy: sortBy,
             }),
             returnValue: _i6.Future<void>.value(),
             returnValueForMissingStub: _i6.Future<void>.value(),
@@ -333,12 +336,13 @@ class MockVideoEventService extends _i1.Mock implements _i2.VideoEventService {
   _i6.Future<void> subscribeToHomeFeed(
     List<String>? followingPubkeys, {
     int? limit = 100,
+    _i7.VideoSortField? sortBy,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
               #subscribeToHomeFeed,
               [followingPubkeys],
-              {#limit: limit},
+              {#limit: limit, #sortBy: sortBy},
             ),
             returnValue: _i6.Future<void>.value(),
             returnValueForMissingStub: _i6.Future<void>.value(),
@@ -346,9 +350,15 @@ class MockVideoEventService extends _i1.Mock implements _i2.VideoEventService {
           as _i6.Future<void>);
 
   @override
-  _i6.Future<void> subscribeToDiscovery({int? limit = 100}) =>
+  _i6.Future<void> subscribeToDiscovery({
+    int? limit = 100,
+    _i7.VideoSortField? sortBy,
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#subscribeToDiscovery, [], {#limit: limit}),
+            Invocation.method(#subscribeToDiscovery, [], {
+              #limit: limit,
+              #sortBy: sortBy,
+            }),
             returnValue: _i6.Future<void>.value(),
             returnValueForMissingStub: _i6.Future<void>.value(),
           )
@@ -633,7 +643,7 @@ class MockVideoEventService extends _i1.Mock implements _i2.VideoEventService {
   );
 
   @override
-  List<_i3.VideoEvent> processSearchResults(List<_i7.Event>? events) =>
+  List<_i3.VideoEvent> processSearchResults(List<_i8.Event>? events) =>
       (super.noSuchMethod(
             Invocation.method(#processSearchResults, [events]),
             returnValue: <_i3.VideoEvent>[],
@@ -716,20 +726,20 @@ class MockVideoEventService extends _i1.Mock implements _i2.VideoEventService {
   );
 
   @override
-  void handleEventForTesting(_i7.Event? event, _i2.SubscriptionType? type) =>
+  void handleEventForTesting(_i8.Event? event, _i2.SubscriptionType? type) =>
       super.noSuchMethod(
         Invocation.method(#handleEventForTesting, [event, type]),
         returnValueForMissingStub: null,
       );
 
   @override
-  void addListener(_i8.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i9.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#addListener, [listener]),
     returnValueForMissingStub: null,
   );
 
   @override
-  void removeListener(_i8.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i9.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#removeListener, [listener]),
     returnValueForMissingStub: null,
   );

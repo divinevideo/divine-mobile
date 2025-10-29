@@ -106,13 +106,13 @@ class ClickableHashtagText extends StatelessWidget {
   }
 
   void _navigateToHashtagFeed(BuildContext context, String hashtag) {
-    Log.debug('📍 Navigating to hashtag feed: #$hashtag',
+    Log.debug('📍 Navigating to hashtag grid: #$hashtag',
         name: 'ClickableHashtagText', category: LogCategory.ui);
 
     // Notify parent about video state change if callback provided
     onVideoStateChange?.call();
 
-    // Navigate to hashtag tab using GoRouter
-    context.goHashtag(hashtag, 0);
+    // Navigate to hashtag grid view (no index = grid mode)
+    context.goHashtag(hashtag);
   }
 }

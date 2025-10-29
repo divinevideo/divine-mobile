@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "972941478875",
+    "project_id": "openvine-co",
+    "storage_bucket": "openvine-co.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:972941478875:android:c716006682f92d9444b5fe",
+        "android_client_info": {
+          "package_name": "co.openvine.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUMlaHAMKqeS62WG7w4PeqBPRLMDIZCdo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

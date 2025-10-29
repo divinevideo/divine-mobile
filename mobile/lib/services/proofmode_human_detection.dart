@@ -87,6 +87,15 @@ class ProofModeHumanDetection {
         );
       }
 
+      // Insufficient data for analysis (need at least 2 interactions for patterns)
+      if (interactions.length < 2) {
+        return HumanActivityAnalysis(
+          isHumanLikely: false,
+          confidenceScore: 0.5, // Neutral - insufficient data
+          reasons: ['Insufficient interaction data for analysis'],
+        );
+      }
+
       // Analyze timing patterns
       final timingAnalysis = _analyzeTimingPatterns(interactions);
       if (timingAnalysis.hasNaturalVariation) {
@@ -188,7 +197,10 @@ class ProofModeHumanDetection {
         confidenceScore += 0.1;
       }
 
-      if (pauseDuration.inMilliseconds > 0) {
+      // Only reward pauses if there's actual recording (can't pause without recording)
+      // and pause is meaningful (> 500ms)
+      if (pauseDuration.inMilliseconds > 500 &&
+          manifest.segments.isNotEmpty) {
         reasons.add('Natural pauses during recording');
         confidenceScore += 0.15;
       }
@@ -207,8 +219,10 @@ class ProofModeHumanDetection {
 
       // Analyze interactions
       final interactionAnalysis = analyzeInteractions(manifest.interactions);
-      confidenceScore += interactionAnalysis.confidenceScore *
-          0.5; // Weight interaction analysis
+      // Interaction analysis has strong influence on session score
+      // Low interaction scores (bot-like) should pull session score down
+      // High interaction scores (human-like) should pull session score up
+      confidenceScore += (interactionAnalysis.confidenceScore - 0.5) * 1.0;
 
       if (interactionAnalysis.isHumanLikely) {
         reasons.addAll(interactionAnalysis.reasons);
@@ -327,7 +341,7 @@ class ProofModeHumanDetection {
     // Higher variance indicates more natural human imprecision
     final precisionScore = (xVariance + yVariance).clamp(0.0, 1.0);
     final hasNaturalImprecision =
-        precisionScore > 0.001; // Minimum expected for human touch
+        precisionScore > 0.000001; // Minimum expected for human touch (adjusted for normalized 0-1 coordinates)
 
     return CoordinatePrecision(
       coordinates: coordinates,
@@ -358,10 +372,19 @@ class ProofModeHumanDetection {
 
     final totalDuration =
         interactions.last.timestamp.difference(interactions.first.timestamp);
-    final frequency = interactions.length / totalDuration.inSeconds;
 
-    // Human interaction frequency is typically 0.5-5 interactions per second during active use
-    final isHumanLike = frequency >= 0.1 && frequency <= 10.0;
+    // Use milliseconds to avoid division by zero for sub-second durations
+    final durationMs = totalDuration.inMilliseconds;
+    if (durationMs == 0) {
+      return (isHumanLike: false, frequency: 0.0);
+    }
+
+    // Calculate interactions per second
+    final frequency = (interactions.length / durationMs) * 1000.0;
+
+    // Human interaction frequency: 0.1-20.0 interactions per second
+    // (allows for rapid tapping during short video recordings)
+    final isHumanLike = frequency >= 0.1 && frequency <= 20.0;
 
     return (isHumanLike: isHumanLike, frequency: frequency);
   }

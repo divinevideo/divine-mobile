@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
@@ -212,7 +213,7 @@ void main() {
           'size': 5,
         });
 
-        when(() => mockDio.put(
+        when(() => mockDio.post(
           any(),
           data: any(named: 'data'),
           options: any(named: 'options'),
@@ -237,7 +238,7 @@ void main() {
         expect(result.videoId, equals('74f81fe167d99b4cb41d6d0ccda82278caee9f3e2f25d5e5a3936ff3dcec60d0'));
       });
 
-      test('should send PUT request with raw bytes and NIP-98 auth header', () async {
+      test('should send POST request with raw bytes and NIP-98 auth header', () async {
         // Arrange
         await service.setBlossomEnabled(true);
         await service.setBlossomServer('https://cdn.satellite.earth');
@@ -278,8 +279,8 @@ void main() {
           'size': 5,
         });
 
-        // Capture the actual request to verify it uses PUT with raw bytes
-        when(() => mockDio.put(
+        // Capture the actual request to verify it uses POST with multipart/form-data
+        when(() => mockDio.post(
           any(),
           data: any(named: 'data'),
           options: any(named: 'options'),
@@ -296,8 +297,8 @@ void main() {
         // Assert
         expect(result.success, isTrue);
 
-        // Verify PUT was called with raw bytes (List<int>)
-        verify(() => mockDio.put(
+        // Verify POST was called with raw bytes
+        verify(() => mockDio.post(
           'https://cdn.satellite.earth/upload',
           data: any(named: 'data', that: isA<List<int>>()),
           options: any(named: 'options', that: isA<Options>().having(
@@ -312,8 +313,8 @@ void main() {
           onSendProgress: any(named: 'onSendProgress'),
         )).called(1);
 
-        // Verify POST was NOT called
-        verifyNever(() => mockDio.post(
+        // Verify PUT was NOT called
+        verifyNever(() => mockDio.put(
           any(),
           data: any(named: 'data'),
           options: any(named: 'options'),
@@ -417,14 +418,101 @@ void main() {
       test('should report upload progress via callback', () async {
         // This test verifies that upload progress is reported
         // Would need Dio mock with onSendProgress simulation
-        
+
         // Document expected behavior:
         // - Progress callback should be called multiple times
         // - Values should be between 0.0 and 1.0
         // - Values should be monotonically increasing
         // - Final value should be 1.0 on success
-        
+
         expect(true, isTrue); // Placeholder
+      });
+    });
+
+    group('Bug Report Upload', () {
+      test('should successfully upload bug report text file', () async {
+        // Arrange
+        const testPublicKey = '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+        await service.setBlossomServer('https://blossom.divine.video');
+        await service.setBlossomEnabled(true);
+
+        final mockDio = MockDio();
+        final mockAuthService = MockAuthService();
+        final testService = BlossomUploadService(
+          authService: mockAuthService,
+          nostrService: mockNostrService,
+          dio: mockDio,
+        );
+
+        // Create test bug report file
+        final tempDir = await getTemporaryDirectory();
+        final testFile = File('${tempDir.path}/test_bug_report.txt');
+        await testFile.writeAsString('Test bug report content\nWith multiple lines\nAnd diagnostic data');
+
+        // Mock authentication
+        when(() => mockAuthService.isAuthenticated).thenReturn(true);
+        when(() => mockAuthService.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+        )).thenAnswer((_) async {
+          return Event(
+            testPublicKey,
+            24242,
+            [['t', 'upload']],
+            'Upload bug report to Blossom server',
+          );
+        });
+
+        // Mock successful Blossom response
+        when(() => mockDio.post(
+          any(),
+          data: any(named: 'data'),
+          options: any(named: 'options'),
+          onSendProgress: any(named: 'onSendProgress'),
+        )).thenAnswer((_) async => Response(
+              data: {'url': 'https://blossom.divine.video/abc123.txt'},
+              statusCode: 200,
+              requestOptions: RequestOptions(path: ''),
+            ));
+
+        // Act
+        final result = await testService.uploadBugReport(
+          bugReportFile: testFile,
+        );
+
+        // Assert
+        expect(result, isNotNull);
+        expect(result, contains('https://'));
+        expect(result, contains('.txt'));
+
+        // Verify correct MIME type was used
+        final capturedHeaders = verify(() => mockDio.post(
+          any(),
+          data: any(named: 'data'),
+          options: captureAny(named: 'options'),
+          onSendProgress: any(named: 'onSendProgress'),
+        )).captured.last as Options;
+
+        expect(capturedHeaders.headers!['Content-Type'], equals('text/plain'));
+      });
+
+      test('should return null if Blossom is not enabled', () async {
+        // Arrange
+        await service.setBlossomEnabled(false);
+
+        final tempDir = await getTemporaryDirectory();
+        final testFile = File('${tempDir.path}/test_bug_report_disabled.txt');
+        await testFile.writeAsString('Test content');
+
+        // Act
+        final result = await service.uploadBugReport(
+          bugReportFile: testFile,
+        );
+
+        // Assert
+        expect(result, isNull);
       });
     });
   });

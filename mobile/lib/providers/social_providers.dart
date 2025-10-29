@@ -1101,8 +1101,6 @@ class SocialNotifier extends _$SocialNotifier {
     for (final tag in event.tags) {
       if (tag.length >= 2 && tag[0] == 'p') {
         followingPubkeys.add(tag[1]);
-        Log.debug('📋 Found following: ${tag[1]}...',
-            name: 'SocialNotifier', category: LogCategory.system);
       }
     }
 

@@ -8,6 +8,42 @@ import 'package:openvine/services/vine_recording_controller.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
+/// ProofMode indicator badge showing active cryptographic proof recording
+class ProofModeIndicator extends StatelessWidget {
+  const ProofModeIndicator({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.green.shade700.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.shade400, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.verified_user,
+            color: Colors.white,
+            size: 14,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'ProofMode',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Progress bar that uses provider state for updates
 class VineRecordingProgressBarWithState extends StatelessWidget {
   const VineRecordingProgressBarWithState({
@@ -666,7 +702,7 @@ class VineRecordingUIWithProvider extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // Top controls: progress bar and camera switch
+              // Top controls: ProofMode indicator, progress bar and camera switch
               Row(
                 children: [
                   // Camera switch button (only show when not recording and switching is available)
@@ -695,9 +731,19 @@ class VineRecordingUIWithProvider extends StatelessWidget {
 
                   // Progress bar (takes remaining space)
                   Expanded(
-                    child: VineRecordingProgressBarWithState(
-                      progress: state.progress,
-                      recordingState: state.recordingState,
+                    child: Column(
+                      children: [
+                        // ProofMode indicator at top
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: ProofModeIndicator(),
+                        ),
+                        // Progress bar below
+                        VineRecordingProgressBarWithState(
+                          progress: state.progress,
+                          recordingState: state.recordingState,
+                        ),
+                      ],
                     ),
                   ),
 

@@ -56,16 +56,9 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
   }
 
   Future<void> _loadThumbnail() async {
-    final videoId = widget.video.id;
-
     // Check if we have an existing thumbnail URL
     if (widget.video.thumbnailUrl != null &&
         widget.video.thumbnailUrl!.isNotEmpty) {
-      Log.debug(
-        '🖼️ Using existing thumbnailUrl for video $videoId',
-        name: 'VideoThumbnailWidget',
-        category: LogCategory.video,
-      );
       setState(() {
         _thumbnailUrl = widget.video.thumbnailUrl;
         _isLoading = false;
@@ -81,11 +74,6 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
     if (!shouldTryApiThumbnail) {
       // Video not hosted on api.openvine.co - don't try to generate thumbnail
       // Just show blurhash or placeholder
-      Log.debug(
-        '🖼️ Video $videoId not hosted on api.openvine.co - skipping API thumbnail generation',
-        name: 'VideoThumbnailWidget',
-        category: LogCategory.video,
-      );
       if (mounted) {
         setState(() {
           _thumbnailUrl = null;
@@ -96,12 +84,6 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
     }
 
     // Video is on api.openvine.co - try to get API thumbnail
-    Log.debug(
-      '🖼️ No thumbnailUrl for video $videoId - trying API thumbnail generation',
-      name: 'VideoThumbnailWidget',
-      category: LogCategory.video,
-    );
-
     // Keep in loading state - show blurhash or loading indicator while generating
     setState(() {
       _isLoading = true;
@@ -110,11 +92,6 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
     try {
       final generatedThumbnailUrl = await widget.video.getApiThumbnailUrl();
       if (generatedThumbnailUrl != null && generatedThumbnailUrl.isNotEmpty) {
-        Log.debug(
-          '✅ Got API thumbnail URL for video $videoId: $generatedThumbnailUrl',
-          name: 'VideoThumbnailWidget',
-          category: LogCategory.video,
-        );
         if (mounted) {
           setState(() {
             _thumbnailUrl = generatedThumbnailUrl;
@@ -122,20 +99,9 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
           });
         }
         return;
-      } else {
-        Log.debug(
-          '⚠️ API returned empty thumbnail URL for video $videoId',
-          name: 'VideoThumbnailWidget',
-          category: LogCategory.video,
-        );
       }
     } catch (e) {
       // Silently fail - will use blurhash or placeholder
-      Log.debug(
-        '❌ Failed to get API thumbnail for video $videoId: $e',
-        name: 'VideoThumbnailWidget',
-        category: LogCategory.video,
-      );
     }
 
     // No API thumbnail available - stop loading and show blurhash or placeholder
@@ -235,11 +201,6 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
 
     // No thumbnail URL - show blurhash if available, otherwise placeholder
     if (widget.video.blurhash != null) {
-      Log.debug(
-        '🖼️ Using blurhash as fallback',
-        name: 'VideoThumbnailWidget',
-        category: LogCategory.ui,
-      );
       return Stack(
         fit: StackFit.expand,
         children: [
@@ -278,13 +239,8 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
         borderRadius: widget.borderRadius?.topLeft.x ?? 8.0,
       );
     }
-    
+
     // Final fallback - icon placeholder
-    Log.debug(
-      '🖼️ No video URL available - using icon placeholder',
-      name: 'VideoThumbnailWidget',
-      category: LogCategory.ui,
-    );
     return VideoIconPlaceholder(
       width: widget.width,
       height: widget.height,
@@ -299,19 +255,9 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
     final double aspectRatio;
     if (widget.video.width != null && widget.video.height != null && widget.video.height! > 0) {
       aspectRatio = widget.video.width! / widget.video.height!;
-      Log.debug(
-        '📐 Using video dimensions for thumbnail: ${widget.video.width}x${widget.video.height} = ${aspectRatio.toStringAsFixed(3)}',
-        name: 'VideoThumbnailWidget',
-        category: LogCategory.ui,
-      );
     } else {
       // Fallback to square for videos without dimension metadata
       aspectRatio = 1.0;
-      Log.debug(
-        '📐 No dimensions metadata, using square (1:1) aspect ratio for thumbnail',
-        name: 'VideoThumbnailWidget',
-        category: LogCategory.ui,
-      );
     }
 
     // Match video player's BoxFit strategy to prevent visual jump:
@@ -319,12 +265,6 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
     // - Square/Landscape videos (aspectRatio >= 0.9): Use BoxFit.contain to show full video
     final bool isPortrait = aspectRatio < 0.9;
     final BoxFit effectiveFit = isPortrait ? BoxFit.cover : BoxFit.contain;
-
-    Log.debug(
-      '🎨 Thumbnail BoxFit: ${effectiveFit.toString().split('.').last} (portrait=$isPortrait)',
-      name: 'VideoThumbnailWidget',
-      category: LogCategory.ui,
-    );
 
     // Build content with the calculated fit
     var content = _buildContent(effectiveFit);

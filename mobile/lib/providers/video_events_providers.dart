@@ -11,6 +11,7 @@ import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -143,9 +144,13 @@ class VideoEvents extends _$VideoEvents {
 
     // Subscribe to discovery videos if not already subscribed
     if (!_isSubscribed) {
-      Log.info('VideoEvents: Starting discovery subscription',
+      Log.info('VideoEvents: Starting discovery subscription with trending sort',
           name: 'VideoEventsProvider', category: LogCategory.video);
-      service.subscribeToDiscovery(limit: 100);
+      // Request server-side sorting by loop_count (trending) if relay supports it
+      service.subscribeToDiscovery(
+        limit: 100,
+        sortBy: VideoSortField.loopCount, // Trending videos (most looped)
+      );
       _isSubscribed = true;
     }
 
@@ -182,12 +187,6 @@ class VideoEvents extends _$VideoEvents {
   void _onVideoEventServiceChange() {
     final service = ref.read(videoEventServiceProvider);
     final newEvents = List<VideoEvent>.from(service.discoveryVideos);
-
-    Log.debug(
-      '🔔 VideoEvents: Listener fired! Service has ${newEvents.length} discovery videos',
-      name: 'VideoEventsProvider',
-      category: LogCategory.video,
-    );
 
     // Store pending events for debounced emission (no reordering - preserve order)
     _pendingEvents = newEvents;
@@ -227,14 +226,17 @@ class VideoEvents extends _$VideoEvents {
     }
 
     Log.info(
-      'VideoEvents: Starting discovery subscription on demand',
+      'VideoEvents: Starting discovery subscription on demand with trending sort',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
 
-    // Subscribe to discovery videos using dedicated subscription type
+    // Subscribe to discovery videos using dedicated subscription type with trending sort
     // NostrService now handles deduplication automatically
-    videoEventService.subscribeToDiscovery(limit: 100);
+    videoEventService.subscribeToDiscovery(
+      limit: 100,
+      sortBy: VideoSortField.loopCount, // Trending videos (most looped)
+    );
   }
 
   /// Load more historical events

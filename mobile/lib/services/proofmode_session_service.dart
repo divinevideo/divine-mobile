@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:openvine/services/proofmode_config.dart';
@@ -231,9 +232,16 @@ class ProofModeSessionService {
       final sessionId = _generateSessionId();
       final challengeNonce = _generateChallengeNonce();
 
-      // Get device attestation
-      final attestation =
-          await _attestationService.generateAttestation(challengeNonce);
+      // Get device attestation (gracefully handle errors)
+      DeviceAttestation? attestation;
+      try {
+        attestation =
+            await _attestationService.generateAttestation(challengeNonce);
+      } catch (e) {
+        Log.warning('Failed to generate device attestation: $e',
+            name: 'ProofModeSessionService', category: LogCategory.system);
+        // Continue without attestation
+      }
 
       _currentSession = ProofSession(
         sessionId: sessionId,
@@ -410,9 +418,16 @@ class ProofModeSessionService {
         deviceAttestation: session.deviceAttestation,
       );
 
-      // Sign the manifest
-      final manifestJson = jsonEncode(manifest.toJson());
-      final signature = await _keyService.signData(manifestJson);
+      // Sign the manifest (gracefully handle errors)
+      ProofSignature? signature;
+      try {
+        final manifestJson = jsonEncode(manifest.toJson());
+        signature = await _keyService.signData(manifestJson);
+      } catch (e) {
+        Log.warning('Failed to sign manifest: $e',
+            name: 'ProofModeSessionService', category: LogCategory.system);
+        // Continue without signature
+      }
 
       final signedManifest = ProofManifest(
         sessionId: manifest.sessionId,
@@ -464,7 +479,7 @@ class ProofModeSessionService {
 
   String _generateSessionId() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final random = (timestamp % 10000).toString().padLeft(4, '0');
+    final random = Random().nextInt(10000).toString().padLeft(4, '0');
     return 'session_${timestamp}_$random';
   }
 

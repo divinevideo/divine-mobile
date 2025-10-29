@@ -24,7 +24,6 @@ final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _homeKey = GlobalKey<NavigatorState>(debugLabel: 'home');
 final _exploreKey = GlobalKey<NavigatorState>(debugLabel: 'explore');
 final _notificationsKey = GlobalKey<NavigatorState>(debugLabel: 'notifications');
-final _profileKey = GlobalKey<NavigatorState>(debugLabel: 'profile');
 final _searchKey = GlobalKey<NavigatorState>(debugLabel: 'search');
 final _hashtagKey = GlobalKey<NavigatorState>(debugLabel: 'hashtag');
 
@@ -161,15 +160,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             name: 'profile',
             pageBuilder: (ctx, st) {
               // ProfileScreenRouter gets npub from pageContext (router-driven)
-              return NoTransitionPage(
+              // Use MaterialPage for swipe-back gesture support
+              return MaterialPage(
                 key: st.pageKey,
-                child: Navigator(
-                  key: _profileKey,
-                  onGenerateRoute: (r) => MaterialPageRoute(
-                    builder: (_) => const ProfileScreenRouter(),
-                    settings: const RouteSettings(name: 'profile-root'),
-                  ),
-                ),
+                child: const ProfileScreenRouter(),
               );
             },
           ),

@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:video_player/video_player.dart';
 
@@ -39,6 +40,10 @@ class _VideoMetricsTrackerState extends ConsumerState<VideoMetricsTracker> {
 
   // Track if we've sent end event to avoid duplicates
   bool _hasSentEndEvent = false;
+
+  // Track if we've started playback performance trace
+  bool _hasStartedPlaybackTrace = false;
+  bool _hasCompletedPlaybackTrace = false;
 
   // Save provider references for safe access during dispose
   dynamic _analyticsService;
@@ -75,6 +80,13 @@ class _VideoMetricsTrackerState extends ConsumerState<VideoMetricsTracker> {
 
   void _initializeTracking() {
     if (widget.controller == null) return;
+
+    // Start performance trace for video playback
+    if (!_hasStartedPlaybackTrace) {
+      _hasStartedPlaybackTrace = true;
+      final traceName = 'video_playback_${widget.video.id}';
+      PerformanceMonitoringService.instance.startTrace(traceName);
+    }
 
     _addControllerListeners();
     _startPositionTracking();
@@ -115,6 +127,18 @@ class _VideoMetricsTrackerState extends ConsumerState<VideoMetricsTracker> {
   void _onControllerUpdate() {
     final controller = widget.controller;
     if (controller == null || !controller.value.isInitialized) return;
+
+    // Stop performance trace when video starts playing for the first time
+    if (!_hasCompletedPlaybackTrace && controller.value.isPlaying) {
+      _hasCompletedPlaybackTrace = true;
+      final traceName = 'video_playback_${widget.video.id}';
+      PerformanceMonitoringService.instance.stopTrace(traceName);
+      Log.debug(
+        '⏱️ Video playback started for ${widget.video.id}',
+        name: 'VideoMetricsTracker',
+        category: LogCategory.video,
+      );
+    }
 
     final position = controller.value.position;
     final duration = controller.value.duration;

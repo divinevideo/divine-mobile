@@ -20,6 +20,7 @@ class ExploreVideoScreenPure extends ConsumerStatefulWidget {
     required this.contextTitle,
     this.startingIndex,
     this.onLoadMore,
+    this.onNavigate,
   });
 
   final VideoEvent startingVideo;
@@ -27,6 +28,7 @@ class ExploreVideoScreenPure extends ConsumerStatefulWidget {
   final String contextTitle;
   final int? startingIndex;
   final VoidCallback? onLoadMore;
+  final void Function(int index)? onNavigate;
 
   @override
   ConsumerState<ExploreVideoScreenPure> createState() => _ExploreVideoScreenPureState();
@@ -87,7 +89,12 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
                 name: 'ExploreVideoScreen', category: LogCategory.video);
 
             // Update URL to trigger reactive video playback via router
-            context.goExplore(index);
+            // Use custom navigation callback if provided, otherwise default to explore
+            if (widget.onNavigate != null) {
+              widget.onNavigate!(index);
+            } else {
+              context.goExplore(index);
+            }
 
             // Trigger pagination when near the end if callback provided
             if (widget.onLoadMore != null) {
