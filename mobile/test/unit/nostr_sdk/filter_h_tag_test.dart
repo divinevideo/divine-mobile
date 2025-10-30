@@ -57,7 +57,8 @@ void main() {
         22,
         [
           ['h', 'vine'],
-          ['url', 'https://example.com/video.mp4']
+          ['url', 'https://example.com/video.mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -70,7 +71,8 @@ void main() {
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         22,
         [
-          ['url', 'https://example.com/video.mp4']
+          ['url', 'https://example.com/video.mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -84,7 +86,8 @@ void main() {
         22,
         [
           ['h', 'other'],
-          ['url', 'https://example.com/video.mp4']
+          ['url', 'https://example.com/video.mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -104,7 +107,8 @@ void main() {
         '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
         22,
         [
-          ['h', 'vine']
+          ['h', 'vine'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -117,7 +121,8 @@ void main() {
         '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
         22,
         [
-          ['h', 'test']
+          ['h', 'test'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -130,7 +135,8 @@ void main() {
         '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
         22,
         [
-          ['h', 'other']
+          ['h', 'other'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -149,7 +155,8 @@ void main() {
         '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
         22,
         [
-          ['url', 'https://example.com/video.mp4']
+          ['url', 'https://example.com/video.mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -163,7 +170,8 @@ void main() {
         22,
         [
           ['h', 'vine'],
-          ['url', 'https://example.com/video.mp4']
+          ['url', 'https://example.com/video.mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -186,7 +194,8 @@ void main() {
         '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
         22,
         [
-          ['h', 'vine']
+          ['h', 'vine'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -199,7 +208,8 @@ void main() {
         'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
         22,
         [
-          ['h', 'vine']
+          ['h', 'vine'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -212,7 +222,8 @@ void main() {
         '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
         22,
         [
-          ['url', 'https://example.com/video.mp4']
+          ['url', 'https://example.com/video.mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,

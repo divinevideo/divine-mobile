@@ -8,6 +8,8 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
+import 'package:openvine/widgets/share_video_menu.dart';
+import 'package:openvine/services/content_deletion_service.dart';
 
 /// Composable video grid that automatically filters broken videos
 /// and provides consistent styling across Explore, Hashtag, and Search screens
@@ -17,7 +19,7 @@ class ComposableVideoGrid extends ConsumerWidget {
     required this.videos,
     required this.onVideoTap,
     this.crossAxisCount = 2,
-    this.childAspectRatio = 0.85,
+    this.childAspectRatio = 0.72,
     this.padding,
     this.emptyBuilder,
   });
@@ -87,6 +89,7 @@ class ComposableVideoGrid extends ConsumerWidget {
   ) {
     return GestureDetector(
       onTap: () => onVideoTap(displayedVideos, index),
+      onLongPress: () => _showVideoContextMenu(context, ref, video),
       child: Container(
         decoration: BoxDecoration(
           color: VineTheme.cardBackground,
@@ -253,5 +256,239 @@ class ComposableVideoGrid extends ConsumerWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
+  }
+
+  /// Show context menu for long press on video tiles
+  void _showVideoContextMenu(BuildContext context, WidgetRef ref, VideoEvent video) {
+    // Check if user owns this video
+    final nostrService = ref.read(nostrServiceProvider);
+    final userPubkey = nostrService.publicKey;
+    final isOwnVideo = userPubkey != null && userPubkey == video.pubkey;
+
+    // Only show context menu for own videos
+    if (!isOwnVideo) {
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: VineTheme.backgroundColor,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.more_vert, color: VineTheme.whiteText),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Video Options',
+                      style: TextStyle(
+                        color: VineTheme.whiteText,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Icon(Icons.close, color: VineTheme.secondaryText),
+                  ),
+                ],
+              ),
+            ),
+
+            // Edit option
+            ListTile(
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: VineTheme.cardBackground,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.edit, color: VineTheme.vineGreen, size: 20),
+              ),
+              title: Text(
+                'Edit Video',
+                style: TextStyle(
+                  color: VineTheme.whiteText,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              subtitle: Text(
+                'Update title, description, and hashtags',
+                style: TextStyle(
+                  color: VineTheme.secondaryText,
+                  fontSize: 12,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                showEditDialogForVideo(context, video);
+              },
+            ),
+
+            // Delete option
+            ListTile(
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: VineTheme.cardBackground,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.delete_outline, color: Colors.red, size: 20),
+              ),
+              title: Text(
+                'Delete Video',
+                style: TextStyle(
+                  color: VineTheme.whiteText,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              subtitle: Text(
+                'Permanently remove this content',
+                style: TextStyle(
+                  color: VineTheme.secondaryText,
+                  fontSize: 12,
+                ),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                _showDeleteConfirmation(context, ref, video);
+              },
+            ),
+
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show delete confirmation dialog
+  Future<void> _showDeleteConfirmation(
+    BuildContext context,
+    WidgetRef ref,
+    VideoEvent video,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: VineTheme.cardBackground,
+        title: Text('Delete Video', style: TextStyle(color: VineTheme.whiteText)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete this video?',
+              style: TextStyle(color: VineTheme.whiteText),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'This will send a delete request (NIP-09) to all relays. Some relays may still retain the content.',
+              style: TextStyle(
+                color: VineTheme.secondaryText,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await _deleteVideo(context, ref, video);
+    }
+  }
+
+  /// Delete video using ContentDeletionService
+  Future<void> _deleteVideo(
+    BuildContext context,
+    WidgetRef ref,
+    VideoEvent video,
+  ) async {
+    try {
+      final deletionService = await ref.read(contentDeletionServiceProvider.future);
+
+      // Show loading snackbar
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('Deleting content...'),
+              ],
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      final result = await deletionService.quickDelete(
+        video: video,
+        reason: DeleteReason.personalChoice,
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  result.success ? Icons.check_circle : Icons.error,
+                  color: Colors.white,
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    result.success
+                        ? 'Delete request sent successfully'
+                        : 'Failed to delete content: ${result.error}',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: result.success ? VineTheme.vineGreen : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete content: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

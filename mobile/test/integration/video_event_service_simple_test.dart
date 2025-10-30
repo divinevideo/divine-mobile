@@ -89,6 +89,7 @@ void main() {
           ['m', 'video/mp4'],
           ['title', 'Test Video'],
           ['duration', '30'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video content from relay',
       );
@@ -187,7 +188,9 @@ void main() {
       final textEvent = Event(
         '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
         1, // Kind 1 for text note
-        [],
+        [
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+        ],
         'This is not a video event',
       );
 
@@ -212,6 +215,7 @@ void main() {
           ], // Required 'd' tag for addressable events
           ['url', 'https://example.com/filtered-test.mp4'],
           ['title', 'Filtered Test Video'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Video event content',
       );

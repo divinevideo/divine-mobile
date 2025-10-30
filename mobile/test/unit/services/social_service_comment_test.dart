@@ -126,6 +126,7 @@ void main() {
           [
             ['e', testVideoEventId, '', 'root'],
             ['p', testVideoAuthorPubkey],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -189,6 +190,7 @@ void main() {
             ['p', testVideoAuthorPubkey],
             ['e', replyToEventId, '', 'reply'],
             ['p', replyToAuthorPubkey],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -251,6 +253,7 @@ void main() {
           [
             ['e', testVideoEventId, '', 'root'],
             ['p', testVideoAuthorPubkey],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -323,6 +326,7 @@ void main() {
           [
             ['e', testVideoEventId, '', 'root'],
             ['p', testVideoAuthorPubkey],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -376,6 +380,7 @@ void main() {
           [
             ['e', testVideoEventId, '', 'root'],
             ['p', testVideoAuthorPubkey],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           trimmedContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -426,6 +431,7 @@ void main() {
           [
             ['e', testVideoEventId, '', 'root'],
             ['p', testVideoAuthorPubkey],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,

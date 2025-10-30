@@ -208,15 +208,20 @@ class NotificationServiceEnhanced {
     }
     if (videoEventId == null) return;
 
+    // Get video info
+    final videoEvent = _videoService?.getVideoEventById(videoEventId);
+
+    // CRITICAL: Only create notification if this is the current user's video
+    if (videoEvent == null || videoEvent.pubkey != _nostrService?.publicKey) {
+      return;
+    }
+
     // Get actor info - try multiple profile fields
     final actorProfile = await _profileService?.fetchProfile(event.pubkey);
     final actorName = actorProfile?.name ??
         actorProfile?.displayName ??
         actorProfile?.nip05?.split('@').first ??
         'Unknown user';
-
-    // Get video info
-    final videoEvent = _videoService?.getVideoEventById(videoEventId);
 
     final notification = NotificationModel(
       id: event.id,
@@ -227,8 +232,8 @@ class NotificationServiceEnhanced {
       message: '$actorName liked your video',
       timestamp: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
       targetEventId: videoEventId,
-      targetVideoUrl: videoEvent?.videoUrl,
-      targetVideoThumbnail: videoEvent?.thumbnailUrl,
+      targetVideoUrl: videoEvent.videoUrl,
+      targetVideoThumbnail: videoEvent.thumbnailUrl,
     );
 
     await _addNotification(notification);
@@ -246,15 +251,20 @@ class NotificationServiceEnhanced {
     }
     if (videoEventId == null) return;
 
+    // Get video info
+    final videoEvent = _videoService?.getVideoEventById(videoEventId);
+
+    // CRITICAL: Only create notification if this is the current user's video
+    if (videoEvent == null || videoEvent.pubkey != _nostrService?.publicKey) {
+      return;
+    }
+
     // Get actor info - try multiple profile fields
     final actorProfile = await _profileService?.fetchProfile(event.pubkey);
     final actorName = actorProfile?.name ??
         actorProfile?.displayName ??
         actorProfile?.nip05?.split('@').first ??
         'Unknown user';
-
-    // Get video info
-    final videoEvent = _videoService?.getVideoEventById(videoEventId);
 
     final notification = NotificationModel(
       id: event.id,
@@ -265,8 +275,8 @@ class NotificationServiceEnhanced {
       message: '$actorName commented on your video',
       timestamp: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
       targetEventId: videoEventId,
-      targetVideoUrl: videoEvent?.videoUrl,
-      targetVideoThumbnail: videoEvent?.thumbnailUrl,
+      targetVideoUrl: videoEvent.videoUrl,
+      targetVideoThumbnail: videoEvent.thumbnailUrl,
       metadata: {
         'comment': event.content,
       },
@@ -277,6 +287,24 @@ class NotificationServiceEnhanced {
 
   /// Handle follow events
   Future<void> _handleFollowEvent(Event event) async {
+    // CRITICAL: Check if the contact list includes the current user
+    final currentUserPubkey = _nostrService?.publicKey;
+    if (currentUserPubkey == null) return;
+
+    // Check if current user is in the 'p' tags (meaning event.pubkey is following them)
+    bool isFollowingCurrentUser = false;
+    for (final tag in event.tags) {
+      if (tag.isNotEmpty && tag[0] == 'p' && tag.length > 1) {
+        if (tag[1] == currentUserPubkey) {
+          isFollowingCurrentUser = true;
+          break;
+        }
+      }
+    }
+
+    // Only create notification if this contact list includes the current user
+    if (!isFollowingCurrentUser) return;
+
     // Get actor info - try multiple profile fields
     final actorProfile = await _profileService?.fetchProfile(event.pubkey);
     final actorName = actorProfile?.name ??
@@ -299,6 +327,24 @@ class NotificationServiceEnhanced {
 
   /// Handle mention events
   Future<void> _handleMentionEvent(Event event) async {
+    // CRITICAL: Check if the event mentions the current user
+    final currentUserPubkey = _nostrService?.publicKey;
+    if (currentUserPubkey == null) return;
+
+    // Check if current user is mentioned in 'p' tags
+    bool mentionsCurrentUser = false;
+    for (final tag in event.tags) {
+      if (tag.isNotEmpty && tag[0] == 'p' && tag.length > 1) {
+        if (tag[1] == currentUserPubkey) {
+          mentionsCurrentUser = true;
+          break;
+        }
+      }
+    }
+
+    // Only create notification if this event mentions the current user
+    if (!mentionsCurrentUser) return;
+
     // Get actor info - try multiple profile fields
     final actorProfile = await _profileService?.fetchProfile(event.pubkey);
     final actorName = actorProfile?.name ??
@@ -334,15 +380,20 @@ class NotificationServiceEnhanced {
     }
     if (videoEventId == null) return;
 
+    // Get video info
+    final videoEvent = _videoService?.getVideoEventById(videoEventId);
+
+    // CRITICAL: Only create notification if this is the current user's video
+    if (videoEvent == null || videoEvent.pubkey != _nostrService?.publicKey) {
+      return;
+    }
+
     // Get actor info - try multiple profile fields
     final actorProfile = await _profileService?.fetchProfile(event.pubkey);
     final actorName = actorProfile?.name ??
         actorProfile?.displayName ??
         actorProfile?.nip05?.split('@').first ??
         'Unknown user';
-
-    // Get video info
-    final videoEvent = _videoService?.getVideoEventById(videoEventId);
 
     final notification = NotificationModel(
       id: event.id,
@@ -353,8 +404,8 @@ class NotificationServiceEnhanced {
       message: '$actorName reposted your video',
       timestamp: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
       targetEventId: videoEventId,
-      targetVideoUrl: videoEvent?.videoUrl,
-      targetVideoThumbnail: videoEvent?.thumbnailUrl,
+      targetVideoUrl: videoEvent.videoUrl,
+      targetVideoThumbnail: videoEvent.thumbnailUrl,
     );
 
     await _addNotification(notification);

@@ -88,6 +88,7 @@ void main() {
         [
           ['url', 'https://example.com/video1.mp4'],
           ['m', 'video/mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -127,6 +128,7 @@ void main() {
           [
             ['url', 'https://example.com/video$index.mp4'],
             ['m', 'video/mp4'],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           'Test video content $index',
           createdAt: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + index,
@@ -166,6 +168,7 @@ void main() {
         [
           ['url', 'https://example.com/video1.mp4'],
           ['m', 'video/mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video 1',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -178,6 +181,7 @@ void main() {
         [
           ['url', 'https://example.com/video2.mp4'],
           ['m', 'video/mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video 2',
         createdAt: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 1,
@@ -272,6 +276,7 @@ void main() {
         [
           ['url', 'https://example.com/rapid.mp4'],
           ['m', 'video/mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Rapid test video',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -305,6 +310,7 @@ void main() {
         [
           ['url', 'https://example.com/valid.mp4'],
           ['m', 'video/mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Valid video',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -314,7 +320,9 @@ void main() {
       final invalidEvent = Event(
         'd0aa74d68e414f0305db9f7dc96ec32e616502e6ccf5bbf5739de19a96b67f3e',
         1, // Text note, not a video
-        [],
+        [
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+        ],
         'Not a video',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       );
@@ -376,6 +384,7 @@ void main() {
         [
           ['e', originalVideoId, '', 'mention'],
           ['p', originalPubkey],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         '',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -388,6 +397,7 @@ void main() {
         [
           ['e', originalVideoId, '', 'mention'],
           ['p', originalPubkey],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         '',
         createdAt: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 1,

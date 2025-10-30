@@ -1,7 +1,6 @@
 // ABOUTME: Video feed item using individual controller architecture
 // ABOUTME: Each video gets its own controller with automatic lifecycle management via Riverpod autoDispose
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -818,29 +817,8 @@ class VideoOverlayActions extends ConsumerWidget {
               category: LogCategory.ui,
             );
 
-            // Platform guard: web shows modal, native navigates to editor
-            if (kIsWeb) {
-              // Show "not available on web" modal
-              showDialog<void>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Editor Not Available'),
-                  content: const Text(
-                    'Video editing is not available on web yet. '
-                    'Please use the mobile app to edit your videos.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('OK'),
-                    ),
-                  ],
-                ),
-              );
-            } else {
-              // Navigate to video editor screen (route will be added next)
-              context.push('/edit-video', extra: video);
-            }
+            // Show edit dialog directly (works on all platforms)
+            showEditDialogForVideo(context, video);
           },
           tooltip: 'Edit video',
           icon: const Icon(

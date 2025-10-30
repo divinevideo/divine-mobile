@@ -63,7 +63,8 @@ void main() {
           publicKey,
           1063,
           [
-            ['url', 'test.com']
+            ['url', 'test.com'],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           'Test content',
         );
@@ -88,6 +89,7 @@ void main() {
             ['x', 'sha256hash'],
             ['size', '1024'],
             ['dim', '320x240'],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           'Test NIP-94 event',
         );
@@ -337,7 +339,9 @@ void main() {
         final mockEvent = Event(
           publicKey,
           1063,
-          [],
+          [
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          ],
           'Test',
         );
         mockEvent.sign(privateKey);
@@ -373,7 +377,9 @@ void main() {
         final mockEvent = Event(
           publicKey,
           1063,
-          [],
+          [
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          ],
           'Test',
         );
         mockEvent.sign(privateKey);
@@ -398,7 +404,9 @@ void main() {
         final mockEvent = Event(
           publicKey,
           1063,
-          [],
+          [
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          ],
           'Test',
         );
         mockEvent.sign(privateKey);
@@ -424,7 +432,9 @@ void main() {
         final mockEvent = Event(
           publicKey,
           1063,
-          [],
+          [
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          ],
           'Test',
         );
         mockEvent.sign(privateKey);

@@ -11,18 +11,17 @@ final appForegroundProvider = StreamProvider<bool>((ref) {
   final binding = WidgetsBinding.instance;
   final ctrl = StreamController<bool>(sync: true);
 
-  // Seed initial state (treat "resumed" as true; else false).
-  // On Web, lifecycle can be null; default to true.
+  // Seed initial state (only "resumed" counts as foreground)
+  // On Web, lifecycle can be null; default to true for initial load
   final initialState = binding.lifecycleState;
   ctrl.add(initialState == null || initialState == AppLifecycleState.resumed);
 
   final observer = _LifecycleObserver((state) {
-    // Only emit when the boolean actually changes
-    final next =
-        state == AppLifecycleState.resumed || state == AppLifecycleState.inactive
-            ? true
-            : false;
-    // (inactive is "visible but not focused"; treat as foreground if you prefer)
+    // Only "resumed" counts as foreground - videos should stop when app loses focus
+    // inactive = visible but no focus (another app active) → background
+    // paused = not visible (backgrounded on mobile) → background
+    // hidden/detached = fully hidden → background
+    final next = state == AppLifecycleState.resumed;
     ctrl.add(next);
   });
 

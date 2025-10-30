@@ -2305,3 +2305,11 @@ class _CreateBookmarkSetDialogState
     super.dispose();
   }
 }
+
+/// Public helper to show edit dialog for a video from anywhere
+void showEditDialogForVideo(BuildContext context, VideoEvent video) {
+  showDialog(
+    context: context,
+    builder: (context) => _EditVideoDialog(video: video),
+  );
+}

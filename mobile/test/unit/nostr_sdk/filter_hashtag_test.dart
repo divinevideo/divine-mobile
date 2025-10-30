@@ -82,6 +82,7 @@ void main() {
         [
           ['t', 'bitcoin'],
           ['t', 'crypto'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video about bitcoin',
         createdAt: 1234567890,
@@ -94,6 +95,7 @@ void main() {
         [
           ['t', 'ethereum'],
           ['t', 'crypto'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video about ethereum',
         createdAt: 1234567890,
@@ -103,7 +105,9 @@ void main() {
       final noHashtagEvent = Event(
         testPubkey3,
         22,
-        [],
+        [
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+        ],
         'Test video without hashtags',
         createdAt: 1234567890,
       );
@@ -123,6 +127,7 @@ void main() {
         22,
         [
           ['t', 'bitcoin'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video',
         createdAt: 1234567890,
@@ -131,7 +136,9 @@ void main() {
       final eventNoHashtags = Event(
         testPubkey2,
         22,
-        [],
+        [
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+        ],
         'Test video without hashtags',
         createdAt: 1234567890,
       );
@@ -153,6 +160,7 @@ void main() {
           ['t', 'bitcoin'],
           ['t', 'nostr'],
           ['t', 'crypto'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video with multiple hashtags',
         createdAt: 1234567890,
@@ -174,6 +182,7 @@ void main() {
           ['t'], // Missing value
           ['t', 'bitcoin'], // Valid tag
           'not_a_list', // Invalid tag format
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video with malformed tags',
         createdAt: 1234567890,

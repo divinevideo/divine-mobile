@@ -87,7 +87,8 @@ void main() {
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         22,
         [
-          ['url', 'https://example.com/video1.mp4']
+          ['url', 'https://example.com/video1.mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video content 1',
       );
@@ -96,7 +97,8 @@ void main() {
         'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
         22,
         [
-          ['url', 'https://example.com/video2.mp4']
+          ['url', 'https://example.com/video2.mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video content 2',
       );
@@ -155,12 +157,16 @@ void main() {
       final testEvent1 = Event(
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
           22,
-          [],
+          [
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          ],
           'Test 1');
       final testEvent2 = Event(
           'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
           22,
-          [],
+          [
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          ],
           'Test 2');
 
       testEventController.add(testEvent1);

@@ -17,6 +17,7 @@ import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
 import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_editor_screen.dart';
+import 'package:openvine/services/video_stop_navigator_observer.dart';
 
 // Navigator keys for per-tab state preservation
 // One key per logical screen (not per route variant)
@@ -54,6 +55,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootKey,
     initialLocation: '/home/0',
+    observers: [VideoStopNavigatorObserver()],
     redirect: (context, state) {
       // Redirect to explore if user follows nobody
       final location = state.matchedLocation;

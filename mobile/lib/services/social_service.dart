@@ -1712,8 +1712,8 @@ class SocialService {
           ['k', '7'], // Request deletion of Kind 7 (reaction) events
           [
             'k',
-            '32222'
-          ], // Request deletion of Kind 32222 (addressable video) events
+            '34236'
+          ], // Request deletion of Kind 34236 (addressable short video) events per NIP-71
         ],
       );
 

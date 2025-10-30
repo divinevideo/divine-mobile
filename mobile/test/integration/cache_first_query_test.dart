@@ -90,6 +90,9 @@ Event createTestVideoEvent({
   // Without this, events will be filtered out by _handleNewVideoEvent() at line 1111
   tags.add(['url', 'https://example.com/test-video-$id.mp4']);
 
+  // Add expiration tag for NIP-40 (1 hour from now)
+  tags.add(['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}']);
+
   // Add hashtag tags
   if (hashtags != null) {
     for (final tag in hashtags) {
@@ -147,7 +150,9 @@ void main() {
       );
 
       // Insert a profile event (kind 0)
-      final profileEvent = Event(toHex64('user1'), 0, [], '{"name":"Test User"}', createdAt: 50);
+      final profileEvent = Event(toHex64('user1'), 0, [
+        ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+      ], '{"name":"Test User"}', createdAt: 50);
       profileEvent.id = toHex64('profile1');
       profileEvent.sig = toHex64('sig_profile1');
 

@@ -129,6 +129,7 @@ void main() {
           [
             ['e', testVideoEventId],
             ['p', testVideoAuthorPubkey],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -161,6 +162,7 @@ void main() {
           1,
           [
             ['invalid_tag_type'], // Malformed tag structure
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -191,6 +193,7 @@ void main() {
           [
             ['e', testVideoEventId],
             ['p', testVideoAuthorPubkey],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           'Parent comment',
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -204,6 +207,7 @@ void main() {
             ['p', testVideoAuthorPubkey],
             ['e', parentCommentEvent.id, '', 'reply'],
             ['p', testCurrentUserPubkey],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           'Reply comment',
           createdAt: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 1,
@@ -404,6 +408,7 @@ void main() {
           [
             ['e', testVideoEventId],
             ['p', testVideoAuthorPubkey],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           'Comment 1',
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -415,6 +420,7 @@ void main() {
           [
             ['e', testVideoEventId],
             ['p', testVideoAuthorPubkey],
+            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
           ],
           'Comment 2',
           createdAt: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 1,

@@ -234,7 +234,8 @@ void main() {
         22,
         [
           ['url', 'https://example.com/video1.mp4'],
-          ['m', 'video/mp4']
+          ['m', 'video/mp4'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Video 1',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,

@@ -26,7 +26,8 @@ void main() {
           ["summary", ""],
           ["t", "openvine"],
           ["client", "openvine"],
-          ["h", "vine"]
+          ["h", "vine"],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         '',
       );
@@ -73,7 +74,7 @@ void main() {
           ["t", "randomvines"],
           ["t", "classicvines"],
           ["vine_id", "itjpUUgL6tE"],
-          ["expiration", "1751536124"]
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'this mascot and fan had some problems 😳😂\n\n#RandomVines #ClassicVines #Preserved #RabblesSelection',
       );
@@ -110,7 +111,8 @@ void main() {
                34236,
         [
           ["d", "test-video-validation"], // Required for addressable events
-          ["url", "https://api.openvine.co/media/test-video-id"]
+          ["url", "https://api.openvine.co/media/test-video-id"],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         '',
       );

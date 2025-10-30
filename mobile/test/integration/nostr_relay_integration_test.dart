@@ -50,7 +50,9 @@ void main() {
           final testEvent = Event(
             service.publicKey!,
             1, // Kind 1: Text note
-            [],
+            [
+              ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            ],
             testContent,
           );
 
@@ -135,6 +137,7 @@ void main() {
               ['title', 'Integration Test Video'],
               ['duration', '6'],
               ['dimensions', '1920x1080'],
+              ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
             ],
             'Test video from integration test',
           );

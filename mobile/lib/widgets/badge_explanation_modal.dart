@@ -132,7 +132,7 @@ class _ProofModeExplanation extends StatelessWidget {
         _VerificationLevelCard(video: video),
         const SizedBox(height: 12),
         const Text(
-          'ProofMode helps verify that videos are original content and not AI-generated or manipulated.',
+          'ProofMode helps verify that videos are authentic and not AI-generated or manipulated.',
           style: TextStyle(fontSize: 13, color: Colors.white70),
         ),
         const SizedBox(height: 12),

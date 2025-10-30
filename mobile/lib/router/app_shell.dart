@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/vine_drawer.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/active_video_provider.dart';
 import 'page_context_provider.dart';
 import 'route_utils.dart';
 import 'nav_extensions.dart';
@@ -105,6 +106,9 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final title = _titleFor(ref);
+
+    // Initialize auto-cleanup provider to ensure only one video plays at a time
+    ref.watch(videoControllerAutoCleanupProvider);
 
     // Watch page context to determine if back button should show
     final pageCtxAsync = ref.watch(pageContextProvider);

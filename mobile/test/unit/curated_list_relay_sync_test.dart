@@ -117,6 +117,7 @@ void main() {
           ['e', 'video1'],
           ['e', 'video2'],
           ['client', 'openvine'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test curated list',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -165,6 +166,7 @@ void main() {
         [
           ['d', 'same_list_id'],
           ['title', 'Old Title'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Older version',
         createdAt: 1000, // older timestamp
@@ -176,6 +178,7 @@ void main() {
         [
           ['d', 'same_list_id'],
           ['title', 'New Title'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Newer version',
         createdAt: 2000, // newer timestamp
@@ -278,6 +281,7 @@ void main() {
           ], // Use the actual list ID instead of hardcoded 'test_list_id'
           ['title', 'Relay List'],
           ['description', 'Relay description'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Relay version',
         createdAt: futureTimestamp, // Ensure this is newer than the local list

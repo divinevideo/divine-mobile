@@ -230,6 +230,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                     video: videos[index],
                     index: index,  // Use list index for active video detection
                     hasBottomNavigation: false, // Fullscreen mode, no bottom nav
+                    forceShowOverlay: isOwnProfile, // Show overlay controls on own profile
                     contextTitle: ref.read(fetchUserProfileProvider(userIdHex)).value?.displayName ?? 'Profile',
                   );
                 },

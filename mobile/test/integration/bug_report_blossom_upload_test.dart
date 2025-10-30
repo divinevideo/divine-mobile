@@ -192,7 +192,8 @@ Error Counts:
       // Assert: Verify upload succeeded
       expect(uploadedUrl, isNotNull, reason: 'Upload should return a URL');
       expect(uploadedUrl, contains('http'), reason: 'URL should be HTTP/HTTPS');
-      expect(uploadedUrl, contains('.txt'), reason: 'URL should reference text file');
+      expect(uploadedUrl!.contains('cdn.divine.video') || uploadedUrl.contains('blossom.divine.video'),
+          isTrue, reason: 'URL should be from divine.video CDN');
 
       print('✅ Upload successful!');
       print('🔗 Uploaded URL: $uploadedUrl');

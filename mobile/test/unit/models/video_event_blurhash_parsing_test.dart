@@ -31,6 +31,9 @@ void main() {
         ["expiration", "1754122534"]
       ];
 
+      // Add expiration tag to eventTags
+      eventTags.add(['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}']);
+
       final event = Event(
           "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", // pubkey
                  34236, // kind
@@ -82,6 +85,9 @@ void main() {
         ["expiration", "1754122534"]
       ];
 
+      // Add expiration tag to eventTags
+      eventTags.add(['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}']);
+
       final event = Event(
           "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890", // pubkey
                  34236, // kind
@@ -115,6 +121,9 @@ void main() {
         ]
       ];
 
+      // Add expiration tag to eventTags
+      eventTags.add(['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}']);
+
       final event = Event(
           "fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321", // pubkey
                  34236, // kind
@@ -143,6 +152,9 @@ void main() {
           "blurhash" // Missing value - should not crash (malformed NIP-92 format)
         ]
       ];
+
+      // Add expiration tag to eventTags
+      eventTags.add(['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}']);
 
       final event = Event(
           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", // pubkey

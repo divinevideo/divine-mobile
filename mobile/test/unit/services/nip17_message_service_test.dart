@@ -50,7 +50,8 @@ void main() {
             'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
             'kind': 1059, // GIFT_WRAP
             'tags': [
-              ['p', recipientPubkey]
+              ['p', recipientPubkey],
+              ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
             ],
             'content': 'encrypted-content',
             'sig': 'test-signature',
@@ -204,7 +205,9 @@ void main() {
             'pubkey': 'test-pubkey',
             'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
             'kind': 1059,
-            'tags': [],
+            'tags': [
+              ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            ],
             'content': '',
             'sig': 'test-sig',
           }),

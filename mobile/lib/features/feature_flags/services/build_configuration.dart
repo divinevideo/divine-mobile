@@ -1,7 +1,6 @@
 // ABOUTME: Build configuration service providing compile-time feature flag defaults
 // ABOUTME: Maps environment variables to feature flag defaults for build-time configuration
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 
 class BuildConfiguration {
@@ -31,9 +30,9 @@ class BuildConfiguration {
         return const bool.fromEnvironment('FF_ROUTER_DRIVEN_HOME',
             defaultValue: false);
       case FeatureFlag.enableVideoEditorV1:
-        // Video editor disabled on web (not supported), enabled on native platforms
+        // Video editor now works on all platforms (uses dialog-based editor)
         return const bool.fromEnvironment('FF_ENABLE_VIDEO_EDITOR_V1',
-            defaultValue: !kIsWeb);
+            defaultValue: true);
     }
   }
 

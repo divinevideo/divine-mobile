@@ -74,7 +74,8 @@ void main() {
         'follower1',  // pubkey
         3,  // kind
         [
-          ['p', 'target_pubkey']
+          ['p', 'target_pubkey'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],  // tags
         '',  // content
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -138,7 +139,8 @@ void main() {
         'follower1',  // pubkey
         3,  // kind
         [
-          ['p', 'target_pubkey']
+          ['p', 'target_pubkey'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],  // tags
         '',  // content
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -148,7 +150,8 @@ void main() {
         'follower1',  // pubkey - Same follower
         3,  // kind
         [
-          ['p', 'target_pubkey']
+          ['p', 'target_pubkey'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],  // tags
         '',  // content
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,

@@ -69,6 +69,7 @@ void main() {
           ['url', 'https://example.com/test.mp4'],
           ['title', 'Test Video'],
           ['t', 'test'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Test video content from embedded relay integration',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -92,7 +93,8 @@ void main() {
         keyManager.publicKey!,
                34236,
         [
-          ['t', 'embedded-test']
+          ['t', 'embedded-test'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         testContent,
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -150,7 +152,8 @@ void main() {
         keyManager.publicKey!,
         10001, // Replaceable event kind
         [
-          ['d', 'test-replaceable']
+          ['d', 'test-replaceable'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'First version',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -166,7 +169,8 @@ void main() {
         keyManager.publicKey!,
         10001,
         [
-          ['d', 'test-replaceable']
+          ['d', 'test-replaceable'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Second version - should replace first',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -199,6 +203,7 @@ void main() {
         [
           ['url', 'https://example.com/search-test.mp4'],
           ['title', 'Searchable Video'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'This is a searchable Flutter video about Nostr relay integration',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -229,7 +234,9 @@ void main() {
       final profileEvent = Event(
         keyManager.publicKey!,
         0, // kind 0 - user metadata
-        [],
+        [
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+        ],
         '{"name":"Test User","about":"Testing relay discovery","relays":"wss://relay.example.com"}',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       );
@@ -243,6 +250,7 @@ void main() {
         [
           ['r', 'wss://custom.relay.io', 'write'],
           ['r', 'wss://another.relay.com', 'read'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         '',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -271,6 +279,7 @@ void main() {
         [
           ['e', 'someeventid', 'wss://hint.relay.org'],
           ['p', 'somepubkey', 'wss://profile.relay.net'],
+          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
         ],
         'Event with relay hints for discovery',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
