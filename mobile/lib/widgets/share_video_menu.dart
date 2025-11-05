@@ -1661,8 +1661,8 @@ class ReportContentDialogState extends ConsumerState<ReportContentDialog> {
                 style: TextStyle(color: VineTheme.whiteText),
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                height: 200,
+              Container(
+                constraints: const BoxConstraints(maxHeight: 400),
                 child: SingleChildScrollView(
                   child: RadioGroup<ContentFilterReason>(
                     groupValue: _selectedReason,
