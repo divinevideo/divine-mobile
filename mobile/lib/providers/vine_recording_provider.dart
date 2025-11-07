@@ -18,6 +18,19 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 
+/// Result returned from stopRecording containing video file, draft ID, and proof manifest
+class RecordingResult {
+  const RecordingResult({
+    required this.videoFile,
+    required this.draftId,
+    this.proofManifest,
+  });
+
+  final File? videoFile;
+  final String? draftId;
+  final ProofManifest? proofManifest;
+}
+
 /// State class for VineRecording that captures all necessary UI state
 class VineRecordingUIState {
   const VineRecordingUIState({
@@ -119,11 +132,16 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
     updateState();
   }
 
-  Future<(File?, ProofManifest?)> stopRecording() async {
+  Future<RecordingResult> stopRecording() async {
     await _controller.stopRecording();
     final result = await _controller.finishRecording();
     updateState();
-    return result;
+
+    return RecordingResult(
+      videoFile: result.$1,
+      draftId: null, // Will implement auto-draft in next task
+      proofManifest: result.$2,
+    );
   }
 
   Future<(File?, ProofManifest?)> finishRecording() async {

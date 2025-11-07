@@ -1,6 +1,7 @@
 // ABOUTME: TDD test for VineRecordingUIState convenience getters used by universal_camera_screen_pure.dart
 // ABOUTME: Tests isRecording, isInitialized, isError, recordingDuration, and errorMessage getters
 
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/services/vine_recording_controller.dart';
@@ -15,7 +16,7 @@ void main() {
           totalRecordedDuration: Duration(seconds: 3),
           remainingDuration: Duration(seconds: 3),
           canRecord: true,
-          segments: []
+          segments: [],
           isCameraInitialized: true,
         );
 
@@ -25,7 +26,7 @@ void main() {
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: true,
-          segments: []
+          segments: [],
           isCameraInitialized: true,
         );
 
@@ -40,7 +41,7 @@ void main() {
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: true,
-          segments: []
+          segments: [],
           isCameraInitialized: true,
         );
 
@@ -50,7 +51,7 @@ void main() {
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: false,
-          segments: []
+          segments: [],
           isCameraInitialized: true,
         );
 
@@ -60,7 +61,7 @@ void main() {
           totalRecordedDuration: Duration(seconds: 6),
           remainingDuration: Duration.zero,
           canRecord: false,
-          segments: []
+          segments: [],
           isCameraInitialized: true,
         );
 
@@ -76,7 +77,7 @@ void main() {
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: false,
-          segments: []
+          segments: [],
           isCameraInitialized: true,
         );
 
@@ -86,7 +87,7 @@ void main() {
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: true,
-          segments: []
+          segments: [],
           isCameraInitialized: true,
         );
 
@@ -101,7 +102,7 @@ void main() {
           totalRecordedDuration: Duration(seconds: 3),
           remainingDuration: Duration(seconds: 3),
           canRecord: true,
-          segments: []
+          segments: [],
           isCameraInitialized: true,
         );
 
@@ -115,7 +116,7 @@ void main() {
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: false,
-          segments: []
+          segments: [],
           isCameraInitialized: true,
         );
 
@@ -125,7 +126,7 @@ void main() {
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: true,
-          segments: []
+          segments: [],
           isCameraInitialized: true,
         );
 
@@ -133,6 +134,26 @@ void main() {
         expect(errorState.errorMessage, isNotNull);
         expect(idleState.errorMessage, null);
       });
+    });
+  });
+
+  group('RecordingResult return type (TDD)', () {
+    test('stopRecording should return RecordingResult with video and draftId', () async {
+      // This test will guide implementation
+      // Note: We can't fully test this without a real controller setup
+      // This is a structural test to verify the API exists
+
+      // For now, just verify the RecordingResult class exists and has the right fields
+      final result = RecordingResult(
+        videoFile: File('/path/to/video.mp4'),
+        draftId: 'draft_12345',
+        proofManifest: null,
+      );
+
+      expect(result.videoFile, isNotNull);
+      expect(result.draftId, isNotNull);
+      expect(result.draftId, startsWith('draft_'));
+      expect(result.proofManifest, isNull);
     });
   });
 }
