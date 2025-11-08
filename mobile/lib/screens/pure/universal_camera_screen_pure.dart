@@ -979,10 +979,16 @@ class _UniversalCameraScreenPureState extends ConsumerState<UniversalCameraScree
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Maximum recording time reached. Press ✓ to publish.'),
+          SnackBar(
+            content: const Text('Maximum recording time reached. Press ✓ to publish.'),
             backgroundColor: VineTheme.vineGreen,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(
+              top: 100, // Position at top to avoid covering bottom controls
+              left: 16,
+              right: 16,
+            ),
           ),
         );
       }
