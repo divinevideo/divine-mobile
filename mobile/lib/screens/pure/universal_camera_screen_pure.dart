@@ -532,9 +532,11 @@ class _UniversalCameraScreenPureState
                     child: ClipRect(
                       child: Stack(
                         children: [
-                          // Preview widget
+                          // Preview widget positioned to fill the aspect ratio container
                           if (recordingState.isInitialized)
-                            ref.read(vineRecordingProvider.notifier).previewWidget
+                            Positioned.fill(
+                              child: ref.read(vineRecordingProvider.notifier).previewWidget,
+                            )
                           else
                             CameraPreviewPlaceholder(
                               isRecording: recordingState.isRecording,
