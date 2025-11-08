@@ -15,6 +15,7 @@ void main() {
         canRecord: controller.canRecord,
         segments: controller.segments,
         isCameraInitialized: controller.isCameraInitialized,
+        canSwitchCamera: controller.canSwitchCamera,
         aspectRatio: controller.aspectRatio,
       );
 
@@ -31,6 +32,7 @@ void main() {
         canRecord: controller.canRecord,
         segments: controller.segments,
         isCameraInitialized: controller.isCameraInitialized,
+        canSwitchCamera: controller.canSwitchCamera,
         aspectRatio: AspectRatio.square,
       );
 

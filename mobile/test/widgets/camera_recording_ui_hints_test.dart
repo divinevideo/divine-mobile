@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/models/aspect_ratio.dart' as model;
 import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/services/vine_recording_controller.dart';
 
@@ -29,6 +30,8 @@ void main() {
         remainingDuration: const Duration(seconds: 6),
         canRecord: true,
         isCameraInitialized: true,
+        canSwitchCamera: true,
+        aspectRatio: model.AspectRatio.square,
         segments: [],
       );
 
@@ -83,6 +86,8 @@ void main() {
         remainingDuration: const Duration(seconds: 4),
         canRecord: true,
         isCameraInitialized: true,
+        canSwitchCamera: true,
+        aspectRatio: model.AspectRatio.square,
         segments: [
           RecordingSegment(
             startTime: DateTime.now(),
@@ -142,6 +147,8 @@ void main() {
         remainingDuration: const Duration(seconds: 4),
         canRecord: true,
         isCameraInitialized: true,
+        canSwitchCamera: true,
+        aspectRatio: model.AspectRatio.square,
         segments: [
           RecordingSegment(
             startTime: DateTime.now(),
@@ -191,6 +198,8 @@ void main() {
         remainingDuration: const Duration(milliseconds: 5500),
         canRecord: false,
         isCameraInitialized: true,
+        canSwitchCamera: false,
+        aspectRatio: model.AspectRatio.square,
         segments: [],
       );
 
@@ -234,6 +243,8 @@ void main() {
         remainingDuration: const Duration(seconds: 5),
         canRecord: true,
         isCameraInitialized: true,
+        canSwitchCamera: true,
+        aspectRatio: model.AspectRatio.square,
         segments: [
           RecordingSegment(
             startTime: DateTime.now(),
