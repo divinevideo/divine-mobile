@@ -835,7 +835,7 @@ class WebCameraInterface extends CameraPlatformInterface {
 class VineRecordingController {
   static const Duration maxRecordingDuration =
       Duration(milliseconds: 6300); // 6.3 seconds like original Vine
-  static const Duration minSegmentDuration = Duration(milliseconds: 100);
+  static const Duration minSegmentDuration = Duration(milliseconds: 33); // 1 frame at 30fps for stop-motion
 
   CameraPlatformInterface? _cameraInterface;
   ProofModeSessionService? _proofModeSession;
