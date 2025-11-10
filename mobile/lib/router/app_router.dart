@@ -282,6 +282,24 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               ),
             ),
           ),
+
+          // PROFILE EDITING routes (inside shell, with bottom nav hidden)
+          GoRoute(
+            path: '/edit-profile',
+            name: 'edit-profile',
+            pageBuilder: (ctx, st) => NoTransitionPage(
+              key: st.pageKey,
+              child: const ProfileSetupScreen(isNewUser: false),
+            ),
+          ),
+          GoRoute(
+            path: '/setup-profile',
+            name: 'setup-profile',
+            pageBuilder: (ctx, st) => NoTransitionPage(
+              key: st.pageKey,
+              child: const ProfileSetupScreen(isNewUser: true),
+            ),
+          ),
         ],
       ),
 
@@ -300,16 +318,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         name: 'settings',
         builder: (_, __) => const SettingsScreen(),
-      ),
-      GoRoute(
-        path: '/edit-profile',
-        name: 'edit-profile',
-        builder: (_, __) => const ProfileSetupScreen(isNewUser: false),
-      ),
-      GoRoute(
-        path: '/setup-profile',
-        name: 'setup-profile',
-        builder: (_, __) => const ProfileSetupScreen(isNewUser: true),
       ),
       // Followers screen
       GoRoute(

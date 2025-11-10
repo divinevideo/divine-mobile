@@ -1206,19 +1206,11 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
   // Action methods
 
   Future<void> _setupProfile() async {
-    await Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (context) => const ProfileSetupScreen(isNewUser: true),
-      ),
-    );
+    await context.push('/setup-profile');
   }
 
   Future<void> _editProfile() async {
-    await Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (context) => const ProfileSetupScreen(isNewUser: false),
-      ),
-    );
+    await context.push('/edit-profile');
   }
 
   Future<void> _shareProfile(String userIdHex) async {

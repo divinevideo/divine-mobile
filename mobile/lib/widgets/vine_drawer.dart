@@ -98,13 +98,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                       title: 'Edit Profile',
                       onTap: () {
                         Navigator.pop(context); // Close drawer
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const ProfileSetupScreen(isNewUser: false),
-                          ),
-                        );
+                        context.push('/edit-profile');
                       },
                     ),
                     const Divider(color: Colors.grey, height: 1),
