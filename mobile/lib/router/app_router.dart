@@ -17,6 +17,7 @@ import 'package:openvine/screens/pure/search_screen_pure.dart';
 import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
 import 'package:openvine/screens/followers_screen.dart';
 import 'package:openvine/screens/following_screen.dart';
+import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_editor_screen.dart';
@@ -299,6 +300,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         name: 'settings',
         builder: (_, __) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        name: 'edit-profile',
+        builder: (_, __) => const ProfileSetupScreen(isNewUser: false),
+      ),
+      GoRoute(
+        path: '/setup-profile',
+        name: 'setup-profile',
+        builder: (_, __) => const ProfileSetupScreen(isNewUser: true),
       ),
       // Followers screen
       GoRoute(
