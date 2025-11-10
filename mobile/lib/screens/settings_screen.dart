@@ -196,9 +196,6 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: const CameraFAB(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: VineBottomNav(),
     );
   }
 
