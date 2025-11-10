@@ -565,7 +565,8 @@ class _UniversalCameraScreenPureState
             children: [
               // Camera preview (square/1:1 aspect ratio for Vine-style videos)
               Positioned.fill(
-                child: Center(
+                child: Align(
+                  alignment: Alignment.topCenter,
                   child: AspectRatio(
                     aspectRatio:
                         recordingState.aspectRatio == vine.AspectRatio.square
@@ -574,21 +575,44 @@ class _UniversalCameraScreenPureState
                     child: ClipRect(
                       child: Stack(
                         children: [
-                          // Preview widget positioned to fill the aspect ratio container
+                          // Camera preview cropped (not stretched) using Stack Overflow pattern:
+                          // https://stackoverflow.com/questions/51348166/how-to-square-crop-a-flutter-camera-preview
                           if (recordingState.isInitialized)
-                            Positioned.fill(
+                            LayoutBuilder(
                               // CRITICAL: Use a key that changes when camera switches
                               // Without this, the preview widget won't rebuild and freezes on the old camera frame
                               key: ValueKey('preview_${recordingState.cameraSwitchCount}'),
-                              child: Builder(
-                                builder: (context) {
-                                  Log.info('📸 Building camera preview widget (switchCount=${recordingState.cameraSwitchCount})',
-                                      name: 'UniversalCameraScreenPure', category: LogCategory.system);
-                                  return ref
-                                      .read(vineRecordingProvider.notifier)
-                                      .previewWidget;
-                                },
-                              ),
+                              builder: (context, constraints) {
+                                Log.info('📸 Building camera preview widget (switchCount=${recordingState.cameraSwitchCount})',
+                                    name: 'UniversalCameraScreenPure', category: LogCategory.system);
+
+                                // Camera aspect ratio (width/height)
+                                // Mobile cameras in portrait mode are typically 3:4 (0.75)
+                                // This is the natural camera sensor aspect ratio
+                                final cameraAspectRatio = 3.0 / 4.0;
+
+                                // Container size
+                                final containerWidth = constraints.maxWidth;
+
+                                // Calculate preview size to fill width, then crop height
+                                final previewHeight = containerWidth / cameraAspectRatio;
+
+                                return OverflowBox(
+                                  alignment: Alignment.center,
+                                  maxWidth: containerWidth,
+                                  maxHeight: previewHeight,
+                                  child: FittedBox(
+                                    fit: BoxFit.fitWidth,
+                                    child: SizedBox(
+                                      width: containerWidth,
+                                      height: previewHeight,
+                                      child: ref
+                                          .read(vineRecordingProvider.notifier)
+                                          .previewWidget,
+                                    ),
+                                  ),
+                                );
+                              },
                             )
                           else
                             CameraPreviewPlaceholder(
@@ -1287,6 +1311,9 @@ class _UniversalCameraScreenPureState
         }
       }
 
+      // Get current aspect ratio from recording state
+      final recordingState = ref.read(vineRecordingProvider);
+
       final draft = VineDraft.create(
         videoFile: recordedFile,
         title: '',
@@ -1295,6 +1322,7 @@ class _UniversalCameraScreenPureState
         frameCount: 0,
         selectedApproach: 'video',
         proofManifestJson: proofManifestJson,
+        aspectRatio: recordingState.aspectRatio,
       );
 
       await draftService.saveDraft(draft);

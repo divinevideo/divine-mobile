@@ -1771,18 +1771,21 @@ class VineRecordingController {
         }
       }
 
-      // For other platforms, handle segments
+      // For other platforms (iOS, Android), handle single segment with aspect ratio crop
       if (!kIsWeb &&
           _segments.length == 1 &&
           _segments.first.filePath != null) {
         final file = File(_segments.first.filePath!);
         if (await file.exists()) {
+          // Apply aspect ratio crop to the video
+          final croppedFile = await _applyAspectRatioCrop(file.path);
+
           _setState(VineRecordingState.completed);
 
           // Generate ProofManifest
-          final proofManifest = await _generateProofManifest(file);
+          final proofManifest = await _generateProofManifest(croppedFile);
 
-          return (file, proofManifest);
+          return (croppedFile, proofManifest);
         }
       }
 
