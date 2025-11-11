@@ -54,22 +54,18 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
-            // Add ProGuard rules to handle duplicate classes from java-opentimestamps fat JAR
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Disable minification/R8 to avoid duplicate class errors from java-opentimestamps fat JAR
+            // This increases APK size but is necessary until ProofMode library is fixed
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 
     packaging {
-        // Exclude files bundled inside java-opentimestamps.jar (pulled in by ProofMode)
-        // to prevent conflicts with the project's other dependencies.
-        // java-opentimestamps is a "fat JAR" that improperly bundles common libraries
-        // instead of declaring them as dependencies.
-        resources.excludes.add("META-INF/**")
-        resources.pickFirsts.add("com/google/common/**")
-        resources.pickFirsts.add("com/google/protobuf/**")
-        resources.pickFirsts.add("javax/annotation/**")
-        resources.pickFirsts.add("okio/**")
-        resources.pickFirsts.add("com/google/thirdparty/**")
+        // Handle duplicate classes from java-opentimestamps fat JAR
+        // Pick first occurrence of duplicate classes during DEX merging
+        jniLibs.pickFirsts.add("**")
+        resources.pickFirsts.add("**")
     }
 }
 
@@ -89,10 +85,8 @@ dependencies {
     implementation("androidx.multidex:multidex:2.0.1")
 
     // ProofMode library for cryptographic proof generation
-    // Exclude java-opentimestamps fat JAR that causes duplicate class errors
-    implementation("org.witness:android-libproofmode:1.0.18") {
-        exclude(group = "com.eternitywall", module = "java-opentimestamps")
-    }
+    // Note: This pulls in java-opentimestamps:1.20 which is a fat JAR
+    implementation("org.witness:android-libproofmode:1.0.18")
 }
 
 // Disable duplicate class check for release builds

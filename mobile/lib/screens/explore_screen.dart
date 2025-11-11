@@ -51,7 +51,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this, initialIndex: 1); // Start on Popular Vines
+    _tabController = TabController(length: 3, vsync: this, initialIndex: 1); // Start on Popular Videos
     _tabController.addListener(_onTabChanged);
 
     // Track screen load
@@ -108,7 +108,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   void _onTabChanged() {
     if (!mounted) return;
 
-    final tabNames = ['new_vines', 'trending', 'editors_pick'];
+    final tabNames = ['new_videos', 'popular_videos', 'editors_pick'];
     final tabName = tabNames[_tabController.index];
 
     Log.debug('🎯 ExploreScreenPure: Switched to tab ${_tabController.index}',
@@ -239,11 +239,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                   Log.debug('🎯 ExploreScreen: Already in grid mode for tab $index, ignoring tap',
                       category: LogCategory.video);
                 }
+              } else {
+                // Switching to a different tab - reset to grid mode if needed
+                _resetToDefaultState();
               }
             },
             tabs: const [
-              Tab(text: 'New Vines'),
-              Tab(text: 'Popular Vines'),
+              Tab(text: 'New Videos'),
+              Tab(text: 'Popular Videos'),
               Tab(text: "Editor's Pick"),
             ],
           ),
@@ -284,7 +287,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 _buildEditorsPickTab(),
               ],
             ),
-            // New videos banner (only show on New Vines and Trending tabs)
+            // New videos banner (only show on New Videos and Popular Videos tabs)
             if (_tabController.index < 2) _buildNewVideosBanner(),
           ],
         );
@@ -413,7 +416,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
         }
 
         // Videos are already sorted by PopularNowFeed provider (newest first)
-        return _buildVideoGrid(videos, 'New Vines');
+        return _buildVideoGrid(videos, 'New Videos');
       },
       loading: () {
         Log.info('⏳ NewVinesTab: Showing loading indicator',
@@ -707,7 +710,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
         ),
         // Videos grid
         Expanded(
-          child: _buildVideoGrid(videos, 'Trending'),
+          child: _buildVideoGrid(videos, 'Popular Videos'),
         ),
       ],
     );
@@ -728,7 +731,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
         // Refresh the appropriate provider based on tab
         if (tabName == "Editor's Pick") {
           await ref.read(curationProvider.notifier).refreshAll();
-        } else if (tabName == "New Vines") {
+        } else if (tabName == "New Videos") {
           // Refresh popular now feed
           ref.invalidate(popularNowFeedProvider);
           await ref.read(popularNowFeedProvider.future);
