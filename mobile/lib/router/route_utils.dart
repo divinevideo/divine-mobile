@@ -11,6 +11,7 @@ enum RouteType {
   search,
   camera,
   settings,
+  editProfile, // Profile editing screen
 }
 
 /// Structured representation of a route
@@ -133,8 +134,8 @@ RouteContext parseRoute(String path) {
 
     case 'edit-profile':
     case 'setup-profile':
-      // Profile editing screens - treat as settings-like (non-feed routes)
-      return const RouteContext(type: RouteType.settings);
+      // Profile editing screens - standalone routes outside ShellRoute
+      return const RouteContext(type: RouteType.editProfile);
 
     default:
       return const RouteContext(type: RouteType.home, videoIndex: 0);
@@ -212,5 +213,8 @@ String buildRoute(RouteContext context) {
 
     case RouteType.settings:
       return '/settings';
+
+    case RouteType.editProfile:
+      return '/edit-profile';
   }
 }

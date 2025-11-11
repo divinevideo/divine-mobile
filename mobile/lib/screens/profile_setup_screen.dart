@@ -114,19 +114,14 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Check if we're in a nested navigation (pushed from another screen with AppBar)
-    // If so, don't show our own AppBar to avoid double AppBar issue
-    final route = ModalRoute.of(context);
-    final showAppBar = route?.isFirst ?? true;
-
+    // /edit-profile and /setup-profile are standalone routes outside the ShellRoute
+    // They should ALWAYS show their own AppBar
     print('🔍 PROFILE_SETUP DEBUG: build called');
-    print('🔍 PROFILE_SETUP DEBUG: route?.isFirst = ${route?.isFirst}');
-    print('🔍 PROFILE_SETUP DEBUG: showAppBar = $showAppBar');
     print('🔍 PROFILE_SETUP DEBUG: isNewUser = ${widget.isNewUser}');
 
     return Scaffold(
         backgroundColor: Colors.black,
-        appBar: showAppBar ? AppBar(
+        appBar: AppBar(
           title: const Text('Edit Profile'),
           backgroundColor: VineTheme.vineGreen,
           foregroundColor: VineTheme.whiteText,
@@ -135,7 +130,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             onPressed: () => Navigator.of(context).pop(),
             tooltip: 'Back',
           ),
-        ) : null,
+        ),
         body: GestureDetector(
           onTap: () {
             // Dismiss keyboard when tapping outside text fields
@@ -154,18 +149,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                      // Show back button when AppBar is hidden
-                      if (!showAppBar)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: IconButton(
-                            icon: const Icon(Icons.arrow_back, color: Colors.white),
-                            onPressed: () => Navigator.of(context).pop(),
-                            tooltip: 'Back',
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ),
                       Text(
                         widget.isNewUser
                             ? 'Welcome to divine!'

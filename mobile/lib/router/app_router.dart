@@ -38,7 +38,7 @@ final _hashtagGridKey = GlobalKey<NavigatorState>(debugLabel: 'hashtag-grid');
 final _hashtagFeedKey = GlobalKey<NavigatorState>(debugLabel: 'hashtag-feed');
 
 /// Maps URL location to bottom nav tab index
-/// Returns -1 for non-tab routes (like search) to hide bottom nav
+/// Returns -1 for non-tab routes (like search, settings, edit-profile) to hide bottom nav
 int tabIndexFromLocation(String loc) {
   final uri = Uri.parse(loc);
   final first = uri.pathSegments.isEmpty ? '' : uri.pathSegments.first;
@@ -54,7 +54,11 @@ int tabIndexFromLocation(String loc) {
     case 'profile':
       return 3;
     case 'search':
-      return -1; // Search has AppBar but no bottom nav
+    case 'settings':
+    case 'edit-profile':
+    case 'setup-profile':
+    case 'camera':
+      return -1; // Non-tab routes - no bottom nav
     default:
       return 0; // fallback to home
   }

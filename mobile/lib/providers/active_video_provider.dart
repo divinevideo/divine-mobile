@@ -58,6 +58,7 @@ final activeVideoIdProvider = Provider<String?>((ref) {
     case RouteType.search:
     case RouteType.camera:
     case RouteType.settings:
+    case RouteType.editProfile:
       // Non-video routes - return null
       Log.debug('[ACTIVE] ❌ Non-video route: ${ctx.type}',
           name: 'ActiveVideoProvider', category: LogCategory.system);
