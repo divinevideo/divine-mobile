@@ -185,6 +185,29 @@ VideoPlayerController individualVideoController(
   final timeoutDuration = isHls ? const Duration(seconds: 60) : const Duration(seconds: 30);
   final formatType = isHls ? 'HLS' : 'MP4';
 
+  // DEBUG: Add listener to track all video player value changes
+  void debugListener() {
+    final value = controller.value;
+    final position = value.position;
+    final duration = value.duration;
+    final buffered = value.buffered.isNotEmpty ? value.buffered.last.end : Duration.zero;
+
+    Log.debug(
+      '🎬 VIDEO STATE CHANGE [${params.videoId}]:\n'
+      '   • Position: ${position.inMilliseconds}ms / ${duration.inMilliseconds}ms\n'
+      '   • Buffered: ${buffered.inMilliseconds}ms\n'
+      '   • Initialized: ${value.isInitialized}\n'
+      '   • Playing: ${value.isPlaying}\n'
+      '   • Buffering: ${value.isBuffering}\n'
+      '   • Size: ${value.size.width.toInt()}x${value.size.height.toInt()}\n'
+      '   • HasError: ${value.hasError}',
+      name: 'IndividualVideoController',
+      category: LogCategory.video,
+    );
+  }
+
+  controller.addListener(debugListener);
+
   final initFuture = controller.initialize().timeout(
     timeoutDuration,
     onTimeout: () => throw TimeoutException(
@@ -193,11 +216,39 @@ VideoPlayerController individualVideoController(
   );
 
   initFuture.then((_) {
-    Log.info('✅ VideoPlayerController initialized for video ${params.videoId.length > 8 ? params.videoId : params.videoId}...',
-        name: 'IndividualVideoController', category: LogCategory.system);
+    final initialPosition = controller.value.position;
+    final initialSize = controller.value.size;
+
+    Log.info(
+      '✅ VideoPlayerController initialized for video ${params.videoId.length > 8 ? params.videoId : params.videoId}...\n'
+      '   • Initial position: ${initialPosition.inMilliseconds}ms\n'
+      '   • Duration: ${controller.value.duration.inMilliseconds}ms\n'
+      '   • Size: ${initialSize.width.toInt()}x${initialSize.height.toInt()}\n'
+      '   • Buffered: ${controller.value.buffered.isNotEmpty ? controller.value.buffered.last.end.inMilliseconds : 0}ms',
+      name: 'IndividualVideoController',
+      category: LogCategory.system,
+    );
 
     // Set looping for Vine-like behavior
     controller.setLooping(true);
+
+    // CRITICAL DEBUG: Check if video is starting at position 0
+    if (initialPosition.inMilliseconds > 0) {
+      Log.warning(
+        '⚠️ VIDEO NOT AT START! Video ${params.videoId} initialized at ${initialPosition.inMilliseconds}ms instead of 0ms',
+        name: 'IndividualVideoController',
+        category: LogCategory.video,
+      );
+
+      // Try to seek to beginning
+      controller.seekTo(Duration.zero).then((_) {
+        Log.info('🔄 Seeked video ${params.videoId} back to start (was at ${initialPosition.inMilliseconds}ms)',
+            name: 'IndividualVideoController', category: LogCategory.video);
+      }).catchError((e) {
+        Log.error('❌ Failed to seek video ${params.videoId} to start: $e',
+            name: 'IndividualVideoController', category: LogCategory.video);
+      });
+    }
 
     // Controller is initialized and paused - widget will control playback
     Log.debug('⏸️ Video ${params.videoId.length > 8 ? params.videoId : params.videoId}... initialized and paused (widget controls playback)',
@@ -287,6 +338,10 @@ VideoPlayerController individualVideoController(
     cacheTimer?.cancel();
     Log.info('🧹 Disposing VideoPlayerController for video ${params.videoId.length > 8 ? params.videoId : params.videoId}...',
         name: 'IndividualVideoController', category: LogCategory.system);
+
+    // Remove debug listener before disposal
+    controller.removeListener(debugListener);
+
     // Defer controller disposal to avoid triggering listener callbacks during lifecycle
     // This prevents "Cannot use Ref inside life-cycles" errors when listeners try to access providers
     Future.microtask(() {

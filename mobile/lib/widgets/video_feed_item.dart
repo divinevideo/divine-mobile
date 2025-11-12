@@ -123,10 +123,27 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
             name: 'VideoFeedItem', category: LogCategory.video);
 
         if (controller.value.isInitialized && !controller.value.isPlaying) {
+          final positionBeforePlay = controller.value.position;
+
           // Controller ready - play immediately
-          Log.info('▶️ Widget starting video ${widget.video.id} (controller already initialized)',
-              name: 'VideoFeedItem', category: LogCategory.ui);
+          Log.info(
+            '▶️ Widget starting video ${widget.video.id} (controller already initialized)\n'
+            '   • Current position before play: ${positionBeforePlay.inMilliseconds}ms\n'
+            '   • Duration: ${controller.value.duration.inMilliseconds}ms\n'
+            '   • Size: ${controller.value.size.width.toInt()}x${controller.value.size.height.toInt()}',
+            name: 'VideoFeedItem',
+            category: LogCategory.ui,
+          );
+
           controller.play().then((_) {
+            final positionAfterPlay = controller.value.position;
+            Log.info(
+              '✅ Video ${widget.video.id} play() completed\n'
+              '   • Position after play: ${positionAfterPlay.inMilliseconds}ms\n'
+              '   • Is playing: ${controller.value.isPlaying}',
+              name: 'VideoFeedItem',
+              category: LogCategory.ui,
+            );
             if (gen != _playbackGeneration) {
               Log.debug('⏭️ Ignoring stale play() completion for ${widget.video.id}',
                   name: 'VideoFeedItem', category: LogCategory.ui);
@@ -357,6 +374,17 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                     final videoWidget = ValueListenableBuilder<VideoPlayerValue>(
                       valueListenable: controller,
                       builder: (context, value, _) {
+                        // DEBUG: Log render state changes
+                        Log.debug(
+                          '🎨 VideoPlayer RENDER [${video.id}]:\n'
+                          '   • Position: ${value.position.inMilliseconds}ms\n'
+                          '   • Playing: ${value.isPlaying}\n'
+                          '   • Buffering: ${value.isBuffering}\n'
+                          '   • Initialized: ${value.isInitialized}',
+                          name: 'VideoFeedItem',
+                          category: LogCategory.video,
+                        );
+
                         // Let the individual controller handle autoplay based on active state
                         // Don't interfere with playback control here
 
@@ -370,17 +398,25 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                           );
                         }
 
-                        if (!value.isInitialized) {
-                          // Show thumbnail/blurhash while the video initializes
+                        // Show thumbnail ONLY while video is not initialized
+                        // Once initialized, show the video player immediately (even at 0ms)
+                        // This avoids showing thumbnails that may be from the wrong timestamp (backend issue)
+                        final shouldShowThumbnail = !value.isInitialized;
+
+                        if (shouldShowThumbnail) {
+                          Log.debug(
+                            '🖼️ SHOWING LOADING STATE [${video.id}] - video not initialized yet (initialized=${value.isInitialized}, playing=${value.isPlaying}, position=${value.position.inMilliseconds}ms)',
+                            name: 'VideoFeedItem',
+                            category: LogCategory.video,
+                          );
+                          // Show black screen with loading indicator while video initializes
+                          // We don't show the thumbnail because backend thumbnails are from wrong timestamps
                           return Stack(
                             fit: StackFit.expand,
                             children: [
-                              VideoThumbnailWidget(
-                                video: video,
-                                fit: BoxFit.cover,
-                                showPlayIcon: false,
-                              ),
-                              // Only show loading indicator on active video
+                              // Black background
+                              Container(color: Colors.black),
+                              // Loading indicator for active video
                               if (isActive)
                                 const Center(
                                   child: SizedBox(
@@ -392,6 +428,12 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                             ],
                           );
                         }
+
+                        Log.debug(
+                          '🎥 SHOWING VIDEO PLAYER [${video.id}] - initialized and rendering at ${value.position.inMilliseconds}ms',
+                          name: 'VideoFeedItem',
+                          category: LogCategory.video,
+                        );
 
                         // Use BoxFit.contain for square/landscape videos to avoid cropping
                         // Use BoxFit.cover for portrait videos to fill the screen
@@ -449,11 +491,17 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                   },
                 )
               else
-                // Not active or prewarmed: show thumbnail/blurhash with play overlay
-                VideoThumbnailWidget(
-                  video: video,
-                  fit: BoxFit.cover,
-                  showPlayIcon: true,
+                // Not active: show black screen instead of thumbnail
+                // (thumbnails are from wrong timestamp - backend issue)
+                Container(
+                  color: Colors.black,
+                  child: const Center(
+                    child: Icon(
+                      Icons.play_circle_outline,
+                      size: 64,
+                      color: Colors.white54,
+                    ),
+                  ),
                 ),
 
               // Video overlay with actions
