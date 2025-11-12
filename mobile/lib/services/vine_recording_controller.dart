@@ -175,12 +175,26 @@ class MobileCameraInterface extends CameraPlatformInterface {
       throw Exception('Camera controller not initialized');
     }
 
-    // Wait for any in-progress operation to complete
+    // Wait for any in-progress operation to complete with timeout protection
     // This prevents race conditions from rapid tap sequences
+    int waitCount = 0;
+    const maxWaitMs = 5000; // 5 second timeout
     while (_operationInProgress) {
+      if (waitCount >= maxWaitMs / 10) {
+        Log.error('Camera operation timeout after ${maxWaitMs}ms - forcing unlock',
+            name: 'VineRecordingController', category: LogCategory.system);
+        _operationInProgress = false;
+        throw Exception('Camera operation timeout after ${maxWaitMs}ms');
+      }
       Log.debug('Waiting for previous camera operation to complete',
           name: 'VineRecordingController', category: LogCategory.system);
       await Future.delayed(const Duration(milliseconds: 10));
+      waitCount++;
+    }
+
+    if (waitCount > 0) {
+      Log.info('Waited ${waitCount * 10}ms for camera operation to complete',
+          name: 'VineRecordingController', category: LogCategory.system);
     }
 
     // Already recording - ignore duplicate start request
@@ -212,11 +226,25 @@ class MobileCameraInterface extends CameraPlatformInterface {
       throw Exception('Camera controller not initialized');
     }
 
-    // Wait for any in-progress operation to complete
+    // Wait for any in-progress operation to complete with timeout protection
+    int waitCount = 0;
+    const maxWaitMs = 5000; // 5 second timeout
     while (_operationInProgress) {
+      if (waitCount >= maxWaitMs / 10) {
+        Log.error('Camera operation timeout after ${maxWaitMs}ms - forcing unlock',
+            name: 'VineRecordingController', category: LogCategory.system);
+        _operationInProgress = false;
+        throw Exception('Camera operation timeout after ${maxWaitMs}ms');
+      }
       Log.debug('Waiting for previous camera operation to complete',
           name: 'VineRecordingController', category: LogCategory.system);
       await Future.delayed(const Duration(milliseconds: 10));
+      waitCount++;
+    }
+
+    if (waitCount > 0) {
+      Log.info('Waited ${waitCount * 10}ms for camera operation to complete',
+          name: 'VineRecordingController', category: LogCategory.system);
     }
 
     // Not recording - nothing to stop
@@ -255,11 +283,25 @@ class MobileCameraInterface extends CameraPlatformInterface {
       return;
     }
 
-    // Wait for any in-progress operation to complete before switching
+    // Wait for any in-progress operation to complete before switching (with timeout)
+    int waitCount = 0;
+    const maxWaitMs = 5000; // 5 second timeout
     while (_operationInProgress) {
+      if (waitCount >= maxWaitMs / 10) {
+        Log.error('Camera operation timeout after ${maxWaitMs}ms - forcing unlock',
+            name: 'VineRecordingController', category: LogCategory.system);
+        _operationInProgress = false;
+        throw Exception('Camera operation timeout after ${maxWaitMs}ms');
+      }
       Log.debug('Waiting for camera operation to complete before switch',
           name: 'VineRecordingController', category: LogCategory.system);
       await Future.delayed(const Duration(milliseconds: 10));
+      waitCount++;
+    }
+
+    if (waitCount > 0) {
+      Log.info('Waited ${waitCount * 10}ms for camera operation before switch',
+          name: 'VineRecordingController', category: LogCategory.system);
     }
 
     // Don't switch if controller is not properly initialized
