@@ -378,7 +378,7 @@ class _UniversalCameraScreenPureState
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: VineTheme.vineGreen,
         elevation: 0,
         leading: IconButton(
           key: const Key('back-button'),
@@ -488,7 +488,7 @@ class _UniversalCameraScreenPureState
 
           return Stack(
             children: [
-              // Camera preview (square/1:1 aspect ratio for Vine-style videos)
+              // Camera preview at natural aspect ratio (cropping applied during encoding)
               // Wrapped in GestureDetector for tap-anywhere-to-record (Vine-style UX)
               Positioned.fill(
                 child: GestureDetector(
@@ -507,54 +507,18 @@ class _UniversalCameraScreenPureState
                   behavior: HitTestBehavior.translucent,
                   child: Align(
                     alignment: Alignment.topCenter,
-                    child: AspectRatio(
-                      aspectRatio:
-                          recordingState.aspectRatio == vine.AspectRatio.square
-                          ? 1.0
-                          : 9.0 / 16.0,
-                      child: ClipRect(
-                        child: Stack(
-                          children: [
-                            // Camera preview cropped (not stretched) using Stack Overflow pattern:
-                            // https://stackoverflow.com/questions/51348166/how-to-square-crop-a-flutter-camera-preview
+                    child: ClipRect(
+                      child: Stack(
+                        children: [
+                            // Camera preview at natural aspect ratio
                             if (recordingState.isInitialized)
-                              LayoutBuilder(
-                                // CRITICAL: Use a key that changes when camera switches
-                                // Without this, the preview widget won't rebuild and freezes on the old camera frame
+                              // CRITICAL: Use a key that changes when camera switches
+                              // Without this, the preview widget won't rebuild and freezes on the old camera frame
+                              Container(
                                 key: ValueKey('preview_${recordingState.cameraSwitchCount}'),
-                                builder: (context, constraints) {
-                                  Log.info('📸 Building camera preview widget (switchCount=${recordingState.cameraSwitchCount})',
-                                      name: 'UniversalCameraScreenPure', category: LogCategory.system);
-
-                                  // Get actual camera aspect ratio from the recording provider
-                                  // This prevents distortion by using the real camera sensor aspect ratio
-                                  final cameraAspectRatio = ref.read(vineRecordingProvider.notifier).cameraPreviewAspectRatio;
-
-                                  Log.info('📸 Camera aspect ratio: $cameraAspectRatio',
-                                      name: 'UniversalCameraScreenPure', category: LogCategory.system);
-
-                                  // Container size
-                                  final containerWidth = constraints.maxWidth;
-
-                                  // Calculate preview size to fill width using actual camera aspect ratio
-                                  final previewHeight = containerWidth / cameraAspectRatio;
-
-                                  return OverflowBox(
-                                    alignment: Alignment.center,
-                                    maxWidth: containerWidth,
-                                    maxHeight: previewHeight,
-                                    child: FittedBox(
-                                      fit: BoxFit.fitWidth,
-                                      child: SizedBox(
-                                        width: containerWidth,
-                                        height: previewHeight,
-                                        child: ref
-                                            .read(vineRecordingProvider.notifier)
-                                            .previewWidget,
-                                      ),
-                                    ),
-                                  );
-                                },
+                                child: ref
+                                    .read(vineRecordingProvider.notifier)
+                                    .previewWidget,
                               )
                             else
                               CameraPreviewPlaceholder(
@@ -584,7 +548,6 @@ class _UniversalCameraScreenPureState
                     ),
                   ),
                 ),
-              ),
 
               // Recording controls overlay (bottom)
               Positioned(
