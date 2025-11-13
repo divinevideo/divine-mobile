@@ -17,31 +17,63 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
-    <!-- P2P Permissions for Video Sharing -->
-    <!-- BLE permissions for video metadata sync -->
+    <!-- Force override camera.any and wifi to NOT be required (dependencies set them to required=true) -->
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" tools:replace="android:required" />
+    <uses-feature android:name="android.hardware.wifi" android:required="false" tools:replace="android:required" />
+
+    <!-- P2P Permissions for Future Video Sharing (not yet implemented) -->
+    <!-- Uncomment when P2P sync is enabled:
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-    
-    <!-- WiFi Direct permissions for high-bandwidth video sharing -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
-    
-    <!-- Runtime permissions for Android 12+ -->
-    <uses-feature
-        android:name="android.hardware.bluetooth_le"
-        android:required="false" />
-    <uses-feature
-        android:name="android.hardware.wifi.direct"
-        android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi.direct" android:required="false" />
+    -->
 
     <!-- Declare that we do NOT use advertising ID for Google Play compliance -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove" />
+
+    <!-- FORCE REMOVE location permissions added by dependencies -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"
+        tools:node="remove" />
+
+    <!-- FORCE REMOVE P2P permissions added by nearby_connections/flutter_embedded_nostr_relay -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE"
+        tools:node="remove" />
+
+    <!-- FORCE REMOVE advertising permissions -->
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
         tools:node="remove" />
 
     <application

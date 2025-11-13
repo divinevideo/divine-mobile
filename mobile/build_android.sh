@@ -55,6 +55,13 @@ echo ""
 # Change to mobile directory
 cd "$(dirname "$0")"
 
+# For release builds, ALWAYS increment build number (required by Play Store)
+if [ "$BUILD_TYPE" = "release" ]; then
+  echo -e "${YELLOW}🔢 Auto-incrementing build number (required for Play Store)...${NC}"
+  ./increment_build_number.sh --auto
+  echo ""
+fi
+
 # Clean previous builds
 echo -e "${YELLOW}Cleaning previous builds...${NC}"
 flutter clean
