@@ -505,49 +505,48 @@ class _UniversalCameraScreenPureState
                       : null,
                   // Allow gestures to pass through to children (camera controls, zoom, etc.)
                   behavior: HitTestBehavior.translucent,
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ClipRect(
-                      child: Stack(
-                        children: [
-                            // Camera preview at natural aspect ratio
-                            if (recordingState.isInitialized)
-                              // CRITICAL: Use a key that changes when camera switches
-                              // Without this, the preview widget won't rebuild and freezes on the old camera frame
-                              Container(
-                                key: ValueKey('preview_${recordingState.cameraSwitchCount}'),
-                                child: ref
-                                    .read(vineRecordingProvider.notifier)
-                                    .previewWidget,
-                              )
-                            else
-                              CameraPreviewPlaceholder(
-                                isRecording: recordingState.isRecording,
-                              ),
+                  child: SizedBox.expand(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Camera preview fitted to fill screen body
+                        if (recordingState.isInitialized)
+                          // CRITICAL: Use a key that changes when camera switches
+                          // Without this, the preview widget won't rebuild and freezes on the old camera frame
+                          FittedBox(
+                            key: ValueKey('preview_${recordingState.cameraSwitchCount}'),
+                            fit: BoxFit.cover, // Fill height, crop sides if needed
+                            child: ref
+                                .read(vineRecordingProvider.notifier)
+                                .previewWidget,
+                          )
+                        else
+                          CameraPreviewPlaceholder(
+                            isRecording: recordingState.isRecording,
+                          ),
 
-                            // Zoom and gesture controls overlay
-                            if (recordingState.isInitialized)
-                              Consumer(
-                                builder: (context, ref, child) {
-                                  final cameraInterface = ref
-                                      .read(vineRecordingProvider.notifier)
-                                      .cameraInterface;
-                                  if (cameraInterface != null) {
-                                    return CameraControlsOverlay(
-                                      cameraInterface: cameraInterface,
-                                      recordingState:
-                                          recordingState.recordingState,
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                },
-                              ),
-                          ],
-                        ),
-                      ),
+                        // Zoom and gesture controls overlay
+                        if (recordingState.isInitialized)
+                          Consumer(
+                            builder: (context, ref, child) {
+                              final cameraInterface = ref
+                                  .read(vineRecordingProvider.notifier)
+                                  .cameraInterface;
+                              if (cameraInterface != null) {
+                                return CameraControlsOverlay(
+                                  cameraInterface: cameraInterface,
+                                  recordingState:
+                                      recordingState.recordingState,
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                      ],
                     ),
                   ),
                 ),
+              ),
 
               // Square crop mask overlay (only shown in square mode)
               // Positioned OUTSIDE ClipRect so it's not clipped away
@@ -557,17 +556,21 @@ class _UniversalCameraScreenPureState
                     Log.info('🎭 Building square crop mask overlay',
                         name: 'UniversalCameraScreenPure', category: LogCategory.video);
 
-                    // Use screen dimensions, not camera preview dimensions
                     final screenWidth = constraints.maxWidth;
                     final screenHeight = constraints.maxHeight;
                     final squareSize = screenWidth; // Square uses full screen width
 
-                    Log.info('🎭 Mask dimensions: screenWidth=$screenWidth, screenHeight=$screenHeight, squareSize=$squareSize',
+                    // Center the square on the VISIBLE screen area (not theoretical camera preview)
+                    // This gives a better visual guide for framing
+                    final squareTopOffset = (screenHeight - squareSize) / 2;
+
+                    Log.info('🎭 Mask dimensions: screenWidth=$screenWidth, screenHeight=$screenHeight, squareSize=$squareSize, squareTop=$squareTopOffset',
                         name: 'UniversalCameraScreenPure', category: LogCategory.video);
 
-                    return _buildSquareCropMaskForPreview(
+                    return _buildSquareCropMask(
                       screenWidth,
                       screenHeight,
+                      squareTopOffset,
                     );
                   },
                 ),
@@ -955,36 +958,37 @@ class _UniversalCameraScreenPureState
     );
   }
 
-  /// Build square crop mask overlay centered on screen
+  /// Build square crop mask overlay centered on visible screen area
   /// Shows semi-transparent overlay outside the 1:1 square
-  Widget _buildSquareCropMaskForPreview(double screenWidth, double screenHeight) {
-    // Square uses full screen width
+  Widget _buildSquareCropMask(
+    double screenWidth,
+    double screenHeight,
+    double squareTopOffset,
+  ) {
     final squareSize = screenWidth;
-
-    // Calculate top/bottom areas to darken (centered vertically on screen)
-    final topBottomHeight = (screenHeight - squareSize) / 2;
+    final squareBottomOffset = squareTopOffset + squareSize;
 
     return Stack(
       children: [
-        // Top darkened area
-        if (topBottomHeight > 0)
+        // Top darkened area (from screen top to square top)
+        if (squareTopOffset > 0)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: topBottomHeight,
+            height: squareTopOffset,
             child: Container(
               color: Colors.black.withValues(alpha: 0.6),
             ),
           ),
 
-        // Bottom darkened area
-        if (topBottomHeight > 0)
+        // Bottom darkened area (from square bottom to screen bottom)
+        if (squareBottomOffset < screenHeight)
           Positioned(
-            bottom: 0,
+            top: squareBottomOffset,
             left: 0,
             right: 0,
-            height: topBottomHeight,
+            height: screenHeight - squareBottomOffset,
             child: Container(
               color: Colors.black.withValues(alpha: 0.6),
             ),
@@ -992,7 +996,7 @@ class _UniversalCameraScreenPureState
 
         // Square frame outline (visual guide)
         Positioned(
-          top: topBottomHeight > 0 ? topBottomHeight : 0,
+          top: squareTopOffset > 0 ? squareTopOffset : 0,
           left: 0,
           width: squareSize,
           height: squareSize,
