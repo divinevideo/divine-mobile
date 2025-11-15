@@ -12,7 +12,9 @@
       "Bash(export PATH=\"$HOME/flutter/bin:$PATH\")",
       "Bash(flutter pub:*)",
       "Bash(flutter install:*)",
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "Bash(adb uninstall:*)",
+      "Bash(git revert:*)"
     ],
     "deny": [],
     "ask": []

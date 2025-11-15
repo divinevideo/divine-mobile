@@ -1329,18 +1329,7 @@ class VineRecordingController {
       throw Exception('No segments to concatenate');
     }
 
-    // ANDROID TEMPORARY: Return single video file without FFmpeg processing
-    if (Platform.isAndroid) {
-      Log.info('📹 Android: Returning recorded video without concat (continuous recording mode)',
-          name: 'VineRecordingController', category: LogCategory.system);
-
-      if (segments.isNotEmpty && segments.first.filePath != null) {
-        return File(segments.first.filePath!);
-      }
-      throw Exception('No video file available on Android');
-    }
-
-    // Single segment - apply square cropping via FFmpeg (iOS/macOS only)
+    // Single segment - apply aspect ratio cropping via FFmpeg
     if (segments.length == 1 && segments.first.filePath != null) {
       Log.info('📹 Applying square cropping to single segment',
           name: 'VineRecordingController', category: LogCategory.system);
