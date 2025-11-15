@@ -57,6 +57,10 @@ android {
             // Enable R8 minification for code shrinking and obfuscation
             isMinifyEnabled = true
             isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 

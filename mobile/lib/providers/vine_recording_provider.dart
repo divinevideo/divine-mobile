@@ -249,10 +249,11 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
 
     // Force state update to rebuild UI with new camera preview
     // Increment camera switch count to ensure state object changes and triggers UI rebuild
+    // CRITICAL: Must update state AFTER switchCamera completes so new camera is initialized
     state = state.copyWith(
       cameraSwitchCount: state.cameraSwitchCount + 1,
+      isCameraInitialized: _controller.isCameraInitialized,
     );
-    updateState();
   }
 
   /// Set aspect ratio for recording

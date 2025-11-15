@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:camera/camera.dart' show FlashMode;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/screens/vine_drafts_screen.dart';
+import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
 import 'package:openvine/screens/pure/video_metadata_screen_pure.dart';
@@ -902,14 +904,19 @@ class _UniversalCameraScreenPureState
   }
 
   Widget _buildCameraControls(dynamic recordingState) {
+    final cameraInterface = ref.read(vineRecordingProvider.notifier).cameraInterface;
+    final isFrontCamera = cameraInterface is EnhancedMobileCameraInterface && cameraInterface.isFrontCamera;
+
     return Column(
       children: [
-        // Flash toggle
-        IconButton(
-          onPressed: _toggleFlash,
-          icon: Icon(_getFlashIcon(), color: Colors.white, size: 28),
-        ),
-        const SizedBox(height: 8),
+        // Flash toggle (only show for rear camera - front cameras don't have flash)
+        if (!isFrontCamera) ...[
+          IconButton(
+            onPressed: _toggleFlash,
+            icon: Icon(_getFlashIcon(), color: Colors.white, size: 28),
+          ),
+          const SizedBox(height: 8),
+        ],
         // Timer toggle
         IconButton(
           onPressed: _toggleTimer,
@@ -1015,10 +1022,10 @@ class _UniversalCameraScreenPureState
         return Icons.flash_off;
       case FlashMode.auto:
         return Icons.flash_auto;
-      case FlashMode.on:
+      case FlashMode.always:
         return Icons.flash_on;
       case FlashMode.torch:
-        return Icons.flashlight_on;
+        return Icons.flash_on;
     }
   }
 
@@ -1160,27 +1167,34 @@ class _UniversalCameraScreenPureState
   }
 
   void _toggleFlash() {
-    setState(() {
-      switch (_flashMode) {
-        case FlashMode.off:
-          _flashMode = FlashMode.auto;
-          break;
-        case FlashMode.auto:
-          _flashMode = FlashMode.on;
-          break;
-        case FlashMode.on:
-          _flashMode = FlashMode.torch;
-          break;
-        case FlashMode.torch:
-          _flashMode = FlashMode.off;
-          break;
-      }
-    });
-    Log.info(
-      '📹 Flash mode changed to: $_flashMode',
-      category: LogCategory.video,
-    );
-    // TODO: Apply flash mode to camera controller when camera package supports it
+    Log.info('🔦 Flash button tapped', category: LogCategory.video);
+
+    final cameraInterface = ref.read(vineRecordingProvider.notifier).cameraInterface;
+
+    if (cameraInterface is EnhancedMobileCameraInterface) {
+      // Update local state to cycle through: off → auto → always → off
+      setState(() {
+        switch (_flashMode) {
+          case FlashMode.off:
+            _flashMode = FlashMode.auto;
+            break;
+          case FlashMode.auto:
+            _flashMode = FlashMode.always;
+            break;
+          case FlashMode.always:
+          case FlashMode.torch:
+            _flashMode = FlashMode.off;
+            break;
+        }
+      });
+
+      Log.info('🔦 Flash mode toggled to: $_flashMode', category: LogCategory.video);
+
+      // Apply the new flash mode to camera
+      cameraInterface.setFlashMode(_flashMode);
+    } else {
+      Log.warning('🔦 Camera interface is not EnhancedMobileCameraInterface', category: LogCategory.video);
+    }
   }
 
   void _handleRecordingAutoStop() async {
@@ -1517,9 +1531,6 @@ class _UniversalCameraScreenPureState
     );
   }
 }
-
-/// Flash mode options for camera
-enum FlashMode { off, auto, on, torch }
 
 /// Timer duration options for delayed recording
 enum TimerDuration { off, threeSeconds, tenSeconds }
