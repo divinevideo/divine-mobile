@@ -10,3 +10,9 @@
 # Keep ProofMode classes
 -keep class org.witness.proofmode.** { *; }
 -keep class com.eternitywall.** { *; }
+
+# Keep FFmpeg Kit classes and native methods
+-keep class com.antonkarpenko.ffmpegkit.** { *; }
+-keep class com.arthenica.** { *; }
+-keepclassmembers class com.antonkarpenko.ffmpegkit.** { *; }
+-keepclassmembers class com.arthenica.** { *; }
