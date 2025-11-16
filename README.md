@@ -1,34 +1,14 @@
-# OpenVine
+# diVine
+    
+<img src="https://devine.video/og.png" alt="diVine logo and screenshot"/>
 
-**A decentralized vine-like video sharing app powered by Nostr.**
+### diVine is a decentralized, short-form video sharing mobile application built on the Nostr protocol, inspired by the simplicity and creativity of Vine.
 
-OpenVine is a decentralized, short-form video sharing mobile application built on the Nostr protocol, inspired by the simplicity and creativity of Vine.
+**Try it:** https://divine.video/discovery 
 
-## App Screenshots
+_Feed navigation • Hashtag filtering • Video interactions • Social sharing • Real-time content discovery_
 
-<div align="center">
-  
-### 📱 Mobile Experience
-  
-<img src="mobile/screenshots/feed-screen.png" alt="Video Feed - Zappix Flix uploads video" width="300"/>
-<img src="mobile/screenshots/explore-screen.png" alt="Explore Screen - Browse trending content with hashtags" width="300"/>
-<img src="mobile/screenshots/video-player.png" alt="Video Player - Immersive full-screen viewing" width="300"/>
-
-*Experience Vine-style short videos with seamless social features and decentralized content sharing*
-
-**Features shown:** Feed navigation • Hashtag filtering • Video interactions • Social sharing • Real-time content discovery
-
-**Live web demo:** https://divine.video/discovery 
-
-</div>
-
-## Recent Updates ✨
-
-- **Enhanced Activity Screen**: Video thumbnails in activity notifications are now clickable and open videos in the full player
-- **Fixed Video Loading**: Resolved issues with videos getting stuck on loading screen
-- **Domain Correction**: Automatic fixing of legacy URL domain issues for seamless video playback
-- **Improved Share Menu**: Comprehensive video sharing with content reporting and list management
-- **Better Error Handling**: User-friendly error messages and validation for video URLs
+<br>
 
 ## Features
 
