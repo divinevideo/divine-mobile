@@ -883,15 +883,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     // CRITICAL: Check hasValue FIRST before isLoading
     // StreamProviders can have both isLoading:true and hasValue:true during rebuilds
     if (videoEventsAsync.hasValue && videoEventsAsync.value != null) {
-      // Filter to show ONLY imported classic Vines (videos with originalLoops metadata)
-      // New user-uploaded videos won't have this metadata and shouldn't appear here
-      // Also filter out WebM videos on iOS/macOS (not supported by AVPlayer)
+      // Filter out WebM videos on iOS/macOS (not supported by AVPlayer)
+      // Show all videos sorted by relay (using NIP-50 search for trending/popular)
       final allVideos = videoEventsAsync.value!;
       final videos = allVideos
-          .where((v) => v.isOriginalVine && v.isSupportedOnCurrentPlatform)
+          .where((v) => v.isSupportedOnCurrentPlatform)
           .toList();
 
-      Log.info('✅ TrendingTab: Data state - ${videos.length} classic Vines (filtered from ${allVideos.length} total videos)',
+      Log.info('✅ TrendingTab: Data state - ${videos.length} videos (filtered from ${allVideos.length} total)',
           name: 'ExploreScreen', category: LogCategory.video);
 
       // Track feed loaded with videos

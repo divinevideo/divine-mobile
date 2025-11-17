@@ -197,12 +197,12 @@ class VideoEvents extends _$VideoEvents {
 
     // Subscribe to discovery videos if not already subscribed
     if (!_isSubscribed) {
-      Log.error('  🔍 Starting NEW discovery subscription with trending sort',
+      Log.error('  🔍 Starting NEW discovery subscription with NIP-50 search (sort:hot)',
           name: 'VideoEventsProvider', category: LogCategory.video);
-      // Request server-side sorting by loop_count (trending) if relay supports it
+      // Use NIP-50 search for trending/popular discovery (otherstuff-relay)
       service.subscribeToDiscovery(
         limit: 100,
-        sortBy: VideoSortField.loopCount, // Trending videos (most looped)
+        nip50Sort: NIP50SortMode.hot, // Recent events with high engagement
       );
       _isSubscribed = true;
     } else {
@@ -340,16 +340,16 @@ class VideoEvents extends _$VideoEvents {
     }
 
     Log.info(
-      'VideoEvents: Starting discovery subscription on demand with trending sort',
+      'VideoEvents: Starting discovery subscription on demand with NIP-50 search (sort:hot)',
       name: 'VideoEventsProvider',
       category: LogCategory.video,
     );
 
-    // Subscribe to discovery videos using dedicated subscription type with trending sort
+    // Subscribe to discovery videos using NIP-50 search for trending/popular
     // NostrService now handles deduplication automatically
     videoEventService.subscribeToDiscovery(
       limit: 100,
-      sortBy: VideoSortField.loopCount, // Trending videos (most looped)
+      nip50Sort: NIP50SortMode.hot, // Recent events with high engagement
     );
   }
 

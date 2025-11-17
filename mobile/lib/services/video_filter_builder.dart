@@ -30,6 +30,27 @@ enum VideoSortField {
   final String fieldName;
 }
 
+/// NIP-50 search sort modes (supported by otherstuff-relay)
+enum NIP50SortMode {
+  /// Recent events with high engagement (recency + popularity combined)
+  hot('hot'),
+
+  /// Most-referenced events across all time or specific periods
+  top('top'),
+
+  /// Recently created content gaining momentum quickly
+  rising('rising'),
+
+  /// Events with mixed positive/negative reaction ratios
+  controversial('controversial');
+
+  const NIP50SortMode(this.mode);
+  final String mode;
+
+  /// Convert to NIP-50 search query string
+  String toSearchQuery() => 'sort:$mode';
+}
+
 /// Filter builder that automatically uses server-side sorting when relay supports it
 ///
 /// Usage:
@@ -46,6 +67,35 @@ class VideoFilterBuilder {
   final RelayCapabilityService _capabilityService;
 
   VideoFilterBuilder(this._capabilityService);
+
+  /// Build a filter with NIP-50 search support
+  ///
+  /// Returns a Filter with the search field set for NIP-50 sort modes
+  Filter buildNIP50Filter({
+    required Filter baseFilter,
+    required NIP50SortMode sortMode,
+  }) {
+    UnifiedLogger.debug(
+      '🔍 VideoFilterBuilder.buildNIP50Filter: sortMode=${sortMode.mode}',
+      name: 'VideoFilterBuilder',
+    );
+
+    // Create new filter with search field for NIP-50 sorting
+    return Filter(
+      ids: baseFilter.ids,
+      authors: baseFilter.authors,
+      kinds: baseFilter.kinds,
+      e: baseFilter.e,
+      p: baseFilter.p,
+      t: baseFilter.t,
+      h: baseFilter.h,
+      d: baseFilter.d,
+      since: baseFilter.since,
+      until: baseFilter.until,
+      limit: baseFilter.limit,
+      search: sortMode.toSearchQuery(), // Add NIP-50 search query
+    );
+  }
 
   /// Build a filter with optional server-side sorting
   ///

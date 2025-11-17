@@ -555,6 +555,7 @@ class VideoEventService extends ChangeNotifier {
     bool includeReposts =
         false, // Whether to include kind 6 reposts (disabled by default)
     VideoSortField? sortBy, // Server-side sorting if relay supports it
+    NIP50SortMode? nip50Sort, // NIP-50 search sorting (e.g., sort:hot, sort:top)
     bool force = false, // Force refresh even if parameters match
   }) async {
     // NostrService now handles subscription deduplication automatically via filter hashing
@@ -689,9 +690,20 @@ class VideoEventService extends ChangeNotifier {
         t: lowercaseHashtags, // Add hashtag filtering at relay level (lowercase per NIP-24)
       );
 
-      // Use VideoFilterBuilder to add server-side sorting if requested and relay supports it
+      // Use NIP-50 search or VideoFilterBuilder for server-side sorting
       Filter videoFilter = baseVideoFilter;
-      if (sortBy != null && _videoFilterBuilder != null) {
+
+      // NIP-50 search takes priority over divine extensions
+      if (nip50Sort != null && _videoFilterBuilder != null) {
+        videoFilter = _videoFilterBuilder!.buildNIP50Filter(
+          baseFilter: baseVideoFilter,
+          sortMode: nip50Sort,
+        );
+        Log.info(
+            '🔍 NIP-50: Using search query "${nip50Sort.toSearchQuery()}" for trending/popular discovery',
+            name: 'VideoEventService',
+            category: LogCategory.video);
+      } else if (sortBy != null && _videoFilterBuilder != null) {
         try {
           videoFilter = await _videoFilterBuilder!.buildFilter(
             baseFilter: baseVideoFilter,
@@ -1955,6 +1967,7 @@ class VideoEventService extends ChangeNotifier {
   Future<void> subscribeToDiscovery({
     int limit = 100,
     VideoSortField? sortBy,
+    NIP50SortMode? nip50Sort,
     bool force = false,
   }) async =>
       subscribeToVideoFeed(
@@ -1963,6 +1976,7 @@ class VideoEventService extends ChangeNotifier {
         limit: limit,
         includeReposts: true,
         sortBy: sortBy,
+        nip50Sort: nip50Sort,
         force: force,
       );
 
