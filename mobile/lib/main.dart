@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -42,6 +43,18 @@ Future<void> _startOpenVineApp() async {
 
   // Ensure bindings are initialized first (required for everything)
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Lock app to portrait mode only (portrait up and portrait down)
+  // Skip on desktop platforms where orientation lock doesn't apply
+  if (!kIsWeb &&
+      defaultTargetPlatform != TargetPlatform.macOS &&
+      defaultTargetPlatform != TargetPlatform.windows &&
+      defaultTargetPlatform != TargetPlatform.linux) {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
 
   // Initialize startup performance monitoring FIRST
   await StartupPerformanceService.instance.initialize();
