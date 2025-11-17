@@ -24,34 +24,9 @@ class CameraControlsOverlay extends StatefulWidget {
 class _CameraControlsOverlayState extends State<CameraControlsOverlay> {
   @override
   Widget build(BuildContext context) {
-    // Only show enhanced controls for enhanced mobile camera
-    if (widget.cameraInterface is! EnhancedMobileCameraInterface) {
-      return const SizedBox.shrink();
-    }
-
-    final enhancedCamera =
-        widget.cameraInterface as EnhancedMobileCameraInterface;
-    final isRecording = widget.recordingState == VineRecordingState.recording;
-
-    return Stack(
-      children: [
-        // Top controls (flash toggle)
-        if (!isRecording)
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            right: 16,
-            child: Column(
-              children: [
-                // Flash toggle button
-                _buildControlButton(
-                  icon: Icons.flash_auto,
-                  onTap: () => enhancedCamera.toggleFlash(),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
+    // CameraControlsOverlay now only handles gesture-based controls (zoom, focus)
+    // Flash, timer, and aspect ratio buttons are in UniversalCameraScreenPure._buildCameraControls
+    return const SizedBox.shrink();
   }
 
   Widget _buildControlButton({
