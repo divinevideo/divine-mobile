@@ -480,12 +480,9 @@ class _UniversalCameraScreenPureState
           return Stack(
             fit: StackFit.expand,
             children: [
-              // Camera preview - full screen without extra wrappers
+              // Camera preview - EXACTLY matching experimental app structure
               if (recordingState.isInitialized)
-                KeyedSubtree(
-                  key: ValueKey('preview_${recordingState.cameraSwitchCount}'),
-                  child: ref.read(vineRecordingProvider.notifier).previewWidget,
-                )
+                ref.read(vineRecordingProvider.notifier).previewWidget
               else
                 CameraPreviewPlaceholder(
                   isRecording: recordingState.isRecording,
