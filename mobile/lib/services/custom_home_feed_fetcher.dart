@@ -29,7 +29,7 @@ class CustomHomeFeedFetcher {
 
     final videos = <VideoEvent>[];
 
-    Log.info(
+    Log.debug(
       '🔍 CustomHomeFeedFetcher: Connecting to $relayUrl for ${authorPubkeys.length} authors',
       name: 'CustomHomeFeedFetcher',
       category: LogCategory.video,
@@ -45,7 +45,7 @@ class CustomHomeFeedFetcher {
 
       await channel.ready;
 
-      Log.info(
+      Log.debug(
         '✅ CustomHomeFeedFetcher: Connected to $relayUrl',
         name: 'CustomHomeFeedFetcher',
         category: LogCategory.video,
@@ -66,8 +66,8 @@ class CustomHomeFeedFetcher {
       ];
 
       final reqJson = jsonEncode(reqMessage);
-      Log.info(
-        '📨 CustomHomeFeedFetcher: Sending REQ with ${authorPubkeys.length} authors: $reqJson',
+      Log.debug(
+        '📨 CustomHomeFeedFetcher: Sending REQ with ${authorPubkeys.length} authors',
         name: 'CustomHomeFeedFetcher',
         category: LogCategory.video,
       );
@@ -129,7 +129,7 @@ class CustomHomeFeedFetcher {
             } else if (messageType == 'EOSE') {
               final eoseSubId = decoded[1] as String;
               if (eoseSubId == subId) {
-                Log.info(
+                Log.debug(
                   '🏁 CustomHomeFeedFetcher: EOSE received, got $eventCount events',
                   name: 'CustomHomeFeedFetcher',
                   category: LogCategory.video,

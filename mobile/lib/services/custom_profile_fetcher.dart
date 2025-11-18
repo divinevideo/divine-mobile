@@ -29,7 +29,7 @@ class CustomProfileFetcher {
 
     final profiles = <String, UserProfile>{};
 
-    Log.info(
+    Log.debug(
       '👤 CustomProfileFetcher: Connecting to $relayUrl for ${authorPubkeys.length} profiles',
       name: 'CustomProfileFetcher',
       category: LogCategory.system,
@@ -45,7 +45,7 @@ class CustomProfileFetcher {
 
       await channel.ready;
 
-      Log.info(
+      Log.debug(
         '✅ CustomProfileFetcher: Connected to $relayUrl',
         name: 'CustomProfileFetcher',
         category: LogCategory.system,
@@ -66,7 +66,7 @@ class CustomProfileFetcher {
       ];
 
       final reqJson = jsonEncode(reqMessage);
-      Log.info(
+      Log.debug(
         '📨 CustomProfileFetcher: Sending REQ for ${authorPubkeys.length} profiles',
         name: 'CustomProfileFetcher',
         category: LogCategory.system,
@@ -135,7 +135,7 @@ class CustomProfileFetcher {
             } else if (messageType == 'EOSE') {
               final eoseSubId = decoded[1] as String;
               if (eoseSubId == subId) {
-                Log.info(
+                Log.debug(
                   '🏁 CustomProfileFetcher: EOSE received, got $eventCount profile events',
                   name: 'CustomProfileFetcher',
                   category: LogCategory.system,
