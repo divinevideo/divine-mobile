@@ -54,9 +54,9 @@ Future<void> _startOpenVineApp() async {
       defaultTargetPlatform != TargetPlatform.macOS &&
       defaultTargetPlatform != TargetPlatform.windows &&
       defaultTargetPlatform != TargetPlatform.linux) {
+    // CRITICAL: Lock to portraitUp ONLY for proper camera orientation
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
     ]);
   }
 
