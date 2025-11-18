@@ -298,7 +298,8 @@ class NostrService implements INostrService, BackgroundAwareService {
   Stream<Event> subscribeToEvents(
       {required List<nostr.Filter> filters,
       bool bypassLimits = false,
-      void Function()? onEose}) {
+      void Function()? onEose,
+      bool allowReuse = true}) {
     if (_isDisposed) throw StateError('NostrService is disposed');
     if (!_isInitialized) throw StateError('NostrService not initialized');
     if (_relayPool == null) {
@@ -306,11 +307,32 @@ class NostrService implements INostrService, BackgroundAwareService {
     }
 
     final filterHash = _generateFilterHash(filters);
-    final id = 'sub_$filterHash';
 
-    if (_subscriptions.containsKey(id) && !_subscriptions[id]!.isClosed) {
-      UnifiedLogger.info('🔄 Reusing existing subscription $id with identical filters', name: 'NostrService');
-      return _subscriptions[id]!.stream;
+    // For profile requests (kind 0), use unique IDs to prevent reuse of completed streams
+    final isProfileRequest = filters.any((f) => f.kinds?.contains(0) == true);
+    final String id;
+
+    if (!allowReuse || isProfileRequest) {
+      // Always create new subscription for profiles or when reuse is disabled
+      id = 'sub_${DateTime.now().millisecondsSinceEpoch}_$filterHash';
+      UnifiedLogger.info('🆕 Creating unique subscription ID (no reuse): $id', name: 'NostrService');
+    } else {
+      // Use hash-based ID for reusable subscriptions (video feeds, etc.)
+      id = 'sub_$filterHash';
+
+      if (_subscriptions.containsKey(id) && !_subscriptions[id]!.isClosed) {
+        UnifiedLogger.warning('🔄 Reusing existing subscription $id with identical filters',
+            name: 'NostrService');
+        UnifiedLogger.warning('   Controller closed: ${_subscriptions[id]!.isClosed}, hasListener: ${_subscriptions[id]!.hasListener}',
+            name: 'NostrService');
+        return _subscriptions[id]!.stream;
+      }
+
+      if (_subscriptions.containsKey(id)) {
+        UnifiedLogger.warning('⚠️  Subscription $id exists but controller is closed - removing and creating new one',
+            name: 'NostrService');
+        _subscriptions.remove(id);
+      }
     }
 
     if (_subscriptions.length >= 10 && !bypassLimits) {
@@ -329,13 +351,16 @@ class NostrService implements INostrService, BackgroundAwareService {
     // Convert filters to JSON for relay pool
     final filterJsonList = filters.map((f) => f.toJson()).toList();
 
-    UnifiedLogger.debug('Creating subscription $id with ${filterJsonList.length} filters', name: 'NostrService');
-    UnifiedLogger.debug('📋 Filter JSON: ${filterJsonList.map((f) => f.toString()).join(", ")}', name: 'NostrService');
+    UnifiedLogger.info('🆕 Creating NEW subscription $id with ${filterJsonList.length} filters', name: 'NostrService');
+    UnifiedLogger.info('📋 Filter JSON: ${filterJsonList.map((f) => f.toString()).join(", ")}', name: 'NostrService');
 
     // Subscribe via relay pool
+    UnifiedLogger.info('📡 Calling RelayPool.subscribe() now...', name: 'NostrService');
     final subscriptionId = _relayPool!.subscribe(
       filterJsonList,
       (event) {
+        UnifiedLogger.info('📨 Received event via subscription $id: kind=${event.kind}, id=${event.id.substring(0, 8)}', name: 'NostrService');
+
         // Deduplication logic
         if (seenEventIds.contains(event.id)) {
           RelayEventLogBatcher.batchDuplicateEvent(
@@ -390,6 +415,8 @@ class NostrService implements INostrService, BackgroundAwareService {
       id: id,
       sendAfterAuth: true, // Send after auth for relays that require it
     );
+
+    UnifiedLogger.info('✅ RelayPool.subscribe() returned subscription ID: $subscriptionId', name: 'NostrService');
 
     // Handle controller disposal
     controller.onCancel = () {

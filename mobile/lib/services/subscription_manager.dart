@@ -51,19 +51,46 @@ class SubscriptionManager {
 
     final id = '${name}_${DateTime.now().millisecondsSinceEpoch}';
 
+    Log.info(
+      '🔧 createSubscription called: $name with ${filters.length} filters',
+      name: 'SubscriptionManager',
+      category: LogCategory.system,
+    );
+
+    for (var i = 0; i < filters.length; i++) {
+      final filter = filters[i];
+      Log.info(
+        '🔧 Filter #$i: kinds=${filter.kinds}, authors=${filter.authors?.length ?? 0} authors',
+        name: 'SubscriptionManager',
+        category: LogCategory.system,
+      );
+    }
+
     // Smart filtering: Check cache for event IDs and profile authors
     final filteredFilters = _filterCachedData(filters, onEvent);
 
+    Log.info(
+      '🔧 After filtering: ${filteredFilters.length}/${filters.length} filters remain',
+      name: 'SubscriptionManager',
+      category: LogCategory.system,
+    );
+
     // If all requested data was in cache, complete immediately
     if (filteredFilters.isEmpty) {
-      Log.debug(
-        '✨ All requested data found in cache - skipping relay subscription',
+      Log.warning(
+        '⚠️ All requested data found in cache - skipping relay subscription',
         name: 'SubscriptionManager',
         category: LogCategory.system,
       );
       onComplete?.call();
       return id;
     }
+
+    Log.info(
+      '📡 Sending subscription to relay with ${filteredFilters.length} filters',
+      name: 'SubscriptionManager',
+      category: LogCategory.system,
+    );
 
     // Create event stream from NostrService with filtered filters
     final eventStream = _nostrService.subscribeToEvents(filters: filteredFilters);
@@ -154,13 +181,31 @@ class SubscriptionManager {
         final cachedAuthors = <String>[];
         final missingAuthors = <String>[];
 
+        Log.info(
+          '🔍 Checking profile cache for ${authors.length} authors',
+          name: 'SubscriptionManager',
+          category: LogCategory.system,
+        );
+
         for (final author in authors) {
-          if (_hasProfileCached!(author)) {
+          final isCached = _hasProfileCached!(author);
+          Log.info(
+            '🔍 Author ${author.substring(0, 8)}...: cached=$isCached',
+            name: 'SubscriptionManager',
+            category: LogCategory.system,
+          );
+          if (isCached) {
             cachedAuthors.add(author);
           } else {
             missingAuthors.add(author);
           }
         }
+
+        Log.info(
+          '🔍 Cache check result: ${cachedAuthors.length} cached, ${missingAuthors.length} missing',
+          name: 'SubscriptionManager',
+          category: LogCategory.system,
+        );
 
         if (cachedAuthors.isNotEmpty) {
           Log.debug(
@@ -172,6 +217,11 @@ class SubscriptionManager {
 
         // Update filter with only missing authors
         if (missingAuthors.isEmpty) {
+          Log.warning(
+            '⚠️ ALL profiles reported as cached - skipping filter entirely',
+            name: 'SubscriptionManager',
+            category: LogCategory.system,
+          );
           continue; // Skip this filter entirely - all profiles cached
         }
 

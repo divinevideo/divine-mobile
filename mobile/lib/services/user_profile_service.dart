@@ -85,13 +85,23 @@ class UserProfileService extends ChangeNotifier {
 
   /// Check if profile is cached
   bool hasProfile(String pubkey) {
-    if (_profileCache.containsKey(pubkey)) return true;
+    final inMemCache = _profileCache.containsKey(pubkey);
+    if (inMemCache) {
+      Log.info('🔍 hasProfile(${pubkey.substring(0, 8)}...): YES (in-memory cache)',
+          name: 'UserProfileService', category: LogCategory.system);
+      return true;
+    }
 
     // Also check persistent cache
     if (_persistentCache?.isInitialized == true) {
-      return _persistentCache!.getCachedProfile(pubkey) != null;
+      final inPersistent = _persistentCache!.getCachedProfile(pubkey) != null;
+      Log.info('🔍 hasProfile(${pubkey.substring(0, 8)}...): ${inPersistent ? "YES" : "NO"} (persistent cache)',
+          name: 'UserProfileService', category: LogCategory.system);
+      return inPersistent;
     }
 
+    Log.info('🔍 hasProfile(${pubkey.substring(0, 8)}...): NO (not cached)',
+        name: 'UserProfileService', category: LogCategory.system);
     return false;
   }
 
@@ -373,7 +383,14 @@ class UserProfileService extends ChangeNotifier {
 
   /// Aggressively pre-fetch profiles for immediate display (no debouncing)
   Future<void> prefetchProfilesImmediately(List<String> pubkeys) async {
-    if (pubkeys.isEmpty) return;
+    Log.info('📥 prefetchProfilesImmediately called with ${pubkeys.length} pubkeys',
+        name: 'UserProfileService', category: LogCategory.system);
+
+    if (pubkeys.isEmpty) {
+      Log.info('📥 Skipping: pubkeys list is empty',
+          name: 'UserProfileService', category: LogCategory.system);
+      return;
+    }
 
     // Filter out already cached profiles and pending requests
     final pubkeysToFetch = pubkeys
@@ -383,14 +400,22 @@ class UserProfileService extends ChangeNotifier {
             !shouldSkipProfileFetch(pubkey))
         .toList();
 
-    if (pubkeysToFetch.isEmpty) return;
+    Log.info('📥 After filtering: ${pubkeysToFetch.length} profiles to fetch '
+        '(${pubkeys.length - pubkeysToFetch.length} already cached/pending)',
+        name: 'UserProfileService', category: LogCategory.system);
 
-    Log.debug('⚡ Immediate pre-fetch for ${pubkeysToFetch.length} profiles',
+    if (pubkeysToFetch.isEmpty) {
+      Log.info('📥 Skipping: all profiles already cached or pending',
+          name: 'UserProfileService', category: LogCategory.system);
+      return;
+    }
+
+    Log.info('⚡ Immediate pre-fetch for ${pubkeysToFetch.length} profiles',
         name: 'UserProfileService', category: LogCategory.system);
 
     // Prevent flooding: if a prefetch is currently active, skip co-incident calls
     if (_prefetchActive) {
-      Log.debug('Prefetch suppressed: another prefetch is active',
+      Log.warning('📥 Prefetch suppressed: another prefetch is active (_prefetchActive=true)',
           name: 'UserProfileService', category: LogCategory.system);
       return;
     }
@@ -399,7 +424,8 @@ class UserProfileService extends ChangeNotifier {
     if (_lastPrefetchAt != null &&
         DateTime.now().difference(_lastPrefetchAt!) <
             const Duration(seconds: 1)) {
-      Log.debug('Prefetch suppressed: rate limit within 1s',
+      final timeSince = DateTime.now().difference(_lastPrefetchAt!).inMilliseconds;
+      Log.warning('📥 Prefetch suppressed: rate limit within 1s (${timeSince}ms since last)',
           name: 'UserProfileService', category: LogCategory.system);
       return;
     }
@@ -421,17 +447,34 @@ class UserProfileService extends ChangeNotifier {
 
       // Subscribe to profile events using SubscriptionManager with highest priority
       _prefetchActive = true;
+
+      // Add safety timeout to reset flag if subscription never completes
+      Timer(const Duration(seconds: 10), () {
+        if (_prefetchActive) {
+          Log.warning('⏰ Prefetch timeout - forcing reset of _prefetchActive flag',
+              name: 'UserProfileService', category: LogCategory.system);
+          _prefetchActive = false;
+          _lastPrefetchAt = DateTime.now();
+          _pendingRequests.removeAll(pubkeysToFetch);
+        }
+      });
+
       await _subscriptionManager.createSubscription(
         name: 'profile_prefetch_${DateTime.now().millisecondsSinceEpoch}',
         filters: [filter],
         onEvent: _handleProfileEvent,
-        onError: (error) => Log.error('Prefetch profile error: $error',
-            name: 'UserProfileService', category: LogCategory.system),
+        onError: (error) {
+          Log.error('Prefetch profile error: $error',
+              name: 'UserProfileService', category: LogCategory.system);
+          // Reset flag on error
+          _prefetchActive = false;
+          _lastPrefetchAt = DateTime.now();
+        },
         onComplete: () => _completePrefetch(thisBatchPubkeys),
         priority: 0, // Highest priority for immediate prefetch
       );
 
-      Log.debug(
+      Log.info(
           '⚡ Sent immediate prefetch request for ${pubkeysToFetch.length} profiles',
           name: 'UserProfileService',
           category: LogCategory.system);

@@ -68,6 +68,7 @@ abstract class INostrService {
     required List<Filter> filters,
     bool bypassLimits = false,
     void Function()? onEose,
+    bool allowReuse = true,
   });
 
   /// Subscribe to events using custom filter JSON (bypasses Filter class)
