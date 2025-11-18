@@ -19,7 +19,7 @@ final class CommentsNotifierProvider
   /// Notifier for managing comments for a specific video
   const CommentsNotifierProvider._({
     required CommentsNotifierFamily super.from,
-    required (String, String) super.argument,
+    required (String, String, String) super.argument,
   }) : super(
          retry: null,
          name: r'commentsProvider',
@@ -61,7 +61,7 @@ final class CommentsNotifierProvider
   }
 }
 
-String _$commentsNotifierHash() => r'8de16790121f70fd9ba53e6c714aa72450e80293';
+String _$commentsNotifierHash() => r'5d0725c5778794e9a986e585642ff288f2c86cd3';
 
 /// Notifier for managing comments for a specific video
 
@@ -72,7 +72,7 @@ final class CommentsNotifierFamily extends $Family
           CommentsState,
           CommentsState,
           CommentsState,
-          (String, String)
+          (String, String, String)
         > {
   const CommentsNotifierFamily._()
     : super(
@@ -85,11 +85,14 @@ final class CommentsNotifierFamily extends $Family
 
   /// Notifier for managing comments for a specific video
 
-  CommentsNotifierProvider call(String rootEventId, String rootAuthorPubkey) =>
-      CommentsNotifierProvider._(
-        argument: (rootEventId, rootAuthorPubkey),
-        from: this,
-      );
+  CommentsNotifierProvider call(
+    String rootEventId,
+    String rootAuthorPubkey,
+    String rootDTag,
+  ) => CommentsNotifierProvider._(
+    argument: (rootEventId, rootAuthorPubkey, rootDTag),
+    from: this,
+  );
 
   @override
   String toString() => r'commentsProvider';
@@ -98,15 +101,20 @@ final class CommentsNotifierFamily extends $Family
 /// Notifier for managing comments for a specific video
 
 abstract class _$CommentsNotifier extends $Notifier<CommentsState> {
-  late final _$args = ref.$arg as (String, String);
+  late final _$args = ref.$arg as (String, String, String);
   String get rootEventId => _$args.$1;
   String get rootAuthorPubkey => _$args.$2;
+  String get rootDTag => _$args.$3;
 
-  CommentsState build(String rootEventId, String rootAuthorPubkey);
+  CommentsState build(
+    String rootEventId,
+    String rootAuthorPubkey,
+    String rootDTag,
+  );
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(_$args.$1, _$args.$2);
+    final created = build(_$args.$1, _$args.$2, _$args.$3);
     final ref = this.ref as $Ref<CommentsState, CommentsState>;
     final element =
         ref.element

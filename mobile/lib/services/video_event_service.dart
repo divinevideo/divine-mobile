@@ -693,8 +693,25 @@ class VideoEventService extends ChangeNotifier {
       // Use NIP-50 search or VideoFilterBuilder for server-side sorting
       Filter videoFilter = baseVideoFilter;
 
-      // NIP-50 search takes priority over divine extensions
-      if (nip50Sort != null && _videoFilterBuilder != null) {
+      // Use NIP-50 search for hashtags (with optional sort mode)
+      if (lowercaseHashtags != null && lowercaseHashtags.isNotEmpty && _videoFilterBuilder != null) {
+        // For hashtag queries, use NIP-50 search with the first hashtag
+        // Format: "#funny" or "#funny sort:hot"
+        videoFilter = _videoFilterBuilder!.buildNIP50Filter(
+          baseFilter: baseVideoFilter,
+          hashtag: lowercaseHashtags.first,
+          sortMode: nip50Sort,
+        );
+        final searchQuery = nip50Sort != null
+            ? '#${lowercaseHashtags.first} ${nip50Sort.toSearchQuery()}'
+            : '#${lowercaseHashtags.first}';
+        Log.info(
+            '🔍 NIP-50: Using hashtag search query "$searchQuery"',
+            name: 'VideoEventService',
+            category: LogCategory.video);
+      }
+      // NIP-50 search takes priority over divine extensions for non-hashtag queries
+      else if (nip50Sort != null && _videoFilterBuilder != null) {
         videoFilter = _videoFilterBuilder!.buildNIP50Filter(
           baseFilter: baseVideoFilter,
           sortMode: nip50Sort,
@@ -2991,6 +3008,11 @@ class VideoEventService extends ChangeNotifier {
   void _addVideoToSubscription(
       VideoEvent videoEvent, SubscriptionType subscriptionType,
       {bool isHistorical = false}) {
+    Log.info(
+        '📥 _addVideoToSubscription called: id=${videoEvent.id}, type=$subscriptionType, isHistorical=$isHistorical, hasVideo=${videoEvent.hasVideo}, videoUrl=${videoEvent.videoUrl}',
+        name: 'VideoEventService',
+        category: LogCategory.video);
+
     // CRITICAL: Filter out locally deleted videos to prevent pagination resurrection
     if (isVideoLocallyDeleted(videoEvent.id)) {
       Log.debug(
@@ -3136,9 +3158,17 @@ class VideoEventService extends ChangeNotifier {
         if (isHistorical) {
           // Historical events: add to bottom
           eventList.add(videoEvent);
+          Log.info(
+              '✅ Added hashtag video to END of list: id=${videoEvent.id}, list now has ${eventList.length} videos',
+              name: 'VideoEventService',
+              category: LogCategory.video);
         } else {
           // Real-time events: add to top
           eventList.insert(0, videoEvent);
+          Log.info(
+              '✅ Added hashtag video to START of list: id=${videoEvent.id}, list now has ${eventList.length} videos',
+              name: 'VideoEventService',
+              category: LogCategory.video);
         }
         break;
 
