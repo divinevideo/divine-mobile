@@ -61,7 +61,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'These external relays sync with your embedded relay to distribute your content across the decentralized Nostr network. You can add or remove relays as you wish.',
+                  'These relays distribute your content across the decentralized Nostr network. You can add or remove relays as you wish.',
                   style: TextStyle(color: Colors.grey, fontSize: 13),
                 ),
                 const SizedBox(height: 8),
@@ -233,11 +233,8 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
       final nostrService = ref.read(nostrServiceProvider);
       await nostrService.removeRelay(relayUrl);
 
-      // Force UI refresh by invalidating the provider and calling setState
-      ref.invalidate(nostrServiceProvider);
-
       if (mounted) {
-        setState(() {}); // Force immediate rebuild
+        setState(() {}); // Rebuild to reflect the relay list change
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -308,11 +305,14 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
   }
 
   Future<void> _showAddRelayDialog() async {
-    final controller = TextEditingController();
+    String? relayUrl;
 
-    final relayUrl = await showDialog<String>(
+    await showDialog<void>(
       context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
+      builder: (BuildContext dialogContext) {
+        final controller = TextEditingController();
+
+        return AlertDialog(
         backgroundColor: Colors.grey[900],
         title: const Text(
           'Add Relay',
@@ -347,7 +347,10 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(null),
+            onPressed: () {
+              controller.dispose();
+              Navigator.of(dialogContext).pop();
+            },
             child: Text(
               'Cancel',
               style: TextStyle(color: Colors.grey[400]),
@@ -357,8 +360,10 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
             onPressed: () {
               final url = controller.text.trim();
               if (url.isNotEmpty) {
-                Navigator.of(dialogContext).pop(url);
+                relayUrl = url;
               }
+              controller.dispose();
+              Navigator.of(dialogContext).pop();
             },
             child: const Text(
               'Add',
@@ -366,29 +371,25 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
             ),
           ),
         ],
-      ),
+      );
+      },
     );
 
-    controller.dispose();
-
-    if (relayUrl == null || relayUrl.isEmpty) return;
+    if (relayUrl == null || relayUrl!.isEmpty) return;
 
     // Validate URL format
-    if (!relayUrl.startsWith('wss://') && !relayUrl.startsWith('ws://')) {
+    if (!relayUrl!.startsWith('wss://') && !relayUrl!.startsWith('ws://')) {
       _showError('Relay URL must start with wss:// or ws://');
       return;
     }
 
     try {
       final nostrService = ref.read(nostrServiceProvider);
-      final success = await nostrService.addRelay(relayUrl);
+      final success = await nostrService.addRelay(relayUrl!);
 
       if (success) {
-        // Force UI refresh by invalidating the provider and calling setState
-        ref.invalidate(nostrServiceProvider);
-
         if (mounted) {
-          setState(() {}); // Force immediate rebuild
+          setState(() {}); // Rebuild to reflect the relay list change
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

@@ -696,9 +696,23 @@ class NostrService implements INostrService {
           }
 
           final success = await _relayPool!.add(relay);
+
+          // Wait for relay connection to establish (WebSocket is async)
+          // Poll for up to 500ms to see if connection establishes
+          bool isConnected = relay.relayStatus.connected == ClientConneccted.CONNECTED;
+          int retries = 0;
+          const maxRetries = 5;
+          const retryDelay = Duration(milliseconds: 100);
+
+          while (!isConnected && retries < maxRetries && success) {
+            await Future.delayed(retryDelay);
+            isConnected = relay.relayStatus.connected == ClientConneccted.CONNECTED;
+            retries++;
+          }
+
           final connectDuration = DateTime.now().difference(connectStart);
 
-          if (success && relay.relayStatus.connected == ClientConneccted.CONNECTED) {
+          if (success && isConnected) {
             _relayAuthStates[relayUrl] = true;
             UnifiedLogger.info('✅ Reconnected to relay: $relayUrl (${connectDuration.inMilliseconds}ms)', name: 'NostrService');
           } else {
@@ -775,13 +789,23 @@ class NostrService implements INostrService {
       UnifiedLogger.warning('⚠️ No relays connected, attempting reconnection...', name: 'NostrService');
       await reconnectAll();
 
-      // Give relays a moment to connect
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Poll for relay connection instead of arbitrary delay
+      // Wait up to 5 seconds (50 * 100ms) for at least one relay to connect
+      int pollAttempts = 0;
+      const maxPollAttempts = 50; // 5 seconds total
+      const pollDelay = Duration(milliseconds: 100);
+
+      while (connectedRelays.isEmpty && pollAttempts < maxPollAttempts) {
+        await Future.delayed(pollDelay);
+        pollAttempts++;
+      }
+
+      final waitedMs = pollAttempts * 100;
 
       if (connectedRelays.isEmpty) {
-        UnifiedLogger.error('❌ Still no relays connected after reconnection attempt', name: 'NostrService');
+        UnifiedLogger.error('❌ Still no relays connected after ${waitedMs}ms reconnection attempt', name: 'NostrService');
       } else {
-        UnifiedLogger.info('✅ Successfully reconnected ${connectedRelays.length} relay(s)', name: 'NostrService');
+        UnifiedLogger.info('✅ Successfully reconnected ${connectedRelays.length} relay(s) after ${waitedMs}ms', name: 'NostrService');
       }
     }
   }

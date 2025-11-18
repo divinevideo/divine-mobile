@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -40,7 +41,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   bool _isPublishing = false;
   bool _isUploadingImage = false;
   bool _isCheckingUsername = false;
-  bool _isWaitingForRelay = false; // Track relay confirmation phase
   bool? _usernameAvailable;
   String? _usernameError;
   File? _selectedImage;
@@ -624,9 +624,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                                           ),
                                         ),
                                         const SizedBox(width: 12),
-                                        Text(_isWaitingForRelay
-                                            ? 'Confirming with relay...'
-                                            : 'Saving...'),
+                                        const Text('Saving...'),
                                       ],
                                     )
                                   : const Text(
@@ -860,193 +858,192 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       }
 
 
+      // Always update local cache with the profile event we created, even if broadcast failed
+      // The relay might still accept it asynchronously, and we have valid data to cache
+      try {
+        // Create UserProfile from the published event
+        final publishedProfile = profile_model.UserProfile.fromNostrEvent(event);
+
+        // Update cache with published profile
+        await userProfileService.updateCachedProfile(publishedProfile);
+        Log.info('✅ Updated local cache with published profile',
+            name: 'ProfileSetupScreen', category: LogCategory.ui);
+
+        // Update AuthService profile cache
+        await authService.refreshCurrentProfile(userProfileService);
+        Log.info('✅ Updated AuthService profile cache',
+            name: 'ProfileSetupScreen', category: LogCategory.ui);
+
+        // Invalidate Riverpod provider to trigger UI refresh
+        ref.invalidate(fetchUserProfileProvider(currentPubkey));
+        Log.info('✅ Invalidated fetchUserProfileProvider for UI refresh',
+            name: 'ProfileSetupScreen', category: LogCategory.ui);
+
+      } catch (e, stackTrace) {
+        // Cache update failed - show error to user
+        Log.error(
+          'Failed to update local cache with published profile: $e',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+          stackTrace: stackTrace,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Profile published to relay but local cache update failed. Please restart the app.',
+                style: const TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.red.shade700,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+
+          // Wait for SnackBar animation before navigating to prevent black screen
+          await Future.delayed(const Duration(milliseconds: 300));
+
+          // Still navigate back even on error, but warn user
+          if (widget.isNewUser) {
+            if (mounted) {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            }
+          } else {
+            if (mounted) {
+              Navigator.of(context).pop(false); // Return false to indicate partial success
+            }
+          }
+        }
+        return; // Exit early on cache error
+      }
+
+      // Cache updated successfully, now check broadcast result
       if (success) {
-        // CRITICAL: Wait for relay to confirm it has the updated profile before navigating
-        // This prevents race condition where user navigates back but relay hasn't processed update yet
+        // Broadcast succeeded - show success message
         Log.info(
-          '⏳ Waiting for relay to confirm profile update...',
+          '✅ Broadcast succeeded - profile published to relay',
           name: 'ProfileSetupScreen',
           category: LogCategory.ui,
         );
 
-        // Show relay confirmation UI
         if (mounted) {
-          setState(() {
-            _isWaitingForRelay = true;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: VineTheme.vineGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 17,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Profile published successfully!',
+                    style: TextStyle(color: VineTheme.vineGreen),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.white,
+            ),
+          );
+
+          // Schedule navigation for after the current frame completes
+          // This prevents "!_debugLocked" assertion failure from SnackBar + navigation race
+          SchedulerBinding.instance.addPostFrameCallback((_) async {
+            // Navigate back or to main app
+            if (widget.isNewUser) {
+              // For new users, wait a moment to show success message, then navigate to main app
+              await Future.delayed(const Duration(seconds: 1));
+              if (mounted) {
+                // Navigate to main app by popping back to the auth flow
+                // The auth service should already be in authenticated state
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              }
+            } else {
+              // Wait for SnackBar animation to complete before navigating
+              // This prevents navigation timing race condition that causes black screens
+              await Future.delayed(const Duration(milliseconds: 300));
+              if (mounted) {
+                // Use go() instead of pop() to handle cases where we can't pop
+                // This happens when edit-profile is at the root of the navigation stack
+                if (Navigator.canPop(context)) {
+                  Navigator.of(context).pop(true); // Return true to indicate success
+                } else {
+                  // Can't pop, so use go() to navigate to profile page
+                  final authService = ref.read(authServiceProvider);
+                  final userNpub = authService.currentNpub;
+                  if (userNpub != null) {
+                    context.go('/profile/$userNpub');
+                  }
+                }
+              }
+            }
           });
         }
+      } else {
+        // Broadcast failed, but we still updated local cache
+        // Show warning instead of error since the relay might still accept it
+        Log.warning(
+          '⚠️ Broadcast failed but local cache updated - relay may accept asynchronously',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
 
-        final userProfileService = ref.read(userProfileServiceProvider);
-
-        try {
-          // Retry with exponential backoff until relay returns updated profile
-          final confirmedProfile = await AsyncUtils.retryWithBackoff<profile_model.UserProfile?>(
-            operation: () async {
-              // Clear cache to force fresh fetch from relay
-              userProfileService.removeProfile(currentPubkey);
-
-              // Fetch profile from relay
-              final fetchedProfile = await userProfileService.fetchProfile(
-                currentPubkey,
-                forceRefresh: true,
-              );
-
-              Log.debug(
-                'Profile fetch attempt: eventId=${fetchedProfile?.eventId}, '
-                'timestamp=${fetchedProfile?.createdAt.millisecondsSinceEpoch}, '
-                'expected eventId=${event.id}, '
-                'expected timestamp>=${event.createdAt * 1000 - 1000}',
-                name: 'ProfileSetupScreen',
-                category: LogCategory.ui,
-              );
-
-              // Validate we got the updated profile (match by event ID or timestamp)
-              final eventIdMatches = fetchedProfile?.eventId == event.id;
-              final timestampMatches = fetchedProfile?.createdAt != null &&
-                  fetchedProfile!.createdAt.millisecondsSinceEpoch >=
-                      (event.createdAt * 1000 - 1000); // Allow 1s tolerance
-
-              if (eventIdMatches || timestampMatches) {
-                Log.info(
-                  '✅ Relay confirmed profile update (eventId match=$eventIdMatches, timestamp match=$timestampMatches)',
-                  name: 'ProfileSetupScreen',
-                  category: LogCategory.ui,
-                );
-                return fetchedProfile;
-              }
-
-              // Profile not yet updated on relay - retry
-              throw Exception(
-                  'Relay returned stale profile - retrying... (eventId=${fetchedProfile?.eventId} vs ${event.id})');
-            },
-            maxRetries: 5, // Allow up to 5 retries
-            baseDelay: const Duration(milliseconds: 500), // Start with 500ms
-            maxDelay: const Duration(seconds: 8), // Cap at 8s
-            debugName: 'profile-publish-confirmation',
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.warning, color: Colors.orange),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Profile saved locally. Relay may sync later.',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.orange.shade700,
+            ),
           );
 
-          if (confirmedProfile == null) {
-            throw Exception('Failed to confirm profile update after retries');
-          }
-
-          // Update cache with confirmed profile
-          await userProfileService.updateCachedProfile(confirmedProfile);
-          Log.info('✅ Updated local cache with relay-confirmed profile',
-              name: 'ProfileSetupScreen', category: LogCategory.ui);
-
-          // Update AuthService profile cache
-          await authService.refreshCurrentProfile(userProfileService);
-          Log.info('✅ Updated AuthService profile cache',
-              name: 'ProfileSetupScreen', category: LogCategory.ui);
-
-          // Invalidate Riverpod provider to trigger UI refresh
-          ref.invalidate(fetchUserProfileProvider(currentPubkey));
-          Log.info('✅ Invalidated fetchUserProfileProvider for UI refresh',
-              name: 'ProfileSetupScreen', category: LogCategory.ui);
-
-          // Clear waiting state
-          if (mounted) {
-            setState(() {
-              _isWaitingForRelay = false;
-            });
-          }
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: VineTheme.vineGreen,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 17,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Profile published successfully!',
-                      style: TextStyle(color: VineTheme.vineGreen),
-                    ),
-                  ],
-                ),
-                backgroundColor: Colors.white,
-              ),
-            );
-          }
-
-          // Navigate back or to main app - NOW SAFE because relay has confirmed update
-          if (widget.isNewUser) {
-            // For new users, wait a moment to show success message, then navigate to main app
-            await Future.delayed(const Duration(seconds: 1));
-            if (mounted) {
-              // Navigate to main app by popping back to the auth flow
-              // The auth service should already be in authenticated state
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            }
-          } else {
-            // Wait for SnackBar animation to complete before popping
-            // This prevents navigation timing race condition that causes black screens
-            await Future.delayed(const Duration(milliseconds: 300));
-            if (mounted) {
-              Navigator.of(context).pop(true); // Return true to indicate success
-            }
-          }
-        } catch (e, stackTrace) {
-          // Clear waiting state
-          if (mounted) {
-            setState(() {
-              _isWaitingForRelay = false;
-            });
-          }
-
-          // Retry failed - show error to user
-          Log.error(
-            'Failed to confirm profile update from relay: $e',
-            name: 'ProfileSetupScreen',
-            category: LogCategory.ui,
-            stackTrace: stackTrace,
-          );
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Profile may not have updated correctly. Please check your profile and try again if needed.',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                backgroundColor: Colors.red.shade700,
-                duration: const Duration(seconds: 5),
-              ),
-            );
-
-            // Wait for SnackBar animation before navigating to prevent black screen
+          // Schedule navigation for after the current frame completes
+          // This prevents "!_debugLocked" assertion failure from SnackBar + navigation race
+          SchedulerBinding.instance.addPostFrameCallback((_) async {
+            // Wait for SnackBar animation before navigating
             await Future.delayed(const Duration(milliseconds: 300));
 
-            // Still navigate back even on error, but warn user
+            // Navigate back or to main app
             if (widget.isNewUser) {
               if (mounted) {
                 Navigator.of(context).popUntil((route) => route.isFirst);
               }
             } else {
               if (mounted) {
-                Navigator.of(context).pop(false); // Return false to indicate partial success
+                // Use go() instead of pop() to handle cases where we can't pop
+                // This happens when edit-profile is at the root of the navigation stack
+                if (Navigator.canPop(context)) {
+                  Navigator.of(context).pop(true); // Return true since we did update cache
+                } else {
+                  // Can't pop, so use go() to navigate to profile page
+                  final authService = ref.read(authServiceProvider);
+                  final userNpub = authService.currentNpub;
+                  if (userNpub != null) {
+                    context.go('/profile/$userNpub');
+                  }
+                }
               }
             }
-          }
+          });
         }
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to publish profile. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
     } catch (e) {
       if (mounted) {
