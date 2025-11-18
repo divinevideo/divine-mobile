@@ -384,6 +384,73 @@ class SocialNotifier extends _$SocialNotifier {
     }
   }
 
+  /// Fetch and cache like count for a video
+  /// This queries the relay for all reactions to the video and updates the state
+  Future<void> fetchLikeCount(String eventId) async {
+    // Skip if already fetched
+    if (state.likeCounts.containsKey(eventId)) {
+      return;
+    }
+
+    try {
+      final socialService = ref.read(socialServiceProvider);
+      final count = await socialService.getLikeCount(eventId);
+
+      if (!ref.mounted) return;
+
+      state = state.copyWith(
+        likeCounts: {
+          ...state.likeCounts,
+          eventId: count,
+        },
+      );
+
+      Log.debug('📊 Fetched like count for $eventId: $count',
+          name: 'SocialNotifier', category: LogCategory.system);
+    } catch (e) {
+      Log.error('Error fetching like count for $eventId: $e',
+          name: 'SocialNotifier', category: LogCategory.system);
+    }
+  }
+
+  /// Fetch and cache comment count for a video
+  /// This queries the relay for all comments on the video and updates the state
+  Future<void> fetchCommentCount(String eventId, String authorPubkey, String dTag) async {
+    // Skip if already fetched
+    if (state.commentCounts.containsKey(eventId)) {
+      return;
+    }
+
+    try {
+      final socialService = ref.read(socialServiceProvider);
+      final count = await socialService.getCommentCountForVideo(eventId, authorPubkey, dTag);
+
+      if (!ref.mounted) return;
+
+      state = state.copyWith(
+        commentCounts: {
+          ...state.commentCounts,
+          eventId: count,
+        },
+      );
+
+      Log.debug('📊 Fetched comment count for $eventId: $count',
+          name: 'SocialNotifier', category: LogCategory.system);
+    } catch (e) {
+      Log.error('Error fetching comment count for $eventId: $e',
+          name: 'SocialNotifier', category: LogCategory.system);
+    }
+  }
+
+  /// Fetch both like and comment counts for a video
+  /// This is a convenience method to fetch both counts in parallel
+  Future<void> fetchCountsForVideo(String eventId, String authorPubkey, String dTag) async {
+    await Future.wait([
+      fetchLikeCount(eventId),
+      fetchCommentCount(eventId, authorPubkey, dTag),
+    ]);
+  }
+
   /// Follow a user
   Future<void> followUser(String pubkeyToFollow) async {
     final authService = ref.read(authServiceProvider);

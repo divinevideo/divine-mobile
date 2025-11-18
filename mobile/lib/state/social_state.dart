@@ -15,6 +15,9 @@ sealed class SocialState with _$SocialState {
     @Default({}) Map<String, int> likeCounts, // NEW likes from Nostr only (add to originalLikes for total)
     @Default({}) Map<String, String> likeEventIdToReactionId,
 
+    // Comment-related state
+    @Default({}) Map<String, int> commentCounts, // NEW comments from Nostr only (add to originalComments for total)
+
     // Repost-related state
     @Default({}) Set<String> repostedEventIds,
     @Default({}) Map<String, String> repostEventIdToRepostId,

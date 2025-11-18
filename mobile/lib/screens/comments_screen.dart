@@ -53,11 +53,15 @@ class _CommentsScreenState extends ConsumerState<CommentsScreen> {
     setState(() => _isPosting = true);
 
     try {
-      final socialService = ref.read(socialServiceProvider);
-      await socialService.postComment(
+      final rootDTag = widget.videoEvent.vineId ?? widget.videoEvent.id;
+
+      // Use the provider's postComment method which handles optimistic updates
+      await ref.read(commentsProvider(
+        widget.videoEvent.id,
+        widget.videoEvent.pubkey,
+        rootDTag
+      ).notifier).postComment(
         content: controller.text.trim(),
-        rootEventId: widget.videoEvent.id,
-        rootEventAuthorPubkey: widget.videoEvent.pubkey,
         replyToEventId: replyToId,
       );
 
@@ -145,8 +149,9 @@ class _CommentsScreenState extends ConsumerState<CommentsScreen> {
                     Expanded(
                       child: Builder(
                         builder: (context) {
+                          final rootDTag = widget.videoEvent.vineId ?? widget.videoEvent.id;
                           final state = ref.watch(commentsProvider(
-                              widget.videoEvent.id, widget.videoEvent.pubkey));
+                              widget.videoEvent.id, widget.videoEvent.pubkey, rootDTag));
 
                           if (state.isLoading) {
                             return const Center(

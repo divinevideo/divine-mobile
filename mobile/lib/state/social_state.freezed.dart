@@ -17,7 +17,9 @@ mixin _$SocialState {
 
 // Like-related state
  Set<String> get likedEventIds; Map<String, int> get likeCounts;// NEW likes from Nostr only (add to originalLikes for total)
- Map<String, String> get likeEventIdToReactionId;// Repost-related state
+ Map<String, String> get likeEventIdToReactionId;// Comment-related state
+ Map<String, int> get commentCounts;// NEW comments from Nostr only (add to originalComments for total)
+// Repost-related state
  Set<String> get repostedEventIds; Map<String, String> get repostEventIdToRepostId;// Follow-related state
  List<String> get followingPubkeys; Map<String, Map<String, int>> get followerStats; Event? get currentUserContactListEvent;// Loading and error state
  bool get isLoading; bool get isInitialized; String? get error;// Operation-specific loading states
@@ -34,16 +36,16 @@ $SocialStateCopyWith<SocialState> get copyWith => _$SocialStateCopyWithImpl<Soci
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SocialState&&const DeepCollectionEquality().equals(other.likedEventIds, likedEventIds)&&const DeepCollectionEquality().equals(other.likeCounts, likeCounts)&&const DeepCollectionEquality().equals(other.likeEventIdToReactionId, likeEventIdToReactionId)&&const DeepCollectionEquality().equals(other.repostedEventIds, repostedEventIds)&&const DeepCollectionEquality().equals(other.repostEventIdToRepostId, repostEventIdToRepostId)&&const DeepCollectionEquality().equals(other.followingPubkeys, followingPubkeys)&&const DeepCollectionEquality().equals(other.followerStats, followerStats)&&(identical(other.currentUserContactListEvent, currentUserContactListEvent) || other.currentUserContactListEvent == currentUserContactListEvent)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.isInitialized, isInitialized) || other.isInitialized == isInitialized)&&(identical(other.error, error) || other.error == error)&&const DeepCollectionEquality().equals(other.likesInProgress, likesInProgress)&&const DeepCollectionEquality().equals(other.repostsInProgress, repostsInProgress)&&const DeepCollectionEquality().equals(other.followsInProgress, followsInProgress));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SocialState&&const DeepCollectionEquality().equals(other.likedEventIds, likedEventIds)&&const DeepCollectionEquality().equals(other.likeCounts, likeCounts)&&const DeepCollectionEquality().equals(other.likeEventIdToReactionId, likeEventIdToReactionId)&&const DeepCollectionEquality().equals(other.commentCounts, commentCounts)&&const DeepCollectionEquality().equals(other.repostedEventIds, repostedEventIds)&&const DeepCollectionEquality().equals(other.repostEventIdToRepostId, repostEventIdToRepostId)&&const DeepCollectionEquality().equals(other.followingPubkeys, followingPubkeys)&&const DeepCollectionEquality().equals(other.followerStats, followerStats)&&(identical(other.currentUserContactListEvent, currentUserContactListEvent) || other.currentUserContactListEvent == currentUserContactListEvent)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.isInitialized, isInitialized) || other.isInitialized == isInitialized)&&(identical(other.error, error) || other.error == error)&&const DeepCollectionEquality().equals(other.likesInProgress, likesInProgress)&&const DeepCollectionEquality().equals(other.repostsInProgress, repostsInProgress)&&const DeepCollectionEquality().equals(other.followsInProgress, followsInProgress));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(likedEventIds),const DeepCollectionEquality().hash(likeCounts),const DeepCollectionEquality().hash(likeEventIdToReactionId),const DeepCollectionEquality().hash(repostedEventIds),const DeepCollectionEquality().hash(repostEventIdToRepostId),const DeepCollectionEquality().hash(followingPubkeys),const DeepCollectionEquality().hash(followerStats),currentUserContactListEvent,isLoading,isInitialized,error,const DeepCollectionEquality().hash(likesInProgress),const DeepCollectionEquality().hash(repostsInProgress),const DeepCollectionEquality().hash(followsInProgress));
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(likedEventIds),const DeepCollectionEquality().hash(likeCounts),const DeepCollectionEquality().hash(likeEventIdToReactionId),const DeepCollectionEquality().hash(commentCounts),const DeepCollectionEquality().hash(repostedEventIds),const DeepCollectionEquality().hash(repostEventIdToRepostId),const DeepCollectionEquality().hash(followingPubkeys),const DeepCollectionEquality().hash(followerStats),currentUserContactListEvent,isLoading,isInitialized,error,const DeepCollectionEquality().hash(likesInProgress),const DeepCollectionEquality().hash(repostsInProgress),const DeepCollectionEquality().hash(followsInProgress));
 
 @override
 String toString() {
-  return 'SocialState(likedEventIds: $likedEventIds, likeCounts: $likeCounts, likeEventIdToReactionId: $likeEventIdToReactionId, repostedEventIds: $repostedEventIds, repostEventIdToRepostId: $repostEventIdToRepostId, followingPubkeys: $followingPubkeys, followerStats: $followerStats, currentUserContactListEvent: $currentUserContactListEvent, isLoading: $isLoading, isInitialized: $isInitialized, error: $error, likesInProgress: $likesInProgress, repostsInProgress: $repostsInProgress, followsInProgress: $followsInProgress)';
+  return 'SocialState(likedEventIds: $likedEventIds, likeCounts: $likeCounts, likeEventIdToReactionId: $likeEventIdToReactionId, commentCounts: $commentCounts, repostedEventIds: $repostedEventIds, repostEventIdToRepostId: $repostEventIdToRepostId, followingPubkeys: $followingPubkeys, followerStats: $followerStats, currentUserContactListEvent: $currentUserContactListEvent, isLoading: $isLoading, isInitialized: $isInitialized, error: $error, likesInProgress: $likesInProgress, repostsInProgress: $repostsInProgress, followsInProgress: $followsInProgress)';
 }
 
 
@@ -54,7 +56,7 @@ abstract mixin class $SocialStateCopyWith<$Res>  {
   factory $SocialStateCopyWith(SocialState value, $Res Function(SocialState) _then) = _$SocialStateCopyWithImpl;
 @useResult
 $Res call({
- Set<String> likedEventIds, Map<String, int> likeCounts, Map<String, String> likeEventIdToReactionId, Set<String> repostedEventIds, Map<String, String> repostEventIdToRepostId, List<String> followingPubkeys, Map<String, Map<String, int>> followerStats, Event? currentUserContactListEvent, bool isLoading, bool isInitialized, String? error, Set<String> likesInProgress, Set<String> repostsInProgress, Set<String> followsInProgress
+ Set<String> likedEventIds, Map<String, int> likeCounts, Map<String, String> likeEventIdToReactionId, Map<String, int> commentCounts, Set<String> repostedEventIds, Map<String, String> repostEventIdToRepostId, List<String> followingPubkeys, Map<String, Map<String, int>> followerStats, Event? currentUserContactListEvent, bool isLoading, bool isInitialized, String? error, Set<String> likesInProgress, Set<String> repostsInProgress, Set<String> followsInProgress
 });
 
 
@@ -71,12 +73,13 @@ class _$SocialStateCopyWithImpl<$Res>
 
 /// Create a copy of SocialState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? likedEventIds = null,Object? likeCounts = null,Object? likeEventIdToReactionId = null,Object? repostedEventIds = null,Object? repostEventIdToRepostId = null,Object? followingPubkeys = null,Object? followerStats = null,Object? currentUserContactListEvent = freezed,Object? isLoading = null,Object? isInitialized = null,Object? error = freezed,Object? likesInProgress = null,Object? repostsInProgress = null,Object? followsInProgress = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? likedEventIds = null,Object? likeCounts = null,Object? likeEventIdToReactionId = null,Object? commentCounts = null,Object? repostedEventIds = null,Object? repostEventIdToRepostId = null,Object? followingPubkeys = null,Object? followerStats = null,Object? currentUserContactListEvent = freezed,Object? isLoading = null,Object? isInitialized = null,Object? error = freezed,Object? likesInProgress = null,Object? repostsInProgress = null,Object? followsInProgress = null,}) {
   return _then(_self.copyWith(
 likedEventIds: null == likedEventIds ? _self.likedEventIds : likedEventIds // ignore: cast_nullable_to_non_nullable
 as Set<String>,likeCounts: null == likeCounts ? _self.likeCounts : likeCounts // ignore: cast_nullable_to_non_nullable
 as Map<String, int>,likeEventIdToReactionId: null == likeEventIdToReactionId ? _self.likeEventIdToReactionId : likeEventIdToReactionId // ignore: cast_nullable_to_non_nullable
-as Map<String, String>,repostedEventIds: null == repostedEventIds ? _self.repostedEventIds : repostedEventIds // ignore: cast_nullable_to_non_nullable
+as Map<String, String>,commentCounts: null == commentCounts ? _self.commentCounts : commentCounts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,repostedEventIds: null == repostedEventIds ? _self.repostedEventIds : repostedEventIds // ignore: cast_nullable_to_non_nullable
 as Set<String>,repostEventIdToRepostId: null == repostEventIdToRepostId ? _self.repostEventIdToRepostId : repostEventIdToRepostId // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,followingPubkeys: null == followingPubkeys ? _self.followingPubkeys : followingPubkeys // ignore: cast_nullable_to_non_nullable
 as List<String>,followerStats: null == followerStats ? _self.followerStats : followerStats // ignore: cast_nullable_to_non_nullable
@@ -169,10 +172,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Set<String> likedEventIds,  Map<String, int> likeCounts,  Map<String, String> likeEventIdToReactionId,  Set<String> repostedEventIds,  Map<String, String> repostEventIdToRepostId,  List<String> followingPubkeys,  Map<String, Map<String, int>> followerStats,  Event? currentUserContactListEvent,  bool isLoading,  bool isInitialized,  String? error,  Set<String> likesInProgress,  Set<String> repostsInProgress,  Set<String> followsInProgress)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Set<String> likedEventIds,  Map<String, int> likeCounts,  Map<String, String> likeEventIdToReactionId,  Map<String, int> commentCounts,  Set<String> repostedEventIds,  Map<String, String> repostEventIdToRepostId,  List<String> followingPubkeys,  Map<String, Map<String, int>> followerStats,  Event? currentUserContactListEvent,  bool isLoading,  bool isInitialized,  String? error,  Set<String> likesInProgress,  Set<String> repostsInProgress,  Set<String> followsInProgress)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SocialState() when $default != null:
-return $default(_that.likedEventIds,_that.likeCounts,_that.likeEventIdToReactionId,_that.repostedEventIds,_that.repostEventIdToRepostId,_that.followingPubkeys,_that.followerStats,_that.currentUserContactListEvent,_that.isLoading,_that.isInitialized,_that.error,_that.likesInProgress,_that.repostsInProgress,_that.followsInProgress);case _:
+return $default(_that.likedEventIds,_that.likeCounts,_that.likeEventIdToReactionId,_that.commentCounts,_that.repostedEventIds,_that.repostEventIdToRepostId,_that.followingPubkeys,_that.followerStats,_that.currentUserContactListEvent,_that.isLoading,_that.isInitialized,_that.error,_that.likesInProgress,_that.repostsInProgress,_that.followsInProgress);case _:
   return orElse();
 
 }
@@ -190,10 +193,10 @@ return $default(_that.likedEventIds,_that.likeCounts,_that.likeEventIdToReaction
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Set<String> likedEventIds,  Map<String, int> likeCounts,  Map<String, String> likeEventIdToReactionId,  Set<String> repostedEventIds,  Map<String, String> repostEventIdToRepostId,  List<String> followingPubkeys,  Map<String, Map<String, int>> followerStats,  Event? currentUserContactListEvent,  bool isLoading,  bool isInitialized,  String? error,  Set<String> likesInProgress,  Set<String> repostsInProgress,  Set<String> followsInProgress)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Set<String> likedEventIds,  Map<String, int> likeCounts,  Map<String, String> likeEventIdToReactionId,  Map<String, int> commentCounts,  Set<String> repostedEventIds,  Map<String, String> repostEventIdToRepostId,  List<String> followingPubkeys,  Map<String, Map<String, int>> followerStats,  Event? currentUserContactListEvent,  bool isLoading,  bool isInitialized,  String? error,  Set<String> likesInProgress,  Set<String> repostsInProgress,  Set<String> followsInProgress)  $default,) {final _that = this;
 switch (_that) {
 case _SocialState():
-return $default(_that.likedEventIds,_that.likeCounts,_that.likeEventIdToReactionId,_that.repostedEventIds,_that.repostEventIdToRepostId,_that.followingPubkeys,_that.followerStats,_that.currentUserContactListEvent,_that.isLoading,_that.isInitialized,_that.error,_that.likesInProgress,_that.repostsInProgress,_that.followsInProgress);}
+return $default(_that.likedEventIds,_that.likeCounts,_that.likeEventIdToReactionId,_that.commentCounts,_that.repostedEventIds,_that.repostEventIdToRepostId,_that.followingPubkeys,_that.followerStats,_that.currentUserContactListEvent,_that.isLoading,_that.isInitialized,_that.error,_that.likesInProgress,_that.repostsInProgress,_that.followsInProgress);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -207,10 +210,10 @@ return $default(_that.likedEventIds,_that.likeCounts,_that.likeEventIdToReaction
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Set<String> likedEventIds,  Map<String, int> likeCounts,  Map<String, String> likeEventIdToReactionId,  Set<String> repostedEventIds,  Map<String, String> repostEventIdToRepostId,  List<String> followingPubkeys,  Map<String, Map<String, int>> followerStats,  Event? currentUserContactListEvent,  bool isLoading,  bool isInitialized,  String? error,  Set<String> likesInProgress,  Set<String> repostsInProgress,  Set<String> followsInProgress)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Set<String> likedEventIds,  Map<String, int> likeCounts,  Map<String, String> likeEventIdToReactionId,  Map<String, int> commentCounts,  Set<String> repostedEventIds,  Map<String, String> repostEventIdToRepostId,  List<String> followingPubkeys,  Map<String, Map<String, int>> followerStats,  Event? currentUserContactListEvent,  bool isLoading,  bool isInitialized,  String? error,  Set<String> likesInProgress,  Set<String> repostsInProgress,  Set<String> followsInProgress)?  $default,) {final _that = this;
 switch (_that) {
 case _SocialState() when $default != null:
-return $default(_that.likedEventIds,_that.likeCounts,_that.likeEventIdToReactionId,_that.repostedEventIds,_that.repostEventIdToRepostId,_that.followingPubkeys,_that.followerStats,_that.currentUserContactListEvent,_that.isLoading,_that.isInitialized,_that.error,_that.likesInProgress,_that.repostsInProgress,_that.followsInProgress);case _:
+return $default(_that.likedEventIds,_that.likeCounts,_that.likeEventIdToReactionId,_that.commentCounts,_that.repostedEventIds,_that.repostEventIdToRepostId,_that.followingPubkeys,_that.followerStats,_that.currentUserContactListEvent,_that.isLoading,_that.isInitialized,_that.error,_that.likesInProgress,_that.repostsInProgress,_that.followsInProgress);case _:
   return null;
 
 }
@@ -222,7 +225,7 @@ return $default(_that.likedEventIds,_that.likeCounts,_that.likeEventIdToReaction
 @JsonSerializable()
 
 class _SocialState extends SocialState {
-  const _SocialState({final  Set<String> likedEventIds = const {}, final  Map<String, int> likeCounts = const {}, final  Map<String, String> likeEventIdToReactionId = const {}, final  Set<String> repostedEventIds = const {}, final  Map<String, String> repostEventIdToRepostId = const {}, final  List<String> followingPubkeys = const [], final  Map<String, Map<String, int>> followerStats = const {}, this.currentUserContactListEvent, this.isLoading = false, this.isInitialized = false, this.error, final  Set<String> likesInProgress = const {}, final  Set<String> repostsInProgress = const {}, final  Set<String> followsInProgress = const {}}): _likedEventIds = likedEventIds,_likeCounts = likeCounts,_likeEventIdToReactionId = likeEventIdToReactionId,_repostedEventIds = repostedEventIds,_repostEventIdToRepostId = repostEventIdToRepostId,_followingPubkeys = followingPubkeys,_followerStats = followerStats,_likesInProgress = likesInProgress,_repostsInProgress = repostsInProgress,_followsInProgress = followsInProgress,super._();
+  const _SocialState({final  Set<String> likedEventIds = const {}, final  Map<String, int> likeCounts = const {}, final  Map<String, String> likeEventIdToReactionId = const {}, final  Map<String, int> commentCounts = const {}, final  Set<String> repostedEventIds = const {}, final  Map<String, String> repostEventIdToRepostId = const {}, final  List<String> followingPubkeys = const [], final  Map<String, Map<String, int>> followerStats = const {}, this.currentUserContactListEvent, this.isLoading = false, this.isInitialized = false, this.error, final  Set<String> likesInProgress = const {}, final  Set<String> repostsInProgress = const {}, final  Set<String> followsInProgress = const {}}): _likedEventIds = likedEventIds,_likeCounts = likeCounts,_likeEventIdToReactionId = likeEventIdToReactionId,_commentCounts = commentCounts,_repostedEventIds = repostedEventIds,_repostEventIdToRepostId = repostEventIdToRepostId,_followingPubkeys = followingPubkeys,_followerStats = followerStats,_likesInProgress = likesInProgress,_repostsInProgress = repostsInProgress,_followsInProgress = followsInProgress,super._();
   factory _SocialState.fromJson(Map<String, dynamic> json) => _$SocialStateFromJson(json);
 
 // Like-related state
@@ -250,8 +253,19 @@ class _SocialState extends SocialState {
   return EqualUnmodifiableMapView(_likeEventIdToReactionId);
 }
 
+// Comment-related state
+ final  Map<String, int> _commentCounts;
+// Comment-related state
+@override@JsonKey() Map<String, int> get commentCounts {
+  if (_commentCounts is EqualUnmodifiableMapView) return _commentCounts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_commentCounts);
+}
+
+// NEW comments from Nostr only (add to originalComments for total)
 // Repost-related state
  final  Set<String> _repostedEventIds;
+// NEW comments from Nostr only (add to originalComments for total)
 // Repost-related state
 @override@JsonKey() Set<String> get repostedEventIds {
   if (_repostedEventIds is EqualUnmodifiableSetView) return _repostedEventIds;
@@ -324,16 +338,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SocialState&&const DeepCollectionEquality().equals(other._likedEventIds, _likedEventIds)&&const DeepCollectionEquality().equals(other._likeCounts, _likeCounts)&&const DeepCollectionEquality().equals(other._likeEventIdToReactionId, _likeEventIdToReactionId)&&const DeepCollectionEquality().equals(other._repostedEventIds, _repostedEventIds)&&const DeepCollectionEquality().equals(other._repostEventIdToRepostId, _repostEventIdToRepostId)&&const DeepCollectionEquality().equals(other._followingPubkeys, _followingPubkeys)&&const DeepCollectionEquality().equals(other._followerStats, _followerStats)&&(identical(other.currentUserContactListEvent, currentUserContactListEvent) || other.currentUserContactListEvent == currentUserContactListEvent)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.isInitialized, isInitialized) || other.isInitialized == isInitialized)&&(identical(other.error, error) || other.error == error)&&const DeepCollectionEquality().equals(other._likesInProgress, _likesInProgress)&&const DeepCollectionEquality().equals(other._repostsInProgress, _repostsInProgress)&&const DeepCollectionEquality().equals(other._followsInProgress, _followsInProgress));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SocialState&&const DeepCollectionEquality().equals(other._likedEventIds, _likedEventIds)&&const DeepCollectionEquality().equals(other._likeCounts, _likeCounts)&&const DeepCollectionEquality().equals(other._likeEventIdToReactionId, _likeEventIdToReactionId)&&const DeepCollectionEquality().equals(other._commentCounts, _commentCounts)&&const DeepCollectionEquality().equals(other._repostedEventIds, _repostedEventIds)&&const DeepCollectionEquality().equals(other._repostEventIdToRepostId, _repostEventIdToRepostId)&&const DeepCollectionEquality().equals(other._followingPubkeys, _followingPubkeys)&&const DeepCollectionEquality().equals(other._followerStats, _followerStats)&&(identical(other.currentUserContactListEvent, currentUserContactListEvent) || other.currentUserContactListEvent == currentUserContactListEvent)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.isInitialized, isInitialized) || other.isInitialized == isInitialized)&&(identical(other.error, error) || other.error == error)&&const DeepCollectionEquality().equals(other._likesInProgress, _likesInProgress)&&const DeepCollectionEquality().equals(other._repostsInProgress, _repostsInProgress)&&const DeepCollectionEquality().equals(other._followsInProgress, _followsInProgress));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_likedEventIds),const DeepCollectionEquality().hash(_likeCounts),const DeepCollectionEquality().hash(_likeEventIdToReactionId),const DeepCollectionEquality().hash(_repostedEventIds),const DeepCollectionEquality().hash(_repostEventIdToRepostId),const DeepCollectionEquality().hash(_followingPubkeys),const DeepCollectionEquality().hash(_followerStats),currentUserContactListEvent,isLoading,isInitialized,error,const DeepCollectionEquality().hash(_likesInProgress),const DeepCollectionEquality().hash(_repostsInProgress),const DeepCollectionEquality().hash(_followsInProgress));
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_likedEventIds),const DeepCollectionEquality().hash(_likeCounts),const DeepCollectionEquality().hash(_likeEventIdToReactionId),const DeepCollectionEquality().hash(_commentCounts),const DeepCollectionEquality().hash(_repostedEventIds),const DeepCollectionEquality().hash(_repostEventIdToRepostId),const DeepCollectionEquality().hash(_followingPubkeys),const DeepCollectionEquality().hash(_followerStats),currentUserContactListEvent,isLoading,isInitialized,error,const DeepCollectionEquality().hash(_likesInProgress),const DeepCollectionEquality().hash(_repostsInProgress),const DeepCollectionEquality().hash(_followsInProgress));
 
 @override
 String toString() {
-  return 'SocialState(likedEventIds: $likedEventIds, likeCounts: $likeCounts, likeEventIdToReactionId: $likeEventIdToReactionId, repostedEventIds: $repostedEventIds, repostEventIdToRepostId: $repostEventIdToRepostId, followingPubkeys: $followingPubkeys, followerStats: $followerStats, currentUserContactListEvent: $currentUserContactListEvent, isLoading: $isLoading, isInitialized: $isInitialized, error: $error, likesInProgress: $likesInProgress, repostsInProgress: $repostsInProgress, followsInProgress: $followsInProgress)';
+  return 'SocialState(likedEventIds: $likedEventIds, likeCounts: $likeCounts, likeEventIdToReactionId: $likeEventIdToReactionId, commentCounts: $commentCounts, repostedEventIds: $repostedEventIds, repostEventIdToRepostId: $repostEventIdToRepostId, followingPubkeys: $followingPubkeys, followerStats: $followerStats, currentUserContactListEvent: $currentUserContactListEvent, isLoading: $isLoading, isInitialized: $isInitialized, error: $error, likesInProgress: $likesInProgress, repostsInProgress: $repostsInProgress, followsInProgress: $followsInProgress)';
 }
 
 
@@ -344,7 +358,7 @@ abstract mixin class _$SocialStateCopyWith<$Res> implements $SocialStateCopyWith
   factory _$SocialStateCopyWith(_SocialState value, $Res Function(_SocialState) _then) = __$SocialStateCopyWithImpl;
 @override @useResult
 $Res call({
- Set<String> likedEventIds, Map<String, int> likeCounts, Map<String, String> likeEventIdToReactionId, Set<String> repostedEventIds, Map<String, String> repostEventIdToRepostId, List<String> followingPubkeys, Map<String, Map<String, int>> followerStats, Event? currentUserContactListEvent, bool isLoading, bool isInitialized, String? error, Set<String> likesInProgress, Set<String> repostsInProgress, Set<String> followsInProgress
+ Set<String> likedEventIds, Map<String, int> likeCounts, Map<String, String> likeEventIdToReactionId, Map<String, int> commentCounts, Set<String> repostedEventIds, Map<String, String> repostEventIdToRepostId, List<String> followingPubkeys, Map<String, Map<String, int>> followerStats, Event? currentUserContactListEvent, bool isLoading, bool isInitialized, String? error, Set<String> likesInProgress, Set<String> repostsInProgress, Set<String> followsInProgress
 });
 
 
@@ -361,12 +375,13 @@ class __$SocialStateCopyWithImpl<$Res>
 
 /// Create a copy of SocialState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? likedEventIds = null,Object? likeCounts = null,Object? likeEventIdToReactionId = null,Object? repostedEventIds = null,Object? repostEventIdToRepostId = null,Object? followingPubkeys = null,Object? followerStats = null,Object? currentUserContactListEvent = freezed,Object? isLoading = null,Object? isInitialized = null,Object? error = freezed,Object? likesInProgress = null,Object? repostsInProgress = null,Object? followsInProgress = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? likedEventIds = null,Object? likeCounts = null,Object? likeEventIdToReactionId = null,Object? commentCounts = null,Object? repostedEventIds = null,Object? repostEventIdToRepostId = null,Object? followingPubkeys = null,Object? followerStats = null,Object? currentUserContactListEvent = freezed,Object? isLoading = null,Object? isInitialized = null,Object? error = freezed,Object? likesInProgress = null,Object? repostsInProgress = null,Object? followsInProgress = null,}) {
   return _then(_SocialState(
 likedEventIds: null == likedEventIds ? _self._likedEventIds : likedEventIds // ignore: cast_nullable_to_non_nullable
 as Set<String>,likeCounts: null == likeCounts ? _self._likeCounts : likeCounts // ignore: cast_nullable_to_non_nullable
 as Map<String, int>,likeEventIdToReactionId: null == likeEventIdToReactionId ? _self._likeEventIdToReactionId : likeEventIdToReactionId // ignore: cast_nullable_to_non_nullable
-as Map<String, String>,repostedEventIds: null == repostedEventIds ? _self._repostedEventIds : repostedEventIds // ignore: cast_nullable_to_non_nullable
+as Map<String, String>,commentCounts: null == commentCounts ? _self._commentCounts : commentCounts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,repostedEventIds: null == repostedEventIds ? _self._repostedEventIds : repostedEventIds // ignore: cast_nullable_to_non_nullable
 as Set<String>,repostEventIdToRepostId: null == repostEventIdToRepostId ? _self._repostEventIdToRepostId : repostEventIdToRepostId // ignore: cast_nullable_to_non_nullable
 as Map<String, String>,followingPubkeys: null == followingPubkeys ? _self._followingPubkeys : followingPubkeys // ignore: cast_nullable_to_non_nullable
 as List<String>,followerStats: null == followerStats ? _self._followerStats : followerStats // ignore: cast_nullable_to_non_nullable

@@ -22,6 +22,11 @@ _SocialState _$SocialStateFromJson(Map<String, dynamic> json) => _SocialState(
         (k, e) => MapEntry(k, e as String),
       ) ??
       const {},
+  commentCounts:
+      (json['commentCounts'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toInt()),
+      ) ??
+      const {},
   repostedEventIds:
       (json['repostedEventIds'] as List<dynamic>?)
           ?.map((e) => e as String)
@@ -72,6 +77,7 @@ Map<String, dynamic> _$SocialStateToJson(_SocialState instance) =>
       'likedEventIds': instance.likedEventIds.toList(),
       'likeCounts': instance.likeCounts,
       'likeEventIdToReactionId': instance.likeEventIdToReactionId,
+      'commentCounts': instance.commentCounts,
       'repostedEventIds': instance.repostedEventIds.toList(),
       'repostEventIdToRepostId': instance.repostEventIdToRepostId,
       'followingPubkeys': instance.followingPubkeys,
