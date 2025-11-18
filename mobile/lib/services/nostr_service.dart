@@ -15,6 +15,7 @@ import 'package:nostr_sdk/relay/client_connected.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/models/nip94_metadata.dart';
+import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
@@ -24,7 +25,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Production implementation of NostrService using nostr_sdk RelayPool directly
 /// Manages direct WebSocket connections to Nostr relays without embedded relay layer
-class NostrService implements INostrService {
+class NostrService implements INostrService, BackgroundAwareService {
   NostrService(this._keyManager, {
     void Function()? onInitialized,
   }) : _onInitialized = onInitialized {
@@ -682,50 +683,29 @@ class NostrService implements INostrService {
     final beforeConnected = connectedRelays.length;
     UnifiedLogger.info('📊 Before retry: $beforeConnected/${_configuredRelays.length} relays connected', name: 'NostrService');
 
-    for (final relayUrl in _configuredRelays) {
-      if (_relays[relayUrl]?.relayStatus.connected != ClientConneccted.CONNECTED) {
-        try {
-          final connectStart = DateTime.now();
-          UnifiedLogger.info('🔌 Reconnecting to relay: $relayUrl', name: 'NostrService');
+    // Use SDK's built-in reconnect() which calls relay.connect() on all relays
+    _relayPool!.reconnect();
 
-          final relay = RelayBase(relayUrl, RelayStatus(relayUrl));
-          _relays[relayUrl] = relay;
+    // Poll for connection establishment with exponential backoff
+    // Start with 100ms, double each time, up to 2 seconds max
+    int pollDelay = 100;
+    int totalWaited = 0;
+    const maxWait = 5000; // 5 seconds total
+    final connectStart = DateTime.now();
 
-          if (relayUrl.contains('vine.hol.is')) {
-            relay.relayStatus.alwaysAuth = true;
-          }
+    while (connectedRelays.isEmpty && totalWaited < maxWait) {
+      await Future.delayed(Duration(milliseconds: pollDelay));
+      totalWaited += pollDelay;
 
-          final success = await _relayPool!.add(relay);
-
-          // Wait for relay connection to establish (WebSocket is async)
-          // Poll for up to 500ms to see if connection establishes
-          bool isConnected = relay.relayStatus.connected == ClientConneccted.CONNECTED;
-          int retries = 0;
-          const maxRetries = 5;
-          const retryDelay = Duration(milliseconds: 100);
-
-          while (!isConnected && retries < maxRetries && success) {
-            await Future.delayed(retryDelay);
-            isConnected = relay.relayStatus.connected == ClientConneccted.CONNECTED;
-            retries++;
-          }
-
-          final connectDuration = DateTime.now().difference(connectStart);
-
-          if (success && isConnected) {
-            _relayAuthStates[relayUrl] = true;
-            UnifiedLogger.info('✅ Reconnected to relay: $relayUrl (${connectDuration.inMilliseconds}ms)', name: 'NostrService');
-          } else {
-            UnifiedLogger.error('❌ Failed to reconnect relay: $relayUrl (${connectDuration.inMilliseconds}ms)', name: 'NostrService');
-          }
-        } catch (e) {
-          UnifiedLogger.error('❌ Exception reconnecting relay $relayUrl: $e', name: 'NostrService');
-        }
-      }
+      // Exponential backoff: 100ms -> 200ms -> 400ms -> 800ms -> 1600ms -> 2000ms (capped)
+      pollDelay = (pollDelay * 2).clamp(100, 2000);
     }
 
+    final connectDuration = DateTime.now().difference(connectStart);
     final afterConnected = connectedRelays.length;
-    UnifiedLogger.info('🎯 Retry complete: $afterConnected/${_configuredRelays.length} relays connected', name: 'NostrService');
+
+    UnifiedLogger.info('🎯 Retry complete: $afterConnected/${_configuredRelays.length} relays connected (${connectDuration.inMilliseconds}ms)',
+        name: 'NostrService');
 
     if (afterConnected > beforeConnected) {
       UnifiedLogger.info('✨ Successfully connected ${afterConnected - beforeConnected} additional relay(s)', name: 'NostrService');
@@ -787,26 +767,8 @@ class NostrService implements INostrService {
 
     if (connectedRelays.isEmpty) {
       UnifiedLogger.warning('⚠️ No relays connected, attempting reconnection...', name: 'NostrService');
+      // reconnectAll() already handles polling and waiting for connections
       await reconnectAll();
-
-      // Poll for relay connection instead of arbitrary delay
-      // Wait up to 5 seconds (50 * 100ms) for at least one relay to connect
-      int pollAttempts = 0;
-      const maxPollAttempts = 50; // 5 seconds total
-      const pollDelay = Duration(milliseconds: 100);
-
-      while (connectedRelays.isEmpty && pollAttempts < maxPollAttempts) {
-        await Future.delayed(pollDelay);
-        pollAttempts++;
-      }
-
-      final waitedMs = pollAttempts * 100;
-
-      if (connectedRelays.isEmpty) {
-        UnifiedLogger.error('❌ Still no relays connected after ${waitedMs}ms reconnection attempt', name: 'NostrService');
-      } else {
-        UnifiedLogger.info('✅ Successfully reconnected ${connectedRelays.length} relay(s) after ${waitedMs}ms', name: 'NostrService');
-      }
     }
   }
 
@@ -1074,6 +1036,102 @@ class NostrService implements INostrService {
       UnifiedLogger.debug('💾 Saved ${relays.length} relay(s) to SharedPreferences', name: 'NostrService');
     } catch (e) {
       UnifiedLogger.error('Failed to save relay config: $e', name: 'NostrService');
+    }
+  }
+
+  // BackgroundAwareService implementation
+  @override
+  String get serviceName => 'NostrService';
+
+  @override
+  void onAppBackgrounded() {
+    UnifiedLogger.info('📱 App backgrounded - relay connections may be suspended by OS',
+        name: 'NostrService');
+    // Note: We don't proactively close connections here because:
+    // 1. The OS will suspend WebSockets automatically
+    // 2. Closing them explicitly might prevent proper reconnection
+    // Instead, we rely on onAppResumed() to detect and fix disconnections
+  }
+
+  @override
+  void onExtendedBackground() {
+    UnifiedLogger.info('📱 App in extended background - relay connections likely closed by OS',
+        name: 'NostrService');
+    // After 30 seconds in background, assume all connections are dead
+    // Mark all relays as disconnected to trigger reconnection on resume
+    for (final relayUrl in _configuredRelays) {
+      if (_relays[relayUrl] != null) {
+        UnifiedLogger.debug('Marking relay as disconnected: $relayUrl', name: 'NostrService');
+      }
+    }
+  }
+
+  @override
+  void onAppResumed() {
+    UnifiedLogger.info('📱 App resumed - checking relay connections', name: 'NostrService');
+
+    // Check how many relays are actually connected
+    final connectedCount = connectedRelays.length;
+    final totalCount = _configuredRelays.length;
+
+    UnifiedLogger.info('📊 Relay status: $connectedCount/$totalCount connected', name: 'NostrService');
+
+    // If no relays are connected, trigger reconnection
+    if (connectedCount == 0 && totalCount > 0) {
+      UnifiedLogger.warning('⚠️ No relays connected after resume, triggering reconnection',
+          name: 'NostrService');
+
+      // Trigger reconnection asynchronously (don't block the lifecycle callback)
+      Future.microtask(() async {
+        try {
+          await reconnectAll();
+          final newConnectedCount = connectedRelays.length;
+          if (newConnectedCount > 0) {
+            UnifiedLogger.info('✅ Relay reconnection successful: $newConnectedCount/$totalCount',
+                name: 'NostrService');
+          } else {
+            UnifiedLogger.error('❌ Relay reconnection failed: still 0/$totalCount connected',
+                name: 'NostrService');
+          }
+        } catch (e) {
+          UnifiedLogger.error('❌ Exception during relay reconnection: $e', name: 'NostrService');
+        }
+      });
+    } else if (connectedCount < totalCount) {
+      UnifiedLogger.warning('⚠️ Some relays disconnected ($connectedCount/$totalCount), triggering reconnection',
+          name: 'NostrService');
+
+      // Some relays disconnected - reconnect them
+      Future.microtask(() async {
+        try {
+          await reconnectAll();
+        } catch (e) {
+          UnifiedLogger.error('❌ Exception during partial relay reconnection: $e', name: 'NostrService');
+        }
+      });
+    } else {
+      UnifiedLogger.info('✅ All relays still connected after resume', name: 'NostrService');
+    }
+  }
+
+  @override
+  void onPeriodicCleanup() {
+    // Check relay health periodically
+    final connectedCount = connectedRelays.length;
+    final totalCount = _configuredRelays.length;
+
+    if (connectedCount < totalCount) {
+      UnifiedLogger.warning('🧹 Periodic cleanup: some relays disconnected ($connectedCount/$totalCount)',
+          name: 'NostrService');
+
+      // Trigger reconnection if some relays are down
+      Future.microtask(() async {
+        try {
+          await reconnectAll();
+        } catch (e) {
+          UnifiedLogger.error('❌ Exception during periodic relay reconnection: $e', name: 'NostrService');
+        }
+      });
     }
   }
 }

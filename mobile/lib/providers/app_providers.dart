@@ -265,38 +265,26 @@ INostrService nostrService(Ref ref) {
     try {
       await (service as dynamic).initialize(enableP2P: false);
       UnifiedLogger.info('✅ NostrService initialized with relay connections', name: 'AppProviders');
+
+      // Register NostrService with BackgroundActivityManager for automatic lifecycle handling
+      final backgroundManager = ref.read(backgroundActivityManagerProvider);
+      if (service is BackgroundAwareService) {
+        backgroundManager.registerService(service as BackgroundAwareService);
+        UnifiedLogger.info('✅ NostrService registered with BackgroundActivityManager', name: 'AppProviders');
+      }
     } catch (e, stackTrace) {
       UnifiedLogger.error('❌ Failed to initialize NostrService: $e\n$stackTrace', name: 'AppProviders');
     }
   });
 
-  // Watch app lifecycle to maintain relay connections
-  // When app resumes from background, check and reconnect if needed
-  ref.listen(appForegroundProvider, (previous, next) {
-    if (!next.hasValue) return;
-
-    final isForeground = next.value ?? false;
-    final wasForeground = previous?.value ?? false;
-
-    // App just returned to foreground
-    if (isForeground && !wasForeground) {
-      UnifiedLogger.info('🔄 App resumed - checking relay connections', name: 'AppProviders');
-
-      // Reconnect to relays after app resumes
-      Future.microtask(() async {
-        try {
-          UnifiedLogger.info('🔌 Reconnecting to relays after app resume...', name: 'AppProviders');
-          await (service as dynamic).initialize(enableP2P: false);
-          UnifiedLogger.info('✅ Relay reconnection successful', name: 'AppProviders');
-        } catch (e, stackTrace) {
-          UnifiedLogger.error('❌ Failed to reconnect relays: $e\n$stackTrace', name: 'AppProviders');
-        }
-      });
-    }
-  });
-
   // Cleanup on disposal - but only in production, not during development hot reloads
   ref.onDispose(() {
+    // Unregister from BackgroundActivityManager
+    final backgroundManager = ref.read(backgroundActivityManagerProvider);
+    if (service is BackgroundAwareService) {
+      backgroundManager.unregisterService(service as BackgroundAwareService);
+    }
+
     // Skip disposal during debug mode to prevent embedded relay shutdown during hot reloads
     if (!kDebugMode) {
       service.dispose();
