@@ -1021,17 +1021,17 @@ final class AuthStateStreamProvider
 
 String _$authStateStreamHash() => r'bd5c1864e57cfd46c9676d3dc1fe3aa358c2a14b';
 
-/// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities
+/// Core Nostr service with direct relay connections via nostr_sdk
 
 @ProviderFor(nostrService)
 const nostrServiceProvider = NostrServiceProvider._();
 
-/// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities
+/// Core Nostr service with direct relay connections via nostr_sdk
 
 final class NostrServiceProvider
     extends $FunctionalProvider<INostrService, INostrService, INostrService>
     with $Provider<INostrService> {
-  /// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities
+  /// Core Nostr service with direct relay connections via nostr_sdk
   const NostrServiceProvider._()
     : super(
         from: null,
@@ -1065,7 +1065,7 @@ final class NostrServiceProvider
   }
 }
 
-String _$nostrServiceHash() => r'dfb69ec730649762bbddc57b6b1e443f280cdfd3';
+String _$nostrServiceHash() => r'8abf79e3d06d4070e183b3bf3ed71cba96525e28';
 
 /// Subscription manager for centralized subscription management
 

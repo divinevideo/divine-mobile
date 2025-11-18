@@ -53,7 +53,7 @@ class NostrService implements INostrService, BackgroundAwareService {
 
   @override
   Future<void> initialize(
-      {List<String>? customRelays, bool enableP2P = true}) async {
+      {List<String>? customRelays}) async {
     if (_isDisposed) throw StateError('NostrService is disposed');
     if (_isInitialized) {
       UnifiedLogger.info('🔄 initialize() called but service is already initialized', name: 'NostrService');

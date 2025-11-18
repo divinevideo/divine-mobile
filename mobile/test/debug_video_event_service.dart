@@ -28,6 +28,7 @@ class TestableNostrService extends NostrService {
     required List<Filter> filters,
     bool bypassLimits = false,
     void Function()? onEose,
+    bool allowReuse = true,
   }) {
     Log.info(
         '🔍 TestableNostrService.subscribeToEvents called with ${filters.length} filters',

@@ -34,7 +34,6 @@ import 'package:openvine/services/video_filter_builder.dart' as _i13;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
-// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeNostrKeyManager_0 extends _i1.SmartFake
     implements _i2.NostrKeyManager {
@@ -184,12 +183,14 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
     required List<_i8.Filter>? filters,
     bool? bypassLimits = false,
     void Function()? onEose,
+    bool? allowReuse = true,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#subscribeToEvents, [], {
               #filters: filters,
               #bypassLimits: bypassLimits,
               #onEose: onEose,
+              #allowReuse: allowReuse,
             }),
             returnValue: _i5.Stream<_i7.Event>.empty(),
           )
@@ -824,6 +825,13 @@ class MockVideoEventService extends _i1.Mock implements _i10.VideoEventService {
     Invocation.method(#clearVideoEvents, []),
     returnValueForMissingStub: null,
   );
+
+  @override
+  void clearEventsForSubscription(_i10.SubscriptionType? type) =>
+      super.noSuchMethod(
+        Invocation.method(#clearEventsForSubscription, [type]),
+        returnValueForMissingStub: null,
+      );
 
   @override
   _i5.Future<void> unsubscribeFromVideoFeed() =>

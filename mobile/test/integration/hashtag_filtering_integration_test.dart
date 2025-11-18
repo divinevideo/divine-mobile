@@ -57,6 +57,7 @@ class MinimalMockNostrService implements INostrService {
     required List<Filter> filters,
     bool bypassLimits = false,
     void Function()? onEose,
+    bool allowReuse = true,
   }) =>
       const Stream<Event>.empty();
 

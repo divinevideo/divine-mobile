@@ -31,7 +31,6 @@ import 'package:openvine/services/user_profile_service.dart' as _i9;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
-// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeAuthService_0 extends _i1.SmartFake implements _i2.AuthService {
   _FakeAuthService_0(Object parent, Invocation parentInvocation)
@@ -542,12 +541,14 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
     required List<_i12.Filter>? filters,
     bool? bypassLimits = false,
     void Function()? onEose,
+    bool? allowReuse = true,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#subscribeToEvents, [], {
               #filters: filters,
               #bypassLimits: bypassLimits,
               #onEose: onEose,
+              #allowReuse: allowReuse,
             }),
             returnValue: _i7.Stream<_i10.Event>.empty(),
           )

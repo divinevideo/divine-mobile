@@ -28,7 +28,6 @@ import 'package:openvine/services/video_filter_builder.dart' as _i9;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
-// ignore_for_file: invalid_use_of_internal_member
 
 /// A class which mocks [SocialService].
 ///
@@ -812,6 +811,13 @@ class MockVideoEventService extends _i1.Mock implements _i6.VideoEventService {
     Invocation.method(#clearVideoEvents, []),
     returnValueForMissingStub: null,
   );
+
+  @override
+  void clearEventsForSubscription(_i6.SubscriptionType? type) =>
+      super.noSuchMethod(
+        Invocation.method(#clearEventsForSubscription, [type]),
+        returnValueForMissingStub: null,
+      );
 
   @override
   _i3.Future<void> unsubscribeFromVideoFeed() =>

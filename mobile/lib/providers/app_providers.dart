@@ -241,7 +241,7 @@ Stream<AuthState> authStateStream(Ref ref) async* {
 }
 
 
-/// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities
+/// Core Nostr service with direct relay connections via nostr_sdk
 @Riverpod(keepAlive: true)
 INostrService nostrService(Ref ref) {
   final keyManager = ref.watch(nostrKeyManagerProvider);
@@ -263,7 +263,7 @@ INostrService nostrService(Ref ref) {
   Future.microtask(() async {
     UnifiedLogger.info('🔧 Future.microtask: Starting NostrService initialization...', name: 'AppProviders');
     try {
-      await (service as dynamic).initialize(enableP2P: false);
+      await (service as dynamic).initialize();
       UnifiedLogger.info('✅ NostrService initialized with relay connections', name: 'AppProviders');
 
       // Register NostrService with BackgroundActivityManager for automatic lifecycle handling
@@ -285,11 +285,11 @@ INostrService nostrService(Ref ref) {
       backgroundManager.unregisterService(service as BackgroundAwareService);
     }
 
-    // Skip disposal during debug mode to prevent embedded relay shutdown during hot reloads
+    // Skip disposal during debug mode to prevent relay disconnection during hot reloads
     if (!kDebugMode) {
       service.dispose();
     } else {
-      // In debug mode, just close subscriptions but keep the relay alive
+      // In debug mode, just close subscriptions but keep relay connections alive
       service.closeAllSubscriptions().catchError((e) {
         UnifiedLogger.warning('Error closing subscriptions during hot reload: $e');
       });

@@ -31,7 +31,6 @@ import 'package:openvine/services/user_profile_service.dart' as _i11;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
-// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeNostrKeyManager_0 extends _i1.SmartFake
     implements _i2.NostrKeyManager {
@@ -165,15 +164,9 @@ class MockNostrService extends _i1.Mock implements _i5.NostrService {
           as String);
 
   @override
-  _i6.Future<void> initialize({
-    List<String>? customRelays,
-    bool? enableP2P = true,
-  }) =>
+  _i6.Future<void> initialize({List<String>? customRelays}) =>
       (super.noSuchMethod(
-            Invocation.method(#initialize, [], {
-              #customRelays: customRelays,
-              #enableP2P: enableP2P,
-            }),
+            Invocation.method(#initialize, [], {#customRelays: customRelays}),
             returnValue: _i6.Future<void>.value(),
             returnValueForMissingStub: _i6.Future<void>.value(),
           )
@@ -198,12 +191,14 @@ class MockNostrService extends _i1.Mock implements _i5.NostrService {
     required List<_i9.Filter>? filters,
     bool? bypassLimits = false,
     void Function()? onEose,
+    bool? allowReuse = true,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#subscribeToEvents, [], {
               #filters: filters,
               #bypassLimits: bypassLimits,
               #onEose: onEose,
+              #allowReuse: allowReuse,
             }),
             returnValue: _i6.Stream<_i8.Event>.empty(),
           )

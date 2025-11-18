@@ -34,6 +34,7 @@ class MockNostrServiceWithDelay implements INostrService {
     required List<Filter> filters,
     bool bypassLimits = false,
     void Function()? onEose,
+    bool allowReuse = true,
   }) {
     // Simulate relay delay: call onEose after 100ms
     if (onEose != null) {

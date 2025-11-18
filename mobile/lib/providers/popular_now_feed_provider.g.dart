@@ -11,7 +11,7 @@ part of 'popular_now_feed_provider.dart';
 /// PopularNow feed provider - shows newest videos (sorted by creation time)
 ///
 /// Rebuilds when:
-/// - Poll interval elapses (uses same auto-refresh as home feed)
+/// - Auto-refresh every 30 seconds (matching web version)
 /// - User pulls to refresh
 /// - VideoEventService updates with new videos
 
@@ -21,7 +21,7 @@ const popularNowFeedProvider = PopularNowFeedProvider._();
 /// PopularNow feed provider - shows newest videos (sorted by creation time)
 ///
 /// Rebuilds when:
-/// - Poll interval elapses (uses same auto-refresh as home feed)
+/// - Auto-refresh every 30 seconds (matching web version)
 /// - User pulls to refresh
 /// - VideoEventService updates with new videos
 final class PopularNowFeedProvider
@@ -29,7 +29,7 @@ final class PopularNowFeedProvider
   /// PopularNow feed provider - shows newest videos (sorted by creation time)
   ///
   /// Rebuilds when:
-  /// - Poll interval elapses (uses same auto-refresh as home feed)
+  /// - Auto-refresh every 30 seconds (matching web version)
   /// - User pulls to refresh
   /// - VideoEventService updates with new videos
   const PopularNowFeedProvider._()
@@ -51,12 +51,12 @@ final class PopularNowFeedProvider
   PopularNowFeed create() => PopularNowFeed();
 }
 
-String _$popularNowFeedHash() => r'd64b6f8b124575a8a0f380776ea5e21e64fccd45';
+String _$popularNowFeedHash() => r'5fdb14360d0da9c0c3f50ef3b9f8452f0ef67ae0';
 
 /// PopularNow feed provider - shows newest videos (sorted by creation time)
 ///
 /// Rebuilds when:
-/// - Poll interval elapses (uses same auto-refresh as home feed)
+/// - Auto-refresh every 30 seconds (matching web version)
 /// - User pulls to refresh
 /// - VideoEventService updates with new videos
 

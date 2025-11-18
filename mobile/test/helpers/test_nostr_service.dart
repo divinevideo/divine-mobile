@@ -157,6 +157,7 @@ class TestNostrService implements INostrService {
     required List<Filter> filters,
     bool bypassLimits = false,
     void Function()? onEose,
+    bool allowReuse = true,
   }) {
     final subscriptionId = 'test_sub_${DateTime.now().millisecondsSinceEpoch}';
 
@@ -292,6 +293,27 @@ class TestNostrService implements INostrService {
   @override
   Future<void> retryInitialization() async {
     _isConnected = true;
+  }
+
+  @override
+  Stream<Event> subscribeToEventsWithCustomJson({
+    required List<Map<String, dynamic>> filtersJson,
+    String? subscriptionId,
+    bool bypassLimits = false,
+    void Function()? onEose,
+  }) {
+    // Convert JSON filters to Filter objects and use regular subscribe
+    final filters = filtersJson.map((json) => Filter.fromJson(json)).toList();
+    return subscribeToEvents(filters: filters, bypassLimits: bypassLimits, onEose: onEose);
+  }
+
+  @override
+  Future<List<Event>> queryEventsWithCustomJson({
+    required List<Map<String, dynamic>> filtersJson,
+  }) async {
+    // Convert JSON filters to Filter objects and use regular getEvents
+    final filters = filtersJson.map((json) => Filter.fromJson(json)).toList();
+    return getEvents(filters: filters);
   }
 
   @override
