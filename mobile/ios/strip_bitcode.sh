@@ -29,8 +29,14 @@ for framework in "${ZENDESK_FRAMEWORKS[@]}"; do
 
     if [ -f "$FRAMEWORK_BINARY" ]; then
         echo "Stripping bitcode from $framework..."
-        xcrun bitcode_strip -r "$FRAMEWORK_BINARY" -o "$FRAMEWORK_BINARY"
+        # Use temp file to avoid overwriting while reading
+        TEMP_FILE="${FRAMEWORK_BINARY}.tmp"
+        xcrun bitcode_strip -r "$FRAMEWORK_BINARY" -o "$TEMP_FILE"
+        mv "$TEMP_FILE" "$FRAMEWORK_BINARY"
     fi
 done
+
+# Clean up any .backup or .tmp files that may exist
+find "$FRAMEWORKS_DIR" -name "*.backup" -o -name "*.tmp" | xargs rm -f 2>/dev/null || true
 
 echo "Bitcode stripping complete"

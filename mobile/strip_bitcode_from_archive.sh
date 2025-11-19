@@ -38,21 +38,27 @@ for framework in "${ZENDESK_FRAMEWORKS[@]}"; do
     if [ -f "$FRAMEWORK_BINARY" ]; then
         echo "Processing $framework..."
 
-        # Check if it contains bitcode
-        if xcrun bitcode_strip -v "$FRAMEWORK_BINARY" 2>&1 | grep -q "bitcode"; then
-            echo "  Stripping bitcode from $framework"
-            # Create backup
-            cp "$FRAMEWORK_BINARY" "${FRAMEWORK_BINARY}.backup"
-            # Strip bitcode
-            xcrun bitcode_strip -r "$FRAMEWORK_BINARY" -o "$FRAMEWORK_BINARY"
-            echo "  ✅ Bitcode stripped from $framework"
-        else
-            echo "  ℹ️  No bitcode found in $framework"
+        # Strip bitcode in-place (no backup)
+        # Use a temp file to avoid overwriting while reading
+        TEMP_FILE="${FRAMEWORK_BINARY}.tmp"
+        xcrun bitcode_strip -r "$FRAMEWORK_BINARY" -o "$TEMP_FILE"
+        mv "$TEMP_FILE" "$FRAMEWORK_BINARY"
+        echo "  ✅ Bitcode stripped from $framework"
+
+        # Clean up any .backup files that may exist from previous runs
+        if [ -f "${FRAMEWORK_BINARY}.backup" ]; then
+            rm -f "${FRAMEWORK_BINARY}.backup"
+            echo "  🧹 Removed backup file"
         fi
     else
         echo "  ⚠️  Framework binary not found: $FRAMEWORK_BINARY"
     fi
 done
+
+# Clean up any remaining .backup files in frameworks directory
+echo ""
+echo "🧹 Cleaning up any .backup files..."
+find "$FRAMEWORKS_PATH" -name "*.backup" -type f -delete
 
 echo ""
 echo "✅ Bitcode stripping complete!"
