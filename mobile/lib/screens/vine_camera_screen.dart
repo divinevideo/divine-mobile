@@ -87,6 +87,13 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
       Log.info('📹 Categorized cameras: ${_rearCameras.length} rear, ${_frontCamera != null ? '1' : '0'} front',
           name: 'VineCameraScreen', category: LogCategory.system);
 
+      // Log rear camera details for debugging zoom labels
+      for (var i = 0; i < _rearCameras.length; i++) {
+        final cam = _rearCameras[i];
+        Log.debug('📹 Rear camera $i: ${cam.name}, lensType: ${cam.lensType}',
+            name: 'VineCameraScreen', category: LogCategory.system);
+      }
+
       // Start with first rear camera (default is back camera)
       _currentRearCameraIndex = 0;
       _isFrontCamera = false;
@@ -649,23 +656,29 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
       return '1x';
     }
 
-    // Try to extract zoom info from camera name
+    // Use lensType property to determine zoom level
     final camera = _rearCameras[_currentRearCameraIndex];
-    final name = camera.name.toLowerCase();
 
-    // Common patterns for camera names
-    if (name.contains('ultra') || name.contains('0.5')) {
-      return '0.5x';
-    } else if (name.contains('telephoto') || name.contains('tele') || name.contains('3x')) {
-      return '3x';
-    } else if (name.contains('5x')) {
-      return '5x';
-    } else if (name.contains('wide') || name.contains('main') || name.contains('back')) {
-      return '1x';
+    switch (camera.lensType) {
+      case CameraLensType.ultraWide:
+        return '0.5x';
+      case CameraLensType.wide:
+        return '1x';
+      case CameraLensType.telephoto:
+        // For telephoto, check camera name for 5x vs 3x
+        final name = camera.name.toLowerCase();
+        if (name.contains('5x') || name.contains('periscope')) {
+          return '5x';
+        }
+        return '3x';
+      case CameraLensType.unknown:
+        // Fallback: try to parse from name
+        final name = camera.name.toLowerCase();
+        if (name.contains('ultra')) return '0.5x';
+        if (name.contains('tele') || name.contains('telephoto')) return '3x';
+        if (name.contains('5x')) return '5x';
+        return '1x';
     }
-
-    // Default to camera index + 1 if we can't determine
-    return '${_currentRearCameraIndex + 1}x';
   }
 
   @override
