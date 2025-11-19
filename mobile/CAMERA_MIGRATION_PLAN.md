@@ -37,6 +37,7 @@ These features can be added to the Stack WITHOUT touching the camera preview str
 **Action**: Keep as-is, but will need to enhance for mobile vs web behavior
 
 ### 1.4 Bottom Control Bar (PRIORITY: HIGH)
+**Status**: ❌ Not implemented (Cancel button present, but no gradient overlay, Publish button, or segment counter)
 **Add**: Gradient overlay with Cancel/Publish buttons and segment counter
 **Risk**: LOW - just Positioned widgets in Stack
 **Implementation**:
@@ -68,6 +69,7 @@ Positioned(
 ```
 
 ### 1.5 Camera Controls (Flash, Timer, Aspect Ratio) (PRIORITY: MEDIUM)
+**Status**: ✅ Partial - Flash and Switch Camera implemented, Timer and Aspect Ratio missing
 **Add**: Vertical button stack at top-right
 **Risk**: LOW - just Positioned widgets in Stack
 **Implementation**:
@@ -86,6 +88,7 @@ Positioned(
 ```
 
 ### 1.6 Switch Camera Button (PRIORITY: MEDIUM)
+**Status**: ✅ Implemented at top-right
 **Add**: In bottom control bar, right side
 **Risk**: LOW - just a button
 **Implementation**: Add to Row in bottom control bar
@@ -161,6 +164,7 @@ if (_aspectRatio == AspectRatio.square)
 ```
 
 ### 1.10 Tap-Anywhere-to-Record (PRIORITY: HIGH)
+**Status**: ✅ Implemented with onTapDown/onTapUp/onTapCancel
 **Add**: Full-screen GestureDetector for mobile recording
 **Risk**: LOW - wraps Stack but doesn't touch camera preview
 **Implementation**:
@@ -251,6 +255,7 @@ These change recording behavior but don't touch camera preview.
 - Concatenate on finish via FFmpeg
 
 ### 3.2 Web vs Mobile Recording Split (PRIORITY: HIGH)
+**Status**: ✅ Implemented (mobile: press-hold, web: tap toggle)
 **Current**: Simple tap toggle
 **Add**: Platform-specific behavior
 **Risk**: LOW - just conditional logic
@@ -283,6 +288,7 @@ Future<void> _startCountdownTimer() async {
 **Implementation**: Via Riverpod listener watching `remainingDuration`
 
 ### 3.5 Flash Control (PRIORITY: LOW)
+**Status**: ✅ Implemented (toggles between off → torch → off)
 **Add**: Toggle flash modes (off → torch → off)
 **Risk**: LOW - just calls controller.setFlashMode()
 **Implementation**:
@@ -295,6 +301,7 @@ Future<void> _toggleFlash() async {
 ```
 
 ### 3.6 Switch Camera (PRIORITY: MEDIUM)
+**Status**: ✅ Implemented with proper state management and recording stop
 **Add**: Flip between front/back cameras
 **Risk**: HIGH - requires reinitializing camera
 **Strategy**:
