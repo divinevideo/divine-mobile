@@ -1,7 +1,6 @@
 // ABOUTME: Main camera screen with orientation fix and full recording features
 // ABOUTME: Uses exact camera preview structure from experimental app to ensure proper orientation
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
@@ -23,6 +22,10 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
   FlashMode _flashMode = FlashMode.off;
   List<CameraDescription> _availableCameras = [];
   int _currentCameraIndex = 0;
+
+  // Focus indicator state
+  Offset? _focusPoint;
+  bool _showFocusIndicator = false;
 
   @override
   void initState() {
@@ -278,8 +281,8 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
     }
   }
 
-  // Web recording: toggle pattern
-  Future<void> _toggleRecordingWeb() async {
+  // Toggle recording: tap once to start, tap again to stop
+  Future<void> _toggleRecording() async {
     if (_isRecording) {
       await _stopRecording();
     } else {
@@ -287,12 +290,45 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
     }
   }
 
-  bool get _canRecord =>
-      _controller != null &&
-      _controller!.value.isInitialized &&
-      !_isRecording &&
-      !_isSwitchingCamera &&
-      mounted;
+  // Handle tap-to-focus
+  Future<void> _handleTapToFocus(TapDownDetails details) async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    try {
+      // Get the tap position relative to the screen
+      final RenderBox renderBox = context.findRenderObject() as RenderBox;
+      final tapPosition = details.localPosition;
+
+      // Convert to normalized coordinates (0.0 to 1.0)
+      final double x = tapPosition.dx / renderBox.size.width;
+      final double y = tapPosition.dy / renderBox.size.height;
+
+      // Set focus and exposure point
+      await _controller!.setFocusPoint(Offset(x, y));
+      await _controller!.setExposurePoint(Offset(x, y));
+
+      // Show focus indicator
+      setState(() {
+        _focusPoint = tapPosition;
+        _showFocusIndicator = true;
+      });
+
+      Log.debug('📹 Focus set to: ($x, $y)',
+          name: 'VineCameraScreen', category: LogCategory.system);
+
+      // Hide focus indicator after 2 seconds
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _showFocusIndicator = false;
+          });
+        }
+      });
+    } catch (e) {
+      Log.error('📹 Failed to set focus: $e',
+          name: 'VineCameraScreen', category: LogCategory.system);
+    }
+  }
 
   // Toggle flash mode: off → torch → off
   Future<void> _toggleFlash() async {
@@ -475,10 +511,8 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
-        // Mobile: press-hold to record (tap down = start, tap up = stop)
-        onTapDown: !kIsWeb && _canRecord ? (_) => _startRecording() : null,
-        onTapUp: !kIsWeb && _isRecording ? (_) => _stopRecording() : null,
-        onTapCancel: !kIsWeb && _isRecording ? () => _stopRecording() : null,
+        // Tap anywhere to focus camera
+        onTapDown: (details) => _handleTapToFocus(details),
         behavior: HitTestBehavior.translucent,
         child: Stack(
           fit: StackFit.expand,
@@ -549,36 +583,50 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
             ),
           ),
 
-          // Recording button at the bottom (visible on web, hidden on mobile)
-          if (kIsWeb)
-            Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: GestureDetector(
-                  onTap: _toggleRecordingWeb,
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _isRecording ? Colors.red : Colors.white,
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 4,
-                      ),
+          // Recording button at the bottom center
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: GestureDetector(
+                onTap: _toggleRecording,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _isRecording ? Colors.red : Colors.white,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 4,
                     ),
-                    child: _isRecording
-                        ? const Center(
-                            child: Icon(
-                              Icons.stop,
-                              color: Colors.white,
-                              size: 40,
-                            ),
-                          )
-                        : null,
                   ),
+                  child: _isRecording
+                      ? const Center(
+                          child: Icon(
+                            Icons.stop,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+            ),
+          ),
+
+          // Focus indicator
+          if (_showFocusIndicator && _focusPoint != null)
+            Positioned(
+              left: _focusPoint!.dx - 40,
+              top: _focusPoint!.dy - 40,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.yellow, width: 2),
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
             ),
@@ -622,43 +670,6 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
               ),
             ),
 
-          // Bottom control bar with gradient
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 120,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.8),
-                  ],
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Cancel button (X)
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white, size: 32),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    // Center space for recording button (mobile) or info
-                    const SizedBox(width: 80),
-                    // Placeholder for future Publish button
-                    const SizedBox(width: 48),
-                  ],
-                ),
-              ),
-            ),
-          ),
           ],
         ), // End of Stack
       ), // End of GestureDetector
