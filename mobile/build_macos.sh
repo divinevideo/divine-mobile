@@ -18,6 +18,10 @@ echo "✅ Camera permissions reset (will need to re-grant on first launch)"
 echo "📦 Getting Flutter dependencies..."
 flutter pub get
 
+# Generate code (Riverpod providers, Freezed models, etc.)
+echo "🔧 Generating code with build_runner..."
+dart run build_runner build --delete-conflicting-outputs
+
 # Navigate to macOS directory and install CocoaPods
 echo "🏗️  Installing CocoaPods dependencies..."
 cd macos
