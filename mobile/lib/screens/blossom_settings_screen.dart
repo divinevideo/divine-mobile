@@ -64,7 +64,7 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
       if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please enter a valid server URL (e.g., https://blossom.divine.video)'),
+            content: Text('Please enter a valid server URL (e.g., https://blossom.band)'),
             backgroundColor: Colors.red,
           ),
         );
@@ -91,7 +91,7 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Blossom settings saved'),
+            content: Text('Blossom settings saved', style: TextStyle(color: Colors.white)),
             backgroundColor: VineTheme.vineGreen,
           ),
         );
@@ -149,13 +149,13 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
-                      color: VineTheme.vineGreen,
+                      color: Colors.white,
                       strokeWidth: 2,
                     ),
                   )
                 : const Text(
                     'Save',
-                    style: TextStyle(color: VineTheme.vineGreen),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
           ),
         ],
@@ -198,7 +198,7 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
                   const SizedBox(height: 12),
                   Text(
                     'Blossom is a decentralized media storage protocol that allows you to upload videos to any compatible server. '
-                    'When enabled, your videos will be uploaded to your chosen Blossom server instead of Divine\'s default storage.',
+                    'By default, videos are uploaded to diVine\'s Blossom server. Enable the option below to use a custom server instead.',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha:0.8),
                       fontSize: 14,
@@ -213,23 +213,19 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
           // Enable/Disable toggle
           SwitchListTile(
             title: const Text(
-              'Use Blossom Upload',
+              'Use Custom Blossom Server',
               style: TextStyle(color: Colors.white, fontSize: 16),
             ),
             subtitle: Text(
               _isBlossomEnabled
-                  ? 'Videos will be uploaded to your Blossom server'
-                  : 'Videos will be uploaded to Divine\'s servers',
+                  ? 'Videos will be uploaded to your custom Blossom server'
+                  : 'Your videos are currently being uploaded to diVine\'s Blossom server',
               style: TextStyle(color: Colors.white.withValues(alpha:0.6)),
             ),
             value: _isBlossomEnabled,
             onChanged: (value) {
               setState(() {
                 _isBlossomEnabled = value;
-                // Set default server to diVine Blossom when enabling for the first time
-                if (value && _serverController.text.isEmpty) {
-                  _serverController.text = 'https://blossom.divine.video';
-                }
               });
             },
             activeThumbColor: VineTheme.vineGreen,
@@ -238,15 +234,13 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Server URL input
-          AnimatedOpacity(
-            opacity: _isBlossomEnabled ? 1.0 : 0.5,
-            duration: const Duration(milliseconds: 300),
-            child: Column(
+          // Server URL input (only shown when custom server is enabled)
+          if (_isBlossomEnabled) ...[
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Blossom Server URL',
+                  'Custom Blossom Server URL',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -256,10 +250,9 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
                 const SizedBox(height: 8),
                 TextField(
                   controller: _serverController,
-                  enabled: _isBlossomEnabled,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: 'https://blossom.divine.video',
+                    hintText: 'https://blossom.band',
                     hintStyle: TextStyle(color: Colors.white.withValues(alpha:0.4)),
                     filled: true,
                     fillColor: Colors.white.withValues(alpha:0.1),
@@ -281,12 +274,6 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
                         color: VineTheme.vineGreen,
                       ),
                     ),
-                    disabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: Colors.grey.withValues(alpha:0.3),
-                      ),
-                    ),
                     prefixIcon: const Icon(
                       Icons.cloud_upload,
                       color: VineTheme.vineGreen,
@@ -297,7 +284,7 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Enter the URL of your Blossom server',
+                  'Enter the URL of your custom Blossom server',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha:0.6),
                     fontSize: 12,
@@ -305,11 +292,9 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 30),
+            const SizedBox(height: 30),
 
-          // Popular Blossom servers section
-          if (_isBlossomEnabled) ...[
+            // Popular Blossom servers section
             const Text(
               'Popular Blossom Servers',
               style: TextStyle(
@@ -319,7 +304,6 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildServerOption('https://blossom.divine.video', 'diVine Blossom (Default)'),
             _buildServerOption('https://blossom.band', 'Blossom Band'),
             _buildServerOption('https://cdn.satellite.earth', 'Satellite Earth'),
             _buildServerOption('https://blossom.primal.net', 'Primal'),

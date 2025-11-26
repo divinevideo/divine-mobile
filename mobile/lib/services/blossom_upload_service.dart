@@ -79,10 +79,12 @@ class BlossomUploadService {
     }
   }
   
-  /// Check if Blossom upload is enabled
+  /// Check if custom Blossom server is enabled
+  /// When false (default), uploads go to diVine's Blossom server
+  /// When true, uploads go to the user's custom configured server
   Future<bool> isBlossomEnabled() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_useBlossomKey) ?? true; // Default to true
+    return prefs.getBool(_useBlossomKey) ?? false; // Default to false (use diVine's server)
   }
   
   /// Enable or disable Blossom upload
@@ -161,23 +163,26 @@ class BlossomUploadService {
     await PerformanceMonitoringService.instance.startTrace('video_upload');
 
     try {
-      // Check if Blossom is enabled and configured
-      final isEnabled = await isBlossomEnabled();
-      if (!isEnabled) {
-        return BlossomUploadResult(
-          success: false,
-          errorMessage: 'Blossom upload is not enabled',
-        );
+      // Determine which server to use
+      // If custom server is enabled, use the configured server
+      // Otherwise, use the default diVine Blossom server
+      final isCustomServerEnabled = await isBlossomEnabled();
+      String serverUrl;
+
+      if (isCustomServerEnabled) {
+        final customServerUrl = await getBlossomServer();
+        if (customServerUrl == null || customServerUrl.isEmpty) {
+          return BlossomUploadResult(
+            success: false,
+            errorMessage: 'Custom Blossom server enabled but not configured',
+          );
+        }
+        serverUrl = customServerUrl;
+      } else {
+        // Use default diVine Blossom server
+        serverUrl = 'https://blossom.divine.video';
       }
-      
-      final serverUrl = await getBlossomServer();
-      if (serverUrl == null || serverUrl.isEmpty) {
-        return BlossomUploadResult(
-          success: false,
-          errorMessage: 'No Blossom server configured',
-        );
-      }
-      
+
       // Parse and validate server URL
       final uri = Uri.tryParse(serverUrl);
       if (uri == null) {
@@ -241,7 +246,7 @@ class BlossomUploadService {
       // Create Blossom auth event (kind 24242)
       final authEvent = await _createBlossomAuthEvent(
         url: '$serverUrl/upload',
-        method: 'POST',
+        method: 'PUT',
         fileHash: fileHash,
         fileSize: fileSize,
       );
@@ -267,15 +272,15 @@ class BlossomUploadService {
         _addProofModeHeaders(headers, proofManifestJson);
       }
 
-      Log.info('Sending POST request with raw bytes',
+      Log.info('Sending PUT request with raw bytes',
           name: 'BlossomUploadService', category: LogCategory.video);
       Log.info('  URL: $serverUrl/upload',
           name: 'BlossomUploadService', category: LogCategory.video);
       Log.info('  File size: $fileSize bytes',
           name: 'BlossomUploadService', category: LogCategory.video);
 
-      // POST request with raw bytes (Blossom spec - NOT multipart/form-data)
-      final response = await dio.post(
+      // PUT request with raw bytes (Blossom BUD-01 spec)
+      final response = await dio.put(
         '$serverUrl/upload',
         data: fileBytes,
         options: Options(
@@ -437,21 +442,21 @@ class BlossomUploadService {
     void Function(double)? onProgress,
   }) async {
     try {
-      // Check if Blossom is enabled and configured
-      final isEnabled = await isBlossomEnabled();
-      if (!isEnabled) {
-        return BlossomUploadResult(
-          success: false,
-          errorMessage: 'Blossom upload is not enabled',
-        );
-      }
+      // Determine which server to use
+      final isCustomServerEnabled = await isBlossomEnabled();
+      String serverUrl;
 
-      final serverUrl = await getBlossomServer();
-      if (serverUrl == null || serverUrl.isEmpty) {
-        return BlossomUploadResult(
-          success: false,
-          errorMessage: 'No Blossom server configured',
-        );
+      if (isCustomServerEnabled) {
+        final customServerUrl = await getBlossomServer();
+        if (customServerUrl == null || customServerUrl.isEmpty) {
+          return BlossomUploadResult(
+            success: false,
+            errorMessage: 'Custom Blossom server enabled but not configured',
+          );
+        }
+        serverUrl = customServerUrl;
+      } else {
+        serverUrl = 'https://blossom.divine.video';
       }
 
       // Parse and validate server URL
@@ -488,7 +493,7 @@ class BlossomUploadService {
       // Create Blossom auth event
       final authEvent = await _createBlossomAuthEvent(
         url: '$serverUrl/upload',
-        method: 'POST',
+        method: 'PUT',
         fileHash: fileHash,
         fileSize: fileSize,
       );
@@ -504,11 +509,11 @@ class BlossomUploadService {
       final authEventJson = jsonEncode(authEvent.toJson());
       final authHeader = 'Nostr ${base64.encode(utf8.encode(authEventJson))}';
 
-      Log.info('📤 Blossom Image Upload: POST with raw bytes to $serverUrl/upload',
+      Log.info('📤 Blossom Image Upload: PUT with raw bytes to $serverUrl/upload',
           name: 'BlossomUploadService', category: LogCategory.video);
 
-      // Blossom spec: POST with raw bytes (NOT multipart/form-data)
-      final response = await dio.post(
+      // Blossom BUD-01 spec: PUT with raw bytes
+      final response = await dio.put(
         '$serverUrl/upload',
         data: fileBytes,
         options: Options(
@@ -653,19 +658,20 @@ class BlossomUploadService {
     void Function(double)? onProgress,
   }) async {
     try {
-      // Check if Blossom is enabled and configured
-      final isEnabled = await isBlossomEnabled();
-      if (!isEnabled) {
-        Log.error('Blossom upload is not enabled',
-            name: 'BlossomUploadService', category: LogCategory.system);
-        return null;
-      }
+      // Determine which server to use
+      final isCustomServerEnabled = await isBlossomEnabled();
+      String serverUrl;
 
-      final serverUrl = await getBlossomServer();
-      if (serverUrl == null || serverUrl.isEmpty) {
-        Log.error('No Blossom server configured',
-            name: 'BlossomUploadService', category: LogCategory.system);
-        return null;
+      if (isCustomServerEnabled) {
+        final customServerUrl = await getBlossomServer();
+        if (customServerUrl == null || customServerUrl.isEmpty) {
+          Log.error('Custom Blossom server enabled but not configured',
+              name: 'BlossomUploadService', category: LogCategory.system);
+          return null;
+        }
+        serverUrl = customServerUrl;
+      } else {
+        serverUrl = 'https://blossom.divine.video';
       }
 
       // Parse and validate server URL
@@ -702,7 +708,7 @@ class BlossomUploadService {
       // Create Blossom auth event (kind 24242)
       final authEvent = await _createBlossomAuthEvent(
         url: '$serverUrl/upload',
-        method: 'POST',
+        method: 'PUT',
         fileHash: fileHash,
         fileSize: fileSize,
         contentDescription: 'Upload bug report to Blossom server',
@@ -723,15 +729,15 @@ class BlossomUploadService {
         'Content-Type': 'text/plain', // Bug reports are plain text
       };
 
-      Log.info('Sending POST request for bug report',
+      Log.info('Sending PUT request for bug report',
           name: 'BlossomUploadService', category: LogCategory.system);
       Log.info('  URL: $serverUrl/upload',
           name: 'BlossomUploadService', category: LogCategory.system);
       Log.info('  File size: $fileSize bytes',
           name: 'BlossomUploadService', category: LogCategory.system);
 
-      // POST request with raw bytes (Blossom spec)
-      final response = await dio.post(
+      // PUT request with raw bytes (BUD-01 spec requires PUT for uploads)
+      final response = await dio.put(
         '$serverUrl/upload',
         data: fileBytes,
         options: Options(

@@ -574,18 +574,23 @@ class UploadManager {
       Log.info('🌸 Using Blossom upload service',
           name: 'UploadManager', category: LogCategory.video);
 
-      final isBlossomEnabled = await _blossomService.isBlossomEnabled();
-      if (!isBlossomEnabled) {
-        throw Exception('Blossom upload is disabled. Please configure Blossom server in settings.');
-      }
+      // Check if custom server is enabled, otherwise use default diVine server
+      final isCustomServerEnabled = await _blossomService.isBlossomEnabled();
+      String blossomServer;
 
-      final blossomServer = await _blossomService.getBlossomServer();
-      if (blossomServer == null || blossomServer.isEmpty) {
-        throw Exception('No Blossom server configured. Please configure Blossom server in settings.');
+      if (isCustomServerEnabled) {
+        final customServer = await _blossomService.getBlossomServer();
+        if (customServer == null || customServer.isEmpty) {
+          throw Exception('Custom Blossom server enabled but not configured. Please configure a server in settings.');
+        }
+        blossomServer = customServer;
+        Log.info('🌸 Uploading to custom Blossom server: $blossomServer',
+            name: 'UploadManager', category: LogCategory.video);
+      } else {
+        blossomServer = 'https://blossom.divine.video';
+        Log.info('🌸 Uploading to default diVine Blossom server: $blossomServer',
+            name: 'UploadManager', category: LogCategory.video);
       }
-
-      Log.info('🌸 Uploading to Blossom server: $blossomServer',
-          name: 'UploadManager', category: LogCategory.video);
 
       final result = await _blossomService.uploadVideo(
         videoFile: videoFile,
