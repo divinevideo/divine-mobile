@@ -64,7 +64,7 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
       if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please enter a valid server URL (e.g., https://blossom.band)'),
+            content: Text('Please enter a valid server URL (e.g., https://blossom.divine.video)'),
             backgroundColor: Colors.red,
           ),
         );
@@ -226,9 +226,9 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
             onChanged: (value) {
               setState(() {
                 _isBlossomEnabled = value;
-                // Set default server to blossom.band when enabling for the first time
+                // Set default server to diVine Blossom when enabling for the first time
                 if (value && _serverController.text.isEmpty) {
-                  _serverController.text = 'https://blossom.band';
+                  _serverController.text = 'https://blossom.divine.video';
                 }
               });
             },
@@ -259,7 +259,7 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
                   enabled: _isBlossomEnabled,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: 'https://blossom.band',
+                    hintText: 'https://blossom.divine.video',
                     hintStyle: TextStyle(color: Colors.white.withValues(alpha:0.4)),
                     filled: true,
                     fillColor: Colors.white.withValues(alpha:0.1),
@@ -319,12 +319,12 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildServerOption('https://blossom.band', 'Blossom Band (Default)'),
+            _buildServerOption('https://blossom.divine.video', 'diVine Blossom (Default)'),
+            _buildServerOption('https://blossom.band', 'Blossom Band'),
             _buildServerOption('https://cdn.satellite.earth', 'Satellite Earth'),
             _buildServerOption('https://blossom.primal.net', 'Primal'),
-            _buildServerOption('https://media.nostr.band', 'Nostr.band'),
-            _buildServerOption('https://nostr.build', 'Nostr.build'),
-            _buildServerOption('https://void.cat', 'Void.cat'),
+            _buildServerOption('https://nostr.download', 'Nostr Download'),
+            _buildServerOption('https://cdn.nostrcheck.me', 'NostrCheck'),
           ],
         ],
           ),
