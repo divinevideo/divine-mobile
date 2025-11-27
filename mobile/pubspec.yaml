@@ -195,6 +195,7 @@ flutter:
     - assets/icon/Black on white.png
     - assets/icon/Green on ivory.png
     - assets/icon/divine_icon_transparent.png
+    - assets/icon/divine_wordmark.png
     - assets/icon/user-avatar.png
     - assets/seed_data/seed_events.sql
     - assets/seed_media/manifest.json
