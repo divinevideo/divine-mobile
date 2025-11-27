@@ -4,19 +4,31 @@ title: "fix: "
 labels: ["bug"]
 body:
   - type: textarea
-    id: description
+    id: summary
     attributes:
-      label: Description
-      description: A clear and concise description of what the bug is.
-      placeholder: "Describe the bug."
+      label: Summary
+      description: One sentence about what's broken
+      placeholder: "Example: Video upload fails when recording exceeds 10 seconds"
     validations:
       required: true
 
   - type: textarea
-    id: setps-to-reproduce
+    id: environment
     attributes:
-      label: Steps To Reproduce
-      description: A set of instructions, step by step, explaining how to reproduce the bug.
+      label: Environment
+      description: App version, OS/device, network conditions
+      placeholder: |
+        App version: 1.2.3
+        Device: iPhone 14 Pro, iOS 17.1
+        Network: WiFi / Cellular
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Clear numbered steps to reproduce the issue
       placeholder: |
         1. Go to '...'
         2. Click on '....'
@@ -26,17 +38,38 @@ body:
       required: true
 
   - type: textarea
-    id: expected-behavior
+    id: actual-result
     attributes:
-      label: Expected Behavior
-      description: A clear and concise description of what you expected to happen.
-      placeholder: "Describe what you expected to happen."
+      label: Actual Result
+      description: What actually happened
+      placeholder: "Describe what you observed happening."
     validations:
       required: true
 
   - type: textarea
-    id: additional-context
+    id: expected-result
     attributes:
-      label: Additional Context
-      description: Add any other context, including links/screenshots/video recordings/etc about the problem here, OS version, etc.
-      placeholder: "Provide context here."
+      label: Expected Result
+      description: What you expected to happen
+      placeholder: "Describe what you expected to happen."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Regression?
+      description: Did this work in a previous version?
+      options:
+        - "Yes"
+        - "No"
+        - "Unknown"
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Screenshots, screen recordings, logs, crash reports, etc.
+      placeholder: "Attach or link to evidence here (videos, screenshots, logs, etc.)"
