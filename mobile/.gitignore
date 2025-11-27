@@ -67,10 +67,6 @@ flutter_*.log
 .worktrees/
 android/play-store-service-account.json
 
-# Generated files from build_runner, freezed, and mockito
-*.g.dart
-*.freezed.dart
-*.mocks.dart
 
 # Environment variables (secrets)
 .env
