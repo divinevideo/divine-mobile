@@ -142,7 +142,8 @@ node_modules/
 logs/
 
 # IDE files
-.vscode/
+!*/.vscode/launch.json
+*/.vscode/*
 .idea/
 *.swp
 *.swo
