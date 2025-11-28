@@ -4,10 +4,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class KeyImportScreen extends ConsumerStatefulWidget {
   const KeyImportScreen({super.key});
@@ -266,12 +267,12 @@ class _KeyImportScreenState extends ConsumerState<KeyImportScreen> {
         // Clear the text field for security
         _keyController.clear();
 
-        // Navigate to profile setup
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const ProfileSetupScreen(isNewUser: false),
-          ),
-        );
+        // Set age verified to avoid redirect to welcome screen
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('age_verified_16_plus', true);
+
+        // Navigate to home
+        context.go('/home/0');
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
