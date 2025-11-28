@@ -127,19 +127,33 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
       final videoEventService = ref.read(videoEventServiceProvider);
       final videos = videoEventService.discoveryVideos;
 
+      final profileService = ref.read(userProfileServiceProvider);
+
       Log.debug('🔍 SearchScreenPure: Filtering ${videos.length} cached videos', category: LogCategory.video);
+
+      final users = <String>{};
+
+      // Find user profiles for matching the query
+      final matchingProfilesKeys = profileService.allProfiles.values.where((profile) {
+        final displayNameMatch = profile.bestDisplayName.toLowerCase().contains(query.toLowerCase());
+        return displayNameMatch;
+      })
+      .map((profile) => profile.pubkey)
+      .toList();
+
+      users.addAll(matchingProfilesKeys.toList());
 
       // Filter local videos based on search query
       final filteredVideos = videos.where((video) {
         final titleMatch = video.title?.toLowerCase().contains(query.toLowerCase()) ?? false;
         final contentMatch = video.content.toLowerCase().contains(query.toLowerCase());
         final hashtagMatch = video.hashtags.any((tag) => tag.toLowerCase().contains(query.toLowerCase()));
+
         return titleMatch || contentMatch || hashtagMatch;
       }).toList();
 
       // Extract unique hashtags and users from local results
       final hashtags = <String>{};
-      final users = <String>{};
 
       for (final video in filteredVideos) {
         for (final tag in video.hashtags) {
@@ -216,7 +230,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
 
       // Extract all unique hashtags and users from combined results
       final allHashtags = <String>{};
-      final allUsers = <String>{};
+      final allUsers = <String>{..._userResults};
 
       for (final video in uniqueVideos) {
         for (final tag in video.hashtags) {
