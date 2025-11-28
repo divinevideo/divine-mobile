@@ -16,7 +16,19 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(git push:*)",
-      "Bash(adb uninstall:*)"
+      "Bash(adb uninstall:*)",
+      "Bash(pod --version:*)",
+      "Bash(gem list:*)",
+      "Bash(ruby --version:*)",
+      "Bash(rbenv versions:*)",
+      "Bash(rbenv global:*)",
+      "Bash(rbenv rehash:*)",
+      "Bash(gem install:*)",
+      "Bash(rbenv install:*)",
+      "Bash(brew update:*)",
+      "Bash(brew upgrade:*)",
+      "Bash(pod install:*)",
+      "Bash(xcrun simctl:*)"
     ],
     "deny": [],
     "ask": []
