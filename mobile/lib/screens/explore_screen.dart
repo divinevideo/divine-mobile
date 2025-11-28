@@ -23,6 +23,7 @@ import 'package:openvine/services/error_analytics_tracker.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/trending_hashtags_section.dart';
 import 'package:openvine/widgets/list_card.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
@@ -1035,85 +1036,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   }
 
   Widget _buildTrendingTabWithHashtags(List<VideoEvent> videos) {
+    final hashtags = TopHashtagsService.instance.getTopHashtags(limit: 20);
+
     return Column(
       children: [
-        // Hashtag navigation section
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Trending Hashtags',
-                  style: TextStyle(
-                    color: VineTheme.primaryText,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 28,
-                child: Builder(
-                  builder: (context) {
-                    final hashtags = TopHashtagsService.instance.getTopHashtags(limit: 20);
-
-                    if (hashtags.isEmpty) {
-                      // Show placeholder while loading
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'Loading hashtags...',
-                          style: TextStyle(
-                            color: VineTheme.secondaryText,
-                            fontSize: 14,
-                          ),
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: hashtags.length,
-                      itemBuilder: (context, index) {
-                        final hashtag = hashtags[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () {
-                          context.goHashtag(hashtag);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12.8),
-                          decoration: BoxDecoration(
-                            color: VineTheme.cardBackground,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '#$hashtag',
-                              style: const TextStyle(
-                                color: VineTheme.vineGreen,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                height: 1.0,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+        TrendingHashtagsSection(
+          hashtags: hashtags,
+          isLoading: !TopHashtagsService.instance.isLoaded,
         ),
         // Videos grid
         Expanded(
