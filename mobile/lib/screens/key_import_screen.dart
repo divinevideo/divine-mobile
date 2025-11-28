@@ -120,7 +120,6 @@ class _KeyImportScreenState extends ConsumerState<KeyImportScreen> {
 
                       return null;
                     },
-                    maxLines: 3,
                     minLines: 1,
                   ),
                   const SizedBox(height: 24),
