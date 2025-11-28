@@ -45,62 +45,14 @@ git clone https://github.com/your-org/openvine.git
 cd openvine
 ```
 
-### 2. Set Up Flutter Embedded Nostr Relay
-
-**CRITICAL**: diVine uses a custom embedded Nostr relay that runs inside the Flutter app. This must be set up as a local dependency via symlink.
-
-#### Clone the Embedded Relay Repository
-
-```bash
-# Clone the embedded relay repository (adjust path as needed)
-cd ..  # Go to parent directory of openvine
-git clone https://github.com/your-org/flutter_embedded_nostr_relay.git
-```
-
-#### Create the Symlink
-
-**Option A: Symlink from Parent Directory (Recommended)**
-```bash
-# From the parent directory containing both repos
-cd openvine  # Return to openvine directory
-cd ..  # Go back to parent
-ln -s flutter_embedded_nostr_relay flutter_embedded_nostr_relay
-```
-
-**Option B: Adjust pubspec.yaml Path**
-If you prefer a different directory structure, update `mobile/pubspec.yaml`:
-```yaml
-flutter_embedded_nostr_relay:
-  path: /absolute/path/to/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay
-```
-
-#### Verify the Setup
-
-```bash
-# Check that the symlink or path exists
-ls -la flutter_embedded_nostr_relay
-# Should show the flutter_embedded_nostr_relay directory contents
-
-# Expected structure:
-# flutter_embedded_nostr_relay/
-# ├── flutter_embedded_nostr_relay/  (the actual package)
-# ├── README.md
-# └── ...
-```
-
-### 3. Install Flutter Dependencies
+### 2. Install Flutter Dependencies
 
 ```bash
 cd openvine/mobile
 flutter pub get
 ```
 
-If you see errors about `flutter_embedded_nostr_relay` not found, verify:
-1. The symlink exists and points to the correct location
-2. The path in `mobile/pubspec.yaml` is correct
-3. The embedded relay repo has been cloned
-
-### 4. Install Backend Dependencies (Optional)
+### 3. Install Backend Dependencies (Optional)
 
 ```bash
 cd ../backend
