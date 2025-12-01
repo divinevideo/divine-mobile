@@ -35,7 +35,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       loading: () => AuthState.checking,
       error: (_, __) => AuthState.unauthenticated,
     );
-    final isAuthenticated = authState == AuthState.authenticated;
 
     return Scaffold(
         body: Container(
@@ -114,127 +113,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 const SizedBox(height: 32),
 
                 // Main action buttons - show based on auth state
-                if (authState == AuthState.checking || authState == AuthState.authenticating)
-                  // Show loading indicator during auth checking or creation
-                  const Center(
-                    child: CircularProgressIndicator(
-                      color: VineTheme.vineGreen,
-                    ),
-                  )
-                else if (isAuthenticated)
-                  // If already authenticated, just show Continue button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _canProceed && !_isAccepting
-                          ? () => _handleContinue(context, true)
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: VineTheme.vineGreen,
-                        disabledBackgroundColor: Colors.white.withValues(alpha: 0.7),
-                        disabledForegroundColor: VineTheme.vineGreen.withValues(alpha: 0.7),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isAccepting
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: VineTheme.vineGreen,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              _canProceed ? 'Continue' : 'Accept Terms to Continue',
-                              style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w600),
-                            ),
-                    ),
-                  )
-                else if (authService.lastError != null)
-                  // If there's an error (e.g., auto-creation failed), show error message
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red),
-                    ),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          color: Colors.red,
-                          size: 48,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Setup Error',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          authService.lastError!,
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Please restart the app. If the problem persists, contact support.',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  // Unauthenticated with no error - show Get Started button to create new account
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _canProceed && !_isAccepting
-                          ? () => _handleContinue(context, false)
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: VineTheme.vineGreen,
-                        disabledBackgroundColor: Colors.white.withValues(alpha: 0.7),
-                        disabledForegroundColor: VineTheme.vineGreen.withValues(alpha: 0.7),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isAccepting
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: VineTheme.vineGreen,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              _canProceed ? 'Get Started' : 'Accept Terms to Continue',
-                              style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w600),
-                            ),
-                    ),
-                  ),
+                _WelcomeActionSection(
+                  authState: authState,
+                  lastError: authService.lastError,
+                  canProceed: _canProceed,
+                  isAccepting: _isAccepting,
+                  onContinue: (isAuthenticated) => _handleContinue(context, isAuthenticated),
+                ),
                 ],
               ),
             ),
@@ -280,6 +165,158 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         setState(() => _isAccepting = false);
       }
     }
+  }
+}
+
+class _WelcomeActionSection extends StatelessWidget {
+  const _WelcomeActionSection({
+    required this.authState,
+    required this.lastError,
+    required this.canProceed,
+    required this.isAccepting,
+    required this.onContinue,
+  });
+
+  final AuthState authState;
+  final String? lastError;
+  final bool canProceed;
+  final bool isAccepting;
+  final void Function(bool isAuthenticated) onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    if (authState == AuthState.checking || authState == AuthState.authenticating) {
+      return const _LoadingIndicator();
+    }
+
+    if (lastError != null) {
+      return _ErrorMessage(error: lastError!);
+    }
+
+    final isAuthenticated = authState == AuthState.authenticated;
+    return _ActionButton(
+      label: isAuthenticated ? 'Continue' : 'Get Started',
+      enabled: canProceed && !isAccepting,
+      isLoading: isAccepting,
+      onPressed: () => onContinue(isAuthenticated),
+    );
+  }
+}
+
+class _LoadingIndicator extends StatelessWidget {
+  const _LoadingIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: CircularProgressIndicator(
+        color: VineTheme.vineGreen,
+      ),
+    );
+  }
+}
+
+class _ErrorMessage extends StatelessWidget {
+  const _ErrorMessage({required this.error});
+
+  final String error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.error_outline,
+            color: Colors.red,
+            size: 48,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Setup Error',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Please restart the app. If the problem persists, contact support.',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    required this.enabled,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool enabled;
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: enabled ? onPressed : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: VineTheme.vineGreen,
+          disabledBackgroundColor: Colors.white.withValues(alpha: 0.7),
+          disabledForegroundColor: VineTheme.vineGreen.withValues(alpha: 0.7),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  color: VineTheme.vineGreen,
+                  strokeWidth: 2,
+                ),
+              )
+            : Text(
+                enabled ? label : 'Accept Terms to Continue',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+      ),
+    );
   }
 }
 
