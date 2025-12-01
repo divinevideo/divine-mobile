@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 
@@ -118,7 +117,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   lastError: authService.lastError,
                   canProceed: _canProceed,
                   isAccepting: _isAccepting,
-                  onContinue: (isAuthenticated) => _handleContinue(context, isAuthenticated),
+                  onContinue: () => _handleContinue(context),
                 ),
                 ],
               ),
@@ -132,25 +131,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   bool get _canProceed => _isOver16 && _agreedToTerms;
 
-  Future<void> _storeTermsAcceptance() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('terms_accepted_at', DateTime.now().toIso8601String());
-    await prefs.setBool('age_verified_16_plus', true);
-  }
-
-  Future<void> _handleContinue(BuildContext context, bool isAuthenticated) async {
+  Future<void> _handleContinue(BuildContext context) async {
     setState(() => _isAccepting = true);
 
     try {
-      // Store terms acceptance
-      await _storeTermsAcceptance();
-
-      // Create new account if not authenticated
-      if (!isAuthenticated) {
-        final authService = ref.read(authServiceProvider);
-        await authService.createNewIdentity();
-      }
-      // Router will redirect to home when auth state is authenticated and TOS accepted
+      final authService = ref.read(authServiceProvider);
+      // Accept TOS - this transitions auth state from awaitingTosAcceptance to authenticated
+      // Router will automatically redirect to /explore when state changes
+      await authService.acceptTermsOfService();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -181,7 +169,7 @@ class _WelcomeActionSection extends StatelessWidget {
   final String? lastError;
   final bool canProceed;
   final bool isAccepting;
-  final void Function(bool isAuthenticated) onContinue;
+  final VoidCallback onContinue;
 
   @override
   Widget build(BuildContext context) {
@@ -193,11 +181,10 @@ class _WelcomeActionSection extends StatelessWidget {
       return _ErrorMessage(error: lastError!);
     }
 
-    final isAuthenticated = authState == AuthState.authenticated;
     return _ActionButton(
       enabled: canProceed && !isAccepting,
       isLoading: isAccepting,
-      onPressed: () => onContinue(isAuthenticated),
+      onPressed: onContinue,
     );
   }
 }

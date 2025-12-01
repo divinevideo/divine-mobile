@@ -1290,8 +1290,9 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
                 ),
               ),
             );
+          case AuthState.awaitingTosAcceptance:
           case AuthState.authenticated:
-            // TODO(PR8): Router handles navigation now, AppInitializer just signals ready
+            // Router handles navigation - shows welcome screen for TOS or main app
             return const Scaffold(
               body: Center(
                 child: CircularProgressIndicator(),

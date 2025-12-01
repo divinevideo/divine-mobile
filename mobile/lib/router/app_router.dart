@@ -63,6 +63,7 @@ int tabIndexFromLocation(String loc) {
     case 'edit-profile':
     case 'setup-profile':
     case 'import-key':
+    case 'welcome':
     case 'camera':
     case 'drafts':
     case 'followers':
@@ -136,41 +137,27 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       VideoStopNavigatorObserver(),
       FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
     ],
-    // Refresh router when auth state changes (e.g., logout)
+    // Refresh router when auth state changes
     refreshListenable: authListenable,
     redirect: (context, state) async {
       final location = state.matchedLocation;
-      final prefs = await SharedPreferences.getInstance();
+      final authService = ref.read(authServiceProvider);
+      final currentAuthState = authService.authState;
 
-      // Check TOS acceptance first (before any other routes except /welcome)
+      // Redirect to /welcome if not yet authenticated
+      // This includes: unauthenticated, awaitingTosAcceptance, checking, authenticating
       if (!location.startsWith('/welcome') &&
           !location.startsWith('/import-key')) {
-        final hasAcceptedTerms = prefs.getBool('age_verified_16_plus') ?? false;
-
-        if (!hasAcceptedTerms) {
+        if (currentAuthState != AuthState.authenticated) {
+          debugPrint('[Router] Auth state is $currentAuthState, redirecting to /welcome');
           return '/welcome';
         }
       }
 
-      // Check auth state - redirect to welcome if not authenticated
-      // This handles logout from anywhere in the app
-      if (!location.startsWith('/welcome') &&
-          !location.startsWith('/import-key')) {
-        final authService = ref.read(authServiceProvider);
-        if (authService.authState == AuthState.unauthenticated) {
-          debugPrint('[Router] User is unauthenticated, redirecting to /welcome');
-          return '/welcome';
-        }
-      }
-
-      // Redirect FROM welcome TO explore when authenticated and TOS accepted
-      // This handles the case after account creation on the welcome screen
-      // New users have no following list, so we send them to explore directly
+      // Redirect FROM /welcome TO /explore when fully authenticated
       if (location.startsWith('/welcome')) {
-        final authService = ref.read(authServiceProvider);
-        final hasAcceptedTerms = prefs.getBool('age_verified_16_plus') ?? false;
-        if (authService.authState == AuthState.authenticated && hasAcceptedTerms) {
-          debugPrint('[Router] User is authenticated with TOS accepted, redirecting from /welcome to /explore');
+        if (currentAuthState == AuthState.authenticated) {
+          debugPrint('[Router] User is authenticated, redirecting from /welcome to /explore');
           return '/explore';
         }
       }
@@ -182,6 +169,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
         // Check SharedPreferences cache directly for following list
         // This is more reliable than checking socialProvider state which may not be initialized
+        final prefs = await SharedPreferences.getInstance();
         final hasFollowing = await hasAnyFollowingInCache(prefs);
         debugPrint('[Router] Empty contacts check: hasFollowing=$hasFollowing, redirecting=${!hasFollowing}');
         if (!hasFollowing) {

@@ -4,7 +4,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/widgets.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/secure_key_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,7 +18,10 @@ enum AuthState {
   /// User is not authenticated (no keys stored)
   unauthenticated,
 
-  /// User is authenticated (has valid keys)
+  /// User has keys but hasn't accepted Terms of Service yet
+  awaitingTosAcceptance,
+
+  /// User is authenticated (has valid keys and accepted TOS)
   authenticated,
 
   /// Authentication state is being checked
@@ -304,6 +306,61 @@ class AuthService {
     }
   }
 
+  /// Accept Terms of Service - transitions to authenticated state
+  /// Handles multiple scenarios:
+  /// - awaitingTosAcceptance: Normal flow, just save TOS and set authenticated
+  /// - authenticated: Edge case, force router refresh
+  /// - unauthenticated: After logout, re-initialize to load existing keys
+  Future<void> acceptTermsOfService() async {
+    print('[AuthService] acceptTermsOfService called, current state: $_authState');
+
+    // If unauthenticated (e.g., after logout), re-initialize to load existing keys
+    if (_authState == AuthState.unauthenticated) {
+      print('[AuthService] Unauthenticated state - re-initializing to load existing keys');
+      // Save TOS first, then initialize (which will check for existing keys)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('terms_accepted_at', DateTime.now().toIso8601String());
+      await prefs.setBool('age_verified_16_plus', true);
+      // Re-initialize will load existing keys or create new ones
+      await initialize();
+      return;
+    }
+
+    if (_authState != AuthState.awaitingTosAcceptance &&
+        _authState != AuthState.authenticated) {
+      Log.warning('acceptTermsOfService called in unexpected state: $_authState',
+          name: 'AuthService', category: LogCategory.auth);
+      print('[AuthService] EARLY RETURN - unexpected state');
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('terms_accepted_at', DateTime.now().toIso8601String());
+      await prefs.setBool('age_verified_16_plus', true);
+      print('[AuthService] TOS saved to prefs');
+
+      // Force state change to trigger router refresh, even if already authenticated
+      // This handles edge case where TOS was previously accepted but user is on welcome screen
+      if (_authState == AuthState.authenticated) {
+        print('[AuthService] Already authenticated, forcing stream emit');
+        // Force a notify by temporarily changing state
+        _authStateController.add(AuthState.authenticated);
+      } else {
+        print('[AuthService] Changing state to authenticated');
+        _setAuthState(AuthState.authenticated);
+      }
+
+      Log.info('Terms of Service accepted, user is now fully authenticated',
+          name: 'AuthService', category: LogCategory.auth);
+    } catch (e) {
+      Log.error('Failed to save TOS acceptance: $e',
+          name: 'AuthService', category: LogCategory.auth);
+      print('[AuthService] ERROR: $e');
+      _lastError = 'Failed to accept terms: $e';
+    }
+  }
+
   /// Sign out the current user
   Future<void> signOut({bool deleteKeys = false}) async {
     Log.debug('📱 Signing out user',
@@ -314,6 +371,11 @@ class AuthService {
         Log.debug('📱️ Deleting stored keys',
             name: 'AuthService', category: LogCategory.auth);
         await _keyStorage.deleteKeys();
+
+        // Clear TOS acceptance when deleting keys - new identity requires new TOS acceptance
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('age_verified_16_plus');
+        await prefs.remove('terms_accepted_at');
       } else {
         // Just clear cache
         _keyStorage.clearCache();
@@ -329,6 +391,13 @@ class AuthService {
 
       Log.info('User signed out',
           name: 'AuthService', category: LogCategory.auth);
+
+      // If keys were deleted, auto-create a new identity (TikTok-style seamless onboarding)
+      if (deleteKeys) {
+        Log.info('Auto-creating new identity after key deletion',
+            name: 'AuthService', category: LogCategory.auth);
+        await _checkExistingAuth();
+      }
     } catch (e) {
       Log.error('Error during sign out: $e',
           name: 'AuthService', category: LogCategory.auth);
@@ -568,12 +637,21 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
           'current_user_pubkey_hex', keyContainer.publicKeyHex);
+
+      // Check if user has accepted TOS
+      final hasAcceptedTos = prefs.getBool('age_verified_16_plus') ?? false;
+      if (hasAcceptedTos) {
+        _setAuthState(AuthState.authenticated);
+      } else {
+        _setAuthState(AuthState.awaitingTosAcceptance);
+      }
     } catch (e) {
-      Log.warning('Failed to save current user pubkey to prefs: $e',
+      Log.warning('Failed to check TOS status: $e',
           name: 'AuthService', category: LogCategory.auth);
+      // Default to awaiting TOS if we can't check
+      _setAuthState(AuthState.awaitingTosAcceptance);
     }
 
-    _setAuthState(AuthState.authenticated);
     _profileController.add(_currentProfile);
 
     Log.info('Secure user session established',
