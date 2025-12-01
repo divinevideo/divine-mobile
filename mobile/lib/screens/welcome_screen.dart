@@ -69,7 +69,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 ),
                 // Wordmark logo - positioned close to icon above
                 Image.asset(
-                  'assets/icon/White cropped.png',
+                  'assets/icon/divine_wordmark.png',
                   width: MediaQuery.of(context).size.width < 600 ? 130 : 182,
                   fit: BoxFit.contain,
                 ),

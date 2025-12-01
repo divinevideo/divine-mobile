@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import AVFoundation
 import LibProofMode
 import ZendeskCoreSDK
 import SupportSDK
@@ -18,6 +19,9 @@ import SupportProvidersSDK
 
     // Set up Zendesk platform channel
     setupZendeskChannel()
+
+    // Set up Camera Zoom Detector platform channel
+    setupCameraZoomDetectorChannel()
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
@@ -276,5 +280,131 @@ import SupportProvidersSDK
     }
 
     NSLog("✅ Zendesk: Platform channel registered")
+  }
+
+  private func setupCameraZoomDetectorChannel() {
+    guard let controller = window?.rootViewController as? FlutterViewController else {
+      NSLog("❌ CameraZoomDetector: Could not get FlutterViewController")
+      return
+    }
+
+    let channel = FlutterMethodChannel(
+      name: "com.openvine/camera_zoom_detector",
+      binaryMessenger: controller.binaryMessenger
+    )
+
+    channel.setMethodCallHandler { (call, result) in
+      switch call.method {
+      case "getPhysicalCameras":
+        NSLog("📷 CameraZoomDetector: Getting physical cameras...")
+
+        guard #available(iOS 10.0, *) else {
+          result([])
+          return
+        }
+
+        // Query back cameras
+        let backDiscoverySession = AVCaptureDevice.DiscoverySession(
+          deviceTypes: [
+            .builtInWideAngleCamera,
+            .builtInUltraWideCamera,
+            .builtInTelephotoCamera
+          ].compactMap { $0 },
+          mediaType: .video,
+          position: .back
+        )
+
+        // Query front cameras
+        let frontDiscoverySession = AVCaptureDevice.DiscoverySession(
+          deviceTypes: [
+            .builtInWideAngleCamera
+          ].compactMap { $0 },
+          mediaType: .video,
+          position: .front
+        )
+
+        // First, get the multi-camera virtual device to query zoom switchover points
+        var telephotoZoomFactor: Double = 2.0  // Default fallback
+
+        if #available(iOS 13.0, *) {
+          // Query multi-camera device to get actual zoom switchover factors
+          let multiCamSession = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInTripleCamera, .builtInDualWideCamera, .builtInDualCamera].compactMap { $0 },
+            mediaType: .video,
+            position: .back
+          )
+
+          if let multiCamDevice = multiCamSession.devices.first {
+            let switchFactors = multiCamDevice.virtualDeviceSwitchOverVideoZoomFactors.map { $0.doubleValue }
+            NSLog("📷 Multi-camera device internal switchover factors: \(switchFactors)")
+
+            // CRITICAL: Apple uses ultra-wide as baseline (internal factor 1 = 0.5x display)
+            // iPhone 13 Pro Max returns [2, 6] which means:
+            //   - Factor 2 = Wide camera (1x display) = 2 / 2 = 1.0x
+            //   - Factor 6 = Telephoto camera (3x display) = 6 / 2 = 3.0x
+            // Conversion: Display zoom = Internal factor / 2
+            if let maxInternalZoom = switchFactors.max(), maxInternalZoom > 1.0 {
+              telephotoZoomFactor = maxInternalZoom / 2.0
+              NSLog("📷 Telephoto display zoom factor: \(telephotoZoomFactor)x (from internal \(maxInternalZoom))")
+            }
+          }
+        }
+
+        var cameras: [[String: Any]] = []
+
+        // Process back cameras
+        for device in backDiscoverySession.devices {
+          // Determine camera type based on device type
+          var cameraType = "wide"
+          if device.deviceType == .builtInUltraWideCamera {
+            cameraType = "ultrawide"
+          } else if device.deviceType == .builtInTelephotoCamera {
+            cameraType = "telephoto"
+          }
+
+          // Get zoom factor relative to wide camera (1.0x baseline)
+          let zoomFactor: Double
+          if device.deviceType == .builtInUltraWideCamera {
+            // Ultrawide is typically 0.5x on all iPhones (13mm vs 26mm)
+            zoomFactor = 0.5
+          } else if device.deviceType == .builtInTelephotoCamera {
+            // Use the zoom factor from multi-camera switchover points
+            zoomFactor = telephotoZoomFactor
+          } else {
+            // Wide angle camera is the baseline (1.0x)
+            zoomFactor = 1.0
+          }
+
+          cameras.append([
+            "type": cameraType,
+            "zoomFactor": zoomFactor,
+            "deviceId": device.uniqueID,
+            "displayName": device.localizedName
+          ])
+
+          NSLog("📷 Found back camera: \(device.localizedName) - \(cameraType) - \(zoomFactor)x")
+        }
+
+        // Process front cameras
+        for device in frontDiscoverySession.devices {
+          cameras.append([
+            "type": "front",
+            "zoomFactor": 1.0,  // Front cameras are always 1.0x
+            "deviceId": device.uniqueID,
+            "displayName": device.localizedName
+          ])
+
+          NSLog("📷 Found front camera: \(device.localizedName) - front - 1.0x")
+        }
+
+        NSLog("📷 CameraZoomDetector: Found \(cameras.count) cameras total")
+        result(cameras)
+
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
+    NSLog("✅ CameraZoomDetector: Platform channel registered")
   }
 }

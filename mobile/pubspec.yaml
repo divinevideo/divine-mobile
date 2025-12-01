@@ -128,9 +128,14 @@ dependencies:
   video_player_web_hls: ^1.3.0
   firebase_performance: ^0.11.1+1
   openpgp: ^3.10.7
+  camerawesome:
+    git:
+      url: https://github.com/Apparence-io/CamerAwesome.git
+      ref: master
 
 dependency_overrides:
   device_info_plus: ^10.1.2
+  rxdart: ^0.28.0
   cryptography_flutter:
     path: overrides/cryptography_flutter-2.3.2
 
@@ -195,6 +200,7 @@ flutter:
     - assets/icon/Black on white.png
     - assets/icon/Green on ivory.png
     - assets/icon/divine_icon_transparent.png
+    - assets/icon/divine_wordmark.png
     - assets/icon/user-avatar.png
     - assets/seed_data/seed_events.sql
     - assets/seed_media/manifest.json

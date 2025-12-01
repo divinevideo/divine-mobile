@@ -4,12 +4,6 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<false/>
-	<key>UIApplicationSupportsMultipleScenes</key>
-	<false/>
-	<key>UIRequiresPersistentWiFi</key>
-	<false/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -30,6 +24,8 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>FirebaseCrashlyticsCollectionEnabled</key>
+	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
@@ -42,6 +38,13 @@
 		<true/>
 		<key>NSExceptionDomains</key>
 		<dict>
+			<key>relay.divine.video</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
 			<key>relay3.openvine.co</key>
 			<dict>
 				<key>NSExceptionRequiresForwardSecrecy</key>
@@ -51,8 +54,6 @@
 			</dict>
 		</dict>
 	</dict>
-	<key>FirebaseCrashlyticsCollectionEnabled</key>
-	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Divine uses Bluetooth to discover and sync videos with nearby users for offline sharing.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
@@ -75,10 +76,14 @@
 	<string>Photo library access is needed to pick and share your videos.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIApplicationSupportsMultipleScenes</key>
+	<false/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<key>UIRequiresPersistentWiFi</key>
+	<false/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -90,5 +95,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
 </dict>
 </plist>

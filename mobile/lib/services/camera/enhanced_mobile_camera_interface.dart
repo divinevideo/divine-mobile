@@ -457,110 +457,18 @@ class _EnhancedCameraPreviewState extends State<EnhancedCameraPreview> {
       category: LogCategory.system,
     );
 
-    return Stack(
-      children: [
-        // Camera preview
-        CameraPreview(widget.controller),
-
-        // Gesture detector for zoom and focus
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onScaleStart: (details) {
-              _baseZoom = widget.currentZoom;
-            },
-            onScaleUpdate: (details) {
-              // Calculate new zoom level
-              final newZoom = (_baseZoom * details.scale).clamp(
-                widget.minZoom,
-                widget.maxZoom,
-              );
-              widget.onZoomChanged(newZoom);
-            },
-            onTapDown: (details) {
-              // Calculate relative position for focus
-              final box = context.findRenderObject() as RenderBox?;
-              if (box != null) {
-                final offset = details.localPosition;
-                final size = box.size;
-                final x = offset.dx / size.width;
-                final y = offset.dy / size.height;
-
-                widget.onFocusPoint(Offset(x, y));
-
-                // Show focus indicator
-                setState(() {
-                  _focusPoint = offset;
-                });
-
-                // Hide focus indicator after 2 seconds
-                _focusTimer?.cancel();
-                _focusTimer = Timer(const Duration(seconds: 2), () {
-                  if (mounted) {
-                    setState(() {
-                      _focusPoint = null;
-                    });
-                  }
-                });
-              }
-            },
-            child: Container(
-              color: Colors.transparent,
-            ),
-          ),
+    // Camera preview with proper sizing for portrait orientation
+    // CRITICAL: Swap width/height to display camera sensor correctly in portrait
+    // This structure MUST match experimental app EXACTLY!
+    return SizedBox.expand(
+      child: FittedBox(
+        fit: BoxFit.cover,
+        child: SizedBox(
+          width: widget.controller.value.previewSize!.height,
+          height: widget.controller.value.previewSize!.width,
+          child: CameraPreview(widget.controller),
         ),
-
-        // Focus indicator
-        if (_focusPoint != null)
-          Positioned(
-            left: _focusPoint!.dx - 40,
-            top: _focusPoint!.dy - 40,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.yellow, width: 2),
-                borderRadius: BorderRadius.circular(40),
-              ),
-              child: Center(
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: Colors.yellow,
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-        // Zoom level indicator
-        if ((widget.currentZoom - widget.minZoom).abs() > 0.01)
-          Positioned(
-            bottom: 80,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '${widget.currentZoom.toStringAsFixed(1)}x',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
+      ),
     );
   }
 

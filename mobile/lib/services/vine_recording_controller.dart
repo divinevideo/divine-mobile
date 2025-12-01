@@ -15,6 +15,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:openvine/models/aspect_ratio.dart' as model;
 import 'package:openvine/services/camera/native_macos_camera.dart';
 import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
+import 'package:openvine/services/camera/camerawesome_mobile_camera_interface.dart';
 import 'package:openvine/services/web_camera_service_stub.dart'
     if (dart.library.html) 'web_camera_service.dart' as camera_service;
 import 'package:openvine/services/native_proofmode_service.dart';
@@ -1073,27 +1074,26 @@ class VineRecordingController {
       } else if (Platform.isMacOS) {
         _cameraInterface = MacOSCameraInterface();
       } else if (Platform.isIOS || Platform.isAndroid) {
-        // Use basic camera for iOS due to performance issues with enhanced camera
-        // Enhanced camera causes dark/slow preview on iOS devices
+        // Use CamerAwesome for iOS with physical sensor switching support
         if (Platform.isIOS) {
-          _cameraInterface = MobileCameraInterface();
+          _cameraInterface = CamerAwesomeMobileCameraInterface();
           await _cameraInterface!.initialize();
-          Log.info('Using basic mobile camera for iOS (performance optimization)',
+          Log.info('Using CamerAwesome camera with physical sensor switching',
               name: 'VineRecordingController', category: LogCategory.system);
         } else {
-          // Try enhanced mobile camera interface first for Android, fallback to basic if it fails
+          // Android: Try CamerAwesome, fallback to enhanced camera if needed
           try {
-            _cameraInterface = EnhancedMobileCameraInterface();
+            _cameraInterface = CamerAwesomeMobileCameraInterface();
             await _cameraInterface!.initialize();
-            Log.info('Using enhanced mobile camera with zoom and focus features',
+            Log.info('Using CamerAwesome camera for Android',
                 name: 'VineRecordingController', category: LogCategory.system);
-          } catch (enhancedError) {
-            Log.warning('Enhanced camera failed, falling back to basic camera: $enhancedError',
+          } catch (cameraAwesomeError) {
+            Log.warning('CamerAwesome failed, falling back to enhanced camera: $cameraAwesomeError',
                 name: 'VineRecordingController', category: LogCategory.system);
             _cameraInterface?.dispose();
-            _cameraInterface = MobileCameraInterface();
+            _cameraInterface = EnhancedMobileCameraInterface();
             await _cameraInterface!.initialize();
-            Log.info('Using basic mobile camera interface as fallback',
+            Log.info('Using enhanced mobile camera interface as fallback',
                 name: 'VineRecordingController', category: LogCategory.system);
           }
         }
@@ -1177,17 +1177,21 @@ class VineRecordingController {
 
   /// Stop recording current segment (release)
   Future<void> stopRecording() async {
-    if (_state != VineRecordingState.recording ||
-        _currentSegmentStartTime == null) {
+    // Capture start time locally to prevent race conditions
+    final segmentStartTime = _currentSegmentStartTime;
+
+    if (_state != VineRecordingState.recording || segmentStartTime == null) {
       Log.warning('Not recording or no start time, ignoring stop request',
           name: 'VineRecordingController', category: LogCategory.system);
       return;
     }
 
+    // Clear the segment start time immediately to prevent double-stop
+    _currentSegmentStartTime = null;
+
     try {
       var segmentEndTime = DateTime.now();
-      var segmentDuration =
-          segmentEndTime.difference(_currentSegmentStartTime!);
+      var segmentDuration = segmentEndTime.difference(segmentStartTime);
 
       // For stop-motion: if user taps very quickly, wait for minimum duration
       // to ensure at least one frame is captured
@@ -1201,7 +1205,7 @@ class VineRecordingController {
 
         // Recalculate after waiting
         segmentEndTime = DateTime.now();
-        segmentDuration = segmentEndTime.difference(_currentSegmentStartTime!);
+        segmentDuration = segmentEndTime.difference(segmentStartTime);
       }
 
       // Now we're guaranteed to have at least minSegmentDuration
@@ -1223,7 +1227,7 @@ class VineRecordingController {
                 name: 'VineRecordingController', category: LogCategory.system);
 
             final segment = RecordingSegment(
-              startTime: _currentSegmentStartTime!,
+              startTime: segmentStartTime,
               endTime: segmentEndTime,
               duration: segmentDuration,
               filePath: recordedPath,
@@ -1248,20 +1252,66 @@ class VineRecordingController {
           final filePath = await _cameraInterface!.stopRecordingSegment();
 
           if (filePath != null) {
-            final segment = RecordingSegment(
-              startTime: _currentSegmentStartTime!,
-              endTime: segmentEndTime,
-              duration: segmentDuration,
-              filePath: filePath,
-            );
+            // CRITICAL: Copy segment to safe location immediately
+            // CamerAwesome may delete previous recordings when starting new ones
+            // This ensures all segments are preserved for concatenation
+            Log.info('📹 Segment ${_segments.length + 1} recorded to: $filePath',
+                name: 'VineRecordingController', category: LogCategory.system);
 
-            _segments.add(segment);
-            _totalRecordedDuration += segmentDuration;
+            // Wait for file to be written - CamerAwesome's stopRecording may return
+            // before the file is fully flushed to disk, especially for short recordings
+            final sourceFile = File(filePath);
+            bool exists = await sourceFile.exists();
 
-            Log.info(
-                'Completed segment ${_segments.length}: ${segmentDuration.inMilliseconds}ms',
-                name: 'VineRecordingController',
-                category: LogCategory.system);
+            // Retry up to 500ms waiting for file to appear (for stop-motion short taps)
+            if (!exists) {
+              Log.info('📹 File not yet written, waiting for CamerAwesome to flush...',
+                  name: 'VineRecordingController', category: LogCategory.system);
+              for (int i = 0; i < 10 && !exists; i++) {
+                await Future.delayed(const Duration(milliseconds: 50));
+                exists = await sourceFile.exists();
+              }
+            }
+
+            Log.info('📹 Source file exists: $exists',
+                name: 'VineRecordingController', category: LogCategory.system);
+
+            if (!exists) {
+              // Even after waiting, file doesn't exist - recording truly failed
+              Log.warning('📹 Segment file does not exist after waiting, skipping segment',
+                  name: 'VineRecordingController', category: LogCategory.system);
+              // Don't add to _segments - this segment is invalid
+            } else {
+              String safeFilePath = filePath;
+              try {
+                final safeDir = await _getTempDirectory();
+                final safePath = '${safeDir.path}/safe_segment_${_segments.length + 1}_${DateTime.now().millisecondsSinceEpoch}.mov';
+                Log.info('📹 Copying to safe path: $safePath',
+                    name: 'VineRecordingController', category: LogCategory.system);
+                final copiedFile = await sourceFile.copy(safePath);
+                safeFilePath = copiedFile.path;
+                Log.info('📹 Copied segment to safe location: $safeFilePath',
+                    name: 'VineRecordingController', category: LogCategory.system);
+              } catch (e) {
+                Log.error('📹 Failed to copy segment to safe location: $e, using original path: $filePath',
+                    name: 'VineRecordingController', category: LogCategory.system);
+              }
+
+              final segment = RecordingSegment(
+                startTime: segmentStartTime,
+                endTime: segmentEndTime,
+                duration: segmentDuration,
+                filePath: safeFilePath,
+              );
+
+              _segments.add(segment);
+              _totalRecordedDuration += segmentDuration;
+
+              Log.info(
+                  'Completed segment ${_segments.length}: ${segmentDuration.inMilliseconds}ms',
+                  name: 'VineRecordingController',
+                  category: LogCategory.system);
+            }
           } else {
             Log.warning('No file path returned from camera interface',
                 name: 'VineRecordingController', category: LogCategory.system);
@@ -1269,7 +1319,7 @@ class VineRecordingController {
         }
       }
 
-      _currentSegmentStartTime = null;
+      // _currentSegmentStartTime already cleared at start of method
       _stopProgressTimer();
       _stopMaxDurationTimer();
 
@@ -1291,7 +1341,7 @@ class VineRecordingController {
       }
     } catch (e) {
       // Reset state and clean up on error
-      _currentSegmentStartTime = null;
+      // Note: _currentSegmentStartTime already cleared at start of method
       _stopProgressTimer();
       _stopMaxDurationTimer();
       _setState(VineRecordingState.error);
@@ -1329,6 +1379,24 @@ class VineRecordingController {
       throw Exception('No segments to concatenate');
     }
 
+    // CRITICAL: Verify all segment files exist before proceeding
+    // CamerAwesome may delete old segments when new recordings start
+    Log.info('📹 Verifying ${segments.length} segment files exist before concatenation',
+        name: 'VineRecordingController', category: LogCategory.system);
+
+    for (var i = 0; i < segments.length; i++) {
+      final segment = segments[i];
+      if (segment.filePath == null) {
+        throw Exception('Segment $i has null file path');
+      }
+      final file = File(segment.filePath!);
+      if (!await file.exists()) {
+        throw Exception('Segment $i file does not exist: ${segment.filePath}');
+      }
+      Log.info('📹 Segment $i verified: ${segment.filePath}',
+          name: 'VineRecordingController', category: LogCategory.system);
+    }
+
     // Single segment - apply aspect ratio cropping via FFmpeg
     if (segments.length == 1 && segments.first.filePath != null) {
       Log.info('📹 Applying square cropping to single segment',
@@ -1340,7 +1408,7 @@ class VineRecordingController {
           '${tempDir.path}/vine_final_${DateTime.now().millisecondsSinceEpoch}.mp4';
 
       final cropFilter = _buildCropFilter(_aspectRatio);
-      final command = '-i "$inputPath" -vf "$cropFilter" -c:a copy "$outputPath"';
+      final command = '-y -i "$inputPath" -vf "$cropFilter" -c:a copy "$outputPath"';
 
       Log.info('📹 Executing FFmpeg square crop command: $command',
           name: 'VineRecordingController', category: LogCategory.system);
@@ -1393,7 +1461,9 @@ class VineRecordingController {
         // Use -noautorotate to prevent FFmpeg from auto-rotating during input
         // Then manually apply rotation metadata to pixels and strip metadata
         // This ensures all segments have physically upright pixels with no rotation tag
-        final normalizeCommand = '-i "${segment.filePath}" -c:v libx264 -preset ultrafast -c:a copy -metadata:s:v rotate=0 "$normalizedPath"';
+        // Re-encode audio too to ensure proper A/V sync across segments
+        // Force 30fps output and use -vsync cfr for consistent timing
+        final normalizeCommand = '-y -i "${segment.filePath}" -c:v libx264 -preset ultrafast -r 30 -vsync cfr -c:a aac -b:a 128k -async 1 -metadata:s:v rotate=0 "$normalizedPath"';
 
         Log.info('📹 Normalizing segment $i with command: $normalizeCommand',
             name: 'VineRecordingController', category: LogCategory.system);
@@ -1428,8 +1498,10 @@ class VineRecordingController {
           name: 'VineRecordingController', category: LogCategory.system);
 
       // Execute FFmpeg concatenation with aspect ratio cropping
+      // Re-encode both video and audio to ensure proper A/V sync
+      // Use -vsync cfr for constant frame rate and -async 1 to sync audio to video
       final cropFilter = _buildCropFilter(_aspectRatio);
-      final command = '-f concat -safe 0 -i "$concatFilePath" -vf "$cropFilter" -c:a copy "$outputPath"';
+      final command = '-y -f concat -safe 0 -i "$concatFilePath" -vf "$cropFilter" -c:v libx264 -preset fast -vsync cfr -r 30 -c:a aac -b:a 128k -async 1 "$outputPath"';
 
       Log.info('📹 Executing FFmpeg command: $command',
           name: 'VineRecordingController', category: LogCategory.system);

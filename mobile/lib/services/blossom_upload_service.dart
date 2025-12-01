@@ -116,6 +116,7 @@ class BlossomUploadService {
       final tags = [
         ['t', 'upload'],
         ['expiration', expirationTimestamp.toString()],
+        ['size', fileSize.toString()], // File size for server validation
         ['x', fileHash], // SHA-256 hash of the file
       ];
 
@@ -133,6 +134,14 @@ class BlossomUploadService {
       }
 
       Log.info('Created Blossom auth event: ${signedEvent.id}',
+          name: 'BlossomUploadService', category: LogCategory.video);
+      Log.info('  Event kind: ${signedEvent.kind}',
+          name: 'BlossomUploadService', category: LogCategory.video);
+      Log.info('  Event pubkey: ${signedEvent.pubkey}',
+          name: 'BlossomUploadService', category: LogCategory.video);
+      Log.info('  Event created_at: ${signedEvent.createdAt}',
+          name: 'BlossomUploadService', category: LogCategory.video);
+      Log.info('  Event tags: ${signedEvent.tags}',
           name: 'BlossomUploadService', category: LogCategory.video);
 
       return signedEvent;
@@ -258,14 +267,21 @@ class BlossomUploadService {
         );
       }
 
-      // Prepare headers following Blossom spec
+      // Prepare headers following Blossom spec (BUD-01 requires standard base64 encoding)
       final authEventJson = jsonEncode(authEvent.toJson());
       final authHeader = 'Nostr ${base64.encode(utf8.encode(authEventJson))}';
+
+      // Debug: Log auth event for troubleshooting 401 errors
+      Log.info('🔐 Auth event JSON (first 200 chars): ${authEventJson.substring(0, authEventJson.length > 200 ? 200 : authEventJson.length)}...',
+          name: 'BlossomUploadService', category: LogCategory.video);
+      Log.info('🔐 Auth header length: ${authHeader.length} chars',
+          name: 'BlossomUploadService', category: LogCategory.video);
 
       // Add ProofMode headers if manifest is provided
       final headers = <String, dynamic>{
         'Authorization': authHeader,
         'Content-Type': 'video/mp4',
+        'Content-Length': fileSize.toString(),
       };
 
       if (proofManifestJson != null && proofManifestJson.isNotEmpty) {
@@ -392,11 +408,17 @@ class BlossomUploadService {
       }
 
       // Handle other error responses
+      // Extract X-Reason header for detailed error info (BUD-01 spec)
+      final xReason = response.headers.value('X-Reason') ?? response.headers.value('x-reason');
       Log.error('❌ Upload failed: ${response.statusCode} - ${response.data}',
           name: 'BlossomUploadService', category: LogCategory.video);
+      if (xReason != null) {
+        Log.error('❌ X-Reason header: $xReason',
+            name: 'BlossomUploadService', category: LogCategory.video);
+      }
       return BlossomUploadResult(
         success: false,
-        errorMessage: 'Upload failed: ${response.statusCode} - ${response.data}',
+        errorMessage: 'Upload failed: ${response.statusCode} - ${xReason ?? response.data}',
       );
     } on DioException catch (e) {
       Log.error('Blossom upload network error: ${e.message}',
@@ -505,7 +527,7 @@ class BlossomUploadService {
         );
       }
 
-      // Prepare authorization header
+      // Prepare authorization header (BUD-01/NIP-98 requires standard base64 encoding)
       final authEventJson = jsonEncode(authEvent.toJson());
       final authHeader = 'Nostr ${base64.encode(utf8.encode(authEventJson))}';
 
@@ -720,7 +742,7 @@ class BlossomUploadService {
         return null;
       }
 
-      // Prepare headers following Blossom spec
+      // Prepare headers following Blossom spec (BUD-01 requires standard base64 encoding)
       final authEventJson = jsonEncode(authEvent.toJson());
       final authHeader = 'Nostr ${base64.encode(utf8.encode(authEventJson))}';
 

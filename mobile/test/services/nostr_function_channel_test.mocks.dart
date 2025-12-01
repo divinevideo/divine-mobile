@@ -37,6 +37,7 @@ import 'package:openvine/services/user_profile_service.dart' as _i8;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
+// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeKeychain_0 extends _i1.SmartFake implements _i2.Keychain {
   _FakeKeychain_0(Object parent, Invocation parentInvocation)
@@ -449,24 +450,6 @@ class MockEmbeddedNostrRelay extends _i1.Mock
             returnValue: <String, dynamic>{},
           )
           as Map<String, dynamic>);
-
-  @override
-  Map<String, dynamic> getPublishQueueStats() =>
-      (super.noSuchMethod(
-            Invocation.method(#getPublishQueueStats, []),
-            returnValue: <String, dynamic>{},
-          )
-          as Map<String, dynamic>);
-
-  @override
-  _i6.Future<Map<String, dynamic>> getPublishQueueStatsFromDatabase() =>
-      (super.noSuchMethod(
-            Invocation.method(#getPublishQueueStatsFromDatabase, []),
-            returnValue: _i6.Future<Map<String, dynamic>>.value(
-              <String, dynamic>{},
-            ),
-          )
-          as _i6.Future<Map<String, dynamic>>);
 
   @override
   _i5.FunctionChannelSession createFunctionSession() =>

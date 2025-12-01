@@ -1,0 +1,75 @@
+name: Bug Report
+description: Report a bug or issue with the app
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence about what's broken
+      placeholder: "Example: Video upload fails when recording exceeds 10 seconds"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: App version, OS/device, network conditions
+      placeholder: |
+        App version: 1.2.3
+        Device: iPhone 14 Pro, iOS 17.1
+        Network: WiFi / Cellular
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Clear numbered steps to reproduce the issue
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-result
+    attributes:
+      label: Actual Result
+      description: What actually happened
+      placeholder: "Describe what you observed happening."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-result
+    attributes:
+      label: Expected Result
+      description: What you expected to happen
+      placeholder: "Describe what you expected to happen."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Regression?
+      description: Did this work in a previous version?
+      options:
+        - "Yes"
+        - "No"
+        - "Unknown"
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Screenshots, screen recordings, logs, crash reports, etc.
+      placeholder: "Attach or link to evidence here (videos, screenshots, logs, etc.)"

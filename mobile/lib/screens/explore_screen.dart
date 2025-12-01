@@ -23,6 +23,7 @@ import 'package:openvine/services/error_analytics_tracker.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/popular_videos_tab.dart';
 import 'package:openvine/widgets/list_card.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
@@ -50,10 +51,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   final _feedTracker = FeedPerformanceTracker();
   final _errorTracker = ErrorAnalyticsTracker();
   DateTime? _feedLoadStartTime;
-
-  // Trending tab sort cache - avoid re-sorting 500 videos on every rebuild
-  List<VideoEvent>? _cachedTrendingVideos;
-  List<VideoEvent>? _lastRawVideos;
 
   @override
   void initState() {
@@ -315,7 +312,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               controller: _tabController,
               children: [
                 _buildNewVinesTab(),
-                _buildTrendingTab(),
+                PopularVideosTab(
+                  onVideoTap: _enterFeedMode,
+                  screenAnalytics: _screenAnalytics,
+                  feedTracker: _feedTracker,
+                  errorTracker: _errorTracker,
+                ),
                 _buildListsTab(),
               ],
             ),
@@ -891,235 +893,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           ),
         );
       },
-    );
-  }
-
-  Widget _buildTrendingTab() {
-    // Sort videos by loop count (most loops first) - "Popular Vines"
-    final videoEventsAsync = ref.watch(videoEventsProvider);
-
-    Log.debug(
-      '🔍 PopularVinesTab: AsyncValue state - isLoading: ${videoEventsAsync.isLoading}, '
-      'hasValue: ${videoEventsAsync.hasValue}, hasError: ${videoEventsAsync.hasError}, '
-      'value length: ${videoEventsAsync.value?.length ?? 0}',
-      name: 'ExploreScreen',
-      category: LogCategory.video,
-    );
-
-    // Track feed loading start
-    if (videoEventsAsync.isLoading && _feedLoadStartTime == null) {
-      _feedLoadStartTime = DateTime.now();
-      _feedTracker.startFeedLoad('trending');
-    }
-
-    // CRITICAL: Check hasValue FIRST before isLoading
-    // StreamProviders can have both isLoading:true and hasValue:true during rebuilds
-    if (videoEventsAsync.hasValue && videoEventsAsync.value != null) {
-      // Filter out WebM videos on iOS/macOS (not supported by AVPlayer)
-      // Show all videos sorted by relay (using NIP-50 search for trending/popular)
-      final allVideos = videoEventsAsync.value!;
-      final videos = allVideos
-          .where((v) => v.isSupportedOnCurrentPlatform)
-          .toList();
-
-      Log.info('✅ TrendingTab: Data state - ${videos.length} videos (filtered from ${allVideos.length} total)',
-          name: 'ExploreScreen', category: LogCategory.video);
-
-      // Track feed loaded with videos
-      if (_feedLoadStartTime != null) {
-        _feedTracker.markFirstVideosReceived('trending', videos.length);
-        _feedTracker.markFeedDisplayed('trending', videos.length);
-        _screenAnalytics.markDataLoaded('explore_screen', dataMetrics: {
-          'tab': 'trending',
-          'video_count': videos.length,
-        });
-        _feedLoadStartTime = null;
-      }
-
-      // Track empty feed
-      if (videos.isEmpty) {
-        _feedTracker.trackEmptyFeed('trending');
-      }
-
-      // PERFORMANCE OPTIMIZATION: Only re-sort if video list changed
-      // Check if we can use cached sorted list
-      final List<VideoEvent> sortedVideos;
-      if (identical(videos, _lastRawVideos) && _cachedTrendingVideos != null) {
-        // Same video list object - use cached sort
-        sortedVideos = _cachedTrendingVideos!;
-        Log.debug(
-          '✨ TRENDING CACHE HIT: Reusing sorted list (${sortedVideos.length} videos)',
-          name: 'ExploreScreen',
-          category: LogCategory.video,
-        );
-      } else {
-        // New video list - sort and cache
-        sortedVideos = List<VideoEvent>.from(videos);
-        sortedVideos.sort((a, b) {
-          final aLoops = a.originalLoops ?? 0;
-          final bLoops = b.originalLoops ?? 0;
-          return bLoops.compareTo(aLoops); // Descending order
-        });
-
-        // Update cache
-        _lastRawVideos = videos;
-        _cachedTrendingVideos = sortedVideos;
-
-        // Log trending sort at verbose level to reduce noise
-        Log.verbose(
-          'Trending: sorted ${sortedVideos.length} videos by loop count',
-          name: 'ExploreScreen',
-          category: LogCategory.video,
-        );
-      }
-
-      return _buildTrendingTabWithHashtags(sortedVideos);
-    }
-
-    if (videoEventsAsync.hasError) {
-      Log.error('❌ TrendingTab: Error state - ${videoEventsAsync.error}',
-          name: 'ExploreScreen', category: LogCategory.video);
-
-      // Track error
-      final loadTime = _feedLoadStartTime != null
-          ? DateTime.now().difference(_feedLoadStartTime!).inMilliseconds
-          : null;
-      _feedTracker.trackFeedError(
-        'trending',
-        errorType: 'load_failed',
-        errorMessage: videoEventsAsync.error.toString(),
-      );
-      _errorTracker.trackFeedLoadError(
-        feedType: 'trending',
-        errorType: 'provider_error',
-        errorMessage: videoEventsAsync.error.toString(),
-        loadTimeMs: loadTime,
-      );
-      _feedLoadStartTime = null;
-
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error, size: 64, color: VineTheme.likeRed),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to load trending videos',
-              style: TextStyle(color: VineTheme.likeRed, fontSize: 18),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Only show loading if we truly have no data yet
-    Log.info('⏳ TrendingTab: Showing loading indicator',
-        name: 'ExploreScreen', category: LogCategory.video);
-
-    // Track slow loading after 5 seconds
-    if (_feedLoadStartTime != null) {
-      final elapsed = DateTime.now().difference(_feedLoadStartTime!).inMilliseconds;
-      if (elapsed > 5000) {
-        _errorTracker.trackSlowOperation(
-          operation: 'trending_feed_load',
-          durationMs: elapsed,
-          thresholdMs: 5000,
-          location: 'explore_trending',
-        );
-      }
-    }
-
-    return Center(
-      child: CircularProgressIndicator(color: VineTheme.vineGreen),
-    );
-  }
-
-  Widget _buildTrendingTabWithHashtags(List<VideoEvent> videos) {
-    return Column(
-      children: [
-        // Hashtag navigation section
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Trending Hashtags',
-                  style: TextStyle(
-                    color: VineTheme.primaryText,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 28,
-                child: Builder(
-                  builder: (context) {
-                    final hashtags = TopHashtagsService.instance.getTopHashtags(limit: 20);
-
-                    if (hashtags.isEmpty) {
-                      // Show placeholder while loading
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'Loading hashtags...',
-                          style: TextStyle(
-                            color: VineTheme.secondaryText,
-                            fontSize: 14,
-                          ),
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: hashtags.length,
-                      itemBuilder: (context, index) {
-                        final hashtag = hashtags[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () {
-                          context.goHashtag(hashtag);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12.8),
-                          decoration: BoxDecoration(
-                            color: VineTheme.cardBackground,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '#$hashtag',
-                              style: const TextStyle(
-                                color: VineTheme.vineGreen,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                height: 1.0,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Videos grid
-        Expanded(
-          child: _buildVideoGrid(videos, 'Popular Videos'),
-        ),
-      ],
     );
   }
 
