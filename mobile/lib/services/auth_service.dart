@@ -336,17 +336,16 @@ class AuthService {
         name: 'AuthService', category: LogCategory.auth);
 
     try {
+      // Clear TOS acceptance on any logout - user must re-accept when logging back in
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('age_verified_16_plus');
+      await prefs.remove('terms_accepted_at');
+
       if (deleteKeys) {
         Log.debug('📱️ Deleting stored keys',
             name: 'AuthService', category: LogCategory.auth);
         await _keyStorage.deleteKeys();
-
-        // Clear TOS acceptance when deleting keys - new identity requires new TOS acceptance
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('age_verified_16_plus');
-        await prefs.remove('terms_accepted_at');
       } else {
-        // Just clear cache
         _keyStorage.clearCache();
       }
 
