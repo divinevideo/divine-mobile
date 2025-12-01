@@ -40,13 +40,13 @@ class SeenVideoMetrics {
   }
 
   Map<String, dynamic> toJson() => {
-        'videoId': videoId,
-        'firstSeenAt': firstSeenAt.millisecondsSinceEpoch,
-        'lastSeenAt': lastSeenAt.millisecondsSinceEpoch,
-        'loopCount': loopCount,
-        'totalWatchDurationMs': totalWatchDuration.inMilliseconds,
-        'lastWatchDurationMs': lastWatchDuration.inMilliseconds,
-      };
+    'videoId': videoId,
+    'firstSeenAt': firstSeenAt.millisecondsSinceEpoch,
+    'lastSeenAt': lastSeenAt.millisecondsSinceEpoch,
+    'loopCount': loopCount,
+    'totalWatchDurationMs': totalWatchDuration.inMilliseconds,
+    'lastWatchDurationMs': lastWatchDuration.inMilliseconds,
+  };
 
   factory SeenVideoMetrics.fromJson(Map<String, dynamic> json) =>
       SeenVideoMetrics(
@@ -54,10 +54,12 @@ class SeenVideoMetrics {
         firstSeenAt: DateTime.fromMillisecondsSinceEpoch(json['firstSeenAt']),
         lastSeenAt: DateTime.fromMillisecondsSinceEpoch(json['lastSeenAt']),
         loopCount: json['loopCount'] ?? 0,
-        totalWatchDuration:
-            Duration(milliseconds: json['totalWatchDurationMs'] ?? 0),
-        lastWatchDuration:
-            Duration(milliseconds: json['lastWatchDurationMs'] ?? 0),
+        totalWatchDuration: Duration(
+          milliseconds: json['totalWatchDurationMs'] ?? 0,
+        ),
+        lastWatchDuration: Duration(
+          milliseconds: json['lastWatchDurationMs'] ?? 0,
+        ),
       );
 }
 
@@ -89,12 +91,16 @@ class SeenVideosService {
       _isInitialized = true;
 
       Log.info(
-          '📱️ SeenVideosService initialized with ${_seenVideos.length} seen videos',
-          name: 'SeenVideosService',
-          category: LogCategory.system);
+        '📱️ SeenVideosService initialized with ${_seenVideos.length} seen videos',
+        name: 'SeenVideosService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to initialize SeenVideosService: $e',
-          name: 'SeenVideosService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize SeenVideosService: $e',
+        name: 'SeenVideosService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -112,8 +118,11 @@ class SeenVideosService {
           final metrics = SeenVideoMetrics.fromJson(json);
           _seenVideos[metrics.videoId] = metrics;
         }
-        Log.debug('📱 Loaded ${_seenVideos.length} seen videos with metrics',
-            name: 'SeenVideosService', category: LogCategory.system);
+        Log.debug(
+          '📱 Loaded ${_seenVideos.length} seen videos with metrics',
+          name: 'SeenVideosService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -130,17 +139,21 @@ class SeenVideosService {
           );
         }
         Log.info(
-            '📱 Migrated ${_seenVideos.length} videos from legacy format',
-            name: 'SeenVideosService',
-            category: LogCategory.system);
+          '📱 Migrated ${_seenVideos.length} videos from legacy format',
+          name: 'SeenVideosService',
+          category: LogCategory.system,
+        );
 
         // Save in new format and remove legacy key
         await _saveSeenVideos();
         await _prefs!.remove(_seenVideosKey);
       }
     } catch (e) {
-      Log.error('Error loading seen videos: $e',
-          name: 'SeenVideosService', category: LogCategory.system);
+      Log.error(
+        'Error loading seen videos: $e',
+        name: 'SeenVideosService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -170,11 +183,17 @@ class SeenVideosService {
       final metricsList = videosToSave.map((m) => m.toJson()).toList();
       await _prefs!.setString(_seenVideosMetricsKey, jsonEncode(metricsList));
 
-      Log.debug('📱 Saved ${videosToSave.length} seen videos with metrics',
-          name: 'SeenVideosService', category: LogCategory.system);
+      Log.debug(
+        '📱 Saved ${videosToSave.length} seen videos with metrics',
+        name: 'SeenVideosService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error saving seen videos: $e',
-          name: 'SeenVideosService', category: LogCategory.system);
+      Log.error(
+        'Error saving seen videos: $e',
+        name: 'SeenVideosService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -209,9 +228,10 @@ class SeenVideosService {
         watchDuration: watchDuration,
       );
       Log.debug(
-          '📱 Updated video metrics: ${videoId.substring(0, videoId.length > 8 ? 8 : videoId.length)}... (loops: ${existing.loopCount}, watch: ${existing.totalWatchDuration.inSeconds}s)',
-          name: 'SeenVideosService',
-          category: LogCategory.system);
+        '📱 Updated video metrics: ${videoId.substring(0, videoId.length > 8 ? 8 : videoId.length)}... (loops: ${existing.loopCount}, watch: ${existing.totalWatchDuration.inSeconds}s)',
+        name: 'SeenVideosService',
+        category: LogCategory.system,
+      );
     } else {
       // Create new metrics
       _seenVideos[videoId] = SeenVideoMetrics(
@@ -222,8 +242,11 @@ class SeenVideosService {
         totalWatchDuration: watchDuration ?? Duration.zero,
         lastWatchDuration: watchDuration ?? Duration.zero,
       );
-      Log.debug('📱️ Marking video as seen: ${videoId.substring(0, videoId.length > 8 ? 8 : videoId.length)}...',
-          name: 'SeenVideosService', category: LogCategory.system);
+      Log.debug(
+        '📱️ Marking video as seen: ${videoId.substring(0, videoId.length > 8 ? 8 : videoId.length)}...',
+        name: 'SeenVideosService',
+        category: LogCategory.system,
+      );
     }
 
     // Save to storage asynchronously
@@ -270,7 +293,10 @@ class SeenVideosService {
   }
 
   /// Check if video was seen recently
-  bool wasSeenRecently(String videoId, {Duration within = const Duration(hours: 24)}) {
+  bool wasSeenRecently(
+    String videoId, {
+    Duration within = const Duration(hours: 24),
+  }) {
     final metrics = _seenVideos[videoId];
     if (metrics == null) return false;
 
@@ -280,8 +306,11 @@ class SeenVideosService {
 
   /// Clear all seen videos (for testing or user preference)
   Future<void> clearSeenVideos() async {
-    Log.debug('📱️ Clearing all seen videos',
-        name: 'SeenVideosService', category: LogCategory.system);
+    Log.debug(
+      '📱️ Clearing all seen videos',
+      name: 'SeenVideosService',
+      category: LogCategory.system,
+    );
     _seenVideos.clear();
 
     if (_prefs != null) {
@@ -296,8 +325,11 @@ class SeenVideosService {
       return; // Not in seen list
     }
 
-    Log.debug('📱️ Marking video as unseen: ${videoId.substring(0, videoId.length > 8 ? 8 : videoId.length)}...',
-        name: 'SeenVideosService', category: LogCategory.system);
+    Log.debug(
+      '📱️ Marking video as unseen: ${videoId.substring(0, videoId.length > 8 ? 8 : videoId.length)}...',
+      name: 'SeenVideosService',
+      category: LogCategory.system,
+    );
     _seenVideos.remove(videoId);
 
     await _saveSeenVideos();
@@ -306,19 +338,24 @@ class SeenVideosService {
   /// Get statistics about seen videos
   Map<String, dynamic> getStatistics() {
     final totalLoops = _seenVideos.values.fold<int>(
-        0, (sum, metrics) => sum + metrics.loopCount);
+      0,
+      (sum, metrics) => sum + metrics.loopCount,
+    );
     final totalWatchTime = _seenVideos.values.fold<Duration>(
-        Duration.zero, (sum, metrics) => sum + metrics.totalWatchDuration);
+      Duration.zero,
+      (sum, metrics) => sum + metrics.totalWatchDuration,
+    );
 
     return {
       'totalSeen': _seenVideos.length,
       'storageLimit': _maxSeenVideos,
-      'percentageFull':
-          (_seenVideos.length / _maxSeenVideos * 100).toStringAsFixed(1),
+      'percentageFull': (_seenVideos.length / _maxSeenVideos * 100)
+          .toStringAsFixed(1),
       'totalLoops': totalLoops,
       'totalWatchTimeMinutes': totalWatchTime.inMinutes,
-      'averageLoopsPerVideo':
-          _seenVideos.isEmpty ? 0 : (totalLoops / _seenVideos.length).toStringAsFixed(1),
+      'averageLoopsPerVideo': _seenVideos.isEmpty
+          ? 0
+          : (totalLoops / _seenVideos.length).toStringAsFixed(1),
     };
   }
 

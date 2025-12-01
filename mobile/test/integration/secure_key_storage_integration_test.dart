@@ -169,8 +169,11 @@ void main() {
     late SecureKeyStorageService storageService;
 
     setUp(() async {
-      Log.info('Setting up SecureKeyStorageService test',
-          name: 'Test', category: LogCategory.system);
+      Log.info(
+        'Setting up SecureKeyStorageService test',
+        name: 'Test',
+        category: LogCategory.system,
+      );
 
       storageService = SecureKeyStorageService();
     });

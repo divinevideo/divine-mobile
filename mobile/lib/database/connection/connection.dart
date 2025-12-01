@@ -4,9 +4,6 @@
 import 'package:drift/drift.dart';
 
 // Conditional imports - compiler will choose the correct one based on platform
-import 'connection_stub.dart'
-    if (dart.library.io) 'connection_native.dart'
-    if (dart.library.html) 'connection_web.dart';
 
 /// Open a database connection appropriate for the current platform
 /// - Native platforms (iOS, Android, macOS, etc.): File-based SQLite

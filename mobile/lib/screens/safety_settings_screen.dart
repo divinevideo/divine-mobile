@@ -97,7 +97,8 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
       backgroundColor: Colors.black,
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: VineTheme.vineGreen))
+              child: CircularProgressIndicator(color: VineTheme.vineGreen),
+            )
           : ListView(
               children: [
                 _buildAgeVerificationSection(),
@@ -112,17 +113,17 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
   }
 
   Widget _buildSectionHeader(String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-        child: Text(
-          title,
-          style: const TextStyle(
-            color: VineTheme.vineGreen,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+    child: Text(
+      title,
+      style: const TextStyle(
+        color: VineTheme.vineGreen,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.2,
+      ),
+    ),
+  );
 
   Widget _buildAgeVerificationSection() {
     return Column(
@@ -205,15 +206,11 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
           : null,
       title: Text(
         title,
-        style: TextStyle(
-          color: enabled ? Colors.white : Colors.grey,
-        ),
+        style: TextStyle(color: enabled ? Colors.white : Colors.grey),
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          color: enabled ? Colors.grey : Colors.grey[700],
-        ),
+        style: TextStyle(color: enabled ? Colors.grey : Colors.grey[700]),
       ),
       activeColor: VineTheme.vineGreen,
     );
@@ -234,10 +231,7 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
   Widget _buildDivineProvider() {
     return ListTile(
       leading: const Icon(Icons.verified_user, color: VineTheme.vineGreen),
-      title: const Text(
-        'Divine',
-        style: TextStyle(color: Colors.white),
-      ),
+      title: const Text('Divine', style: TextStyle(color: Colors.white)),
       subtitle: const Text(
         'Default moderation service',
         style: TextStyle(color: Colors.grey),
@@ -284,7 +278,7 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
         'Subscribe to mute lists from people you follow',
         style: TextStyle(color: Colors.grey),
       ),
-      activeColor: VineTheme.vineGreen,
+      activeThumbColor: VineTheme.vineGreen,
       secondary: const Icon(Icons.people, color: Colors.grey),
     );
   }

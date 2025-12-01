@@ -13,8 +13,22 @@ Future<void> main() async {
   // Create test video file
   final testFile = File('/tmp/test_video_upload.mp4');
   final testData = Uint8List.fromList([
-    0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70,
-    0x69, 0x73, 0x6F, 0x6D, 0x00, 0x00, 0x02, 0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x20,
+    0x66,
+    0x74,
+    0x79,
+    0x70,
+    0x69,
+    0x73,
+    0x6F,
+    0x6D,
+    0x00,
+    0x00,
+    0x02,
+    0x00,
     ...List.filled(1000, 0x00),
   ]);
   await testFile.writeAsBytes(testData);
@@ -44,14 +58,15 @@ Future<void> main() async {
     ],
     'Upload video to Blossom server',
   );
-  
+
   // Sign event
   event.sign(keychain.private);
   print('🔐 Created and signed auth event: ${event.id}\n');
 
   // Prepare upload
   final serverUrl = 'https://cf-stream-service-prod.protestnet.workers.dev';
-  final authHeader = 'Nostr ${base64.encode(utf8.encode(jsonEncode(event.toJson())))}';
+  final authHeader =
+      'Nostr ${base64.encode(utf8.encode(jsonEncode(event.toJson())))}';
 
   print('📤 Uploading to: $serverUrl/upload');
   print('🔐 Auth header length: ${authHeader.length} chars\n');

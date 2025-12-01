@@ -17,14 +17,17 @@ abstract class NostrServiceWeb implements INostrService {
   final List<String> _configuredRelays = [];
   final Map<String, WebSocketChannel> _relayConnections = {};
   final Map<String, StreamSubscription> _subscriptions = {};
-  final Map<String, String> _activeSubscriptions = {}; // subscriptionId -> relayUrl
-  final StreamController<sdk.Event> _eventController = StreamController<sdk.Event>.broadcast();
+  final Map<String, String> _activeSubscriptions =
+      {}; // subscriptionId -> relayUrl
+  final StreamController<sdk.Event> _eventController =
+      StreamController<sdk.Event>.broadcast();
   bool _isInitialized = false;
   bool _isDisposed = false;
   int _subscriptionCounter = 0;
 
   // Event batching for compact logging
-  final Map<String, Map<int, int>> _eventBatchCounts = {}; // relayUrl -> {kind: count}
+  final Map<String, Map<int, int>> _eventBatchCounts =
+      {}; // relayUrl -> {kind: count}
   Timer? _batchLogTimer;
   static const _batchLogInterval = Duration(seconds: 5);
 
@@ -33,7 +36,10 @@ abstract class NostrServiceWeb implements INostrService {
   }
 
   void _startBatchLogging() {
-    _batchLogTimer = Timer.periodic(_batchLogInterval, (_) => _flushBatchedLogs());
+    _batchLogTimer = Timer.periodic(
+      _batchLogInterval,
+      (_) => _flushBatchedLogs(),
+    );
   }
 
   void _flushBatchedLogs() {
@@ -48,8 +54,11 @@ abstract class NostrServiceWeb implements INostrService {
         final kindSummary = kindCounts.entries
             .map((e) => 'kind ${e.key}: ${e.value}')
             .join(', ');
-        Log.debug('Received $totalCount events ($kindSummary) from $relayUrl',
-            name: 'NostrServiceWeb', category: LogCategory.relay);
+        Log.debug(
+          'Received $totalCount events ($kindSummary) from $relayUrl',
+          name: 'NostrServiceWeb',
+          category: LogCategory.relay,
+        );
       }
     }
 
@@ -58,7 +67,8 @@ abstract class NostrServiceWeb implements INostrService {
 
   void _recordEventForBatching(String relayUrl, int kind) {
     _eventBatchCounts.putIfAbsent(relayUrl, () => {});
-    _eventBatchCounts[relayUrl]![kind] = (_eventBatchCounts[relayUrl]![kind] ?? 0) + 1;
+    _eventBatchCounts[relayUrl]![kind] =
+        (_eventBatchCounts[relayUrl]![kind] ?? 0) + 1;
   }
 
   @override
@@ -73,8 +83,11 @@ abstract class NostrServiceWeb implements INostrService {
     bool enableP2P = false,
   }) async {
     if (_isInitialized) {
-      Log.warning('NostrServiceWeb already initialized',
-          name: 'NostrServiceWeb', category: LogCategory.relay);
+      Log.warning(
+        'NostrServiceWeb already initialized',
+        name: 'NostrServiceWeb',
+        category: LogCategory.relay,
+      );
       return;
     }
 
@@ -101,11 +114,17 @@ abstract class NostrServiceWeb implements INostrService {
         _relayConnections[relayUrl] = channel;
         _configuredRelays.add(relayUrl);
 
-        Log.info('Connected to relay: $relayUrl',
-            name: 'NostrServiceWeb', category: LogCategory.relay);
+        Log.info(
+          'Connected to relay: $relayUrl',
+          name: 'NostrServiceWeb',
+          category: LogCategory.relay,
+        );
       } catch (e) {
-        Log.error('Failed to connect to relay $relayUrl: $e',
-            name: 'NostrServiceWeb', category: LogCategory.relay);
+        Log.error(
+          'Failed to connect to relay $relayUrl: $e',
+          name: 'NostrServiceWeb',
+          category: LogCategory.relay,
+        );
       }
     }
 
@@ -130,29 +149,44 @@ abstract class NostrServiceWeb implements INostrService {
       } else if (messageType == 'EOSE' && decoded.length >= 2) {
         // End of stored events
         final subscriptionId = decoded[1] as String;
-        Log.debug('EOSE received from $relayUrl for subscription $subscriptionId',
-            name: 'NostrServiceWeb', category: LogCategory.relay);
+        Log.debug(
+          'EOSE received from $relayUrl for subscription $subscriptionId',
+          name: 'NostrServiceWeb',
+          category: LogCategory.relay,
+        );
 
         // Trigger any EOSE callbacks
         // Note: We store callbacks separately if needed
       } else if (messageType == 'NOTICE') {
-        Log.info('Notice from $relayUrl: ${decoded[1]}',
-            name: 'NostrServiceWeb', category: LogCategory.relay);
+        Log.info(
+          'Notice from $relayUrl: ${decoded[1]}',
+          name: 'NostrServiceWeb',
+          category: LogCategory.relay,
+        );
       }
     } catch (e) {
-      Log.error('Error handling relay message from $relayUrl: $e',
-          name: 'NostrServiceWeb', category: LogCategory.relay);
+      Log.error(
+        'Error handling relay message from $relayUrl: $e',
+        name: 'NostrServiceWeb',
+        category: LogCategory.relay,
+      );
     }
   }
 
   void _handleRelayError(String relayUrl, dynamic error) {
-    Log.error('Relay error from $relayUrl: $error',
-        name: 'NostrServiceWeb', category: LogCategory.relay);
+    Log.error(
+      'Relay error from $relayUrl: $error',
+      name: 'NostrServiceWeb',
+      category: LogCategory.relay,
+    );
   }
 
   void _handleRelayDisconnect(String relayUrl) {
-    Log.warning('Relay disconnected: $relayUrl',
-        name: 'NostrServiceWeb', category: LogCategory.relay);
+    Log.warning(
+      'Relay disconnected: $relayUrl',
+      name: 'NostrServiceWeb',
+      category: LogCategory.relay,
+    );
     _relayConnections.remove(relayUrl);
   }
 
@@ -188,11 +222,17 @@ abstract class NostrServiceWeb implements INostrService {
 
         _activeSubscriptions[subscriptionId] = relayUrl;
 
-        Log.debug('Sent REQ to $relayUrl: $subscriptionId',
-            name: 'NostrServiceWeb', category: LogCategory.relay);
+        Log.debug(
+          'Sent REQ to $relayUrl: $subscriptionId',
+          name: 'NostrServiceWeb',
+          category: LogCategory.relay,
+        );
       } catch (e) {
-        Log.error('Failed to subscribe to relay ${entry.key}: $e',
-            name: 'NostrServiceWeb', category: LogCategory.relay);
+        Log.error(
+          'Failed to subscribe to relay ${entry.key}: $e',
+          name: 'NostrServiceWeb',
+          category: LogCategory.relay,
+        );
       }
     }
 
@@ -231,8 +271,11 @@ abstract class NostrServiceWeb implements INostrService {
         final closeMessage = jsonEncode(['CLOSE', subscriptionId]);
         channel.sink.add(closeMessage);
       } catch (e) {
-        Log.error('Failed to query relay ${entry.key}: $e',
-            name: 'NostrServiceWeb', category: LogCategory.relay);
+        Log.error(
+          'Failed to query relay ${entry.key}: $e',
+          name: 'NostrServiceWeb',
+          category: LogCategory.relay,
+        );
       }
     }
 
@@ -273,13 +316,19 @@ abstract class NostrServiceWeb implements INostrService {
         results[relayUrl] = true;
         successCount++;
 
-        Log.debug('Published event to $relayUrl: ${event.id}',
-            name: 'NostrServiceWeb', category: LogCategory.relay);
+        Log.debug(
+          'Published event to $relayUrl: ${event.id}',
+          name: 'NostrServiceWeb',
+          category: LogCategory.relay,
+        );
       } catch (e) {
         results[entry.key] = false;
         errors[entry.key] = e.toString();
-        Log.error('Failed to broadcast to ${entry.key}: $e',
-            name: 'NostrServiceWeb', category: LogCategory.relay);
+        Log.error(
+          'Failed to broadcast to ${entry.key}: $e',
+          name: 'NostrServiceWeb',
+          category: LogCategory.relay,
+        );
       }
     }
 
@@ -337,8 +386,11 @@ abstract class NostrServiceWeb implements INostrService {
     for (final entry in _relayConnections.entries) {
       try {
         await entry.value.sink.close(status.normalClosure);
-        Log.debug('Closed connection to ${entry.key}',
-            name: 'NostrServiceWeb', category: LogCategory.relay);
+        Log.debug(
+          'Closed connection to ${entry.key}',
+          name: 'NostrServiceWeb',
+          category: LogCategory.relay,
+        );
       } catch (e) {
         // Ignore disconnect errors
       }
@@ -413,11 +465,17 @@ abstract class NostrServiceWeb implements INostrService {
       _relayConnections[relayUrl] = channel;
       _configuredRelays.add(relayUrl);
 
-      Log.info('Connected to relay: $relayUrl',
-          name: 'NostrServiceWeb', category: LogCategory.relay);
+      Log.info(
+        'Connected to relay: $relayUrl',
+        name: 'NostrServiceWeb',
+        category: LogCategory.relay,
+      );
     } catch (e) {
-      Log.error('Failed to connect to relay $relayUrl: $e',
-          name: 'NostrServiceWeb', category: LogCategory.relay);
+      Log.error(
+        'Failed to connect to relay $relayUrl: $e',
+        name: 'NostrServiceWeb',
+        category: LogCategory.relay,
+      );
       rethrow;
     }
   }
@@ -444,7 +502,7 @@ abstract class NostrServiceWeb implements INostrService {
 
   Future<sdk.Event?> getEvent(String eventId) async {
     final filters = [
-      sdk.Filter(ids: [eventId])
+      sdk.Filter(ids: [eventId]),
     ];
     final events = await queryEvents(filters);
     return events.isNotEmpty ? events.first : null;
@@ -509,7 +567,8 @@ abstract class NostrServiceWeb implements INostrService {
   bool get hasKeys => true; // Web always has keys from keyManager
 
   @override
-  NostrKeyManager get keyManager => throw UnimplementedError('Override in subclass');
+  NostrKeyManager get keyManager =>
+      throw UnimplementedError('Override in subclass');
 
   @override
   bool get isDisposed => _isDisposed;
@@ -591,7 +650,7 @@ abstract class NostrServiceWeb implements INostrService {
         limit: limit,
         since: since != null ? since.millisecondsSinceEpoch ~/ 1000 : null,
         until: until != null ? until.millisecondsSinceEpoch ~/ 1000 : null,
-      )
+      ),
     ];
 
     return subscribeToEvents(filters: filters);

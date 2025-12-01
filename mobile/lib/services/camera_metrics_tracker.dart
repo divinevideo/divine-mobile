@@ -6,7 +6,8 @@ import 'package:openvine/utils/unified_logger.dart';
 
 /// Service for tracking camera and video recording performance
 class CameraMetricsTracker {
-  static final CameraMetricsTracker _instance = CameraMetricsTracker._internal();
+  static final CameraMetricsTracker _instance =
+      CameraMetricsTracker._internal();
   factory CameraMetricsTracker() => _instance;
   CameraMetricsTracker._internal();
 
@@ -47,10 +48,7 @@ class CameraMetricsTracker {
 
     _analytics.logEvent(
       name: 'camera_init',
-      parameters: {
-        'init_time_ms': initTime,
-        'success': true,
-      },
+      parameters: {'init_time_ms': initTime, 'success': true},
     );
 
     _cameraSessions.remove(sessionId);
@@ -75,7 +73,10 @@ class CameraMetricsTracker {
       parameters: {
         'init_time_ms': attemptTime,
         'success': false,
-        'error_message': errorMessage.substring(0, errorMessage.length > 100 ? 100 : errorMessage.length),
+        'error_message': errorMessage.substring(
+          0,
+          errorMessage.length > 100 ? 100 : errorMessage.length,
+        ),
       },
     );
 
@@ -91,19 +92,14 @@ class CameraMetricsTracker {
 
     _recordingSessions[sessionId] = session;
 
-    UnifiedLogger.info(
-      '🎥 Recording started',
-      name: 'CameraMetrics',
-    );
+    UnifiedLogger.info('🎥 Recording started', name: 'CameraMetrics');
 
-    _analytics.logEvent(
-      name: 'recording_started',
-      parameters: {},
-    );
+    _analytics.logEvent(name: 'recording_started', parameters: {});
   }
 
   /// Stop recording and track metrics
-  void stopRecording(String sessionId, {
+  void stopRecording(
+    String sessionId, {
     required int durationMs,
     required int fileSizeBytes,
     bool? success,
@@ -149,10 +145,7 @@ class CameraMetricsTracker {
 
     _analytics.logEvent(
       name: 'recording_cancelled',
-      parameters: {
-        'duration_before_cancel_ms': duration,
-        'reason': reason,
-      },
+      parameters: {'duration_before_cancel_ms': duration, 'reason': reason},
     );
 
     UnifiedLogger.info(
@@ -164,7 +157,8 @@ class CameraMetricsTracker {
   }
 
   /// Start tracking upload
-  void startUpload(String uploadId, {
+  void startUpload(
+    String uploadId, {
     required int fileSizeBytes,
     required String uploadType, // 'video', 'thumbnail', etc.
   }) {
@@ -184,7 +178,8 @@ class CameraMetricsTracker {
   }
 
   /// Track upload progress
-  void trackUploadProgress(String uploadId, {
+  void trackUploadProgress(
+    String uploadId, {
     required int bytesUploaded,
     required double progressPercentage,
   }) {
@@ -216,7 +211,8 @@ class CameraMetricsTracker {
         .difference(session.startTime)
         .inMilliseconds;
 
-    final uploadSpeedMbps = (session.fileSizeBytes * 8 / 1024 / 1024) / (uploadTime / 1000);
+    final uploadSpeedMbps =
+        (session.fileSizeBytes * 8 / 1024 / 1024) / (uploadTime / 1000);
 
     UnifiedLogger.info(
       '✅ Upload complete: ${session.uploadType} in ${uploadTime}ms (${uploadSpeedMbps.toStringAsFixed(2)} Mbps)',
@@ -228,7 +224,9 @@ class CameraMetricsTracker {
       parameters: {
         'upload_type': session.uploadType,
         'file_size_bytes': session.fileSizeBytes,
-        'file_size_mb': (session.fileSizeBytes / 1024 / 1024).toStringAsFixed(2),
+        'file_size_mb': (session.fileSizeBytes / 1024 / 1024).toStringAsFixed(
+          2,
+        ),
         'upload_time_ms': uploadTime,
         'upload_speed_mbps': uploadSpeedMbps.toStringAsFixed(2),
         'success': true,
@@ -239,7 +237,11 @@ class CameraMetricsTracker {
   }
 
   /// Mark upload failure
-  void markUploadFailed(String uploadId, String errorMessage, {int? retryAttempt}) {
+  void markUploadFailed(
+    String uploadId,
+    String errorMessage, {
+    int? retryAttempt,
+  }) {
     final session = _uploadSessions[uploadId];
     if (session == null) return;
 
@@ -259,7 +261,10 @@ class CameraMetricsTracker {
         'file_size_bytes': session.fileSizeBytes,
         'upload_time_ms': attemptTime,
         'success': false,
-        'error_message': errorMessage.substring(0, errorMessage.length > 100 ? 100 : errorMessage.length),
+        'error_message': errorMessage.substring(
+          0,
+          errorMessage.length > 100 ? 100 : errorMessage.length,
+        ),
         if (retryAttempt != null) 'retry_attempt': retryAttempt,
       },
     );
@@ -290,7 +295,8 @@ class CameraMetricsTracker {
 
   /// Track camera-specific error types
   void trackCameraError({
-    required String errorType, // 'device_busy', 'unsupported_format', 'hardware_failure', 'timeout'
+    required String
+    errorType, // 'device_busy', 'unsupported_format', 'hardware_failure', 'timeout'
     required String errorMessage,
     String? deviceModel,
     String? cameraType, // 'front', 'back', 'external'
@@ -300,7 +306,10 @@ class CameraMetricsTracker {
       name: 'camera_error_detail',
       parameters: {
         'error_type': errorType,
-        'error_message': errorMessage.substring(0, errorMessage.length > 150 ? 150 : errorMessage.length),
+        'error_message': errorMessage.substring(
+          0,
+          errorMessage.length > 150 ? 150 : errorMessage.length,
+        ),
         if (deviceModel != null) 'device_model': deviceModel,
         if (cameraType != null) 'camera_type': cameraType,
         if (additionalContext != null) ...additionalContext,
@@ -351,7 +360,8 @@ class CameraMetricsTracker {
         'dropped_frames': droppedFrames,
         'total_frames': totalFrames,
         'drop_rate': dropRate.toStringAsFixed(4),
-        if (recordingDurationMs != null) 'recording_duration_ms': recordingDurationMs,
+        if (recordingDurationMs != null)
+          'recording_duration_ms': recordingDurationMs,
       },
     );
 
@@ -398,7 +408,10 @@ class CameraMetricsTracker {
         'from_camera': fromCamera,
         'to_camera': toCamera,
         'success': false,
-        'error_message': errorMessage.substring(0, errorMessage.length > 150 ? 150 : errorMessage.length),
+        'error_message': errorMessage.substring(
+          0,
+          errorMessage.length > 150 ? 150 : errorMessage.length,
+        ),
         if (attemptTimeMs != null) 'attempt_time_ms': attemptTimeMs,
       },
     );
@@ -416,10 +429,7 @@ class CameraMetricsTracker {
   }) {
     _analytics.logEvent(
       name: 'camera_mode_change',
-      parameters: {
-        'from_mode': fromMode,
-        'to_mode': toMode,
-      },
+      parameters: {'from_mode': fromMode, 'to_mode': toMode},
     );
   }
 
@@ -452,19 +462,13 @@ class CameraMetricsTracker {
       },
     );
 
-    UnifiedLogger.info(
-      '📝 Video draft $action',
-      name: 'CameraMetrics',
-    );
+    UnifiedLogger.info('📝 Video draft $action', name: 'CameraMetrics');
   }
 }
 
 /// Internal session tracking for camera initialization
 class _CameraSession {
-  _CameraSession({
-    required this.sessionId,
-    required this.startTime,
-  });
+  _CameraSession({required this.sessionId, required this.startTime});
 
   final String sessionId;
   final DateTime startTime;
@@ -473,10 +477,7 @@ class _CameraSession {
 
 /// Internal session tracking for recording
 class _RecordingSession {
-  _RecordingSession({
-    required this.sessionId,
-    required this.startTime,
-  });
+  _RecordingSession({required this.sessionId, required this.startTime});
 
   final String sessionId;
   final DateTime startTime;

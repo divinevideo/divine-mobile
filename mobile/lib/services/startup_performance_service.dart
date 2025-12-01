@@ -34,7 +34,8 @@ class StartupPhaseTimer {
 /// Service for monitoring and optimizing app startup performance
 class StartupPerformanceService {
   StartupPerformanceService._();
-  static final StartupPerformanceService _instance = StartupPerformanceService._();
+  static final StartupPerformanceService _instance =
+      StartupPerformanceService._();
   static StartupPerformanceService get instance => _instance;
 
   final Map<String, StartupPhaseTimer> _phases = {};
@@ -55,8 +56,11 @@ class StartupPerformanceService {
     _appStartTime = DateTime.now();
     _phases['total'] = StartupPhaseTimer('Total App Startup');
 
-    Log.info('🚀 StartupPerformanceService: Monitoring initiated',
-        name: 'StartupPerformance', category: LogCategory.system);
+    Log.info(
+      '🚀 StartupPerformanceService: Monitoring initiated',
+      name: 'StartupPerformance',
+      category: LogCategory.system,
+    );
 
     _isInitialized = true;
 
@@ -71,10 +75,15 @@ class StartupPerformanceService {
     if (!_isInitialized) return;
 
     _phases[phaseName] = StartupPhaseTimer(phaseName);
-    Log.debug('⏱️ Started phase: $phaseName',
-        name: 'StartupPerformance', category: LogCategory.system);
+    Log.debug(
+      '⏱️ Started phase: $phaseName',
+      name: 'StartupPerformance',
+      category: LogCategory.system,
+    );
 
-    CrashReportingService.instance.logInitializationStep('Phase started: $phaseName');
+    CrashReportingService.instance.logInitializationStep(
+      'Phase started: $phaseName',
+    );
   }
 
   /// Mark the end of a startup phase
@@ -84,10 +93,15 @@ class StartupPerformanceService {
       phase.complete();
       final duration = phase.duration?.inMilliseconds ?? 0;
 
-      Log.info('✅ Completed phase: $phaseName in ${duration}ms',
-          name: 'StartupPerformance', category: LogCategory.system);
+      Log.info(
+        '✅ Completed phase: $phaseName in ${duration}ms',
+        name: 'StartupPerformance',
+        category: LogCategory.system,
+      );
 
-      CrashReportingService.instance.logInitializationStep('Phase completed: $phaseName (${duration}ms)');
+      CrashReportingService.instance.logInitializationStep(
+        'Phase completed: $phaseName (${duration}ms)',
+      );
 
       // Check for performance warnings
       if (duration > 1000) {
@@ -101,10 +115,15 @@ class StartupPerformanceService {
     if (!_isInitialized) return;
 
     _checkpoints[name] = DateTime.now();
-    final elapsed = _checkpoints[name]!.difference(_appStartTime!).inMilliseconds;
+    final elapsed = _checkpoints[name]!
+        .difference(_appStartTime!)
+        .inMilliseconds;
 
-    Log.debug('📍 Checkpoint: $name at ${elapsed}ms',
-        name: 'StartupPerformance', category: LogCategory.system);
+    Log.debug(
+      '📍 Checkpoint: $name at ${elapsed}ms',
+      name: 'StartupPerformance',
+      category: LogCategory.system,
+    );
   }
 
   /// Mark when first frame is rendered
@@ -114,10 +133,15 @@ class StartupPerformanceService {
     _firstFrameTime = DateTime.now();
     final elapsed = _firstFrameTime!.difference(_appStartTime!).inMilliseconds;
 
-    Log.info('🖼️ First frame rendered in ${elapsed}ms',
-        name: 'StartupPerformance', category: LogCategory.system);
+    Log.info(
+      '🖼️ First frame rendered in ${elapsed}ms',
+      name: 'StartupPerformance',
+      category: LogCategory.system,
+    );
 
-    CrashReportingService.instance.logInitializationStep('First frame: ${elapsed}ms');
+    CrashReportingService.instance.logInitializationStep(
+      'First frame: ${elapsed}ms',
+    );
     CrashReportingService.instance.setCustomKey('first_frame_ms', elapsed);
   }
 
@@ -128,10 +152,15 @@ class StartupPerformanceService {
     _uiReadyTime = DateTime.now();
     final elapsed = _uiReadyTime!.difference(_appStartTime!).inMilliseconds;
 
-    Log.info('🎯 UI ready for interaction in ${elapsed}ms',
-        name: 'StartupPerformance', category: LogCategory.system);
+    Log.info(
+      '🎯 UI ready for interaction in ${elapsed}ms',
+      name: 'StartupPerformance',
+      category: LogCategory.system,
+    );
 
-    CrashReportingService.instance.logInitializationStep('UI ready: ${elapsed}ms');
+    CrashReportingService.instance.logInitializationStep(
+      'UI ready: ${elapsed}ms',
+    );
     CrashReportingService.instance.setCustomKey('ui_ready_ms', elapsed);
   }
 
@@ -142,10 +171,15 @@ class StartupPerformanceService {
     _videoReadyTime = DateTime.now();
     final elapsed = _videoReadyTime!.difference(_appStartTime!).inMilliseconds;
 
-    Log.info('🎬 Video system ready in ${elapsed}ms',
-        name: 'StartupPerformance', category: LogCategory.system);
+    Log.info(
+      '🎬 Video system ready in ${elapsed}ms',
+      name: 'StartupPerformance',
+      category: LogCategory.system,
+    );
 
-    CrashReportingService.instance.logInitializationStep('Video ready: ${elapsed}ms');
+    CrashReportingService.instance.logInitializationStep(
+      'Video ready: ${elapsed}ms',
+    );
     CrashReportingService.instance.setCustomKey('video_ready_ms', elapsed);
 
     // Complete the total startup phase
@@ -158,7 +192,10 @@ class StartupPerformanceService {
   }
 
   /// Defer heavy work until after UI is ready
-  Future<T> deferUntilUIReady<T>(Future<T> Function() work, {String? taskName}) async {
+  Future<T> deferUntilUIReady<T>(
+    Future<T> Function() work, {
+    String? taskName,
+  }) async {
     // If UI is already ready, execute immediately
     if (_uiReadyTime != null) {
       return await work();
@@ -170,11 +207,13 @@ class StartupPerformanceService {
     void checkUIReady() {
       if (_uiReadyTime != null) {
         // Execute the deferred work
-        work().then((result) {
-          completer.complete(result);
-        }).catchError((error) {
-          completer.completeError(error);
-        });
+        work()
+            .then((result) {
+              completer.complete(result);
+            })
+            .catchError((error) {
+              completer.completeError(error);
+            });
       } else {
         // Check again on next frame
         WidgetsBinding.instance.addPostFrameCallback((_) => checkUIReady());
@@ -184,8 +223,11 @@ class StartupPerformanceService {
     WidgetsBinding.instance.addPostFrameCallback((_) => checkUIReady());
 
     if (taskName != null) {
-      Log.debug('⏳ Deferring task: $taskName until UI ready',
-          name: 'StartupPerformance', category: LogCategory.system);
+      Log.debug(
+        '⏳ Deferring task: $taskName until UI ready',
+        name: 'StartupPerformance',
+        category: LogCategory.system,
+      );
     }
 
     return completer.future;
@@ -213,15 +255,25 @@ class StartupPerformanceService {
     final elapsed = DateTime.now().difference(_appStartTime!).inMilliseconds;
 
     if (elapsed > 5000 && _firstFrameTime == null) {
-      Log.warning('🐌 Slow startup: No first frame after ${elapsed}ms',
-          name: 'StartupPerformance', category: LogCategory.system);
-      CrashReportingService.instance.log('Slow startup detected: ${elapsed}ms without first frame');
+      Log.warning(
+        '🐌 Slow startup: No first frame after ${elapsed}ms',
+        name: 'StartupPerformance',
+        category: LogCategory.system,
+      );
+      CrashReportingService.instance.log(
+        'Slow startup detected: ${elapsed}ms without first frame',
+      );
     }
 
     if (elapsed > 10000 && _uiReadyTime == null) {
-      Log.warning('🚨 Very slow startup: UI not ready after ${elapsed}ms',
-          name: 'StartupPerformance', category: LogCategory.system);
-      CrashReportingService.instance.log('Very slow startup: ${elapsed}ms without UI ready');
+      Log.warning(
+        '🚨 Very slow startup: UI not ready after ${elapsed}ms',
+        name: 'StartupPerformance',
+        category: LogCategory.system,
+      );
+      CrashReportingService.instance.log(
+        'Very slow startup: ${elapsed}ms without UI ready',
+      );
     }
   }
 
@@ -234,7 +286,9 @@ class StartupPerformanceService {
 
     // Overall timings
     if (_firstFrameTime != null) {
-      final firstFrameMs = _firstFrameTime!.difference(_appStartTime!).inMilliseconds;
+      final firstFrameMs = _firstFrameTime!
+          .difference(_appStartTime!)
+          .inMilliseconds;
       report.writeln('First Frame: ${firstFrameMs}ms');
     }
 
@@ -244,7 +298,9 @@ class StartupPerformanceService {
     }
 
     if (_videoReadyTime != null) {
-      final videoReadyMs = _videoReadyTime!.difference(_appStartTime!).inMilliseconds;
+      final videoReadyMs = _videoReadyTime!
+          .difference(_appStartTime!)
+          .inMilliseconds;
       report.writeln('Video Ready: ${videoReadyMs}ms');
     }
 
@@ -284,28 +340,42 @@ class StartupPerformanceService {
     // Optimization recommendations
     report.writeln('\n--- Optimization Recommendations ---');
 
-    if (_firstFrameTime != null && _firstFrameTime!.difference(_appStartTime!).inMilliseconds > 2000) {
-      report.writeln('• Consider deferring heavy initialization until after first frame');
+    if (_firstFrameTime != null &&
+        _firstFrameTime!.difference(_appStartTime!).inMilliseconds > 2000) {
+      report.writeln(
+        '• Consider deferring heavy initialization until after first frame',
+      );
     }
 
-    if (_uiReadyTime != null && _uiReadyTime!.difference(_appStartTime!).inMilliseconds > 3000) {
-      report.writeln('• Move non-critical service initialization to background');
+    if (_uiReadyTime != null &&
+        _uiReadyTime!.difference(_appStartTime!).inMilliseconds > 3000) {
+      report.writeln(
+        '• Move non-critical service initialization to background',
+      );
     }
 
     final slowPhases = _phases.entries
-        .where((e) => e.value.isCompleted && e.value.duration!.inMilliseconds > 500)
+        .where(
+          (e) => e.value.isCompleted && e.value.duration!.inMilliseconds > 500,
+        )
         .toList();
 
     if (slowPhases.isNotEmpty) {
       report.writeln('• Optimize these slow phases:');
       for (final phase in slowPhases) {
-        report.writeln('  - ${phase.key}: ${phase.value.duration!.inMilliseconds}ms');
+        report.writeln(
+          '  - ${phase.key}: ${phase.value.duration!.inMilliseconds}ms',
+        );
       }
     }
 
     report.writeln('=====================================\n');
 
-    Log.info(report.toString(), name: 'StartupPerformance', category: LogCategory.system);
+    Log.info(
+      report.toString(),
+      name: 'StartupPerformance',
+      category: LogCategory.system,
+    );
   }
 
   /// Get startup metrics for analytics
@@ -317,15 +387,21 @@ class StartupPerformanceService {
     }
 
     if (_firstFrameTime != null) {
-      metrics['first_frame_ms'] = _firstFrameTime!.difference(_appStartTime!).inMilliseconds;
+      metrics['first_frame_ms'] = _firstFrameTime!
+          .difference(_appStartTime!)
+          .inMilliseconds;
     }
 
     if (_uiReadyTime != null) {
-      metrics['ui_ready_ms'] = _uiReadyTime!.difference(_appStartTime!).inMilliseconds;
+      metrics['ui_ready_ms'] = _uiReadyTime!
+          .difference(_appStartTime!)
+          .inMilliseconds;
     }
 
     if (_videoReadyTime != null) {
-      metrics['video_ready_ms'] = _videoReadyTime!.difference(_appStartTime!).inMilliseconds;
+      metrics['video_ready_ms'] = _videoReadyTime!
+          .difference(_appStartTime!)
+          .inMilliseconds;
     }
 
     // Add phase timings

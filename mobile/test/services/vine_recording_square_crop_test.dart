@@ -15,7 +15,8 @@ void main() {
       // - x offset: (iw-min(iw,ih))/2 - centers horizontally
       // - y offset: (ih-min(iw,ih))/2 - centers vertically
 
-      const expectedCropFilter = 'crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2';
+      const expectedCropFilter =
+          'crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2';
 
       // For a 1920x1080 video:
       // - min(1920,1080) = 1080

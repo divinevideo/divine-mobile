@@ -37,7 +37,9 @@ void main() {
       print('🔑 Generated test keypair: ${testPublicKey}...');
 
       // Create a small test video file in current directory
-      testVideoFile = File('test_video_${DateTime.now().millisecondsSinceEpoch}.mp4');
+      testVideoFile = File(
+        'test_video_${DateTime.now().millisecondsSinceEpoch}.mp4',
+      );
 
       // Write minimal MP4 file (just needs to be a valid file for the test)
       await testVideoFile.writeAsBytes([
@@ -68,51 +70,55 @@ void main() {
       }
     });
 
-    test('should create pending upload with real upload manager', () async {
-      // Get real upload manager from providers
-      final uploadManager = container.read(uploadManagerProvider);
+    test(
+      'should create pending upload with real upload manager',
+      () async {
+        // Get real upload manager from providers
+        final uploadManager = container.read(uploadManagerProvider);
 
-      print('📤 Starting upload test with test user: ${testPublicKey}...');
+        print('📤 Starting upload test with test user: ${testPublicKey}...');
 
-      // ACT: Call the actual upload function with test keypair
-      final upload = await uploadManager.startUpload(
-        videoFile: testVideoFile,
-        nostrPubkey: testPublicKey,
-        title: 'Integration Test Video',
-        description: 'Test video uploaded by integration test',
-        hashtags: ['test', 'integration'],
-        videoDuration: const Duration(seconds: 1),
-      );
+        // ACT: Call the actual upload function with test keypair
+        final upload = await uploadManager.startUpload(
+          videoFile: testVideoFile,
+          nostrPubkey: testPublicKey,
+          title: 'Integration Test Video',
+          description: 'Test video uploaded by integration test',
+          hashtags: ['test', 'integration'],
+          videoDuration: const Duration(seconds: 1),
+        );
 
-      // ASSERT: Upload was created
-      expect(upload, isNotNull);
-      expect(upload.localVideoPath, equals(testVideoFile.path));
-      expect(upload.nostrPubkey, equals(testPublicKey));
-      expect(upload.title, equals('Integration Test Video'));
-      expect(upload.hashtags, contains('test'));
-      expect(upload.hashtags, contains('integration'));
+        // ASSERT: Upload was created
+        expect(upload, isNotNull);
+        expect(upload.localVideoPath, equals(testVideoFile.path));
+        expect(upload.nostrPubkey, equals(testPublicKey));
+        expect(upload.title, equals('Integration Test Video'));
+        expect(upload.hashtags, contains('test'));
+        expect(upload.hashtags, contains('integration'));
 
-      print('✅ Upload created: ${upload.id}');
-      print('   Status: ${upload.status}');
-      print('   Title: ${upload.title}');
-      print('   Hashtags: ${upload.hashtags}');
+        print('✅ Upload created: ${upload.id}');
+        print('   Status: ${upload.status}');
+        print('   Title: ${upload.title}');
+        print('   Hashtags: ${upload.hashtags}');
 
-      // Wait a bit for upload to potentially start processing
-      await Future.delayed(const Duration(seconds: 2));
+        // Wait a bit for upload to potentially start processing
+        await Future.delayed(const Duration(seconds: 2));
 
-      // Check upload status
-      final updatedUpload = uploadManager.getUpload(upload.id);
-      expect(updatedUpload, isNotNull);
+        // Check upload status
+        final updatedUpload = uploadManager.getUpload(upload.id);
+        expect(updatedUpload, isNotNull);
 
-      print('   Updated status: ${updatedUpload!.status}');
+        print('   Updated status: ${updatedUpload!.status}');
 
-      // Upload should have been created successfully
-      expect(upload.id, isNotEmpty);
-      expect(upload.createdAt, isNotNull);
+        // Upload should have been created successfully
+        expect(upload.id, isNotEmpty);
+        expect(upload.createdAt, isNotNull);
 
-      // Note: Actual Blossom upload may fail in test environment without proper auth/network,
-      // but we've verified the upload manager accepts the request and creates the upload
-    }, timeout: const Timeout(Duration(seconds: 30)));
+        // Note: Actual Blossom upload may fail in test environment without proper auth/network,
+        // but we've verified the upload manager accepts the request and creates the upload
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+    );
 
     test('should accept video with full metadata', () async {
       final uploadManager = container.read(uploadManagerProvider);

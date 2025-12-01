@@ -29,24 +29,16 @@ class ShareableUser {
 /// Result of sharing operation
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class ShareResult {
-  const ShareResult({
-    required this.success,
-    this.error,
-    this.messageEventId,
-  });
+  const ShareResult({required this.success, this.error, this.messageEventId});
   final bool success;
   final String? error;
   final String? messageEventId;
 
-  static ShareResult createSuccess(String messageEventId) => ShareResult(
-        success: true,
-        messageEventId: messageEventId,
-      );
+  static ShareResult createSuccess(String messageEventId) =>
+      ShareResult(success: true, messageEventId: messageEventId);
 
-  static ShareResult failure(String error) => ShareResult(
-        success: false,
-        error: error,
-      );
+  static ShareResult failure(String error) =>
+      ShareResult(success: false, error: error);
 }
 
 /// Service for sharing videos with other users
@@ -56,9 +48,9 @@ class VideoSharingService {
     required INostrService nostrService,
     required AuthService authService,
     required UserProfileService userProfileService,
-  })  : _nostrService = nostrService,
-        _authService = authService,
-        _userProfileService = userProfileService;
+  }) : _nostrService = nostrService,
+       _authService = authService,
+       _userProfileService = userProfileService;
   final INostrService _nostrService;
   final AuthService _authService;
   final UserProfileService _userProfileService;
@@ -78,9 +70,10 @@ class VideoSharingService {
   }) async {
     try {
       Log.debug(
-          '📱 Sharing video with user: $recipientPubkey',
-          name: 'VideoSharingService',
-          category: LogCategory.video);
+        '📱 Sharing video with user: $recipientPubkey',
+        name: 'VideoSharingService',
+        category: LogCategory.video,
+      );
 
       if (!_authService.isAuthenticated) {
         return ShareResult.failure('User not authenticated');
@@ -116,16 +109,22 @@ class VideoSharingService {
         _shareHistory[recipientPubkey] = DateTime.now();
         await _updateRecentlySharedWith(recipientPubkey);
 
-        Log.info('Video shared successfully: ${event.id}',
-            name: 'VideoSharingService', category: LogCategory.video);
+        Log.info(
+          'Video shared successfully: ${event.id}',
+          name: 'VideoSharingService',
+          category: LogCategory.video,
+        );
 
         return ShareResult.createSuccess(event.id);
       } else {
         return ShareResult.failure('Failed to broadcast share message');
       }
     } catch (e) {
-      Log.error('Error sharing video: $e',
-          name: 'VideoSharingService', category: LogCategory.video);
+      Log.error(
+        'Error sharing video: $e',
+        name: 'VideoSharingService',
+        category: LogCategory.video,
+      );
       return ShareResult.failure('Error sharing video: $e');
     }
   }
@@ -161,12 +160,18 @@ class VideoSharingService {
       // TODO: Add followers and following when social service integration is complete
       // For now, return recent users
 
-      Log.info('Found ${shareableUsers.length} shareable users',
-          name: 'VideoSharingService', category: LogCategory.video);
+      Log.info(
+        'Found ${shareableUsers.length} shareable users',
+        name: 'VideoSharingService',
+        category: LogCategory.video,
+      );
       return shareableUsers.take(limit).toList();
     } catch (e) {
-      Log.error('Error getting shareable users: $e',
-          name: 'VideoSharingService', category: LogCategory.video);
+      Log.error(
+        'Error getting shareable users: $e',
+        name: 'VideoSharingService',
+        category: LogCategory.video,
+      );
       return [];
     }
   }
@@ -189,12 +194,18 @@ class VideoSharingService {
         ];
       }
 
-      Log.debug('User search not yet implemented for: $query',
-          name: 'VideoSharingService', category: LogCategory.video);
+      Log.debug(
+        'User search not yet implemented for: $query',
+        name: 'VideoSharingService',
+        category: LogCategory.video,
+      );
       return [];
     } catch (e) {
-      Log.error('Error searching users: $e',
-          name: 'VideoSharingService', category: LogCategory.video);
+      Log.error(
+        'Error searching users: $e',
+        name: 'VideoSharingService',
+        category: LogCategory.video,
+      );
       return [];
     }
   }
@@ -299,8 +310,11 @@ class VideoSharingService {
         _recentlySharedWith.removeRange(10, _recentlySharedWith.length);
       }
     } catch (e) {
-      Log.error('Failed to update recently shared with: $e',
-          name: 'VideoSharingService', category: LogCategory.video);
+      Log.error(
+        'Failed to update recently shared with: $e',
+        name: 'VideoSharingService',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -309,7 +323,10 @@ class VideoSharingService {
     _shareHistory.clear();
     _recentlySharedWith.clear();
 
-    Log.debug('🧹 Cleared sharing history',
-        name: 'VideoSharingService', category: LogCategory.video);
+    Log.debug(
+      '🧹 Cleared sharing history',
+      name: 'VideoSharingService',
+      category: LogCategory.video,
+    );
   }
 }

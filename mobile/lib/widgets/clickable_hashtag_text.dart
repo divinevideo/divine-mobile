@@ -36,27 +36,21 @@ class ClickableHashtagText extends StatelessWidget {
 
     // If no hashtags, return simple text
     if (hashtags.isEmpty) {
-      return SelectableText(
-        text,
-        style: style,
-        maxLines: maxLines,
-      );
+      return SelectableText(text, style: style, maxLines: maxLines);
     }
 
     // Build text spans with clickable hashtags
     final spans = _buildTextSpans(context);
 
-    return SelectableText.rich(
-      TextSpan(children: spans),
-      maxLines: maxLines,
-    );
+    return SelectableText.rich(TextSpan(children: spans), maxLines: maxLines);
   }
 
   List<TextSpan> _buildTextSpans(BuildContext context) {
     final spans = <TextSpan>[];
     final defaultStyle =
         style ?? const TextStyle(color: Colors.white70, fontSize: 14);
-    final tagStyle = hashtagStyle ??
+    final tagStyle =
+        hashtagStyle ??
         const TextStyle(
           color: Colors.blue,
           fontSize: 14,
@@ -94,20 +88,18 @@ class ClickableHashtagText extends StatelessWidget {
 
     // Add any remaining text after the last hashtag
     if (lastEnd < text.length) {
-      spans.add(
-        TextSpan(
-          text: text.substring(lastEnd),
-          style: defaultStyle,
-        ),
-      );
+      spans.add(TextSpan(text: text.substring(lastEnd), style: defaultStyle));
     }
 
     return spans;
   }
 
   void _navigateToHashtagFeed(BuildContext context, String hashtag) {
-    Log.debug('📍 Navigating to hashtag grid: #$hashtag',
-        name: 'ClickableHashtagText', category: LogCategory.ui);
+    Log.debug(
+      '📍 Navigating to hashtag grid: #$hashtag',
+      name: 'ClickableHashtagText',
+      category: LogCategory.ui,
+    );
 
     // Notify parent about video state change if callback provided
     onVideoStateChange?.call();

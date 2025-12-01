@@ -18,10 +18,7 @@ void main() {
       final container = ProviderContainer();
 
       // Attempting to read the provider without overriding throws an exception
-      expect(
-        () => container.read(sharedPreferencesProvider),
-        throwsException,
-      );
+      expect(() => container.read(sharedPreferencesProvider), throwsException);
 
       container.dispose();
     });
@@ -29,9 +26,7 @@ void main() {
     test('relayGatewaySettingsProvider provides settings instance', () async {
       final prefs = await SharedPreferences.getInstance();
       final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       );
 
       final settings = container.read(relayGatewaySettingsProvider);
@@ -45,9 +40,7 @@ void main() {
     test('relayGatewayServiceProvider provides service instance', () async {
       final prefs = await SharedPreferences.getInstance();
       final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       );
 
       final service = container.read(relayGatewayServiceProvider);
@@ -65,9 +58,7 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       );
 
       final service = container.read(relayGatewayServiceProvider);
@@ -77,33 +68,30 @@ void main() {
       container.dispose();
     });
 
-    test('shouldUseGatewayProvider returns true when enabled and using divine relay', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
-      );
+    test(
+      'shouldUseGatewayProvider returns true when enabled and using divine relay',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        );
 
-      final shouldUse = container.read(
-        shouldUseGatewayProvider(['wss://relay.divine.video']),
-      );
+        final shouldUse = container.read(
+          shouldUseGatewayProvider(['wss://relay.divine.video']),
+        );
 
-      expect(shouldUse, true);
+        expect(shouldUse, true);
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
 
     test('shouldUseGatewayProvider returns false when disabled', () async {
-      SharedPreferences.setMockInitialValues({
-        'relay_gateway_enabled': false,
-      });
+      SharedPreferences.setMockInitialValues({'relay_gateway_enabled': false});
 
       final prefs = await SharedPreferences.getInstance();
       final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       );
 
       final shouldUse = container.read(
@@ -115,41 +103,43 @@ void main() {
       container.dispose();
     });
 
-    test('shouldUseGatewayProvider returns false when not using divine relay', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
-      );
+    test(
+      'shouldUseGatewayProvider returns false when not using divine relay',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        );
 
-      final shouldUse = container.read(
-        shouldUseGatewayProvider(['wss://other.relay']),
-      );
+        final shouldUse = container.read(
+          shouldUseGatewayProvider(['wss://other.relay']),
+        );
 
-      expect(shouldUse, false);
+        expect(shouldUse, false);
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
 
-    test('shouldUseGatewayProvider returns true when divine relay is one of many', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
-      );
+    test(
+      'shouldUseGatewayProvider returns true when divine relay is one of many',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        );
 
-      final shouldUse = container.read(
-        shouldUseGatewayProvider([
-          'wss://other.relay',
-          'wss://relay.divine.video',
-        ]),
-      );
+        final shouldUse = container.read(
+          shouldUseGatewayProvider([
+            'wss://other.relay',
+            'wss://relay.divine.video',
+          ]),
+        );
 
-      expect(shouldUse, true);
+        expect(shouldUse, true);
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
   });
 }

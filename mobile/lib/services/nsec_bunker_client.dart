@@ -29,7 +29,8 @@ class BunkerConfig {
       relayUrl: json['relay_url'] as String,
       bunkerPubkey: json['bunker_pubkey'] as String,
       secret: json['secret'] as String,
-      permissions: (json['permissions'] as List<dynamic>?)
+      permissions:
+          (json['permissions'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
@@ -54,9 +55,7 @@ class BunkerAuthResult {
 
 /// NIP-46 Remote Signer Client
 class NsecBunkerClient {
-  NsecBunkerClient({
-    required this.authEndpoint,
-  });
+  NsecBunkerClient({required this.authEndpoint});
 
   final String authEndpoint;
 
@@ -79,16 +78,16 @@ class NsecBunkerClient {
     required String password,
   }) async {
     try {
-      Log.debug('Authenticating with bunker server',
-          name: 'NsecBunkerClient', category: LogCategory.auth);
+      Log.debug(
+        'Authenticating with bunker server',
+        name: 'NsecBunkerClient',
+        category: LogCategory.auth,
+      );
 
       final response = await http.post(
         Uri.parse(authEndpoint),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': username,
-          'password': password,
-        }),
+        body: jsonEncode({'username': username, 'password': password}),
       );
 
       if (response.statusCode != 200) {
@@ -100,17 +99,17 @@ class NsecBunkerClient {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (data['error'] != null) {
-        return BunkerAuthResult(
-          success: false,
-          error: data['error'] as String,
-        );
+        return BunkerAuthResult(success: false, error: data['error'] as String);
       }
 
       _config = BunkerConfig.fromJson(data['bunker'] as Map<String, dynamic>);
       _userPubkey = data['pubkey'] as String;
 
-      Log.info('Bunker authentication successful',
-          name: 'NsecBunkerClient', category: LogCategory.auth);
+      Log.info(
+        'Bunker authentication successful',
+        name: 'NsecBunkerClient',
+        category: LogCategory.auth,
+      );
 
       return BunkerAuthResult(
         success: true,
@@ -118,26 +117,32 @@ class NsecBunkerClient {
         userPubkey: _userPubkey,
       );
     } catch (e) {
-      Log.error('Bunker authentication error: $e',
-          name: 'NsecBunkerClient', category: LogCategory.auth);
-      return BunkerAuthResult(
-        success: false,
-        error: e.toString(),
+      Log.error(
+        'Bunker authentication error: $e',
+        name: 'NsecBunkerClient',
+        category: LogCategory.auth,
       );
+      return BunkerAuthResult(success: false, error: e.toString());
     }
   }
 
   /// Connect to the bunker relay
   Future<bool> connect() async {
     if (_config == null) {
-      Log.error('Cannot connect: no bunker configuration',
-          name: 'NsecBunkerClient', category: LogCategory.relay);
+      Log.error(
+        'Cannot connect: no bunker configuration',
+        name: 'NsecBunkerClient',
+        category: LogCategory.relay,
+      );
       return false;
     }
 
     try {
-      Log.debug('Connecting to bunker relay: ${_config!.relayUrl}',
-          name: 'NsecBunkerClient', category: LogCategory.relay);
+      Log.debug(
+        'Connecting to bunker relay: ${_config!.relayUrl}',
+        name: 'NsecBunkerClient',
+        category: LogCategory.relay,
+      );
 
       // Generate ephemeral client keypair for this session
       _clientPrivateKey = keys.generatePrivateKey();
@@ -150,13 +155,19 @@ class NsecBunkerClient {
       _wsSubscription = _wsChannel!.stream.listen(
         _handleMessage,
         onError: (error) {
-          Log.error('WebSocket error: $error',
-              name: 'NsecBunkerClient', category: LogCategory.relay);
+          Log.error(
+            'WebSocket error: $error',
+            name: 'NsecBunkerClient',
+            category: LogCategory.relay,
+          );
           _handleDisconnect();
         },
         onDone: () {
-          Log.warning('WebSocket connection closed',
-              name: 'NsecBunkerClient', category: LogCategory.relay);
+          Log.warning(
+            'WebSocket connection closed',
+            name: 'NsecBunkerClient',
+            category: LogCategory.relay,
+          );
           _handleDisconnect();
         },
       );
@@ -164,12 +175,18 @@ class NsecBunkerClient {
       // Send connect request to bunker
       await _sendConnectRequest();
 
-      Log.info('Connected to bunker relay',
-          name: 'NsecBunkerClient', category: LogCategory.relay);
+      Log.info(
+        'Connected to bunker relay',
+        name: 'NsecBunkerClient',
+        category: LogCategory.relay,
+      );
       return true;
     } catch (e) {
-      Log.error('Failed to connect to bunker: $e',
-          name: 'NsecBunkerClient', category: LogCategory.relay);
+      Log.error(
+        'Failed to connect to bunker: $e',
+        name: 'NsecBunkerClient',
+        category: LogCategory.relay,
+      );
       return false;
     }
   }
@@ -177,8 +194,11 @@ class NsecBunkerClient {
   /// Sign a Nostr event using the remote bunker
   Future<Map<String, dynamic>?> signEvent(Map<String, dynamic> event) async {
     if (!isConnected) {
-      Log.error('Cannot sign: not connected to bunker',
-          name: 'NsecBunkerClient', category: LogCategory.relay);
+      Log.error(
+        'Cannot sign: not connected to bunker',
+        name: 'NsecBunkerClient',
+        category: LogCategory.relay,
+      );
       return null;
     }
 
@@ -206,15 +226,21 @@ class NsecBunkerClient {
       );
 
       if (response['error'] != null) {
-        Log.error('Signing failed: ${response['error']}',
-            name: 'NsecBunkerClient', category: LogCategory.relay);
+        Log.error(
+          'Signing failed: ${response['error']}',
+          name: 'NsecBunkerClient',
+          category: LogCategory.relay,
+        );
         return null;
       }
 
       return response['result'] as Map<String, dynamic>?;
     } catch (e) {
-      Log.error('Failed to sign event: $e',
-          name: 'NsecBunkerClient', category: LogCategory.relay);
+      Log.error(
+        'Failed to sign event: $e',
+        name: 'NsecBunkerClient',
+        category: LogCategory.relay,
+      );
       return null;
     }
   }
@@ -222,8 +248,11 @@ class NsecBunkerClient {
   /// Get public key from bunker
   Future<String?> getPublicKey() async {
     if (!isConnected) {
-      Log.error('Cannot get pubkey: not connected to bunker',
-          name: 'NsecBunkerClient', category: LogCategory.relay);
+      Log.error(
+        'Cannot get pubkey: not connected to bunker',
+        name: 'NsecBunkerClient',
+        category: LogCategory.relay,
+      );
       return null;
     }
 
@@ -250,23 +279,32 @@ class NsecBunkerClient {
       );
 
       if (response['error'] != null) {
-        Log.error('Failed to get public key: ${response['error']}',
-            name: 'NsecBunkerClient', category: LogCategory.relay);
+        Log.error(
+          'Failed to get public key: ${response['error']}',
+          name: 'NsecBunkerClient',
+          category: LogCategory.relay,
+        );
         return null;
       }
 
       return response['result'] as String?;
     } catch (e) {
-      Log.error('Failed to get public key: $e',
-          name: 'NsecBunkerClient', category: LogCategory.relay);
+      Log.error(
+        'Failed to get public key: $e',
+        name: 'NsecBunkerClient',
+        category: LogCategory.relay,
+      );
       return null;
     }
   }
 
   /// Disconnect from bunker
   void disconnect() {
-    Log.debug('Disconnecting from bunker',
-        name: 'NsecBunkerClient', category: LogCategory.relay);
+    Log.debug(
+      'Disconnecting from bunker',
+      name: 'NsecBunkerClient',
+      category: LogCategory.relay,
+    );
 
     _wsSubscription?.cancel();
     _wsChannel?.sink.close();
@@ -296,8 +334,11 @@ class NsecBunkerClient {
         _pendingRequests.remove(requestId);
       }
     } catch (e) {
-      Log.error('Failed to handle bunker message: $e',
-          name: 'NsecBunkerClient', category: LogCategory.relay);
+      Log.error(
+        'Failed to handle bunker message: $e',
+        name: 'NsecBunkerClient',
+        category: LogCategory.relay,
+      );
     }
   }
 
@@ -361,10 +402,17 @@ class NsecBunkerClient {
       throw StateError('Bunker not properly configured for decryption');
     }
     try {
-      return NIP04.decrypt(encryptedContent, _agreement!, _config!.bunkerPubkey);
+      return NIP04.decrypt(
+        encryptedContent,
+        _agreement!,
+        _config!.bunkerPubkey,
+      );
     } catch (e) {
-      Log.error('Failed to decrypt content: $e',
-          name: 'NsecBunkerClient', category: LogCategory.relay);
+      Log.error(
+        'Failed to decrypt content: $e',
+        name: 'NsecBunkerClient',
+        category: LogCategory.relay,
+      );
       return '';
     }
   }
@@ -434,8 +482,11 @@ class NsecBunkerClient {
 
       return jsonDecode(decryptedContent) as Map<String, dynamic>;
     } catch (e) {
-      Log.error('Failed to process response: $e',
-          name: 'NsecBunkerClient', category: LogCategory.relay);
+      Log.error(
+        'Failed to process response: $e',
+        name: 'NsecBunkerClient',
+        category: LogCategory.relay,
+      );
       return null;
     }
   }

@@ -31,8 +31,9 @@ class HashtagStats {
     final recencyWeight = recentVideoCount / videoCount;
     final engagementWeight = authorCount / 100; // Normalize by 100 authors
     final hoursSinceLastSeen = DateTime.now().difference(lastSeen).inHours;
-    final freshnessWeight =
-        hoursSinceLastSeen < 24 ? 1.0 : 1.0 / (hoursSinceLastSeen / 24);
+    final freshnessWeight = hoursSinceLastSeen < 24
+        ? 1.0
+        : 1.0 / (hoursSinceLastSeen / 24);
 
     return (recencyWeight * 0.5 +
             engagementWeight * 0.3 +
@@ -88,8 +89,9 @@ class HashtagService {
         if (hashtag.isEmpty) continue;
 
         final existing = newStats[hashtag];
-        final videoTime =
-            DateTime.fromMillisecondsSinceEpoch(video.createdAt * 1000);
+        final videoTime = DateTime.fromMillisecondsSinceEpoch(
+          video.createdAt * 1000,
+        );
         final isRecent = videoTime.isAfter(twentyFourHoursAgo);
 
         if (existing == null) {
@@ -169,10 +171,13 @@ class HashtagService {
   /// Get editor's picks - curated selection of interesting hashtags
   List<String> getEditorsPicks({int limit = 25}) {
     // For now, return hashtags with good engagement (multiple authors)
-    final sorted = _hashtagStats.entries
-        .where((e) => e.value.authorCount >= 3) // At least 3 different authors
-        .toList()
-      ..sort((a, b) => b.value.authorCount.compareTo(a.value.authorCount));
+    final sorted =
+        _hashtagStats.entries
+            .where(
+              (e) => e.value.authorCount >= 3,
+            ) // At least 3 different authors
+            .toList()
+          ..sort((a, b) => b.value.authorCount.compareTo(a.value.authorCount));
     return sorted.take(limit).map((e) => e.key).toList();
   }
 
@@ -181,15 +186,17 @@ class HashtagService {
       _videoService.getVideoEventsByHashtags(hashtags);
 
   /// Subscribe to videos with specific hashtags
-  Future<void> subscribeToHashtagVideos(List<String> hashtags,
-          {int limit = 50, int? until}) =>
-      _videoService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.hashtag,
-        hashtags: hashtags,
-        limit: limit,
-        until: until,
-        replace: false,  // Don't replace - support multiple hashtag subscriptions
-      );
+  Future<void> subscribeToHashtagVideos(
+    List<String> hashtags, {
+    int limit = 50,
+    int? until,
+  }) => _videoService.subscribeToVideoFeed(
+    subscriptionType: SubscriptionType.hashtag,
+    hashtags: hashtags,
+    limit: limit,
+    until: until,
+    replace: false, // Don't replace - support multiple hashtag subscriptions
+  );
 
   /// Search hashtags by prefix
   List<String> searchHashtags(String query) {
@@ -214,9 +221,9 @@ class HashtagService {
         }
 
         // Then sort by popularity
-        return _hashtagStats[b]!
-            .videoCount
-            .compareTo(_hashtagStats[a]!.videoCount);
+        return _hashtagStats[b]!.videoCount.compareTo(
+          _hashtagStats[a]!.videoCount,
+        );
       });
   }
 }

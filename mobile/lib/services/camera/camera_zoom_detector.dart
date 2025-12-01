@@ -21,15 +21,19 @@ class PhysicalCameraSensor {
   final double zoomFactor; // Actual zoom factor (e.g., 0.5, 1.0, 2.0, 3.0)
   final String deviceId; // Native device identifier
   final String displayName; // Human-readable name
-  final bool isDigital; // True if this is a digital zoom, false for physical sensor
+  final bool
+  isDigital; // True if this is a digital zoom, false for physical sensor
 
   @override
-  String toString() => 'PhysicalCameraSensor($displayName, ${zoomFactor}x, $type${isDigital ? ' [digital]' : ''})';
+  String toString() =>
+      'PhysicalCameraSensor($displayName, ${zoomFactor}x, $type${isDigital ? ' [digital]' : ''})';
 }
 
 /// Detects available physical cameras and their actual zoom factors
 class CameraZoomDetector {
-  static const MethodChannel _channel = MethodChannel('com.openvine/camera_zoom_detector');
+  static const MethodChannel _channel = MethodChannel(
+    'com.openvine/camera_zoom_detector',
+  );
 
   /// Get all available physical cameras with their actual zoom factors
   /// iOS: Uses AVCaptureDevice to get exact zoom factors from device
@@ -44,7 +48,9 @@ class CameraZoomDetector {
 
       if (Platform.isIOS) {
         // iOS: Use custom method channel for exact zoom factors
-        final List<dynamic>? result = await _channel.invokeListMethod('getPhysicalCameras');
+        final List<dynamic>? result = await _channel.invokeListMethod(
+          'getPhysicalCameras',
+        );
 
         if (result == null || result.isEmpty) {
           Log.warning(
@@ -79,48 +85,59 @@ class CameraZoomDetector {
 
         // Add ultrawide if available
         if (sensorData.ultraWideAngle != null) {
-          cameras.add(PhysicalCameraSensor(
-            type: 'ultrawide',
-            zoomFactor: 0.5,
-            deviceId: sensorData.ultraWideAngle!.uid,
-            displayName: sensorData.ultraWideAngle!.name,
-          ));
+          cameras.add(
+            PhysicalCameraSensor(
+              type: 'ultrawide',
+              zoomFactor: 0.5,
+              deviceId: sensorData.ultraWideAngle!.uid,
+              displayName: sensorData.ultraWideAngle!.name,
+            ),
+          );
         }
 
         // Add wide angle if available
         if (sensorData.wideAngle != null) {
-          cameras.add(PhysicalCameraSensor(
-            type: 'wide',
-            zoomFactor: 1.0,
-            deviceId: sensorData.wideAngle!.uid,
-            displayName: sensorData.wideAngle!.name,
-          ));
+          cameras.add(
+            PhysicalCameraSensor(
+              type: 'wide',
+              zoomFactor: 1.0,
+              deviceId: sensorData.wideAngle!.uid,
+              displayName: sensorData.wideAngle!.name,
+            ),
+          );
         }
 
         // Add telephoto if available (use 3.0x as standard zoom for Android telephoto)
         if (sensorData.telephoto != null) {
-          cameras.add(PhysicalCameraSensor(
-            type: 'telephoto',
-            zoomFactor: 3.0,
-            deviceId: sensorData.telephoto!.uid,
-            displayName: sensorData.telephoto!.name,
-          ));
+          cameras.add(
+            PhysicalCameraSensor(
+              type: 'telephoto',
+              zoomFactor: 3.0,
+              deviceId: sensorData.telephoto!.uid,
+              displayName: sensorData.telephoto!.name,
+            ),
+          );
         }
 
         // Detect front camera using Flutter camera package
         try {
           final availableCameras = await camera_pkg.availableCameras();
-          final frontCamera = availableCameras.where(
-            (cam) => cam.lensDirection == camera_pkg.CameraLensDirection.front,
-          ).firstOrNull;
+          final frontCamera = availableCameras
+              .where(
+                (cam) =>
+                    cam.lensDirection == camera_pkg.CameraLensDirection.front,
+              )
+              .firstOrNull;
 
           if (frontCamera != null) {
-            cameras.add(PhysicalCameraSensor(
-              type: 'front',
-              zoomFactor: 1.0,
-              deviceId: frontCamera.name,
-              displayName: 'Front Camera',
-            ));
+            cameras.add(
+              PhysicalCameraSensor(
+                type: 'front',
+                zoomFactor: 1.0,
+                deviceId: frontCamera.name,
+                displayName: 'Front Camera',
+              ),
+            );
             Log.info(
               'Front camera detected: ${frontCamera.name}',
               name: 'CameraZoomDetector',

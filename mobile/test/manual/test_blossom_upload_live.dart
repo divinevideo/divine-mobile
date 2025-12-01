@@ -29,7 +29,8 @@ void main() async {
   final authEvent = {
     'kind': 24242,
     'created_at': now,
-    'pubkey': '0000000000000000000000000000000000000000000000000000000000000000',
+    'pubkey':
+        '0000000000000000000000000000000000000000000000000000000000000000',
     'tags': [
       ['t', 'upload'],
       ['expiration', (now + 300).toString()], // 5 minutes
@@ -48,7 +49,8 @@ void main() async {
   print('   Auth header length: ${authHeader.length} chars');
 
   // Test upload
-  final uploadUrl = 'https://cf-stream-service-prod.protestnet.workers.dev/upload';
+  final uploadUrl =
+      'https://cf-stream-service-prod.protestnet.workers.dev/upload';
   print('\n📤 Uploading to: $uploadUrl');
   print('   Method: PUT');
   print('   Content-Type: video/mp4');
@@ -100,25 +102,20 @@ void main() async {
       } catch (e) {
         print('⚠️  Could not parse response as JSON: $e');
       }
-
     } else if (response.statusCode == 401) {
       print('\n⚠️  AUTH FAILED (expected with dummy keys)');
       print('   This proves the endpoint exists and checks auth');
       print('   With real Nostr keys, upload would succeed');
-
     } else if (response.statusCode == 409) {
       print('\n✅ FILE EXISTS: Upload succeeded previously');
       print('   Expected CDN URL: https://cdn.divine.video/$fileHash');
-
     } else if (response.statusCode == 404) {
       print('\n❌ ENDPOINT NOT FOUND');
       print('   The /upload endpoint does not exist on this server');
       print('   Check server configuration');
-
     } else {
       print('\n❌ UNEXPECTED STATUS: ${response.statusCode}');
     }
-
   } catch (e, stackTrace) {
     print('\n❌ ERROR: $e');
     print('Stack trace: $stackTrace');

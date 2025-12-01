@@ -38,10 +38,10 @@ class VideoCircuitBreaker {
     Duration openTimeout = const Duration(minutes: 2),
     Duration halfOpenTimeout = const Duration(seconds: 30),
     int maxFailureHistory = 100,
-  })  : _failureThreshold = failureThreshold,
-        _openTimeout = openTimeout,
-        _halfOpenTimeout = halfOpenTimeout,
-        _maxFailureHistory = maxFailureHistory;
+  }) : _failureThreshold = failureThreshold,
+       _openTimeout = openTimeout,
+       _halfOpenTimeout = halfOpenTimeout,
+       _maxFailureHistory = maxFailureHistory;
   final int _failureThreshold;
   final Duration _openTimeout;
   final Duration _halfOpenTimeout;
@@ -72,8 +72,10 @@ class VideoCircuitBreaker {
     const maxRecentFailuresForRate =
         20; // Consider last 20 requests for rate calculation
     final failureCount = recentFailures.length;
-    final rate =
-        (failureCount / maxRecentFailuresForRate * 100).clamp(0.0, 100.0);
+    final rate = (failureCount / maxRecentFailuresForRate * 100).clamp(
+      0.0,
+      100.0,
+    );
 
     return rate;
   }
@@ -121,8 +123,11 @@ class VideoCircuitBreaker {
       }
     }
 
-    Log.info('CircuitBreaker: Success recorded for $url',
-        name: 'CircuitBreakerService', category: LogCategory.system);
+    Log.info(
+      'CircuitBreaker: Success recorded for $url',
+      name: 'CircuitBreakerService',
+      category: LogCategory.system,
+    );
   }
 
   /// Record a failed request
@@ -131,11 +136,7 @@ class VideoCircuitBreaker {
 
     // Add to failure history
     _failureHistory.add(
-      FailureEntry(
-        url: url,
-        timestamp: now,
-        errorMessage: errorMessage,
-      ),
+      FailureEntry(url: url, timestamp: now, errorMessage: errorMessage),
     );
 
     // Maintain history size
@@ -150,17 +151,21 @@ class VideoCircuitBreaker {
     // Check if URL should be permanently failed
     if (_urlFailureCounts[url]! >= _failureThreshold * 2) {
       _permanentlyFailedUrls.add(url);
-      Log.error('CircuitBreaker: URL permanently failed: $url',
-          name: 'CircuitBreakerService', category: LogCategory.system);
+      Log.error(
+        'CircuitBreaker: URL permanently failed: $url',
+        name: 'CircuitBreakerService',
+        category: LogCategory.system,
+      );
     }
 
     // Check overall failure rate
     _checkFailureThreshold();
 
     Log.debug(
-        'CircuitBreaker: Failure recorded for $url (count: ${_urlFailureCounts[url]})',
-        name: 'CircuitBreakerService',
-        category: LogCategory.system);
+      'CircuitBreaker: Failure recorded for $url (count: ${_urlFailureCounts[url]})',
+      name: 'CircuitBreakerService',
+      category: LogCategory.system,
+    );
   }
 
   /// Get failure statistics
@@ -203,16 +208,22 @@ class VideoCircuitBreaker {
     _recoveryTimer?.cancel();
     _recoveryTimer = null;
 
-    Log.debug('CircuitBreaker: Reset to closed state',
-        name: 'CircuitBreakerService', category: LogCategory.system);
+    Log.debug(
+      'CircuitBreaker: Reset to closed state',
+      name: 'CircuitBreakerService',
+      category: LogCategory.system,
+    );
   }
 
   /// Clear permanently failed URLs (allow retry)
   void clearPermanentFailures() {
     final count = _permanentlyFailedUrls.length;
     _permanentlyFailedUrls.clear();
-    Log.error('CircuitBreaker: Cleared $count permanently failed URLs',
-        name: 'CircuitBreakerService', category: LogCategory.system);
+    Log.error(
+      'CircuitBreaker: Cleared $count permanently failed URLs',
+      name: 'CircuitBreakerService',
+      category: LogCategory.system,
+    );
   }
 
   void dispose() {
@@ -239,8 +250,11 @@ class VideoCircuitBreaker {
     _recoveryTimer?.cancel();
     _recoveryTimer = Timer(_openTimeout, _transitionToHalfOpen);
 
-    Log.debug('CircuitBreaker: Transitioned to OPEN state',
-        name: 'CircuitBreakerService', category: LogCategory.system);
+    Log.debug(
+      'CircuitBreaker: Transitioned to OPEN state',
+      name: 'CircuitBreakerService',
+      category: LogCategory.system,
+    );
   }
 
   void _transitionToHalfOpen() {
@@ -256,8 +270,11 @@ class VideoCircuitBreaker {
       }
     });
 
-    Log.debug('CircuitBreaker: Transitioned to HALF-OPEN state',
-        name: 'CircuitBreakerService', category: LogCategory.system);
+    Log.debug(
+      'CircuitBreaker: Transitioned to HALF-OPEN state',
+      name: 'CircuitBreakerService',
+      category: LogCategory.system,
+    );
   }
 
   void _transitionToClosed() {
@@ -266,8 +283,11 @@ class VideoCircuitBreaker {
     _recoveryTimer?.cancel();
     _recoveryTimer = null;
 
-    Log.debug('CircuitBreaker: Transitioned to CLOSED state',
-        name: 'CircuitBreakerService', category: LogCategory.system);
+    Log.debug(
+      'CircuitBreaker: Transitioned to CLOSED state',
+      name: 'CircuitBreakerService',
+      category: LogCategory.system,
+    );
   }
 
   List<FailureEntry> _getRecentFailures(Duration timeWindow) {

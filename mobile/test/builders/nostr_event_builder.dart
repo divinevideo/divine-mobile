@@ -14,13 +14,14 @@ class NostrEventBuilder {
     List<List<String>>? tags,
     this.content = '',
     String? sig,
-  })  : id = id ?? _generateEventId(),
-        createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        tags = tags ??
-            [
-              ['h', 'vine']
-            ], // Always include vine tag
-        sig = sig ?? _generateSignature();
+  }) : id = id ?? _generateEventId(),
+       createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
+       tags =
+           tags ??
+           [
+             ['h', 'vine'],
+           ], // Always include vine tag
+       sig = sig ?? _generateSignature();
   String id;
   String pubkey;
   int createdAt;
@@ -36,12 +37,7 @@ class NostrEventBuilder {
       'test-signature-${DateTime.now().millisecondsSinceEpoch}';
 
   /// Build the Event instance
-  Event build() => Event(
-        id,
-        kind,
-        tags,
-        content,
-      );
+  Event build() => Event(id, kind, tags, content);
 
   /// Create a profile event (Kind 0)
   NostrEventBuilder profile({
@@ -143,7 +139,7 @@ class NostrEventBuilder {
     if (!hasVineTag) {
       tags = [
         ['h', 'vine'],
-        ...customTags
+        ...customTags,
       ];
     } else {
       tags = customTags;
@@ -168,12 +164,11 @@ class NostrEventBuilder {
     required int count,
     required int kind,
     String Function(int index)? contentGenerator,
-  }) =>
-      List.generate(
-        count,
-        (index) => NostrEventBuilder(
-          kind: kind,
-          content: contentGenerator?.call(index) ?? 'Event $index',
-        ).build(),
-      );
+  }) => List.generate(
+    count,
+    (index) => NostrEventBuilder(
+      kind: kind,
+      content: contentGenerator?.call(index) ?? 'Event $index',
+    ).build(),
+  );
 }

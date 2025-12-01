@@ -48,174 +48,206 @@ void main() {
       ),
     ];
 
-    test('activeVideoIdProvider returns correct video at search index 0', () async {
-      final container = ProviderContainer(
-        overrides: [
-          // Mock router location to /search/sexy/0
-          routerLocationStreamProvider.overrideWith(
-            (ref) => Stream.value('/search/sexy/0'),
-          ),
-          // Mock search results
-          searchScreenVideosProvider.overrideWith(
-            (ref) => mockSearchResults,
-          ),
-          // Mock app as foreground
-          appForegroundProvider.overrideWith(
-            (ref) => Stream.value(true),
-          ),
-        ],
-      );
+    test(
+      'activeVideoIdProvider returns correct video at search index 0',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            // Mock router location to /search/sexy/0
+            routerLocationStreamProvider.overrideWith(
+              (ref) => Stream.value('/search/sexy/0'),
+            ),
+            // Mock search results
+            searchScreenVideosProvider.overrideWith((ref) => mockSearchResults),
+            // Mock app as foreground
+            appForegroundProvider.overrideWith((ref) => Stream.value(true)),
+          ],
+        );
 
-      // Listen for page context and app foreground to be emitted
-      container.listen(pageContextProvider, (previous, next) {}, fireImmediately: true);
-      container.listen(appForegroundProvider, (previous, next) {}, fireImmediately: true);
+        // Listen for page context and app foreground to be emitted
+        container.listen(
+          pageContextProvider,
+          (previous, next) {},
+          fireImmediately: true,
+        );
+        container.listen(
+          appForegroundProvider,
+          (previous, next) {},
+          fireImmediately: true,
+        );
 
-      // Start providers by reading them
-      container.read(pageContextProvider);
-      container.read(appForegroundProvider);
+        // Start providers by reading them
+        container.read(pageContextProvider);
+        container.read(appForegroundProvider);
 
-      // Wait for streams to emit
-      await pumpEventQueue();
+        // Wait for streams to emit
+        await pumpEventQueue();
 
-      // Read active video ID
-      final activeVideoId = container.read(activeVideoIdProvider);
+        // Read active video ID
+        final activeVideoId = container.read(activeVideoIdProvider);
 
-      // Should be the first search result
-      expect(activeVideoId, equals('search-video-0'));
+        // Should be the first search result
+        expect(activeVideoId, equals('search-video-0'));
 
-      // Verify isVideoActiveProvider works correctly
-      final isVideo0Active = container.read(isVideoActiveProvider('search-video-0'));
-      final isVideo1Active = container.read(isVideoActiveProvider('search-video-1'));
+        // Verify isVideoActiveProvider works correctly
+        final isVideo0Active = container.read(
+          isVideoActiveProvider('search-video-0'),
+        );
+        final isVideo1Active = container.read(
+          isVideoActiveProvider('search-video-1'),
+        );
 
-      expect(isVideo0Active, isTrue);
-      expect(isVideo1Active, isFalse);
+        expect(isVideo0Active, isTrue);
+        expect(isVideo1Active, isFalse);
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
 
-    test('activeVideoIdProvider returns correct video at search index 1', () async {
-      final container = ProviderContainer(
-        overrides: [
-          // Mock router location to /search/test/1
-          routerLocationStreamProvider.overrideWith(
-            (ref) => Stream.value('/search/test/1'),
-          ),
-          // Mock search results
-          searchScreenVideosProvider.overrideWith(
-            (ref) => mockSearchResults,
-          ),
-          // Mock app as foreground
-          appForegroundProvider.overrideWith(
-            (ref) => Stream.value(true),
-          ),
-        ],
-      );
+    test(
+      'activeVideoIdProvider returns correct video at search index 1',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            // Mock router location to /search/test/1
+            routerLocationStreamProvider.overrideWith(
+              (ref) => Stream.value('/search/test/1'),
+            ),
+            // Mock search results
+            searchScreenVideosProvider.overrideWith((ref) => mockSearchResults),
+            // Mock app as foreground
+            appForegroundProvider.overrideWith((ref) => Stream.value(true)),
+          ],
+        );
 
-      // Listen for streams to emit
-      container.listen(pageContextProvider, (previous, next) {}, fireImmediately: true);
-      container.listen(appForegroundProvider, (previous, next) {}, fireImmediately: true);
+        // Listen for streams to emit
+        container.listen(
+          pageContextProvider,
+          (previous, next) {},
+          fireImmediately: true,
+        );
+        container.listen(
+          appForegroundProvider,
+          (previous, next) {},
+          fireImmediately: true,
+        );
 
-      // Start providers by reading them
-      container.read(pageContextProvider);
-      container.read(appForegroundProvider);
+        // Start providers by reading them
+        container.read(pageContextProvider);
+        container.read(appForegroundProvider);
 
-      // Wait for async operations to complete
-      await pumpEventQueue();
+        // Wait for async operations to complete
+        await pumpEventQueue();
 
-      // Read active video ID
-      final activeVideoId = container.read(activeVideoIdProvider);
+        // Read active video ID
+        final activeVideoId = container.read(activeVideoIdProvider);
 
-      // Should be the SECOND video (index 1)
-      expect(activeVideoId, equals('search-video-1'));
+        // Should be the SECOND video (index 1)
+        expect(activeVideoId, equals('search-video-1'));
 
-      // Verify isVideoActiveProvider works correctly
-      final isVideo0Active = container.read(isVideoActiveProvider('search-video-0'));
-      final isVideo1Active = container.read(isVideoActiveProvider('search-video-1'));
-      final isVideo2Active = container.read(isVideoActiveProvider('search-video-2'));
+        // Verify isVideoActiveProvider works correctly
+        final isVideo0Active = container.read(
+          isVideoActiveProvider('search-video-0'),
+        );
+        final isVideo1Active = container.read(
+          isVideoActiveProvider('search-video-1'),
+        );
+        final isVideo2Active = container.read(
+          isVideoActiveProvider('search-video-2'),
+        );
 
-      expect(isVideo0Active, isFalse);
-      expect(isVideo1Active, isTrue);
-      expect(isVideo2Active, isFalse);
+        expect(isVideo0Active, isFalse);
+        expect(isVideo1Active, isTrue);
+        expect(isVideo2Active, isFalse);
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
 
-    test('activeVideoIdProvider returns null in search grid mode (no videoIndex)', () async {
-      // This test verifies that when URL is /search/query (no index), no video is active
-      final locationController = StreamController<String>();
+    test(
+      'activeVideoIdProvider returns null in search grid mode (no videoIndex)',
+      () async {
+        // This test verifies that when URL is /search/query (no index), no video is active
+        final locationController = StreamController<String>();
 
-      final container = ProviderContainer(
-        overrides: [
-          routerLocationStreamProvider.overrideWith(
-            (ref) => locationController.stream,
-          ),
-          searchScreenVideosProvider.overrideWith(
-            (ref) => mockSearchResults,
-          ),
-          appForegroundProvider.overrideWith(
-            (ref) => Stream.value(true),
-          ),
-        ],
-      );
+        final container = ProviderContainer(
+          overrides: [
+            routerLocationStreamProvider.overrideWith(
+              (ref) => locationController.stream,
+            ),
+            searchScreenVideosProvider.overrideWith((ref) => mockSearchResults),
+            appForegroundProvider.overrideWith((ref) => Stream.value(true)),
+          ],
+        );
 
-      // Listen for active video changes
-      final activeVideoIds = <String?>[];
-      container.listen(
-        activeVideoIdProvider,
-        (previous, next) {
+        // Listen for active video changes
+        final activeVideoIds = <String?>[];
+        container.listen(activeVideoIdProvider, (previous, next) {
           print('ACTIVE VIDEO CHANGED: $previous → $next');
           activeVideoIds.add(next);
-        },
-        fireImmediately: true,
-      );
+        }, fireImmediately: true);
 
-      // Listen for streams to emit
-      container.listen(pageContextProvider, (previous, next) {}, fireImmediately: true);
+        // Listen for streams to emit
+        container.listen(
+          pageContextProvider,
+          (previous, next) {},
+          fireImmediately: true,
+        );
 
-      // Start providers
-      container.read(pageContextProvider);
+        // Start providers
+        container.read(pageContextProvider);
 
-      // Emit location: /search/test (no index - grid mode)
-      locationController.add('/search/test');
-      await pumpEventQueue();
+        // Emit location: /search/test (no index - grid mode)
+        locationController.add('/search/test');
+        await pumpEventQueue();
 
-      // Active video should be null (grid mode)
-      print('Active video ID in search grid mode: ${container.read(activeVideoIdProvider)}');
-      expect(container.read(activeVideoIdProvider), isNull);
+        // Active video should be null (grid mode)
+        print(
+          'Active video ID in search grid mode: ${container.read(activeVideoIdProvider)}',
+        );
+        expect(container.read(activeVideoIdProvider), isNull);
 
-      locationController.close();
-      container.dispose();
-    });
+        locationController.close();
+        container.dispose();
+      },
+    );
 
-    test('activeVideoIdProvider returns null when search has no results', () async {
-      final container = ProviderContainer(
-        overrides: [
-          // Mock router location to /search/empty/0
-          routerLocationStreamProvider.overrideWith(
-            (ref) => Stream.value('/search/empty/0'),
-          ),
-          // Mock search with empty results
-          searchScreenVideosProvider.overrideWith(
-            (ref) => const [],
-          ),
-          // Mock app as foreground
-          appForegroundProvider.overrideWith(
-            (ref) => Stream.value(true),
-          ),
-        ],
-      );
+    test(
+      'activeVideoIdProvider returns null when search has no results',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            // Mock router location to /search/empty/0
+            routerLocationStreamProvider.overrideWith(
+              (ref) => Stream.value('/search/empty/0'),
+            ),
+            // Mock search with empty results
+            searchScreenVideosProvider.overrideWith((ref) => const []),
+            // Mock app as foreground
+            appForegroundProvider.overrideWith((ref) => Stream.value(true)),
+          ],
+        );
 
-      container.listen(pageContextProvider, (previous, next) {}, fireImmediately: true);
-      container.listen(appForegroundProvider, (previous, next) {}, fireImmediately: true);
-      container.read(pageContextProvider);
-      container.read(appForegroundProvider);
-      await pumpEventQueue();
+        container.listen(
+          pageContextProvider,
+          (previous, next) {},
+          fireImmediately: true,
+        );
+        container.listen(
+          appForegroundProvider,
+          (previous, next) {},
+          fireImmediately: true,
+        );
+        container.read(pageContextProvider);
+        container.read(appForegroundProvider);
+        await pumpEventQueue();
 
-      // Should be null when there are no search results
-      final activeVideoId = container.read(activeVideoIdProvider);
-      expect(activeVideoId, isNull);
+        // Should be null when there are no search results
+        final activeVideoId = container.read(activeVideoIdProvider);
+        expect(activeVideoId, isNull);
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
   });
 }

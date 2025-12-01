@@ -20,7 +20,10 @@ class FeedNavigation {
 
   /// Navigate to feed starting with a specific video from a hashtag
   static void goToHashtagFeed(
-      BuildContext context, VideoEvent startingVideo, String hashtag) {
+    BuildContext context,
+    VideoEvent startingVideo,
+    String hashtag,
+  ) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => VideoFeedScreen(
@@ -46,7 +49,10 @@ class FeedNavigation {
 
   /// Navigate to feed starting with a specific video from user profile
   static void goToUserFeed(
-      BuildContext context, VideoEvent startingVideo, String userPubkey) {
+    BuildContext context,
+    VideoEvent startingVideo,
+    String userPubkey,
+  ) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => VideoFeedScreen(

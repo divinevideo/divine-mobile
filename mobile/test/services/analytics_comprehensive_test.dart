@@ -52,8 +52,10 @@ void main() {
       final request = capturedRequests.first;
 
       // Check endpoint
-      expect(request.url.toString(),
-          equals('https://api.openvine.co/analytics/view'));
+      expect(
+        request.url.toString(),
+        equals('https://api.openvine.co/analytics/view'),
+      );
 
       // Check headers
       expect(request.headers['Content-Type'], equals('application/json'));
@@ -75,35 +77,39 @@ void main() {
         {
           'code': 201,
           'body': '{"success": true}',
-          'expectSuccess': false
+          'expectSuccess': false,
         }, // Not 200
         {
           'code': 400,
           'body': '{"error": "Bad Request"}',
-          'expectSuccess': false
+          'expectSuccess': false,
         },
         {
           'code': 401,
           'body': '{"error": "Unauthorized"}',
-          'expectSuccess': false
+          'expectSuccess': false,
         },
         {
           'code': 429,
           'body': '{"error": "Rate Limited"}',
-          'expectSuccess': false
+          'expectSuccess': false,
         },
         {
           'code': 500,
           'body': '{"error": "Server Error"}',
-          'expectSuccess': false
+          'expectSuccess': false,
         },
       ];
 
       for (final testCase in testCases) {
         // Arrange
 
-        mockClient = MockClient((request) async =>
-            http.Response(testCase['body'] as String, testCase['code'] as int));
+        mockClient = MockClient(
+          (request) async => http.Response(
+            testCase['body'] as String,
+            testCase['code'] as int,
+          ),
+        );
 
         analyticsService = AnalyticsService(client: mockClient);
         await analyticsService.initialize();
@@ -143,16 +149,14 @@ void main() {
       );
 
       // Act & Assert - Should complete without throwing
-      await expectLater(
-        analyticsService.trackVideoView(video),
-        completes,
-      );
+      await expectLater(analyticsService.trackVideoView(video), completes);
     });
 
     test('should handle malformed JSON responses', () async {
       // Arrange
-      mockClient =
-          MockClient((request) async => http.Response('Invalid JSON {{{', 200));
+      mockClient = MockClient(
+        (request) async => http.Response('Invalid JSON {{{', 200),
+      );
 
       analyticsService = AnalyticsService(client: mockClient);
       await analyticsService.initialize();
@@ -166,10 +170,7 @@ void main() {
       );
 
       // Act & Assert - Should complete without throwing
-      await expectLater(
-        analyticsService.trackVideoView(video),
-        completes,
-      );
+      await expectLater(analyticsService.trackVideoView(video), completes);
     });
 
     test('should batch track multiple videos with delay', () async {
@@ -202,8 +203,9 @@ void main() {
 
       // Check that there's approximately 100ms delay between requests
       for (var i = 1; i < requestTimes.length; i++) {
-        final delay =
-            requestTimes[i].difference(requestTimes[i - 1]).inMilliseconds;
+        final delay = requestTimes[i]
+            .difference(requestTimes[i - 1])
+            .inMilliseconds;
         expect(delay, greaterThanOrEqualTo(90)); // Allow some timing variance
         expect(delay, lessThanOrEqualTo(150));
       }
@@ -291,7 +293,11 @@ void main() {
       await analyticsService.trackVideoView(video, source: 'unit_test');
 
       // Assert
-      expect(capturedRequests, isNotEmpty, reason: 'Should have captured at least one analytics request');
+      expect(
+        capturedRequests,
+        isNotEmpty,
+        reason: 'Should have captured at least one analytics request',
+      );
       final request = capturedRequests.first;
       final bodyData = jsonDecode(request.body);
 

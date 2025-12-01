@@ -135,8 +135,9 @@ class PopularNowFeed extends _$PopularNowFeed {
 
     try {
       final videoEventService = ref.read(videoEventServiceProvider);
-      final eventCountBefore =
-          videoEventService.getEventCount(SubscriptionType.popularNow);
+      final eventCountBefore = videoEventService.getEventCount(
+        SubscriptionType.popularNow,
+      );
 
       // Load more events for popularNow subscription type
       await videoEventService.loadMoreEvents(
@@ -146,8 +147,9 @@ class PopularNowFeed extends _$PopularNowFeed {
 
       if (!ref.mounted) return;
 
-      final eventCountAfter =
-          videoEventService.getEventCount(SubscriptionType.popularNow);
+      final eventCountAfter = videoEventService.getEventCount(
+        SubscriptionType.popularNow,
+      );
       final newEventsLoaded = eventCountAfter - eventCountBefore;
 
       Log.info(
@@ -159,10 +161,12 @@ class PopularNowFeed extends _$PopularNowFeed {
       // Reset loading state - state will auto-update via listener
       final newState = await future;
       if (!ref.mounted) return;
-      state = AsyncData(newState.copyWith(
-        isLoadingMore: false,
-        hasMoreContent: newEventsLoaded > 0,
-      ));
+      state = AsyncData(
+        newState.copyWith(
+          isLoadingMore: false,
+          hasMoreContent: newEventsLoaded > 0,
+        ),
+      );
     } catch (e) {
       Log.error(
         '🆕 PopularNowFeed: Error loading more: $e',
@@ -174,10 +178,7 @@ class PopularNowFeed extends _$PopularNowFeed {
       final currentState = await future;
       if (!ref.mounted) return;
       state = AsyncData(
-        currentState.copyWith(
-          isLoadingMore: false,
-          error: e.toString(),
-        ),
+        currentState.copyWith(isLoadingMore: false, error: e.toString()),
       );
     }
   }

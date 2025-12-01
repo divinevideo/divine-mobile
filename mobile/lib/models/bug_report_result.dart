@@ -21,13 +21,12 @@ class BugReportResult {
   static BugReportResult createSuccess({
     required String reportId,
     required String messageEventId,
-  }) =>
-      BugReportResult(
-        success: true,
-        reportId: reportId,
-        messageEventId: messageEventId,
-        timestamp: DateTime.now(),
-      );
+  }) => BugReportResult(
+    success: true,
+    reportId: reportId,
+    messageEventId: messageEventId,
+    timestamp: DateTime.now(),
+  );
 
   /// Create failure result
   static BugReportResult failure(String error, {String? reportId}) =>

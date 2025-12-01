@@ -8,8 +8,9 @@ import 'package:openvine/widgets/video_thumbnail_widget.dart';
 
 void main() {
   group('VideoThumbnailWidget 404 handling', () {
-    testWidgets('should not crash when thumbnail URL returns 404',
-        (WidgetTester tester) async {
+    testWidgets('should not crash when thumbnail URL returns 404', (
+      WidgetTester tester,
+    ) async {
       // Arrange: Create a video with a 404 thumbnail URL
       final video = VideoEvent(
         id: 'test-video-id',
@@ -28,11 +29,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: VideoThumbnailWidget(
-              video: video,
-              width: 200,
-              height: 200,
-            ),
+            body: VideoThumbnailWidget(video: video, width: 200, height: 200),
           ),
         ),
       );
@@ -49,8 +46,9 @@ void main() {
       // We're just verifying no exception was thrown
     });
 
-    testWidgets('should show blurhash fallback when thumbnail fails to load',
-        (WidgetTester tester) async {
+    testWidgets('should show blurhash fallback when thumbnail fails to load', (
+      WidgetTester tester,
+    ) async {
       // Arrange: Create a video with a 404 thumbnail but valid blurhash
       final video = VideoEvent(
         id: 'test-video-id',
@@ -68,11 +66,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: VideoThumbnailWidget(
-              video: video,
-              width: 200,
-              height: 200,
-            ),
+            body: VideoThumbnailWidget(video: video, width: 200, height: 200),
           ),
         ),
       );
@@ -88,8 +82,9 @@ void main() {
       // but the important thing is no exception was thrown
     });
 
-    testWidgets('should handle null thumbnail URL gracefully',
-        (WidgetTester tester) async {
+    testWidgets('should handle null thumbnail URL gracefully', (
+      WidgetTester tester,
+    ) async {
       // Arrange: Create a video with no thumbnail URL
       final video = VideoEvent(
         id: 'test-video-id',
@@ -107,11 +102,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: VideoThumbnailWidget(
-              video: video,
-              width: 200,
-              height: 200,
-            ),
+            body: VideoThumbnailWidget(video: video, width: 200, height: 200),
           ),
         ),
       );

@@ -10,10 +10,7 @@ void main() {
     testWidgets('should load drafts without artificial delay', (tester) async {
       // Build the screen
       await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData.dark(),
-          home: const VineDraftsScreen(),
-        ),
+        MaterialApp(theme: ThemeData.dark(), home: const VineDraftsScreen()),
       );
 
       // Initially should show loading indicator
@@ -41,16 +38,15 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(find.text('No Drafts Yet'), findsOneWidget);
       expect(
-          find.text('Your saved Vine drafts will appear here'), findsOneWidget);
+        find.text('Your saved Vine drafts will appear here'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('should handle loading errors gracefully', (tester) async {
       // Build the screen
       await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData.dark(),
-          home: const VineDraftsScreen(),
-        ),
+        MaterialApp(theme: ThemeData.dark(), home: const VineDraftsScreen()),
       );
 
       // Initially should show loading
@@ -68,10 +64,7 @@ void main() {
     testWidgets('should transition states properly', (tester) async {
       // Build the screen
       await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData.dark(),
-          home: const VineDraftsScreen(),
-        ),
+        MaterialApp(theme: ThemeData.dark(), home: const VineDraftsScreen()),
       );
 
       // Initially loading

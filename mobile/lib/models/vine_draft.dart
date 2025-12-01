@@ -7,12 +7,7 @@ import 'package:openvine/models/aspect_ratio.dart';
 import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
-enum PublishStatus {
-  draft,
-  publishing,
-  failed,
-  published,
-}
+enum PublishStatus { draft, publishing, failed, published }
 
 class VineDraft {
   const VineDraft({
@@ -62,28 +57,28 @@ class VineDraft {
   }
 
   factory VineDraft.fromJson(Map<String, dynamic> json) => VineDraft(
-        id: json['id'] as String,
-        videoFile: File(json['videoFilePath'] as String),
-        title: json['title'] as String,
-        description: json['description'] as String,
-        hashtags: List<String>.from(json['hashtags'] as Iterable),
-        frameCount: json['frameCount'] as int,
-        selectedApproach: json['selectedApproach'] as String,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        lastModified: DateTime.parse(json['lastModified'] as String),
-        publishStatus: json['publishStatus'] != null
-            ? PublishStatus.values.byName(json['publishStatus'] as String)
-            : PublishStatus.draft, // Migration: default for old drafts
-        publishError: json['publishError'] as String?,
-        publishAttempts: json['publishAttempts'] as int? ?? 0,
-        proofManifestJson: json['proofManifestJson'] as String?,
-        aspectRatio: json['aspectRatio'] != null
-            ? AspectRatio.values.firstWhere(
-                (e) => e.name == json['aspectRatio'],
-                orElse: () => AspectRatio.square,
-              )
-            : AspectRatio.square, // Default for legacy drafts
-      );
+    id: json['id'] as String,
+    videoFile: File(json['videoFilePath'] as String),
+    title: json['title'] as String,
+    description: json['description'] as String,
+    hashtags: List<String>.from(json['hashtags'] as Iterable),
+    frameCount: json['frameCount'] as int,
+    selectedApproach: json['selectedApproach'] as String,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    lastModified: DateTime.parse(json['lastModified'] as String),
+    publishStatus: json['publishStatus'] != null
+        ? PublishStatus.values.byName(json['publishStatus'] as String)
+        : PublishStatus.draft, // Migration: default for old drafts
+    publishError: json['publishError'] as String?,
+    publishAttempts: json['publishAttempts'] as int? ?? 0,
+    proofManifestJson: json['proofManifestJson'] as String?,
+    aspectRatio: json['aspectRatio'] != null
+        ? AspectRatio.values.firstWhere(
+            (e) => e.name == json['aspectRatio'],
+            orElse: () => AspectRatio.square,
+          )
+        : AspectRatio.square, // Default for legacy drafts
+  );
   final String id;
   final File videoFile;
   final String title;
@@ -114,8 +109,11 @@ class VineDraft {
       }
       return null;
     } catch (e) {
-      Log.error('Failed to parse NativeProofData: $e',
-          name: 'VineDraft', category: LogCategory.system);
+      Log.error(
+        'Failed to parse NativeProofData: $e',
+        name: 'VineDraft',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -129,46 +127,45 @@ class VineDraft {
     int? publishAttempts,
     Object? proofManifestJson = _sentinel,
     AspectRatio? aspectRatio,
-  }) =>
-      VineDraft(
-        id: id,
-        videoFile: videoFile,
-        title: title ?? this.title,
-        description: description ?? this.description,
-        hashtags: hashtags ?? this.hashtags,
-        frameCount: frameCount,
-        selectedApproach: selectedApproach,
-        createdAt: createdAt,
-        lastModified: DateTime.now(),
-        publishStatus: publishStatus ?? this.publishStatus,
-        publishError: publishError == _sentinel
-            ? this.publishError
-            : publishError as String?,
-        publishAttempts: publishAttempts ?? this.publishAttempts,
-        proofManifestJson: proofManifestJson == _sentinel
-            ? this.proofManifestJson
-            : proofManifestJson as String?,
-        aspectRatio: aspectRatio ?? this.aspectRatio,
-      );
+  }) => VineDraft(
+    id: id,
+    videoFile: videoFile,
+    title: title ?? this.title,
+    description: description ?? this.description,
+    hashtags: hashtags ?? this.hashtags,
+    frameCount: frameCount,
+    selectedApproach: selectedApproach,
+    createdAt: createdAt,
+    lastModified: DateTime.now(),
+    publishStatus: publishStatus ?? this.publishStatus,
+    publishError: publishError == _sentinel
+        ? this.publishError
+        : publishError as String?,
+    publishAttempts: publishAttempts ?? this.publishAttempts,
+    proofManifestJson: proofManifestJson == _sentinel
+        ? this.proofManifestJson
+        : proofManifestJson as String?,
+    aspectRatio: aspectRatio ?? this.aspectRatio,
+  );
 
   static const _sentinel = Object();
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'videoFilePath': videoFile.path,
-        'title': title,
-        'description': description,
-        'hashtags': hashtags,
-        'frameCount': frameCount,
-        'selectedApproach': selectedApproach,
-        'createdAt': createdAt.toIso8601String(),
-        'lastModified': lastModified.toIso8601String(),
-        'publishStatus': publishStatus.name,
-        'publishError': publishError,
-        'publishAttempts': publishAttempts,
-        'proofManifestJson': proofManifestJson,
-        'aspectRatio': aspectRatio.name,
-      };
+    'id': id,
+    'videoFilePath': videoFile.path,
+    'title': title,
+    'description': description,
+    'hashtags': hashtags,
+    'frameCount': frameCount,
+    'selectedApproach': selectedApproach,
+    'createdAt': createdAt.toIso8601String(),
+    'lastModified': lastModified.toIso8601String(),
+    'publishStatus': publishStatus.name,
+    'publishError': publishError,
+    'publishAttempts': publishAttempts,
+    'proofManifestJson': proofManifestJson,
+    'aspectRatio': aspectRatio.name,
+  };
 
   String get displayDuration {
     final duration = DateTime.now().difference(createdAt);

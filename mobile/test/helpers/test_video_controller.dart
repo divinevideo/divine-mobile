@@ -7,8 +7,8 @@ import 'package:video_player/video_player.dart';
 /// Test implementation of VideoPlayerController that doesn't require real video files
 class TestVideoPlayerController extends VideoPlayerController {
   TestVideoPlayerController(String dataSource)
-      : _dataSource = dataSource,
-        super.networkUrl(Uri.parse(dataSource));
+    : _dataSource = dataSource,
+      super.networkUrl(Uri.parse(dataSource));
 
   final String _dataSource;
   bool _isInitialized = false;

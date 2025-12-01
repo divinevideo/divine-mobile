@@ -29,38 +29,42 @@ void main() {
 
     tearDown(requestTimes.clear);
 
-    test('should space out batch video views with proper rate limiting',
-        () async {
-      // Arrange
-      final now = DateTime.now();
-      final videos = List.generate(
-        5,
-        (i) => VideoEvent(
-          id: 'video_$i',
-          pubkey: 'pubkey_$i',
-          content: '{"url": "https://example.com/video_$i.mp4"}',
-          createdAt:
-              now.subtract(Duration(hours: i)).millisecondsSinceEpoch ~/ 1000,
-          timestamp: now.subtract(Duration(hours: i)),
-          videoUrl: 'https://example.com/video_$i.mp4',
-          hashtags: [],
-          rawTags: {},
-        ),
-      );
+    test(
+      'should space out batch video views with proper rate limiting',
+      () async {
+        // Arrange
+        final now = DateTime.now();
+        final videos = List.generate(
+          5,
+          (i) => VideoEvent(
+            id: 'video_$i',
+            pubkey: 'pubkey_$i',
+            content: '{"url": "https://example.com/video_$i.mp4"}',
+            createdAt:
+                now.subtract(Duration(hours: i)).millisecondsSinceEpoch ~/ 1000,
+            timestamp: now.subtract(Duration(hours: i)),
+            videoUrl: 'https://example.com/video_$i.mp4',
+            hashtags: [],
+            rawTags: {},
+          ),
+        );
 
-      // Act
-      await analyticsService.trackVideoViews(videos);
+        // Act
+        await analyticsService.trackVideoViews(videos);
 
-      // Assert
-      expect(requestTimes.length, 5);
+        // Assert
+        expect(requestTimes.length, 5);
 
-      // Check spacing between requests (should be ~100ms apart)
-      for (var i = 1; i < requestTimes.length; i++) {
-        final interval = requestTimes[i].difference(requestTimes[i - 1]);
-        expect(interval.inMilliseconds,
-            greaterThanOrEqualTo(90)); // Allow small timing variance
-      }
-    });
+        // Check spacing between requests (should be ~100ms apart)
+        for (var i = 1; i < requestTimes.length; i++) {
+          final interval = requestTimes[i].difference(requestTimes[i - 1]);
+          expect(
+            interval.inMilliseconds,
+            greaterThanOrEqualTo(90),
+          ); // Allow small timing variance
+        }
+      },
+    );
 
     test('should not use Future.delayed pattern', () async {
       // This test ensures the implementation doesn't contain Future.delayed
@@ -94,10 +98,7 @@ void main() {
 
     test('should handle empty video list', () async {
       // Act & Assert
-      await expectLater(
-        analyticsService.trackVideoViews([]),
-        completes,
-      );
+      await expectLater(analyticsService.trackVideoViews([]), completes);
 
       expect(requestTimes, isEmpty);
     });

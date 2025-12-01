@@ -98,7 +98,7 @@ void main() {
 
       // Verify the filter would match events with these hashtags
       final testEvent = {
-        'kind':        34236,
+        'kind': 34236,
         'tags': [
           ['t', 'dankmemes'],
           ['t', 'othertag'],

@@ -28,8 +28,9 @@ void main() {
 
       // Setup common mocks
       when(mockAuth.isAuthenticated).thenReturn(true);
-      when(mockAuth.currentPublicKeyHex)
-          .thenReturn('test_pubkey_123456789abcdef');
+      when(
+        mockAuth.currentPublicKeyHex,
+      ).thenReturn('test_pubkey_123456789abcdef');
 
       // Mock successful event broadcasting
       when(mockNostr.broadcastEvent(any)).thenAnswer((_) async {
@@ -52,26 +53,32 @@ void main() {
       });
 
       // Mock subscribeToEvents for relay sync
-      when(mockNostr.subscribeToEvents(
-        filters: anyNamed('filters'),
-        bypassLimits: anyNamed('bypassLimits'),
-        onEose: anyNamed('onEose'),
-      )).thenAnswer((_) => Stream.empty());
+      when(
+        mockNostr.subscribeToEvents(
+          filters: anyNamed('filters'),
+          bypassLimits: anyNamed('bypassLimits'),
+          onEose: anyNamed('onEose'),
+        ),
+      ).thenAnswer((_) => Stream.empty());
 
       // Mock event creation
-      when(mockAuth.createAndSignEvent(
-        kind: anyNamed('kind'),
-        content: anyNamed('content'),
-        tags: anyNamed('tags'),
-      )).thenAnswer((_) async => Event.fromJson({
-            'id': 'test_event_id',
-            'pubkey': 'test_pubkey_123456789abcdef',
-            'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            'kind': 30005,
-            'tags': [],
-            'content': 'test content',
-            'sig': 'test_signature',
-          }));
+      when(
+        mockAuth.createAndSignEvent(
+          kind: anyNamed('kind'),
+          content: anyNamed('content'),
+          tags: anyNamed('tags'),
+        ),
+      ).thenAnswer(
+        (_) async => Event.fromJson({
+          'id': 'test_event_id',
+          'pubkey': 'test_pubkey_123456789abcdef',
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'kind': 30005,
+          'tags': [],
+          'content': 'test content',
+          'sig': 'test_signature',
+        }),
+      );
 
       service = CuratedListService(
         nostrService: mockNostr,
@@ -84,12 +91,13 @@ void main() {
       test('adds video to list successfully', () async {
         final list = await service.createList(name: 'Test List');
 
-        final result =
-            await service.addVideoToList(list!.id, 'video_event_123');
+        final result = await service.addVideoToList(
+          list!.id,
+          'video_event_123',
+        );
 
         expect(result, isTrue);
-        expect(
-            service.isVideoInList(list.id, 'video_event_123'), isTrue);
+        expect(service.isVideoInList(list.id, 'video_event_123'), isTrue);
         final updatedList = service.getListById(list.id);
         expect(updatedList!.videoEventIds, contains('video_event_123'));
       });
@@ -122,15 +130,16 @@ void main() {
         final list = await service.createList(name: 'Test List');
         await service.addVideoToList(list!.id, 'video_event_123');
 
-        final result =
-            await service.addVideoToList(list.id, 'video_event_123');
+        final result = await service.addVideoToList(list.id, 'video_event_123');
 
         expect(result, isTrue); // Should return true, not false
       });
 
       test('returns false for non-existent list', () async {
-        final result =
-            await service.addVideoToList('non_existent_list', 'video_123');
+        final result = await service.addVideoToList(
+          'non_existent_list',
+          'video_123',
+        );
 
         expect(result, isFalse);
       });
@@ -147,7 +156,10 @@ void main() {
       });
 
       test('publishes update to Nostr for public list', () async {
-        final list = await service.createList(name: 'Test List', isPublic: true);
+        final list = await service.createList(
+          name: 'Test List',
+          isPublic: true,
+        );
         reset(mockNostr); // Clear previous invocations
 
         await service.addVideoToList(list!.id, 'video_event_123');
@@ -156,8 +168,10 @@ void main() {
       });
 
       test('does not publish update for private list', () async {
-        final list =
-            await service.createList(name: 'Test List', isPublic: false);
+        final list = await service.createList(
+          name: 'Test List',
+          isPublic: false,
+        );
         reset(mockNostr); // Clear previous invocations
 
         await service.addVideoToList(list!.id, 'video_event_123');
@@ -191,12 +205,13 @@ void main() {
         final list = await service.createList(name: 'Test List');
         await service.addVideoToList(list!.id, 'video_event_123');
 
-        final result =
-            await service.removeVideoFromList(list.id, 'video_event_123');
+        final result = await service.removeVideoFromList(
+          list.id,
+          'video_event_123',
+        );
 
         expect(result, isTrue);
-        expect(
-            service.isVideoInList(list.id, 'video_event_123'), isFalse);
+        expect(service.isVideoInList(list.id, 'video_event_123'), isFalse);
         final updatedList = service.getListById(list.id);
         expect(updatedList!.videoEventIds, isEmpty);
       });
@@ -215,8 +230,10 @@ void main() {
       });
 
       test('returns false for non-existent list', () async {
-        final result =
-            await service.removeVideoFromList('non_existent_list', 'video_123');
+        final result = await service.removeVideoFromList(
+          'non_existent_list',
+          'video_123',
+        );
 
         expect(result, isFalse);
       });
@@ -225,8 +242,7 @@ void main() {
         final list = await service.createList(name: 'Test List');
         await service.addVideoToList(list!.id, 'video_1');
 
-        final result =
-            await service.removeVideoFromList(list.id, 'video_2');
+        final result = await service.removeVideoFromList(list.id, 'video_2');
 
         expect(result, isTrue); // Should succeed (no-op)
         expect(service.getListById(list.id)!.videoEventIds, ['video_1']);
@@ -245,7 +261,10 @@ void main() {
       });
 
       test('publishes update to Nostr for public list', () async {
-        final list = await service.createList(name: 'Test List', isPublic: true);
+        final list = await service.createList(
+          name: 'Test List',
+          isPublic: true,
+        );
         await service.addVideoToList(list!.id, 'video_event_123');
         reset(mockNostr); // Clear previous invocations
 
@@ -255,8 +274,10 @@ void main() {
       });
 
       test('does not publish update for private list', () async {
-        final list =
-            await service.createList(name: 'Test List', isPublic: false);
+        final list = await service.createList(
+          name: 'Test List',
+          isPublic: false,
+        );
         await service.addVideoToList(list!.id, 'video_event_123');
         reset(mockNostr); // Clear previous invocations
 
@@ -287,12 +308,14 @@ void main() {
       test('returns false when video is not in list', () async {
         final list = await service.createList(name: 'Test List');
 
-        expect(
-            service.isVideoInList(list!.id, 'video_event_123'), isFalse);
+        expect(service.isVideoInList(list!.id, 'video_event_123'), isFalse);
       });
 
       test('returns false for non-existent list', () {
-        expect(service.isVideoInList('non_existent_list', 'video_123'), isFalse);
+        expect(
+          service.isVideoInList('non_existent_list', 'video_123'),
+          isFalse,
+        );
       });
 
       test('returns false after video is removed', () async {
@@ -300,8 +323,7 @@ void main() {
         await service.addVideoToList(list!.id, 'video_event_123');
         await service.removeVideoFromList(list.id, 'video_event_123');
 
-        expect(
-            service.isVideoInList(list.id, 'video_event_123'), isFalse);
+        expect(service.isVideoInList(list.id, 'video_event_123'), isFalse);
       });
     });
 
@@ -325,7 +347,9 @@ void main() {
         await service.initialize();
 
         await service.addVideoToList(
-            CuratedListService.defaultListId, 'video_event_123');
+          CuratedListService.defaultListId,
+          'video_event_123',
+        );
 
         expect(service.isVideoInDefaultList('video_event_123'), isTrue);
       });
@@ -345,7 +369,10 @@ void main() {
         final containingLists = service.getListsContainingVideo('video_123');
 
         expect(containingLists.length, 2);
-        expect(containingLists.map((l) => l.id), containsAll([list1.id, list3.id]));
+        expect(
+          containingLists.map((l) => l.id),
+          containsAll([list1.id, list3.id]),
+        );
       });
 
       test('returns empty list when video not in any list', () async {
@@ -440,25 +467,28 @@ void main() {
     });
 
     group('Video Management - Edge Cases', () {
-      test('handles adding same video to multiple lists simultaneously', () async {
-        final list1 = await service.createList(name: 'List 1');
-        await Future.delayed(const Duration(milliseconds: 5));
-        final list2 = await service.createList(name: 'List 2');
-        await Future.delayed(const Duration(milliseconds: 5));
-        final list3 = await service.createList(name: 'List 3');
+      test(
+        'handles adding same video to multiple lists simultaneously',
+        () async {
+          final list1 = await service.createList(name: 'List 1');
+          await Future.delayed(const Duration(milliseconds: 5));
+          final list2 = await service.createList(name: 'List 2');
+          await Future.delayed(const Duration(milliseconds: 5));
+          final list3 = await service.createList(name: 'List 3');
 
-        // Add same video to all lists
-        await Future.wait([
-          service.addVideoToList(list1!.id, 'video_123'),
-          service.addVideoToList(list2!.id, 'video_123'),
-          service.addVideoToList(list3!.id, 'video_123'),
-        ]);
+          // Add same video to all lists
+          await Future.wait([
+            service.addVideoToList(list1!.id, 'video_123'),
+            service.addVideoToList(list2!.id, 'video_123'),
+            service.addVideoToList(list3!.id, 'video_123'),
+          ]);
 
-        expect(service.isVideoInList(list1.id, 'video_123'), isTrue);
-        expect(service.isVideoInList(list2.id, 'video_123'), isTrue);
-        expect(service.isVideoInList(list3.id, 'video_123'), isTrue);
-        expect(service.getListsContainingVideo('video_123').length, 3);
-      });
+          expect(service.isVideoInList(list1.id, 'video_123'), isTrue);
+          expect(service.isVideoInList(list2.id, 'video_123'), isTrue);
+          expect(service.isVideoInList(list3.id, 'video_123'), isTrue);
+          expect(service.getListsContainingVideo('video_123').length, 3);
+        },
+      );
 
       test('handles empty video event ID', () async {
         final list = await service.createList(name: 'Test List');

@@ -58,7 +58,8 @@ void main() {
 
       expect(queryTime, lessThan(50)); // 100 queries should be very fast
       Log.info(
-          '100 status queries time: ${queryTime}ms (${queryTime / 100}ms per query)');
+        '100 status queries time: ${queryTime}ms (${queryTime / 100}ms per query)',
+      );
     });
 
     test('auth state queries are fast', () {
@@ -68,8 +69,9 @@ void main() {
       for (int i = 0; i < 100; i++) {
         final authStates = embeddedRelayService.relayAuthStates;
         final isVineAuth = embeddedRelayService.isVineRelayAuthenticated;
-        final embeddedAuth =
-            embeddedRelayService.isRelayAuthenticated('ws://localhost:7447');
+        final embeddedAuth = embeddedRelayService.isRelayAuthenticated(
+          'ws://localhost:7447',
+        );
 
         expect(authStates, isA<Map<String, bool>>());
         expect(isVineAuth, isA<bool>());
@@ -81,7 +83,8 @@ void main() {
 
       expect(authQueryTime, lessThan(50)); // Should be very fast
       Log.info(
-          '100 auth queries time: ${authQueryTime}ms (${authQueryTime / 100}ms per query)');
+        '100 auth queries time: ${authQueryTime}ms (${authQueryTime / 100}ms per query)',
+      );
     });
 
     test('subscription stream creation is fast', () {
@@ -108,8 +111,7 @@ void main() {
 
       // Subscription attempt should be fast even if it fails
       expect(subscriptionTime, lessThan(10));
-      Log.info(
-          'Subscription stream creation time: ${subscriptionTime}ms');
+      Log.info('Subscription stream creation time: ${subscriptionTime}ms');
     });
 
     test('multiple relay operations are efficient', () {
@@ -142,7 +144,8 @@ void main() {
       // 10 complete operation cycles should be very fast
       expect(operationsTime, lessThan(100));
       Log.info(
-          '10 operation cycles time: ${operationsTime}ms (${operationsTime / 10}ms per cycle)');
+        '10 operation cycles time: ${operationsTime}ms (${operationsTime / 10}ms per cycle)',
+      );
     });
 
     test('search interface responds quickly', () {
@@ -188,8 +191,7 @@ void main() {
       Log.info('Service disposal time: ${disposeTime}ms');
     });
 
-    test('performance comparison demonstrates embedded relay speed advantage',
-        () {
+    test('performance comparison demonstrates embedded relay speed advantage', () {
       // This test demonstrates the theoretical speed advantage of embedded relay
 
       final stopwatch = Stopwatch()..start();
@@ -206,7 +208,7 @@ void main() {
 
       // 3. Prepare subscription (embedded: instant, external: websocket setup ~50-300ms)
       final filters = [
-        nostr.Filter(kinds: [34236], limit: 50)
+        nostr.Filter(kinds: [34236], limit: 50),
       ];
       try {
         embeddedRelayService.subscribeToEvents(filters: filters);
@@ -222,10 +224,10 @@ void main() {
       expect(totalTime, lessThan(10));
 
       Log.info('Embedded relay operations time: ${totalTime}ms');
+      Log.info('Expected external relay time: 200-1000ms (20-100x slower)');
       Log.info(
-          'Expected external relay time: 200-1000ms (20-100x slower)');
-      Log.info(
-          'Embedded relay speed advantage: ${200 / totalTime.clamp(1, 1000)}x to ${1000 / totalTime.clamp(1, 1000)}x faster');
+        'Embedded relay speed advantage: ${200 / totalTime.clamp(1, 1000)}x to ${1000 / totalTime.clamp(1, 1000)}x faster',
+      );
 
       // Verify we meet the performance target
       expect(totalTime, lessThan(100)); // Well under 100ms target

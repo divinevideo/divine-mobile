@@ -46,16 +46,16 @@ class FeatureFlag {
   });
 
   factory FeatureFlag.fromJson(Map<String, dynamic> json) => FeatureFlag(
-        name: json['name'] as String,
-        enabled: json['enabled'] as bool,
-        rolloutPercentage: json['rolloutPercentage'] as int,
-        variants: (json['variants'] as List<dynamic>?)
-            ?.map((v) => FeatureFlagVariant.fromJson(v as Map<String, dynamic>))
-            .toList(),
-        metadata: json['metadata'] as Map<String, dynamic>?,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-      );
+    name: json['name'] as String,
+    enabled: json['enabled'] as bool,
+    rolloutPercentage: json['rolloutPercentage'] as int,
+    variants: (json['variants'] as List<dynamic>?)
+        ?.map((v) => FeatureFlagVariant.fromJson(v as Map<String, dynamic>))
+        .toList(),
+    metadata: json['metadata'] as Map<String, dynamic>?,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+  );
   final String name;
   final bool enabled;
   final int rolloutPercentage;
@@ -116,7 +116,7 @@ class FeatureFlagService {
     'proofmode_publish': true,
     'proofmode_verify': true,
     'proofmode_ui': true,
-    'proofmode_production': false,  // Keep production off for now
+    'proofmode_production': false, // Keep production off for now
     // NIP-46 bunker authentication (not yet fully implemented)
     'enableNip46': false,
   };
@@ -178,13 +178,19 @@ class FeatureFlagService {
 
         return decision;
       } else {
-        Log.error('Feature flag API error: ${response.statusCode}',
-            name: 'FeatureFlagService', category: LogCategory.system);
+        Log.error(
+          'Feature flag API error: ${response.statusCode}',
+          name: 'FeatureFlagService',
+          category: LogCategory.system,
+        );
         return _getFallbackDecision(flagName);
       }
     } catch (e) {
-      Log.error('Feature flag error: $e',
-          name: 'FeatureFlagService', category: LogCategory.system);
+      Log.error(
+        'Feature flag error: $e',
+        name: 'FeatureFlagService',
+        category: LogCategory.system,
+      );
       return _getFallbackDecision(flagName);
     }
   }
@@ -194,9 +200,7 @@ class FeatureFlagService {
     try {
       final response = await http.get(
         Uri.parse('$apiBaseUrl/api/feature-flags'),
-        headers: {
-          if (apiKey != null) 'Authorization': 'Bearer $apiKey',
-        },
+        headers: {if (apiKey != null) 'Authorization': 'Bearer $apiKey'},
       );
 
       if (response.statusCode == 200) {
@@ -207,11 +211,15 @@ class FeatureFlagService {
         return flags;
       } else {
         throw Exception(
-            'Failed to fetch feature flags: ${response.statusCode}');
+          'Failed to fetch feature flags: ${response.statusCode}',
+        );
       }
     } catch (e) {
-      Log.error('Error fetching all flags: $e',
-          name: 'FeatureFlagService', category: LogCategory.system);
+      Log.error(
+        'Error fetching all flags: $e',
+        name: 'FeatureFlagService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -341,8 +349,11 @@ class FeatureFlagService {
         );
       }
     } catch (e) {
-      Log.error('Error loading persisted decision: $e',
-          name: 'FeatureFlagService', category: LogCategory.system);
+      Log.error(
+        'Error loading persisted decision: $e',
+        name: 'FeatureFlagService',
+        category: LogCategory.system,
+      );
     }
 
     return null;
@@ -369,8 +380,11 @@ class FeatureFlagService {
   Future<void> _sendAnalytics(Map<String, dynamic> event) async {
     // Queue analytics events to send in batch
     // This would integrate with your analytics service
-    Log.debug('Feature flag analytics: ${jsonEncode(event)}',
-        name: 'FeatureFlagService', category: LogCategory.system);
+    Log.debug(
+      'Feature flag analytics: ${jsonEncode(event)}',
+      name: 'FeatureFlagService',
+      category: LogCategory.system,
+    );
   }
 
   void dispose() {

@@ -11,12 +11,15 @@ void main() {
   group('FlashMode Enum', () {
     test('FlashMode has correct values', () {
       expect(FlashMode.values.length, 4);
-      expect(FlashMode.values, containsAll([
-        FlashMode.off,
-        FlashMode.auto,
-        FlashMode.on,
-        FlashMode.torch,
-      ]));
+      expect(
+        FlashMode.values,
+        containsAll([
+          FlashMode.off,
+          FlashMode.auto,
+          FlashMode.on,
+          FlashMode.torch,
+        ]),
+      );
     });
 
     test('FlashMode enum values have correct order', () {
@@ -30,11 +33,14 @@ void main() {
   group('TimerDuration Enum', () {
     test('TimerDuration has correct values', () {
       expect(TimerDuration.values.length, 3);
-      expect(TimerDuration.values, containsAll([
-        TimerDuration.off,
-        TimerDuration.threeSeconds,
-        TimerDuration.tenSeconds,
-      ]));
+      expect(
+        TimerDuration.values,
+        containsAll([
+          TimerDuration.off,
+          TimerDuration.threeSeconds,
+          TimerDuration.tenSeconds,
+        ]),
+      );
     });
 
     test('TimerDuration enum values have correct order', () {

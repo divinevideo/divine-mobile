@@ -20,8 +20,11 @@ class DefaultVideoPrewarmer implements VideoPrewarmer {
 
   @override
   void prewarmVideos(List<VideoControllerParams> params) {
-    Log.debug('🔥 Prewarming ${params.length} videos',
-        name: 'VideoPrewarmer', category: LogCategory.video);
+    Log.debug(
+      '🔥 Prewarming ${params.length} videos',
+      name: 'VideoPrewarmer',
+      category: LogCategory.video,
+    );
 
     for (final param in params) {
       _prewarmedParams.add(param);
@@ -35,8 +38,11 @@ class DefaultVideoPrewarmer implements VideoPrewarmer {
   void cancelAll() {
     if (_prewarmedParams.isEmpty) return;
 
-    Log.debug('🧊 Cancelling ${_prewarmedParams.length} prewarmed videos',
-        name: 'VideoPrewarmer', category: LogCategory.video);
+    Log.debug(
+      '🧊 Cancelling ${_prewarmedParams.length} prewarmed videos',
+      name: 'VideoPrewarmer',
+      category: LogCategory.video,
+    );
 
     // Invalidate all prewarmed providers to cancel their timers
     for (final param in _prewarmedParams) {
@@ -44,8 +50,11 @@ class DefaultVideoPrewarmer implements VideoPrewarmer {
         _ref.invalidate(individualVideoControllerProvider(param));
       } catch (e) {
         // Suppress errors - provider may already be disposed
-        Log.debug('⚠️ Failed to invalidate prewarmed video ${param.videoId}: $e',
-            name: 'VideoPrewarmer', category: LogCategory.video);
+        Log.debug(
+          '⚠️ Failed to invalidate prewarmed video ${param.videoId}: $e',
+          name: 'VideoPrewarmer',
+          category: LogCategory.video,
+        );
       }
     }
     _prewarmedParams.clear();
@@ -69,6 +78,8 @@ class NoopPrewarmer implements VideoPrewarmer {
 /// Widget-scoped so lifecycle binds to the widget tree
 final videoPrewarmerProvider = Provider<VideoPrewarmer>((ref) {
   final prewarmer = DefaultVideoPrewarmer(ref);
-  ref.onDispose(prewarmer.cancelAll); // Hard bind cancellation to provider lifecycle
+  ref.onDispose(
+    prewarmer.cancelAll,
+  ); // Hard bind cancellation to provider lifecycle
   return prewarmer;
 });

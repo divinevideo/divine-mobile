@@ -5,5 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 enum OverlayPolicy { auto, alwaysOn, alwaysOff }
 
-final overlayPolicyProvider =
-    Provider<OverlayPolicy>((_) => OverlayPolicy.auto);
+final overlayPolicyProvider = Provider<OverlayPolicy>(
+  (_) => OverlayPolicy.auto,
+);

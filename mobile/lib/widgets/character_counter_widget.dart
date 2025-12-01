@@ -43,8 +43,9 @@ class CharacterCounterWidget extends StatelessWidget {
           style: TextStyle(
             color: getColor(),
             fontSize: 12,
-            fontWeight:
-                isOverLimit || isWarning ? FontWeight.bold : FontWeight.normal,
+            fontWeight: isOverLimit || isWarning
+                ? FontWeight.bold
+                : FontWeight.normal,
           ),
         ),
       ],

@@ -85,21 +85,22 @@ class MuteItem {
   }
 
   Map<String, dynamic> toJson() => {
-        'type': type.value,
-        'value': value,
-        'reason': reason,
-        'createdAt': createdAt.toIso8601String(),
-        'expireAt': expireAt?.toIso8601String(),
-      };
+    'type': type.value,
+    'value': value,
+    'reason': reason,
+    'createdAt': createdAt.toIso8601String(),
+    'expireAt': expireAt?.toIso8601String(),
+  };
 
   static MuteItem fromJson(Map<String, dynamic> json) => MuteItem(
-        type: MuteTypeExtension.fromString(json['type']),
-        value: json['value'],
-        reason: json['reason'],
-        createdAt: DateTime.parse(json['createdAt']),
-        expireAt:
-            json['expireAt'] != null ? DateTime.parse(json['expireAt']) : null,
-      );
+    type: MuteTypeExtension.fromString(json['type']),
+    value: json['value'],
+    reason: json['reason'],
+    createdAt: DateTime.parse(json['createdAt']),
+    expireAt: json['expireAt'] != null
+        ? DateTime.parse(json['expireAt'])
+        : null,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -115,9 +116,9 @@ class MuteService {
     required INostrService nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
-  })  : _nostrService = nostrService,
-        _authService = authService,
-        _prefs = prefs {
+  }) : _nostrService = nostrService,
+       _authService = authService,
+       _prefs = prefs {
     _loadMutedItems();
   }
 
@@ -147,8 +148,11 @@ class MuteService {
   Future<void> initialize() async {
     try {
       if (!_authService.isAuthenticated) {
-        Log.warning('Cannot initialize mute service - user not authenticated',
-            name: 'MuteService', category: LogCategory.system);
+        Log.warning(
+          'Cannot initialize mute service - user not authenticated',
+          name: 'MuteService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -157,51 +161,83 @@ class MuteService {
 
       _isInitialized = true;
       Log.info(
-          'Mute service initialized with ${_mutedItems.length} muted items',
-          name: 'MuteService',
-          category: LogCategory.system);
+        'Mute service initialized with ${_mutedItems.length} muted items',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to initialize mute service: $e',
-          name: 'MuteService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize mute service: $e',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
     }
   }
 
   // === MUTE MANAGEMENT ===
 
   /// Mute a user by pubkey
-  Future<bool> muteUser(String pubkey,
-      {String? reason, Duration? duration}) async {
+  Future<bool> muteUser(
+    String pubkey, {
+    String? reason,
+    Duration? duration,
+  }) async {
     return muteItem(MuteType.user, pubkey, reason: reason, duration: duration);
   }
 
   /// Mute a hashtag
-  Future<bool> muteHashtag(String hashtag,
-      {String? reason, Duration? duration}) async {
+  Future<bool> muteHashtag(
+    String hashtag, {
+    String? reason,
+    Duration? duration,
+  }) async {
     // Normalize hashtag (remove # if present, convert to lowercase)
     final normalizedHashtag = hashtag.startsWith('#')
         ? hashtag.substring(1).toLowerCase()
         : hashtag.toLowerCase();
-    return muteItem(MuteType.hashtag, normalizedHashtag,
-        reason: reason, duration: duration);
+    return muteItem(
+      MuteType.hashtag,
+      normalizedHashtag,
+      reason: reason,
+      duration: duration,
+    );
   }
 
   /// Mute a keyword or phrase
-  Future<bool> muteKeyword(String keyword,
-      {String? reason, Duration? duration}) async {
-    return muteItem(MuteType.keyword, keyword.toLowerCase(),
-        reason: reason, duration: duration);
+  Future<bool> muteKeyword(
+    String keyword, {
+    String? reason,
+    Duration? duration,
+  }) async {
+    return muteItem(
+      MuteType.keyword,
+      keyword.toLowerCase(),
+      reason: reason,
+      duration: duration,
+    );
   }
 
   /// Mute an entire thread by event ID
-  Future<bool> muteThread(String eventId,
-      {String? reason, Duration? duration}) async {
-    return muteItem(MuteType.thread, eventId,
-        reason: reason, duration: duration);
+  Future<bool> muteThread(
+    String eventId, {
+    String? reason,
+    Duration? duration,
+  }) async {
+    return muteItem(
+      MuteType.thread,
+      eventId,
+      reason: reason,
+      duration: duration,
+    );
   }
 
   /// Generic method to mute any type of item
-  Future<bool> muteItem(MuteType type, String value,
-      {String? reason, Duration? duration}) async {
+  Future<bool> muteItem(
+    MuteType type,
+    String value, {
+    String? reason,
+    Duration? duration,
+  }) async {
     try {
       final expireAt = duration != null ? DateTime.now().add(duration) : null;
 
@@ -215,8 +251,11 @@ class MuteService {
 
       // Check if already muted
       if (_mutedItems.contains(muteItem)) {
-        Log.debug('Item already muted: $value',
-            name: 'MuteService', category: LogCategory.system);
+        Log.debug(
+          'Item already muted: $value',
+          name: 'MuteService',
+          category: LogCategory.system,
+        );
         return true;
       }
 
@@ -229,14 +268,18 @@ class MuteService {
       }
 
       Log.info(
-          'Muted ${type.value}: $value${duration != null ? ' (expires in ${duration.inHours}h)' : ' (permanent)'}',
-          name: 'MuteService',
-          category: LogCategory.system);
+        'Muted ${type.value}: $value${duration != null ? ' (expires in ${duration.inHours}h)' : ' (permanent)'}',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to mute item: $e',
-          name: 'MuteService', category: LogCategory.system);
+      Log.error(
+        'Failed to mute item: $e',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -252,8 +295,11 @@ class MuteService {
 
       final removed = _mutedItems.remove(muteItem);
       if (!removed) {
-        Log.warning('Item not found in mute list: $value',
-            name: 'MuteService', category: LogCategory.system);
+        Log.warning(
+          'Item not found in mute list: $value',
+          name: 'MuteService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -264,13 +310,19 @@ class MuteService {
         await _publishMuteListToNostr();
       }
 
-      Log.info('Unmuted ${type.value}: $value',
-          name: 'MuteService', category: LogCategory.system);
+      Log.info(
+        'Unmuted ${type.value}: $value',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to unmute item: $e',
-          name: 'MuteService', category: LogCategory.system);
+      Log.error(
+        'Failed to unmute item: $e',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -394,13 +446,19 @@ class MuteService {
         }
       }
 
-      Log.info('Imported $importedCount new muted items',
-          name: 'MuteService', category: LogCategory.system);
+      Log.info(
+        'Imported $importedCount new muted items',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to import mute list: $e',
-          name: 'MuteService', category: LogCategory.system);
+      Log.error(
+        'Failed to import mute list: $e',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -421,13 +479,19 @@ class MuteService {
         await _publishMuteListToNostr();
       }
 
-      Log.info('Cleared all muted items',
-          name: 'MuteService', category: LogCategory.system);
+      Log.info(
+        'Cleared all muted items',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to clear mute list: $e',
-          name: 'MuteService', category: LogCategory.system);
+      Log.error(
+        'Failed to clear mute list: $e',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -438,8 +502,11 @@ class MuteService {
   Future<void> _publishMuteListToNostr() async {
     try {
       if (!_authService.isAuthenticated) {
-        Log.warning('Cannot publish mute list - user not authenticated',
-            name: 'MuteService', category: LogCategory.system);
+        Log.warning(
+          'Cannot publish mute list - user not authenticated',
+          name: 'MuteService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -462,13 +529,19 @@ class MuteService {
       if (event != null) {
         final result = await _nostrService.broadcastEvent(event);
         if (result.successCount > 0) {
-          Log.debug('Published mute list to Nostr: ${event.id}',
-              name: 'MuteService', category: LogCategory.system);
+          Log.debug(
+            'Published mute list to Nostr: ${event.id}',
+            name: 'MuteService',
+            category: LogCategory.system,
+          );
         }
       }
     } catch (e) {
-      Log.error('Failed to publish mute list to Nostr: $e',
-          name: 'MuteService', category: LogCategory.system);
+      Log.error(
+        'Failed to publish mute list to Nostr: $e',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -481,8 +554,11 @@ class MuteService {
     final after = _mutedItems.length;
 
     if (before != after) {
-      Log.debug('Cleaned up ${before - after} expired mutes',
-          name: 'MuteService', category: LogCategory.system);
+      Log.debug(
+        'Cleaned up ${before - after} expired mutes',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
       _saveMutedItems();
     }
   }
@@ -493,12 +569,15 @@ class MuteService {
     return {
       'total': activeMutes.length,
       'users': activeMutes.where((item) => item.type == MuteType.user).length,
-      'hashtags':
-          activeMutes.where((item) => item.type == MuteType.hashtag).length,
-      'keywords':
-          activeMutes.where((item) => item.type == MuteType.keyword).length,
-      'threads':
-          activeMutes.where((item) => item.type == MuteType.thread).length,
+      'hashtags': activeMutes
+          .where((item) => item.type == MuteType.hashtag)
+          .length,
+      'keywords': activeMutes
+          .where((item) => item.type == MuteType.keyword)
+          .length,
+      'threads': activeMutes
+          .where((item) => item.type == MuteType.thread)
+          .length,
       'temporary': activeMutes.where((item) => !item.isPermanent).length,
       'permanent': activeMutes.where((item) => item.isPermanent).length,
     };
@@ -514,14 +593,21 @@ class MuteService {
         final List<dynamic> itemsData = jsonDecode(mutedItemsJson);
         _mutedItems.clear();
         _mutedItems.addAll(
-          itemsData
-              .map((json) => MuteItem.fromJson(json as Map<String, dynamic>)),
+          itemsData.map(
+            (json) => MuteItem.fromJson(json as Map<String, dynamic>),
+          ),
         );
-        Log.debug('Loaded ${_mutedItems.length} muted items from storage',
-            name: 'MuteService', category: LogCategory.system);
+        Log.debug(
+          'Loaded ${_mutedItems.length} muted items from storage',
+          name: 'MuteService',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.error('Failed to load muted items: $e',
-            name: 'MuteService', category: LogCategory.system);
+        Log.error(
+          'Failed to load muted items: $e',
+          name: 'MuteService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -532,8 +618,11 @@ class MuteService {
       final mutedItemsJson = _mutedItems.map((item) => item.toJson()).toList();
       await _prefs.setString(mutedItemsStorageKey, jsonEncode(mutedItemsJson));
     } catch (e) {
-      Log.error('Failed to save muted items: $e',
-          name: 'MuteService', category: LogCategory.system);
+      Log.error(
+        'Failed to save muted items: $e',
+        name: 'MuteService',
+        category: LogCategory.system,
+      );
     }
   }
 }

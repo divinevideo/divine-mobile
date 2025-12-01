@@ -33,7 +33,8 @@ void main() {
       videoUrl: 'https://example.com/video.mp4',
     );
 
-    final testPubkey = '2646f4c01362b3b48d4b4e31d9c96a4eabe06c4eb971e1a482ef651f1bf023b7';
+    final testPubkey =
+        '2646f4c01362b3b48d4b4e31d9c96a4eabe06c4eb971e1a482ef651f1bf023b7';
 
     setUp(() {
       mockSocialService = MockSocialService();
@@ -47,7 +48,9 @@ void main() {
       when(mockUserProfileService.getCachedProfile(any)).thenReturn(null);
     });
 
-    testWidgets('Contact display shows npub instead of raw hex', (tester) async {
+    testWidgets('Contact display shows npub instead of raw hex', (
+      tester,
+    ) async {
       // Setup profile with display name but no nip05
       final testProfile = UserProfile(
         pubkey: testPubkey,
@@ -66,21 +69,23 @@ void main() {
       );
 
       when(mockUserProfileService.hasProfile(testPubkey)).thenReturn(true);
-      when(mockUserProfileService.getCachedProfile(testPubkey))
-          .thenReturn(testProfile);
+      when(
+        mockUserProfileService.getCachedProfile(testPubkey),
+      ).thenReturn(testProfile);
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             socialServiceProvider.overrideWithValue(mockSocialService),
-            userProfileServiceProvider.overrideWithValue(mockUserProfileService),
-            videoSharingServiceProvider
-                .overrideWithValue(mockVideoSharingService),
+            userProfileServiceProvider.overrideWithValue(
+              mockUserProfileService,
+            ),
+            videoSharingServiceProvider.overrideWithValue(
+              mockVideoSharingService,
+            ),
           ],
           child: MaterialApp(
-            home: Scaffold(
-              body: ShareVideoMenu(video: testVideo),
-            ),
+            home: Scaffold(body: ShareVideoMenu(video: testVideo)),
           ),
         ),
       );
@@ -120,21 +125,23 @@ void main() {
       );
 
       when(mockUserProfileService.hasProfile(testPubkey)).thenReturn(true);
-      when(mockUserProfileService.getCachedProfile(testPubkey))
-          .thenReturn(testProfile);
+      when(
+        mockUserProfileService.getCachedProfile(testPubkey),
+      ).thenReturn(testProfile);
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             socialServiceProvider.overrideWithValue(mockSocialService),
-            userProfileServiceProvider.overrideWithValue(mockUserProfileService),
-            videoSharingServiceProvider
-                .overrideWithValue(mockVideoSharingService),
+            userProfileServiceProvider.overrideWithValue(
+              mockUserProfileService,
+            ),
+            videoSharingServiceProvider.overrideWithValue(
+              mockVideoSharingService,
+            ),
           ],
           child: MaterialApp(
-            home: Scaffold(
-              body: ShareVideoMenu(video: testVideo),
-            ),
+            home: Scaffold(body: ShareVideoMenu(video: testVideo)),
           ),
         ),
       );
@@ -155,25 +162,28 @@ void main() {
       expect(find.textContaining(testPubkey), findsNothing);
     });
 
-    testWidgets('Contact with no profile data shows npub fallback',
-        (tester) async {
+    testWidgets('Contact with no profile data shows npub fallback', (
+      tester,
+    ) async {
       // No profile data - should still show npub, not hex
       when(mockUserProfileService.hasProfile(testPubkey)).thenReturn(false);
-      when(mockUserProfileService.getCachedProfile(testPubkey))
-          .thenReturn(null);
+      when(
+        mockUserProfileService.getCachedProfile(testPubkey),
+      ).thenReturn(null);
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             socialServiceProvider.overrideWithValue(mockSocialService),
-            userProfileServiceProvider.overrideWithValue(mockUserProfileService),
-            videoSharingServiceProvider
-                .overrideWithValue(mockVideoSharingService),
+            userProfileServiceProvider.overrideWithValue(
+              mockUserProfileService,
+            ),
+            videoSharingServiceProvider.overrideWithValue(
+              mockVideoSharingService,
+            ),
           ],
           child: MaterialApp(
-            home: Scaffold(
-              body: ShareVideoMenu(video: testVideo),
-            ),
+            home: Scaffold(body: ShareVideoMenu(video: testVideo)),
           ),
         ),
       );

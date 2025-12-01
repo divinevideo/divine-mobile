@@ -30,8 +30,9 @@ class TestableNostrService extends NostrService {
     void Function()? onEose,
   }) {
     Log.info(
-        '🔍 TestableNostrService.subscribeToEvents called with ${filters.length} filters',
-        name: 'TestableNostrService');
+      '🔍 TestableNostrService.subscribeToEvents called with ${filters.length} filters',
+      name: 'TestableNostrService',
+    );
 
     // Log filter details
     for (final filter in filters) {
@@ -45,8 +46,10 @@ class TestableNostrService extends NostrService {
     // Simulate receiving some test events after a delay
     Future.delayed(const Duration(milliseconds: 500), () {
       if (_testStreamController != null && !_testStreamController!.isClosed) {
-        Log.info('📨 Injecting test event into stream',
-            name: 'TestableNostrService');
+        Log.info(
+          '📨 Injecting test event into stream',
+          name: 'TestableNostrService',
+        );
 
         // Use a valid hex pubkey (64 hex chars)
         final testEvent = Event(
@@ -102,22 +105,27 @@ void main() {
 
     Log.info('📡 Creating VideoEventService', name: 'DebugTest');
     final subscriptionManager = SubscriptionManager(nostrService);
-    final videoEventService = VideoEventService(nostrService,
-        subscriptionManager: subscriptionManager);
+    final videoEventService = VideoEventService(
+      nostrService,
+      subscriptionManager: subscriptionManager,
+    );
 
     // Note: VideoEventService no longer extends ChangeNotifier after refactor
     // Tracking state changes via periodic checks instead of listeners
     void logServiceState(String context) {
       Log.info('📊 VideoEventService state ($context):', name: 'DebugTest');
       Log.info(
-          '  - Event count: ${videoEventService.getEventCount(SubscriptionType.discovery)}',
-          name: 'DebugTest');
+        '  - Event count: ${videoEventService.getEventCount(SubscriptionType.discovery)}',
+        name: 'DebugTest',
+      );
       Log.info(
-          '  - Has events: ${videoEventService.hasEvents(SubscriptionType.discovery)}',
-          name: 'DebugTest');
+        '  - Has events: ${videoEventService.hasEvents(SubscriptionType.discovery)}',
+        name: 'DebugTest',
+      );
       Log.info(
-          '  - Is subscribed: ${videoEventService.isSubscribed(SubscriptionType.discovery)}',
-          name: 'DebugTest');
+        '  - Is subscribed: ${videoEventService.isSubscribed(SubscriptionType.discovery)}',
+        name: 'DebugTest',
+      );
     }
 
     // Check initial state
@@ -130,8 +138,10 @@ void main() {
         subscriptionType: SubscriptionType.discovery,
         limit: 10,
       );
-      Log.info('✅ subscribeToVideoFeed completed successfully',
-          name: 'DebugTest');
+      Log.info(
+        '✅ subscribeToVideoFeed completed successfully',
+        name: 'DebugTest',
+      );
     } catch (e) {
       Log.error('❌ subscribeToVideoFeed failed: $e', name: 'DebugTest');
     }
@@ -147,19 +157,23 @@ void main() {
     // Final check
     logServiceState('final');
     Log.info(
-        '  - Note: Change notifications no longer available after ChangeNotifier removal',
-        name: 'DebugTest');
+      '  - Note: Change notifications no longer available after ChangeNotifier removal',
+      name: 'DebugTest',
+    );
 
     if (videoEventService.hasEvents(SubscriptionType.discovery)) {
       Log.info('📝 Events received:', name: 'DebugTest');
       for (final event in videoEventService.discoveryVideos) {
         Log.info(
-            '  - Event: ${event.id} title="${event.title}"',
-            name: 'DebugTest');
+          '  - Event: ${event.id} title="${event.title}"',
+          name: 'DebugTest',
+        );
       }
     } else {
-      Log.error('❌ No events received! This confirms the bug.',
-          name: 'DebugTest');
+      Log.error(
+        '❌ No events received! This confirms the bug.',
+        name: 'DebugTest',
+      );
     }
 
     // The key assertion

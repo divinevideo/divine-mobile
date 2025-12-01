@@ -20,15 +20,21 @@ class VideoUrlValidator {
     // Check against known problematic patterns
     if (url.contains('cdn.divine.video')) {
       // Many cdn.divine.video URLs are returning 404
-      Log.warning('⚠️ Skipping potentially problematic cdn.divine.video URL: $url',
-          name: 'VideoUrlValidator', category: LogCategory.video);
+      Log.warning(
+        '⚠️ Skipping potentially problematic cdn.divine.video URL: $url',
+        name: 'VideoUrlValidator',
+        category: LogCategory.video,
+      );
       return false;
     }
 
     // Check if URL has been blacklisted due to repeated failures
     if (_blacklistedUrls.contains(url)) {
-      Log.debug('🚫 URL is blacklisted due to repeated failures: $url',
-          name: 'VideoUrlValidator', category: LogCategory.video);
+      Log.debug(
+        '🚫 URL is blacklisted due to repeated failures: $url',
+        name: 'VideoUrlValidator',
+        category: LogCategory.video,
+      );
       return false;
     }
 
@@ -40,13 +46,19 @@ class VideoUrlValidator {
     final currentCount = _failureCount[url] ?? 0;
     _failureCount[url] = currentCount + 1;
 
-    Log.warning('❌ URL failure #${currentCount + 1} for $url: $error',
-        name: 'VideoUrlValidator', category: LogCategory.video);
+    Log.warning(
+      '❌ URL failure #${currentCount + 1} for $url: $error',
+      name: 'VideoUrlValidator',
+      category: LogCategory.video,
+    );
 
     if (_failureCount[url]! >= maxFailures) {
       _blacklistedUrls.add(url);
-      Log.warning('🚫 Blacklisting URL after $maxFailures failures: $url',
-          name: 'VideoUrlValidator', category: LogCategory.video);
+      Log.warning(
+        '🚫 Blacklisting URL after $maxFailures failures: $url',
+        name: 'VideoUrlValidator',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -61,8 +73,11 @@ class VideoUrlValidator {
 
   /// Clear blacklist (useful for testing or resetting state)
   void clearBlacklist() {
-    Log.info('🔄 Clearing URL blacklist (${_blacklistedUrls.length} URLs)',
-        name: 'VideoUrlValidator', category: LogCategory.video);
+    Log.info(
+      '🔄 Clearing URL blacklist (${_blacklistedUrls.length} URLs)',
+      name: 'VideoUrlValidator',
+      category: LogCategory.video,
+    );
     _blacklistedUrls.clear();
     _failureCount.clear();
   }
@@ -71,21 +86,32 @@ class VideoUrlValidator {
   String? getAlternativeUrl(String originalUrl) {
     // Try to fix common URL issues
     if (originalUrl.contains('apt.openvine.co')) {
-      final fixedUrl = originalUrl.replaceAll('apt.openvine.co', 'api.openvine.co');
-      Log.info('🔧 Fixed apt.openvine.co URL: $fixedUrl',
-          name: 'VideoUrlValidator', category: LogCategory.video);
+      final fixedUrl = originalUrl.replaceAll(
+        'apt.openvine.co',
+        'api.openvine.co',
+      );
+      Log.info(
+        '🔧 Fixed apt.openvine.co URL: $fixedUrl',
+        name: 'VideoUrlValidator',
+        category: LogCategory.video,
+      );
       return fixedUrl;
     }
 
     // For cdn.divine.video URLs, suggest api.openvine.co as fallback
     if (originalUrl.contains('cdn.divine.video')) {
       // Extract hash if available and construct api.openvine.co URL
-      final hashMatch = RegExp(r'cdn\.divine\.video/([a-f0-9]+)').firstMatch(originalUrl);
+      final hashMatch = RegExp(
+        r'cdn\.divine\.video/([a-f0-9]+)',
+      ).firstMatch(originalUrl);
       if (hashMatch != null) {
         final hash = hashMatch.group(1);
         final fallbackUrl = 'https://api.openvine.co/media/$hash';
-        Log.info('🔄 Suggesting api.openvine.co fallback for cdn.divine.video: $fallbackUrl',
-            name: 'VideoUrlValidator', category: LogCategory.video);
+        Log.info(
+          '🔄 Suggesting api.openvine.co fallback for cdn.divine.video: $fallbackUrl',
+          name: 'VideoUrlValidator',
+          category: LogCategory.video,
+        );
         return fallbackUrl;
       }
     }

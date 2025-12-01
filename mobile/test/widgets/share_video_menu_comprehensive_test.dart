@@ -40,27 +40,38 @@ void main() {
     // Mock services removed - focusing on core widget functionality first
 
     setUpAll(() async {
-      Log.info('🚀 Setting up ShareVideoMenu real video data test environment',
-          name: 'ShareVideoMenuTest', category: LogCategory.system);
+      Log.info(
+        '🚀 Setting up ShareVideoMenu real video data test environment',
+        name: 'ShareVideoMenuTest',
+        category: LogCategory.system,
+      );
 
       // Initialize real Nostr connection for realistic testing
       keyManager = NostrKeyManager();
       await keyManager.initialize();
 
       nostrService = NostrService(keyManager);
-      await nostrService.initialize(customRelays: [
-        'wss://staging-relay.divine.video',
-        'wss://relay.damus.io',
-        'wss://nos.lol'
-      ]);
+      await nostrService.initialize(
+        customRelays: [
+          'wss://staging-relay.divine.video',
+          'wss://relay.damus.io',
+          'wss://nos.lol',
+        ],
+      );
 
       subscriptionManager = SubscriptionManager(nostrService);
-      videoEventService = VideoEventService(nostrService, subscriptionManager: subscriptionManager);
+      videoEventService = VideoEventService(
+        nostrService,
+        subscriptionManager: subscriptionManager,
+      );
       await _waitForRelayConnection(nostrService);
       realVideos = await _fetchRealVideoEvents(videoEventService);
 
-      Log.info('✅ Found ${realVideos.length} real videos for ShareVideoMenu testing',
-          name: 'ShareVideoMenuTest', category: LogCategory.system);
+      Log.info(
+        '✅ Found ${realVideos.length} real videos for ShareVideoMenu testing',
+        name: 'ShareVideoMenuTest',
+        category: LogCategory.system,
+      );
     });
 
     setUp(() {
@@ -80,9 +91,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -114,9 +123,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -134,7 +141,9 @@ void main() {
         }
       });
 
-      testWidgets('shows proper header with close functionality', (tester) async {
+      testWidgets('shows proper header with close functionality', (
+        tester,
+      ) async {
         if (realVideos.isEmpty) return;
 
         final testVideo = realVideos.first;
@@ -164,16 +173,16 @@ void main() {
     });
 
     group('Share Functionality Tests', () {
-      testWidgets('displays share options with proper icons and text', (tester) async {
+      testWidgets('displays share options with proper icons and text', (
+        tester,
+      ) async {
         if (realVideos.isEmpty) return;
 
         final testVideo = realVideos.first;
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -186,16 +195,16 @@ void main() {
         expect(find.byIcon(Icons.share), findsWidgets);
       });
 
-      testWidgets('displays share button that triggers external share', (tester) async {
+      testWidgets('displays share button that triggers external share', (
+        tester,
+      ) async {
         if (realVideos.isEmpty) return;
 
         final testVideo = realVideos.first;
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -205,8 +214,11 @@ void main() {
         expect(find.text('Share'), findsOneWidget);
         expect(find.text('Share via other apps or copy link'), findsOneWidget);
 
-        Log.info('✅ Share button test completed',
-            name: 'ShareVideoMenuTest', category: LogCategory.system);
+        Log.info(
+          '✅ Share button test completed',
+          name: 'ShareVideoMenuTest',
+          category: LogCategory.system,
+        );
       });
 
       testWidgets('shows send to user dialog when tapped', (tester) async {
@@ -216,9 +228,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -242,9 +252,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -256,16 +264,16 @@ void main() {
         expect(find.text('Create Follow Set'), findsOneWidget);
       });
 
-      testWidgets('handles bookmark functionality with real video', (tester) async {
+      testWidgets('handles bookmark functionality with real video', (
+        tester,
+      ) async {
         if (realVideos.isEmpty) return;
 
         final testVideo = realVideos.first;
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -290,9 +298,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -312,9 +318,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -328,7 +332,7 @@ void main() {
           'Report as Spam',
           'Report as Inappropriate',
           'Block User',
-          'Hide from Timeline'
+          'Hide from Timeline',
         ];
 
         for (final option in reportOptions) {
@@ -339,16 +343,16 @@ void main() {
         }
       });
 
-      testWidgets('handles content reporting with confirmation', (tester) async {
+      testWidgets('handles content reporting with confirmation', (
+        tester,
+      ) async {
         if (realVideos.isEmpty) return;
 
         final testVideo = realVideos.first;
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -372,9 +376,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -393,16 +395,16 @@ void main() {
     });
 
     group('Service Integration Tests', () {
-      testWidgets('integrates with multiple services correctly', (tester) async {
+      testWidgets('integrates with multiple services correctly', (
+        tester,
+      ) async {
         if (realVideos.isEmpty) return;
 
         final testVideo = realVideos.first;
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -414,8 +416,11 @@ void main() {
         expect(find.text('Manage Lists'), findsOneWidget);
         expect(find.text('Report Content'), findsOneWidget);
 
-        Log.info('✅ Service integration test completed successfully',
-            name: 'ShareVideoMenuTest', category: LogCategory.system);
+        Log.info(
+          '✅ Service integration test completed successfully',
+          name: 'ShareVideoMenuTest',
+          category: LogCategory.system,
+        );
       });
     });
 
@@ -434,9 +439,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: emptyVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: emptyVideo)),
           ),
         );
 
@@ -453,9 +456,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -474,9 +475,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: realVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: realVideo)),
           ),
         );
 
@@ -485,11 +484,16 @@ void main() {
         // Should display real video information
         expect(find.byType(ShareVideoMenu), findsOneWidget);
 
-        Log.info('✅ Real data test completed with video: ${realVideo.title ?? "No title"}',
-            name: 'ShareVideoMenuTest', category: LogCategory.system);
+        Log.info(
+          '✅ Real data test completed with video: ${realVideo.title ?? "No title"}',
+          name: 'ShareVideoMenuTest',
+          category: LogCategory.system,
+        );
       });
 
-      testWidgets('handles multiple real videos with different metadata', (tester) async {
+      testWidgets('handles multiple real videos with different metadata', (
+        tester,
+      ) async {
         if (realVideos.length < 3) return;
 
         for (int i = 0; i < 3; i++) {
@@ -497,9 +501,7 @@ void main() {
 
           await tester.pumpWidget(
             ProviderScope(
-              child: MaterialApp(
-                home: ShareVideoMenu(video: video),
-              ),
+              child: MaterialApp(home: ShareVideoMenu(video: video)),
             ),
           );
 
@@ -512,22 +514,25 @@ void main() {
           await tester.pumpWidget(Container());
         }
 
-        Log.info('✅ Multiple real videos test completed successfully',
-            name: 'ShareVideoMenuTest', category: LogCategory.system);
+        Log.info(
+          '✅ Multiple real videos test completed successfully',
+          name: 'ShareVideoMenuTest',
+          category: LogCategory.system,
+        );
       });
     });
 
     group('Accessibility', () {
-      testWidgets('provides semantic labels for screen readers', (tester) async {
+      testWidgets('provides semantic labels for screen readers', (
+        tester,
+      ) async {
         if (realVideos.isEmpty) return;
 
         final testVideo = realVideos.first;
 
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: ShareVideoMenu(video: testVideo),
-            ),
+            child: MaterialApp(home: ShareVideoMenu(video: testVideo)),
           ),
         );
 
@@ -547,56 +552,77 @@ void main() {
 
 void _setupPlatformMocks() {
   // Mock SharedPreferences
-  const MethodChannel prefsChannel = MethodChannel('plugins.flutter.io/shared_preferences');
+  const MethodChannel prefsChannel = MethodChannel(
+    'plugins.flutter.io/shared_preferences',
+  );
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(prefsChannel, (MethodCall methodCall) async {
-    if (methodCall.method == 'getAll') return <String, dynamic>{};
-    if (methodCall.method == 'setString' || methodCall.method == 'setBool') return true;
-    return null;
-  });
+        if (methodCall.method == 'getAll') return <String, dynamic>{};
+        if (methodCall.method == 'setString' || methodCall.method == 'setBool')
+          return true;
+        return null;
+      });
 
   // Mock connectivity
-  const MethodChannel connectivityChannel = MethodChannel('dev.fluttercommunity.plus/connectivity');
+  const MethodChannel connectivityChannel = MethodChannel(
+    'dev.fluttercommunity.plus/connectivity',
+  );
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(connectivityChannel, (MethodCall methodCall) async {
-    if (methodCall.method == 'check') return ['wifi'];
-    return null;
-  });
+      .setMockMethodCallHandler(connectivityChannel, (
+        MethodCall methodCall,
+      ) async {
+        if (methodCall.method == 'check') return ['wifi'];
+        return null;
+      });
 
   // Mock secure storage
-  const MethodChannel secureStorageChannel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+  const MethodChannel secureStorageChannel = MethodChannel(
+    'plugins.it_nomads.com/flutter_secure_storage',
+  );
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(secureStorageChannel, (MethodCall methodCall) async {
-    if (methodCall.method == 'write') return null;
-    if (methodCall.method == 'read') return null;
-    if (methodCall.method == 'readAll') return <String, String>{};
-    return null;
-  });
+      .setMockMethodCallHandler(secureStorageChannel, (
+        MethodCall methodCall,
+      ) async {
+        if (methodCall.method == 'write') return null;
+        if (methodCall.method == 'read') return null;
+        if (methodCall.method == 'readAll') return <String, String>{};
+        return null;
+      });
 
   // Mock path provider
-  const MethodChannel pathProviderChannel = MethodChannel('plugins.flutter.io/path_provider');
+  const MethodChannel pathProviderChannel = MethodChannel(
+    'plugins.flutter.io/path_provider',
+  );
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(pathProviderChannel, (MethodCall methodCall) async {
-    if (methodCall.method == 'getApplicationDocumentsDirectory') {
-      return '/tmp/openvine_share_menu_test_db';
-    }
-    return null;
-  });
+      .setMockMethodCallHandler(pathProviderChannel, (
+        MethodCall methodCall,
+      ) async {
+        if (methodCall.method == 'getApplicationDocumentsDirectory') {
+          return '/tmp/openvine_share_menu_test_db';
+        }
+        return null;
+      });
 
   // Mock device info
-  const MethodChannel deviceInfoChannel = MethodChannel('dev.fluttercommunity.plus/device_info');
+  const MethodChannel deviceInfoChannel = MethodChannel(
+    'dev.fluttercommunity.plus/device_info',
+  );
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(deviceInfoChannel, (MethodCall methodCall) async {
-    return <String, dynamic>{'systemName': 'iOS', 'model': 'iPhone'};
-  });
+      .setMockMethodCallHandler(deviceInfoChannel, (
+        MethodCall methodCall,
+      ) async {
+        return <String, dynamic>{'systemName': 'iOS', 'model': 'iPhone'};
+      });
 
   // Mock share_plus
-  const MethodChannel shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
+  const MethodChannel shareChannel = MethodChannel(
+    'dev.fluttercommunity.plus/share',
+  );
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(shareChannel, (MethodCall methodCall) async {
-    if (methodCall.method == 'share') return null;
-    return null;
-  });
+        if (methodCall.method == 'share') return null;
+        return null;
+      });
 }
 
 Future<void> _waitForRelayConnection(NostrService nostrService) async {
@@ -612,36 +638,57 @@ Future<void> _waitForRelayConnection(NostrService nostrService) async {
 
   try {
     await connectionCompleter.future.timeout(Duration(seconds: 20));
-    Log.info('✅ Connected to ${nostrService.connectedRelayCount} relays for ShareVideoMenu testing',
-        name: 'ShareVideoMenuTest', category: LogCategory.system);
+    Log.info(
+      '✅ Connected to ${nostrService.connectedRelayCount} relays for ShareVideoMenu testing',
+      name: 'ShareVideoMenuTest',
+      category: LogCategory.system,
+    );
   } catch (e) {
     timer.cancel();
-    Log.warning('Connection timeout: $e', name: 'ShareVideoMenuTest', category: LogCategory.system);
+    Log.warning(
+      'Connection timeout: $e',
+      name: 'ShareVideoMenuTest',
+      category: LogCategory.system,
+    );
   }
 }
 
-Future<List<VideoEvent>> _fetchRealVideoEvents(VideoEventService videoEventService) async {
-  Log.info('🎬 Fetching real video events for ShareVideoMenu testing...',
-      name: 'ShareVideoMenuTest', category: LogCategory.system);
+Future<List<VideoEvent>> _fetchRealVideoEvents(
+  VideoEventService videoEventService,
+) async {
+  Log.info(
+    '🎬 Fetching real video events for ShareVideoMenu testing...',
+    name: 'ShareVideoMenuTest',
+    category: LogCategory.system,
+  );
 
   try {
     await videoEventService.subscribeToDiscovery();
     await Future.delayed(Duration(seconds: 3));
 
     final videos = videoEventService.discoveryVideos;
-    Log.info('📋 Found ${videos.length} video events for ShareVideoMenu testing',
-        name: 'ShareVideoMenuTest', category: LogCategory.system);
+    Log.info(
+      '📋 Found ${videos.length} video events for ShareVideoMenu testing',
+      name: 'ShareVideoMenuTest',
+      category: LogCategory.system,
+    );
 
     for (int i = 0; i < videos.length && i < 3; i++) {
       final video = videos[i];
-      Log.info('  [$i] ${video.title ?? "No title"} by ${video.pubkey}',
-          name: 'ShareVideoMenuTest', category: LogCategory.system);
+      Log.info(
+        '  [$i] ${video.title ?? "No title"} by ${video.pubkey}',
+        name: 'ShareVideoMenuTest',
+        category: LogCategory.system,
+      );
     }
 
     return videos;
   } catch (e) {
-    Log.error('Failed to fetch video events for ShareVideoMenu testing: $e',
-        name: 'ShareVideoMenuTest', category: LogCategory.system);
+    Log.error(
+      'Failed to fetch video events for ShareVideoMenu testing: $e',
+      name: 'ShareVideoMenuTest',
+      category: LogCategory.system,
+    );
     return [];
   }
 }

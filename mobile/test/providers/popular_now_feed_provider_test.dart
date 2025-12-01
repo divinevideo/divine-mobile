@@ -26,11 +26,13 @@ void main() {
       when(mockService.addListener(any)).thenReturn(null);
       when(mockService.removeListener(any)).thenReturn(null);
       when(mockService.popularNowVideos).thenReturn([]);
-      when(mockService.subscribeToVideoFeed(
-        subscriptionType: anyNamed('subscriptionType'),
-        limit: anyNamed('limit'),
-        sortBy: anyNamed('sortBy'),
-      )).thenAnswer((_) async => Future.value());
+      when(
+        mockService.subscribeToVideoFeed(
+          subscriptionType: anyNamed('subscriptionType'),
+          limit: anyNamed('limit'),
+          sortBy: anyNamed('sortBy'),
+        ),
+      ).thenAnswer((_) async => Future.value());
 
       container = ProviderContainer(
         overrides: [
@@ -51,17 +53,25 @@ void main() {
       await container.read(popularNowFeedProvider.future);
 
       // Assert
-      verify(mockService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.popularNow,
-        limit: 100,
-        sortBy: argThat(isNotNull, named: 'sortBy'),
-      )).called(greaterThanOrEqualTo(1));
+      verify(
+        mockService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.popularNow,
+          limit: 100,
+          sortBy: argThat(isNotNull, named: 'sortBy'),
+        ),
+      ).called(greaterThanOrEqualTo(1));
     });
 
     test('should get videos from popularNowVideos getter', () async {
       // Arrange
-      final video1 = _createMockVideo(id: 'v1', createdAt: DateTime(2025, 1, 1));
-      final video2 = _createMockVideo(id: 'v2', createdAt: DateTime(2025, 1, 2));
+      final video1 = _createMockVideo(
+        id: 'v1',
+        createdAt: DateTime(2025, 1, 1),
+      );
+      final video2 = _createMockVideo(
+        id: 'v2',
+        createdAt: DateTime(2025, 1, 2),
+      );
       when(mockService.popularNowVideos).thenReturn([video1, video2]);
 
       // Act
@@ -74,9 +84,18 @@ void main() {
 
     test('should sort videos by timestamp (newest first)', () async {
       // Arrange
-      final video1 = _createMockVideo(id: 'v1', createdAt: DateTime(2025, 1, 1));
-      final video2 = _createMockVideo(id: 'v2', createdAt: DateTime(2025, 1, 3));
-      final video3 = _createMockVideo(id: 'v3', createdAt: DateTime(2025, 1, 2));
+      final video1 = _createMockVideo(
+        id: 'v1',
+        createdAt: DateTime(2025, 1, 1),
+      );
+      final video2 = _createMockVideo(
+        id: 'v2',
+        createdAt: DateTime(2025, 1, 3),
+      );
+      final video3 = _createMockVideo(
+        id: 'v3',
+        createdAt: DateTime(2025, 1, 2),
+      );
       when(mockService.popularNowVideos).thenReturn([video1, video2, video3]);
 
       // Act
@@ -103,10 +122,13 @@ void main() {
 
     test('should set hasMoreContent true when videos >= 10', () async {
       // Arrange
-      final videos = List.generate(15, (i) => _createMockVideo(
-        id: 'v$i',
-        createdAt: DateTime.now().subtract(Duration(hours: i)),
-      ));
+      final videos = List.generate(
+        15,
+        (i) => _createMockVideo(
+          id: 'v$i',
+          createdAt: DateTime.now().subtract(Duration(hours: i)),
+        ),
+      );
       when(mockService.popularNowVideos).thenReturn(videos);
 
       // Act
@@ -121,15 +143,18 @@ void main() {
       // Arrange
       final initialVideos = [_createMockVideo(id: 'v1')];
       when(mockService.popularNowVideos).thenReturn(initialVideos);
-      when(mockService.loadMoreEvents(
-        SubscriptionType.popularNow,
-        limit: anyNamed('limit'),
-      )).thenAnswer((_) async => Future.value());
+      when(
+        mockService.loadMoreEvents(
+          SubscriptionType.popularNow,
+          limit: anyNamed('limit'),
+        ),
+      ).thenAnswer((_) async => Future.value());
 
       // Mock getEventCount to return different values on consecutive calls
       var callCount = 0;
-      when(mockService.getEventCount(SubscriptionType.popularNow))
-        .thenAnswer((_) => callCount++ == 0 ? 1 : 3);
+      when(
+        mockService.getEventCount(SubscriptionType.popularNow),
+      ).thenAnswer((_) => callCount++ == 0 ? 1 : 3);
 
       // Get initial state
       await container.read(popularNowFeedProvider.future);
@@ -138,21 +163,22 @@ void main() {
       await container.read(popularNowFeedProvider.notifier).loadMore();
 
       // Assert
-      verify(mockService.loadMoreEvents(
-        SubscriptionType.popularNow,
-        limit: 50,
-      )).called(1);
+      verify(
+        mockService.loadMoreEvents(SubscriptionType.popularNow, limit: 50),
+      ).called(1);
     });
 
     test('should refresh feed when refresh is called', () async {
       // Arrange
       when(mockService.popularNowVideos).thenReturn([]);
-      when(mockService.subscribeToVideoFeed(
-        subscriptionType: anyNamed('subscriptionType'),
-        limit: anyNamed('limit'),
-        sortBy: anyNamed('sortBy'),
-        force: anyNamed('force'),
-      )).thenAnswer((_) async => Future.value());
+      when(
+        mockService.subscribeToVideoFeed(
+          subscriptionType: anyNamed('subscriptionType'),
+          limit: anyNamed('limit'),
+          sortBy: anyNamed('sortBy'),
+          force: anyNamed('force'),
+        ),
+      ).thenAnswer((_) async => Future.value());
 
       // Get initial state
       await container.read(popularNowFeedProvider.future);
@@ -161,12 +187,14 @@ void main() {
       await container.read(popularNowFeedProvider.notifier).refresh();
 
       // Assert
-      verify(mockService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.popularNow,
-        limit: 100,
-        sortBy: argThat(isNotNull, named: 'sortBy'),
-        force: true, // Should force refresh
-      )).called(1);
+      verify(
+        mockService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.popularNow,
+          limit: 100,
+          sortBy: argThat(isNotNull, named: 'sortBy'),
+          force: true, // Should force refresh
+        ),
+      ).called(1);
     });
 
     test('should return empty state when appReady is false', () async {
@@ -183,12 +211,17 @@ void main() {
 
       // Assert
       expect(state.videos, isEmpty);
-      expect(state.hasMoreContent, true); // True because we assume content will load when ready
-      verifyNever(mockService.subscribeToVideoFeed(
-        subscriptionType: anyNamed('subscriptionType'),
-        limit: anyNamed('limit'),
-        sortBy: anyNamed('sortBy'),
-      ));
+      expect(
+        state.hasMoreContent,
+        true,
+      ); // True because we assume content will load when ready
+      verifyNever(
+        mockService.subscribeToVideoFeed(
+          subscriptionType: anyNamed('subscriptionType'),
+          limit: anyNamed('limit'),
+          sortBy: anyNamed('sortBy'),
+        ),
+      );
 
       notReadyContainer.dispose();
     });
@@ -196,10 +229,7 @@ void main() {
 }
 
 // Helper to create mock VideoEvent for testing
-VideoEvent _createMockVideo({
-  required String id,
-  DateTime? createdAt,
-}) {
+VideoEvent _createMockVideo({required String id, DateTime? createdAt}) {
   final timestamp = createdAt ?? DateTime.now();
   return VideoEvent(
     id: id,

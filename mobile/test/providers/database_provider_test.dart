@@ -60,14 +60,15 @@ void main() {
 
     test('can be overridden in tests', () async {
       // Create test database with custom path
-      final testDbPath = p.join(Directory.systemTemp.path, 'test_db_${DateTime.now().millisecondsSinceEpoch}.db');
+      final testDbPath = p.join(
+        Directory.systemTemp.path,
+        'test_db_${DateTime.now().millisecondsSinceEpoch}.db',
+      );
       final testDb = AppDatabase.test(testDbPath);
 
       // Create container with override
       final overriddenContainer = ProviderContainer(
-        overrides: [
-          databaseProvider.overrideWithValue(testDb),
-        ],
+        overrides: [databaseProvider.overrideWithValue(testDb)],
       );
 
       // Read should return our test database

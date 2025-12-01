@@ -18,9 +18,10 @@ class ContentBlocklistService {
     // Initialize with the specific npub requested
     _addInitialBlockedContent();
     Log.info(
-        'ContentBlocklistService initialized with $totalBlockedCount blocked accounts',
-        name: 'ContentBlocklistService',
-        category: LogCategory.system);
+      'ContentBlocklistService initialized with $totalBlockedCount blocked accounts',
+      name: 'ContentBlocklistService',
+      category: LogCategory.system,
+    );
   }
 
   // Internal blocklist of public keys (hex format) - kept empty for now
@@ -52,9 +53,10 @@ class ContentBlocklistService {
       if (hexPubkey != null) {
         _runtimeBlocklist.add(hexPubkey);
         Log.debug(
-            'Added to blocklist: ${npub.substring(0, 16)}... -> ${hexPubkey}...',
-            name: 'ContentBlocklistService',
-            category: LogCategory.system);
+          'Added to blocklist: ${npub.substring(0, 16)}... -> ${hexPubkey}...',
+          name: 'ContentBlocklistService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -84,8 +86,11 @@ class ContentBlocklistService {
     if (!_runtimeBlocklist.contains(pubkey)) {
       _runtimeBlocklist.add(pubkey);
 
-      Log.debug('Added user to blocklist: ${pubkey}...',
-          name: 'ContentBlocklistService', category: LogCategory.system);
+      Log.debug(
+        'Added user to blocklist: ${pubkey}...',
+        name: 'ContentBlocklistService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -95,19 +100,25 @@ class ContentBlocklistService {
     if (_runtimeBlocklist.contains(pubkey)) {
       _runtimeBlocklist.remove(pubkey);
 
-      Log.info('Removed user from blocklist: ${pubkey}...',
-          name: 'ContentBlocklistService', category: LogCategory.system);
+      Log.info(
+        'Removed user from blocklist: ${pubkey}...',
+        name: 'ContentBlocklistService',
+        category: LogCategory.system,
+      );
     } else if (_internalBlocklist.contains(pubkey)) {
       Log.warning(
-          'Cannot unblock user from internal blocklist: ${pubkey}...',
-          name: 'ContentBlocklistService',
-          category: LogCategory.system);
+        'Cannot unblock user from internal blocklist: ${pubkey}...',
+        name: 'ContentBlocklistService',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Get all blocked public keys (for debugging)
-  Set<String> get blockedPubkeys =>
-      {..._internalBlocklist, ..._runtimeBlocklist};
+  Set<String> get blockedPubkeys => {
+    ..._internalBlocklist,
+    ..._runtimeBlocklist,
+  };
 
   /// Get count of blocked accounts
   int get totalBlockedCount =>
@@ -129,55 +140,69 @@ class ContentBlocklistService {
     if (_runtimeBlocklist.isNotEmpty) {
       _runtimeBlocklist.clear();
 
-      Log.debug('🧹 Cleared all runtime blocks',
-          name: 'ContentBlocklistService', category: LogCategory.system);
+      Log.debug(
+        '🧹 Cleared all runtime blocks',
+        name: 'ContentBlocklistService',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Get stats about blocking
   Map<String, dynamic> get blockingStats => {
-        'internal_blocks': _internalBlocklist.length,
-        'runtime_blocks': _runtimeBlocklist.length,
-        'total_blocks': totalBlockedCount,
-      };
+    'internal_blocks': _internalBlocklist.length,
+    'runtime_blocks': _runtimeBlocklist.length,
+    'total_blocks': totalBlockedCount,
+  };
 
   /// Start background sync of mutual mute lists (NIP-51 kind 10000)
   /// Subscribes to kind 10000 events WHERE our pubkey appears in 'p' tags
   Future<void> syncMuteListsInBackground(
-      INostrService nostrService, String ourPubkey) async {
+    INostrService nostrService,
+    String ourPubkey,
+  ) async {
     if (_mutualMuteSyncStarted) {
-      Log.debug('Mutual mute sync already started, skipping',
-          name: 'ContentBlocklistService', category: LogCategory.system);
+      Log.debug(
+        'Mutual mute sync already started, skipping',
+        name: 'ContentBlocklistService',
+        category: LogCategory.system,
+      );
       return;
     }
 
     _mutualMuteSyncStarted = true;
     _ourPubkey = ourPubkey;
 
-    Log.info('Starting mutual mute list sync for pubkey: $ourPubkey',
-        name: 'ContentBlocklistService', category: LogCategory.system);
+    Log.info(
+      'Starting mutual mute list sync for pubkey: $ourPubkey',
+      name: 'ContentBlocklistService',
+      category: LogCategory.system,
+    );
 
     try {
       // Subscribe to kind 10000 (mute list) events WHERE our pubkey is in 'p' tags
       final filter = Filter(kinds: const [10000]);
       filter.p = [ourPubkey]; // Filter by 'p' tags containing our pubkey
 
-      final subscription = nostrService.subscribeToEvents(
-        filters: [filter],
-      );
+      final subscription = nostrService.subscribeToEvents(filters: [filter]);
 
-      _mutualMuteSubscriptionId = 'mutual-mute-${DateTime.now().millisecondsSinceEpoch}';
+      _mutualMuteSubscriptionId =
+          'mutual-mute-${DateTime.now().millisecondsSinceEpoch}';
 
       // Listen to the stream
       subscription.listen(_handleMuteListEvent);
 
       Log.info(
-          'Mutual mute subscription created: $_mutualMuteSubscriptionId',
-          name: 'ContentBlocklistService',
-          category: LogCategory.system);
+        'Mutual mute subscription created: $_mutualMuteSubscriptionId',
+        name: 'ContentBlocklistService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to start mutual mute sync: $e',
-          name: 'ContentBlocklistService', category: LogCategory.system);
+      Log.error(
+        'Failed to start mutual mute sync: $e',
+        name: 'ContentBlocklistService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -185,30 +210,44 @@ class ContentBlocklistService {
   /// Adds/removes muter based on whether our pubkey is in their 'p' tags
   void _handleMuteListEvent(Event event) {
     if (event.kind != 10000) {
-      Log.warning('Received non-10000 event in mute list handler: ${event.kind}',
-          name: 'ContentBlocklistService', category: LogCategory.system);
+      Log.warning(
+        'Received non-10000 event in mute list handler: ${event.kind}',
+        name: 'ContentBlocklistService',
+        category: LogCategory.system,
+      );
       return;
     }
 
     final muterPubkey = event.pubkey;
 
     // Check if our pubkey is in this user's mute list
-    final stillMuted = event.tags.any((tag) =>
-        tag.isNotEmpty && tag[0] == 'p' && tag.length >= 2 && tag[1] == _ourPubkey);
+    final stillMuted = event.tags.any(
+      (tag) =>
+          tag.isNotEmpty &&
+          tag[0] == 'p' &&
+          tag.length >= 2 &&
+          tag[1] == _ourPubkey,
+    );
 
     if (stillMuted) {
       // They muted us - add to blocklist
       if (!_mutualMuteBlocklist.contains(muterPubkey)) {
         _mutualMuteBlocklist.add(muterPubkey);
-        Log.info('Added mutual mute: $muterPubkey',
-            name: 'ContentBlocklistService', category: LogCategory.system);
+        Log.info(
+          'Added mutual mute: $muterPubkey',
+          name: 'ContentBlocklistService',
+          category: LogCategory.system,
+        );
       }
     } else {
       // They removed us from mute list - remove from blocklist
       if (_mutualMuteBlocklist.contains(muterPubkey)) {
         _mutualMuteBlocklist.remove(muterPubkey);
-        Log.info('Removed mutual mute (unmuted): $muterPubkey',
-            name: 'ContentBlocklistService', category: LogCategory.system);
+        Log.info(
+          'Removed mutual mute (unmuted): $muterPubkey',
+          name: 'ContentBlocklistService',
+          category: LogCategory.system,
+        );
       }
     }
   }

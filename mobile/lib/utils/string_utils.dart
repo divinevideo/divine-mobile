@@ -42,15 +42,21 @@ class StringUtils {
     } else if (number < 1000000) {
       final result = (number / 1000).toStringAsFixed(1);
       // Remove trailing .0
-      return result.endsWith('.0') ? '${result.substring(0, result.length - 2)}k' : '${result}k';
+      return result.endsWith('.0')
+          ? '${result.substring(0, result.length - 2)}k'
+          : '${result}k';
     } else if (number < 1000000000) {
       final result = (number / 1000000).toStringAsFixed(1);
       // Remove trailing .0
-      return result.endsWith('.0') ? '${result.substring(0, result.length - 2)}M' : '${result}M';
+      return result.endsWith('.0')
+          ? '${result.substring(0, result.length - 2)}M'
+          : '${result}M';
     } else {
       final result = (number / 1000000000).toStringAsFixed(1);
       // Remove trailing .0
-      return result.endsWith('.0') ? '${result.substring(0, result.length - 2)}B' : '${result}B';
+      return result.endsWith('.0')
+          ? '${result.substring(0, result.length - 2)}B'
+          : '${result}B';
     }
   }
 }

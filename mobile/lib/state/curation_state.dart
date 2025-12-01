@@ -40,7 +40,7 @@ sealed class CurationState with _$CurationState {
 
   /// Get videos for a specific curation type
   List<VideoEvent> getVideosForType(CurationSetType type) => switch (type) {
-        CurationSetType.editorsPicks => editorsPicks,
-        CurationSetType.trending => trending,
-      };
+    CurationSetType.editorsPicks => editorsPicks,
+    CurationSetType.trending => trending,
+  };
 }

@@ -26,11 +26,17 @@ class HashtagCacheService {
       _hashtagBox = await Hive.openBox(_boxName);
       _isInitialized = true;
 
-      Log.info('HashtagCacheService initialized',
-          name: 'HashtagCacheService', category: LogCategory.storage);
+      Log.info(
+        'HashtagCacheService initialized',
+        name: 'HashtagCacheService',
+        category: LogCategory.storage,
+      );
     } catch (e) {
-      Log.error('Failed to initialize HashtagCacheService: $e',
-          name: 'HashtagCacheService', category: LogCategory.storage);
+      Log.error(
+        'Failed to initialize HashtagCacheService: $e',
+        name: 'HashtagCacheService',
+        category: LogCategory.storage,
+      );
       rethrow;
     }
   }
@@ -44,8 +50,11 @@ class HashtagCacheService {
       final lastUpdate = _hashtagBox!.get(_lastUpdateKey) as DateTime?;
       if (lastUpdate == null ||
           DateTime.now().difference(lastUpdate) > _cacheExpiry) {
-        Log.debug('Hashtag cache expired or not found',
-            name: 'HashtagCacheService', category: LogCategory.storage);
+        Log.debug(
+          'Hashtag cache expired or not found',
+          name: 'HashtagCacheService',
+          category: LogCategory.storage,
+        );
         return null;
       }
 
@@ -54,12 +63,18 @@ class HashtagCacheService {
       if (cachedHashtags == null) return null;
 
       final hashtags = cachedHashtags.cast<String>().toList();
-      Log.debug('Retrieved ${hashtags.length} cached popular hashtags',
-          name: 'HashtagCacheService', category: LogCategory.storage);
+      Log.debug(
+        'Retrieved ${hashtags.length} cached popular hashtags',
+        name: 'HashtagCacheService',
+        category: LogCategory.storage,
+      );
       return hashtags;
     } catch (e) {
-      Log.error('Error retrieving cached hashtags: $e',
-          name: 'HashtagCacheService', category: LogCategory.storage);
+      Log.error(
+        'Error retrieving cached hashtags: $e',
+        name: 'HashtagCacheService',
+        category: LogCategory.storage,
+      );
       return null;
     }
   }
@@ -72,11 +87,17 @@ class HashtagCacheService {
       await _hashtagBox!.put(_popularHashtagsKey, hashtags);
       await _hashtagBox!.put(_lastUpdateKey, DateTime.now());
 
-      Log.info('Cached ${hashtags.length} popular hashtags',
-          name: 'HashtagCacheService', category: LogCategory.storage);
+      Log.info(
+        'Cached ${hashtags.length} popular hashtags',
+        name: 'HashtagCacheService',
+        category: LogCategory.storage,
+      );
     } catch (e) {
-      Log.error('Error caching hashtags: $e',
-          name: 'HashtagCacheService', category: LogCategory.storage);
+      Log.error(
+        'Error caching hashtags: $e',
+        name: 'HashtagCacheService',
+        category: LogCategory.storage,
+      );
     }
   }
 
@@ -86,11 +107,17 @@ class HashtagCacheService {
 
     try {
       await _hashtagBox!.clear();
-      Log.info('Hashtag cache cleared',
-          name: 'HashtagCacheService', category: LogCategory.storage);
+      Log.info(
+        'Hashtag cache cleared',
+        name: 'HashtagCacheService',
+        category: LogCategory.storage,
+      );
     } catch (e) {
-      Log.error('Error clearing hashtag cache: $e',
-          name: 'HashtagCacheService', category: LogCategory.storage);
+      Log.error(
+        'Error clearing hashtag cache: $e',
+        name: 'HashtagCacheService',
+        category: LogCategory.storage,
+      );
     }
   }
 

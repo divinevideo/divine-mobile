@@ -12,7 +12,9 @@ sealed class SocialState with _$SocialState {
   const factory SocialState({
     // Like-related state
     @Default({}) Set<String> likedEventIds,
-    @Default({}) Map<String, int> likeCounts, // NEW likes from Nostr only (add to originalLikes for total)
+    @Default({})
+    Map<String, int>
+    likeCounts, // NEW likes from Nostr only (add to originalLikes for total)
     @Default({}) Map<String, String> likeEventIdToReactionId,
 
     // Repost-related state

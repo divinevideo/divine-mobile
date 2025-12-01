@@ -33,7 +33,7 @@ enum ContentSeverity {
   info, // Informational only
   warning, // Show warning but allow viewing
   hide, // Hide by default, show if requested
-  block // Completely block content
+  block, // Completely block content
 }
 
 /// Mute list entry representing filtered content
@@ -55,28 +55,28 @@ class MuteListEntry {
   final String? note;
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'value': value,
-        'reason': reason.name,
-        'severity': severity.name,
-        'createdAt': createdAt.toIso8601String(),
-        'note': note,
-      };
+    'type': type,
+    'value': value,
+    'reason': reason.name,
+    'severity': severity.name,
+    'createdAt': createdAt.toIso8601String(),
+    'note': note,
+  };
 
   static MuteListEntry fromJson(Map<String, dynamic> json) => MuteListEntry(
-        type: json['type'],
-        value: json['value'],
-        reason: ContentFilterReason.values.firstWhere(
-          (r) => r.name == json['reason'],
-          orElse: () => ContentFilterReason.other,
-        ),
-        severity: ContentSeverity.values.firstWhere(
-          (s) => s.name == json['severity'],
-          orElse: () => ContentSeverity.hide,
-        ),
-        createdAt: DateTime.parse(json['createdAt']),
-        note: json['note'],
-      );
+    type: json['type'],
+    value: json['value'],
+    reason: ContentFilterReason.values.firstWhere(
+      (r) => r.name == json['reason'],
+      orElse: () => ContentFilterReason.other,
+    ),
+    severity: ContentSeverity.values.firstWhere(
+      (s) => s.name == json['severity'],
+      orElse: () => ContentSeverity.hide,
+    ),
+    createdAt: DateTime.parse(json['createdAt']),
+    note: json['note'],
+  );
 
   /// Convert to NIP-51 list entry tag format
   List<String> toNIP51Tag() {
@@ -117,9 +117,9 @@ class ContentModerationService with NostrListServiceMixin {
     required INostrService nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
-  })  : _nostrService = nostrService,
-        _authService = authService,
-        _prefs = prefs {
+  }) : _nostrService = nostrService,
+       _authService = authService,
+       _prefs = prefs {
     _loadSettings();
     _loadLocalMuteList();
     _loadSubscribedLists();
@@ -178,11 +178,17 @@ class ContentModerationService with NostrListServiceMixin {
         }
       }
 
-      Log.info('Content moderation initialized with ${_muteLists.length} lists',
-          name: 'ContentModerationService', category: LogCategory.system);
+      Log.info(
+        'Content moderation initialized with ${_muteLists.length} lists',
+        name: 'ContentModerationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to initialize content moderation: $e',
-          name: 'ContentModerationService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize content moderation: $e',
+        name: 'ContentModerationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -215,8 +221,10 @@ class ContentModerationService with NostrListServiceMixin {
     String? warningMessage;
     if (matchingEntries.isNotEmpty) {
       final primaryReason = reasons.first;
-      warningMessage =
-          _buildWarningMessage(primaryReason, matchingEntries.length);
+      warningMessage = _buildWarningMessage(
+        primaryReason,
+        matchingEntries.length,
+      );
     }
 
     return ModerationResult(
@@ -252,8 +260,11 @@ class ContentModerationService with NostrListServiceMixin {
 
     await _saveLocalMuteList();
 
-    Log.debug('Added to mute list: $type:$value (${reason.name})',
-        name: 'ContentModerationService', category: LogCategory.system);
+    Log.debug(
+      'Added to mute list: $type:$value (${reason.name})',
+      name: 'ContentModerationService',
+      category: LogCategory.system,
+    );
   }
 
   /// Remove entry from local mute list
@@ -297,12 +308,18 @@ class ContentModerationService with NostrListServiceMixin {
       await _subscribeToMuteList(listId);
       await _saveSubscribedLists();
 
-      Log.verbose('Subscribed to mute list: $listId',
-          name: 'ContentModerationService', category: LogCategory.system);
+      Log.verbose(
+        'Subscribed to mute list: $listId',
+        name: 'ContentModerationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
       _subscribedLists.remove(listId);
-      Log.error('Failed to subscribe to mute list $listId: $e',
-          name: 'ContentModerationService', category: LogCategory.system);
+      Log.error(
+        'Failed to subscribe to mute list $listId: $e',
+        name: 'ContentModerationService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -376,11 +393,17 @@ class ContentModerationService with NostrListServiceMixin {
       ];
 
       _muteLists['default'] = defaultEntries;
-      Log.debug('Loaded default moderation list',
-          name: 'ContentModerationService', category: LogCategory.system);
+      Log.debug(
+        'Loaded default moderation list',
+        name: 'ContentModerationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to load default moderation list: $e',
-          name: 'ContentModerationService', category: LogCategory.system);
+      Log.error(
+        'Failed to load default moderation list: $e',
+        name: 'ContentModerationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -391,8 +414,11 @@ class ContentModerationService with NostrListServiceMixin {
   /// 2. By event ID (future): Subscribe to specific list event
   Future<void> _subscribeToMuteList(String listId) async {
     try {
-      Log.debug('Subscribing to NIP-51 mute list: $listId',
-          name: 'ContentModerationService', category: LogCategory.system);
+      Log.debug(
+        'Subscribing to NIP-51 mute list: $listId',
+        name: 'ContentModerationService',
+        category: LogCategory.system,
+      );
 
       List<MuteListEntry> entries;
 
@@ -402,20 +428,27 @@ class ContentModerationService with NostrListServiceMixin {
         entries = await _loadMuteListByPubkey(pubkey);
       } else {
         // Treat as event ID or other identifier (future enhancement)
-        Log.warning('Unknown list ID format: $listId',
-            name: 'ContentModerationService', category: LogCategory.system);
+        Log.warning(
+          'Unknown list ID format: $listId',
+          name: 'ContentModerationService',
+          category: LogCategory.system,
+        );
         entries = [];
       }
 
       _muteLists[listId] = entries;
 
       Log.info(
-          'Subscribed to mute list "$listId" with ${entries.length} entries',
-          name: 'ContentModerationService',
-          category: LogCategory.system);
+        'Subscribed to mute list "$listId" with ${entries.length} entries',
+        name: 'ContentModerationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to subscribe to mute list $listId: $e',
-          name: 'ContentModerationService', category: LogCategory.system);
+      Log.error(
+        'Failed to subscribe to mute list $listId: $e',
+        name: 'ContentModerationService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -426,8 +459,11 @@ class ContentModerationService with NostrListServiceMixin {
   /// Returns the entries from the most recent mute list event.
   Future<List<MuteListEntry>> _loadMuteListByPubkey(String pubkey) async {
     try {
-      Log.debug('Loading mute list for pubkey: $pubkey',
-          name: 'ContentModerationService', category: LogCategory.system);
+      Log.debug(
+        'Loading mute list for pubkey: $pubkey',
+        name: 'ContentModerationService',
+        category: LogCategory.system,
+      );
 
       // Query for kind 10000 (mute list) events from this pubkey
       final filter = Filter(
@@ -438,8 +474,11 @@ class ContentModerationService with NostrListServiceMixin {
       final events = await _nostrService.getEvents(filters: [filter]);
 
       if (events.isEmpty) {
-        Log.debug('No mute list found for pubkey: $pubkey',
-            name: 'ContentModerationService', category: LogCategory.system);
+        Log.debug(
+          'No mute list found for pubkey: $pubkey',
+          name: 'ContentModerationService',
+          category: LogCategory.system,
+        );
         return [];
       }
 
@@ -448,15 +487,19 @@ class ContentModerationService with NostrListServiceMixin {
       final latestEvent = events.first;
 
       Log.debug(
-          'Found mute list event: ${latestEvent.id} (created: ${DateTime.fromMillisecondsSinceEpoch(latestEvent.createdAt * 1000)})',
-          name: 'ContentModerationService',
-          category: LogCategory.system);
+        'Found mute list event: ${latestEvent.id} (created: ${DateTime.fromMillisecondsSinceEpoch(latestEvent.createdAt * 1000)})',
+        name: 'ContentModerationService',
+        category: LogCategory.system,
+      );
 
       // Parse mute list entries from event
       return _parseMuteListFromEvent(latestEvent);
     } catch (e) {
-      Log.error('Failed to load mute list for pubkey $pubkey: $e',
-          name: 'ContentModerationService', category: LogCategory.system);
+      Log.error(
+        'Failed to load mute list for pubkey $pubkey: $e',
+        name: 'ContentModerationService',
+        category: LogCategory.system,
+      );
       return [];
     }
   }
@@ -517,9 +560,10 @@ class ContentModerationService with NostrListServiceMixin {
     }
 
     Log.debug(
-        'Parsed ${entries.length} mute entries from event ${event.id}',
-        name: 'ContentModerationService',
-        category: LogCategory.system);
+      'Parsed ${entries.length} mute entries from event ${event.id}',
+      name: 'ContentModerationService',
+      category: LogCategory.system,
+    );
 
     return entries;
   }
@@ -588,8 +632,11 @@ class ContentModerationService with NostrListServiceMixin {
           orElse: () => ContentSeverity.hide,
         );
       } catch (e) {
-        Log.error('Failed to load moderation settings: $e',
-            name: 'ContentModerationService', category: LogCategory.system);
+        Log.error(
+          'Failed to load moderation settings: $e',
+          name: 'ContentModerationService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -616,8 +663,11 @@ class ContentModerationService with NostrListServiceMixin {
             .toList();
         _muteLists['local'] = entries;
       } catch (e) {
-        Log.error('Failed to load local mute list: $e',
-            name: 'ContentModerationService', category: LogCategory.system);
+        Log.error(
+          'Failed to load local mute list: $e',
+          name: 'ContentModerationService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -636,8 +686,11 @@ class ContentModerationService with NostrListServiceMixin {
       try {
         _subscribedLists = List<String>.from(jsonDecode(listsJson));
       } catch (e) {
-        Log.error('Failed to load subscribed lists: $e',
-            name: 'ContentModerationService', category: LogCategory.system);
+        Log.error(
+          'Failed to load subscribed lists: $e',
+          name: 'ContentModerationService',
+          category: LogCategory.system,
+        );
       }
     }
   }

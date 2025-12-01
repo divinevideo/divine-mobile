@@ -24,8 +24,7 @@ class ProofModeBadgeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Don't render anything if no badges to show
-    if (!video.shouldShowProofModeBadge &&
-        !video.shouldShowOriginalBadge) {
+    if (!video.shouldShowProofModeBadge && !video.shouldShowOriginalBadge) {
       return const SizedBox.shrink();
     }
 
@@ -34,20 +33,13 @@ class ProofModeBadgeRow extends StatelessWidget {
     // Add ProofMode badge if applicable
     if (video.shouldShowProofModeBadge) {
       badges.add(
-        ProofModeBadge(
-          level: video.getVerificationLevel(),
-          size: size,
-        ),
+        ProofModeBadge(level: video.getVerificationLevel(), size: size),
       );
     }
 
     // Add Original Content badge if applicable (for non-repost user content)
     if (video.shouldShowOriginalBadge) {
-      badges.add(
-        OriginalContentBadge(
-          size: size,
-        ),
-      );
+      badges.add(OriginalContentBadge(size: size));
     }
 
     // Original Vine badge removed per user request

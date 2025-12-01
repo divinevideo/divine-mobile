@@ -60,7 +60,9 @@ void main() {
     });
 
     // RED TEST 1: Regular videos should NOT show repost header
-    testWidgets('does not show repost header for original videos', (tester) async {
+    testWidgets('does not show repost header for original videos', (
+      tester,
+    ) async {
       await tester.runAsync(() async {
         await tester.pumpWidget(
           createTestApp(

@@ -161,11 +161,7 @@ void main() {
     testWidgets('renders Original Vine badge correctly', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: OriginalVineBadge(
-              size: BadgeSize.small,
-            ),
-          ),
+          home: Scaffold(body: OriginalVineBadge(size: BadgeSize.small)),
         ),
       );
 
@@ -183,25 +179,19 @@ void main() {
       // Test small size
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: OriginalVineBadge(
-              size: BadgeSize.small,
-            ),
-          ),
+          home: Scaffold(body: OriginalVineBadge(size: BadgeSize.small)),
         ),
       );
 
-      var badge = tester.widget<OriginalVineBadge>(find.byType(OriginalVineBadge));
+      var badge = tester.widget<OriginalVineBadge>(
+        find.byType(OriginalVineBadge),
+      );
       expect(badge.size, BadgeSize.small);
 
       // Test medium size
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: OriginalVineBadge(
-              size: BadgeSize.medium,
-            ),
-          ),
+          home: Scaffold(body: OriginalVineBadge(size: BadgeSize.medium)),
         ),
       );
 
@@ -211,11 +201,7 @@ void main() {
       // Test large size
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: OriginalVineBadge(
-              size: BadgeSize.large,
-            ),
-          ),
+          home: Scaffold(body: OriginalVineBadge(size: BadgeSize.large)),
         ),
       );
 
@@ -226,11 +212,7 @@ void main() {
     testWidgets('Vine badge has proper visual structure', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: OriginalVineBadge(
-              size: BadgeSize.small,
-            ),
-          ),
+          home: Scaffold(body: OriginalVineBadge(size: BadgeSize.small)),
         ),
       );
 
@@ -247,19 +229,17 @@ void main() {
     testWidgets('Vine badge has teal background color', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: OriginalVineBadge(
-              size: BadgeSize.small,
-            ),
-          ),
+          home: Scaffold(body: OriginalVineBadge(size: BadgeSize.small)),
         ),
       );
 
       final container = tester.widget<Container>(
-        find.descendant(
-          of: find.byType(OriginalVineBadge),
-          matching: find.byType(Container),
-        ).first,
+        find
+            .descendant(
+              of: find.byType(OriginalVineBadge),
+              matching: find.byType(Container),
+            )
+            .first,
       );
 
       final decoration = container.decoration as BoxDecoration;
@@ -270,7 +250,10 @@ void main() {
   group('Badge Enum Values', () {
     test('VerificationLevel has all expected values', () {
       expect(VerificationLevel.values, hasLength(4));
-      expect(VerificationLevel.values, contains(VerificationLevel.verifiedMobile));
+      expect(
+        VerificationLevel.values,
+        contains(VerificationLevel.verifiedMobile),
+      );
       expect(VerificationLevel.values, contains(VerificationLevel.verifiedWeb));
       expect(VerificationLevel.values, contains(VerificationLevel.basicProof));
       expect(VerificationLevel.values, contains(VerificationLevel.unverified));

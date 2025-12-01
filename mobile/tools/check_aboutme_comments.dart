@@ -37,7 +37,8 @@ void main(List<String> args) {
     exit(0);
   } else {
     debugPrint(
-        '❌ Found ${violations.length} files without proper ABOUTME comments:\n');
+      '❌ Found ${violations.length} files without proper ABOUTME comments:\n',
+    );
 
     for (final path in violations) {
       final relativePath = path.replaceFirst('${Directory.current.path}/', '');

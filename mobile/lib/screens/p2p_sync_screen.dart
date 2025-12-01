@@ -17,7 +17,8 @@ class P2PSyncScreen extends ConsumerStatefulWidget {
   ConsumerState<P2PSyncScreen> createState() => _P2PSyncScreenState();
 }
 
-class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen> with AsyncValueUIHelpersMixin {
+class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen>
+    with AsyncValueUIHelpersMixin {
   @override
   Widget build(BuildContext context) {
     final syncStatus = ref.watch(p2pSyncStatusProvider);
@@ -107,8 +108,10 @@ class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen> with AsyncValueUI
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: status.isEnabled
                         ? Theme.of(context).colorScheme.primaryContainer
@@ -154,16 +157,18 @@ class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen> with AsyncValueUI
                     Chip(
                       label: const Text('Broadcasting'),
                       avatar: const Icon(Icons.broadcast_on_personal, size: 18),
-                      backgroundColor:
-                          Theme.of(context).colorScheme.secondaryContainer,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.secondaryContainer,
                     ),
                   if (status.isDiscovering) ...[
                     if (status.isAdvertising) const SizedBox(width: 8),
                     Chip(
                       label: const Text('Discovering'),
                       avatar: const Icon(Icons.search, size: 18),
-                      backgroundColor:
-                          Theme.of(context).colorScheme.tertiaryContainer,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.tertiaryContainer,
                     ),
                   ],
                 ],
@@ -183,25 +188,18 @@ class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen> with AsyncValueUI
   ) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               value,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            Text(label, style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
       ],
@@ -222,7 +220,8 @@ class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen> with AsyncValueUI
                 : () => actions.startDiscovery(),
             icon: Icon(status.isDiscovering ? Icons.stop : Icons.search),
             label: Text(
-                status.isDiscovering ? 'Stop Discovery' : 'Start Discovery'),
+              status.isDiscovering ? 'Stop Discovery' : 'Start Discovery',
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -257,9 +256,8 @@ class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen> with AsyncValueUI
               onData: (peersList) => peersList.isEmpty
                   ? _buildEmptyPeersState(context)
                   : _buildPeersList(context, peersList, actions),
-              onError: (error, stack) => Center(
-                child: Text('Error loading peers: $error'),
-              ),
+              onError: (error, stack) =>
+                  Center(child: Text('Error loading peers: $error')),
             ),
           ),
         ],
@@ -287,8 +285,8 @@ class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen> with AsyncValueUI
             'Start discovery to find other divine users\nwho are sharing videos nearby.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -327,10 +325,7 @@ class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen> with AsyncValueUI
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: transportColor.withValues(alpha: 0.1),
-          child: Icon(
-            transportIcon,
-            color: transportColor,
-          ),
+          child: Icon(transportIcon, color: transportColor),
         ),
         title: Text(peer.name),
         subtitle: Column(
@@ -392,9 +387,7 @@ class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen> with AsyncValueUI
         await actions.syncWithPeers();
 
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Video sync started'),
-          ),
+          const SnackBar(content: Text('Video sync started')),
         );
       } else {
         messenger.showSnackBar(

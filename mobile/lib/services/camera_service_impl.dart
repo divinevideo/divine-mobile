@@ -4,7 +4,7 @@
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:camera_macos/camera_macos.dart';
-import 'package:flutter/material.dart';  // For Offset
+import 'package:flutter/material.dart'; // For Offset
 import 'package:openvine/utils/unified_logger.dart';
 import 'camera_service.dart';
 
@@ -22,8 +22,9 @@ class CameraServiceImpl extends CameraService {
   void Function(CameraImage)? _frameCallback;
 
   /// Check if the camera is initialized
-  bool get isInitialized =>
-    Platform.isMacOS ? _macOSController != null : _controller?.value.isInitialized ?? false;
+  bool get isInitialized => Platform.isMacOS
+      ? _macOSController != null
+      : _controller?.value.isInitialized ?? false;
 
   /// Check if currently recording
   @override
@@ -42,7 +43,9 @@ class CameraServiceImpl extends CameraService {
   FlashMode get currentFlashMode => _currentFlashMode;
 
   /// Initialize the camera service
-  Future<void> initialize({ResolutionPreset preferredResolution = ResolutionPreset.medium}) async {
+  Future<void> initialize({
+    ResolutionPreset preferredResolution = ResolutionPreset.medium,
+  }) async {
     try {
       if (Platform.isMacOS) {
         await _initializeMacOS();
@@ -50,8 +53,11 @@ class CameraServiceImpl extends CameraService {
         await _initializeStandardCamera(preferredResolution);
       }
     } catch (e) {
-      Log.error('Failed to initialize camera: $e',
-        name: 'CameraService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize camera: $e',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -62,24 +68,33 @@ class CameraServiceImpl extends CameraService {
       final macOSCameras = await CameraMacOS.instance.listDevices();
 
       if (macOSCameras.isEmpty) {
-        throw CameraException('NoCameraAvailable', 'No cameras found on macOS device');
+        throw CameraException(
+          'NoCameraAvailable',
+          'No cameras found on macOS device',
+        );
       }
 
       // Create controller with first available camera
       // CameraMacOSArguments requires a size parameter
       _macOSController = CameraMacOSController(
         CameraMacOSArguments(
-          size: Size(1280, 720),  // HD resolution
+          size: Size(1280, 720), // HD resolution
           devices: macOSCameras,
         ),
       );
 
       // The controller is ready after construction, no initialize method needed
-      Log.info('macOS camera initialized: ${macOSCameras.first.deviceId}',
-        name: 'CameraService', category: LogCategory.system);
+      Log.info(
+        'macOS camera initialized: ${macOSCameras.first.deviceId}',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('macOS camera initialization failed: $e',
-        name: 'CameraService', category: LogCategory.system);
+      Log.error(
+        'macOS camera initialization failed: $e',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -90,7 +105,10 @@ class CameraServiceImpl extends CameraService {
       _cameras = await availableCameras();
 
       if (_cameras == null || _cameras!.isEmpty) {
-        throw CameraException('NoCameraAvailable', 'No cameras found on device');
+        throw CameraException(
+          'NoCameraAvailable',
+          'No cameras found on device',
+        );
       }
 
       // Prefer back camera if available
@@ -107,11 +125,17 @@ class CameraServiceImpl extends CameraService {
 
       await _controller!.initialize();
 
-      Log.info('Camera initialized: ${_selectedCamera!.name}',
-        name: 'CameraService', category: LogCategory.system);
+      Log.info(
+        'Camera initialized: ${_selectedCamera!.name}',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Standard camera initialization failed: $e',
-        name: 'CameraService', category: LogCategory.system);
+      Log.error(
+        'Standard camera initialization failed: $e',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -129,8 +153,11 @@ class CameraServiceImpl extends CameraService {
     }
 
     if (_isRecording) {
-      Log.warning('Already recording',
-        name: 'CameraService', category: LogCategory.system);
+      Log.warning(
+        'Already recording',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -138,14 +165,20 @@ class CameraServiceImpl extends CameraService {
       if (Platform.isMacOS) {
         // Use recordVideo method for macOS
         // NOTE: macOS camera_macos package doesn't support frame streaming during recording
-        Log.warning('Frame capture not available on macOS',
-          name: 'CameraService', category: LogCategory.system);
+        Log.warning(
+          'Frame capture not available on macOS',
+          name: 'CameraService',
+          category: LogCategory.system,
+        );
         await _macOSController!.recordVideo();
       } else {
         // Start video recording with optional frame streaming
         if (_frameCallback != null) {
-          Log.info('Starting recording with frame capture enabled',
-            name: 'CameraService', category: LogCategory.system);
+          Log.info(
+            'Starting recording with frame capture enabled',
+            name: 'CameraService',
+            category: LogCategory.system,
+          );
           await _controller!.startVideoRecording(
             onAvailable: (CameraImage image) {
               // Call the frame callback asynchronously to avoid blocking recording
@@ -160,11 +193,17 @@ class CameraServiceImpl extends CameraService {
       _isRecording = true;
       _recordingStartTime = DateTime.now();
 
-      Log.info('Recording started',
-        name: 'CameraService', category: LogCategory.system);
+      Log.info(
+        'Recording started',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to start recording: $e',
-        name: 'CameraService', category: LogCategory.system);
+      Log.error(
+        'Failed to start recording: $e',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -198,8 +237,11 @@ class CameraServiceImpl extends CameraService {
         );
       }
     } catch (e) {
-      Log.error('Failed to stop recording: $e',
-        name: 'CameraService', category: LogCategory.system);
+      Log.error(
+        'Failed to stop recording: $e',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
       _isRecording = false;
       rethrow;
     }
@@ -227,24 +269,31 @@ class CameraServiceImpl extends CameraService {
         // Create new controller (will use default camera)
         _macOSController = CameraMacOSController(
           CameraMacOSArguments(
-            size: Size(1280, 720),  // HD resolution
+            size: Size(1280, 720), // HD resolution
             devices: devices,
           ),
         );
 
-        Log.info('Switched macOS camera',
-          name: 'CameraService', category: LogCategory.system);
+        Log.info(
+          'Switched macOS camera',
+          name: 'CameraService',
+          category: LogCategory.system,
+        );
       }
     } else {
       if (_cameras == null || _cameras!.length < 2) {
-        Log.warning('Multiple cameras not available',
-          name: 'CameraService', category: LogCategory.system);
+        Log.warning(
+          'Multiple cameras not available',
+          name: 'CameraService',
+          category: LogCategory.system,
+        );
         return;
       }
 
-      final lensDirection = _selectedCamera!.lensDirection == CameraLensDirection.back
-        ? CameraLensDirection.front
-        : CameraLensDirection.back;
+      final lensDirection =
+          _selectedCamera!.lensDirection == CameraLensDirection.back
+          ? CameraLensDirection.front
+          : CameraLensDirection.back;
 
       _selectedCamera = _cameras!.firstWhere(
         (camera) => camera.lensDirection == lensDirection,
@@ -267,8 +316,11 @@ class CameraServiceImpl extends CameraService {
   Future<void> setFlashMode(FlashMode mode) async {
     if (Platform.isMacOS) {
       // Flash not typically available on macOS cameras
-      Log.info('Flash mode not supported on macOS',
-        name: 'CameraService', category: LogCategory.system);
+      Log.info(
+        'Flash mode not supported on macOS',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -281,8 +333,11 @@ class CameraServiceImpl extends CameraService {
   /// Set focus point (for supported platforms)
   Future<void> setFocusPoint(Offset point) async {
     if (Platform.isMacOS) {
-      Log.info('Focus point not supported on macOS',
-        name: 'CameraService', category: LogCategory.system);
+      Log.info(
+        'Focus point not supported on macOS',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -294,8 +349,11 @@ class CameraServiceImpl extends CameraService {
   /// Set exposure point (for supported platforms)
   Future<void> setExposurePoint(Offset point) async {
     if (Platform.isMacOS) {
-      Log.info('Exposure point not supported on macOS',
-        name: 'CameraService', category: LogCategory.system);
+      Log.info(
+        'Exposure point not supported on macOS',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -321,11 +379,17 @@ class CameraServiceImpl extends CameraService {
 
       _selectedCamera = null;
 
-      Log.info('Camera resources disposed',
-        name: 'CameraService', category: LogCategory.system);
+      Log.info(
+        'Camera resources disposed',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error disposing camera resources: $e',
-        name: 'CameraService', category: LogCategory.system);
+      Log.error(
+        'Error disposing camera resources: $e',
+        name: 'CameraService',
+        category: LogCategory.system,
+      );
     }
   }
 }

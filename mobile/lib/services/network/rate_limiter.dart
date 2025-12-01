@@ -79,7 +79,8 @@ class RateLimiter {
       throw StateError('RateLimiter has been disposed');
     }
 
-    final config = _configs[endpoint] ??
+    final config =
+        _configs[endpoint] ??
         const RateLimitConfig(200, Duration(minutes: 1)); // Default
 
     final now = _clock.now();
@@ -92,10 +93,7 @@ class RateLimiter {
 
     if (_requests[endpoint]!.length >= config.maxRequests) {
       // Rate limit exceeded
-      final violation = RateLimitViolation(
-        endpoint: endpoint,
-        timestamp: now,
-      );
+      final violation = RateLimitViolation(endpoint: endpoint, timestamp: now);
       _violationsController.add(violation);
 
       Log.warning(
@@ -184,13 +182,12 @@ class RateLimiter {
     for (final entry in _requests.entries) {
       final endpoint = entry.key;
       final requests = entry.value;
-      final config = _configs[endpoint] ??
+      final config =
+          _configs[endpoint] ??
           const RateLimitConfig(200, Duration(minutes: 1));
 
       // Clean old requests
-      requests.removeWhere(
-        (time) => now.difference(time) > config.window,
-      );
+      requests.removeWhere((time) => now.difference(time) > config.window);
 
       if (requests.length >= config.maxRequests) {
         limited.add(endpoint);
@@ -218,9 +215,7 @@ class RateLimiter {
       final requests = _requests[endpoint] ?? [];
 
       // Clean old requests
-      requests.removeWhere(
-        (time) => now.difference(time) > config.window,
-      );
+      requests.removeWhere((time) => now.difference(time) > config.window);
 
       metrics[endpoint] = {
         'limit': config.maxRequests,

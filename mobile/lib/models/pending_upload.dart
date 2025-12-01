@@ -79,22 +79,21 @@ class PendingUpload {
     int? videoHeight,
     Duration? videoDuration,
     String? proofManifestJson,
-  }) =>
-      PendingUpload(
-        id: '${DateTime.now().microsecondsSinceEpoch}_${math.Random().nextInt(999999)}',
-        localVideoPath: localVideoPath,
-        nostrPubkey: nostrPubkey,
-        status: UploadStatus.pending,
-        createdAt: DateTime.now(),
-        thumbnailPath: thumbnailPath,
-        title: title,
-        description: description,
-        hashtags: hashtags,
-        videoWidth: videoWidth,
-        videoHeight: videoHeight,
-        videoDurationMillis: videoDuration?.inMilliseconds,
-        proofManifestJson: proofManifestJson,
-      );
+  }) => PendingUpload(
+    id: '${DateTime.now().microsecondsSinceEpoch}_${math.Random().nextInt(999999)}',
+    localVideoPath: localVideoPath,
+    nostrPubkey: nostrPubkey,
+    status: UploadStatus.pending,
+    createdAt: DateTime.now(),
+    thumbnailPath: thumbnailPath,
+    title: title,
+    description: description,
+    hashtags: hashtags,
+    videoWidth: videoWidth,
+    videoHeight: videoHeight,
+    videoDurationMillis: videoDuration?.inMilliseconds,
+    proofManifestJson: proofManifestJson,
+  );
   @HiveField(0)
   final String id;
 
@@ -187,12 +186,14 @@ class PendingUpload {
       }
       return null;
     } catch (e) {
-      Log.error('Failed to parse NativeProofData: $e',
-          name: 'PendingUpload', category: LogCategory.system);
+      Log.error(
+        'Failed to parse NativeProofData: $e',
+        name: 'PendingUpload',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
-
 
   /// Copy with updated fields
   PendingUpload copyWith({
@@ -220,34 +221,32 @@ class PendingUpload {
     String? streamingMp4Url,
     String? streamingHlsUrl,
     String? fallbackUrl,
-  }) =>
-      PendingUpload(
-        id: id ?? this.id,
-        localVideoPath: localVideoPath ?? this.localVideoPath,
-        nostrPubkey: nostrPubkey ?? this.nostrPubkey,
-        status: status ?? this.status,
-        createdAt: createdAt ?? this.createdAt,
-        cloudinaryPublicId: cloudinaryPublicId ?? this.cloudinaryPublicId,
-        videoId: videoId ?? this.videoId,
-        cdnUrl: cdnUrl ?? this.cdnUrl,
-        errorMessage: errorMessage ?? this.errorMessage,
-        uploadProgress: uploadProgress ?? this.uploadProgress,
-        thumbnailPath: thumbnailPath ?? this.thumbnailPath,
-        title: title ?? this.title,
-        description: description ?? this.description,
-        hashtags: hashtags ?? this.hashtags,
-        nostrEventId: nostrEventId ?? this.nostrEventId,
-        completedAt: completedAt ?? this.completedAt,
-        retryCount: retryCount ?? this.retryCount,
-        videoWidth: videoWidth ?? this.videoWidth,
-        videoHeight: videoHeight ?? this.videoHeight,
-        videoDurationMillis:
-            (videoDuration ?? this.videoDuration)?.inMilliseconds,
-        proofManifestJson: proofManifestJson ?? this.proofManifestJson,
-        streamingMp4Url: streamingMp4Url ?? this.streamingMp4Url,
-        streamingHlsUrl: streamingHlsUrl ?? this.streamingHlsUrl,
-        fallbackUrl: fallbackUrl ?? this.fallbackUrl,
-      );
+  }) => PendingUpload(
+    id: id ?? this.id,
+    localVideoPath: localVideoPath ?? this.localVideoPath,
+    nostrPubkey: nostrPubkey ?? this.nostrPubkey,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+    cloudinaryPublicId: cloudinaryPublicId ?? this.cloudinaryPublicId,
+    videoId: videoId ?? this.videoId,
+    cdnUrl: cdnUrl ?? this.cdnUrl,
+    errorMessage: errorMessage ?? this.errorMessage,
+    uploadProgress: uploadProgress ?? this.uploadProgress,
+    thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+    title: title ?? this.title,
+    description: description ?? this.description,
+    hashtags: hashtags ?? this.hashtags,
+    nostrEventId: nostrEventId ?? this.nostrEventId,
+    completedAt: completedAt ?? this.completedAt,
+    retryCount: retryCount ?? this.retryCount,
+    videoWidth: videoWidth ?? this.videoWidth,
+    videoHeight: videoHeight ?? this.videoHeight,
+    videoDurationMillis: (videoDuration ?? this.videoDuration)?.inMilliseconds,
+    proofManifestJson: proofManifestJson ?? this.proofManifestJson,
+    streamingMp4Url: streamingMp4Url ?? this.streamingMp4Url,
+    streamingHlsUrl: streamingHlsUrl ?? this.streamingHlsUrl,
+    fallbackUrl: fallbackUrl ?? this.fallbackUrl,
+  );
 
   /// Check if the upload is in a terminal state
   bool get isCompleted =>

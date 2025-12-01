@@ -24,12 +24,12 @@ void main() {
 
     Widget createTestWidget(List<String> configuredRelays) {
       when(() => mockNostrService.relays).thenReturn(configuredRelays);
-      when(() => mockNostrService.connectedRelayCount).thenReturn(configuredRelays.length);
+      when(
+        () => mockNostrService.connectedRelayCount,
+      ).thenReturn(configuredRelays.length);
 
       final container = ProviderContainer(
-        overrides: [
-          nostrServiceProvider.overrideWithValue(mockNostrService),
-        ],
+        overrides: [nostrServiceProvider.overrideWithValue(mockNostrService)],
       );
 
       return UncontrolledProviderScope(
@@ -41,7 +41,9 @@ void main() {
       );
     }
 
-    testWidgets('shows gateway section when divine relay configured', (tester) async {
+    testWidgets('shows gateway section when divine relay configured', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget(['wss://relay.divine.video']));
       await tester.pumpAndSettle();
 
@@ -50,7 +52,9 @@ void main() {
       expect(find.byKey(const Key('gateway_toggle')), findsOneWidget);
     });
 
-    testWidgets('hides gateway section when divine relay not configured', (tester) async {
+    testWidgets('hides gateway section when divine relay not configured', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget(['wss://other.relay']));
       await tester.pumpAndSettle();
 
@@ -58,11 +62,12 @@ void main() {
       expect(find.byKey(const Key('gateway_toggle')), findsNothing);
     });
 
-    testWidgets('shows gateway section when divine relay is one of many', (tester) async {
-      await tester.pumpWidget(createTestWidget([
-        'wss://other.relay',
-        'wss://relay.divine.video',
-      ]));
+    testWidgets('shows gateway section when divine relay is one of many', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(['wss://other.relay', 'wss://relay.divine.video']),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('REST Gateway'), findsOneWidget);

@@ -5,7 +5,8 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:openvine/providers/profile_stats_provider.dart';
 
 class ProfileStatsCacheService {
-  static final ProfileStatsCacheService _instance = ProfileStatsCacheService._internal();
+  static final ProfileStatsCacheService _instance =
+      ProfileStatsCacheService._internal();
   factory ProfileStatsCacheService() => _instance;
   ProfileStatsCacheService._internal();
 
@@ -33,7 +34,9 @@ class ProfileStatsCacheService {
     final data = _box?.get(pubkey);
     if (data == null) return null;
 
-    final cachedAt = DateTime.fromMillisecondsSinceEpoch(data['cached_at'] as int);
+    final cachedAt = DateTime.fromMillisecondsSinceEpoch(
+      data['cached_at'] as int,
+    );
 
     if (DateTime.now().difference(cachedAt) > _cacheExpiry) {
       await _box?.delete(pubkey);
@@ -84,7 +87,9 @@ class ProfileStatsCacheService {
     for (final key in _box?.keys ?? <String>[]) {
       final data = _box?.get(key);
       if (data != null) {
-        final cachedAt = DateTime.fromMillisecondsSinceEpoch(data['cached_at'] as int);
+        final cachedAt = DateTime.fromMillisecondsSinceEpoch(
+          data['cached_at'] as int,
+        );
         if (now.difference(cachedAt) > _cacheExpiry) {
           keysToRemove.add(key as String);
         }

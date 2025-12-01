@@ -93,19 +93,31 @@ class HomeFeed extends _$HomeFeed {
 
     // Start timer when provider is first watched or resumed
     ref.onResume(() {
-      Log.debug('🏠 HomeFeed: Resuming auto-refresh timer', name: 'HomeFeedProvider', category: LogCategory.video);
+      Log.debug(
+        '🏠 HomeFeed: Resuming auto-refresh timer',
+        name: 'HomeFeedProvider',
+        category: LogCategory.video,
+      );
       startAutoRefresh();
     });
 
     // Pause timer when all listeners detach
     ref.onCancel(() {
-      Log.debug('🏠 HomeFeed: Pausing auto-refresh timer (no listeners)', name: 'HomeFeedProvider', category: LogCategory.video);
+      Log.debug(
+        '🏠 HomeFeed: Pausing auto-refresh timer (no listeners)',
+        name: 'HomeFeedProvider',
+        category: LogCategory.video,
+      );
       stopAutoRefresh();
     });
 
     // Clean up timers on dispose
     ref.onDispose(() {
-      Log.info('🏠 HomeFeed: BUILD #$buildId DISPOSED', name: 'HomeFeedProvider', category: LogCategory.video);
+      Log.info(
+        '🏠 HomeFeed: BUILD #$buildId DISPOSED',
+        name: 'HomeFeedProvider',
+        category: LogCategory.video,
+      );
       stopAutoRefresh();
       _profileFetchTimer?.cancel();
     });
@@ -113,7 +125,11 @@ class HomeFeed extends _$HomeFeed {
     // Start timer immediately for first build
     startAutoRefresh();
 
-    Log.info('🏠 HomeFeed: BUILD #$buildId watching socialProvider...', name: 'HomeFeedProvider', category: LogCategory.video);
+    Log.info(
+      '🏠 HomeFeed: BUILD #$buildId watching socialProvider...',
+      name: 'HomeFeedProvider',
+      category: LogCategory.video,
+    );
 
     // Read social provider to get following list
     // Use ref.read() instead of ref.watch() to avoid rebuilding on every social state change
@@ -216,8 +232,9 @@ class HomeFeed extends _$HomeFeed {
     }
 
     // Get videos from the dedicated home feed list (server-side filtered to only following)
-    var followingVideos =
-        List<VideoEvent>.from(videoEventService.homeFeedVideos);
+    var followingVideos = List<VideoEvent>.from(
+      videoEventService.homeFeedVideos,
+    );
 
     Log.info(
       '🏠 HomeFeed: Server-side filtered to ${followingVideos.length} videos from following',
@@ -227,7 +244,9 @@ class HomeFeed extends _$HomeFeed {
 
     // Filter out WebM videos on iOS/macOS (not supported by AVPlayer)
     final beforeFilter = followingVideos.length;
-    followingVideos = followingVideos.where((v) => v.isSupportedOnCurrentPlatform).toList();
+    followingVideos = followingVideos
+        .where((v) => v.isSupportedOnCurrentPlatform)
+        .toList();
     if (beforeFilter != followingVideos.length) {
       Log.info(
         '🏠 HomeFeed: Filtered out ${beforeFilter - followingVideos.length} unsupported videos (WebM on iOS/macOS)',
@@ -359,25 +378,28 @@ class HomeFeed extends _$HomeFeed {
       if (followingPubkeys.isEmpty) {
         // No one to load more from
         if (!ref.mounted) return;
-        state = AsyncData(currentState.copyWith(
-          isLoadingMore: false,
-          hasMoreContent: false,
-        ));
+        state = AsyncData(
+          currentState.copyWith(isLoadingMore: false, hasMoreContent: false),
+        );
         return;
       }
 
-      final eventCountBefore =
-          videoEventService.getEventCount(SubscriptionType.homeFeed);
+      final eventCountBefore = videoEventService.getEventCount(
+        SubscriptionType.homeFeed,
+      );
 
       // Load more events for home feed subscription type
-      await videoEventService.loadMoreEvents(SubscriptionType.homeFeed,
-          limit: 50);
+      await videoEventService.loadMoreEvents(
+        SubscriptionType.homeFeed,
+        limit: 50,
+      );
 
       // Check if provider is still mounted after async gap
       if (!ref.mounted) return;
 
-      final eventCountAfter =
-          videoEventService.getEventCount(SubscriptionType.homeFeed);
+      final eventCountAfter = videoEventService.getEventCount(
+        SubscriptionType.homeFeed,
+      );
       final newEventsLoaded = eventCountAfter - eventCountBefore;
 
       Log.info(
@@ -389,10 +411,12 @@ class HomeFeed extends _$HomeFeed {
       // Reset loading state - state will auto-update via dependencies
       final newState = await future;
       if (!ref.mounted) return;
-      state = AsyncData(newState.copyWith(
-        isLoadingMore: false,
-        hasMoreContent: newEventsLoaded > 0,
-      ));
+      state = AsyncData(
+        newState.copyWith(
+          isLoadingMore: false,
+          hasMoreContent: newEventsLoaded > 0,
+        ),
+      );
     } catch (e) {
       Log.error(
         'HomeFeed: Error loading more: $e',
@@ -404,10 +428,7 @@ class HomeFeed extends _$HomeFeed {
       final currentState = await future;
       if (!ref.mounted) return;
       state = AsyncData(
-        currentState.copyWith(
-          isLoadingMore: false,
-          error: e.toString(),
-        ),
+        currentState.copyWith(isLoadingMore: false, error: e.toString()),
       );
     }
   }

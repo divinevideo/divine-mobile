@@ -16,7 +16,6 @@ import 'package:openvine/screens/notifications_screen.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/pure/search_screen_pure.dart';
 import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
-import 'package:openvine/screens/test_camera_screen.dart';
 import 'package:openvine/screens/followers_screen.dart';
 import 'package:openvine/screens/following_screen.dart';
 import 'package:openvine/screens/key_import_screen.dart';
@@ -34,7 +33,9 @@ final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final _homeKey = GlobalKey<NavigatorState>(debugLabel: 'home');
 final _exploreGridKey = GlobalKey<NavigatorState>(debugLabel: 'explore-grid');
 final _exploreFeedKey = GlobalKey<NavigatorState>(debugLabel: 'explore-feed');
-final _notificationsKey = GlobalKey<NavigatorState>(debugLabel: 'notifications');
+final _notificationsKey = GlobalKey<NavigatorState>(
+  debugLabel: 'notifications',
+);
 final _searchEmptyKey = GlobalKey<NavigatorState>(debugLabel: 'search-empty');
 final _searchGridKey = GlobalKey<NavigatorState>(debugLabel: 'search-grid');
 final _searchFeedKey = GlobalKey<NavigatorState>(debugLabel: 'search-feed');
@@ -89,7 +90,9 @@ Future<bool> hasAnyFollowingInCache(SharedPreferences prefs) async {
 
   if (currentUserPubkey == null || currentUserPubkey.isEmpty) {
     // No current user stored - treat as no following
-    debugPrint('[Router] No current user pubkey stored, treating as no following');
+    debugPrint(
+      '[Router] No current user pubkey stored, treating as no following',
+    );
     return false;
   }
 
@@ -104,7 +107,9 @@ Future<bool> hasAnyFollowingInCache(SharedPreferences prefs) async {
 
   try {
     final List<dynamic> decoded = jsonDecode(value);
-    debugPrint('[Router] Current user following list has ${decoded.length} entries');
+    debugPrint(
+      '[Router] Current user following list has ${decoded.length} entries',
+    );
     return decoded.isNotEmpty;
   } catch (e) {
     debugPrint('[Router] Current user following list has invalid JSON: $e');
@@ -142,13 +147,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         // Check SharedPreferences cache directly for following list
         // This is more reliable than checking socialProvider state which may not be initialized
         final hasFollowing = await hasAnyFollowingInCache(prefs);
-        debugPrint('[Router] Empty contacts check: hasFollowing=$hasFollowing, redirecting=${!hasFollowing}');
+        debugPrint(
+          '[Router] Empty contacts check: hasFollowing=$hasFollowing, redirecting=${!hasFollowing}',
+        );
         if (!hasFollowing) {
-          debugPrint('[Router] Redirecting to /explore because no following list found');
+          debugPrint(
+            '[Router] Redirecting to /explore because no following list found',
+          );
           return '/explore';
         }
       } else if (location.startsWith('/home')) {
-        debugPrint('[Router] Skipping empty contacts check: _hasNavigated=$_hasNavigated');
+        debugPrint(
+          '[Router] Skipping empty contacts check: _hasNavigated=$_hasNavigated',
+        );
       }
 
       return null;
@@ -159,10 +170,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) {
           final location = state.uri.toString();
           final current = tabIndexFromLocation(location);
-          return AppShell(
-            currentIndex: current,
-            child: child,
-          );
+          return AppShell(currentIndex: current, child: child);
         },
         routes: [
           // HOME tab subtree
@@ -362,7 +370,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           print('🔍 ROUTE DEBUG: /edit-profile route builder called');
           print('🔍 ROUTE DEBUG: state.uri = ${state.uri}');
-          print('🔍 ROUTE DEBUG: state.matchedLocation = ${state.matchedLocation}');
+          print(
+            '🔍 ROUTE DEBUG: state.matchedLocation = ${state.matchedLocation}',
+          );
           print('🔍 ROUTE DEBUG: state.fullPath = ${state.fullPath}');
           return const ProfileSetupScreen(isNewUser: false);
         },
@@ -373,7 +383,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           print('🔍 ROUTE DEBUG: /setup-profile route builder called');
           print('🔍 ROUTE DEBUG: state.uri = ${state.uri}');
-          print('🔍 ROUTE DEBUG: state.matchedLocation = ${state.matchedLocation}');
+          print(
+            '🔍 ROUTE DEBUG: state.matchedLocation = ${state.matchedLocation}',
+          );
           print('🔍 ROUTE DEBUG: state.fullPath = ${state.fullPath}');
           return const ProfileSetupScreen(isNewUser: true);
         },
@@ -393,9 +405,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           if (pubkey == null || pubkey.isEmpty) {
             return Scaffold(
               appBar: AppBar(title: const Text('Error')),
-              body: const Center(
-                child: Text('Invalid user ID'),
-              ),
+              body: const Center(child: Text('Invalid user ID')),
             );
           }
           return FollowersScreen(pubkey: pubkey, displayName: displayName);
@@ -411,9 +421,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           if (pubkey == null || pubkey.isEmpty) {
             return Scaffold(
               appBar: AppBar(title: const Text('Error')),
-              body: const Center(
-                child: Text('Invalid user ID'),
-              ),
+              body: const Center(child: Text('Invalid user ID')),
             );
           }
           return FollowingScreen(pubkey: pubkey, displayName: displayName);
@@ -428,9 +436,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           if (videoId == null || videoId.isEmpty) {
             return Scaffold(
               appBar: AppBar(title: const Text('Error')),
-              body: const Center(
-                child: Text('Invalid video ID'),
-              ),
+              body: const Center(child: Text('Invalid video ID')),
             );
           }
           return VideoDetailScreen(videoId: videoId);
@@ -446,9 +452,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             // If no video provided, show error screen
             return Scaffold(
               appBar: AppBar(title: const Text('Error')),
-              body: const Center(
-                child: Text('No video selected for editing'),
-              ),
+              body: const Center(child: Text('No video selected for editing')),
             );
           }
           return VideoEditorScreen(video: video);

@@ -89,10 +89,12 @@ class _BugReportDialogState extends State<BugReportDialog> {
         }
       }
     } catch (e, stackTrace) {
-      Log.error('Error submitting bug report: $e',
-          category: LogCategory.system,
-          error: e,
-          stackTrace: stackTrace);
+      Log.error(
+        'Error submitting bug report: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
 
       if (!_isDisposed && mounted) {
         setState(() {
@@ -139,7 +141,8 @@ class _BugReportDialogState extends State<BugReportDialog> {
                 helperText: 'Diagnostic info will be sent automatically',
                 helperStyle: TextStyle(color: Colors.grey.shade600),
               ),
-              onChanged: (_) => setState(() {}), // Rebuild to update button state
+              onChanged: (_) =>
+                  setState(() {}), // Rebuild to update button state
             ),
 
             const SizedBox(height: 16),
@@ -163,14 +166,18 @@ class _BugReportDialogState extends State<BugReportDialog> {
                       : Colors.red.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: _isSuccess == true ? VineTheme.vineGreen : Colors.red,
+                    color: _isSuccess == true
+                        ? VineTheme.vineGreen
+                        : Colors.red,
                     width: 1,
                   ),
                 ),
                 child: Text(
                   _resultMessage!,
                   style: TextStyle(
-                    color: _isSuccess == true ? VineTheme.vineGreen : Colors.red,
+                    color: _isSuccess == true
+                        ? VineTheme.vineGreen
+                        : Colors.red,
                   ),
                 ),
               ),
@@ -182,10 +189,7 @@ class _BugReportDialogState extends State<BugReportDialog> {
         if (_isSuccess != true)
           TextButton(
             onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey),
-            ),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
 
         // Send/Close button

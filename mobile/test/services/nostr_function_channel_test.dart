@@ -24,68 +24,87 @@ void main() {
       when(mockKeyManager.hasKeys).thenReturn(true);
     });
 
-    test('should connect to embedded relay WITHOUT opening network port', () async {
-      // This test defines our requirement:
-      // We want to connect to the embedded relay using direct function calls,
-      // NOT through a WebSocket on localhost:7447
+    test(
+      'should connect to embedded relay WITHOUT opening network port',
+      () async {
+        // This test defines our requirement:
+        // We want to connect to the embedded relay using direct function calls,
+        // NOT through a WebSocket on localhost:7447
 
-      // The embedded relay should be initialized with function channel enabled
-      when(mockEmbeddedRelay.isInitialized).thenReturn(false);
+        // The embedded relay should be initialized with function channel enabled
+        when(mockEmbeddedRelay.isInitialized).thenReturn(false);
 
-      // Initialize should be called with useFunctionChannel: true
-      await mockEmbeddedRelay.initialize(
-        enableGarbageCollection: true,
-        useFunctionChannel: true,
-      );
+        // Initialize should be called with useFunctionChannel: true
+        await mockEmbeddedRelay.initialize(
+          enableGarbageCollection: true,
+          useFunctionChannel: true,
+        );
 
-      // After initialization, we should be able to create a function session
-      when(mockEmbeddedRelay.isInitialized).thenReturn(true);
+        // After initialization, we should be able to create a function session
+        when(mockEmbeddedRelay.isInitialized).thenReturn(true);
 
-      // This should NOT throw an error about WebSocket or network
-      final session = mockEmbeddedRelay.createFunctionSession();
+        // This should NOT throw an error about WebSocket or network
+        final session = mockEmbeddedRelay.createFunctionSession();
 
-      expect(session, isNotNull);
+        expect(session, isNotNull);
 
-      // Verify that we initialized with function channel, not WebSocket
-      verify(mockEmbeddedRelay.initialize(
-        enableGarbageCollection: true,
-        useFunctionChannel: true,
-      )).called(1);
+        // Verify that we initialized with function channel, not WebSocket
+        verify(
+          mockEmbeddedRelay.initialize(
+            enableGarbageCollection: true,
+            useFunctionChannel: true,
+          ),
+        ).called(1);
 
-      // The session should be able to send messages without network
-      // This proves we're using function calls, not WebSocket
-      expect(() => session.sendMessage(embedded.ReqMessage(
-        subscriptionId: 'test',
-        filters: [embedded.Filter(kinds: [1])],
-      )), returnsNormally);
-    });
+        // The session should be able to send messages without network
+        // This proves we're using function calls, not WebSocket
+        expect(
+          () => session.sendMessage(
+            embedded.ReqMessage(
+              subscriptionId: 'test',
+              filters: [
+                embedded.Filter(kinds: [1]),
+              ],
+            ),
+          ),
+          returnsNormally,
+        );
+      },
+    );
 
-    test('should receive events through function callbacks, not WebSocket', () async {
-      // This test ensures events are delivered via direct callbacks,
-      // not through WebSocket message parsing
+    test(
+      'should receive events through function callbacks, not WebSocket',
+      () async {
+        // This test ensures events are delivered via direct callbacks,
+        // not through WebSocket message parsing
 
-      when(mockEmbeddedRelay.isInitialized).thenReturn(true);
+        when(mockEmbeddedRelay.isInitialized).thenReturn(true);
 
-      // Create a function session
-      final session = mockEmbeddedRelay.createFunctionSession();
+        // Create a function session
+        final session = mockEmbeddedRelay.createFunctionSession();
 
-      // Listen for events via the stream
-      final events = <embedded.RelayResponse>[];
-      session.responseStream.listen(events.add);
+        // Listen for events via the stream
+        final events = <embedded.RelayResponse>[];
+        session.responseStream.listen(events.add);
 
-      // Send a subscription request
-      await session.sendMessage(embedded.ReqMessage(
-        subscriptionId: 'sub1',
-        filters: [embedded.Filter(kinds: [1])],
-      ));
+        // Send a subscription request
+        await session.sendMessage(
+          embedded.ReqMessage(
+            subscriptionId: 'sub1',
+            filters: [
+              embedded.Filter(kinds: [1]),
+            ],
+          ),
+        );
 
-      // The embedded relay should process this WITHOUT:
-      // - Opening a network port
-      // - Serializing to JSON for WebSocket
-      // - Requiring NSLocalNetworkUsageDescription permission on iOS
+        // The embedded relay should process this WITHOUT:
+        // - Opening a network port
+        // - Serializing to JSON for WebSocket
+        // - Requiring NSLocalNetworkUsageDescription permission on iOS
 
-      // We should receive events directly through the stream
-      expect(session.responseStream, isNotNull);
-    });
+        // We should receive events directly through the stream
+        expect(session.responseStream, isNotNull);
+      },
+    );
   });
 }

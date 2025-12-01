@@ -20,12 +20,11 @@ void main() {
       loadMoreCallIndices.add(index);
     }
 
-    testWidgets('calls onLoadMore when within threshold of end', (tester) async {
+    testWidgets('calls onLoadMore when within threshold of end', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        _TestPaginationWidget(
-          onLoadMore: onLoadMore,
-          threshold: 3,
-        ),
+        _TestPaginationWidget(onLoadMore: onLoadMore, threshold: 3),
       );
 
       final state = tester.state<_TestPaginationWidgetState>(
@@ -68,10 +67,7 @@ void main() {
 
     testWidgets('throttles duplicate calls immediately', (tester) async {
       await tester.pumpWidget(
-        _TestPaginationWidget(
-          onLoadMore: onLoadMore,
-          throttleSeconds: 5,
-        ),
+        _TestPaginationWidget(onLoadMore: onLoadMore, throttleSeconds: 5),
       );
 
       final state = tester.state<_TestPaginationWidgetState>(
@@ -102,10 +98,7 @@ void main() {
 
     testWidgets('resetPagination clears throttle', (tester) async {
       await tester.pumpWidget(
-        _TestPaginationWidget(
-          onLoadMore: onLoadMore,
-          throttleSeconds: 5,
-        ),
+        _TestPaginationWidget(onLoadMore: onLoadMore, throttleSeconds: 5),
       );
 
       final state = tester.state<_TestPaginationWidgetState>(
@@ -155,7 +148,7 @@ void main() {
         currentIndex: 14,
         totalItems: 20,
         onLoadMore: () => onLoadMore(14),
-        threshold: 5,  // ← Must pass the threshold parameter!
+        threshold: 5, // ← Must pass the threshold parameter!
       );
       await tester.pump();
       expect(loadMoreCallCount, 0);
@@ -165,7 +158,7 @@ void main() {
         currentIndex: 15,
         totalItems: 20,
         onLoadMore: () => onLoadMore(15),
-        threshold: 5,  // ← Must pass the threshold parameter!
+        threshold: 5, // ← Must pass the threshold parameter!
       );
       await tester.pump();
       expect(loadMoreCallCount, 1);

@@ -46,14 +46,14 @@ class AuthStateBuilder {
 
   /// Build the AuthData instance
   AuthData build() => AuthData(
-        isAuthenticated: isAuthenticated,
-        privateKey: privateKey,
-        publicKey: publicKey,
-        nsec: nsec,
-        npub: npub,
-        lastAuthenticated: lastAuthenticated,
-        metadata: metadata,
-      );
+    isAuthenticated: isAuthenticated,
+    privateKey: privateKey,
+    publicKey: publicKey,
+    nsec: nsec,
+    npub: npub,
+    lastAuthenticated: lastAuthenticated,
+    metadata: metadata,
+  );
 
   /// Create an authenticated state with generated keys
   AuthStateBuilder authenticated() {
@@ -107,8 +107,8 @@ class AuthStateBuilder {
 
   /// Create multiple auth states for testing different scenarios
   static Map<String, AuthData> buildScenarios() => {
-        'authenticated': AuthStateBuilder().authenticated().build(),
-        'unauthenticated': AuthStateBuilder().unauthenticated().build(),
-        'expired': AuthStateBuilder().authenticated().expired().build(),
-      };
+    'authenticated': AuthStateBuilder().authenticated().build(),
+    'unauthenticated': AuthStateBuilder().unauthenticated().build(),
+    'expired': AuthStateBuilder().authenticated().expired().build(),
+  };
 }

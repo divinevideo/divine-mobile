@@ -25,33 +25,32 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(mockPrefs.setBool('ff_${flag.name}', any))
-            .thenAnswer((_) async => true);
+        when(
+          mockPrefs.setBool('ff_${flag.name}', any),
+        ).thenAnswer((_) async => true);
         when(mockPrefs.remove('ff_${flag.name}')).thenAnswer((_) async => true);
         when(mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
     });
 
-    testWidgets('should provide complete feature flag management workflow',
-        (tester) async {
+    testWidgets('should provide complete feature flag management workflow', (
+      tester,
+    ) async {
       // Create a complete app with both settings screen and feature-gated content
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp(
             home: const TestHomeScreen(),
-            routes: {
-              '/settings': (context) => const FeatureFlagScreen(),
-            },
+            routes: {'/settings': (context) => const FeatureFlagScreen()},
           ),
         ),
       );
 
       // Initialize service and wait for widgets to rebuild
       final container = ProviderScope.containerOf(
-          tester.element(find.byType(TestHomeScreen)));
+        tester.element(find.byType(TestHomeScreen)),
+      );
       final service = container.read(featureFlagServiceProvider);
       await service.initialize();
       await tester.pumpAndSettle();
@@ -102,9 +101,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp(
             home: Scaffold(
               body: Column(
@@ -124,7 +121,8 @@ void main() {
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const FeatureFlagScreen()),
+                          builder: (_) => const FeatureFlagScreen(),
+                        ),
                       ),
                       child: const Text('Open Settings'),
                     ),
@@ -138,7 +136,8 @@ void main() {
 
       // Initialize service
       final container = ProviderScope.containerOf(
-          tester.element(find.byType(FeatureFlagWidget).first));
+        tester.element(find.byType(FeatureFlagWidget).first),
+      );
       final service = container.read(featureFlagServiceProvider);
       await service.initialize();
       await tester.pumpAndSettle();
@@ -156,29 +155,32 @@ void main() {
       // Verify switches are present - ListView.builder may not build all items in tests
       // so we verify we have at least some switches rather than exact count
       final switches = tester.widgetList<Switch>(find.byType(Switch));
-      expect(switches.length, greaterThanOrEqualTo(2),
-          reason: 'Should show switches for feature flags in settings');
+      expect(
+        switches.length,
+        greaterThanOrEqualTo(2),
+        reason: 'Should show switches for feature flags in settings',
+      );
 
       // Verify the feature flag list items are present
       expect(find.text('New Camera UI'), findsOneWidget);
       expect(find.text('Enhanced Video Player'), findsOneWidget);
     });
 
-    testWidgets('should persist flag changes across app restarts',
-        (tester) async {
+    testWidgets('should persist flag changes across app restarts', (
+      tester,
+    ) async {
       // Simulate first app launch with user changing flags
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: const MaterialApp(home: FeatureFlagScreen()),
         ),
       );
 
       // Initialize service
       final container1 = ProviderScope.containerOf(
-          tester.element(find.byType(FeatureFlagScreen)));
+        tester.element(find.byType(FeatureFlagScreen)),
+      );
       final service1 = container1.read(featureFlagServiceProvider);
       await service1.initialize();
       await tester.pumpAndSettle();
@@ -198,18 +200,15 @@ void main() {
       // Create new app instance (simulating restart)
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
-          child: const MaterialApp(
-            home: TestContentScreen(),
-          ),
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+          child: const MaterialApp(home: TestContentScreen()),
         ),
       );
 
       // Initialize service in new app instance
       final container2 = ProviderScope.containerOf(
-          tester.element(find.byType(TestContentScreen)));
+        tester.element(find.byType(TestContentScreen)),
+      );
       final service2 = container2.read(featureFlagServiceProvider);
       await service2.initialize();
       await tester.pumpAndSettle();
@@ -228,9 +227,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp(
             home: Scaffold(
               body: Column(
@@ -250,7 +247,8 @@ void main() {
 
       // Initialize service
       final container = ProviderScope.containerOf(
-          tester.element(find.byType(FeatureFlagWidget)));
+        tester.element(find.byType(FeatureFlagWidget)),
+      );
       final service = container.read(featureFlagServiceProvider);
       await service.initialize();
       await tester.pumpAndSettle();
@@ -288,16 +286,15 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: const MaterialApp(home: FeatureFlagScreen()),
         ),
       );
 
       // Initialize service
       final container = ProviderScope.containerOf(
-          tester.element(find.byType(FeatureFlagScreen)));
+        tester.element(find.byType(FeatureFlagScreen)),
+      );
       final service = container.read(featureFlagServiceProvider);
       await service.initialize();
       await tester.pumpAndSettle();
@@ -317,9 +314,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp(
             home: Scaffold(
               body: Column(
@@ -334,7 +329,8 @@ void main() {
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const FeatureFlagScreen()),
+                          builder: (_) => const FeatureFlagScreen(),
+                        ),
                       ),
                       child: const Text('Open Settings'),
                     ),
@@ -348,7 +344,8 @@ void main() {
 
       // Initialize service
       final container = ProviderScope.containerOf(
-          tester.element(find.byType(FeatureFlagWidget)));
+        tester.element(find.byType(FeatureFlagWidget)),
+      );
       final service = container.read(featureFlagServiceProvider);
       await service.initialize();
       await tester.pumpAndSettle();

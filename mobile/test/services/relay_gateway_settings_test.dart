@@ -30,9 +30,7 @@ void main() {
     });
 
     test('loads persisted state', () async {
-      SharedPreferences.setMockInitialValues({
-        'relay_gateway_enabled': false,
-      });
+      SharedPreferences.setMockInitialValues({'relay_gateway_enabled': false});
 
       final prefs = await SharedPreferences.getInstance();
       final settings = RelayGatewaySettings(prefs);
@@ -55,60 +53,64 @@ void main() {
       expect(settings.gatewayUrl, 'https://custom.gateway');
     });
 
-    test('shouldUseGateway returns true when enabled and using divine relay',
-        () async {
-      final prefs = await SharedPreferences.getInstance();
-      final settings = RelayGatewaySettings(prefs);
+    test(
+      'shouldUseGateway returns true when enabled and using divine relay',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final settings = RelayGatewaySettings(prefs);
 
-      expect(
-        settings.shouldUseGateway(
-            configuredRelays: ['wss://relay.divine.video']),
-        true,
-      );
-    });
+        expect(
+          settings.shouldUseGateway(
+            configuredRelays: ['wss://relay.divine.video'],
+          ),
+          true,
+        );
+      },
+    );
 
     test('shouldUseGateway returns false when disabled', () async {
-      SharedPreferences.setMockInitialValues({
-        'relay_gateway_enabled': false,
-      });
+      SharedPreferences.setMockInitialValues({'relay_gateway_enabled': false});
 
       final prefs = await SharedPreferences.getInstance();
       final settings = RelayGatewaySettings(prefs);
 
       expect(
         settings.shouldUseGateway(
-            configuredRelays: ['wss://relay.divine.video']),
+          configuredRelays: ['wss://relay.divine.video'],
+        ),
         false,
       );
     });
 
-    test('shouldUseGateway returns false when not using divine relay',
-        () async {
-      final prefs = await SharedPreferences.getInstance();
-      final settings = RelayGatewaySettings(prefs);
+    test(
+      'shouldUseGateway returns false when not using divine relay',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final settings = RelayGatewaySettings(prefs);
 
-      expect(
-        settings.shouldUseGateway(configuredRelays: ['wss://other.relay']),
-        false,
-      );
-    });
+        expect(
+          settings.shouldUseGateway(configuredRelays: ['wss://other.relay']),
+          false,
+        );
+      },
+    );
 
-    test('shouldUseGateway returns true when divine relay is one of many',
-        () async {
-      final prefs = await SharedPreferences.getInstance();
-      final settings = RelayGatewaySettings(prefs);
+    test(
+      'shouldUseGateway returns true when divine relay is one of many',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final settings = RelayGatewaySettings(prefs);
 
-      expect(
-        settings.shouldUseGateway(configuredRelays: [
-          'wss://other.relay',
-          'wss://relay.divine.video',
-        ]),
-        true,
-      );
-    });
+        expect(
+          settings.shouldUseGateway(
+            configuredRelays: ['wss://other.relay', 'wss://relay.divine.video'],
+          ),
+          true,
+        );
+      },
+    );
 
-    test('isDivineRelayConfigured returns true when divine relay present',
-        () {
+    test('isDivineRelayConfigured returns true when divine relay present', () {
       expect(
         RelayGatewaySettings.isDivineRelayConfigured([
           'wss://other.relay',

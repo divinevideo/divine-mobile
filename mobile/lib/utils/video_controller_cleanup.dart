@@ -17,6 +17,8 @@ void disposeAllVideoControllers(Object ref) {
   } else if (ref is ProviderContainer) {
     ref.invalidate(individualVideoControllerProvider);
   } else {
-    throw ArgumentError('Expected WidgetRef or ProviderContainer, got ${ref.runtimeType}');
+    throw ArgumentError(
+      'Expected WidgetRef or ProviderContainer, got ${ref.runtimeType}',
+    );
   }
 }

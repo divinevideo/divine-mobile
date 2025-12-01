@@ -21,15 +21,17 @@ class P2PVideoSyncService extends ChangeNotifier {
   P2PVideoSyncService(this._embeddedRelay, this._p2pService);
 
   /// Start automatic syncing with connected peers
-  Future<void> startAutoSync(
-      {Duration interval = const Duration(minutes: 5)}) async {
+  Future<void> startAutoSync({
+    Duration interval = const Duration(minutes: 5),
+  }) async {
     if (_isAutoSyncing) return;
 
     _isAutoSyncing = true;
     _autoSyncTimer = Timer.periodic(interval, (_) => syncWithAllPeers());
 
     debugPrint(
-        'P2P Video Sync: Auto-sync started (interval: ${interval.inMinutes}m)');
+      'P2P Video Sync: Auto-sync started (interval: ${interval.inMinutes}m)',
+    );
   }
 
   /// Stop automatic syncing
@@ -50,7 +52,8 @@ class P2PVideoSyncService extends ChangeNotifier {
     }
 
     debugPrint(
-        'P2P Video Sync: Starting sync with ${connections.length} peers');
+      'P2P Video Sync: Starting sync with ${connections.length} peers',
+    );
 
     for (final connection in connections) {
       await _syncWithPeer(connection);
@@ -80,13 +83,15 @@ class P2PVideoSyncService extends ChangeNotifier {
         'timestamp': DateTime.now().millisecondsSinceEpoch,
         'video_count': localVideos.length,
         'video_summaries': localVideos
-            .map((event) => {
-                  'id': event.id,
-                  'created_at': event.createdAt,
-                  'pubkey': event.pubkey,
-                  // Extract video URL from content if available
-                  'has_content': event.content.isNotEmpty,
-                })
+            .map(
+              (event) => {
+                'id': event.id,
+                'created_at': event.createdAt,
+                'pubkey': event.pubkey,
+                // Extract video URL from content if available
+                'has_content': event.content.isNotEmpty,
+              },
+            )
             .toList(),
       };
 
@@ -94,16 +99,20 @@ class P2PVideoSyncService extends ChangeNotifier {
       _lastSyncTimes[peerId] = DateTime.now();
 
       debugPrint(
-          'P2P Video Sync: Synced with ${connection.peer.name} (${localVideos.length} videos)');
+        'P2P Video Sync: Synced with ${connection.peer.name} (${localVideos.length} videos)',
+      );
     } catch (e) {
       debugPrint(
-          'P2P Video Sync: Failed to sync with ${connection.peer.name}: $e');
+        'P2P Video Sync: Failed to sync with ${connection.peer.name}: $e',
+      );
     }
   }
 
   /// Send a sync message to a peer
   Future<void> _sendSyncMessage(
-      P2PConnection connection, Map<String, dynamic> message) async {
+    P2PConnection connection,
+    Map<String, dynamic> message,
+  ) async {
     final jsonString = jsonEncode(message);
     final bytes = utf8.encode(jsonString);
 
@@ -112,7 +121,9 @@ class P2PVideoSyncService extends ChangeNotifier {
 
   /// Handle incoming sync messages from peers
   Future<void> handleIncomingSync(
-      String peerId, Map<String, dynamic> message) async {
+    String peerId,
+    Map<String, dynamic> message,
+  ) async {
     final messageType = message['type'] as String?;
 
     switch (messageType) {
@@ -132,7 +143,9 @@ class P2PVideoSyncService extends ChangeNotifier {
 
   /// Handle sync offer from a peer
   Future<void> _handleSyncOffer(
-      String peerId, Map<String, dynamic> message) async {
+    String peerId,
+    Map<String, dynamic> message,
+  ) async {
     final videoSummaries = message['video_summaries'] as List?;
     if (videoSummaries == null) return;
 
@@ -165,13 +178,16 @@ class P2PVideoSyncService extends ChangeNotifier {
       await _sendSyncMessage(connection, requestMessage);
 
       debugPrint(
-          'P2P Video Sync: Requested ${missingVideos.length} missing videos from $peerId');
+        'P2P Video Sync: Requested ${missingVideos.length} missing videos from $peerId',
+      );
     }
   }
 
   /// Handle sync request from a peer
   Future<void> _handleSyncRequest(
-      String peerId, Map<String, dynamic> message) async {
+    String peerId,
+    Map<String, dynamic> message,
+  ) async {
     final requestedVideos = message['requested_videos'] as List?;
     if (requestedVideos == null) return;
 
@@ -209,12 +225,15 @@ class P2PVideoSyncService extends ChangeNotifier {
     }
 
     debugPrint(
-        'P2P Video Sync: Sent ${requestedVideos.length} videos to $peerId');
+      'P2P Video Sync: Sent ${requestedVideos.length} videos to $peerId',
+    );
   }
 
   /// Handle video data from a peer
   Future<void> _handleVideoData(
-      String peerId, Map<String, dynamic> message) async {
+    String peerId,
+    Map<String, dynamic> message,
+  ) async {
     final eventData = message['event'] as Map<String, dynamic>?;
     if (eventData == null) return;
 

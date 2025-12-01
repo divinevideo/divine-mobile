@@ -287,8 +287,10 @@ void main() {
 
         expect(cacheService.cacheSize, equals(3));
         // Classic vine should still be prioritized
-        expect(cacheService.cachedVideos.first.pubkey,
-            equals(AppConstants.classicVinesPubkey));
+        expect(
+          cacheService.cachedVideos.first.pubkey,
+          equals(AppConstants.classicVinesPubkey),
+        );
       });
     });
   });

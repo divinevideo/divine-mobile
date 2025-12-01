@@ -11,10 +11,12 @@ import 'package:openvine/utils/unified_logger.dart';
 class ProfileCacheService {
   static const String _boxName = 'user_profiles';
   // Removed cache size limits - Kind 0 events are small, cache everything
-  static const Duration _cacheExpiry =
-      Duration(days: 365); // Cache profiles for 1 year - they rarely change
-  static const Duration _refreshInterval =
-      Duration(days: 7); // Check for updates after 7 days
+  static const Duration _cacheExpiry = Duration(
+    days: 365,
+  ); // Cache profiles for 1 year - they rarely change
+  static const Duration _refreshInterval = Duration(
+    days: 7,
+  ); // Check for updates after 7 days
 
   Box<UserProfile>? _profileBox;
   Box<DateTime>? _fetchTimestamps; // Track when each profile was last fetched
@@ -37,21 +39,26 @@ class ProfileCacheService {
       _profileBox = await Hive.openBox<UserProfile>(_boxName);
 
       // Open the timestamps box
-      _fetchTimestamps =
-          await Hive.openBox<DateTime>('profile_fetch_timestamps');
+      _fetchTimestamps = await Hive.openBox<DateTime>(
+        'profile_fetch_timestamps',
+      );
 
       _isInitialized = true;
 
       Log.info(
-          'ProfileCacheService initialized with ${_profileBox!.length} cached profiles',
-          name: 'ProfileCacheService',
-          category: LogCategory.storage);
+        'ProfileCacheService initialized with ${_profileBox!.length} cached profiles',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
 
       // Clean up old profiles on startup
       await _cleanupExpiredProfiles();
     } catch (e) {
-      Log.error('Failed to initialize ProfileCacheService: $e',
-          name: 'ProfileCacheService', category: LogCategory.storage);
+      Log.error(
+        'Failed to initialize ProfileCacheService: $e',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
       rethrow;
     }
   }
@@ -72,20 +79,25 @@ class ProfileCacheService {
       if (lastFetched == null ||
           DateTime.now().difference(lastFetched) > _cacheExpiry) {
         debugPrint(
-            '🗑️ Removing expired profile for ${pubkey}... (last fetched: ${lastFetched ?? 'never'})');
+          '🗑️ Removing expired profile for ${pubkey}... (last fetched: ${lastFetched ?? 'never'})',
+        );
         _profileBox!.delete(pubkey);
         _fetchTimestamps?.delete(pubkey);
         return null;
       }
 
       Log.debug(
-          '📱 Retrieved cached profile for ${pubkey}... (${profile.bestDisplayName})',
-          name: 'ProfileCacheService',
-          category: LogCategory.storage);
+        '📱 Retrieved cached profile for ${pubkey}... (${profile.bestDisplayName})',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
       return profile;
     } catch (e) {
-      Log.error('Error retrieving cached profile for $pubkey: $e',
-          name: 'ProfileCacheService', category: LogCategory.storage);
+      Log.error(
+        'Error retrieving cached profile for $pubkey: $e',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
       return null;
     }
   }
@@ -103,8 +115,11 @@ class ProfileCacheService {
   /// Cache a profile
   Future<void> cacheProfile(UserProfile profile) async {
     if (!_isInitialized || _profileBox == null) {
-      Log.warning('ProfileCacheService not initialized, cannot cache profile',
-          name: 'ProfileCacheService', category: LogCategory.storage);
+      Log.warning(
+        'ProfileCacheService not initialized, cannot cache profile',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
       return;
     }
 
@@ -117,12 +132,16 @@ class ProfileCacheService {
       await _fetchTimestamps?.put(profile.pubkey, DateTime.now());
 
       Log.debug(
-          '📱 Cached profile for ${profile.pubkey}... (${profile.bestDisplayName})',
-          name: 'ProfileCacheService',
-          category: LogCategory.storage);
+        '📱 Cached profile for ${profile.pubkey}... (${profile.bestDisplayName})',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
     } catch (e) {
-      Log.error('Error caching profile for ${profile.pubkey}: $e',
-          name: 'ProfileCacheService', category: LogCategory.storage);
+      Log.error(
+        'Error caching profile for ${profile.pubkey}: $e',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
     }
   }
 
@@ -137,18 +156,23 @@ class ProfileCacheService {
       if (existing == null || profile.createdAt.isAfter(existing.createdAt)) {
         await _profileBox!.put(profile.pubkey, profile);
         Log.debug(
-            'Updated cached profile for ${profile.pubkey}... (${profile.bestDisplayName})',
-            name: 'ProfileCacheService',
-            category: LogCategory.storage);
+          'Updated cached profile for ${profile.pubkey}... (${profile.bestDisplayName})',
+          name: 'ProfileCacheService',
+          category: LogCategory.storage,
+        );
       } else {
         Log.warning(
-            '⏩ Skipping update for ${profile.pubkey}... - cached version is newer',
-            name: 'ProfileCacheService',
-            category: LogCategory.storage);
+          '⏩ Skipping update for ${profile.pubkey}... - cached version is newer',
+          name: 'ProfileCacheService',
+          category: LogCategory.storage,
+        );
       }
     } catch (e) {
-      Log.error('Error updating cached profile for ${profile.pubkey}: $e',
-          name: 'ProfileCacheService', category: LogCategory.storage);
+      Log.error(
+        'Error updating cached profile for ${profile.pubkey}: $e',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
     }
   }
 
@@ -158,11 +182,17 @@ class ProfileCacheService {
 
     try {
       await _profileBox!.delete(pubkey);
-      Log.debug('📱️ Removed cached profile for ${pubkey}...',
-          name: 'ProfileCacheService', category: LogCategory.storage);
+      Log.debug(
+        '📱️ Removed cached profile for ${pubkey}...',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
     } catch (e) {
-      Log.error('Error removing cached profile for $pubkey: $e',
-          name: 'ProfileCacheService', category: LogCategory.storage);
+      Log.error(
+        'Error removing cached profile for $pubkey: $e',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
     }
   }
 
@@ -175,11 +205,7 @@ class ProfileCacheService {
   /// Get cache statistics
   Map<String, dynamic> getCacheStats() {
     if (!_isInitialized || _profileBox == null) {
-      return {
-        'isInitialized': false,
-        'totalProfiles': 0,
-        'expiredProfiles': 0,
-      };
+      return {'isInitialized': false, 'totalProfiles': 0, 'expiredProfiles': 0};
     }
 
     final allProfiles = _profileBox!.values.toList();
@@ -199,11 +225,17 @@ class ProfileCacheService {
 
     try {
       await _profileBox!.clear();
-      Log.debug('📱️ Cleared all cached profiles',
-          name: 'ProfileCacheService', category: LogCategory.storage);
+      Log.debug(
+        '📱️ Cleared all cached profiles',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
     } catch (e) {
-      Log.error('Error clearing profile cache: $e',
-          name: 'ProfileCacheService', category: LogCategory.storage);
+      Log.error(
+        'Error clearing profile cache: $e',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
     }
   }
 
@@ -234,12 +266,18 @@ class ProfileCacheService {
         for (final key in expiredKeys) {
           await _profileBox!.delete(key);
         }
-        Log.debug('📱️ Cleaned up ${expiredKeys.length} expired profiles',
-            name: 'ProfileCacheService', category: LogCategory.storage);
+        Log.debug(
+          '📱️ Cleaned up ${expiredKeys.length} expired profiles',
+          name: 'ProfileCacheService',
+          category: LogCategory.storage,
+        );
       }
     } catch (e) {
-      Log.error('Error cleaning up expired profiles: $e',
-          name: 'ProfileCacheService', category: LogCategory.storage);
+      Log.error(
+        'Error cleaning up expired profiles: $e',
+        name: 'ProfileCacheService',
+        category: LogCategory.storage,
+      );
     }
   }
 

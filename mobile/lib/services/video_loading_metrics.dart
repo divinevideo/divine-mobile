@@ -42,7 +42,8 @@ class VideoLoadingMetrics {
     _activeSessions[videoId] = session;
 
     // Use both UnifiedLogger AND print to ensure visibility
-    final message = '🎬 STARTED tracking video loading #$_metricsCount for ${videoId}... - $videoUrl';
+    final message =
+        '🎬 STARTED tracking video loading #$_metricsCount for ${videoId}... - $videoUrl';
     UnifiedLogger.info(message, name: 'VideoLoadingMetrics');
     // ignore: avoid_print
     print(message);
@@ -177,7 +178,8 @@ class VideoLoadingMetrics {
         .difference(session.startTime)
         .inMilliseconds;
 
-    final message = '▶️ PLAYBACK STARTED for ${videoId}... in ${totalDuration}ms total';
+    final message =
+        '▶️ PLAYBACK STARTED for ${videoId}... in ${totalDuration}ms total';
     UnifiedLogger.info(message, name: 'VideoLoadingMetrics');
     // ignore: avoid_print
     print(message);
@@ -219,9 +221,7 @@ class VideoLoadingMetrics {
     final session = _activeSessions[videoId];
     if (session == null) return;
 
-    session.bufferingEvents.add(_BufferingEvent(
-      startTime: DateTime.now(),
-    ));
+    session.bufferingEvents.add(_BufferingEvent(startTime: DateTime.now()));
 
     UnifiedLogger.debug(
       'Buffering started for ${videoId}...',
@@ -241,7 +241,9 @@ class VideoLoadingMetrics {
     if (lastEvent.endTime != null) return; // Already ended
 
     lastEvent.endTime = DateTime.now();
-    final duration = lastEvent.endTime!.difference(lastEvent.startTime).inMilliseconds;
+    final duration = lastEvent.endTime!
+        .difference(lastEvent.startTime)
+        .inMilliseconds;
 
     UnifiedLogger.debug(
       'Buffering ended for ${videoId}... after ${duration}ms',
@@ -250,7 +252,8 @@ class VideoLoadingMetrics {
   }
 
   /// Record network performance metrics (bytes downloaded, bandwidth)
-  void recordNetworkStats(String videoId, {
+  void recordNetworkStats(
+    String videoId, {
     int? bytesDownloaded,
     double? bandwidth,
     int? segmentCount,
@@ -272,7 +275,8 @@ class VideoLoadingMetrics {
   }
 
   /// Track video segment loading
-  void markSegmentLoaded(String videoId, {
+  void markSegmentLoaded(
+    String videoId, {
     required int segmentIndex,
     required int segmentSizeBytes,
     required int loadTimeMs,
@@ -280,11 +284,13 @@ class VideoLoadingMetrics {
     final session = _activeSessions[videoId];
     if (session == null) return;
 
-    session.segmentsLoaded.add(_SegmentLoadInfo(
-      index: segmentIndex,
-      sizeBytes: segmentSizeBytes,
-      loadTimeMs: loadTimeMs,
-    ));
+    session.segmentsLoaded.add(
+      _SegmentLoadInfo(
+        index: segmentIndex,
+        sizeBytes: segmentSizeBytes,
+        loadTimeMs: loadTimeMs,
+      ),
+    );
 
     UnifiedLogger.debug(
       'Segment $segmentIndex loaded for ${videoId}... (${segmentSizeBytes} bytes in ${loadTimeMs}ms)',
@@ -293,7 +299,8 @@ class VideoLoadingMetrics {
   }
 
   /// Track segment loading failure
-  void markSegmentFailed(String videoId, {
+  void markSegmentFailed(
+    String videoId, {
     required int segmentIndex,
     required String errorMessage,
   }) {
@@ -335,35 +342,58 @@ class VideoLoadingMetrics {
 
   /// Send complete metrics to Firebase Analytics
   void _recordCompleteMetrics(_VideoLoadingSession session) {
-    final totalDuration = session.playbackStart!.difference(session.startTime).inMilliseconds;
+    final totalDuration = session.playbackStart!
+        .difference(session.startTime)
+        .inMilliseconds;
 
     // Calculate stage durations
-    final controllerCreationMs = session.controllerCreationEnd != null && session.controllerCreationStart != null
-        ? session.controllerCreationEnd!.difference(session.controllerCreationStart!).inMilliseconds
+    final controllerCreationMs =
+        session.controllerCreationEnd != null &&
+            session.controllerCreationStart != null
+        ? session.controllerCreationEnd!
+              .difference(session.controllerCreationStart!)
+              .inMilliseconds
         : null;
 
-    final networkInitMs = session.firstNetworkResponse != null && session.networkInitStart != null
-        ? session.firstNetworkResponse!.difference(session.networkInitStart!).inMilliseconds
+    final networkInitMs =
+        session.firstNetworkResponse != null && session.networkInitStart != null
+        ? session.firstNetworkResponse!
+              .difference(session.networkInitStart!)
+              .inMilliseconds
         : null;
 
-    final videoInitMs = session.videoInitComplete != null && session.videoInitStart != null
-        ? session.videoInitComplete!.difference(session.videoInitStart!).inMilliseconds
+    final videoInitMs =
+        session.videoInitComplete != null && session.videoInitStart != null
+        ? session.videoInitComplete!
+              .difference(session.videoInitStart!)
+              .inMilliseconds
         : null;
 
-    final firstFrameMs = session.firstFrameReady?.difference(session.startTime).inMilliseconds;
+    final firstFrameMs = session.firstFrameReady
+        ?.difference(session.startTime)
+        .inMilliseconds;
 
     // Calculate total buffering time
     final totalBufferingMs = session.bufferingEvents
         .where((event) => event.endTime != null)
-        .map((event) => event.endTime!.difference(event.startTime).inMilliseconds)
+        .map(
+          (event) => event.endTime!.difference(event.startTime).inMilliseconds,
+        )
         .fold<int>(0, (sum, duration) => sum + duration);
 
     // Calculate segment statistics
     final segmentsLoaded = session.segmentsLoaded.length;
     final segmentsFailed = session.failedSegments.length;
-    final totalSegmentBytes = session.segmentsLoaded.fold<int>(0, (sum, seg) => sum + seg.sizeBytes);
+    final totalSegmentBytes = session.segmentsLoaded.fold<int>(
+      0,
+      (sum, seg) => sum + seg.sizeBytes,
+    );
     final avgSegmentLoadTime = segmentsLoaded > 0
-        ? session.segmentsLoaded.fold<int>(0, (sum, seg) => sum + seg.loadTimeMs) / segmentsLoaded
+        ? session.segmentsLoaded.fold<int>(
+                0,
+                (sum, seg) => sum + seg.loadTimeMs,
+              ) /
+              segmentsLoaded
         : 0;
 
     // Send to Firebase Analytics
@@ -391,7 +421,8 @@ class VideoLoadingMetrics {
     );
 
     // Create comprehensive performance summary
-    final summary = '🚀 VIDEO PERFORMANCE COMPLETE: ${session.videoId}\n'
+    final summary =
+        '🚀 VIDEO PERFORMANCE COMPLETE: ${session.videoId}\n'
         '   ⏱️  TOTAL TIME: ${totalDuration}ms\n'
         '   🔧 Controller Creation: ${controllerCreationMs ?? 'N/A'}ms\n'
         '   🌐 Network Init: ${networkInitMs ?? 'N/A'}ms\n'
@@ -418,14 +449,19 @@ class VideoLoadingMetrics {
 
   /// Send error metrics to Firebase Analytics
   void _recordErrorMetrics(_VideoLoadingSession session) {
-    final totalDuration = session.errorTime!.difference(session.startTime).inMilliseconds;
+    final totalDuration = session.errorTime!
+        .difference(session.startTime)
+        .inMilliseconds;
 
     _analytics.logEvent(
       name: 'video_loading_error',
       parameters: {
         'video_id': session.videoId, // Truncate for privacy
         'error_type': session.errorType!,
-        'error_message': session.errorMessage!.substring(0, 100), // Truncate long messages
+        'error_message': session.errorMessage!.substring(
+          0,
+          100,
+        ), // Truncate long messages
         'time_to_error_ms': totalDuration,
         'stage_when_failed': session._getCurrentStage().name,
         'video_url_domain': Uri.tryParse(session.videoUrl)?.host ?? 'unknown',
@@ -436,7 +472,10 @@ class VideoLoadingMetrics {
   /// Clear all active sessions (useful for testing/debugging)
   void clearAllSessions() {
     _activeSessions.clear();
-    UnifiedLogger.debug('Cleared all video loading sessions', name: 'VideoLoadingMetrics');
+    UnifiedLogger.debug(
+      'Cleared all video loading sessions',
+      name: 'VideoLoadingMetrics',
+    );
   }
 }
 
@@ -503,7 +542,8 @@ class _VideoLoadingSession {
     if (firstFrameReady != null) return VideoLoadingStage.preparingFirstFrame;
     if (videoInitStart != null) return VideoLoadingStage.loadingVideo;
     if (networkInitStart != null) return VideoLoadingStage.initializingNetwork;
-    if (controllerCreationStart != null) return VideoLoadingStage.creatingController;
+    if (controllerCreationStart != null)
+      return VideoLoadingStage.creatingController;
     return VideoLoadingStage.starting;
   }
 }

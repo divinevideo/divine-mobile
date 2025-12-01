@@ -18,10 +18,7 @@ void main() {
 
       await Future.delayed(Duration.zero); // Flush microtasks
 
-      expect(messages, [
-        '["EVENT","sub1",{"id":"abc"}]',
-        '["EOSE","sub1"]',
-      ]);
+      expect(messages, ['["EVENT","sub1",{"id":"abc"}]', '["EOSE","sub1"]']);
     });
 
     test('send() adds messages to outgoing stream', () async {
@@ -36,10 +33,7 @@ void main() {
 
       await Future.delayed(Duration.zero); // Flush microtasks
 
-      expect(outgoing, [
-        '["REQ","sub1",{"kinds":[1]}]',
-        '["CLOSE","sub1"]',
-      ]);
+      expect(outgoing, ['["REQ","sub1",{"kinds":[1]}]', '["CLOSE","sub1"]']);
     });
 
     test('dispose closes both streams', () {
@@ -49,7 +43,10 @@ void main() {
       bool outgoingClosed = false;
 
       transport.incoming.listen(null, onDone: () => incomingClosed = true);
-      transport.outgoingFromClient.listen(null, onDone: () => outgoingClosed = true);
+      transport.outgoingFromClient.listen(
+        null,
+        onDone: () => outgoingClosed = true,
+      );
 
       transport.dispose();
 

@@ -21,7 +21,9 @@ extension TrackedAlerts on BuildContext {
       title: title,
       message: message,
       location: location,
-      context: technicalDetails != null ? {'technical_details': technicalDetails} : null,
+      context: technicalDetails != null
+          ? {'technical_details': technicalDetails}
+          : null,
     );
 
     await showDialog(
@@ -72,7 +74,9 @@ extension TrackedAlerts on BuildContext {
       ),
     );
 
-    final userChoice = result == true ? 'confirmed' : (result == false ? 'cancelled' : 'dismissed');
+    final userChoice = result == true
+        ? 'confirmed'
+        : (result == false ? 'cancelled' : 'dismissed');
 
     alertTracker.trackConfirmationDialog(
       confirmationType: confirmationType,

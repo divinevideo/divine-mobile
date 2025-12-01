@@ -95,11 +95,14 @@ void main() {
       expect(fetched.about, equals('New bio'));
     });
 
-    test('watchProfile emits null initially for non-existent profile', () async {
-      final stream = db.userProfilesDao.watchProfile('nonexistent_pubkey');
-      final firstValue = await stream.first;
-      expect(firstValue, isNull);
-    });
+    test(
+      'watchProfile emits null initially for non-existent profile',
+      () async {
+        final stream = db.userProfilesDao.watchProfile('nonexistent_pubkey');
+        final firstValue = await stream.first;
+        expect(firstValue, isNull);
+      },
+    );
 
     test('watchProfile emits profile after insert', () async {
       final pubkey = 'test_pubkey_789';
@@ -198,8 +201,10 @@ void main() {
 
       final allProfiles = await db.userProfilesDao.getAllProfiles();
       expect(allProfiles.length, equals(3));
-      expect(allProfiles.map((p) => p.pubkey).toSet(),
-          equals({'pubkey_1', 'pubkey_2', 'pubkey_3'}));
+      expect(
+        allProfiles.map((p) => p.pubkey).toSet(),
+        equals({'pubkey_1', 'pubkey_2', 'pubkey_3'}),
+      );
     });
 
     test('deleteProfile removes profile', () async {

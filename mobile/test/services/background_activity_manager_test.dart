@@ -86,7 +86,9 @@ void main() {
 
       manager.registerService(testService);
       expect(
-          manager.getStatus()['registeredServices'], equals(initialCount + 1));
+        manager.getStatus()['registeredServices'],
+        equals(initialCount + 1),
+      );
 
       manager.unregisterService(testService);
       expect(manager.getStatus()['registeredServices'], equals(initialCount));

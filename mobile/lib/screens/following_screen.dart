@@ -10,8 +10,11 @@ import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 class FollowingScreen extends ConsumerStatefulWidget {
-  const FollowingScreen(
-      {super.key, required this.pubkey, required this.displayName});
+  const FollowingScreen({
+    super.key,
+    required this.pubkey,
+    required this.displayName,
+  });
 
   final String pubkey;
   final String displayName;
@@ -92,7 +95,9 @@ class _FollowingScreenState extends ConsumerState<FollowingScreen>
       onTimeout: (sink) {
         // No data received within 5 seconds - likely connection issue
         if (mounted && _following.isEmpty) {
-          setError('Failed to connect to relay server. Please check your connection and try again.');
+          setError(
+            'Failed to connect to relay server. Please check your connection and try again.',
+          );
         } else {
           completeLoading();
         }
@@ -123,9 +128,14 @@ class _FollowingScreenState extends ConsumerState<FollowingScreen>
         }
       },
       onError: (error) {
-        Log.error('Error in following subscription: $error',
-            name: 'FollowingScreen', category: LogCategory.relay);
-        setError('Failed to connect to relay server. Please check your connection and try again.');
+        Log.error(
+          'Error in following subscription: $error',
+          name: 'FollowingScreen',
+          category: LogCategory.relay,
+        );
+        setError(
+          'Failed to connect to relay server. Please check your connection and try again.',
+        );
       },
       onDone: () {
         // Stream completed naturally

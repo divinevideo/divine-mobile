@@ -69,7 +69,9 @@ void main() {
         // Verify relay connection
         expect(nostrService.isInitialized, true);
         expect(nostrService.connectedRelays.isNotEmpty, true);
-        Log.info('✅ Connected to ${nostrService.connectedRelays.length} relay(s)');
+        Log.info(
+          '✅ Connected to ${nostrService.connectedRelays.length} relay(s)',
+        );
 
         // Subscribe to discovery feed first (all videos)
         Log.info('📡 Subscribing to discovery videos...');
@@ -85,9 +87,15 @@ void main() {
           attempts++;
         }
 
-        final discoveryCount = videoEventService.getEventCount(SubscriptionType.discovery);
+        final discoveryCount = videoEventService.getEventCount(
+          SubscriptionType.discovery,
+        );
         Log.info('📊 Discovery feed received $discoveryCount videos');
-        expect(discoveryCount, greaterThan(0), reason: 'Discovery feed should receive videos');
+        expect(
+          discoveryCount,
+          greaterThan(0),
+          reason: 'Discovery feed should receive videos',
+        );
 
         // Get some author pubkeys from discovery feed to "follow"
         final discoveryVideos = videoEventService.discoveryVideos;
@@ -97,17 +105,16 @@ void main() {
             .take(5) // Follow first 5 unique authors
             .toList();
 
-        Log.info('👥 Following ${authorPubkeys.length} authors from discovery feed');
+        Log.info(
+          '👥 Following ${authorPubkeys.length} authors from discovery feed',
+        );
         for (final pubkey in authorPubkeys) {
           Log.info('   - ${pubkey}...');
         }
 
         // Subscribe to home feed with these authors
         Log.info('📡 Subscribing to home feed for followed users...');
-        await videoEventService.subscribeToHomeFeed(
-          authorPubkeys,
-          limit: 50,
-        );
+        await videoEventService.subscribeToHomeFeed(authorPubkeys, limit: 50);
 
         // Wait for home feed events
         attempts = 0;
@@ -117,27 +124,39 @@ void main() {
           attempts++;
 
           if (attempts % 10 == 0) {
-            final homeFeedCount = videoEventService.getEventCount(SubscriptionType.homeFeed);
+            final homeFeedCount = videoEventService.getEventCount(
+              SubscriptionType.homeFeed,
+            );
             Log.info('⏳ Waiting for home feed... $homeFeedCount so far');
           }
         }
 
-        final homeFeedCount = videoEventService.getEventCount(SubscriptionType.homeFeed);
+        final homeFeedCount = videoEventService.getEventCount(
+          SubscriptionType.homeFeed,
+        );
         Log.info('📊 Home feed received $homeFeedCount videos');
 
         // CRITICAL ASSERTION: Home feed should have videos from followed users
         // These are the SAME events that are in discovery feed
-        expect(homeFeedCount, greaterThan(0),
-            reason: 'Home feed should receive videos from followed users, '
-                'even though these events were already delivered to discovery feed. '
-                'The same event should appear in BOTH feeds.');
+        expect(
+          homeFeedCount,
+          greaterThan(0),
+          reason:
+              'Home feed should receive videos from followed users, '
+              'even though these events were already delivered to discovery feed. '
+              'The same event should appear in BOTH feeds.',
+        );
 
         // Verify the videos in home feed are actually from followed authors
         final homeFeedVideos = videoEventService.homeFeedVideos;
         for (final video in homeFeedVideos) {
-          expect(authorPubkeys.contains(video.pubkey), true,
-              reason: 'Home feed video ${video.id} '
-                  'should be from a followed author');
+          expect(
+            authorPubkeys.contains(video.pubkey),
+            true,
+            reason:
+                'Home feed video ${video.id} '
+                'should be from a followed author',
+          );
         }
 
         Log.info('✅ Home feed integration test complete');
@@ -173,10 +192,7 @@ void main() {
         Log.info('🎯 Target video: ${targetVideo.id} from $targetAuthor');
 
         // Subscribe to home feed for just this author
-        await videoEventService.subscribeToHomeFeed(
-          [targetAuthor],
-          limit: 30,
-        );
+        await videoEventService.subscribeToHomeFeed([targetAuthor], limit: 30);
 
         // Wait for home feed
         attempts = 0;
@@ -187,14 +203,22 @@ void main() {
         }
 
         final homeFeedVideos = videoEventService.homeFeedVideos;
-        Log.info('📊 Home feed has ${homeFeedVideos.length} videos from followed author');
+        Log.info(
+          '📊 Home feed has ${homeFeedVideos.length} videos from followed author',
+        );
 
         // CRITICAL: The target video should be in home feed
-        final targetInHomeFeed = homeFeedVideos.any((v) => v.id == targetVideo.id);
-        expect(targetInHomeFeed, true,
-            reason: 'Video ${targetVideo.id} should appear in home feed '
-                'because its author is followed, even though it was already in discovery feed. '
-                'One event, multiple feeds.');
+        final targetInHomeFeed = homeFeedVideos.any(
+          (v) => v.id == targetVideo.id,
+        );
+        expect(
+          targetInHomeFeed,
+          true,
+          reason:
+              'Video ${targetVideo.id} should appear in home feed '
+              'because its author is followed, even though it was already in discovery feed. '
+              'One event, multiple feeds.',
+        );
 
         Log.info('✅ Same event appears in both feeds as expected');
       },

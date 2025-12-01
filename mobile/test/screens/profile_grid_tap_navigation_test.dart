@@ -28,15 +28,17 @@ class MockAuthService extends AuthService {
 
 void main() {
   Widget shell(ProviderContainer c) => UncontrolledProviderScope(
-        container: c,
-        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
-      );
+    container: c,
+    child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+  );
 
   final now = DateTime.now();
   final nowUnix = now.millisecondsSinceEpoch ~/ 1000;
 
-  const testUserHex = '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
-  const testUserNpub = 'npub10zjuyx63vmwpga9kfh0hg49l08ntt4455ac5skfm785xddeuyuuqt7gxpj';
+  const testUserHex =
+      '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
+  const testUserNpub =
+      'npub10zjuyx63vmwpga9kfh0hg49l08ntt4455ac5skfm785xddeuyuuqt7gxpj';
 
   final mockVideos = [
     VideoEvent(
@@ -99,25 +101,31 @@ void main() {
   );
 
   group('Profile Grid Navigation', () {
-    testWidgets('Tapping grid item at index 2 navigates to video at index 2', (tester) async {
-      final c = ProviderContainer(overrides: [
-        appForegroundProvider.overrideWithValue(const AsyncValue.data(true)),
-        videosForProfileRouteProvider.overrideWith((ref) {
-          return AsyncValue.data(VideoFeedState(
-            videos: mockVideos,
-            hasMoreContent: false,
-            isLoadingMore: false,
-          ));
-        }),
-        fetchUserProfileProvider(testUserHex).overrideWith((ref) async {
-          return mockProfile;
-        }),
-        authServiceProvider.overrideWith((ref) {
-          final mockAuth = MockAuthService();
-          mockAuth.currentPublicKeyHex = testUserHex;
-          return mockAuth;
-        }),
-      ]);
+    testWidgets('Tapping grid item at index 2 navigates to video at index 2', (
+      tester,
+    ) async {
+      final c = ProviderContainer(
+        overrides: [
+          appForegroundProvider.overrideWithValue(const AsyncValue.data(true)),
+          videosForProfileRouteProvider.overrideWith((ref) {
+            return AsyncValue.data(
+              VideoFeedState(
+                videos: mockVideos,
+                hasMoreContent: false,
+                isLoadingMore: false,
+              ),
+            );
+          }),
+          fetchUserProfileProvider(testUserHex).overrideWith((ref) async {
+            return mockProfile;
+          }),
+          authServiceProvider.overrideWith((ref) {
+            final mockAuth = MockAuthService();
+            mockAuth.currentPublicKeyHex = testUserHex;
+            return mockAuth;
+          }),
+        ],
+      );
       addTearDown(c.dispose);
 
       await tester.pumpWidget(shell(c));
@@ -154,36 +162,47 @@ void main() {
 
       // Verify route changed to /profile/:npub/3 (URL is 1-based: gridIndex 2 → urlIndex 3)
       final router = c.read(goRouterProvider);
-      expect(router.routeInformationProvider.value.uri.path, '/profile/$testUserNpub/3');
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        '/profile/$testUserNpub/3',
+      );
 
       // Verify active video is now video at list index 2 (urlIndex 3 - 1 = 2)
       expect(c.read(activeVideoIdProvider), 'video2');
 
       // Verify VideoFeedItem for video2 is now rendered
-      final videoItem = tester.widget<VideoFeedItem>(find.byType(VideoFeedItem).first);
+      final videoItem = tester.widget<VideoFeedItem>(
+        find.byType(VideoFeedItem).first,
+      );
       expect(videoItem.video.id, 'video2');
       expect(videoItem.index, 2); // List index should be 2
     });
 
-    testWidgets('Own profile video shows author name (not "Loading...")', (tester) async {
-      final c = ProviderContainer(overrides: [
-        appForegroundProvider.overrideWithValue(const AsyncValue.data(true)),
-        videosForProfileRouteProvider.overrideWith((ref) {
-          return AsyncValue.data(VideoFeedState(
-            videos: mockVideos,
-            hasMoreContent: false,
-            isLoadingMore: false,
-          ));
-        }),
-        fetchUserProfileProvider(testUserHex).overrideWith((ref) async {
-          return mockProfile;
-        }),
-        authServiceProvider.overrideWith((ref) {
-          final mockAuth = MockAuthService();
-          mockAuth.currentPublicKeyHex = testUserHex;
-          return mockAuth;
-        }), // Own profile
-      ]);
+    testWidgets('Own profile video shows author name (not "Loading...")', (
+      tester,
+    ) async {
+      final c = ProviderContainer(
+        overrides: [
+          appForegroundProvider.overrideWithValue(const AsyncValue.data(true)),
+          videosForProfileRouteProvider.overrideWith((ref) {
+            return AsyncValue.data(
+              VideoFeedState(
+                videos: mockVideos,
+                hasMoreContent: false,
+                isLoadingMore: false,
+              ),
+            );
+          }),
+          fetchUserProfileProvider(testUserHex).overrideWith((ref) async {
+            return mockProfile;
+          }),
+          authServiceProvider.overrideWith((ref) {
+            final mockAuth = MockAuthService();
+            mockAuth.currentPublicKeyHex = testUserHex;
+            return mockAuth;
+          }), // Own profile
+        ],
+      );
       addTearDown(c.dispose);
 
       await tester.pumpWidget(shell(c));
@@ -197,61 +216,78 @@ void main() {
       expect(find.textContaining('Test User'), findsOneWidget);
     });
 
-    testWidgets('Own profile video shows edit/delete buttons when forceShowOverlay=true', (tester) async {
-      final c = ProviderContainer(overrides: [
-        appForegroundProvider.overrideWithValue(const AsyncValue.data(true)),
-        videosForProfileRouteProvider.overrideWith((ref) {
-          return AsyncValue.data(VideoFeedState(
-            videos: mockVideos,
-            hasMoreContent: false,
-            isLoadingMore: false,
-          ));
-        }),
-        fetchUserProfileProvider(testUserHex).overrideWith((ref) async {
-          return mockProfile;
-        }),
-        authServiceProvider.overrideWith((ref) {
-          final mockAuth = MockAuthService();
-          mockAuth.currentPublicKeyHex = testUserHex;
-          return mockAuth;
-        }), // Own profile
-      ]);
-      addTearDown(c.dispose);
+    testWidgets(
+      'Own profile video shows edit/delete buttons when forceShowOverlay=true',
+      (tester) async {
+        final c = ProviderContainer(
+          overrides: [
+            appForegroundProvider.overrideWithValue(
+              const AsyncValue.data(true),
+            ),
+            videosForProfileRouteProvider.overrideWith((ref) {
+              return AsyncValue.data(
+                VideoFeedState(
+                  videos: mockVideos,
+                  hasMoreContent: false,
+                  isLoadingMore: false,
+                ),
+              );
+            }),
+            fetchUserProfileProvider(testUserHex).overrideWith((ref) async {
+              return mockProfile;
+            }),
+            authServiceProvider.overrideWith((ref) {
+              final mockAuth = MockAuthService();
+              mockAuth.currentPublicKeyHex = testUserHex;
+              return mockAuth;
+            }), // Own profile
+          ],
+        );
+        addTearDown(c.dispose);
 
-      await tester.pumpWidget(shell(c));
+        await tester.pumpWidget(shell(c));
 
-      // Navigate to own video
-      c.read(goRouterProvider).go('/profile/$testUserNpub/1');
-      await tester.pumpAndSettle();
+        // Navigate to own video
+        c.read(goRouterProvider).go('/profile/$testUserNpub/1');
+        await tester.pumpAndSettle();
 
-      // Verify VideoFeedItem has forceShowOverlay=true for own profile
-      final videoItem = tester.widget<VideoFeedItem>(find.byType(VideoFeedItem).first);
-      expect(videoItem.forceShowOverlay, isTrue);
+        // Verify VideoFeedItem has forceShowOverlay=true for own profile
+        final videoItem = tester.widget<VideoFeedItem>(
+          find.byType(VideoFeedItem).first,
+        );
+        expect(videoItem.forceShowOverlay, isTrue);
 
-      // Verify share menu button is visible (overlay is shown)
-      // Note: The actual edit/delete functionality is in ShareVideoMenu widget
-      expect(find.byIcon(Icons.more_vert), findsOneWidget);
-    });
+        // Verify share menu button is visible (overlay is shown)
+        // Note: The actual edit/delete functionality is in ShareVideoMenu widget
+        expect(find.byIcon(Icons.more_vert), findsOneWidget);
+      },
+    );
 
-    testWidgets('Video autoplays when navigating from grid to fullscreen', (tester) async {
-      final c = ProviderContainer(overrides: [
-        appForegroundProvider.overrideWithValue(const AsyncValue.data(true)),
-        videosForProfileRouteProvider.overrideWith((ref) {
-          return AsyncValue.data(VideoFeedState(
-            videos: mockVideos,
-            hasMoreContent: false,
-            isLoadingMore: false,
-          ));
-        }),
-        fetchUserProfileProvider(testUserHex).overrideWith((ref) async {
-          return mockProfile;
-        }),
-        authServiceProvider.overrideWith((ref) {
-          final mockAuth = MockAuthService();
-          mockAuth.currentPublicKeyHex = testUserHex;
-          return mockAuth;
-        }),
-      ]);
+    testWidgets('Video autoplays when navigating from grid to fullscreen', (
+      tester,
+    ) async {
+      final c = ProviderContainer(
+        overrides: [
+          appForegroundProvider.overrideWithValue(const AsyncValue.data(true)),
+          videosForProfileRouteProvider.overrideWith((ref) {
+            return AsyncValue.data(
+              VideoFeedState(
+                videos: mockVideos,
+                hasMoreContent: false,
+                isLoadingMore: false,
+              ),
+            );
+          }),
+          fetchUserProfileProvider(testUserHex).overrideWith((ref) async {
+            return mockProfile;
+          }),
+          authServiceProvider.overrideWith((ref) {
+            final mockAuth = MockAuthService();
+            mockAuth.currentPublicKeyHex = testUserHex;
+            return mockAuth;
+          }),
+        ],
+      );
       addTearDown(c.dispose);
 
       await tester.pumpWidget(shell(c));
