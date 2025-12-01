@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
 import 'package:openvine/screens/key_management_screen.dart';
@@ -339,14 +340,9 @@ class SettingsScreen extends ConsumerWidget {
     // Sign out (keeps keys for re-login)
     await authService.signOut(deleteKeys: false);
 
-    // Navigate to home/login screen
+    // Navigate to welcome screen
     if (context.mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const ProfileSetupScreen(isNewUser: true),
-        ),
-        (route) => false,
-      );
+      context.go('/welcome');
     }
   }
 
@@ -388,14 +384,9 @@ class SettingsScreen extends ConsumerWidget {
             ),
           );
 
-          // Navigate to profile setup
+          // Navigate to welcome screen
           if (!context.mounted) return;
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => const ProfileSetupScreen(isNewUser: true),
-            ),
-            (route) => false,
-          );
+          context.go('/welcome');
         } catch (e) {
           // Close loading indicator
           if (!context.mounted) return;
@@ -452,12 +443,7 @@ class SettingsScreen extends ConsumerWidget {
           await showDeleteAccountCompletionDialog(
             context: context,
             onCreateNewAccount: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (context) => const ProfileSetupScreen(isNewUser: true),
-                ),
-                (route) => false,
-              );
+              context.go('/welcome');
             },
           );
         } else {
