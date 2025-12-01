@@ -360,7 +360,6 @@ class AuthService {
       Log.info('User signed out',
           name: 'AuthService', category: LogCategory.auth);
 
-      // If keys were deleted, auto-create a new identity (TikTok-style seamless onboarding)
       if (deleteKeys) {
         Log.info('Auto-creating new identity after key deletion',
             name: 'AuthService', category: LogCategory.auth);
@@ -606,7 +605,6 @@ class AuthService {
       await prefs.setString(
           'current_user_pubkey_hex', keyContainer.publicKeyHex);
 
-      // Check if user has accepted TOS
       final hasAcceptedTos = prefs.getBool('age_verified_16_plus') ?? false;
       if (hasAcceptedTos) {
         _setAuthState(AuthState.authenticated);
