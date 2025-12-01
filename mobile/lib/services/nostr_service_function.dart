@@ -8,6 +8,7 @@ import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
     as embedded;
 import 'package:logging/logging.dart' as logging;
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart' as nostr;
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/nip71_migration.dart';
@@ -794,6 +795,23 @@ class NostrServiceFunction implements INostrService {
     if (until != null) {
       filter.until = until.millisecondsSinceEpoch ~/ 1000;
     }
+    if (limit != null) {
+      filter.limit = limit;
+    }
+
+    return subscribeToEvents(filters: [filter]);
+  }
+
+  @override
+  Stream<Event> searchUsers(
+    String query, {
+    int? limit,
+  }) {
+    // Create search filter for NIP-50
+    final filter = nostr.Filter()
+      ..kinds = [EventKind.METADATA] // Kind 0 only
+      ..search = query;
+
     if (limit != null) {
       filter.limit = limit;
     }

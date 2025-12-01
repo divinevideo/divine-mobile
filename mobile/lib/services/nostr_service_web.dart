@@ -657,6 +657,22 @@ abstract class NostrServiceWeb implements INostrService {
   }
 
   @override
+  Stream<sdk.Event> searchUsers(
+    String query, {
+    int? limit,
+  }) {
+    final filters = [
+      sdk.Filter(
+        kinds: [sdk.EventKind.METADATA], // User profile event kind
+        search: query,
+        limit: limit,
+      )
+    ];
+
+    return subscribeToEvents(filters: filters);
+  }
+
+  @override
   void setAuthTimeout(Duration timeout) {
     // Not needed for web
   }

@@ -9,6 +9,7 @@ import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
     as embedded;
 import 'package:logging/logging.dart' as logging;
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart' as nostr;
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/models/nip94_metadata.dart';
@@ -1502,29 +1503,13 @@ class NostrService implements INostrService {
     // TODO: Close embedded relay subscriptions
   }
 
-  @override
-  Stream<Event> searchVideos(
-    String query, {
-    List<String>? authors,
-    DateTime? since,
-    DateTime? until,
-    int? limit,
-  }) {
+  Stream<Event> _search(String query, nostr.Filter nostrFilter) {
     if (_isDisposed) throw StateError('NostrService is disposed');
     if (!_isInitialized) throw StateError('NostrService not initialized');
     if (_embeddedRelay == null) {
       throw StateError('Embedded relay not initialized');
     }
 
-    // Create filter for video events with NIP-50 search query using nostr.Filter
-    final nostrFilter = nostr.Filter(
-      kinds: [34236, 16], // Kind 34236 video events + generic repost (kind 16)
-      authors: authors,
-      since: since != null ? (since.millisecondsSinceEpoch ~/ 1000) : null,
-      until: until != null ? (until.millisecondsSinceEpoch ~/ 1000) : null,
-      limit: limit ?? 100,
-      search: query, // NIP-50 search parameter
-    );
     final filter = _convertToEmbeddedFilter(nostrFilter);
 
     // Query embedded relay - it will forward the NIP-50 search to external relays
@@ -1555,6 +1540,40 @@ class NostrService implements INostrService {
     }();
 
     return controller.stream;
+  }
+
+  @override
+  Stream<Event> searchVideos(
+    String query, {
+    List<String>? authors,
+    DateTime? since,
+    DateTime? until,
+    int? limit,
+  }) {
+    // Create filter for video events with NIP-50 search query using nostr.Filter
+    final nostrFilter = nostr.Filter(
+      kinds: [34236, 16], // Kind 34236 video events + generic repost (kind 16)
+      authors: authors,
+      since: since != null ? (since.millisecondsSinceEpoch ~/ 1000) : null,
+      until: until != null ? (until.millisecondsSinceEpoch ~/ 1000) : null,
+      limit: limit ?? 100,
+      search: query, // NIP-50 search parameter
+    );
+    return _search(query, nostrFilter);
+  }
+
+  @override
+  Stream<Event> searchUsers(String query, {int? limit}) {
+    // Create filter for video events with NIP-50 search query using nostr.Filter
+    final nostrFilter = nostr.Filter(
+      kinds: [
+        EventKind.METADATA,
+      ],
+      limit: limit ?? 100,
+      search: query, // NIP-50 search parameter
+    );
+
+    return _search(query, nostrFilter);
   }
 
   @override

@@ -143,6 +143,8 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
         category: LogCategory.video,
       );
 
+      final users = <String>{};
+
       // Find user profiles for matching the query
       final matchingProfilesKeys = profileService.allProfiles.values
           .where((profile) {
@@ -174,7 +176,6 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
 
       // Extract unique hashtags and users from local results
       final hashtags = <String>{};
-      final users = <String>{};
 
       for (final video in filteredVideos) {
         for (final tag in video.hashtags) {
@@ -244,6 +245,20 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
       // Get remote results
       final remoteResults = videoEventService.searchResults;
 
+      final profileService = ref.read(userProfileServiceProvider);
+      await profileService.searchUsers(_currentQuery, limit: 100);
+
+      // Find user profiles for matching the query
+      final matchingRemoteUsers = profileService.allProfiles.values
+          .where((profile) {
+            final displayNameMatch = profile.bestDisplayName
+                .toLowerCase()
+                .contains(_currentQuery.toLowerCase());
+            return displayNameMatch;
+          })
+          .map((profile) => profile.pubkey)
+          .toList();
+
       // Combine local + remote results
       final allVideos = [..._videoResults, ...remoteResults];
 
@@ -260,7 +275,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
 
       // Extract all unique hashtags and users from combined results
       final allHashtags = <String>{};
-      final allUsers = <String>{};
+      final allUsers = <String>{..._userResults, ...matchingRemoteUsers};
 
       for (final video in uniqueVideos) {
         for (final tag in video.hashtags) {

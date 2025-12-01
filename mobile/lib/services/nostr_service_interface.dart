@@ -102,6 +102,12 @@ abstract class INostrService {
     int? limit,
   });
 
+  // NIP-50 Search functionality
+  Stream<Event> searchUsers(
+    String query, {
+    int? limit,
+  });
+
   // Primary relay for all client operations
   String get primaryRelay;
 
