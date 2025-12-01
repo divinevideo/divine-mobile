@@ -317,7 +317,7 @@ class ContentReportingService {
         ['e', eventId], // Event being reported
         ['p', authorPubkey], // Author of reported content
         ['report', reason.name], // Report reason as per NIP-56
-        ['client', 'openvine'], // Reporting client
+        ['client', 'diVine'], // Reporting client
       ];
 
       // Add hashtags as 't' tags

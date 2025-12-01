@@ -519,7 +519,7 @@ class BookmarkService with NostrListServiceMixin {
 
       // Create NIP-51 kind 10003 tags
       final tags = <List<String>>[
-        ['client', 'openvine'],
+        ['client', 'diVine'],
       ];
 
       // Add bookmark items as tags
@@ -559,7 +559,7 @@ class BookmarkService with NostrListServiceMixin {
       final tags = <List<String>>[
         ['d', set.id], // Identifier for replaceable event
         ['title', set.name],
-        ['client', 'openvine'],
+        ['client', 'diVine'],
       ];
 
       // Add description if present
