@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/config/zendesk_config.dart';
 
+import '../builders/nostr_event_builder.dart';
+
 void main() {
   group('ZendeskConfig', () {
     test('appId should be defined from environment', () {
