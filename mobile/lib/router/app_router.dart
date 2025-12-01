@@ -163,14 +163,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         }
       }
 
-      // Redirect FROM welcome TO home when authenticated and TOS accepted
+      // Redirect FROM welcome TO explore when authenticated and TOS accepted
       // This handles the case after account creation on the welcome screen
+      // New users have no following list, so we send them to explore directly
       if (location.startsWith('/welcome')) {
         final authService = ref.read(authServiceProvider);
         final hasAcceptedTerms = prefs.getBool('age_verified_16_plus') ?? false;
         if (authService.authState == AuthState.authenticated && hasAcceptedTerms) {
-          debugPrint('[Router] User is authenticated with TOS accepted, redirecting from /welcome to /home');
-          return '/home/0';
+          debugPrint('[Router] User is authenticated with TOS accepted, redirecting from /welcome to /explore');
+          return '/explore';
         }
       }
 
