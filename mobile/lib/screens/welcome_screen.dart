@@ -122,7 +122,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: _canProceed && !_isAccepting
-                          ? () => _acceptTermsAndContinue(context)
+                          ? () => _handleContinue(context, true)
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
@@ -150,8 +150,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                             ),
                     ),
                   )
-                else
-                  // If unauthenticated (auto-creation failed), show error
+                else if (authService.lastError != null)
+                  // If there's an error (e.g., auto-creation failed), show error message
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -177,7 +177,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          authService.lastError ?? 'Failed to initialize your account',
+                          authService.lastError!,
                           style: const TextStyle(
                             color: Colors.red,
                             fontSize: 14,
@@ -194,6 +194,40 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                           textAlign: TextAlign.center,
                         ),
                       ],
+                    ),
+                  )
+                else
+                  // Unauthenticated with no error - show Get Started button to create new account
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _canProceed && !_isAccepting
+                          ? () => _handleContinue(context, false)
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: VineTheme.vineGreen,
+                        disabledBackgroundColor: Colors.white.withValues(alpha: 0.7),
+                        disabledForegroundColor: VineTheme.vineGreen.withValues(alpha: 0.7),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isAccepting
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: VineTheme.vineGreen,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              _canProceed ? 'Get Started' : 'Accept Terms to Continue',
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w600),
+                            ),
                     ),
                   ),
                 ],
@@ -338,16 +372,27 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     await prefs.setBool('age_verified_16_plus', true);
   }
 
-  Future<void> _acceptTermsAndContinue(BuildContext context) async {
+  Future<void> _handleContinue(BuildContext context, bool isAuthenticated) async {
     setState(() => _isAccepting = true);
 
     try {
       // Store terms acceptance
       await _storeTermsAcceptance();
 
-      if (context.mounted) {
-        // Navigate to home
-        context.go('/home/0');
+      // Create new account if not authenticated
+      if (!isAuthenticated) {
+        final authService = ref.read(authServiceProvider);
+        await authService.createNewIdentity();
+      }
+      // Router will redirect to home when auth state is authenticated and TOS accepted
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to continue: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) {

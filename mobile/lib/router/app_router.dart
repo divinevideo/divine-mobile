@@ -16,7 +16,6 @@ import 'package:openvine/screens/notifications_screen.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/pure/search_screen_pure.dart';
 import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
-import 'package:openvine/screens/test_camera_screen.dart';
 import 'package:openvine/screens/followers_screen.dart';
 import 'package:openvine/screens/following_screen.dart';
 import 'package:openvine/screens/key_import_screen.dart';
@@ -26,6 +25,8 @@ import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_editor_screen.dart';
 import 'package:openvine/screens/vine_drafts_screen.dart';
 import 'package:openvine/screens/welcome_screen.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_stop_navigator_observer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -112,7 +113,22 @@ Future<bool> hasAnyFollowingInCache(SharedPreferences prefs) async {
   }
 }
 
+/// Listenable that notifies when auth state changes
+class _AuthStateListenable extends ChangeNotifier {
+  _AuthStateListenable(this._authService) {
+    _authService.authStateStream.listen((_) {
+      notifyListeners();
+    });
+  }
+
+  final AuthService _authService;
+}
+
 final goRouterProvider = Provider<GoRouter>((ref) {
+  // Watch auth service to trigger router refresh on auth state changes
+  final authService = ref.watch(authServiceProvider);
+  final authListenable = _AuthStateListenable(authService);
+
   return GoRouter(
     navigatorKey: _rootKey,
     initialLocation: '/home/0',
@@ -120,6 +136,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       VideoStopNavigatorObserver(),
       FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
     ],
+    // Refresh router when auth state changes (e.g., logout)
+    refreshListenable: authListenable,
     redirect: (context, state) async {
       final location = state.matchedLocation;
       final prefs = await SharedPreferences.getInstance();
@@ -131,6 +149,28 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
         if (!hasAcceptedTerms) {
           return '/welcome';
+        }
+      }
+
+      // Check auth state - redirect to welcome if not authenticated
+      // This handles logout from anywhere in the app
+      if (!location.startsWith('/welcome') &&
+          !location.startsWith('/import-key')) {
+        final authService = ref.read(authServiceProvider);
+        if (authService.authState == AuthState.unauthenticated) {
+          debugPrint('[Router] User is unauthenticated, redirecting to /welcome');
+          return '/welcome';
+        }
+      }
+
+      // Redirect FROM welcome TO home when authenticated and TOS accepted
+      // This handles the case after account creation on the welcome screen
+      if (location.startsWith('/welcome')) {
+        final authService = ref.read(authServiceProvider);
+        final hasAcceptedTerms = prefs.getBool('age_verified_16_plus') ?? false;
+        if (authService.authState == AuthState.authenticated && hasAcceptedTerms) {
+          debugPrint('[Router] User is authenticated with TOS accepted, redirecting from /welcome to /home');
+          return '/home/0';
         }
       }
 

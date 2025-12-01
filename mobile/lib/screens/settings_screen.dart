@@ -3,7 +3,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
 import 'package:openvine/screens/key_management_screen.dart';
@@ -338,12 +337,8 @@ class SettingsScreen extends ConsumerWidget {
     if (confirmed != true || !context.mounted) return;
 
     // Sign out (keeps keys for re-login)
+    // Router will automatically redirect to /welcome when auth state becomes unauthenticated
     await authService.signOut(deleteKeys: false);
-
-    // Navigate to welcome screen
-    if (context.mounted) {
-      context.go('/welcome');
-    }
   }
 
   /// Handle removing keys from device only (no relay broadcast)
@@ -373,6 +368,7 @@ class SettingsScreen extends ConsumerWidget {
           Navigator.of(context).pop();
 
           // Show success message
+          // Router will automatically redirect to /welcome when auth state becomes unauthenticated
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -383,10 +379,6 @@ class SettingsScreen extends ConsumerWidget {
               backgroundColor: VineTheme.vineGreen,
             ),
           );
-
-          // Navigate to welcome screen
-          if (!context.mounted) return;
-          context.go('/welcome');
         } catch (e) {
           // Close loading indicator
           if (!context.mounted) return;
@@ -436,6 +428,7 @@ class SettingsScreen extends ConsumerWidget {
 
         if (result.success) {
           // Sign out and delete keys
+          // Router will automatically redirect to /welcome when auth state becomes unauthenticated
           await authService.signOut(deleteKeys: true);
 
           // Show completion dialog
@@ -443,7 +436,8 @@ class SettingsScreen extends ConsumerWidget {
           await showDeleteAccountCompletionDialog(
             context: context,
             onCreateNewAccount: () {
-              context.go('/welcome');
+              // Just close the dialog - router will handle navigation
+              Navigator.of(context).pop();
             },
           );
         } else {
