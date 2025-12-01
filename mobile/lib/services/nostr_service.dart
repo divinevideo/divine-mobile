@@ -14,16 +14,14 @@ import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/utils/log_batcher.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Direct WebSocket implementation of NostrService
 /// Connects directly to external Nostr relays without an embedded relay intermediary
-class NostrServiceDirect implements INostrService {
-  NostrServiceDirect(
-    this._keyManager, {
-    void Function()? onInitialized,
-  }) : _onInitialized = onInitialized {
+class NostrService implements INostrService {
+  NostrService(this._keyManager, {void Function()? onInitialized})
+    : _onInitialized = onInitialized {
     UnifiedLogger.info(
       '🏗️  NostrServiceDirect CONSTRUCTOR called - creating NEW instance',
       name: 'NostrServiceDirect',
@@ -66,8 +64,10 @@ class NostrServiceDirect implements INostrService {
   final Map<String, Timer?> _reconnectTimers = {};
 
   void _startBatchLogging() {
-    _batchLogTimer =
-        Timer.periodic(_batchLogInterval, (_) => _flushBatchedLogs());
+    _batchLogTimer = Timer.periodic(
+      _batchLogInterval,
+      (_) => _flushBatchedLogs(),
+    );
   }
 
   void _flushBatchedLogs() {
@@ -79,8 +79,9 @@ class NostrServiceDirect implements INostrService {
       final totalCount = kindCounts.values.fold(0, (sum, count) => sum + count);
 
       if (totalCount > 0) {
-        final kindSummary =
-            kindCounts.entries.map((e) => 'kind ${e.key}: ${e.value}').join(', ');
+        final kindSummary = kindCounts.entries
+            .map((e) => 'kind ${e.key}: ${e.value}')
+            .join(', ');
         Log.debug(
           'Received $totalCount events ($kindSummary) from $relayUrl',
           name: 'NostrServiceDirect',
@@ -162,7 +163,10 @@ class NostrServiceDirect implements INostrService {
   }
 
   @override
-  Future<void> initialize({List<String>? customRelays, bool enableP2P = true}) async {
+  Future<void> initialize({
+    List<String>? customRelays,
+    bool enableP2P = true,
+  }) async {
     if (_isDisposed) throw StateError('NostrServiceDirect is disposed');
     if (_isInitialized) {
       UnifiedLogger.info(
@@ -233,7 +237,10 @@ class NostrServiceDirect implements INostrService {
       relaysToAdd.add(defaultRelay);
     }
 
-    UnifiedLogger.info('📋 Relays to be loaded at startup:', name: 'NostrServiceDirect');
+    UnifiedLogger.info(
+      '📋 Relays to be loaded at startup:',
+      name: 'NostrServiceDirect',
+    );
     for (var relay in relaysToAdd) {
       UnifiedLogger.info('   - $relay', name: 'NostrServiceDirect');
     }
@@ -275,7 +282,8 @@ class NostrServiceDirect implements INostrService {
       CrashReportingService.instance.recordError(
         Exception('CRITICAL: No relays connected'),
         StackTrace.current,
-        reason: 'All relay connections failed\n'
+        reason:
+            'All relay connections failed\n'
             'Configured relays: ${_configuredRelays.join(", ")}',
       );
     }
@@ -409,7 +417,10 @@ class NostrServiceDirect implements INostrService {
                 // Existing event is newer or same, skip this one
                 return;
               }
-              subState.replaceableEvents[replaceKey] = (event.id, event.createdAt);
+              subState.replaceableEvents[replaceKey] = (
+                event.id,
+                event.createdAt,
+              );
             }
 
             subState.controller.add(event);
@@ -732,7 +743,10 @@ class NostrServiceDirect implements INostrService {
 
   @override
   Future<bool> addRelay(String relayUrl) async {
-    UnifiedLogger.info('🔌 addRelay() called for: $relayUrl', name: 'NostrServiceDirect');
+    UnifiedLogger.info(
+      '🔌 addRelay() called for: $relayUrl',
+      name: 'NostrServiceDirect',
+    );
 
     if (_configuredRelays.contains(relayUrl)) {
       UnifiedLogger.warning(
@@ -759,7 +773,10 @@ class NostrServiceDirect implements INostrService {
 
   @override
   Future<void> removeRelay(String relayUrl) async {
-    UnifiedLogger.info('🔌 removeRelay() called for: $relayUrl', name: 'NostrServiceDirect');
+    UnifiedLogger.info(
+      '🔌 removeRelay() called for: $relayUrl',
+      name: 'NostrServiceDirect',
+    );
 
     // Disconnect
     final channel = _relayConnections[relayUrl];
@@ -905,7 +922,9 @@ class NostrServiceDirect implements INostrService {
   @override
   Future<Event?> fetchEventById(String eventId, {String? relayUrl}) async {
     final events = await getEvents(
-      filters: [nostr.Filter(ids: [eventId])],
+      filters: [
+        nostr.Filter(ids: [eventId]),
+      ],
       limit: 1,
     );
     return events.isNotEmpty ? events.first : null;
