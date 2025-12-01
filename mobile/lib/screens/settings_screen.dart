@@ -435,10 +435,7 @@ class SettingsScreen extends ConsumerWidget {
           if (!context.mounted) return;
           await showDeleteAccountCompletionDialog(
             context: context,
-            onCreateNewAccount: () {
-              // Just close the dialog - router will handle navigation
-              Navigator.of(context).pop();
-            },
+            onCreateNewAccount: () => Navigator.of(context).pop(),
           );
         } else {
           // Show error
