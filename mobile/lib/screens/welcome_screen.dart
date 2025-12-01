@@ -87,7 +87,12 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 const Spacer(),
 
                 // Age verification and TOS acceptance
-                _buildCheckboxSection(),
+                _TermsCheckboxSection(
+                  isOver16: _isOver16,
+                  agreedToTerms: _agreedToTerms,
+                  onOver16Changed: (value) => setState(() => _isOver16 = value),
+                  onAgreedToTermsChanged: (value) => setState(() => _agreedToTerms = value),
+                ),
 
                 const SizedBox(height: 16),
 
@@ -240,131 +245,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   );
   }
 
-  Widget _buildCheckboxSection() => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Age verification checkbox
-            InkWell(
-              onTap: () => setState(() => _isOver16 = !_isOver16),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: Checkbox(
-                      value: _isOver16,
-                      onChanged: (value) =>
-                          setState(() => _isOver16 = value ?? false),
-                      fillColor: WidgetStateProperty.resolveWith((states) {
-                        if (states.contains(WidgetState.selected)) {
-                          return Colors.white;
-                        }
-                        return Colors.transparent;
-                      }),
-                      checkColor: VineTheme.vineGreen,
-                      side: const BorderSide(color: Colors.white, width: 2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'I am 16 years or older',
-                      style: TextStyle(
-                        color: VineTheme.whiteText,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // TOS acceptance checkbox with links
-            InkWell(
-              onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: Checkbox(
-                      value: _agreedToTerms,
-                      onChanged: (value) =>
-                          setState(() => _agreedToTerms = value ?? false),
-                      fillColor: WidgetStateProperty.resolveWith((states) {
-                        if (states.contains(WidgetState.selected)) {
-                          return Colors.white;
-                        }
-                        return Colors.transparent;
-                      }),
-                      checkColor: VineTheme.vineGreen,
-                      side: const BorderSide(color: Colors.white, width: 2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                        style: const TextStyle(
-                          color: VineTheme.whiteText,
-                          fontSize: 14,
-                        ),
-                        children: [
-                          const TextSpan(text: 'I agree to the '),
-                          TextSpan(
-                            text: 'Terms of Service',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              decoration: TextDecoration.underline,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () => _openUrl('https://divine.video/terms'),
-                          ),
-                          const TextSpan(text: ', '),
-                          TextSpan(
-                            text: 'Privacy Policy',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              decoration: TextDecoration.underline,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap =
-                                  () => _openUrl('https://divine.video/privacy'),
-                          ),
-                          const TextSpan(text: ', and '),
-                          TextSpan(
-                            text: 'Safety Standards',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              decoration: TextDecoration.underline,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap =
-                                  () => _openUrl('https://divine.video/safety'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-
   bool get _canProceed => _isOver16 && _agreedToTerms;
-
-  Future<void> _openUrl(String urlString) async {
-    final uri = Uri.parse(urlString);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
 
   Future<void> _storeTermsAcceptance() async {
     final prefs = await SharedPreferences.getInstance();
@@ -399,5 +280,142 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         setState(() => _isAccepting = false);
       }
     }
+  }
+}
+
+class _TermsCheckboxSection extends StatelessWidget {
+  const _TermsCheckboxSection({
+    required this.isOver16,
+    required this.agreedToTerms,
+    required this.onOver16Changed,
+    required this.onAgreedToTermsChanged,
+  });
+
+  final bool isOver16;
+  final bool agreedToTerms;
+  final ValueChanged<bool> onOver16Changed;
+  final ValueChanged<bool> onAgreedToTermsChanged;
+
+  Future<void> _openUrl(String urlString) async {
+    final uri = Uri.parse(urlString);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Age verification checkbox
+          InkWell(
+            onTap: () => onOver16Changed(!isOver16),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Checkbox(
+                    value: isOver16,
+                    onChanged: (value) => onOver16Changed(value ?? false),
+                    fillColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Colors.white;
+                      }
+                      return Colors.transparent;
+                    }),
+                    checkColor: VineTheme.vineGreen,
+                    side: const BorderSide(color: Colors.white, width: 2),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'I am 16 years or older',
+                    style: TextStyle(
+                      color: VineTheme.whiteText,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // TOS acceptance checkbox with links
+          InkWell(
+            onTap: () => onAgreedToTermsChanged(!agreedToTerms),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Checkbox(
+                    value: agreedToTerms,
+                    onChanged: (value) => onAgreedToTermsChanged(value ?? false),
+                    fillColor: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Colors.white;
+                      }
+                      return Colors.transparent;
+                    }),
+                    checkColor: VineTheme.vineGreen,
+                    side: const BorderSide(color: Colors.white, width: 2),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                        color: VineTheme.whiteText,
+                        fontSize: 14,
+                      ),
+                      children: [
+                        const TextSpan(text: 'I agree to the '),
+                        TextSpan(
+                          text: 'Terms of Service',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            decoration: TextDecoration.underline,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () => _openUrl('https://divine.video/terms'),
+                        ),
+                        const TextSpan(text: ', '),
+                        TextSpan(
+                          text: 'Privacy Policy',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            decoration: TextDecoration.underline,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () => _openUrl('https://divine.video/privacy'),
+                        ),
+                        const TextSpan(text: ', and '),
+                        TextSpan(
+                          text: 'Safety Standards',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            decoration: TextDecoration.underline,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () => _openUrl('https://divine.video/safety'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
