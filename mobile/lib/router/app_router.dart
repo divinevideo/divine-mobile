@@ -141,23 +141,24 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: authListenable,
     redirect: (context, state) async {
       final location = state.matchedLocation;
-      final authService = ref.read(authServiceProvider);
-      final currentAuthState = authService.authState;
+      final prefs = await SharedPreferences.getInstance();
 
-      // Redirect to /welcome if not yet authenticated
-      // This includes: unauthenticated, awaitingTosAcceptance, checking, authenticating
+      // Check TOS acceptance first (before any other routes except /welcome)
       if (!location.startsWith('/welcome') &&
           !location.startsWith('/import-key')) {
-        if (currentAuthState != AuthState.authenticated) {
-          debugPrint('[Router] Auth state is $currentAuthState, redirecting to /welcome');
+        final hasAcceptedTerms = prefs.getBool('age_verified_16_plus') ?? false;
+
+        if (!hasAcceptedTerms) {
+          debugPrint('[Router] TOS not accepted, redirecting to /welcome');
           return '/welcome';
         }
       }
 
-      // Redirect FROM /welcome TO /explore when fully authenticated
+      // Redirect FROM /welcome TO /explore when TOS is accepted
       if (location.startsWith('/welcome')) {
-        if (currentAuthState == AuthState.authenticated) {
-          debugPrint('[Router] User is authenticated, redirecting from /welcome to /explore');
+        final hasAcceptedTerms = prefs.getBool('age_verified_16_plus') ?? false;
+        if (hasAcceptedTerms) {
+          debugPrint('[Router] TOS accepted, redirecting from /welcome to /explore');
           return '/explore';
         }
       }
