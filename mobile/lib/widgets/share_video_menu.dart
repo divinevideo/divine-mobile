@@ -2356,7 +2356,7 @@ class _EditVideoDialogState extends ConsumerState<_EditVideoDialog> {
       }
 
       // Add client tag
-      tags.add(['client', 'openvine']);
+      tags.add(['client', 'diVine']);
 
       // Create and sign the updated event
       final content = _descriptionController.text.trim();

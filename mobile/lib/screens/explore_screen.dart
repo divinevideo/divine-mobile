@@ -929,8 +929,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           await ref.read(popularNowFeedProvider.notifier).refresh();
         } else {
           // For Trending tab, refresh video events
-          ref.invalidate(videoEventsProvider);
-          await ref.read(videoEventsProvider.future);
+          final _ = await ref.refresh(videoEventsProvider);
         }
       },
       emptyBuilder: () => Center(

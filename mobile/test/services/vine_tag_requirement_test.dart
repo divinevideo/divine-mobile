@@ -63,7 +63,7 @@ void main() {
     test('vine tag should be automatically added to existing tags', () async {
       // Simulate adding vine tag to existing tags
       final existingTags = [
-        ['client', 'openvine'],
+        ['client', 'diVine'],
         ['t', 'hashtag'],
         ['p', 'somepubkey'],
       ];
@@ -72,7 +72,7 @@ void main() {
       finalTags.add(['h', 'vine']);
 
       expect(finalTags, containsOnce(['h', 'vine']));
-      expect(finalTags, containsOnce(['client', 'openvine']));
+      expect(finalTags, containsOnce(['client', 'diVine']));
       expect(finalTags, containsOnce(['t', 'hashtag']));
       expect(finalTags, containsOnce(['p', 'somepubkey']));
 

@@ -37,7 +37,6 @@ import 'package:openvine/services/user_profile_service.dart' as _i8;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
-// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeKeychain_0 extends _i1.SmartFake implements _i2.Keychain {
   _FakeKeychain_0(Object parent, Invocation parentInvocation)
@@ -398,6 +397,14 @@ class MockEmbeddedNostrRelay extends _i1.Mock
           as _i6.Future<bool>);
 
   @override
+  _i6.Future<Map<String, bool>> verifyEventOnExternalRelays(String? eventId) =>
+      (super.noSuchMethod(
+            Invocation.method(#verifyEventOnExternalRelays, [eventId]),
+            returnValue: _i6.Future<Map<String, bool>>.value(<String, bool>{}),
+          )
+          as _i6.Future<Map<String, bool>>);
+
+  @override
   _i6.Future<List<_i11.NostrEvent>> queryEvents(List<_i14.Filter>? filters) =>
       (super.noSuchMethod(
             Invocation.method(#queryEvents, [filters]),
@@ -425,6 +432,14 @@ class MockEmbeddedNostrRelay extends _i1.Mock
           as _i6.Future<void>);
 
   @override
+  _i6.Future<int> importEvents(List<_i11.NostrEvent>? events) =>
+      (super.noSuchMethod(
+            Invocation.method(#importEvents, [events]),
+            returnValue: _i6.Future<int>.value(0),
+          )
+          as _i6.Future<int>);
+
+  @override
   _i4.RelayInfo getRelayInfo() =>
       (super.noSuchMethod(
             Invocation.method(#getRelayInfo, []),
@@ -450,6 +465,24 @@ class MockEmbeddedNostrRelay extends _i1.Mock
             returnValue: <String, dynamic>{},
           )
           as Map<String, dynamic>);
+
+  @override
+  Map<String, dynamic> getPublishQueueStats() =>
+      (super.noSuchMethod(
+            Invocation.method(#getPublishQueueStats, []),
+            returnValue: <String, dynamic>{},
+          )
+          as Map<String, dynamic>);
+
+  @override
+  _i6.Future<Map<String, dynamic>> getPublishQueueStatsFromDatabase() =>
+      (super.noSuchMethod(
+            Invocation.method(#getPublishQueueStatsFromDatabase, []),
+            returnValue: _i6.Future<Map<String, dynamic>>.value(
+              <String, dynamic>{},
+            ),
+          )
+          as _i6.Future<Map<String, dynamic>>);
 
   @override
   _i5.FunctionChannelSession createFunctionSession() =>

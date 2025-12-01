@@ -353,7 +353,7 @@ class NIP17MessageService {
       'created_at': (DateTime.now().millisecondsSinceEpoch ~/ 1000),
       'tags': [
         ['p', recipientPubkey],
-        ['client', 'openvine_bug_report'],
+        ['client', 'diVine_bug_report'],
         ...additionalTags,
       ],
     };

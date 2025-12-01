@@ -4,16 +4,17 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
-import 'dart:ui' as _i10;
+import 'dart:ui' as _i11;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
 import 'package:nostr_sdk/event.dart' as _i9;
 import 'package:openvine/models/video_event.dart' as _i3;
+import 'package:openvine/services/age_verification_service.dart' as _i8;
 import 'package:openvine/services/content_blocklist_service.dart' as _i7;
 import 'package:openvine/services/hashtag_service.dart' as _i2;
 import 'package:openvine/services/video_event_service.dart' as _i5;
-import 'package:openvine/services/video_filter_builder.dart' as _i8;
+import 'package:openvine/services/video_filter_builder.dart' as _i10;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -28,7 +29,6 @@ import 'package:openvine/services/video_filter_builder.dart' as _i8;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
-// ignore_for_file: invalid_use_of_internal_member
 
 /// A class which mocks [HashtagService].
 ///
@@ -130,6 +130,14 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
   }
 
   @override
+  bool get shouldFilterAdultContent =>
+      (super.noSuchMethod(
+            Invocation.getter(#shouldFilterAdultContent),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
   List<_i3.VideoEvent> get homeFeedVideos =>
       (super.noSuchMethod(
             Invocation.getter(#homeFeedVideos),
@@ -228,6 +236,30 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
         Invocation.method(#setBlocklistService, [blocklistService]),
         returnValueForMissingStub: null,
       );
+
+  @override
+  void setAgeVerificationService(
+    _i8.AgeVerificationService? ageVerificationService,
+  ) => super.noSuchMethod(
+    Invocation.method(#setAgeVerificationService, [ageVerificationService]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  bool shouldFilterEvent(_i9.Event? event) =>
+      (super.noSuchMethod(
+            Invocation.method(#shouldFilterEvent, [event]),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  int filterAdultContentFromExistingVideos() =>
+      (super.noSuchMethod(
+            Invocation.method(#filterAdultContentFromExistingVideos, []),
+            returnValue: 0,
+          )
+          as int);
 
   @override
   List<_i3.VideoEvent> getVideos(_i5.SubscriptionType? type) =>
@@ -338,8 +370,8 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
     int? limit = 200,
     bool? replace = true,
     bool? includeReposts = false,
-    _i8.VideoSortField? sortBy,
-    _i8.NIP50SortMode? nip50Sort,
+    _i10.VideoSortField? sortBy,
+    _i10.NIP50SortMode? nip50Sort,
     bool? force = false,
   }) =>
       (super.noSuchMethod(
@@ -413,7 +445,7 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
   _i4.Future<void> subscribeToHomeFeed(
     List<String>? followingPubkeys, {
     int? limit = 100,
-    _i8.VideoSortField? sortBy,
+    _i10.VideoSortField? sortBy,
     bool? force = false,
   }) =>
       (super.noSuchMethod(
@@ -430,8 +462,8 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
   @override
   _i4.Future<void> subscribeToDiscovery({
     int? limit = 100,
-    _i8.VideoSortField? sortBy,
-    _i8.NIP50SortMode? nip50Sort,
+    _i10.VideoSortField? sortBy,
+    _i10.NIP50SortMode? nip50Sort,
     bool? force = false,
   }) =>
       (super.noSuchMethod(
@@ -795,13 +827,13 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
       );
 
   @override
-  void addListener(_i10.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i11.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#addListener, [listener]),
     returnValueForMissingStub: null,
   );
 
   @override
-  void removeListener(_i10.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i11.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#removeListener, [listener]),
     returnValueForMissingStub: null,
   );

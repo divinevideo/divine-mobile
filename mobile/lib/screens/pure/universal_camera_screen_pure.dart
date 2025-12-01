@@ -507,7 +507,7 @@ class _UniversalCameraScreenPureState
                   isRecording: recordingState.isRecording,
                 ),
 
-              // Tap-anywhere-to-record gesture detector
+              // Tap-anywhere-to-record gesture detector (MUST be before top bar so bar receives taps)
               Positioned.fill(
                 child: GestureDetector(
                   onTapDown: !kIsWeb && recordingState.canRecord
@@ -522,6 +522,14 @@ class _UniversalCameraScreenPureState
                   behavior: HitTestBehavior.translucent,
                   child: const SizedBox.expand(),
                 ),
+              ),
+
+              // Top progress bar - Vine-style full width at top (AFTER gesture detector so buttons work)
+              Positioned(
+                top: MediaQuery.of(context).padding.top,
+                left: 0,
+                right: 0,
+                child: _buildTopProgressBar(recordingState),
               ),
 
               // Square crop mask overlay (only shown in square mode)
@@ -759,6 +767,103 @@ class _UniversalCameraScreenPureState
     );
   }
 
+  /// Vine-style top bar with X (close), progress bar, and > (publish) buttons
+  Widget _buildTopProgressBar(VineRecordingUIState recordingState) {
+    final progress = recordingState.progress;
+    final hasSegments = recordingState.hasSegments;
+
+    return Container(
+      height: 44, // Taller to accommodate buttons
+      color: VineTheme.vineGreen,
+      child: Row(
+        children: [
+          // X button (close/cancel) on the left - pops back to previous screen
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              Log.info(
+                '📹 X CANCEL - popping back',
+                category: LogCategory.video,
+              );
+              // Camera is pushed via pushCamera(), so pop() returns to previous screen
+              GoRouter.of(context).pop();
+            },
+            child: Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.close,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+          // Progress bar in the middle (takes remaining space)
+          Expanded(
+            child: Container(
+              height: 24,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 50),
+                    width: double.infinity,
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: progress.clamp(0.0, 1.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.5),
+                              blurRadius: 4,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // > button (publish/proceed) on the right
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: hasSegments
+                ? () {
+                    Log.info(
+                      '📹 > PUBLISH BUTTON PRESSED',
+                      category: LogCategory.video,
+                    );
+                    _finishRecording();
+                  }
+                : null,
+            child: Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.chevron_right,
+                color: hasSegments ? Colors.white : Colors.white.withValues(alpha: 0.3),
+                size: 32,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRecordingControls(dynamic recordingState) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -798,32 +903,8 @@ class _UniversalCameraScreenPureState
           ),
 
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Cancel/Back button (when idle) OR Publish button (when has segments)
-            IconButton(
-              onPressed: recordingState.hasSegments
-                  ? () {
-                      // Finish and publish
-                      Log.info(
-                        '📹 Publish button pressed',
-                        category: LogCategory.video,
-                      );
-                      _finishRecording();
-                    }
-                  : () {
-                      Navigator.of(context).pop();
-                    },
-              icon: Icon(
-                recordingState.hasSegments ? Icons.check_circle : Icons.close,
-                color: recordingState.hasSegments
-                    ? VineTheme.vineGreen
-                    : Colors.white,
-                size: recordingState.hasSegments ? 40 : 32,
-              ),
-              tooltip: recordingState.hasSegments ? 'Publish video' : 'Cancel',
-            ),
-
             // Record button - Platform-specific interaction
             // Web: Tap to start/stop (single continuous recording)
             // Mobile: Press-and-hold to record, release to pause (segmented)

@@ -211,17 +211,19 @@ public class NativeCameraPlugin: NSObject, FlutterPlugin {
             // Add movie output for recording
             movieOutput = AVCaptureMovieFileOutput()
             if let movieOutput = movieOutput, captureSession.canAddOutput(movieOutput) {
-                // Configure movie output for optimal vine recording
-                movieOutput.maxRecordedDuration = CMTimeMakeWithSeconds(8.0, preferredTimescale: 1) // Slightly more than 6s for safety
-                movieOutput.maxRecordedFileSize = Int64(50 * 1024 * 1024) // 50MB max file size
-                
+                // Configure movie output for vine recording
+                // No wall-clock duration limit - users may take hours setting up shots between segments.
+                // The actual 6-second recorded content limit is enforced by Flutter virtual segments.
+                movieOutput.maxRecordedDuration = CMTime.invalid // No limit
+                movieOutput.maxRecordedFileSize = Int64(500 * 1024 * 1024) // 500MB max file size
+
                 // Set up video settings for good quality/size balance
                 // macOS will use the default system codec (typically H.264)
                 print("🎥 [NativeCamera] Using system default codec for macOS recording")
-                
+
                 captureSession.addOutput(movieOutput)
-                print("✅ [NativeCamera] Movie output added to capture session with optimal settings")
-                print("🎥 [NativeCamera] Max duration: 8s, Max file size: 50MB")
+                print("✅ [NativeCamera] Movie output added to capture session")
+                print("🎥 [NativeCamera] No wall-clock limit (6s content limit enforced by Flutter)")
             } else {
                 print("❌ [NativeCamera] Failed to add movie output to capture session")
             }

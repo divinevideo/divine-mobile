@@ -92,7 +92,7 @@ class VideoSharingService {
       // Create NIP-04 encrypted DM (kind 4)
       final tags = <List<String>>[
         ['p', recipientPubkey], // Recipient
-        ['client', 'openvine'],
+        ['client', 'diVine'],
       ];
 
       // Add video reference as tag

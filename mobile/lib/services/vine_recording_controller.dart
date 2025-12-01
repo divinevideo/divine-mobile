@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:camera_macos/camera_macos.dart' as macos;
+// camera_macos removed - using NativeMacOSCamera for both preview and recording
 import 'package:path_provider/path_provider.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
@@ -492,9 +492,8 @@ class MobileCameraInterface extends CameraPlatformInterface {
   }
 }
 
-/// macOS camera implementation using hybrid approach:
-/// - camera_macos for visual preview
-/// - native platform channels for recording (more reliable)
+/// macOS camera implementation using native platform channels
+/// Uses single AVCaptureSession for both preview and recording via NativeMacOSCamera
 class MacOSCameraInterface extends CameraPlatformInterface
     with AsyncInitialization {
   final GlobalKey _cameraKey = GlobalKey(debugLabel: 'vineCamera');
@@ -510,6 +509,7 @@ class MacOSCameraInterface extends CameraPlatformInterface
 
   // Recording completion tracking
   DateTime? _recordingStartTime;
+  DateTime? _currentSegmentStartTime;
   Timer? _maxDurationTimer;
 
   @override
@@ -534,17 +534,9 @@ class MacOSCameraInterface extends CameraPlatformInterface
     // Complete initialization now that native camera is ready for recording
     completeInitialization();
 
-    // Create the camera widget for visual preview (asynchronous, doesn't block recording)
+    // Create the camera widget using native frame stream (single AVCaptureSession)
     _previewWidget = SizedBox.expand(
-      child: macos.CameraMacOSView(
-        key: _cameraKey,
-        fit: BoxFit.cover,
-        cameraMode: macos.CameraMacOSMode.video,
-        onCameraInizialized: (controller) {
-          Log.info('📱 macOS camera visual preview initialized',
-              name: 'VineRecordingController', category: LogCategory.system);
-        },
-      ),
+      child: _NativeFramePreview(key: _cameraKey),
     );
 
     Log.info('📱 Native macOS camera initialized successfully',
@@ -568,13 +560,15 @@ class MacOSCameraInterface extends CameraPlatformInterface
           'macOS camera not initialized after waiting 5 seconds: $e');
     }
 
-    // For macOS, use single recording mode
+    // For macOS, use single recording mode - one continuous native recording
+    // with virtual segments tracked in software
     if (!isSingleRecordingMode && !isRecording) {
-      // First time - start the single recording
+      // First segment - start the native recording
       // Don't set currentRecordingPath yet - native will provide the actual path
       isRecording = true;
       isSingleRecordingMode = true;
       _recordingStartTime = DateTime.now();
+      _currentSegmentStartTime = _recordingStartTime;
 
       // Start native recording
       final started = await NativeMacOSCamera.startRecording();
@@ -582,43 +576,59 @@ class MacOSCameraInterface extends CameraPlatformInterface
         isRecording = false;
         isSingleRecordingMode = false;
         _recordingStartTime = null;
+        _currentSegmentStartTime = null;
         throw Exception('Failed to start native macOS recording');
       }
 
-      // Note: Auto-stop timer is handled by VineRecordingController._startMaxDurationTimer()
-      // No need for a separate timer here to avoid race conditions
-
-      Log.info('Started native macOS single recording mode',
+      Log.info('Started native macOS single recording mode (segment 1)',
           name: 'VineRecordingController', category: LogCategory.system);
     } else if (isSingleRecordingMode && isRecording) {
-      // Already recording in single mode - just track the virtual segment start
-      Log.verbose(
-          'Native macOS single recording mode - tracking new virtual segment',
+      // Subsequent segments - native recording continues, just track segment start
+      _currentSegmentStartTime = DateTime.now();
+      Log.info(
+          'Native macOS recording continues - starting segment ${_virtualSegments.length + 2}',
           name: 'VineRecordingController',
           category: LogCategory.system);
     }
+    // Note: The case (isSingleRecordingMode && !isRecording) should not happen
+    // since we keep isRecording=true between segments
   }
 
   @override
   Future<String?> stopRecordingSegment() async {
     Log.debug(
-        '📱 Stopping recording segment, recording: $isRecording, singleMode: $isSingleRecordingMode',
+        '📱 Pausing segment, recording: $isRecording, singleMode: $isSingleRecordingMode',
         name: 'VineRecordingController',
         category: LogCategory.system);
 
-    if (!isSingleRecordingMode) {
+    if (!isSingleRecordingMode || !isRecording) {
       return null;
     }
 
-    // In single recording mode, complete the recording and get the actual file
-    if (isSingleRecordingMode && isRecording) {
-      Log.verbose('Native macOS single recording mode - completing recording',
-          name: 'VineRecordingController', category: LogCategory.system);
-      // Complete the recording and get the actual file path
-      final completedPath = await completeRecording();
-      return completedPath;
+    // In single recording mode, track the segment end but KEEP native recording going
+    // This allows multiple segments to be recorded continuously
+    if (_currentSegmentStartTime != null) {
+      final endTime = DateTime.now();
+      final duration = endTime.difference(_currentSegmentStartTime!);
+
+      final segment = RecordingSegment(
+        startTime: _currentSegmentStartTime!,
+        endTime: endTime,
+        duration: duration,
+        filePath: '', // Placeholder - actual path comes from completeRecording()
+      );
+
+      _virtualSegments.add(segment);
+      Log.info(
+          'Tracked virtual segment ${_virtualSegments.length}: ${duration.inMilliseconds}ms (native recording continues)',
+          name: 'VineRecordingController',
+          category: LogCategory.system);
     }
 
+    // Clear segment start time (will be set again on next segment start)
+    _currentSegmentStartTime = null;
+
+    // Return null - file path only comes from completeRecording() at the end
     return null;
   }
 
@@ -629,6 +639,26 @@ class MacOSCameraInterface extends CameraPlatformInterface
     }
 
     _maxDurationTimer?.cancel();
+
+    // If there's an active segment in progress, track it before stopping
+    if (_currentSegmentStartTime != null) {
+      final endTime = DateTime.now();
+      final duration = endTime.difference(_currentSegmentStartTime!);
+
+      final segment = RecordingSegment(
+        startTime: _currentSegmentStartTime!,
+        endTime: endTime,
+        duration: duration,
+        filePath: '', // Will be updated below
+      );
+
+      _virtualSegments.add(segment);
+      Log.info(
+          'Tracked final segment ${_virtualSegments.length}: ${duration.inMilliseconds}ms',
+          name: 'VineRecordingController',
+          category: LogCategory.system);
+    }
+
     isRecording = false;
 
     // Stop native recording and get the file path
@@ -638,29 +668,21 @@ class MacOSCameraInterface extends CameraPlatformInterface
       // The native implementation returns the actual file path
       currentRecordingPath = recordedPath;
 
-      // Create a virtual segment for the entire recording
-      if (_recordingStartTime != null) {
-        final endTime = DateTime.now();
-        final duration = endTime.difference(_recordingStartTime!);
+      // Calculate total duration from all segments
+      final totalDuration = _virtualSegments.fold<Duration>(
+        Duration.zero,
+        (sum, segment) => sum + segment.duration,
+      );
 
-        final segment = RecordingSegment(
-          startTime: _recordingStartTime!,
-          endTime: endTime,
-          duration: duration,
-          filePath: recordedPath,
-        );
-
-        _virtualSegments.add(segment);
-        Log.info('Added virtual segment: ${duration.inMilliseconds}ms',
-            name: 'VineRecordingController', category: LogCategory.system);
-      }
-
-      Log.info('Native macOS recording completed: $recordedPath',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+          'Native macOS recording completed: $recordedPath (${_virtualSegments.length} segments, total: ${totalDuration.inMilliseconds}ms)',
+          name: 'VineRecordingController',
+          category: LogCategory.system);
 
       // Don't clear isSingleRecordingMode here - it's needed by finishRecording()
       // It will be cleared in dispose() or when starting a new recording
       _recordingStartTime = null;
+      _currentSegmentStartTime = null;
 
       return recordedPath;
     } else {
@@ -669,6 +691,7 @@ class MacOSCameraInterface extends CameraPlatformInterface
       // Clear flags on error
       isSingleRecordingMode = false;
       _recordingStartTime = null;
+      _currentSegmentStartTime = null;
       return null;
     }
   }
@@ -700,9 +723,12 @@ class MacOSCameraInterface extends CameraPlatformInterface
   /// Get virtual segments for macOS single recording mode
   List<RecordingSegment> getVirtualSegments() => _virtualSegments;
 
+  /// Get the timestamp when native recording started (for calculating video offsets)
+  DateTime? get recordingStartTime => _recordingStartTime;
+
   @override
   Widget get previewWidget {
-    // Return the visual preview from camera_macos, or placeholder if not ready
+    // Return the native frame preview widget, or placeholder if not ready
     if (_previewWidget == null) {
       if (isInitialized) {
         Log.info('📱 macOS camera initialized but preview widget not created yet',
@@ -768,8 +794,61 @@ class MacOSCameraInterface extends CameraPlatformInterface
     currentRecordingPath = null;
     _virtualSegments.clear();
     _recordingStartTime = null;
+    _currentSegmentStartTime = null;
     Log.debug('📱 Native macOS camera interface reset',
         name: 'VineRecordingController', category: LogCategory.system);
+  }
+}
+
+/// Native frame preview widget for macOS using NativeMacOSCamera.frameStream
+/// Uses a single AVCaptureSession for both preview and recording
+class _NativeFramePreview extends StatefulWidget {
+  const _NativeFramePreview({super.key});
+
+  @override
+  State<_NativeFramePreview> createState() => _NativeFramePreviewState();
+}
+
+class _NativeFramePreviewState extends State<_NativeFramePreview> {
+  Uint8List? _lastFrame;
+  StreamSubscription<Uint8List>? _frameSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _frameSubscription = NativeMacOSCamera.frameStream.listen((frameData) {
+      if (mounted) {
+        setState(() {
+          _lastFrame = frameData;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _frameSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_lastFrame == null) {
+      return const ColoredBox(
+        color: Colors.black,
+        child: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        ),
+      );
+    }
+
+    return Image.memory(
+      _lastFrame!,
+      fit: BoxFit.cover,
+      gaplessPlayback: true,
+    );
   }
 }
 
@@ -958,7 +1037,15 @@ class VineRecordingController {
   bool get canRecord =>
       remainingDuration > minSegmentDuration &&
       _state != VineRecordingState.processing;
-  bool get hasSegments => _segments.isNotEmpty;
+  bool get hasSegments {
+    if (_segments.isNotEmpty) return true;
+    // For macOS, also check virtual segments since we use single-recording mode
+    if (!kIsWeb && Platform.isMacOS && _cameraInterface is MacOSCameraInterface) {
+      final macOSInterface = _cameraInterface as MacOSCameraInterface;
+      return macOSInterface.getVirtualSegments().isNotEmpty;
+    }
+    return false;
+  }
   Widget get cameraPreview =>
       _cameraInterface?.previewWidget ??
       const ColoredBox(
@@ -1210,43 +1297,25 @@ class VineRecordingController {
 
       // Now we're guaranteed to have at least minSegmentDuration
       if (segmentDuration >= minSegmentDuration) {
-        // For macOS in single recording mode, stop the native recording to get the actual path
+        // For macOS in single recording mode, track segment but KEEP native recording going
+        // The native recording only stops when finishRecording() is called
         if (!kIsWeb &&
             Platform.isMacOS &&
             _cameraInterface is MacOSCameraInterface) {
           final macOSInterface = _cameraInterface as MacOSCameraInterface;
 
-          // Cancel auto-stop timer since user is manually stopping
-          macOSInterface._maxDurationTimer?.cancel();
+          // Track the segment end time but DON'T stop native recording
+          // This allows subsequent segments to continue from the same recording
+          await macOSInterface.stopRecordingSegment();
 
-          // Stop the native recording and get the actual file path
-          final recordedPath = await macOSInterface.completeRecording();
+          // Update total recorded duration for progress bar
+          _totalRecordedDuration += segmentDuration;
 
-          if (recordedPath != null) {
-            Log.info('📱 Native recording stopped, path: $recordedPath',
-                name: 'VineRecordingController', category: LogCategory.system);
-
-            final segment = RecordingSegment(
-              startTime: segmentStartTime,
-              endTime: segmentEndTime,
-              duration: segmentDuration,
-              filePath: recordedPath,
-            );
-
-            _segments.add(segment);
-            _totalRecordedDuration += segmentDuration;
-
-            Log.info('📱 Segment added - segments count now: ${_segments.length}',
-                name: 'VineRecordingController', category: LogCategory.system);
-
-            Log.info(
-                'Completed segment ${_segments.length}: ${segmentDuration.inMilliseconds}ms',
-                name: 'VineRecordingController',
-                category: LogCategory.system);
-          } else {
-            Log.warning('Failed to stop native recording - no path returned',
-                name: 'VineRecordingController', category: LogCategory.system);
-          }
+          final virtualSegments = macOSInterface.getVirtualSegments();
+          Log.info(
+              '📱 macOS segment ${virtualSegments.length} tracked (${segmentDuration.inMilliseconds}ms) - native recording continues',
+              name: 'VineRecordingController',
+              category: LogCategory.system);
         } else {
           // Normal segment recording for other platforms
           final filePath = await _cameraInterface!.stopRecordingSegment();
@@ -1324,10 +1393,22 @@ class VineRecordingController {
       _stopMaxDurationTimer();
 
       // Reset total duration to actual segments total (removing any in-progress time)
-      _totalRecordedDuration = _segments.fold<Duration>(
-        Duration.zero,
-        (total, segment) => total + segment.duration,
-      );
+      // For macOS with virtual segments, use the virtual segments for duration calculation
+      if (!kIsWeb &&
+          Platform.isMacOS &&
+          _cameraInterface is MacOSCameraInterface) {
+        final macOSInterface = _cameraInterface as MacOSCameraInterface;
+        final virtualSegments = macOSInterface.getVirtualSegments();
+        _totalRecordedDuration = virtualSegments.fold<Duration>(
+          Duration.zero,
+          (total, segment) => total + segment.duration,
+        );
+      } else {
+        _totalRecordedDuration = _segments.fold<Duration>(
+          Duration.zero,
+          (total, segment) => total + segment.duration,
+        );
+      }
 
       // Check if we've reached the maximum duration or if on web (single segment only)
       if (_totalRecordedDuration >= maxRecordingDuration || kIsWeb) {
@@ -1651,6 +1732,140 @@ class VineRecordingController {
     return croppedFile;
   }
 
+  /// Extract only the recorded segments from a macOS continuous recording
+  /// Uses FFmpeg to cut out the paused portions based on virtual segment timestamps
+  Future<File> _extractMacOSSegments(
+    String inputPath,
+    List<RecordingSegment> virtualSegments,
+    DateTime recordingStartTime,
+  ) async {
+    if (virtualSegments.isEmpty) {
+      throw Exception('No virtual segments to extract');
+    }
+
+    final tempDir = await getTemporaryDirectory();
+
+    // If only one segment, just trim it directly with aspect ratio crop
+    if (virtualSegments.length == 1) {
+      final segment = virtualSegments.first;
+      final startOffset = segment.startTime.difference(recordingStartTime);
+      final startSec = startOffset.inMilliseconds / 1000.0;
+      final durationSec = segment.duration.inMilliseconds / 1000.0;
+
+      final outputPath = '${tempDir.path}/vine_extracted_${DateTime.now().millisecondsSinceEpoch}.mp4';
+      final cropFilter = _buildCropFilter(_aspectRatio);
+
+      // Use -ss before -i for fast seeking, then -t for duration
+      final command = '-y -ss $startSec -i "$inputPath" -t $durationSec -vf "$cropFilter" -c:v libx264 -preset fast -c:a aac "$outputPath"';
+
+      Log.info('📹 Extracting single macOS segment: start=${startSec}s, duration=${durationSec}s',
+          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info('📹 FFmpeg command: $command',
+          name: 'VineRecordingController', category: LogCategory.system);
+
+      final session = await FFmpegKit.execute(command);
+      final returnCode = await session.getReturnCode();
+
+      if (!ReturnCode.isSuccess(returnCode)) {
+        final output = await session.getOutput();
+        Log.error('📹 FFmpeg segment extraction failed: $output',
+            name: 'VineRecordingController', category: LogCategory.system);
+        throw Exception('FFmpeg segment extraction failed');
+      }
+
+      final outputFile = File(outputPath);
+      if (!await outputFile.exists()) {
+        throw Exception('Extracted segment file does not exist');
+      }
+
+      Log.info('📹 Single segment extracted successfully: $outputPath',
+          name: 'VineRecordingController', category: LogCategory.system);
+      return outputFile;
+    }
+
+    // Multiple segments: extract each, then concatenate
+    Log.info('📹 Extracting ${virtualSegments.length} segments from macOS continuous recording',
+        name: 'VineRecordingController', category: LogCategory.system);
+
+    final extractedPaths = <String>[];
+
+    for (var i = 0; i < virtualSegments.length; i++) {
+      final segment = virtualSegments[i];
+      final startOffset = segment.startTime.difference(recordingStartTime);
+      final startSec = startOffset.inMilliseconds / 1000.0;
+      final durationSec = segment.duration.inMilliseconds / 1000.0;
+
+      final extractedPath = '${tempDir.path}/segment_$i.mp4';
+
+      // Extract segment without cropping first (will crop during concat)
+      final extractCommand = '-y -ss $startSec -i "$inputPath" -t $durationSec -c:v libx264 -preset ultrafast -c:a aac "$extractedPath"';
+
+      Log.info('📹 Extracting segment $i: start=${startSec}s, duration=${durationSec}s',
+          name: 'VineRecordingController', category: LogCategory.system);
+
+      final session = await FFmpegKit.execute(extractCommand);
+      final returnCode = await session.getReturnCode();
+
+      if (!ReturnCode.isSuccess(returnCode)) {
+        final output = await session.getOutput();
+        Log.error('📹 Failed to extract segment $i: $output',
+            name: 'VineRecordingController', category: LogCategory.system);
+        throw Exception('Failed to extract segment $i');
+      }
+
+      extractedPaths.add(extractedPath);
+      Log.info('📹 Segment $i extracted successfully',
+          name: 'VineRecordingController', category: LogCategory.system);
+    }
+
+    // Create concat file list
+    final concatFilePath = '${tempDir.path}/concat_list.txt';
+    final concatFile = File(concatFilePath);
+    final buffer = StringBuffer();
+    for (final path in extractedPaths) {
+      buffer.writeln("file '$path'");
+    }
+    await concatFile.writeAsString(buffer.toString());
+
+    // Concatenate with aspect ratio crop
+    final outputPath = '${tempDir.path}/vine_final_${DateTime.now().millisecondsSinceEpoch}.mp4';
+    final cropFilter = _buildCropFilter(_aspectRatio);
+    final concatCommand = '-y -f concat -safe 0 -i "$concatFilePath" -vf "$cropFilter" -c:v libx264 -preset fast -c:a aac "$outputPath"';
+
+    Log.info('📹 Concatenating extracted segments with crop filter',
+        name: 'VineRecordingController', category: LogCategory.system);
+
+    final concatSession = await FFmpegKit.execute(concatCommand);
+    final concatReturnCode = await concatSession.getReturnCode();
+
+    if (!ReturnCode.isSuccess(concatReturnCode)) {
+      final output = await concatSession.getOutput();
+      Log.error('📹 FFmpeg concat failed: $output',
+          name: 'VineRecordingController', category: LogCategory.system);
+      throw Exception('FFmpeg concatenation of extracted segments failed');
+    }
+
+    // Cleanup temp files
+    try {
+      await concatFile.delete();
+      for (final path in extractedPaths) {
+        await File(path).delete();
+      }
+    } catch (e) {
+      Log.warning('📹 Failed to cleanup temp files: $e',
+          name: 'VineRecordingController', category: LogCategory.system);
+    }
+
+    final outputFile = File(outputPath);
+    if (!await outputFile.exists()) {
+      throw Exception('Final concatenated file does not exist');
+    }
+
+    Log.info('📹 All segments extracted and concatenated: $outputPath',
+        name: 'VineRecordingController', category: LogCategory.system);
+    return outputFile;
+  }
+
   /// Generate native ProofMode proof for a video file
   Future<NativeProofData?> _generateNativeProof(File videoFile) async {
     try {
@@ -1711,10 +1926,14 @@ class VineRecordingController {
           _cameraInterface is MacOSCameraInterface) {
         final macOSInterface = _cameraInterface as MacOSCameraInterface;
 
-        // For single recording mode, get the recorded file directly
+        // For single recording mode, extract only the virtual segment portions
         if (macOSInterface.isSingleRecordingMode) {
+          final virtualSegments = macOSInterface.getVirtualSegments();
+          final recordingStartTime = macOSInterface.recordingStartTime;
+
           Log.info(
-              '📱 finishRecording: macOS single mode, isRecording=${macOSInterface.isRecording}',
+              '📱 finishRecording: macOS single mode, isRecording=${macOSInterface.isRecording}, '
+              'virtualSegments=${virtualSegments.length}, recordingStartTime=$recordingStartTime',
               name: 'VineRecordingController',
               category: LogCategory.system);
 
@@ -1724,16 +1943,36 @@ class VineRecordingController {
             throw Exception('No valid recording found for macOS single recording mode');
           }
 
-          // Apply aspect ratio crop to the video
-          final croppedFile = await _applyAspectRatioCrop(recordingPath);
+          File finalFile;
+
+          // If we have virtual segments and a valid start time, extract only those portions
+          if (virtualSegments.isNotEmpty && recordingStartTime != null) {
+            Log.info(
+                '📱 Extracting ${virtualSegments.length} virtual segments from continuous recording',
+                name: 'VineRecordingController',
+                category: LogCategory.system);
+
+            finalFile = await _extractMacOSSegments(
+              recordingPath,
+              virtualSegments,
+              recordingStartTime,
+            );
+          } else {
+            // Fallback: just apply aspect ratio crop (shouldn't normally happen)
+            Log.warning(
+                '📱 No virtual segments found, falling back to full video crop',
+                name: 'VineRecordingController',
+                category: LogCategory.system);
+            finalFile = await _applyAspectRatioCrop(recordingPath);
+          }
 
           _setState(VineRecordingState.completed);
           macOSInterface.isSingleRecordingMode = false; // Clear flag after successful completion
 
           // Generate native ProofMode proof
-          final nativeProof = await _generateNativeProof(croppedFile);
+          final nativeProof = await _generateNativeProof(finalFile);
 
-          return (croppedFile, nativeProof);
+          return (finalFile, nativeProof);
         }
       }
 
@@ -2014,14 +2253,29 @@ class VineRecordingController {
     _stopProgressTimer();
     _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (!_disposed && _state == VineRecordingState.recording) {
-        // For macOS, update the total duration based on current segment time
+        // Update the total duration based on current segment time
         if (_currentSegmentStartTime != null) {
           final currentSegmentDuration =
               DateTime.now().difference(_currentSegmentStartTime!);
-          final previousDuration = _segments.fold<Duration>(
-            Duration.zero,
-            (total, segment) => total + segment.duration,
-          );
+
+          Duration previousDuration;
+          // On macOS, use virtual segments for accumulated duration since _segments is empty
+          if (!kIsWeb &&
+              Platform.isMacOS &&
+              _cameraInterface is MacOSCameraInterface) {
+            final macOSInterface = _cameraInterface as MacOSCameraInterface;
+            final virtualSegments = macOSInterface.getVirtualSegments();
+            previousDuration = virtualSegments.fold<Duration>(
+              Duration.zero,
+              (total, segment) => total + segment.duration,
+            );
+          } else {
+            previousDuration = _segments.fold<Duration>(
+              Duration.zero,
+              (total, segment) => total + segment.duration,
+            );
+          }
+
           _totalRecordedDuration = previousDuration + currentSegmentDuration;
         }
 

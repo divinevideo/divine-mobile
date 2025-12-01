@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/services/relay_gateway_settings.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Screen for managing Nostr relay settings
@@ -20,6 +22,22 @@ class RelaySettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
+  late RelayGatewaySettings _gatewaySettings;
+  bool _gatewayEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initGatewaySettings();
+  }
+
+  Future<void> _initGatewaySettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    _gatewaySettings = RelayGatewaySettings(prefs);
+    setState(() {
+      _gatewayEnabled = _gatewaySettings.isEnabled;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +110,9 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
               ],
             ),
           ),
+
+          // Gateway toggle section (only visible when divine relay configured)
+          _buildGatewaySection(externalRelays),
 
           // Relay list
           Expanded(
@@ -220,6 +241,63 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                       ),
                     ],
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGatewaySection(List<String> relays) {
+    // Only show when divine relay is configured
+    if (!RelayGatewaySettings.isDivineRelayConfigured(relays)) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.bolt, color: VineTheme.vineGreen, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'REST Gateway',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Switch(
+                key: const Key('gateway_toggle'),
+                value: _gatewayEnabled,
+                activeTrackColor: VineTheme.vineGreen,
+                onChanged: (value) async {
+                  await _gatewaySettings.setEnabled(value);
+                  setState(() {
+                    _gatewayEnabled = value;
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Use caching gateway for faster loading of discovery feeds, hashtags, and profiles.',
+            style: TextStyle(color: Colors.grey, fontSize: 13),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Only available when using relay.divine.video',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
           ),
         ],
       ),
