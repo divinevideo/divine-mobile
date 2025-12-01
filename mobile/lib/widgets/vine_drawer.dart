@@ -9,7 +9,6 @@ import 'package:openvine/screens/blossom_settings_screen.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
 import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/screens/relay_settings_screen.dart';
-// import 'package:openvine/screens/p2p_sync_screen.dart'; // Hidden for release
 import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';

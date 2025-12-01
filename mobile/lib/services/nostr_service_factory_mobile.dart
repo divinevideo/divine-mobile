@@ -8,6 +8,6 @@ import 'package:openvine/services/nostr_service_interface.dart';
 /// Create NostrService instance for mobile platforms
 ///
 /// Uses direct WebSocket connections to external Nostr relays
-INostrService createEmbeddedRelayService(NostrKeyManager keyManager, {void Function()? onInitialized}) {
+INostrService createDirectRelayService(NostrKeyManager keyManager, {void Function()? onInitialized}) {
   return NostrServiceDirect(keyManager, onInitialized: onInitialized);
 }

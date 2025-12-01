@@ -11,7 +11,6 @@ import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/screens/relay_settings_screen.dart';
 import 'package:openvine/screens/relay_diagnostic_screen.dart';
 import 'package:openvine/screens/safety_settings_screen.dart';
-// import 'package:openvine/screens/p2p_sync_screen.dart'; // Hidden for release
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/delete_account_dialog.dart';
