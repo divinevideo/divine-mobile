@@ -195,7 +195,6 @@ class _WelcomeActionSection extends StatelessWidget {
 
     final isAuthenticated = authState == AuthState.authenticated;
     return _ActionButton(
-      label: isAuthenticated ? 'Continue' : 'Get Started',
       enabled: canProceed && !isAccepting,
       isLoading: isAccepting,
       onPressed: () => onContinue(isAuthenticated),
@@ -272,13 +271,10 @@ class _ErrorMessage extends StatelessWidget {
 
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
-    required this.label,
     required this.enabled,
     required this.isLoading,
     required this.onPressed,
   });
-
-  final String label;
   final bool enabled;
   final bool isLoading;
   final VoidCallback onPressed;
@@ -309,7 +305,7 @@ class _ActionButton extends StatelessWidget {
                 ),
               )
             : Text(
-                enabled ? label : 'Accept Terms to Continue',
+                enabled ? 'Continue' : 'Accept Terms to Continue',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
