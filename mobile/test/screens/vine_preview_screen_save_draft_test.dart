@@ -39,7 +39,9 @@ void main() {
       expect(find.text('Save Draft'), findsOneWidget);
     });
 
-    testWidgets('should save draft when Save Draft button is tapped', (tester) async {
+    testWidgets('should save draft when Save Draft button is tapped', (
+      tester,
+    ) async {
       final videoFile = File('/path/to/test/video.mp4');
 
       await tester.pumpWidget(
@@ -55,9 +57,18 @@ void main() {
       );
 
       // Enter metadata
-      await tester.enterText(find.byKey(const Key('title-input')), 'Test Vine Title');
-      await tester.enterText(find.byKey(const Key('description-input')), 'Test description');
-      await tester.enterText(find.byKey(const Key('hashtags-input')), 'test vine');
+      await tester.enterText(
+        find.byKey(const Key('title-input')),
+        'Test Vine Title',
+      );
+      await tester.enterText(
+        find.byKey(const Key('description-input')),
+        'Test description',
+      );
+      await tester.enterText(
+        find.byKey(const Key('hashtags-input')),
+        'test vine',
+      );
 
       // Tap Save Draft
       await tester.tap(find.text('Save Draft'));
@@ -74,7 +85,9 @@ void main() {
       expect(drafts.first.videoFile.path, videoFile.path);
     });
 
-    testWidgets('should show success message and close after saving draft', (tester) async {
+    testWidgets('should show success message and close after saving draft', (
+      tester,
+    ) async {
       final videoFile = File('/path/to/test/video.mp4');
       bool didPop = false;
 
@@ -199,7 +212,9 @@ void main() {
       expect(drafts.first.selectedApproach, 'imageSequence');
     });
 
-    testWidgets('should not disable Save Draft button when uploading', (tester) async {
+    testWidgets('should not disable Save Draft button when uploading', (
+      tester,
+    ) async {
       final videoFile = File('/path/to/test/video.mp4');
 
       await tester.pumpWidget(
@@ -220,10 +235,7 @@ void main() {
 
       // Verify it's a TextButton and not disabled
       final textButton = tester.widget<TextButton>(
-        find.ancestor(
-          of: saveDraftButton,
-          matching: find.byType(TextButton),
-        ),
+        find.ancestor(of: saveDraftButton, matching: find.byType(TextButton)),
       );
       expect(textButton.onPressed, isNotNull);
     });

@@ -11,34 +11,40 @@ void main() {
 
       // Verify that Kind 0 would get the vine tag
       final expectedTags = [
-        ['h', 'vine']
+        ['h', 'vine'],
       ];
 
       expect(expectedTags, containsOnce(['h', 'vine']));
-      Log.info('✅ Kind 0 events will include required vine tag',
-          name: 'VineTagTest');
+      Log.info(
+        '✅ Kind 0 events will include required vine tag',
+        name: 'VineTagTest',
+      );
     });
 
     test('Kind 22 (video) events should include h:vine tag', () async {
       // Note: kind 22 test - variable removed as unused
       final expectedTags = [
-        ['h', 'vine']
+        ['h', 'vine'],
       ];
 
       expect(expectedTags, containsOnce(['h', 'vine']));
-      Log.info('✅ Kind 22 events will include required vine tag',
-          name: 'VineTagTest');
+      Log.info(
+        '✅ Kind 22 events will include required vine tag',
+        name: 'VineTagTest',
+      );
     });
 
     test('Kind 7 (reaction) events should include h:vine tag', () async {
       // Note: kind 7 test - variable removed as unused
       final expectedTags = [
-        ['h', 'vine']
+        ['h', 'vine'],
       ];
 
       expect(expectedTags, containsOnce(['h', 'vine']));
-      Log.info('✅ Kind 7 events will include required vine tag',
-          name: 'VineTagTest');
+      Log.info(
+        '✅ Kind 7 events will include required vine tag',
+        name: 'VineTagTest',
+      );
     });
 
     test('All event kinds should include h:vine tag', () async {
@@ -47,7 +53,7 @@ void main() {
 
       for (final kind in eventKinds) {
         final expectedTags = [
-          ['h', 'vine']
+          ['h', 'vine'],
         ];
         expect(
           expectedTags,
@@ -56,8 +62,10 @@ void main() {
         );
       }
 
-      Log.info('✅ All event kinds will include required vine tag',
-          name: 'VineTagTest');
+      Log.info(
+        '✅ All event kinds will include required vine tag',
+        name: 'VineTagTest',
+      );
     });
 
     test('vine tag should be automatically added to existing tags', () async {
@@ -76,8 +84,10 @@ void main() {
       expect(finalTags, containsOnce(['t', 'hashtag']));
       expect(finalTags, containsOnce(['p', 'somepubkey']));
 
-      Log.info('✅ Vine tag is added without affecting existing tags',
-          name: 'VineTagTest');
+      Log.info(
+        '✅ Vine tag is added without affecting existing tags',
+        name: 'VineTagTest',
+      );
       Log.info('Final tags: $finalTags', name: 'VineTagTest');
     });
 

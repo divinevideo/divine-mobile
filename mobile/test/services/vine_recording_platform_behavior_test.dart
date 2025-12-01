@@ -53,8 +53,11 @@ void main() {
 
         // Cannot start another segment
         await controller.startRecording();
-        expect(controller.segments.length, equals(1),
-            reason: 'Web should not allow multiple segments');
+        expect(
+          controller.segments.length,
+          equals(1),
+          reason: 'Web should not allow multiple segments',
+        );
 
         controller.dispose();
       });
@@ -111,10 +114,7 @@ void main() {
           controller.totalRecordedDuration.inMilliseconds,
           greaterThan(500),
         );
-        expect(
-          controller.totalRecordedDuration.inMilliseconds,
-          lessThan(800),
-        );
+        expect(controller.totalRecordedDuration.inMilliseconds, lessThan(800));
 
         controller.dispose();
       });
@@ -185,8 +185,11 @@ void main() {
           await controller.stopRecording();
         }
 
-        expect(controller.segments.length, equals(3),
-            reason: 'Mobile should support multiple segments for FFmpeg concat');
+        expect(
+          controller.segments.length,
+          equals(3),
+          reason: 'Mobile should support multiple segments for FFmpeg concat',
+        );
 
         controller.dispose();
       });

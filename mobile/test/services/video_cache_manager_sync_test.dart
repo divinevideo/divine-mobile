@@ -4,7 +4,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/video_cache_manager.dart';
-import 'package:path/path.dart' as path;
 
 void main() {
   group('VideoCacheManager getCachedVideoSync() bug', () {
@@ -61,29 +60,32 @@ void main() {
       // 4. Verify File exists and path is correct
     });
 
-    test('getCachedVideoSync() should detect cache file existence without async', () {
-      // ARRANGE: This test documents the expected behavior
-      // getCachedVideoSync() should:
-      // 1. Construct the expected cache file path from videoId
-      // 2. Use synchronous File.existsSync() to check existence
-      // 3. Return File if exists, null otherwise
+    test(
+      'getCachedVideoSync() should detect cache file existence without async',
+      () {
+        // ARRANGE: This test documents the expected behavior
+        // getCachedVideoSync() should:
+        // 1. Construct the expected cache file path from videoId
+        // 2. Use synchronous File.existsSync() to check existence
+        // 3. Return File if exists, null otherwise
 
-      // Currently, the method always returns null (TODO in implementation)
-      // This test will fail until the synchronous check is implemented
+        // Currently, the method always returns null (TODO in implementation)
+        // This test will fail until the synchronous check is implemented
 
-      const videoId = 'test_sync_check';
+        const videoId = 'test_sync_check';
 
-      // ACT
-      final result = cacheManager.getCachedVideoSync(videoId);
+        // ACT
+        final result = cacheManager.getCachedVideoSync(videoId);
 
-      // ASSERT: Currently returns null (bug to fix)
-      expect(result, isNull);
+        // ASSERT: Currently returns null (bug to fix)
+        expect(result, isNull);
 
-      // After fix, this test should:
-      // - Create a file at the expected cache path
-      // - Call getCachedVideoSync(videoId)
-      // - Expect it to return the File without any async calls
-    });
+        // After fix, this test should:
+        // - Create a file at the expected cache path
+        // - Call getCachedVideoSync(videoId)
+        // - Expect it to return the File without any async calls
+      },
+    );
   });
 
   group('Video initialization timeout', () {

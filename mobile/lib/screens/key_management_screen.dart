@@ -46,17 +46,22 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-          // What are Nostr keys explanation
-          _buildExplanationCard(),
-          const SizedBox(height: 24),
+              // What are Nostr keys explanation
+              _buildExplanationCard(),
+              const SizedBox(height: 24),
 
-          // Import existing key section
-          _buildImportSection(context, keyManager, nostrService, profileService),
-          const SizedBox(height: 24),
+              // Import existing key section
+              _buildImportSection(
+                context,
+                keyManager,
+                nostrService,
+                profileService,
+              ),
+              const SizedBox(height: 24),
 
-          // Export/Backup section
-          _buildExportSection(context, keyManager),
-        ],
+              // Export/Backup section
+              _buildExportSection(context, keyManager),
+            ],
           ),
         ),
       ),
@@ -94,11 +99,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
             '• Your public key (npub) is like your username - share it freely\n'
             '• Your private key (nsec) is like your password - keep it secret!\n\n'
             'Your nsec lets you access your account on any Nostr app.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              height: 1.5,
-            ),
+            style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
           ),
         ],
       ),
@@ -125,11 +126,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
         const SizedBox(height: 8),
         const Text(
           'Already have a Nostr account? Paste your private key (nsec) to access it here.',
-          style: TextStyle(
-            color: Colors.white60,
-            fontSize: 14,
-            height: 1.4,
-          ),
+          style: TextStyle(color: Colors.white60, fontSize: 14, height: 1.4),
         ),
         const SizedBox(height: 16),
         Container(
@@ -181,7 +178,12 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
                 child: ElevatedButton(
                   onPressed: _isProcessing
                       ? null
-                      : () => _importKey(context, keyManager, nostrService, profileService),
+                      : () => _importKey(
+                          context,
+                          keyManager,
+                          nostrService,
+                          profileService,
+                        ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: VineTheme.vineGreen,
                     foregroundColor: Colors.white,
@@ -214,19 +216,22 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
                 decoration: BoxDecoration(
                   color: Colors.orange.shade900.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade700.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: Colors.orange.shade700.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.warning_amber, color: Colors.orange.shade300, size: 20),
+                    Icon(
+                      Icons.warning_amber,
+                      color: Colors.orange.shade300,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     const Expanded(
                       child: Text(
                         'This will replace your current key!',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
                       ),
                     ),
                   ],
@@ -254,11 +259,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
         const SizedBox(height: 8),
         const Text(
           'Save your private key (nsec) to use your account in other Nostr apps.',
-          style: TextStyle(
-            color: Colors.white60,
-            fontSize: 14,
-            height: 1.4,
-          ),
+          style: TextStyle(color: Colors.white60, fontSize: 14, height: 1.4),
         ),
         const SizedBox(height: 16),
         Container(
@@ -279,10 +280,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
                   icon: const Icon(Icons.copy, size: 20),
                   label: const Text(
                     'Copy My Private Key (nsec)',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: VineTheme.vineGreen,
@@ -300,7 +298,9 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
                 decoration: BoxDecoration(
                   color: Colors.red.shade900.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade700.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: Colors.red.shade700.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -441,7 +441,9 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Private key copied to clipboard!\n\nStore it somewhere safe.'),
+            content: Text(
+              '✅ Private key copied to clipboard!\n\nStore it somewhere safe.',
+            ),
             backgroundColor: VineTheme.vineGreen,
             duration: Duration(seconds: 4),
           ),

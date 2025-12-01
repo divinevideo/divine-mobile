@@ -30,9 +30,9 @@ class ApiService {
     http.Client? client,
     Nip98AuthService? authService,
     RateLimiter? rateLimiter,
-  })  : _client = client ?? http.Client(),
-        _authService = authService,
-        _rateLimiter = rateLimiter;
+  }) : _client = client ?? http.Client(),
+       _authService = authService,
+       _rateLimiter = rateLimiter;
   static String get _baseUrl => AppConfig.backendBaseUrl;
   static const Duration _defaultTimeout = Duration(seconds: 30);
 
@@ -49,8 +49,11 @@ class ApiService {
     String? description,
     List<String>? hashtags,
   }) async {
-    Log.debug('📱 Requesting signed upload parameters',
-        name: 'ApiService', category: LogCategory.api);
+    Log.debug(
+      '📱 Requesting signed upload parameters',
+      name: 'ApiService',
+      category: LogCategory.api,
+    );
 
     try {
       // Check rate limit if configured
@@ -72,16 +75,21 @@ class ApiService {
       final response = await _client
           .post(
             uri,
-            headers:
-                await _getHeaders(url: uri.toString(), method: HttpMethod.post),
+            headers: await _getHeaders(
+              url: uri.toString(),
+              method: HttpMethod.post,
+            ),
             body: jsonEncode(requestBody),
           )
           .timeout(_defaultTimeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        Log.info('Received signed upload parameters',
-            name: 'ApiService', category: LogCategory.api);
+        Log.info(
+          'Received signed upload parameters',
+          name: 'ApiService',
+          category: LogCategory.api,
+        );
         return data;
       } else {
         throw ApiException(
@@ -100,8 +108,11 @@ class ApiService {
 
   /// Get user's upload status
   Future<Map<String, dynamic>> getUserUploadStatus() async {
-    Log.debug('Fetching user upload status',
-        name: 'ApiService', category: LogCategory.api);
+    Log.debug(
+      'Fetching user upload status',
+      name: 'ApiService',
+      category: LogCategory.api,
+    );
 
     try {
       final uri = Uri.parse('$_baseUrl/v1/media/status');
@@ -109,15 +120,20 @@ class ApiService {
       final response = await _client
           .get(
             uri,
-            headers:
-                await _getHeaders(url: uri.toString(), method: HttpMethod.get),
+            headers: await _getHeaders(
+              url: uri.toString(),
+              method: HttpMethod.get,
+            ),
           )
           .timeout(_defaultTimeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        Log.info('Retrieved upload status',
-            name: 'ApiService', category: LogCategory.api);
+        Log.info(
+          'Retrieved upload status',
+          name: 'ApiService',
+          category: LogCategory.api,
+        );
         return data;
       } else {
         throw ApiException(
@@ -154,15 +170,24 @@ class ApiService {
 
       if (authToken != null) {
         headers['Authorization'] = authToken.authorizationHeader;
-        Log.debug('📱 Added NIP-98 auth to request',
-            name: 'ApiService', category: LogCategory.api);
+        Log.debug(
+          '📱 Added NIP-98 auth to request',
+          name: 'ApiService',
+          category: LogCategory.api,
+        );
       } else {
-        Log.error('Failed to create NIP-98 auth token',
-            name: 'ApiService', category: LogCategory.api);
+        Log.error(
+          'Failed to create NIP-98 auth token',
+          name: 'ApiService',
+          category: LogCategory.api,
+        );
       }
     } else {
-      Log.warning('No authentication service available',
-          name: 'ApiService', category: LogCategory.api);
+      Log.warning(
+        'No authentication service available',
+        name: 'ApiService',
+        category: LogCategory.api,
+      );
     }
 
     return headers;
@@ -171,17 +196,21 @@ class ApiService {
   /// Test API connectivity
   Future<bool> testConnection() async {
     try {
-      Log.debug('📱 Testing API connection to: ${AppConfig.healthUrl}',
-          name: 'ApiService', category: LogCategory.api);
+      Log.debug(
+        '📱 Testing API connection to: ${AppConfig.healthUrl}',
+        name: 'ApiService',
+        category: LogCategory.api,
+      );
 
       final uri = Uri.parse(AppConfig.healthUrl);
-      final response =
-          await _client.get(uri).timeout(const Duration(seconds: 10));
+      final response = await _client
+          .get(uri)
+          .timeout(const Duration(seconds: 10));
 
       final isHealthy = response.statusCode == 200;
-      debugPrint(isHealthy
-          ? '✅ API connection healthy'
-          : '❌ API connection unhealthy');
+      debugPrint(
+        isHealthy ? '✅ API connection healthy' : '❌ API connection unhealthy',
+      );
 
       if (isHealthy) {
         try {
@@ -194,8 +223,11 @@ class ApiService {
 
       return isHealthy;
     } catch (e) {
-      Log.error('API connection test failed: $e',
-          name: 'ApiService', category: LogCategory.api);
+      Log.error(
+        'API connection test failed: $e',
+        name: 'ApiService',
+        category: LogCategory.api,
+      );
       return false;
     }
   }
@@ -212,8 +244,11 @@ class ApiService {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
     } catch (e) {
-      Log.error('Failed to get API config: $e',
-          name: 'ApiService', category: LogCategory.api);
+      Log.error(
+        'Failed to get API config: $e',
+        name: 'ApiService',
+        category: LogCategory.api,
+      );
     }
     return null;
   }

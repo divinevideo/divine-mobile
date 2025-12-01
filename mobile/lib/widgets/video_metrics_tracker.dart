@@ -180,8 +180,9 @@ class _VideoMetricsTrackerState extends ConsumerState<VideoMetricsTracker> {
       // Update total watch duration (capped by actual video length to handle pauses)
       final videoDuration = controller.value.duration;
       if (videoDuration > Duration.zero) {
-        final effectiveDuration =
-            sessionDuration > videoDuration ? videoDuration : sessionDuration;
+        final effectiveDuration = sessionDuration > videoDuration
+            ? videoDuration
+            : sessionDuration;
         _totalWatchDuration = effectiveDuration;
       }
     }
@@ -229,7 +230,8 @@ class _VideoMetricsTrackerState extends ConsumerState<VideoMetricsTracker> {
           watchDuration: _totalWatchDuration,
           totalDuration: totalDuration,
           loopCount: _loopCount,
-          completedVideo: _loopCount > 0 ||
+          completedVideo:
+              _loopCount > 0 ||
               (_totalWatchDuration.inMilliseconds >=
                   (totalDuration?.inMilliseconds ?? 0) * 0.9),
         );

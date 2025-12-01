@@ -33,8 +33,10 @@ void main() {
       testAttestationService = TestProofModeAttestationService();
       testFlagService = await TestFeatureFlagService.create();
 
-      sessionService =
-          ProofModeSessionService(testKeyService, testAttestationService);
+      sessionService = ProofModeSessionService(
+        testKeyService,
+        testAttestationService,
+      );
 
       integration = ProofModeCameraIntegration(
         testCameraService,
@@ -48,80 +50,94 @@ void main() {
     });
 
     group('Full Recording Workflow', () {
-      test('should complete full vine recording with ProofMode enabled',
-          () async {
-        // Enable all ProofMode features
-        testFlagService.setFlags({
-          'proofmode_crypto': true,
-          'proofmode_capture': true,
-          'proofmode_publish': true,
-        });
+      test(
+        'should complete full vine recording with ProofMode enabled',
+        () async {
+          // Enable all ProofMode features
+          testFlagService.setFlags({
+            'proofmode_crypto': true,
+            'proofmode_capture': true,
+            'proofmode_publish': true,
+          });
 
-        testKeyService.setMockSignature(ProofSignature(
-          signature: 'test_signature',
-          publicKeyFingerprint: 'test_fingerprint',
-          signedAt: DateTime.now(),
-        ));
+          testKeyService.setMockSignature(
+            ProofSignature(
+              signature: 'test_signature',
+              publicKeyFingerprint: 'test_fingerprint',
+              signedAt: DateTime.now(),
+            ),
+          );
 
-        testAttestationService.setMockAttestation(DeviceAttestation(
-          token: 'test_token',
-          platform: 'test',
-          deviceId: 'test_device',
-          isHardwareBacked: true,
-          createdAt: DateTime.now(),
-        ));
+          testAttestationService.setMockAttestation(
+            DeviceAttestation(
+              token: 'test_token',
+              platform: 'test',
+              deviceId: 'test_device',
+              isHardwareBacked: true,
+              createdAt: DateTime.now(),
+            ),
+          );
 
-        testCameraService.setMockRecordingResult(VineRecordingResult(
-          videoFile: File('/test/video.mp4'),
-          duration: Duration(seconds: 6),
-        ));
+          testCameraService.setMockRecordingResult(
+            VineRecordingResult(
+              videoFile: File('/test/video.mp4'),
+              duration: Duration(seconds: 6),
+            ),
+          );
 
-        // Execute full workflow
-        await integration.startRecording();
-        expect(integration.hasActiveProofSession, isTrue);
-        expect(testCameraService.isRecording, isTrue);
+          // Execute full workflow
+          await integration.startRecording();
+          expect(integration.hasActiveProofSession, isTrue);
+          expect(testCameraService.isRecording, isTrue);
 
-        // Simulate user interactions
-        integration.recordTouchInteraction();
-        integration.recordTouchInteraction();
+          // Simulate user interactions
+          integration.recordTouchInteraction();
+          integration.recordTouchInteraction();
 
-        // Complete recording
-        final result = await integration.stopRecording();
+          // Complete recording
+          final result = await integration.stopRecording();
 
-        // Verify results
-        expect(result, isA<ProofModeVineRecordingResult>());
-        expect(result.hasProof, isTrue);
-        expect(result.proofLevel, isNotNull);
-        expect(result.proofManifest, isNotNull);
-        expect(result.proofManifest!['interactions']?.length ?? 0,
-            greaterThanOrEqualTo(2));
-        expect(result.proofManifest!['pgpSignature'], isNotNull);
-        expect(integration.hasActiveProofSession, isFalse);
-      });
+          // Verify results
+          expect(result, isA<ProofModeVineRecordingResult>());
+          expect(result.hasProof, isTrue);
+          expect(result.proofLevel, isNotNull);
+          expect(result.proofManifest, isNotNull);
+          expect(
+            result.proofManifest!['interactions']?.length ?? 0,
+            greaterThanOrEqualTo(2),
+          );
+          expect(result.proofManifest!['pgpSignature'], isNotNull);
+          expect(integration.hasActiveProofSession, isFalse);
+        },
+      );
 
-      test('should complete recording without ProofMode when disabled',
-          () async {
-        // Disable ProofMode
-        testFlagService.setFlags({
-          'proofmode_crypto': false,
-          'proofmode_capture': false,
-        });
+      test(
+        'should complete recording without ProofMode when disabled',
+        () async {
+          // Disable ProofMode
+          testFlagService.setFlags({
+            'proofmode_crypto': false,
+            'proofmode_capture': false,
+          });
 
-        testCameraService.setMockRecordingResult(VineRecordingResult(
-          videoFile: File('/test/video.mp4'),
-          duration: Duration(seconds: 6),
-        ));
+          testCameraService.setMockRecordingResult(
+            VineRecordingResult(
+              videoFile: File('/test/video.mp4'),
+              duration: Duration(seconds: 6),
+            ),
+          );
 
-        await integration.startRecording();
-        expect(integration.hasActiveProofSession, isFalse);
-        expect(testCameraService.isRecording, isTrue);
+          await integration.startRecording();
+          expect(integration.hasActiveProofSession, isFalse);
+          expect(testCameraService.isRecording, isTrue);
 
-        final result = await integration.stopRecording();
+          final result = await integration.stopRecording();
 
-        expect(result.hasProof, isFalse);
-        expect(result.proofLevel, equals('unverified'));
-        expect(result.proofManifest, isNull);
-      });
+          expect(result.hasProof, isFalse);
+          expect(result.proofLevel, equals('unverified'));
+          expect(result.proofManifest, isNull);
+        },
+      );
 
       test('should handle segmented recording with pauses', () async {
         testFlagService.setFlags({
@@ -129,16 +145,20 @@ void main() {
           'proofmode_capture': true,
         });
 
-        testKeyService.setMockSignature(ProofSignature(
-          signature: 'test_sig',
-          publicKeyFingerprint: 'test_fp',
-          signedAt: DateTime.now(),
-        ));
+        testKeyService.setMockSignature(
+          ProofSignature(
+            signature: 'test_sig',
+            publicKeyFingerprint: 'test_fp',
+            signedAt: DateTime.now(),
+          ),
+        );
 
-        testCameraService.setMockRecordingResult(VineRecordingResult(
-          videoFile: File('/test/segmented_video.mp4'),
-          duration: Duration(seconds: 6),
-        ));
+        testCameraService.setMockRecordingResult(
+          VineRecordingResult(
+            videoFile: File('/test/segmented_video.mp4'),
+            duration: Duration(seconds: 6),
+          ),
+        );
 
         // Start recording
         await integration.startRecording();
@@ -165,10 +185,14 @@ void main() {
         final result = await integration.stopRecording();
 
         expect(result.hasProof, isTrue);
-        expect(result.proofManifest!['segments']?.length ?? 0,
-            greaterThanOrEqualTo(3));
-        expect(result.proofManifest!['interactions']?.length ?? 0,
-            greaterThanOrEqualTo(3));
+        expect(
+          result.proofManifest!['segments']?.length ?? 0,
+          greaterThanOrEqualTo(3),
+        );
+        expect(
+          result.proofManifest!['interactions']?.length ?? 0,
+          greaterThanOrEqualTo(3),
+        );
       });
     });
 
@@ -194,10 +218,12 @@ void main() {
         testKeyService.setShouldThrowError(true);
         testAttestationService.setShouldThrowError(true);
 
-        testCameraService.setMockRecordingResult(VineRecordingResult(
-          videoFile: File('/test/video.mp4'),
-          duration: Duration(seconds: 6),
-        ));
+        testCameraService.setMockRecordingResult(
+          VineRecordingResult(
+            videoFile: File('/test/video.mp4'),
+            duration: Duration(seconds: 6),
+          ),
+        );
 
         await integration.startRecording();
         final result = await integration.stopRecording();
@@ -229,10 +255,12 @@ void main() {
           'proofmode_capture': true,
         });
 
-        testCameraService.setMockRecordingResult(VineRecordingResult(
-          videoFile: File('/test/video1.mp4'),
-          duration: Duration(seconds: 6),
-        ));
+        testCameraService.setMockRecordingResult(
+          VineRecordingResult(
+            videoFile: File('/test/video1.mp4'),
+            duration: Duration(seconds: 6),
+          ),
+        );
 
         // First recording
         await integration.startRecording();
@@ -240,10 +268,12 @@ void main() {
         expect(integration.hasActiveProofSession, isFalse);
 
         // Second recording
-        testCameraService.setMockRecordingResult(VineRecordingResult(
-          videoFile: File('/test/video2.mp4'),
-          duration: Duration(seconds: 6),
-        ));
+        testCameraService.setMockRecordingResult(
+          VineRecordingResult(
+            videoFile: File('/test/video2.mp4'),
+            duration: Duration(seconds: 6),
+          ),
+        );
 
         await integration.startRecording();
         final result = await integration.stopRecording();
@@ -254,37 +284,45 @@ void main() {
     });
 
     group('Proof Level Determination', () {
-      test('should assign verified_mobile for hardware-backed attestation',
-          () async {
-        testFlagService.setFlags({
-          'proofmode_crypto': true,
-          'proofmode_capture': true,
-        });
+      test(
+        'should assign verified_mobile for hardware-backed attestation',
+        () async {
+          testFlagService.setFlags({
+            'proofmode_crypto': true,
+            'proofmode_capture': true,
+          });
 
-        testAttestationService.setMockAttestation(DeviceAttestation(
-          token: 'hw_token',
-          platform: 'iOS',
-          deviceId: 'device123',
-          isHardwareBacked: true,
-          createdAt: DateTime.now(),
-        ));
+          testAttestationService.setMockAttestation(
+            DeviceAttestation(
+              token: 'hw_token',
+              platform: 'iOS',
+              deviceId: 'device123',
+              isHardwareBacked: true,
+              createdAt: DateTime.now(),
+            ),
+          );
 
-        testKeyService.setMockSignature(ProofSignature(
-          signature: 'sig',
-          publicKeyFingerprint: 'fp',
-          signedAt: DateTime.now(),
-        ));
+          testKeyService.setMockSignature(
+            ProofSignature(
+              signature: 'sig',
+              publicKeyFingerprint: 'fp',
+              signedAt: DateTime.now(),
+            ),
+          );
 
-        testCameraService.setMockRecordingResult(VineRecordingResult(
-          videoFile: File('/test/video.mp4'),
-          duration: Duration(seconds: 6),
-        ));
+          testCameraService.setMockRecordingResult(
+            VineRecordingResult(
+              videoFile: File('/test/video.mp4'),
+              duration: Duration(seconds: 6),
+            ),
+          );
 
-        await integration.startRecording();
-        final result = await integration.stopRecording();
+          await integration.startRecording();
+          final result = await integration.stopRecording();
 
-        expect(result.proofLevel, equals('verified_mobile'));
-      });
+          expect(result.proofLevel, equals('verified_mobile'));
+        },
+      );
 
       test('should assign verified_web for web platform', () async {
         testFlagService.setFlags({
@@ -292,24 +330,30 @@ void main() {
           'proofmode_capture': true,
         });
 
-        testAttestationService.setMockAttestation(DeviceAttestation(
-          token: 'web_token',
-          platform: 'web',
-          deviceId: 'browser123',
-          isHardwareBacked: false,
-          createdAt: DateTime.now(),
-        ));
+        testAttestationService.setMockAttestation(
+          DeviceAttestation(
+            token: 'web_token',
+            platform: 'web',
+            deviceId: 'browser123',
+            isHardwareBacked: false,
+            createdAt: DateTime.now(),
+          ),
+        );
 
-        testKeyService.setMockSignature(ProofSignature(
-          signature: 'sig',
-          publicKeyFingerprint: 'fp',
-          signedAt: DateTime.now(),
-        ));
+        testKeyService.setMockSignature(
+          ProofSignature(
+            signature: 'sig',
+            publicKeyFingerprint: 'fp',
+            signedAt: DateTime.now(),
+          ),
+        );
 
-        testCameraService.setMockRecordingResult(VineRecordingResult(
-          videoFile: File('/test/video.mp4'),
-          duration: Duration(seconds: 6),
-        ));
+        testCameraService.setMockRecordingResult(
+          VineRecordingResult(
+            videoFile: File('/test/video.mp4'),
+            duration: Duration(seconds: 6),
+          ),
+        );
 
         await integration.startRecording();
         final result = await integration.stopRecording();
@@ -317,76 +361,88 @@ void main() {
         expect(result.proofLevel, equals('verified_web'));
       });
 
-      test('should assign basic_proof for signed but non-attested content',
-          () async {
-        testFlagService.setFlags({
-          'proofmode_crypto': true,
-          'proofmode_capture': true,
-        });
+      test(
+        'should assign basic_proof for signed but non-attested content',
+        () async {
+          testFlagService.setFlags({
+            'proofmode_crypto': true,
+            'proofmode_capture': true,
+          });
 
-        testKeyService.setMockSignature(ProofSignature(
-          signature: 'sig',
-          publicKeyFingerprint: 'fp',
-          signedAt: DateTime.now(),
-        ));
+          testKeyService.setMockSignature(
+            ProofSignature(
+              signature: 'sig',
+              publicKeyFingerprint: 'fp',
+              signedAt: DateTime.now(),
+            ),
+          );
 
-        // No attestation provided
-        testAttestationService.setMockAttestation(null);
+          // No attestation provided
+          testAttestationService.setMockAttestation(null);
 
-        testCameraService.setMockRecordingResult(VineRecordingResult(
-          videoFile: File('/test/video.mp4'),
-          duration: Duration(seconds: 6),
-        ));
+          testCameraService.setMockRecordingResult(
+            VineRecordingResult(
+              videoFile: File('/test/video.mp4'),
+              duration: Duration(seconds: 6),
+            ),
+          );
 
-        await integration.startRecording();
-        integration.recordTouchInteraction();
-        final result = await integration.stopRecording();
+          await integration.startRecording();
+          integration.recordTouchInteraction();
+          final result = await integration.stopRecording();
 
-        expect(result.proofLevel, equals('basic_proof'));
-      });
+          expect(result.proofLevel, equals('basic_proof'));
+        },
+      );
     });
 
     group('Human Activity Integration', () {
-      test('should capture natural human interactions during recording',
-          () async {
-        testFlagService.setFlags({
-          'proofmode_crypto': true,
-          'proofmode_capture': true,
-        });
+      test(
+        'should capture natural human interactions during recording',
+        () async {
+          testFlagService.setFlags({
+            'proofmode_crypto': true,
+            'proofmode_capture': true,
+          });
 
-        testCameraService.setMockRecordingResult(VineRecordingResult(
-          videoFile: File('/test/video.mp4'),
-          duration: Duration(seconds: 6),
-        ));
+          testCameraService.setMockRecordingResult(
+            VineRecordingResult(
+              videoFile: File('/test/video.mp4'),
+              duration: Duration(seconds: 6),
+            ),
+          );
 
-        await integration.startRecording();
+          await integration.startRecording();
 
-        // Simulate natural human touch patterns
-        integration.recordTouchInteraction();
-        integration.recordTouchInteraction();
-        integration.recordTouchInteraction();
-        integration.recordTouchInteraction();
+          // Simulate natural human touch patterns
+          integration.recordTouchInteraction();
+          integration.recordTouchInteraction();
+          integration.recordTouchInteraction();
+          integration.recordTouchInteraction();
 
-        final result = await integration.stopRecording();
+          final result = await integration.stopRecording();
 
-        expect(result.hasProof, isTrue);
-        expect(result.proofManifest!['interactions']?.length ?? 0,
-            greaterThanOrEqualTo(4));
+          expect(result.hasProof, isTrue);
+          expect(
+            result.proofManifest!['interactions']?.length ?? 0,
+            greaterThanOrEqualTo(4),
+          );
 
-        // Verify interactions have natural variation
-        final interactions =
-            result.proofManifest!['interactions'] as List<dynamic>? ?? [];
-        final coords = interactions
-            .map((i) => i['coordinates'] as Map<String, dynamic>)
-            .toList();
+          // Verify interactions have natural variation
+          final interactions =
+              result.proofManifest!['interactions'] as List<dynamic>? ?? [];
+          final coords = interactions
+              .map((i) => i['coordinates'] as Map<String, dynamic>)
+              .toList();
 
-        final xValues = coords.map((c) => c['x']!).toList();
-        final yValues = coords.map((c) => c['y']!).toList();
+          final xValues = coords.map((c) => c['x']!).toList();
+          final yValues = coords.map((c) => c['y']!).toList();
 
-        // Should have some variation (not all identical)
-        expect(xValues.toSet().length, greaterThan(1));
-        expect(yValues.toSet().length, greaterThan(1));
-      });
+          // Should have some variation (not all identical)
+          expect(xValues.toSet().length, greaterThan(1));
+          expect(yValues.toSet().length, greaterThan(1));
+        },
+      );
 
       test('should detect and flag bot-like interactions', () async {
         testFlagService.setFlags({
@@ -394,10 +450,12 @@ void main() {
           'proofmode_capture': true,
         });
 
-        testCameraService.setMockRecordingResult(VineRecordingResult(
-          videoFile: File('/test/video.mp4'),
-          duration: Duration(seconds: 6),
-        ));
+        testCameraService.setMockRecordingResult(
+          VineRecordingResult(
+            videoFile: File('/test/video.mp4'),
+            duration: Duration(seconds: 6),
+          ),
+        );
 
         await integration.startRecording();
 
@@ -414,8 +472,9 @@ void main() {
         final interactions =
             result.proofManifest!['interactions'] as List<dynamic>? ?? [];
         final userInteractions = interactions.cast<UserInteractionProof>();
-        final analysis =
-            ProofModeHumanDetection.analyzeInteractions(userInteractions);
+        final analysis = ProofModeHumanDetection.analyzeInteractions(
+          userInteractions,
+        );
 
         expect(analysis.isHumanLikely, isFalse);
         expect(analysis.redFlags, isNotEmpty);
@@ -429,10 +488,12 @@ void main() {
           'proofmode_capture': true,
         });
 
-        testCameraService.setMockRecordingResult(VineRecordingResult(
-          videoFile: File('/test/video.mp4'),
-          duration: Duration(seconds: 1),
-        ));
+        testCameraService.setMockRecordingResult(
+          VineRecordingResult(
+            videoFile: File('/test/video.mp4'),
+            duration: Duration(seconds: 1),
+          ),
+        );
 
         // Rapid operations
         for (int i = 0; i < 5; i++) {
@@ -562,11 +623,7 @@ class TestProofModeAttestationService extends ProofModeAttestationService {
 class TestFeatureFlagService extends FeatureFlagService {
   final Map<String, bool> _flags = {};
 
-  TestFeatureFlagService._()
-      : super(
-          apiBaseUrl: 'test',
-          prefs: _testPrefs!,
-        );
+  TestFeatureFlagService._() : super(apiBaseUrl: 'test', prefs: _testPrefs!);
 
   static SharedPreferences? _testPrefs;
 
@@ -580,8 +637,11 @@ class TestFeatureFlagService extends FeatureFlagService {
   }
 
   @override
-  Future<bool> isEnabled(String flagName,
-      {Map<String, dynamic>? attributes, bool forceRefresh = false}) async {
+  Future<bool> isEnabled(
+    String flagName, {
+    Map<String, dynamic>? attributes,
+    bool forceRefresh = false,
+  }) async {
     return _flags[flagName] ?? false;
   }
 }

@@ -45,7 +45,9 @@ void main() {
       expect(drafts.first.title, 'My Awesome Vine');
 
       // 5. Publish attempt updates status
-      final publishing = edited.copyWith(publishStatus: PublishStatus.publishing);
+      final publishing = edited.copyWith(
+        publishStatus: PublishStatus.publishing,
+      );
       await draftStorage.saveDraft(publishing);
 
       final afterPublishing = await draftStorage.getAllDrafts();

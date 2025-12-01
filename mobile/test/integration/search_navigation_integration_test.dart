@@ -28,13 +28,15 @@ void main() {
 
       // Setup default mock behavior
       when(mockNostrService.isInitialized).thenReturn(true);
-      when(mockVideoEventService.searchVideos(any, limit: anyNamed('limit')))
-          .thenAnswer((_) async {});
+      when(
+        mockVideoEventService.searchVideos(any, limit: anyNamed('limit')),
+      ).thenAnswer((_) async {});
       when(mockVideoEventService.searchResults).thenReturn([]);
     });
 
-    testWidgets('Complete search flow: enter term → URL updates',
-        (tester) async {
+    testWidgets('Complete search flow: enter term → URL updates', (
+      tester,
+    ) async {
       final container = ProviderContainer(
         overrides: [
           nostrServiceProvider.overrideWithValue(mockNostrService),
@@ -71,11 +73,15 @@ void main() {
 
       // Assert: URL should update to /search/bitcoin
       final router = container.read(goRouterProvider);
-      expect(router.routeInformationProvider.value.uri.toString(), contains('/search/bitcoin'));
+      expect(
+        router.routeInformationProvider.value.uri.toString(),
+        contains('/search/bitcoin'),
+      );
 
       // Assert: Search should be triggered
-      verify(mockVideoEventService.searchVideos('bitcoin', limit: anyNamed('limit')))
-          .called(greaterThan(0));
+      verify(
+        mockVideoEventService.searchVideos('bitcoin', limit: anyNamed('limit')),
+      ).called(greaterThan(0));
 
       // Wait for UI to settle
       await tester.pumpAndSettle(const Duration(milliseconds: 500));
@@ -85,7 +91,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Assert: URL should update to /search/bitcoin/1
-      expect(router.routeInformationProvider.value.uri.toString(), equals('/search/bitcoin/1'));
+      expect(
+        router.routeInformationProvider.value.uri.toString(),
+        equals('/search/bitcoin/1'),
+      );
 
       // Assert: PageContext should reflect feed mode
       final pageContext2 = container.read(pageContextProvider);
@@ -96,7 +105,9 @@ void main() {
       container.dispose();
     });
 
-    testWidgets('Direct URL access to /search/bitcoin loads results', (tester) async {
+    testWidgets('Direct URL access to /search/bitcoin loads results', (
+      tester,
+    ) async {
       final container = ProviderContainer(
         overrides: [
           nostrServiceProvider.overrideWithValue(mockNostrService),
@@ -120,8 +131,9 @@ void main() {
       final textField = tester.widget<TextField>(find.byType(TextField));
       expect(textField.controller?.text, equals('bitcoin'));
 
-      verify(mockVideoEventService.searchVideos('bitcoin', limit: anyNamed('limit')))
-          .called(greaterThan(0));
+      verify(
+        mockVideoEventService.searchVideos('bitcoin', limit: anyNamed('limit')),
+      ).called(greaterThan(0));
 
       final pageContext = container.read(pageContextProvider);
       expect(pageContext.value?.type, RouteType.search);
@@ -130,8 +142,9 @@ void main() {
       container.dispose();
     });
 
-    testWidgets('Direct URL access to /search/bitcoin/3 loads video feed',
-        (tester) async {
+    testWidgets('Direct URL access to /search/bitcoin/3 loads video feed', (
+      tester,
+    ) async {
       final container = ProviderContainer(
         overrides: [
           nostrServiceProvider.overrideWithValue(mockNostrService),
@@ -160,45 +173,47 @@ void main() {
       container.dispose();
     });
 
-    testWidgets('Back navigation from /search/bitcoin/1 returns to /search/bitcoin',
-        (tester) async {
-      final container = ProviderContainer(
-        overrides: [
-          nostrServiceProvider.overrideWithValue(mockNostrService),
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-        ],
-      );
+    testWidgets(
+      'Back navigation from /search/bitcoin/1 returns to /search/bitcoin',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [
+            nostrServiceProvider.overrideWithValue(mockNostrService),
+            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+          ],
+        );
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            routerConfig: container.read(goRouterProvider),
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(
+              routerConfig: container.read(goRouterProvider),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      container.read(goRouterProvider).go('/search/bitcoin/1');
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
+        container.read(goRouterProvider).go('/search/bitcoin/1');
+        await tester.pumpAndSettle(const Duration(milliseconds: 500));
 
-      final pageContext1 = container.read(pageContextProvider);
-      expect(pageContext1.value?.videoIndex, 1);
+        final pageContext1 = container.read(pageContextProvider);
+        expect(pageContext1.value?.videoIndex, 1);
 
-      final router = container.read(goRouterProvider);
-      router.go('/search/bitcoin');
-      await tester.pumpAndSettle();
+        final router = container.read(goRouterProvider);
+        router.go('/search/bitcoin');
+        await tester.pumpAndSettle();
 
-      final pageContext2 = container.read(pageContextProvider);
-      expect(pageContext2.value?.type, RouteType.search);
-      expect(pageContext2.value?.searchTerm, 'bitcoin');
-      expect(pageContext2.value?.videoIndex, isNull);
+        final pageContext2 = container.read(pageContextProvider);
+        expect(pageContext2.value?.type, RouteType.search);
+        expect(pageContext2.value?.searchTerm, 'bitcoin');
+        expect(pageContext2.value?.videoIndex, isNull);
 
-      final textField = tester.widget<TextField>(find.byType(TextField));
-      expect(textField.controller?.text, equals('bitcoin'));
+        final textField = tester.widget<TextField>(find.byType(TextField));
+        expect(textField.controller?.text, equals('bitcoin'));
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
 
     testWidgets('Changing search term updates URL', (tester) async {
       final container = ProviderContainer(
@@ -221,13 +236,15 @@ void main() {
       container.read(goRouterProvider).go('/search/bitcoin');
       await tester.pumpAndSettle(const Duration(milliseconds: 500));
 
-      verify(mockVideoEventService.searchVideos('bitcoin', limit: anyNamed('limit')))
-          .called(greaterThan(0));
+      verify(
+        mockVideoEventService.searchVideos('bitcoin', limit: anyNamed('limit')),
+      ).called(greaterThan(0));
 
       reset(mockVideoEventService);
       when(mockNostrService.isInitialized).thenReturn(true);
-      when(mockVideoEventService.searchVideos(any, limit: anyNamed('limit')))
-          .thenAnswer((_) async {});
+      when(
+        mockVideoEventService.searchVideos(any, limit: anyNamed('limit')),
+      ).thenAnswer((_) async {});
       when(mockVideoEventService.searchResults).thenReturn([]);
 
       final textField = find.byType(TextField);
@@ -235,10 +252,14 @@ void main() {
       await tester.pumpAndSettle(const Duration(milliseconds: 500));
 
       final router = container.read(goRouterProvider);
-      expect(router.routeInformationProvider.value.uri.toString(), contains('/search/nostr'));
+      expect(
+        router.routeInformationProvider.value.uri.toString(),
+        contains('/search/nostr'),
+      );
 
-      verify(mockVideoEventService.searchVideos('nostr', limit: anyNamed('limit')))
-          .called(greaterThan(0));
+      verify(
+        mockVideoEventService.searchVideos('nostr', limit: anyNamed('limit')),
+      ).called(greaterThan(0));
 
       final pageContext = container.read(pageContextProvider);
       expect(pageContext.value?.searchTerm, 'nostr');

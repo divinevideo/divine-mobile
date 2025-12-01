@@ -146,9 +146,7 @@ void main() {
 
       await tester.pumpWidgetBuilder(
         builder.build(),
-        wrapper: materialAppWrapper(
-          theme: ThemeData.light(),
-        ),
+        wrapper: materialAppWrapper(theme: ThemeData.light()),
         surfaceSize: const Size(450, 1200),
       );
 
@@ -161,10 +159,7 @@ void main() {
     });
 
     testGoldens('CompactUploadProgress states', (tester) async {
-      final builder = GoldenBuilder.grid(
-        columns: 2,
-        widthToHeightRatio: 3,
-      )
+      final builder = GoldenBuilder.grid(columns: 2, widthToHeightRatio: 3)
         ..addScenario(
           'Uploading Compact',
           CompactUploadProgress(upload: uploadingState),
@@ -191,13 +186,8 @@ void main() {
         );
 
       await tester.pumpWidgetBuilder(
-        Container(
-          color: Colors.grey[900],
-          child: builder.build(),
-        ),
-        wrapper: materialAppWrapper(
-          theme: ThemeData.dark(),
-        ),
+        Container(color: Colors.grey[900], child: builder.build()),
+        wrapper: materialAppWrapper(theme: ThemeData.dark()),
       );
 
       // Skip pumpAndSettle to avoid animation timeout
@@ -239,9 +229,7 @@ void main() {
 
       await tester.pumpWidgetBuilder(
         widget,
-        wrapper: materialAppWrapper(
-          theme: ThemeData.light(),
-        ),
+        wrapper: materialAppWrapper(theme: ThemeData.light()),
       );
 
       // Skip multiScreenGolden due to timeout issues - test single device only

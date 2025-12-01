@@ -10,8 +10,8 @@ class NostrServiceDirectWeb extends NostrServiceWeb {
   final void Function()? _onInitialized;
 
   NostrServiceDirectWeb(this._keyManager, {void Function()? onInitialized})
-      : _onInitialized = onInitialized,
-        super();
+    : _onInitialized = onInitialized,
+      super();
 
   @override
   NostrKeyManager get keyManager => _keyManager;

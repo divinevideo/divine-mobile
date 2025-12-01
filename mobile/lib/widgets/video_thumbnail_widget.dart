@@ -254,7 +254,9 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
   Widget build(BuildContext context) {
     // Calculate aspect ratio from video dimensions if available, fallback to 1:1 square
     final double aspectRatio;
-    if (widget.video.width != null && widget.video.height != null && widget.video.height! > 0) {
+    if (widget.video.width != null &&
+        widget.video.height != null &&
+        widget.video.height! > 0) {
       aspectRatio = widget.video.width! / widget.video.height!;
     } else {
       // Fallback to square for videos without dimension metadata
@@ -271,16 +273,10 @@ class _VideoThumbnailWidgetState extends State<VideoThumbnailWidget> {
     var content = _buildContent(effectiveFit);
 
     if (widget.borderRadius != null) {
-      content = ClipRRect(
-        borderRadius: widget.borderRadius!,
-        child: content,
-      );
+      content = ClipRRect(borderRadius: widget.borderRadius!, child: content);
     }
 
-    return AspectRatio(
-      aspectRatio: aspectRatio,
-      child: content,
-    );
+    return AspectRatio(aspectRatio: aspectRatio, child: content);
   }
 }
 
@@ -319,17 +315,26 @@ class _SafeNetworkImage extends StatelessWidget {
       placeholder: (context, url) => _buildFallback(),
       errorWidget: (context, url, error) {
         // Log the specific error for debugging
-        Log.error('❌ Network image failed: $url',
-            name: 'VideoThumbnailWidget', category: LogCategory.video);
-        Log.error('❌ Error type: ${error.runtimeType}, Details: $error',
-            name: 'VideoThumbnailWidget', category: LogCategory.video);
+        Log.error(
+          '❌ Network image failed: $url',
+          name: 'VideoThumbnailWidget',
+          category: LogCategory.video,
+        );
+        Log.error(
+          '❌ Error type: ${error.runtimeType}, Details: $error',
+          name: 'VideoThumbnailWidget',
+          category: LogCategory.video,
+        );
 
         // Log the full stack trace if available
         if (error is Exception) {
           try {
             final stackTrace = StackTrace.current;
-            Log.error('❌ Stack trace: $stackTrace',
-                name: 'VideoThumbnailWidget', category: LogCategory.video);
+            Log.error(
+              '❌ Stack trace: $stackTrace',
+              name: 'VideoThumbnailWidget',
+              category: LogCategory.video,
+            );
           } catch (e) {
             // Ignore stack trace errors
           }
@@ -339,9 +344,10 @@ class _SafeNetworkImage extends StatelessWidget {
         if (error.toString().contains('404') ||
             error.toString().contains('statusCode')) {
           Log.warning(
-              '🖼️ HTTP error loading thumbnail for video $videoId (FULL ID), URL: $url',
-              name: 'VideoThumbnailWidget',
-              category: LogCategory.video);
+            '🖼️ HTTP error loading thumbnail for video $videoId (FULL ID), URL: $url',
+            name: 'VideoThumbnailWidget',
+            category: LogCategory.video,
+          );
         }
 
         return _buildFallback();
@@ -353,17 +359,19 @@ class _SafeNetworkImage extends StatelessWidget {
     // Don't show blurhash here - it's already shown as background in the outer Stack
     // Just show a transparent container so the background blurhash is visible
     if (blurhash != null && blurhash!.isNotEmpty) {
-      Log.debug('🎨 Image failed, showing transparent container to reveal background blurhash',
-          name: 'VideoThumbnailWidget', category: LogCategory.video);
-      return Container(
-        width: width,
-        height: height,
-        color: Colors.transparent,
+      Log.debug(
+        '🎨 Image failed, showing transparent container to reveal background blurhash',
+        name: 'VideoThumbnailWidget',
+        category: LogCategory.video,
       );
+      return Container(width: width, height: height, color: Colors.transparent);
     }
     // Fall back to icon placeholder if no blurhash
-    Log.debug('📦 Image failed, no blurhash available, showing placeholder',
-        name: 'VideoThumbnailWidget', category: LogCategory.video);
+    Log.debug(
+      '📦 Image failed, no blurhash available, showing placeholder',
+      name: 'VideoThumbnailWidget',
+      category: LogCategory.video,
+    );
     return VideoIconPlaceholder(
       width: width,
       height: height,

@@ -78,8 +78,11 @@ mixin PageControllerSyncMixin {
     required int itemCount,
   }) {
     if (!controller.hasClients) {
-      Log.debug('⚠️  PageController sync skipped - no clients',
-          name: 'PageControllerSyncMixin', category: LogCategory.video);
+      Log.debug(
+        '⚠️  PageController sync skipped - no clients',
+        name: 'PageControllerSyncMixin',
+        category: LogCategory.video,
+      );
       return;
     }
 
@@ -91,8 +94,11 @@ mixin PageControllerSyncMixin {
 
       final currentPage = controller.page?.round() ?? 0;
       if (currentPage != safeIndex) {
-        Log.debug('🔄 Syncing PageController: current=$currentPage -> target=$safeIndex',
-            name: 'PageControllerSyncMixin', category: LogCategory.video);
+        Log.debug(
+          '🔄 Syncing PageController: current=$currentPage -> target=$safeIndex',
+          name: 'PageControllerSyncMixin',
+          category: LogCategory.video,
+        );
         controller.jumpToPage(safeIndex);
       }
     });

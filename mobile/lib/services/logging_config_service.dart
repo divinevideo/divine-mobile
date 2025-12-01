@@ -25,18 +25,24 @@ class LoggingConfigService {
       if (storedLevel != null) {
         final level = LogLevel.fromString(storedLevel);
         UnifiedLogger.setLogLevel(level);
-        Log.info('Logging initialized with stored level: ${level.name}',
-            name: 'LogConfig');
+        Log.info(
+          'Logging initialized with stored level: ${level.name}',
+          name: 'LogConfig',
+        );
       } else {
         // Log initial level
         Log.info(
-            'Logging initialized with default level: ${UnifiedLogger.currentLevel.name}',
-            name: 'LogConfig');
+          'Logging initialized with default level: ${UnifiedLogger.currentLevel.name}',
+          name: 'LogConfig',
+        );
       }
     } catch (e) {
       if (kDebugMode) {
-        Log.error('Failed to load logging preferences: $e',
-            name: 'LoggingConfigService', category: LogCategory.system);
+        Log.error(
+          'Failed to load logging preferences: $e',
+          name: 'LoggingConfigService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -66,8 +72,10 @@ class LoggingConfigService {
   /// Enable verbose logging temporarily (useful for debugging)
   void enableVerboseLogging() {
     UnifiedLogger.setLogLevel(LogLevel.verbose);
-    Log.warning('Verbose logging enabled - remember to disable for production!',
-        name: 'LogConfig');
+    Log.warning(
+      'Verbose logging enabled - remember to disable for production!',
+      name: 'LogConfig',
+    );
   }
 
   /// Reset to default log level

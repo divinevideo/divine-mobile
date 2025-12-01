@@ -75,7 +75,9 @@ void main() {
         ''');
 
         // Query event table
-        final result = await db.customSelect('SELECT * FROM event LIMIT 1').get();
+        final result = await db
+            .customSelect('SELECT * FROM event LIMIT 1')
+            .get();
         expect(result, isNotEmpty);
         expect(result.first.data['id'], contains('test_event_id'));
         expect(result.first.data['kind'], equals(1));
@@ -99,7 +101,9 @@ void main() {
 
         // Query table schema
         final schema = await db.customSelect('PRAGMA table_info(event)').get();
-        final columnNames = schema.map((row) => row.data['name'] as String).toList();
+        final columnNames = schema
+            .map((row) => row.data['name'] as String)
+            .toList();
 
         expect(columnNames, contains('id'));
         expect(columnNames, contains('pubkey'));
@@ -159,9 +163,11 @@ void main() {
         ''');
 
         // Verify table exists
-        final tables = await db.customSelect(
-          "SELECT name FROM sqlite_master WHERE type='table' AND name='user_profiles'",
-        ).get();
+        final tables = await db
+            .customSelect(
+              "SELECT name FROM sqlite_master WHERE type='table' AND name='user_profiles'",
+            )
+            .get();
 
         expect(tables, isNotEmpty);
         expect(tables.first.data['name'], equals('user_profiles'));
@@ -189,8 +195,12 @@ void main() {
         ''');
 
         // Query table schema
-        final schema = await db.customSelect('PRAGMA table_info(user_profiles)').get();
-        final columnNames = schema.map((row) => row.data['name'] as String).toList();
+        final schema = await db
+            .customSelect('PRAGMA table_info(user_profiles)')
+            .get();
+        final columnNames = schema
+            .map((row) => row.data['name'] as String)
+            .toList();
 
         expect(columnNames, contains('pubkey'));
         expect(columnNames, contains('display_name'));
@@ -230,8 +240,12 @@ void main() {
         ''');
 
         // Query table schema to verify primary key
-        final schema = await db.customSelect('PRAGMA table_info(user_profiles)').get();
-        final pubkeyColumn = schema.firstWhere((row) => row.data['name'] == 'pubkey');
+        final schema = await db
+            .customSelect('PRAGMA table_info(user_profiles)')
+            .get();
+        final pubkeyColumn = schema.firstWhere(
+          (row) => row.data['name'] == 'pubkey',
+        );
 
         // pk column indicates primary key (1 = yes, 0 = no)
         expect(pubkeyColumn.data['pk'], equals(1));
@@ -283,10 +297,16 @@ void main() {
         ''');
 
         // Query profile
-        final result = await db.customSelect(
-          'SELECT * FROM user_profiles WHERE pubkey = ?',
-          variables: [Variable('test_pubkey_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab')],
-        ).get();
+        final result = await db
+            .customSelect(
+              'SELECT * FROM user_profiles WHERE pubkey = ?',
+              variables: [
+                Variable(
+                  'test_pubkey_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
+                ),
+              ],
+            )
+            .get();
 
         expect(result, isNotEmpty);
         expect(result.first.data['display_name'], equals('Test User'));
@@ -316,48 +336,57 @@ void main() {
           )
         ''');
 
-        final testPubkey = 'test_pubkey_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab';
+        final testPubkey =
+            'test_pubkey_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab';
         final now = DateTime.now().millisecondsSinceEpoch;
 
         // Insert initial profile
-        await db.customStatement('''
+        await db.customStatement(
+          '''
           INSERT INTO user_profiles (
             pubkey, display_name, name, about, picture, banner, website, nip05, lud16, lud06, raw_data, created_at, event_id, last_fetched
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', [
-          testPubkey,
-          'Old Name',
-          'oldname',
-          'Old bio',
-          'https://example.com/old.jpg',
-          'https://example.com/old_banner.jpg',
-          'https://example.com',
-          'old@example.com',
-          'old@wallet.com',
-          'lnurl123',
-          '{}',
-          now,
-          'test_event_id_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
-          now,
-        ]);
+        ''',
+          [
+            testPubkey,
+            'Old Name',
+            'oldname',
+            'Old bio',
+            'https://example.com/old.jpg',
+            'https://example.com/old_banner.jpg',
+            'https://example.com',
+            'old@example.com',
+            'old@wallet.com',
+            'lnurl123',
+            '{}',
+            now,
+            'test_event_id_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
+            now,
+          ],
+        );
 
         // Update profile
-        await db.customStatement('''
+        await db.customStatement(
+          '''
           UPDATE user_profiles
           SET display_name = ?, name = ?, last_fetched = ?
           WHERE pubkey = ?
-        ''', [
-          'New Name',
-          'newname',
-          DateTime.now().millisecondsSinceEpoch,
-          testPubkey,
-        ]);
+        ''',
+          [
+            'New Name',
+            'newname',
+            DateTime.now().millisecondsSinceEpoch,
+            testPubkey,
+          ],
+        );
 
         // Query updated profile
-        final result = await db.customSelect(
-          'SELECT * FROM user_profiles WHERE pubkey = ?',
-          variables: [Variable(testPubkey)],
-        ).get();
+        final result = await db
+            .customSelect(
+              'SELECT * FROM user_profiles WHERE pubkey = ?',
+              variables: [Variable(testPubkey)],
+            )
+            .get();
 
         expect(result, isNotEmpty);
         expect(result.first.data['display_name'], equals('New Name'));
@@ -403,42 +432,49 @@ void main() {
         ''');
 
         // Insert test data
-        final testPubkey = 'test_pubkey_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab';
+        final testPubkey =
+            'test_pubkey_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab';
         final now = DateTime.now().millisecondsSinceEpoch;
 
-        await db.customStatement('''
+        await db.customStatement(
+          '''
           INSERT INTO user_profiles (
             pubkey, display_name, name, about, picture, banner, website, nip05, lud16, lud06, raw_data, created_at, event_id, last_fetched
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', [
-          testPubkey,
-          'Test User',
-          'testuser',
-          'Test bio',
-          'https://example.com/pic.jpg',
-          'https://example.com/banner.jpg',
-          'https://example.com',
-          'test@example.com',
-          'test@wallet.com',
-          'lnurl123',
-          '{}',
-          now,
-          'test_event_id_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
-          now,
-        ]);
+        ''',
+          [
+            testPubkey,
+            'Test User',
+            'testuser',
+            'Test bio',
+            'https://example.com/pic.jpg',
+            'https://example.com/banner.jpg',
+            'https://example.com',
+            'test@example.com',
+            'test@wallet.com',
+            'lnurl123',
+            '{}',
+            now,
+            'test_event_id_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
+            now,
+          ],
+        );
 
-        await db.customStatement('''
+        await db.customStatement(
+          '''
           INSERT INTO event (id, pubkey, created_at, kind, tags, content, sig)
           VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', [
-          'test_event_id_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
-          testPubkey,
-          1234567890,
-          1,
-          '[]',
-          'test content',
-          'test_sig_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
-        ]);
+        ''',
+          [
+            'test_event_id_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
+            testPubkey,
+            1234567890,
+            1,
+            '[]',
+            'test content',
+            'test_sig_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
+          ],
+        );
 
         // Query both tables with JOIN
         final result = await db.customSelect('''

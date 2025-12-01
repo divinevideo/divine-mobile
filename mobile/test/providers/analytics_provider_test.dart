@@ -27,14 +27,10 @@ void main() {
       mockClient = MockHttpClient();
 
       // Setup SharedPreferences mock with initial values
-      SharedPreferences.setMockInitialValues({
-        'analytics_enabled': true,
-      });
+      SharedPreferences.setMockInitialValues({'analytics_enabled': true});
 
       container = ProviderContainer(
-        overrides: [
-          httpClientProvider.overrideWithValue(mockClient),
-        ],
+        overrides: [httpClientProvider.overrideWithValue(mockClient)],
       );
     });
 
@@ -63,15 +59,11 @@ void main() {
 
     test('should initialize with saved analytics preference', () async {
       // Set up SharedPreferences with analytics disabled
-      SharedPreferences.setMockInitialValues({
-        'analytics_enabled': false,
-      });
+      SharedPreferences.setMockInitialValues({'analytics_enabled': false});
 
       // Create new container with the updated mock values
       final testContainer = ProviderContainer(
-        overrides: [
-          httpClientProvider.overrideWithValue(mockClient),
-        ],
+        overrides: [httpClientProvider.overrideWithValue(mockClient)],
       );
 
       await testContainer.read(analyticsProvider.notifier).initialize();
@@ -150,8 +142,13 @@ void main() {
 
       await container.read(analyticsProvider.notifier).trackVideoView(video);
 
-      verifyNever(() => mockClient.post(any(),
-          headers: any(named: 'headers'), body: any(named: 'body')));
+      verifyNever(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      );
     });
 
     test('should handle HTTP errors gracefully', () async {
@@ -218,8 +215,13 @@ void main() {
 
       await container.read(analyticsProvider.notifier).trackVideoViews(videos);
 
-      verify(() => mockClient.post(any(),
-          headers: any(named: 'headers'), body: any(named: 'body'))).called(2);
+      verify(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).called(2);
     });
   });
 }

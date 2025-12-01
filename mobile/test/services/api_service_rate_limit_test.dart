@@ -37,10 +37,7 @@ void main() {
         );
       });
 
-      apiService = ApiService(
-        client: mockClient,
-        rateLimiter: rateLimiter,
-      );
+      apiService = ApiService(client: mockClient, rateLimiter: rateLimiter);
 
       // Configure aggressive rate limit for testing
       rateLimiter.configureEndpoint(
@@ -84,9 +81,7 @@ void main() {
       );
 
       // Create ApiService without rate limiter
-      apiService = ApiService(
-        client: mockClient,
-      );
+      apiService = ApiService(client: mockClient);
 
       // Act & Assert - Should work normally
       final result = await apiService.requestSignedUpload(

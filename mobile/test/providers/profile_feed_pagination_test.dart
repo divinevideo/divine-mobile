@@ -9,7 +9,8 @@ import 'package:openvine/models/video_event.dart';
 
 void main() {
   // Test user ID (using a real Nostr pubkey hex for integration testing)
-  const testUserId = '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d'; // fiatjaf
+  const testUserId =
+      '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d'; // fiatjaf
 
   group('ProfileFeed Cursor Pagination', () {
     test('loads initial page of videos', () async {
@@ -17,7 +18,9 @@ void main() {
       final container = ProviderContainer();
 
       // ACT: Read the profile feed provider (this should trigger initial load)
-      final asyncValue = await container.read(profileFeedProvider(testUserId).future);
+      final asyncValue = await container.read(
+        profileFeedProvider(testUserId).future,
+      );
 
       // ASSERT: Should return VideoFeedState with data
       expect(asyncValue, isA<VideoFeedState>());
@@ -32,14 +35,18 @@ void main() {
       final container = ProviderContainer();
 
       // Load initial page
-      final initialState = await container.read(profileFeedProvider(testUserId).future);
+      final initialState = await container.read(
+        profileFeedProvider(testUserId).future,
+      );
       final initialCount = initialState.videos.length;
 
       // ACT: Call loadMore()
       await container.read(profileFeedProvider(testUserId).notifier).loadMore();
 
       // ASSERT: Should have loaded more videos (or at least tried to)
-      final newState = await container.read(profileFeedProvider(testUserId).future);
+      final newState = await container.read(
+        profileFeedProvider(testUserId).future,
+      );
       // Either we loaded more videos, or we're at the end (hasMoreContent = false)
       expect(newState.videos.length >= initialCount, isTrue);
       expect(newState.isLoadingMore, isFalse);
@@ -52,19 +59,27 @@ void main() {
       final container = ProviderContainer();
 
       // Load initial page and capture video IDs
-      final initialState = await container.read(profileFeedProvider(testUserId).future);
+      final initialState = await container.read(
+        profileFeedProvider(testUserId).future,
+      );
       final initialVideoIds = initialState.videos.map((v) => v.id).toSet();
 
       // ACT: Load more videos
       await container.read(profileFeedProvider(testUserId).notifier).loadMore();
 
       // ASSERT: Original videos should still be present
-      final newState = await container.read(profileFeedProvider(testUserId).future);
+      final newState = await container.read(
+        profileFeedProvider(testUserId).future,
+      );
       final newVideoIds = newState.videos.map((v) => v.id).toSet();
 
       // All initial videos should still be in the list
       for (final id in initialVideoIds) {
-        expect(newVideoIds.contains(id), isTrue, reason: 'Initial video $id missing after loadMore');
+        expect(
+          newVideoIds.contains(id),
+          isTrue,
+          reason: 'Initial video $id missing after loadMore',
+        );
       }
 
       container.dispose();
@@ -80,7 +95,9 @@ void main() {
       // Keep loading until hasMoreContent is false or we hit a limit
       int loadAttempts = 0;
       while (state.hasMoreContent && loadAttempts < 10) {
-        await container.read(profileFeedProvider(testUserId).notifier).loadMore();
+        await container
+            .read(profileFeedProvider(testUserId).notifier)
+            .loadMore();
         state = await container.read(profileFeedProvider(testUserId).future);
         loadAttempts++;
       }
@@ -88,7 +105,9 @@ void main() {
       // ACT: Try to load more when hasMoreContent is false
       final videoCountBefore = state.videos.length;
       if (!state.hasMoreContent) {
-        await container.read(profileFeedProvider(testUserId).notifier).loadMore();
+        await container
+            .read(profileFeedProvider(testUserId).notifier)
+            .loadMore();
         state = await container.read(profileFeedProvider(testUserId).future);
 
         // ASSERT: Should not have loaded more videos
@@ -113,13 +132,19 @@ void main() {
       await Future.wait(futures);
 
       // ASSERT: Should complete without errors and maintain consistent state
-      final state = await container.read(profileFeedProvider(testUserId).future);
+      final state = await container.read(
+        profileFeedProvider(testUserId).future,
+      );
       expect(state.isLoadingMore, isFalse);
 
       // No duplicate videos in the list
       final videoIds = state.videos.map((v) => v.id).toList();
       final uniqueIds = videoIds.toSet();
-      expect(videoIds.length, equals(uniqueIds.length), reason: 'Found duplicate videos in feed');
+      expect(
+        videoIds.length,
+        equals(uniqueIds.length),
+        reason: 'Found duplicate videos in feed',
+      );
 
       container.dispose();
     });
@@ -129,12 +154,15 @@ void main() {
       final container = ProviderContainer();
 
       const userId1 = testUserId;
-      const userId2 = '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2'; // jack
+      const userId2 =
+          '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2'; // jack
 
       // Load first user's feed
       final state1 = await container.read(profileFeedProvider(userId1).future);
       await container.read(profileFeedProvider(userId1).notifier).loadMore();
-      final state1After = await container.read(profileFeedProvider(userId1).future);
+      final state1After = await container.read(
+        profileFeedProvider(userId1).future,
+      );
 
       // Load second user's feed
       final state2 = await container.read(profileFeedProvider(userId2).future);
@@ -149,16 +177,23 @@ void main() {
       // Load more for user 1 again
       final videos1BeforeSecondLoad = state1After.videos.length;
       await container.read(profileFeedProvider(userId1).notifier).loadMore();
-      final state1AfterSecondLoad = await container.read(profileFeedProvider(userId1).future);
+      final state1AfterSecondLoad = await container.read(
+        profileFeedProvider(userId1).future,
+      );
 
       // Re-read user 2's state - it should still be at its initial state (not affected by user 1's pagination)
-      final state2Reread = await container.read(profileFeedProvider(userId2).future);
+      final state2Reread = await container.read(
+        profileFeedProvider(userId2).future,
+      );
 
       // User 2's state should not have changed just because user 1 paginated
       expect(state2Reread.videos.length, equals(state2.videos.length));
 
       // User 1 should have potentially loaded more content
-      expect(state1AfterSecondLoad.videos.length >= videos1BeforeSecondLoad, isTrue);
+      expect(
+        state1AfterSecondLoad.videos.length >= videos1BeforeSecondLoad,
+        isTrue,
+      );
 
       container.dispose();
     });

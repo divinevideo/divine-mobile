@@ -54,19 +54,29 @@ class AnalyticsService implements BackgroundAwareService {
       try {
         BackgroundActivityManager().registerService(this);
         Log.debug(
-            '📱 Registered AnalyticsService with background activity manager',
-            name: 'AnalyticsService',
-            category: LogCategory.system);
+          '📱 Registered AnalyticsService with background activity manager',
+          name: 'AnalyticsService',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.warning('Could not register with background activity manager: $e',
-            name: 'AnalyticsService', category: LogCategory.system);
+        Log.warning(
+          'Could not register with background activity manager: $e',
+          name: 'AnalyticsService',
+          category: LogCategory.system,
+        );
       }
 
-      Log.info('Analytics service initialized (enabled: $_analyticsEnabled)',
-          name: 'AnalyticsService', category: LogCategory.system);
+      Log.info(
+        'Analytics service initialized (enabled: $_analyticsEnabled)',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to initialize analytics service: $e',
-          name: 'AnalyticsService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize analytics service: $e',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
       _isInitialized = true; // Mark as initialized even on error
     }
   }
@@ -86,24 +96,28 @@ class AnalyticsService implements BackgroundAwareService {
 
       debugPrint('📊 Analytics ${enabled ? 'enabled' : 'disabled'} by user');
     } catch (e) {
-      Log.error('Failed to save analytics preference: $e',
-          name: 'AnalyticsService', category: LogCategory.system);
+      Log.error(
+        'Failed to save analytics preference: $e',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Track a basic video view (when video starts playing)
-  Future<void> trackVideoView(VideoEvent video,
-      {String source = 'mobile'}) async {
-    trackDetailedVideoView(
-      video,
-      source: source,
-      eventType: 'view_start',
-    );
+  Future<void> trackVideoView(
+    VideoEvent video, {
+    String source = 'mobile',
+  }) async {
+    trackDetailedVideoView(video, source: source, eventType: 'view_start');
   }
 
   /// Track a video view with user identification for proper analytics
-  Future<void> trackVideoViewWithUser(VideoEvent video,
-      {required String? userId, String source = 'mobile'}) async {
+  Future<void> trackVideoViewWithUser(
+    VideoEvent video, {
+    required String? userId,
+    String source = 'mobile',
+  }) async {
     trackDetailedVideoViewWithUser(
       video,
       userId: userId,
@@ -117,7 +131,7 @@ class AnalyticsService implements BackgroundAwareService {
     VideoEvent video, {
     required String source,
     required String
-        eventType, // 'view_start', 'view_end', 'loop', 'pause', 'resume', 'skip'
+    eventType, // 'view_start', 'view_end', 'loop', 'pause', 'resume', 'skip'
     Duration? watchDuration,
     Duration? totalDuration,
     int? loopCount,
@@ -141,7 +155,7 @@ class AnalyticsService implements BackgroundAwareService {
     required String? userId,
     required String source,
     required String
-        eventType, // 'view_start', 'view_end', 'loop', 'pause', 'resume', 'skip'
+    eventType, // 'view_start', 'view_end', 'loop', 'pause', 'resume', 'skip'
     Duration? watchDuration,
     Duration? totalDuration,
     int? loopCount,
@@ -149,8 +163,11 @@ class AnalyticsService implements BackgroundAwareService {
   }) async {
     // Check if analytics is enabled
     if (!_analyticsEnabled) {
-      Log.debug('Analytics disabled - not tracking view',
-          name: 'AnalyticsService', category: LogCategory.system);
+      Log.debug(
+        'Analytics disabled - not tracking view',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -165,8 +182,11 @@ class AnalyticsService implements BackgroundAwareService {
       loopCount: loopCount,
       completedVideo: completedVideo,
     ).catchError((error) {
-      Log.error('Analytics tracking failed after retries: $error',
-          name: 'AnalyticsService', category: LogCategory.system);
+      Log.error(
+        'Analytics tracking failed after retries: $error',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
     });
   }
 
@@ -218,9 +238,10 @@ class AnalyticsService implements BackgroundAwareService {
       // Log only on first attempt to reduce noise
       if (attempt == 1) {
         Log.info(
-            '📊 Tracking $eventType for video ${video.id}',
-            name: 'AnalyticsService',
-            category: LogCategory.system);
+          '📊 Tracking $eventType for video ${video.id}',
+          name: 'AnalyticsService',
+          category: LogCategory.system,
+        );
       }
 
       // Send view tracking request
@@ -237,27 +258,37 @@ class AnalyticsService implements BackgroundAwareService {
 
       if (response.statusCode == 200) {
         Log.debug(
-            '✅ Successfully tracked $eventType for video ${video.id} (attempt $attempt)',
-            name: 'AnalyticsService',
-            category: LogCategory.system);
+          '✅ Successfully tracked $eventType for video ${video.id} (attempt $attempt)',
+          name: 'AnalyticsService',
+          category: LogCategory.system,
+        );
       } else if (response.statusCode == 429) {
-        Log.warning('⚠️ Rate limited by analytics service (attempt $attempt)',
-            name: 'AnalyticsService', category: LogCategory.system);
+        Log.warning(
+          '⚠️ Rate limited by analytics service (attempt $attempt)',
+          name: 'AnalyticsService',
+          category: LogCategory.system,
+        );
         // Don't retry on rate limits
         return;
       } else {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      Log.warning('Analytics attempt $attempt failed: $e',
-          name: 'AnalyticsService', category: LogCategory.system);
+      Log.warning(
+        'Analytics attempt $attempt failed: $e',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
 
       // Retry with exponential backoff if we haven't reached max attempts
       if (attempt < maxAttempts) {
         // Check if disposed before scheduling retry
         if (_isDisposed) {
-          Log.debug('Analytics service disposed, skipping retry',
-              name: 'AnalyticsService', category: LogCategory.system);
+          Log.debug(
+            'Analytics service disposed, skipping retry',
+            name: 'AnalyticsService',
+            category: LogCategory.system,
+          );
           return;
         }
 
@@ -266,30 +297,43 @@ class AnalyticsService implements BackgroundAwareService {
 
         // Check if disposed after delay
         if (_isDisposed) {
-          Log.debug('Analytics service disposed during retry delay',
-              name: 'AnalyticsService', category: LogCategory.system);
+          Log.debug(
+            'Analytics service disposed during retry delay',
+            name: 'AnalyticsService',
+            category: LogCategory.system,
+          );
           return;
         }
 
-        await _trackDetailedVideoViewWithRetry(video, userId, source, eventType,
-            watchDuration: watchDuration,
-            totalDuration: totalDuration,
-            loopCount: loopCount,
-            completedVideo: completedVideo,
-            attempt: attempt + 1,
-            maxAttempts: maxAttempts);
+        await _trackDetailedVideoViewWithRetry(
+          video,
+          userId,
+          source,
+          eventType,
+          watchDuration: watchDuration,
+          totalDuration: totalDuration,
+          loopCount: loopCount,
+          completedVideo: completedVideo,
+          attempt: attempt + 1,
+          maxAttempts: maxAttempts,
+        );
       } else {
         // Log final failure but don't crash the app
-        Log.error('Analytics tracking failed after $maxAttempts attempts: $e',
-            name: 'AnalyticsService', category: LogCategory.system);
+        Log.error(
+          'Analytics tracking failed after $maxAttempts attempts: $e',
+          name: 'AnalyticsService',
+          category: LogCategory.system,
+        );
         rethrow;
       }
     }
   }
 
   /// Track multiple video views in batch (for feed loading)
-  Future<void> trackVideoViews(List<VideoEvent> videos,
-      {String source = 'mobile'}) async {
+  Future<void> trackVideoViews(
+    List<VideoEvent> videos, {
+    String source = 'mobile',
+  }) async {
     if (!_analyticsEnabled || videos.isEmpty) return;
 
     // Create operations for rate-limited execution
@@ -322,17 +366,21 @@ class AnalyticsService implements BackgroundAwareService {
   @override
   void onAppBackgrounded() {
     _isInBackground = true;
-    Log.info('📱 AnalyticsService: App backgrounded - queuing analytics',
-        name: 'AnalyticsService', category: LogCategory.system);
+    Log.info(
+      '📱 AnalyticsService: App backgrounded - queuing analytics',
+      name: 'AnalyticsService',
+      category: LogCategory.system,
+    );
   }
 
   @override
   void onExtendedBackground() {
     if (_isInBackground) {
       Log.info(
-          '📱 AnalyticsService: Extended background - suspending network requests',
-          name: 'AnalyticsService',
-          category: LogCategory.system);
+        '📱 AnalyticsService: Extended background - suspending network requests',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
       // Analytics will be queued and sent when app resumes
     }
   }
@@ -340,13 +388,19 @@ class AnalyticsService implements BackgroundAwareService {
   @override
   void onAppResumed() {
     _isInBackground = false;
-    Log.info('📱 AnalyticsService: App resumed - processing pending analytics',
-        name: 'AnalyticsService', category: LogCategory.system);
+    Log.info(
+      '📱 AnalyticsService: App resumed - processing pending analytics',
+      name: 'AnalyticsService',
+      category: LogCategory.system,
+    );
 
     // Process any pending analytics
     if (_pendingAnalytics.isNotEmpty) {
-      Log.info('📊 Processing ${_pendingAnalytics.length} pending analytics',
-          name: 'AnalyticsService', category: LogCategory.system);
+      Log.info(
+        '📊 Processing ${_pendingAnalytics.length} pending analytics',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
 
       // Process pending analytics asynchronously
       _processPendingAnalytics();
@@ -356,8 +410,11 @@ class AnalyticsService implements BackgroundAwareService {
   @override
   void onPeriodicCleanup() {
     if (!_isInBackground) {
-      Log.debug('🧹 AnalyticsService: Performing periodic cleanup',
-          name: 'AnalyticsService', category: LogCategory.system);
+      Log.debug(
+        '🧹 AnalyticsService: Performing periodic cleanup',
+        name: 'AnalyticsService',
+        category: LogCategory.system,
+      );
 
       // Clear old tracked views to prevent memory growth
       _recentlyTrackedViews.clear();
@@ -376,12 +433,18 @@ class AnalyticsService implements BackgroundAwareService {
         if (!_isInBackground && _analyticsEnabled) {
           // Send the queued analytics
           // This would require refactoring the tracking methods to accept raw data
-          Log.debug('📊 Sending queued analytic: ${analytic['event_type']}',
-              name: 'AnalyticsService', category: LogCategory.system);
+          Log.debug(
+            '📊 Sending queued analytic: ${analytic['event_type']}',
+            name: 'AnalyticsService',
+            category: LogCategory.system,
+          );
         }
       } catch (e) {
-        Log.error('Failed to send queued analytics: $e',
-            name: 'AnalyticsService', category: LogCategory.system);
+        Log.error(
+          'Failed to send queued analytics: $e',
+          name: 'AnalyticsService',
+          category: LogCategory.system,
+        );
       }
     }
   }

@@ -17,15 +17,23 @@ void main() {
         // Verify correct interface is selected for platform
         if (kIsWeb) {
           expect(controller.cameraInterface, isNotNull);
-          expect(controller.cameraInterface.runtimeType.toString(),
-              contains('WebCameraInterface'));
+          expect(
+            controller.cameraInterface.runtimeType.toString(),
+            contains('WebCameraInterface'),
+          );
         } else if (Platform.isMacOS) {
-          expect(controller.cameraInterface.runtimeType.toString(),
-              contains('MacOSCameraInterface'));
+          expect(
+            controller.cameraInterface.runtimeType.toString(),
+            contains('MacOSCameraInterface'),
+          );
         } else if (Platform.isIOS || Platform.isAndroid) {
-          expect(controller.cameraInterface.runtimeType.toString(),
-              anyOf(contains('EnhancedMobileCameraInterface'),
-                    contains('MobileCameraInterface')));
+          expect(
+            controller.cameraInterface.runtimeType.toString(),
+            anyOf(
+              contains('EnhancedMobileCameraInterface'),
+              contains('MobileCameraInterface'),
+            ),
+          );
         }
       } finally {
         controller.dispose();
@@ -45,11 +53,10 @@ void main() {
         await Future.delayed(Duration(milliseconds: 500));
 
         await controller.stopRecording();
-        expect(controller.state, anyOf([
-          VineRecordingState.paused,
-          VineRecordingState.completed,
-        ]));
-
+        expect(
+          controller.state,
+          anyOf([VineRecordingState.paused, VineRecordingState.completed]),
+        );
       } finally {
         controller.dispose();
       }

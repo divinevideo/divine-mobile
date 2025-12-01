@@ -10,18 +10,22 @@ import 'package:openvine/screens/pure/search_screen_pure.dart';
 
 void main() {
   group('parseRoute() - Search with terms', () {
-    test('parseRoute("/search/nostr") returns RouteContext with searchTerm', () {
-      final result = parseRoute('/search/nostr');
+    test(
+      'parseRoute("/search/nostr") returns RouteContext with searchTerm',
+      () {
+        final result = parseRoute('/search/nostr');
 
-      expect(result.type, RouteType.search);
-      expect(result.searchTerm, 'nostr');
-      expect(result.videoIndex, null);
-    });
+        expect(result.type, RouteType.search);
+        expect(result.searchTerm, 'nostr');
+        expect(result.videoIndex, null);
+      },
+    );
   });
 
   group('Search Route Navigation', () {
-    testWidgets('navigating to /search renders SearchScreenPure',
-        (tester) async {
+    testWidgets('navigating to /search renders SearchScreenPure', (
+      tester,
+    ) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -43,14 +47,12 @@ void main() {
 
       // Verify search bar is visible (grid mode)
       expect(find.byType(TextField), findsOneWidget);
-      expect(
-        find.text('Search videos, users, hashtags...'),
-        findsOneWidget,
-      );
+      expect(find.text('Search videos, users, hashtags...'), findsOneWidget);
     });
 
-    testWidgets('navigating to /search/0 renders SearchScreenPure in feed mode',
-        (tester) async {
+    testWidgets('navigating to /search/0 renders SearchScreenPure in feed mode', (
+      tester,
+    ) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -74,7 +76,9 @@ void main() {
       // (This will initially show empty state since no search has been performed)
     });
 
-    testWidgets('search route is part of shell (has bottom nav)', (tester) async {
+    testWidgets('search route is part of shell (has bottom nav)', (
+      tester,
+    ) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -95,8 +99,9 @@ void main() {
       expect(find.byType(BottomNavigationBar), findsOneWidget);
     });
 
-    testWidgets('can navigate between search grid and feed modes',
-        (tester) async {
+    testWidgets('can navigate between search grid and feed modes', (
+      tester,
+    ) async {
       // SKIP: This test triggers actual search operations which require full provider mocking
       // The functionality works in the app - this is a test infrastructure limitation
     }, skip: true);

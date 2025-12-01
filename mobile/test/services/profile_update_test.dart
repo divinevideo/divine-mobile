@@ -21,9 +21,9 @@ void main() {
     setUp(() {
       mockNostrService = MockINostrService();
       mockSubscriptionManager = MockSubscriptionManager();
-      
+
       when(mockNostrService.isInitialized).thenReturn(true);
-      
+
       service = UserProfileService(
         mockNostrService,
         subscriptionManager: mockSubscriptionManager,
@@ -36,7 +36,7 @@ void main() {
       final oldEventId = 'old_event_123';
       final newEventId = 'new_event_456';
       final timestamp = DateTime.now();
-      
+
       // Create old profile event
       final oldEvent = Event(
         pubkey,
@@ -47,7 +47,7 @@ void main() {
       );
       oldEvent.id = oldEventId;
       oldEvent.sig = 'sig1';
-      
+
       // Create new profile event with same timestamp but different ID
       final newEvent = Event(
         pubkey,
@@ -61,19 +61,19 @@ void main() {
 
       // Initialize service
       await service.initialize();
-      
+
       // Process old event first
       service.handleProfileEventForTesting(oldEvent);
-      
+
       // Verify old profile is cached
       var cachedProfile = service.getCachedProfile(pubkey);
       expect(cachedProfile, isNotNull);
       expect(cachedProfile!.name, equals('Old Name'));
       expect(cachedProfile.eventId, equals(oldEventId));
-      
+
       // Process new event with different ID
       service.handleProfileEventForTesting(newEvent);
-      
+
       // Verify new profile replaced the old one
       cachedProfile = service.getCachedProfile(pubkey);
       expect(cachedProfile, isNotNull);
@@ -88,7 +88,7 @@ void main() {
       final eventId2 = 'event_2';
       final oldTimestamp = DateTime.now().subtract(const Duration(minutes: 5));
       final newTimestamp = DateTime.now();
-      
+
       // Create old profile event
       final oldEvent = Event(
         pubkey,
@@ -99,7 +99,7 @@ void main() {
       );
       oldEvent.id = eventId1;
       oldEvent.sig = 'sig1';
-      
+
       // Create new profile event with newer timestamp
       final newEvent = Event(
         pubkey,
@@ -113,19 +113,19 @@ void main() {
 
       // Initialize service
       await service.initialize();
-      
+
       // Process old event
       service.handleProfileEventForTesting(oldEvent);
-      
+
       // Verify old profile
       var cachedProfile = service.getCachedProfile(pubkey);
       expect(cachedProfile, isNotNull);
       expect(cachedProfile!.name, equals('Original'));
       expect(cachedProfile.picture, equals('https://old.jpg'));
-      
+
       // Process newer event
       service.handleProfileEventForTesting(newEvent);
-      
+
       // Verify profile was updated
       cachedProfile = service.getCachedProfile(pubkey);
       expect(cachedProfile, isNotNull);
@@ -139,7 +139,7 @@ void main() {
       final eventId = 'same_event'; // Same event ID for both
       final newerTimestamp = DateTime.now();
       final olderTimestamp = DateTime.now().subtract(const Duration(hours: 1));
-      
+
       // Create newer profile event
       final newerEvent = Event(
         pubkey,
@@ -150,7 +150,7 @@ void main() {
       );
       newerEvent.id = eventId;
       newerEvent.sig = 'sig1';
-      
+
       // Create older profile event with SAME event ID (simulating a replay)
       final olderEvent = Event(
         pubkey,
@@ -164,19 +164,19 @@ void main() {
 
       // Initialize service
       await service.initialize();
-      
+
       // Process newer event first
       service.handleProfileEventForTesting(newerEvent);
-      
+
       // Verify newer profile is cached
       var cachedProfile = service.getCachedProfile(pubkey);
       expect(cachedProfile, isNotNull);
       expect(cachedProfile!.name, equals('Current Name'));
       expect(cachedProfile.eventId, equals(eventId));
-      
+
       // Try to process older event with same ID
       service.handleProfileEventForTesting(olderEvent);
-      
+
       // Verify newer profile is still cached (older was rejected)
       cachedProfile = service.getCachedProfile(pubkey);
       expect(cachedProfile, isNotNull);
@@ -191,7 +191,7 @@ void main() {
       final eventId2 = 'second_event';
       final timestamp = DateTime.now();
       final timestampSeconds = timestamp.millisecondsSinceEpoch ~/ 1000;
-      
+
       // Create first profile event
       final firstEvent = Event(
         pubkey,
@@ -202,7 +202,7 @@ void main() {
       );
       firstEvent.id = eventId1;
       firstEvent.sig = 'sig1';
-      
+
       // Create second profile event with same timestamp but different ID
       final secondEvent = Event(
         pubkey,
@@ -216,18 +216,18 @@ void main() {
 
       // Initialize service
       await service.initialize();
-      
+
       // Process first event
       service.handleProfileEventForTesting(firstEvent);
-      
+
       // Verify first profile
       var cachedProfile = service.getCachedProfile(pubkey);
       expect(cachedProfile, isNotNull);
       expect(cachedProfile!.name, equals('First Update'));
-      
+
       // Process second event with same timestamp
       service.handleProfileEventForTesting(secondEvent);
-      
+
       // Verify second profile was accepted (different event ID)
       cachedProfile = service.getCachedProfile(pubkey);
       expect(cachedProfile, isNotNull);
@@ -239,7 +239,7 @@ void main() {
       // Given
       final pubkey = 'e' * 64; // Valid 64-char hex pubkey
       final eventId = 'event_123';
-      
+
       // Create profile event
       final profileEvent = Event(
         pubkey,
@@ -252,39 +252,42 @@ void main() {
       profileEvent.sig = 'sig1';
 
       // Setup mock subscription manager
-      when(mockSubscriptionManager.createSubscription(
-        name: anyNamed('name'),
-        filters: anyNamed('filters'),
-        onEvent: anyNamed('onEvent'),
-        onError: anyNamed('onError'),
-        onComplete: anyNamed('onComplete'),
-        priority: anyNamed('priority'),
-      )).thenAnswer((_) async => 'sub_123');
+      when(
+        mockSubscriptionManager.createSubscription(
+          name: anyNamed('name'),
+          filters: anyNamed('filters'),
+          onEvent: anyNamed('onEvent'),
+          onError: anyNamed('onError'),
+          onComplete: anyNamed('onComplete'),
+          priority: anyNamed('priority'),
+        ),
+      ).thenAnswer((_) async => 'sub_123');
 
       // Initialize service
       await service.initialize();
-      
+
       // Cache initial profile
       service.handleProfileEventForTesting(profileEvent);
-      
+
       // Verify profile is cached
       var cachedProfile = service.getCachedProfile(pubkey);
       expect(cachedProfile, isNotNull);
       expect(cachedProfile!.name, equals('Test User'));
-      
+
       // Force refresh should clear cache and create new subscription
       await service.fetchProfile(pubkey, forceRefresh: true);
-      
+
       // Verify subscription was created
-      verify(mockSubscriptionManager.createSubscription(
-        name: anyNamed('name'),
-        filters: anyNamed('filters'),
-        onEvent: anyNamed('onEvent'),
-        onError: anyNamed('onError'),
-        onComplete: anyNamed('onComplete'),
-        priority: anyNamed('priority'),
-      )).called(1);
+      verify(
+        mockSubscriptionManager.createSubscription(
+          name: anyNamed('name'),
+          filters: anyNamed('filters'),
+          onEvent: anyNamed('onEvent'),
+          onError: anyNamed('onError'),
+          onComplete: anyNamed('onComplete'),
+          priority: anyNamed('priority'),
+        ),
+      ).called(1);
     });
   });
 }
-

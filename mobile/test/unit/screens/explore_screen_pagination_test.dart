@@ -63,8 +63,10 @@ void main() {
       // Test various scroll positions
       expect(850.0 > paginationTriggerPoint, isTrue); // Should trigger
       expect(750.0 > paginationTriggerPoint, isFalse); // Should not trigger
-      expect(800.0 >= paginationTriggerPoint,
-          isTrue); // Edge case - should trigger
+      expect(
+        800.0 >= paginationTriggerPoint,
+        isTrue,
+      ); // Edge case - should trigger
     });
 
     test('PageView pagination threshold logic works correctly', () {

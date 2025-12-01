@@ -38,7 +38,9 @@ void main() {
           PauseProof(
             startTime: DateTime(2025, 1, 1, 10, 0, 3),
             endTime: DateTime(2025, 1, 1, 10, 0, 3, 500),
-            sensorData: {'accelerometer': {'x': 0.1, 'y': 0.2, 'z': 9.8}},
+            sensorData: {
+              'accelerometer': {'x': 0.1, 'y': 0.2, 'z': 9.8},
+            },
           ),
         ],
         interactions: [
@@ -113,9 +115,15 @@ void main() {
       expect(manifest.interactions.length, equals(1));
       expect(manifest.finalVideoHash, equals('abc123def456'));
       expect(manifest.deviceAttestation, isNotNull);
-      expect(manifest.deviceAttestation!.token, equals('attestation_token_xyz'));
+      expect(
+        manifest.deviceAttestation!.token,
+        equals('attestation_token_xyz'),
+      );
       expect(manifest.pgpSignature, isNotNull);
-      expect(manifest.pgpSignature!.publicKeyFingerprint, equals('ABCD1234EFGH5678'));
+      expect(
+        manifest.pgpSignature!.publicKeyFingerprint,
+        equals('ABCD1234EFGH5678'),
+      );
     });
 
     test('proofManifest getter returns null for invalid JSON', () {
@@ -189,9 +197,18 @@ void main() {
       final roundtrippedManifest = roundtripped.proofManifest;
       expect(roundtrippedManifest, isNotNull);
       expect(roundtrippedManifest!.sessionId, equals(manifest.sessionId));
-      expect(roundtrippedManifest.challengeNonce, equals(manifest.challengeNonce));
-      expect(roundtrippedManifest.finalVideoHash, equals(manifest.finalVideoHash));
-      expect(roundtrippedManifest.segments.length, equals(manifest.segments.length));
+      expect(
+        roundtrippedManifest.challengeNonce,
+        equals(manifest.challengeNonce),
+      );
+      expect(
+        roundtrippedManifest.finalVideoHash,
+        equals(manifest.finalVideoHash),
+      );
+      expect(
+        roundtrippedManifest.segments.length,
+        equals(manifest.segments.length),
+      );
     });
   });
 }

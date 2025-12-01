@@ -8,22 +8,26 @@ import 'package:flutter/material.dart';
 class WebCameraService {
   Future<void> initialize() async {
     throw UnsupportedError(
-        'WebCameraService is only supported on web platform');
+      'WebCameraService is only supported on web platform',
+    );
   }
 
   Future<void> startRecording() async {
     throw UnsupportedError(
-        'WebCameraService is only supported on web platform');
+      'WebCameraService is only supported on web platform',
+    );
   }
 
   Future<String?> stopRecording() async {
     throw UnsupportedError(
-        'WebCameraService is only supported on web platform');
+      'WebCameraService is only supported on web platform',
+    );
   }
 
   Future<void> switchCamera() async {
     throw UnsupportedError(
-        'WebCameraService is only supported on web platform');
+      'WebCameraService is only supported on web platform',
+    );
   }
 
   void dispose() {}
@@ -35,22 +39,19 @@ class WebCameraService {
 
 /// Stub for WebCameraPreview on non-web platforms
 class WebCameraPreview extends StatelessWidget {
-  const WebCameraPreview({
-    required this.cameraService,
-    super.key,
-  });
+  const WebCameraPreview({required this.cameraService, super.key});
   final dynamic cameraService;
 
   @override
   Widget build(BuildContext context) => const ColoredBox(
-        color: Colors.black,
-        child: Center(
-          child: Text(
-            'Web camera not available on this platform',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-      );
+    color: Colors.black,
+    child: Center(
+      child: Text(
+        'Web camera not available on this platform',
+        style: TextStyle(color: Colors.white),
+      ),
+    ),
+  );
 }
 
 /// Stub function for blobUrlToBytes on non-web platforms

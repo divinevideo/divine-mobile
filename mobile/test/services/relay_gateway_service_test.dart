@@ -53,7 +53,7 @@ void main() {
                   'tags': [],
                   'content': 'test',
                   'sig': 'sig1',
-                }
+                },
               ],
               'eose': true,
               'complete': true,
@@ -125,7 +125,7 @@ void main() {
                   'tags': [],
                   'content': '{"name":"Test User"}',
                   'sig': 'sig1',
-                }
+                },
               ],
               'eose': true,
             }),
@@ -147,10 +147,7 @@ void main() {
 
       test('returns null for missing profile', () async {
         final mockClient = MockClient((request) async {
-          return http.Response(
-            jsonEncode({'events': [], 'eose': true}),
-            200,
-          );
+          return http.Response(jsonEncode({'events': [], 'eose': true}), 200);
         });
 
         final service = RelayGatewayService(
@@ -179,7 +176,7 @@ void main() {
                   'tags': [],
                   'content': 'video content',
                   'sig': 'sig1',
-                }
+                },
               ],
               'eose': true,
             }),
@@ -200,10 +197,7 @@ void main() {
 
       test('returns null for missing event', () async {
         final mockClient = MockClient((request) async {
-          return http.Response(
-            jsonEncode({'events': [], 'eose': true}),
-            200,
-          );
+          return http.Response(jsonEncode({'events': [], 'eose': true}), 200);
         });
 
         final service = RelayGatewayService(

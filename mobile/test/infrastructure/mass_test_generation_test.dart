@@ -23,16 +23,12 @@ void main() {
       }
 
       // Run the test generation script for a sample service
-      final result = Process.runSync(
-        'dart',
-        [
-          'run',
-          'tools/generate_tests.dart',
-          '--type=service',
-          '--input=lib/services/auth_service.dart'
-        ],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/generate_tests.dart',
+        '--type=service',
+        '--input=lib/services/auth_service.dart',
+      ], workingDirectory: Directory.current.path);
 
       expect(
         result.exitCode,
@@ -60,24 +56,16 @@ void main() {
         contains("group('AuthService',"),
         reason: 'Should have test group',
       );
-      expect(
-        content,
-        contains('test('),
-        reason: 'Should contain test cases',
-      );
+      expect(content, contains('test('), reason: 'Should contain test cases');
     });
 
     test('can generate widget tests', () {
-      final result = Process.runSync(
-        'dart',
-        [
-          'run',
-          'tools/generate_tests.dart',
-          '--type=widget',
-          '--input=lib/screens/video_feed_screen.dart'
-        ],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/generate_tests.dart',
+        '--type=widget',
+        '--input=lib/screens/video_feed_screen.dart',
+      ], workingDirectory: Directory.current.path);
 
       expect(
         result.exitCode,
@@ -98,29 +86,17 @@ void main() {
         contains('testWidgets('),
         reason: 'Should use testWidgets for widget tests',
       );
-      expect(
-        content,
-        contains('pumpWidget'),
-        reason: 'Should pump widgets',
-      );
-      expect(
-        content,
-        contains('find.'),
-        reason: 'Should use finders',
-      );
+      expect(content, contains('pumpWidget'), reason: 'Should pump widgets');
+      expect(content, contains('find.'), reason: 'Should use finders');
     });
 
     test('can generate integration tests', () {
-      final result = Process.runSync(
-        'dart',
-        [
-          'run',
-          'tools/generate_tests.dart',
-          '--type=integration',
-          '--flow=video-upload'
-        ],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/generate_tests.dart',
+        '--type=integration',
+        '--flow=video-upload',
+      ], workingDirectory: Directory.current.path);
 
       expect(
         result.exitCode,
@@ -128,8 +104,9 @@ void main() {
         reason: 'Integration test generation should succeed',
       );
 
-      final generatedTest =
-          File('test/generated/video_upload_integration_test.dart');
+      final generatedTest = File(
+        'test/generated/video_upload_integration_test.dart',
+      );
       expect(
         generatedTest.existsSync(),
         isTrue,
@@ -186,17 +163,13 @@ void main() {
 ''');
 
       // Generate test following the pattern
-      final result = Process.runSync(
-        'dart',
-        [
-          'run',
-          'tools/generate_tests.dart',
-          '--type=service',
-          '--input=lib/services/video_event_service.dart',
-          '--pattern=test/examples/example_service_test.dart'
-        ],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/generate_tests.dart',
+        '--type=service',
+        '--input=lib/services/video_event_service.dart',
+        '--pattern=test/examples/example_service_test.dart',
+      ], workingDirectory: Directory.current.path);
 
       expect(
         result.exitCode,
@@ -204,8 +177,9 @@ void main() {
         reason: 'Pattern-based test generation should succeed',
       );
 
-      final generatedTest =
-          File('test/generated/video_event_service_test.dart');
+      final generatedTest = File(
+        'test/generated/video_event_service_test.dart',
+      );
       final content = generatedTest.readAsStringSync();
 
       // Should follow the pattern structure
@@ -227,16 +201,12 @@ void main() {
     });
 
     test('generates performance benchmarks', () {
-      final result = Process.runSync(
-        'dart',
-        [
-          'run',
-          'tools/generate_tests.dart',
-          '--type=benchmark',
-          '--input=lib/services/video_event_service.dart'
-        ],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/generate_tests.dart',
+        '--type=benchmark',
+        '--input=lib/services/video_event_service.dart',
+      ], workingDirectory: Directory.current.path);
 
       expect(
         result.exitCode,
@@ -244,8 +214,9 @@ void main() {
         reason: 'Benchmark generation should succeed',
       );
 
-      final generatedBenchmark =
-          File('test/generated/video_event_service_benchmark.dart');
+      final generatedBenchmark = File(
+        'test/generated/video_event_service_benchmark.dart',
+      );
       expect(
         generatedBenchmark.existsSync(),
         isTrue,

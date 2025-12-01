@@ -35,35 +35,50 @@ class PersonalEventCacheService {
       _isInitialized = true;
 
       Log.info(
-          'PersonalEventCacheService initialized for $userPubkey with ${_eventsBox!.length} cached events',
-          name: 'PersonalEventCache',
-          category: LogCategory.storage);
+        'PersonalEventCacheService initialized for $userPubkey with ${_eventsBox!.length} cached events',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
 
       // Log cache statistics by kind
       _logCacheStatistics();
     } catch (e) {
-      Log.error('Failed to initialize PersonalEventCacheService: $e',
-          name: 'PersonalEventCache', category: LogCategory.storage);
+      Log.error(
+        'Failed to initialize PersonalEventCacheService: $e',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
 
       // Try to recover by deleting corrupted boxes
       try {
-        Log.warning('Attempting to recover from corrupted cache by deleting boxes',
-            name: 'PersonalEventCache', category: LogCategory.storage);
+        Log.warning(
+          'Attempting to recover from corrupted cache by deleting boxes',
+          name: 'PersonalEventCache',
+          category: LogCategory.storage,
+        );
 
         await Hive.deleteBoxFromDisk(_boxName);
         await Hive.deleteBoxFromDisk(_metadataBoxName);
 
         // Retry opening after deletion
         _eventsBox = await Hive.openBox<Map<String, dynamic>>(_boxName);
-        _metadataBox = await Hive.openBox<Map<String, dynamic>>(_metadataBoxName);
+        _metadataBox = await Hive.openBox<Map<String, dynamic>>(
+          _metadataBoxName,
+        );
 
         _isInitialized = true;
 
-        Log.info('Successfully recovered PersonalEventCacheService after corruption',
-            name: 'PersonalEventCache', category: LogCategory.storage);
+        Log.info(
+          'Successfully recovered PersonalEventCacheService after corruption',
+          name: 'PersonalEventCache',
+          category: LogCategory.storage,
+        );
       } catch (recoveryError) {
-        Log.error('Failed to recover from corrupted cache: $recoveryError',
-            name: 'PersonalEventCache', category: LogCategory.storage);
+        Log.error(
+          'Failed to recover from corrupted cache: $recoveryError',
+          name: 'PersonalEventCache',
+          category: LogCategory.storage,
+        );
         rethrow;
       }
     }
@@ -72,8 +87,11 @@ class PersonalEventCacheService {
   /// Cache a user's own event (any kind)
   void cacheUserEvent(Event event) {
     if (!_isInitialized || _eventsBox == null || _metadataBox == null) {
-      Log.warning('PersonalEventCache not initialized, cannot cache event',
-          name: 'PersonalEventCache', category: LogCategory.storage);
+      Log.warning(
+        'PersonalEventCache not initialized, cannot cache event',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
       return;
     }
 
@@ -99,8 +117,10 @@ class PersonalEventCacheService {
 
       // Update metadata for quick queries
       final kindKey = 'kind_${event.kind}';
-      final kindEvents =
-          _metadataBox!.get(kindKey, defaultValue: <String, dynamic>{})!;
+      final kindEvents = _metadataBox!.get(
+        kindKey,
+        defaultValue: <String, dynamic>{},
+      )!;
       kindEvents[event.id] = {
         'created_at': event.createdAt,
         'cached_at': DateTime.now().millisecondsSinceEpoch,
@@ -108,12 +128,16 @@ class PersonalEventCacheService {
       _metadataBox!.put(kindKey, kindEvents);
 
       Log.debug(
-          '💾 Cached personal event: ${event.id} (kind ${event.kind})',
-          name: 'PersonalEventCache',
-          category: LogCategory.storage);
+        '💾 Cached personal event: ${event.id} (kind ${event.kind})',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
     } catch (e) {
-      Log.error('Failed to cache personal event ${event.id}: $e',
-          name: 'PersonalEventCache', category: LogCategory.storage);
+      Log.error(
+        'Failed to cache personal event ${event.id}: $e',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
     }
   }
 
@@ -125,8 +149,10 @@ class PersonalEventCacheService {
 
     try {
       final kindKey = 'kind_$kind';
-      final kindEvents =
-          _metadataBox!.get(kindKey, defaultValue: <String, dynamic>{})!;
+      final kindEvents = _metadataBox!.get(
+        kindKey,
+        defaultValue: <String, dynamic>{},
+      )!;
 
       final events = <Event>[];
       for (final eventId in kindEvents.keys) {
@@ -142,13 +168,19 @@ class PersonalEventCacheService {
       // Sort by creation time (newest first)
       events.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      Log.debug('📋 Retrieved ${events.length} cached events of kind $kind',
-          name: 'PersonalEventCache', category: LogCategory.storage);
+      Log.debug(
+        '📋 Retrieved ${events.length} cached events of kind $kind',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
 
       return events;
     } catch (e) {
-      Log.error('Failed to get events by kind $kind: $e',
-          name: 'PersonalEventCache', category: LogCategory.storage);
+      Log.error(
+        'Failed to get events by kind $kind: $e',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
       return [];
     }
   }
@@ -171,13 +203,19 @@ class PersonalEventCacheService {
       // Sort by creation time (newest first)
       events.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      Log.debug('📋 Retrieved ${events.length} total cached personal events',
-          name: 'PersonalEventCache', category: LogCategory.storage);
+      Log.debug(
+        '📋 Retrieved ${events.length} total cached personal events',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
 
       return events;
     } catch (e) {
-      Log.error('Failed to get all personal events: $e',
-          name: 'PersonalEventCache', category: LogCategory.storage);
+      Log.error(
+        'Failed to get all personal events: $e',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
       return [];
     }
   }
@@ -194,8 +232,11 @@ class PersonalEventCacheService {
         return _eventDataToEvent(eventData);
       }
     } catch (e) {
-      Log.error('Failed to get event by ID $eventId: $e',
-          name: 'PersonalEventCache', category: LogCategory.storage);
+      Log.error(
+        'Failed to get event by ID $eventId: $e',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
     }
 
     return null;
@@ -225,8 +266,10 @@ class PersonalEventCacheService {
     for (final kindKey in _metadataBox!.keys) {
       if (kindKey.startsWith('kind_')) {
         final kind = kindKey.substring(5);
-        final kindEvents =
-            _metadataBox!.get(kindKey, defaultValue: <String, dynamic>{})!;
+        final kindEvents = _metadataBox!.get(
+          kindKey,
+          defaultValue: <String, dynamic>{},
+        )!;
         stats['by_kind'][kind] = kindEvents.length;
       }
     }
@@ -237,21 +280,36 @@ class PersonalEventCacheService {
   /// Log cache statistics for debugging
   void _logCacheStatistics() {
     final stats = getCacheStats();
-    Log.info('📊 Personal Event Cache Statistics:',
-        name: 'PersonalEventCache', category: LogCategory.storage);
-    Log.info('  - Total events: ${stats['total_events']}',
-        name: 'PersonalEventCache', category: LogCategory.storage);
-    Log.info('  - User: ${stats['user_pubkey']}',
-        name: 'PersonalEventCache', category: LogCategory.storage);
+    Log.info(
+      '📊 Personal Event Cache Statistics:',
+      name: 'PersonalEventCache',
+      category: LogCategory.storage,
+    );
+    Log.info(
+      '  - Total events: ${stats['total_events']}',
+      name: 'PersonalEventCache',
+      category: LogCategory.storage,
+    );
+    Log.info(
+      '  - User: ${stats['user_pubkey']}',
+      name: 'PersonalEventCache',
+      category: LogCategory.storage,
+    );
 
     final byKind = stats['by_kind'] as Map<String, int>;
     if (byKind.isNotEmpty) {
-      Log.info('  - By kind:',
-          name: 'PersonalEventCache', category: LogCategory.storage);
+      Log.info(
+        '  - By kind:',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
       for (final entry in byKind.entries) {
         final kindName = _getKindName(int.tryParse(entry.key) ?? 0);
-        Log.info('    Kind ${entry.key} ($kindName): ${entry.value}',
-            name: 'PersonalEventCache', category: LogCategory.storage);
+        Log.info(
+          '    Kind ${entry.key} ($kindName): ${entry.value}',
+          name: 'PersonalEventCache',
+          category: LogCategory.storage,
+        );
       }
     }
   }
@@ -263,8 +321,11 @@ class PersonalEventCacheService {
         eventData['pubkey'] as String,
         eventData['kind'] as int,
         (eventData['tags'] as List<dynamic>)
-            .map((tag) =>
-                (tag as List<dynamic>).map((item) => item.toString()).toList())
+            .map(
+              (tag) => (tag as List<dynamic>)
+                  .map((item) => item.toString())
+                  .toList(),
+            )
             .toList(),
         eventData['content'] as String,
         createdAt: eventData['created_at'] as int,
@@ -276,8 +337,11 @@ class PersonalEventCacheService {
 
       return event;
     } catch (e) {
-      Log.error('Failed to convert event data to Event: $e',
-          name: 'PersonalEventCache', category: LogCategory.storage);
+      Log.error(
+        'Failed to convert event data to Event: $e',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
       return null;
     }
   }
@@ -316,11 +380,17 @@ class PersonalEventCacheService {
       await _eventsBox!.clear();
       await _metadataBox!.clear();
 
-      Log.info('🧹 Cleared all personal event cache',
-          name: 'PersonalEventCache', category: LogCategory.storage);
+      Log.info(
+        '🧹 Cleared all personal event cache',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
     } catch (e) {
-      Log.error('Failed to clear personal event cache: $e',
-          name: 'PersonalEventCache', category: LogCategory.storage);
+      Log.error(
+        'Failed to clear personal event cache: $e',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
     }
   }
 
@@ -331,7 +401,10 @@ class PersonalEventCacheService {
     _isInitialized = false;
     _currentUserPubkey = null;
 
-    Log.debug('📱 PersonalEventCacheService disposed',
-        name: 'PersonalEventCache', category: LogCategory.storage);
+    Log.debug(
+      '📱 PersonalEventCacheService disposed',
+      name: 'PersonalEventCache',
+      category: LogCategory.storage,
+    );
   }
 }

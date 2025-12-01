@@ -6,13 +6,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// App lifecycle state enum (simplified version for testing)
-enum AppLifecycleState {
-  resumed,
-  inactive,
-  paused,
-  detached,
-  hidden,
-}
+enum AppLifecycleState { resumed, inactive, paused, detached, hidden }
 
 /// Simple provider test harness for TDD development
 ///
@@ -37,15 +31,16 @@ class ProviderTestHarness {
     // We'll override specific providers as needed in each test
     container = ProviderContainer();
 
-    Log.info('🧪 ProviderTestHarness initialized',
-        category: LogCategory.system);
+    Log.info(
+      '🧪 ProviderTestHarness initialized',
+      category: LogCategory.system,
+    );
   }
 
   /// Clean up test environment
   void tearDown() {
     container.dispose();
-    Log.info('🧪 ProviderTestHarness disposed',
-        category: LogCategory.system);
+    Log.info('🧪 ProviderTestHarness disposed', category: LogCategory.system);
   }
 
   // Test data manipulation methods
@@ -162,7 +157,9 @@ class TestDataBuilder {
       return VideoEvent(
         id: 'test_video_$index',
         pubkey: 'test_pubkey_$index',
-        createdAt: now.subtract(Duration(minutes: index)).millisecondsSinceEpoch ~/ 1000,
+        createdAt:
+            now.subtract(Duration(minutes: index)).millisecondsSinceEpoch ~/
+            1000,
         content: 'Test video $index content',
         timestamp: now.subtract(Duration(minutes: index)),
         videoUrl: 'https://example.com/video_$index.mp4',
@@ -195,9 +192,11 @@ class TestDataBuilder {
       createdAt: now.millisecondsSinceEpoch ~/ 1000,
       content: title ?? 'Mock video content',
       timestamp: now,
-      videoUrl: videoUrl ?? (isGif
-          ? 'https://example.com/video.gif'
-          : 'https://example.com/video.mp4'),
+      videoUrl:
+          videoUrl ??
+          (isGif
+              ? 'https://example.com/video.gif'
+              : 'https://example.com/video.mp4'),
       thumbnailUrl: 'https://example.com/thumb.jpg',
       title: title ?? 'Mock Video',
       hashtags: hashtags ?? ['mock', 'test'],

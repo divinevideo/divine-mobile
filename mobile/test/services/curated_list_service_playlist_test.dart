@@ -27,8 +27,9 @@ void main() {
       prefs = await SharedPreferences.getInstance();
 
       when(mockAuth.isAuthenticated).thenReturn(true);
-      when(mockAuth.currentPublicKeyHex)
-          .thenReturn('test_pubkey_123456789abcdef');
+      when(
+        mockAuth.currentPublicKeyHex,
+      ).thenReturn('test_pubkey_123456789abcdef');
 
       when(mockNostr.broadcastEvent(any)).thenAnswer((_) async {
         final event = Event.fromJson({
@@ -49,25 +50,31 @@ void main() {
         );
       });
 
-      when(mockNostr.subscribeToEvents(
-        filters: anyNamed('filters'),
-        bypassLimits: anyNamed('bypassLimits'),
-        onEose: anyNamed('onEose'),
-      )).thenAnswer((_) => Stream.empty());
+      when(
+        mockNostr.subscribeToEvents(
+          filters: anyNamed('filters'),
+          bypassLimits: anyNamed('bypassLimits'),
+          onEose: anyNamed('onEose'),
+        ),
+      ).thenAnswer((_) => Stream.empty());
 
-      when(mockAuth.createAndSignEvent(
-        kind: anyNamed('kind'),
-        content: anyNamed('content'),
-        tags: anyNamed('tags'),
-      )).thenAnswer((_) async => Event.fromJson({
-            'id': 'test_event_id',
-            'pubkey': 'test_pubkey_123456789abcdef',
-            'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            'kind': 30005,
-            'tags': [],
-            'content': 'test',
-            'sig': 'test_sig',
-          }));
+      when(
+        mockAuth.createAndSignEvent(
+          kind: anyNamed('kind'),
+          content: anyNamed('content'),
+          tags: anyNamed('tags'),
+        ),
+      ).thenAnswer(
+        (_) async => Event.fromJson({
+          'id': 'test_event_id',
+          'pubkey': 'test_pubkey_123456789abcdef',
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'kind': 30005,
+          'tags': [],
+          'content': 'test',
+          'sig': 'test_sig',
+        }),
+      );
 
       service = CuratedListService(
         nostrService: mockNostr,
@@ -83,10 +90,11 @@ void main() {
         await service.addVideoToList(list.id, 'video_2');
         await service.addVideoToList(list.id, 'video_3');
 
-        final result = await service.reorderVideos(
-          list.id,
-          ['video_3', 'video_1', 'video_2'],
-        );
+        final result = await service.reorderVideos(list.id, [
+          'video_3',
+          'video_1',
+          'video_2',
+        ]);
 
         expect(result, isTrue);
         final updatedList = service.getListById(list.id);
@@ -108,10 +116,10 @@ void main() {
       });
 
       test('returns false for non-existent list', () async {
-        final result = await service.reorderVideos(
-          'non_existent',
-          ['video_1', 'video_2'],
-        );
+        final result = await service.reorderVideos('non_existent', [
+          'video_1',
+          'video_2',
+        ]);
 
         expect(result, isFalse);
       });
@@ -123,10 +131,10 @@ void main() {
         await service.addVideoToList(list.id, 'video_3');
 
         // Missing video_3
-        final result = await service.reorderVideos(
-          list.id,
-          ['video_1', 'video_2'],
-        );
+        final result = await service.reorderVideos(list.id, [
+          'video_1',
+          'video_2',
+        ]);
 
         expect(result, isFalse);
         // Order should not change
@@ -140,16 +148,20 @@ void main() {
         await service.addVideoToList(list.id, 'video_2');
 
         // Extra video_3
-        final result = await service.reorderVideos(
-          list.id,
-          ['video_1', 'video_2', 'video_3'],
-        );
+        final result = await service.reorderVideos(list.id, [
+          'video_1',
+          'video_2',
+          'video_3',
+        ]);
 
         expect(result, isFalse);
       });
 
       test('publishes update to Nostr for public list', () async {
-        final list = await service.createList(name: 'Test List', isPublic: true);
+        final list = await service.createList(
+          name: 'Test List',
+          isPublic: true,
+        );
         await service.addVideoToList(list!.id, 'video_1');
         await service.addVideoToList(list.id, 'video_2');
         reset(mockNostr);
@@ -324,45 +336,58 @@ void main() {
         expect(service.getListById(listId)!.videoEventIds, isEmpty);
       });
 
-      test('reorder with duplicate videos in new order is accepted (duplicates removed)', () async {
-        final list = await service.createList(name: 'Test List');
-        await service.addVideoToList(list!.id, 'video_1');
-        await service.addVideoToList(list.id, 'video_2');
+      test(
+        'reorder with duplicate videos in new order is accepted (duplicates removed)',
+        () async {
+          final list = await service.createList(name: 'Test List');
+          await service.addVideoToList(list!.id, 'video_1');
+          await service.addVideoToList(list.id, 'video_2');
 
-        // Duplicate video_1 - implementation uses Set which deduplicates
-        final result = await service.reorderVideos(
-          list.id,
-          ['video_1', 'video_1', 'video_2'],
-        );
+          // Duplicate video_1 - implementation uses Set which deduplicates
+          final result = await service.reorderVideos(list.id, [
+            'video_1',
+            'video_1',
+            'video_2',
+          ]);
 
-        // Implementation accepts because Set(['video_1', 'video_1', 'video_2']) == Set(['video_1', 'video_2'])
-        expect(result, isTrue);
-      });
+          // Implementation accepts because Set(['video_1', 'video_1', 'video_2']) == Set(['video_1', 'video_2'])
+          expect(result, isTrue);
+        },
+      );
 
-      test('getOrderedVideoIds respects playOrder after manual reorder', () async {
-        final list = await service.createList(
-          name: 'Test List',
-          playOrder: PlayOrder.reverse, // Start with reverse
-        );
-        await service.addVideoToList(list!.id, 'video_1');
-        await service.addVideoToList(list.id, 'video_2');
-        await service.addVideoToList(list.id, 'video_3');
+      test(
+        'getOrderedVideoIds respects playOrder after manual reorder',
+        () async {
+          final list = await service.createList(
+            name: 'Test List',
+            playOrder: PlayOrder.reverse, // Start with reverse
+          );
+          await service.addVideoToList(list!.id, 'video_1');
+          await service.addVideoToList(list.id, 'video_2');
+          await service.addVideoToList(list.id, 'video_3');
 
-        // Before reorder - should be reverse
-        expect(
-          service.getOrderedVideoIds(list.id),
-          ['video_3', 'video_2', 'video_1'],
-        );
+          // Before reorder - should be reverse
+          expect(service.getOrderedVideoIds(list.id), [
+            'video_3',
+            'video_2',
+            'video_1',
+          ]);
 
-        // Reorder - changes to manual
-        await service.reorderVideos(list.id, ['video_2', 'video_1', 'video_3']);
+          // Reorder - changes to manual
+          await service.reorderVideos(list.id, [
+            'video_2',
+            'video_1',
+            'video_3',
+          ]);
 
-        // After reorder - should use manual order
-        expect(
-          service.getOrderedVideoIds(list.id),
-          ['video_2', 'video_1', 'video_3'],
-        );
-      });
+          // After reorder - should use manual order
+          expect(service.getOrderedVideoIds(list.id), [
+            'video_2',
+            'video_1',
+            'video_3',
+          ]);
+        },
+      );
 
       test('shuffle generates different orders on multiple calls', () async {
         final list = await service.createList(
@@ -379,7 +404,8 @@ void main() {
         final order3 = service.getOrderedVideoIds(listId);
 
         // At least one should be different (very high probability with 10 items)
-        final allSame = order1.toString() == order2.toString() &&
+        final allSame =
+            order1.toString() == order2.toString() &&
             order2.toString() == order3.toString();
         expect(allSame, isFalse);
       });

@@ -110,28 +110,31 @@ void main() {
       expect(videoEvent.isExpired, isTrue);
     });
 
-    test('isExpired returns true for events expiring in exactly 0 seconds (boundary)', () {
-      final now = DateTime.now();
-      final expirationTimestamp = now.millisecondsSinceEpoch ~/ 1000;
+    test(
+      'isExpired returns true for events expiring in exactly 0 seconds (boundary)',
+      () {
+        final now = DateTime.now();
+        final expirationTimestamp = now.millisecondsSinceEpoch ~/ 1000;
 
-      final event = Event.fromJson({
-        'id': 'test123',
-        'pubkey': 'pubkey123',
-        'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        'kind': 34236,
-        'tags': [
-          ['url', 'https://example.com/video.mp4'],
-          ['expiration', expirationTimestamp.toString()],
-        ],
-        'content': 'Test video',
-        'sig': 'sig123',
-      });
+        final event = Event.fromJson({
+          'id': 'test123',
+          'pubkey': 'pubkey123',
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'kind': 34236,
+          'tags': [
+            ['url', 'https://example.com/video.mp4'],
+            ['expiration', expirationTimestamp.toString()],
+          ],
+          'content': 'Test video',
+          'sig': 'sig123',
+        });
 
-      final videoEvent = VideoEvent.fromNostrEvent(event);
+        final videoEvent = VideoEvent.fromNostrEvent(event);
 
-      // Event should be expired if current time >= expiration time
-      expect(videoEvent.isExpired, isTrue);
-    });
+        // Event should be expired if current time >= expiration time
+        expect(videoEvent.isExpired, isTrue);
+      },
+    );
 
     test('handles invalid expiration timestamp gracefully', () {
       final event = Event.fromJson({

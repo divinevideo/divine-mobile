@@ -8,6 +8,9 @@ import 'package:openvine/services/nostr_service_interface.dart';
 /// Create NostrService instance for mobile platforms
 ///
 /// Uses WebSocket connection to local embedded relay on port 7447
-INostrService createEmbeddedRelayService(NostrKeyManager keyManager, {void Function()? onInitialized}) {
+INostrService createEmbeddedRelayService(
+  NostrKeyManager keyManager, {
+  void Function()? onInitialized,
+}) {
   return NostrService(keyManager, onInitialized: onInitialized);
 }

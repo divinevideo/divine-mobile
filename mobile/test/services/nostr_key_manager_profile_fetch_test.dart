@@ -39,28 +39,29 @@ void main() {
     });
 
     group('importFromNsec - profile fetching', () {
-      test('should fetch profile from specified relays after successful nsec import',
-          () async {
-        // Arrange: Create a valid test nsec key
-        final testPrivateKeyHex =
-            'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
-        final testNsec = NostrEncoding.encodePrivateKey(testPrivateKeyHex);
+      test(
+        'should fetch profile from specified relays after successful nsec import',
+        () async {
+          // Arrange: Create a valid test nsec key
+          final testPrivateKeyHex =
+              'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+          final testNsec = NostrEncoding.encodePrivateKey(testPrivateKeyHex);
 
-        // Act: Import the nsec key (this should trigger profile fetch)
-        await keyManager.importFromNsec(
-          testNsec,
-          nostrService: mockNostrService,
-          profileService: mockProfileService,
-        );
+          // Act: Import the nsec key (this should trigger profile fetch)
+          await keyManager.importFromNsec(
+            testNsec,
+            nostrService: mockNostrService,
+            profileService: mockProfileService,
+          );
 
-        // Assert: Verify profile fetch was called with correct parameters
-        final captured = verify(mockProfileService.fetchProfile(
-          captureAny,
-          forceRefresh: false,
-        )).captured;
-        expect(captured.length, equals(1));
-        expect(captured[0], equals(keyManager.publicKey));
-      });
+          // Assert: Verify profile fetch was called with correct parameters
+          final captured = verify(
+            mockProfileService.fetchProfile(captureAny, forceRefresh: false),
+          ).captured;
+          expect(captured.length, equals(1));
+          expect(captured[0], equals(keyManager.publicKey));
+        },
+      );
 
       test('should NOT fetch profile if nsec import fails', () async {
         // Arrange: Create an INVALID nsec
@@ -77,10 +78,12 @@ void main() {
         );
 
         // Verify profile service was never called
-        verifyNever(mockProfileService.fetchProfile(
-          any,
-          forceRefresh: anyNamed('forceRefresh'),
-        ));
+        verifyNever(
+          mockProfileService.fetchProfile(
+            any,
+            forceRefresh: anyNamed('forceRefresh'),
+          ),
+        );
       });
 
       test('should handle missing UserProfileService gracefully', () async {
@@ -109,8 +112,9 @@ void main() {
         final testNsec = NostrEncoding.encodePrivateKey(testPrivateKeyHex);
 
         // Mock profile service to throw an error
-        when(mockProfileService.fetchProfile(any, forceRefresh: false))
-            .thenThrow(Exception('Profile fetch failed'));
+        when(
+          mockProfileService.fetchProfile(any, forceRefresh: false),
+        ).thenThrow(Exception('Profile fetch failed'));
 
         // Act: Import should still succeed despite profile fetch error
         final result = await keyManager.importFromNsec(
@@ -125,85 +129,88 @@ void main() {
         expect(keyManager.hasKeys, isTrue);
 
         // Verify profile fetch was attempted
-        verify(mockProfileService.fetchProfile(any, forceRefresh: false))
-            .called(1);
+        verify(
+          mockProfileService.fetchProfile(any, forceRefresh: false),
+        ).called(1);
       });
 
-      test('should NOT fetch profile if NostrService is not initialized',
-          () async {
-        // Arrange: Create a valid test nsec key
-        final testPrivateKeyHex =
-            'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5';
-        final testNsec = NostrEncoding.encodePrivateKey(testPrivateKeyHex);
+      test(
+        'should NOT fetch profile if NostrService is not initialized',
+        () async {
+          // Arrange: Create a valid test nsec key
+          final testPrivateKeyHex =
+              'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5';
+          final testNsec = NostrEncoding.encodePrivateKey(testPrivateKeyHex);
 
-        // Mock NostrService as NOT initialized
-        when(mockNostrService.isInitialized).thenReturn(false);
+          // Mock NostrService as NOT initialized
+          when(mockNostrService.isInitialized).thenReturn(false);
 
-        // Act: Import key
-        await keyManager.importFromNsec(
-          testNsec,
-          nostrService: mockNostrService,
-          profileService: mockProfileService,
-        );
+          // Act: Import key
+          await keyManager.importFromNsec(
+            testNsec,
+            nostrService: mockNostrService,
+            profileService: mockProfileService,
+          );
 
-        // Assert: Profile fetch should NOT be called when service not initialized
-        verifyNever(mockProfileService.fetchProfile(
-          any,
-          forceRefresh: anyNamed('forceRefresh'),
-        ));
-      });
+          // Assert: Profile fetch should NOT be called when service not initialized
+          verifyNever(
+            mockProfileService.fetchProfile(
+              any,
+              forceRefresh: anyNamed('forceRefresh'),
+            ),
+          );
+        },
+      );
 
-      test('should fetch profile using forceRefresh=false for initial import',
-          () async {
-        // Arrange: Create a valid test nsec key
-        final testPrivateKeyHex =
-            'e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6';
-        final testNsec = NostrEncoding.encodePrivateKey(testPrivateKeyHex);
+      test(
+        'should fetch profile using forceRefresh=false for initial import',
+        () async {
+          // Arrange: Create a valid test nsec key
+          final testPrivateKeyHex =
+              'e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6';
+          final testNsec = NostrEncoding.encodePrivateKey(testPrivateKeyHex);
 
-        // Act: Import key
-        await keyManager.importFromNsec(
-          testNsec,
-          nostrService: mockNostrService,
-          profileService: mockProfileService,
-        );
+          // Act: Import key
+          await keyManager.importFromNsec(
+            testNsec,
+            nostrService: mockNostrService,
+            profileService: mockProfileService,
+          );
 
-        // Assert: Verify forceRefresh is false (use cached profile if available)
-        verify(mockProfileService.fetchProfile(
-          any,
-          forceRefresh: false,
-        )).called(1);
+          // Assert: Verify forceRefresh is false (use cached profile if available)
+          verify(
+            mockProfileService.fetchProfile(any, forceRefresh: false),
+          ).called(1);
 
-        // Ensure forceRefresh=true was NOT called
-        verifyNever(mockProfileService.fetchProfile(
-          any,
-          forceRefresh: true,
-        ));
-      });
+          // Ensure forceRefresh=true was NOT called
+          verifyNever(mockProfileService.fetchProfile(any, forceRefresh: true));
+        },
+      );
     });
 
     group('importPrivateKey - profile fetching', () {
       test(
-          'should fetch profile from specified relays after successful hex key import',
-          () async {
-        // Arrange: Create a valid test private key in hex format
-        final testPrivateKeyHex =
-            'f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7';
+        'should fetch profile from specified relays after successful hex key import',
+        () async {
+          // Arrange: Create a valid test private key in hex format
+          final testPrivateKeyHex =
+              'f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7';
 
-        // Act: Import the hex private key (this should trigger profile fetch)
-        await keyManager.importPrivateKeyWithServices(
-          testPrivateKeyHex,
-          nostrService: mockNostrService,
-          profileService: mockProfileService,
-        );
+          // Act: Import the hex private key (this should trigger profile fetch)
+          await keyManager.importPrivateKeyWithServices(
+            testPrivateKeyHex,
+            nostrService: mockNostrService,
+            profileService: mockProfileService,
+          );
 
-        // Assert: Verify profile fetch was called
-        final captured = verify(mockProfileService.fetchProfile(
-          captureAny,
-          forceRefresh: false,
-        )).captured;
-        expect(captured.length, equals(1));
-        expect(captured[0], equals(keyManager.publicKey));
-      });
+          // Assert: Verify profile fetch was called
+          final captured = verify(
+            mockProfileService.fetchProfile(captureAny, forceRefresh: false),
+          ).captured;
+          expect(captured.length, equals(1));
+          expect(captured[0], equals(keyManager.publicKey));
+        },
+      );
 
       test('should handle profile fetch gracefully for hex import', () async {
         // Arrange: Create a valid test private key
@@ -211,8 +218,9 @@ void main() {
             'a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8';
 
         // Mock profile service to return null (profile not found)
-        when(mockProfileService.fetchProfile(any, forceRefresh: false))
-            .thenAnswer((_) async => null);
+        when(
+          mockProfileService.fetchProfile(any, forceRefresh: false),
+        ).thenAnswer((_) async => null);
 
         // Act: Import should still succeed
         final result = await keyManager.importPrivateKeyWithServices(

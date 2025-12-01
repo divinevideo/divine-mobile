@@ -14,8 +14,11 @@ class CacheRecoveryService {
   /// This works on iOS devices, Android, and desktop platforms
   static Future<bool> clearAllCaches() async {
     try {
-      Log.info('🧹 Starting cache recovery process',
-          name: _logName, category: LogCategory.system);
+      Log.info(
+        '🧹 Starting cache recovery process',
+        name: _logName,
+        category: LogCategory.system,
+      );
 
       int clearedItems = 0;
 
@@ -31,13 +34,19 @@ class CacheRecoveryService {
       // 4. Clear specific cache directories
       clearedItems += await _clearCacheDirectory();
 
-      Log.info('✅ Cache recovery completed - cleared $clearedItems items',
-          name: _logName, category: LogCategory.system);
+      Log.info(
+        '✅ Cache recovery completed - cleared $clearedItems items',
+        name: _logName,
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('❌ Cache recovery failed: $e',
-          name: _logName, category: LogCategory.system);
+      Log.error(
+        '❌ Cache recovery failed: $e',
+        name: _logName,
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -66,12 +75,18 @@ class CacheRecoveryService {
             final box = Hive.box(boxName);
             await box.clear();
             cleared++;
-            Log.debug('Cleared Hive box: $boxName',
-                name: _logName, category: LogCategory.system);
+            Log.debug(
+              'Cleared Hive box: $boxName',
+              name: _logName,
+              category: LogCategory.system,
+            );
           }
         } catch (e) {
-          Log.warning('Failed to clear Hive box $boxName: $e',
-              name: _logName, category: LogCategory.system);
+          Log.warning(
+            'Failed to clear Hive box $boxName: $e',
+            name: _logName,
+            category: LogCategory.system,
+          );
         }
       }
 
@@ -82,14 +97,19 @@ class CacheRecoveryService {
           cleared++;
         } catch (e) {
           // Box might not exist, which is fine
-          Log.debug('Box $boxName not found or already deleted',
-              name: _logName, category: LogCategory.system);
+          Log.debug(
+            'Box $boxName not found or already deleted',
+            name: _logName,
+            category: LogCategory.system,
+          );
         }
       }
-
     } catch (e) {
-      Log.warning('Error clearing Hive boxes: $e',
-          name: _logName, category: LogCategory.system);
+      Log.warning(
+        'Error clearing Hive boxes: $e',
+        name: _logName,
+        category: LogCategory.system,
+      );
     }
 
     return cleared;
@@ -108,14 +128,20 @@ class CacheRecoveryService {
             await file.delete(recursive: true);
             cleared++;
           } catch (e) {
-            Log.debug('Could not delete ${file.path}: $e',
-                name: _logName, category: LogCategory.system);
+            Log.debug(
+              'Could not delete ${file.path}: $e',
+              name: _logName,
+              category: LogCategory.system,
+            );
           }
         }
       }
     } catch (e) {
-      Log.warning('Error clearing app support directory: $e',
-          name: _logName, category: LogCategory.system);
+      Log.warning(
+        'Error clearing app support directory: $e',
+        name: _logName,
+        category: LogCategory.system,
+      );
     }
 
     return cleared;
@@ -134,14 +160,20 @@ class CacheRecoveryService {
             await file.delete(recursive: true);
             cleared++;
           } catch (e) {
-            Log.debug('Could not delete temp file ${file.path}: $e',
-                name: _logName, category: LogCategory.system);
+            Log.debug(
+              'Could not delete temp file ${file.path}: $e',
+              name: _logName,
+              category: LogCategory.system,
+            );
           }
         }
       }
     } catch (e) {
-      Log.warning('Error clearing temp directory: $e',
-          name: _logName, category: LogCategory.system);
+      Log.warning(
+        'Error clearing temp directory: $e',
+        name: _logName,
+        category: LogCategory.system,
+      );
     }
 
     return cleared;
@@ -160,14 +192,20 @@ class CacheRecoveryService {
             await file.delete(recursive: true);
             cleared++;
           } catch (e) {
-            Log.debug('Could not delete cache file ${file.path}: $e',
-                name: _logName, category: LogCategory.system);
+            Log.debug(
+              'Could not delete cache file ${file.path}: $e',
+              name: _logName,
+              category: LogCategory.system,
+            );
           }
         }
       }
     } catch (e) {
-      Log.warning('Error clearing cache directory: $e',
-          name: _logName, category: LogCategory.system);
+      Log.warning(
+        'Error clearing cache directory: $e',
+        name: _logName,
+        category: LogCategory.system,
+      );
     }
 
     return cleared;
@@ -215,7 +253,8 @@ class CacheRecoveryService {
   static String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 }

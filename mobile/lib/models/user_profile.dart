@@ -40,7 +40,8 @@ class UserProfile {
       return UserProfile(
         pubkey: event.pubkey,
         name: content['name']?.toString(),
-        displayName: content['display_name']?.toString() ??
+        displayName:
+            content['display_name']?.toString() ??
             content['displayName']?.toString(),
         about: content['about']?.toString(),
         picture: content['picture']?.toString(),
@@ -66,21 +67,20 @@ class UserProfile {
 
   /// Create profile from JSON
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
-        pubkey: json['pubkey'] as String,
-        name: json['name'] as String?,
-        displayName: json['display_name'] as String?,
-        about: json['about'] as String?,
-        picture: json['picture'] as String?,
-        banner: json['banner'] as String?,
-        website: json['website'] as String?,
-        nip05: json['nip05'] as String?,
-        lud16: json['lud16'] as String?,
-        lud06: json['lud06'] as String?,
-        rawData: json['raw_data'] as Map<String, dynamic>? ?? {},
-        createdAt:
-            DateTime.fromMillisecondsSinceEpoch(json['created_at'] as int),
-        eventId: json['event_id'] as String,
-      );
+    pubkey: json['pubkey'] as String,
+    name: json['name'] as String?,
+    displayName: json['display_name'] as String?,
+    about: json['about'] as String?,
+    picture: json['picture'] as String?,
+    banner: json['banner'] as String?,
+    website: json['website'] as String?,
+    nip05: json['nip05'] as String?,
+    lud16: json['lud16'] as String?,
+    lud06: json['lud06'] as String?,
+    rawData: json['raw_data'] as Map<String, dynamic>? ?? {},
+    createdAt: DateTime.fromMillisecondsSinceEpoch(json['created_at'] as int),
+    eventId: json['event_id'] as String,
+  );
 
   /// Create profile from Drift database row
   factory UserProfile.fromDrift(dynamic row) {
@@ -88,7 +88,8 @@ class UserProfile {
     Map<String, dynamic> parsedRawData = {};
     if (row.rawData != null && row.rawData is String) {
       try {
-        parsedRawData = jsonDecode(row.rawData as String) as Map<String, dynamic>;
+        parsedRawData =
+            jsonDecode(row.rawData as String) as Map<String, dynamic>;
       } catch (e) {
         // If JSON parsing fails, use empty map
         parsedRawData = {};
@@ -227,20 +228,20 @@ class UserProfile {
 
   /// Convert profile to JSON
   Map<String, dynamic> toJson() => {
-        'pubkey': pubkey,
-        'name': name,
-        'display_name': displayName,
-        'about': about,
-        'picture': picture,
-        'banner': banner,
-        'website': website,
-        'nip05': nip05,
-        'lud16': lud16,
-        'lud06': lud06,
-        'created_at': createdAt.millisecondsSinceEpoch,
-        'event_id': eventId,
-        'raw_data': rawData,
-      };
+    'pubkey': pubkey,
+    'name': name,
+    'display_name': displayName,
+    'about': about,
+    'picture': picture,
+    'banner': banner,
+    'website': website,
+    'nip05': nip05,
+    'lud16': lud16,
+    'lud06': lud06,
+    'created_at': createdAt.millisecondsSinceEpoch,
+    'event_id': eventId,
+    'raw_data': rawData,
+  };
 
   /// Create copy with updated fields
   UserProfile copyWith({
@@ -254,22 +255,21 @@ class UserProfile {
     String? lud16,
     String? lud06,
     Map<String, dynamic>? rawData,
-  }) =>
-      UserProfile(
-        pubkey: pubkey,
-        name: name ?? this.name,
-        displayName: displayName ?? this.displayName,
-        about: about ?? this.about,
-        picture: picture ?? this.picture,
-        banner: banner ?? this.banner,
-        website: website ?? this.website,
-        nip05: nip05 ?? this.nip05,
-        lud16: lud16 ?? this.lud16,
-        lud06: lud06 ?? this.lud06,
-        rawData: rawData ?? this.rawData,
-        createdAt: createdAt,
-        eventId: eventId,
-      );
+  }) => UserProfile(
+    pubkey: pubkey,
+    name: name ?? this.name,
+    displayName: displayName ?? this.displayName,
+    about: about ?? this.about,
+    picture: picture ?? this.picture,
+    banner: banner ?? this.banner,
+    website: website ?? this.website,
+    nip05: nip05 ?? this.nip05,
+    lud16: lud16 ?? this.lud16,
+    lud06: lud06 ?? this.lud06,
+    rawData: rawData ?? this.rawData,
+    createdAt: createdAt,
+    eventId: eventId,
+  );
 
   @override
   bool operator ==(Object other) {

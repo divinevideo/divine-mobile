@@ -66,8 +66,11 @@ class ProofModeConfig {
       'production': await isProductionEnabled,
     };
 
-    Log.debug('ProofMode capabilities: $capabilities',
-        name: 'ProofModeConfig', category: LogCategory.system);
+    Log.debug(
+      'ProofMode capabilities: $capabilities',
+      name: 'ProofModeConfig',
+      category: LogCategory.system,
+    );
 
     return capabilities;
   }
@@ -80,8 +83,11 @@ class ProofModeConfig {
         .map((entry) => entry.key)
         .toList();
 
-    Log.info('ProofMode: Always enabled. Active features: ${enabledFeatures.join(", ")}',
-        name: 'ProofModeConfig', category: LogCategory.system);
+    Log.info(
+      'ProofMode: Always enabled. Active features: ${enabledFeatures.join(", ")}',
+      name: 'ProofModeConfig',
+      category: LogCategory.system,
+    );
   }
 
   /// Get GCP Project ID for Android Play Integrity attestation
@@ -95,21 +101,33 @@ class ProofModeConfig {
   static Future<int> get gcpProjectId async {
     try {
       // Try to load from environment variable
-      final envValue = const String.fromEnvironment('GCP_PROJECT_ID', defaultValue: '0');
+      final envValue = const String.fromEnvironment(
+        'GCP_PROJECT_ID',
+        defaultValue: '0',
+      );
       final projectId = int.tryParse(envValue) ?? 0;
 
       if (projectId > 0) {
-        Log.debug('Loaded GCP Project ID from environment: $projectId',
-            name: 'ProofModeConfig', category: LogCategory.system);
+        Log.debug(
+          'Loaded GCP Project ID from environment: $projectId',
+          name: 'ProofModeConfig',
+          category: LogCategory.system,
+        );
       } else {
-        Log.debug('GCP Project ID not configured (using default: 0)',
-            name: 'ProofModeConfig', category: LogCategory.system);
+        Log.debug(
+          'GCP Project ID not configured (using default: 0)',
+          name: 'ProofModeConfig',
+          category: LogCategory.system,
+        );
       }
 
       return projectId;
     } catch (e) {
-      Log.warning('Failed to load GCP Project ID: $e',
-          name: 'ProofModeConfig', category: LogCategory.system);
+      Log.warning(
+        'Failed to load GCP Project ID: $e',
+        name: 'ProofModeConfig',
+        category: LogCategory.system,
+      );
       return 0;
     }
   }

@@ -6,37 +6,49 @@ import 'package:openvine/router/route_utils.dart';
 
 void main() {
   group('parseRoute() - Search with terms', () {
-    test('parseRoute("/search/nostr") returns RouteContext with searchTerm', () {
-      final result = parseRoute('/search/nostr');
+    test(
+      'parseRoute("/search/nostr") returns RouteContext with searchTerm',
+      () {
+        final result = parseRoute('/search/nostr');
 
-      expect(result.type, RouteType.search);
-      expect(result.searchTerm, 'nostr');
-      expect(result.videoIndex, null);
-    });
+        expect(result.type, RouteType.search);
+        expect(result.searchTerm, 'nostr');
+        expect(result.videoIndex, null);
+      },
+    );
 
-    test('parseRoute("/search/bitcoin/7") returns RouteContext with term and index', () {
-      final result = parseRoute('/search/bitcoin/7');
+    test(
+      'parseRoute("/search/bitcoin/7") returns RouteContext with term and index',
+      () {
+        final result = parseRoute('/search/bitcoin/7');
 
-      expect(result.type, RouteType.search);
-      expect(result.searchTerm, 'bitcoin');
-      expect(result.videoIndex, 7);
-    });
+        expect(result.type, RouteType.search);
+        expect(result.searchTerm, 'bitcoin');
+        expect(result.videoIndex, 7);
+      },
+    );
 
-    test('parseRoute("/search") returns RouteContext with no term or index', () {
-      final result = parseRoute('/search');
+    test(
+      'parseRoute("/search") returns RouteContext with no term or index',
+      () {
+        final result = parseRoute('/search');
 
-      expect(result.type, RouteType.search);
-      expect(result.searchTerm, null);
-      expect(result.videoIndex, null);
-    });
+        expect(result.type, RouteType.search);
+        expect(result.searchTerm, null);
+        expect(result.videoIndex, null);
+      },
+    );
 
-    test('parseRoute("/search/5") returns legacy format (index only, no term)', () {
-      final result = parseRoute('/search/5');
+    test(
+      'parseRoute("/search/5") returns legacy format (index only, no term)',
+      () {
+        final result = parseRoute('/search/5');
 
-      expect(result.type, RouteType.search);
-      expect(result.searchTerm, null);
-      expect(result.videoIndex, 5);
-    });
+        expect(result.type, RouteType.search);
+        expect(result.searchTerm, null);
+        expect(result.videoIndex, 5);
+      },
+    );
   });
 
   group('buildRoute() - Search with terms', () {
@@ -51,22 +63,23 @@ void main() {
       expect(result, '/search/bitcoin');
     });
 
-    test('buildRoute with searchTerm and videoIndex returns /search/lightning/3', () {
-      final context = RouteContext(
-        type: RouteType.search,
-        searchTerm: 'lightning',
-        videoIndex: 3,
-      );
+    test(
+      'buildRoute with searchTerm and videoIndex returns /search/lightning/3',
+      () {
+        final context = RouteContext(
+          type: RouteType.search,
+          searchTerm: 'lightning',
+          videoIndex: 3,
+        );
 
-      final result = buildRoute(context);
+        final result = buildRoute(context);
 
-      expect(result, '/search/lightning/3');
-    });
+        expect(result, '/search/lightning/3');
+      },
+    );
 
     test('buildRoute with no term or index returns /search', () {
-      final context = RouteContext(
-        type: RouteType.search,
-      );
+      final context = RouteContext(type: RouteType.search);
 
       final result = buildRoute(context);
 
@@ -74,10 +87,7 @@ void main() {
     });
 
     test('buildRoute with legacy format (index only) returns /search/5', () {
-      final context = RouteContext(
-        type: RouteType.search,
-        videoIndex: 5,
-      );
+      final context = RouteContext(type: RouteType.search, videoIndex: 5);
 
       final result = buildRoute(context);
 
@@ -133,13 +143,16 @@ void main() {
       expect(result.videoIndex, null);
     });
 
-    test('parseRoute("/search/%2Fspecial") decodes forward slash correctly', () {
-      final result = parseRoute('/search/%2Fspecial');
+    test(
+      'parseRoute("/search/%2Fspecial") decodes forward slash correctly',
+      () {
+        final result = parseRoute('/search/%2Fspecial');
 
-      expect(result.type, RouteType.search);
-      expect(result.searchTerm, '/special');
-      expect(result.videoIndex, null);
-    });
+        expect(result.type, RouteType.search);
+        expect(result.searchTerm, '/special');
+        expect(result.videoIndex, null);
+      },
+    );
 
     test('parseRoute("/search/%F0%9F%9A%80") decodes emoji correctly', () {
       final result = parseRoute('/search/%F0%9F%9A%80');
@@ -201,10 +214,7 @@ void main() {
     });
 
     test('buildRoute encodes emoji in search term', () {
-      final context = RouteContext(
-        type: RouteType.search,
-        searchTerm: '🚀',
-      );
+      final context = RouteContext(type: RouteType.search, searchTerm: '🚀');
 
       final result = buildRoute(context);
 
@@ -280,10 +290,7 @@ void main() {
     });
 
     test('Round-trip preserves search term with emoji', () {
-      final original = RouteContext(
-        type: RouteType.search,
-        searchTerm: '🚀',
-      );
+      final original = RouteContext(type: RouteType.search, searchTerm: '🚀');
 
       final url = buildRoute(original);
       final parsed = parseRoute(url);
@@ -293,19 +300,22 @@ void main() {
       expect(parsed.videoIndex, original.videoIndex);
     });
 
-    test('Round-trip preserves complex search term with multiple special chars', () {
-      final original = RouteContext(
-        type: RouteType.search,
-        searchTerm: 'hello world #bitcoin 🚀',
-        videoIndex: 7,
-      );
+    test(
+      'Round-trip preserves complex search term with multiple special chars',
+      () {
+        final original = RouteContext(
+          type: RouteType.search,
+          searchTerm: 'hello world #bitcoin 🚀',
+          videoIndex: 7,
+        );
 
-      final url = buildRoute(original);
-      final parsed = parseRoute(url);
+        final url = buildRoute(original);
+        final parsed = parseRoute(url);
 
-      expect(parsed.type, original.type);
-      expect(parsed.searchTerm, original.searchTerm);
-      expect(parsed.videoIndex, original.videoIndex);
-    });
+        expect(parsed.type, original.type);
+        expect(parsed.searchTerm, original.searchTerm);
+        expect(parsed.videoIndex, original.videoIndex);
+      },
+    );
   });
 }

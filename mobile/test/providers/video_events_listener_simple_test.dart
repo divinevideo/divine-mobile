@@ -16,7 +16,6 @@ import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:openvine/state/seen_videos_state.dart';
 
 import 'video_events_listener_simple_test.mocks.dart';
 
@@ -60,17 +59,18 @@ void main() {
       );
 
       // Act - Subscribe to provider
-      final listener = container.listen(
-        videoEventsProvider,
-        (prev, next) {},
-      );
+      final listener = container.listen(videoEventsProvider, (prev, next) {});
 
       // Allow async processing
       await pumpEventQueue();
 
       // Assert - Verify listener was attached (remove-then-add pattern)
-      verify(mockVideoEventService.removeListener(any)).called(greaterThanOrEqualTo(1));
-      verify(mockVideoEventService.addListener(any)).called(greaterThanOrEqualTo(1));
+      verify(
+        mockVideoEventService.removeListener(any),
+      ).called(greaterThanOrEqualTo(1));
+      verify(
+        mockVideoEventService.addListener(any),
+      ).called(greaterThanOrEqualTo(1));
 
       listener.close();
       container.dispose();
@@ -93,10 +93,7 @@ void main() {
       );
 
       // Act
-      final listener = container.listen(
-        videoEventsProvider,
-        (prev, next) {},
-      );
+      final listener = container.listen(videoEventsProvider, (prev, next) {});
 
       await pumpEventQueue();
 
@@ -149,19 +146,18 @@ void main() {
 
       // Act
       final states = <AsyncValue<List<VideoEvent>>>[];
-      final listener = container.listen(
-        videoEventsProvider,
-        (prev, next) {
-          states.add(next);
-        },
-        fireImmediately: true,
-      );
+      final listener = container.listen(videoEventsProvider, (prev, next) {
+        states.add(next);
+      }, fireImmediately: true);
 
       await pumpEventQueue();
 
       // Assert - Should emit videos
-      expect(states.any((s) => s.hasValue && s.value!.length == 2), isTrue,
-          reason: 'Should emit 2 videos from service');
+      expect(
+        states.any((s) => s.hasValue && s.value!.length == 2),
+        isTrue,
+        reason: 'Should emit 2 videos from service',
+      );
 
       listener.close();
       container.dispose();
@@ -183,10 +179,7 @@ void main() {
         ],
       );
 
-      final listener = container.listen(
-        videoEventsProvider,
-        (prev, next) {},
-      );
+      final listener = container.listen(videoEventsProvider, (prev, next) {});
 
       await pumpEventQueue();
 
@@ -195,7 +188,9 @@ void main() {
       container.dispose();
 
       // Assert - Should remove listener on cleanup
-      verify(mockVideoEventService.removeListener(any)).called(greaterThanOrEqualTo(1));
+      verify(
+        mockVideoEventService.removeListener(any),
+      ).called(greaterThanOrEqualTo(1));
     });
 
     test('idempotent listener attachment - remove then add', () async {
@@ -215,16 +210,17 @@ void main() {
       );
 
       // Act
-      final listener = container.listen(
-        videoEventsProvider,
-        (prev, next) {},
-      );
+      final listener = container.listen(videoEventsProvider, (prev, next) {});
 
       await pumpEventQueue();
 
       // Assert - Should use remove-then-add pattern for idempotency
-      final allCalls = verify(mockVideoEventService.removeListener(captureAny)).captured;
-      final allAdds = verify(mockVideoEventService.addListener(captureAny)).captured;
+      final allCalls = verify(
+        mockVideoEventService.removeListener(captureAny),
+      ).captured;
+      final allAdds = verify(
+        mockVideoEventService.addListener(captureAny),
+      ).captured;
 
       expect(allCalls.isNotEmpty, isTrue, reason: 'Should call removeListener');
       expect(allAdds.isNotEmpty, isTrue, reason: 'Should call addListener');

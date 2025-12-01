@@ -10,25 +10,21 @@ import 'route_utils.dart';
 
 extension NavX on BuildContext {
   // Tab bases
-  void goHome([int index = 0]) => go(buildRoute(
-        RouteContext(type: RouteType.home, videoIndex: index),
-      ));
+  void goHome([int index = 0]) =>
+      go(buildRoute(RouteContext(type: RouteType.home, videoIndex: index)));
 
-  void goExplore([int? index]) => go(buildRoute(
-        RouteContext(type: RouteType.explore, videoIndex: index),
-      ));
+  void goExplore([int? index]) =>
+      go(buildRoute(RouteContext(type: RouteType.explore, videoIndex: index)));
 
-  void goNotifications([int index = 0]) => go(buildRoute(
-        RouteContext(type: RouteType.notifications, videoIndex: index),
-      ));
+  void goNotifications([int index = 0]) => go(
+    buildRoute(RouteContext(type: RouteType.notifications, videoIndex: index)),
+  );
 
-  void goHashtag(String tag, [int? index]) => go(buildRoute(
-        RouteContext(
-          type: RouteType.hashtag,
-          hashtag: tag,
-          videoIndex: index,
-        ),
-      ));
+  void goHashtag(String tag, [int? index]) => go(
+    buildRoute(
+      RouteContext(type: RouteType.hashtag, hashtag: tag, videoIndex: index),
+    ),
+  );
 
   void goProfile(String identifier, [int index = 0]) {
     debugPrint('🧭 goProfile called: identifier=$identifier, index=$index');
@@ -51,11 +47,7 @@ extension NavX on BuildContext {
     }
 
     final route = buildRoute(
-      RouteContext(
-        type: RouteType.profile,
-        npub: npub,
-        videoIndex: index,
-      ),
+      RouteContext(type: RouteType.profile, npub: npub, videoIndex: index),
     );
     debugPrint('🧭 goProfile: navigating to route=$route (videoIndex=$index)');
     go(route);
@@ -80,13 +72,15 @@ extension NavX on BuildContext {
       return;
     }
 
-    go(buildRoute(
-      RouteContext(
-        type: RouteType.profile,
-        npub: npub,
-        videoIndex: null, // Grid mode - no active video
+    go(
+      buildRoute(
+        RouteContext(
+          type: RouteType.profile,
+          npub: npub,
+          videoIndex: null, // Grid mode - no active video
+        ),
       ),
-    ));
+    );
   }
 
   void pushProfile(String identifier, [int index = 0]) {
@@ -107,18 +101,22 @@ extension NavX on BuildContext {
       return;
     }
 
-    push(buildRoute(
-      RouteContext(
-        type: RouteType.profile,
-        npub: npub,
-        videoIndex: index,
+    push(
+      buildRoute(
+        RouteContext(type: RouteType.profile, npub: npub, videoIndex: index),
       ),
-    ));
+    );
   }
 
-  void goSearch([String? searchTerm, int? index]) => go(buildRoute(
-        RouteContext(type: RouteType.search, searchTerm: searchTerm, videoIndex: index),
-      ));
+  void goSearch([String? searchTerm, int? index]) => go(
+    buildRoute(
+      RouteContext(
+        type: RouteType.search,
+        searchTerm: searchTerm,
+        videoIndex: index,
+      ),
+    ),
+  );
 
   // Optional pushes (non-tab routes)
   Future<void> pushCamera() => push('/camera');

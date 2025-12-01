@@ -130,8 +130,9 @@ class VideoFilterBuilder {
         '🔍 VideoFilterBuilder: Checking capabilities for $relayUrl',
         name: 'VideoFilterBuilder',
       );
-      final capabilities =
-          await _capabilityService.getRelayCapabilities(relayUrl);
+      final capabilities = await _capabilityService.getRelayCapabilities(
+        relayUrl,
+      );
 
       UnifiedLogger.debug(
         '🔍 VideoFilterBuilder: Capabilities - hasDivineExtensions=${capabilities.hasDivineExtensions}, sortFields=${capabilities.sortFields.join(', ')}',
@@ -226,8 +227,9 @@ class VideoFilterBuilder {
       relayUrl: relayUrl,
       sortBy: VideoSortField.likes,
       sortDirection: SortDirection.desc,
-      intFilters:
-          minLikes != null ? {'likes': IntRangeFilter(gte: minLikes)} : null,
+      intFilters: minLikes != null
+          ? {'likes': IntRangeFilter(gte: minLikes)}
+          : null,
     );
   }
 
@@ -242,8 +244,9 @@ class VideoFilterBuilder {
       relayUrl: relayUrl,
       sortBy: VideoSortField.views,
       sortDirection: SortDirection.desc,
-      intFilters:
-          minViews != null ? {'views': IntRangeFilter(gte: minViews)} : null,
+      intFilters: minViews != null
+          ? {'views': IntRangeFilter(gte: minViews)}
+          : null,
     );
   }
 
@@ -267,19 +270,19 @@ class _DivineFilterAdapter extends Filter {
   final DivineFilter _divineFilter;
 
   _DivineFilterAdapter(this._divineFilter)
-      : super(
-          kinds: _divineFilter.baseFilter.kinds,
-          authors: _divineFilter.baseFilter.authors,
-          ids: _divineFilter.baseFilter.ids,
-          e: _divineFilter.baseFilter.e,
-          p: _divineFilter.baseFilter.p,
-          since: _divineFilter.baseFilter.since,
-          until: _divineFilter.baseFilter.until,
-          limit: _divineFilter.baseFilter.limit,
-          t: _divineFilter.baseFilter.t,
-          d: _divineFilter.baseFilter.d,
-          h: _divineFilter.baseFilter.h,
-        );
+    : super(
+        kinds: _divineFilter.baseFilter.kinds,
+        authors: _divineFilter.baseFilter.authors,
+        ids: _divineFilter.baseFilter.ids,
+        e: _divineFilter.baseFilter.e,
+        p: _divineFilter.baseFilter.p,
+        since: _divineFilter.baseFilter.since,
+        until: _divineFilter.baseFilter.until,
+        limit: _divineFilter.baseFilter.limit,
+        t: _divineFilter.baseFilter.t,
+        d: _divineFilter.baseFilter.d,
+        h: _divineFilter.baseFilter.h,
+      );
 
   @override
   Map<String, dynamic> toJson() {

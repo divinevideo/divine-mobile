@@ -60,10 +60,12 @@ class Nip98Token {
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class Nip98AuthService {
   Nip98AuthService({required AuthService authService})
-      : _authService = authService {
+    : _authService = authService {
     // Start periodic cache cleanup
-    _cleanupTimer =
-        Timer.periodic(_cacheCleanupInterval, (_) => _cleanupExpiredTokens());
+    _cleanupTimer = Timer.periodic(
+      _cacheCleanupInterval,
+      (_) => _cleanupExpiredTokens(),
+    );
   }
   final AuthService _authService;
 
@@ -81,8 +83,11 @@ class Nip98AuthService {
     String? payload,
   }) async {
     if (!_authService.isAuthenticated) {
-      Log.error('Cannot create NIP-98 token - user not authenticated',
-          name: 'Nip98AuthService', category: LogCategory.system);
+      Log.error(
+        'Cannot create NIP-98 token - user not authenticated',
+        name: 'Nip98AuthService',
+        category: LogCategory.system,
+      );
       return null;
     }
 
@@ -93,13 +98,19 @@ class Nip98AuthService {
       // Check cache first
       final cachedToken = _tokenCache[cacheKey];
       if (cachedToken != null && !cachedToken.isExpired) {
-        Log.debug('Using cached NIP-98 token',
-            name: 'Nip98AuthService', category: LogCategory.system);
+        Log.debug(
+          'Using cached NIP-98 token',
+          name: 'Nip98AuthService',
+          category: LogCategory.system,
+        );
         return cachedToken;
       }
 
-      Log.debug('📱 Creating new NIP-98 auth token for ${method.value} $url',
-          name: 'Nip98AuthService', category: LogCategory.system);
+      Log.debug(
+        '📱 Creating new NIP-98 auth token for ${method.value} $url',
+        name: 'Nip98AuthService',
+        category: LogCategory.system,
+      );
 
       // Parse URL to extract components
       final uri = Uri.parse(url);
@@ -131,15 +142,24 @@ class Nip98AuthService {
       // Cache the token
       _tokenCache[cacheKey] = nip98Token;
 
-      Log.info('Created NIP-98 token (expires: ${nip98Token.expiresAt})',
-          name: 'Nip98AuthService', category: LogCategory.system);
-      Log.debug('📱 Event ID: ${authEvent.id}',
-          name: 'Nip98AuthService', category: LogCategory.system);
+      Log.info(
+        'Created NIP-98 token (expires: ${nip98Token.expiresAt})',
+        name: 'Nip98AuthService',
+        category: LogCategory.system,
+      );
+      Log.debug(
+        '📱 Event ID: ${authEvent.id}',
+        name: 'Nip98AuthService',
+        category: LogCategory.system,
+      );
 
       return nip98Token;
     } catch (e) {
-      Log.error('Failed to create NIP-98 token: $e',
-          name: 'Nip98AuthService', category: LogCategory.system);
+      Log.error(
+        'Failed to create NIP-98 token: $e',
+        name: 'Nip98AuthService',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -176,22 +196,31 @@ class Nip98AuthService {
       );
 
       if (authEvent == null) {
-        Log.error('Failed to sign authentication event',
-            name: 'Nip98AuthService', category: LogCategory.system);
+        Log.error(
+          'Failed to sign authentication event',
+          name: 'Nip98AuthService',
+          category: LogCategory.system,
+        );
         return null;
       }
 
       // Validate the event
       if (!_validateAuthEvent(authEvent, url, method)) {
-        Log.error('Authentication event validation failed',
-            name: 'Nip98AuthService', category: LogCategory.system);
+        Log.error(
+          'Authentication event validation failed',
+          name: 'Nip98AuthService',
+          category: LogCategory.system,
+        );
         return null;
       }
 
       return authEvent;
     } catch (e) {
-      Log.error('Error creating auth event: $e',
-          name: 'Nip98AuthService', category: LogCategory.system);
+      Log.error(
+        'Error creating auth event: $e',
+        name: 'Nip98AuthService',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -201,8 +230,11 @@ class Nip98AuthService {
     try {
       // Check event kind
       if (event.kind != 27235) {
-        Log.error('Invalid event kind: ${event.kind}',
-            name: 'Nip98AuthService', category: LogCategory.system);
+        Log.error(
+          'Invalid event kind: ${event.kind}',
+          name: 'Nip98AuthService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -214,8 +246,11 @@ class Nip98AuthService {
         orElse: () => <String>[],
       );
       if (urlTag.isEmpty || urlTag[1] != url) {
-        Log.error('Missing or invalid URL tag',
-            name: 'Nip98AuthService', category: LogCategory.system);
+        Log.error(
+          'Missing or invalid URL tag',
+          name: 'Nip98AuthService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -224,8 +259,11 @@ class Nip98AuthService {
         orElse: () => <String>[],
       );
       if (methodTag.isEmpty || methodTag[1] != method.value) {
-        Log.error('Missing or invalid method tag',
-            name: 'Nip98AuthService', category: LogCategory.system);
+        Log.error(
+          'Missing or invalid method tag',
+          name: 'Nip98AuthService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -234,16 +272,22 @@ class Nip98AuthService {
         orElse: () => <String>[],
       );
       if (createdAtTag.isEmpty) {
-        Log.error('Missing created_at tag',
-            name: 'Nip98AuthService', category: LogCategory.system);
+        Log.error(
+          'Missing created_at tag',
+          name: 'Nip98AuthService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
       // Check timestamp is recent (within 1 hour)
       final tagTimestamp = int.tryParse(createdAtTag[1]);
       if (tagTimestamp == null) {
-        Log.error('Invalid timestamp format',
-            name: 'Nip98AuthService', category: LogCategory.system);
+        Log.error(
+          'Invalid timestamp format',
+          name: 'Nip98AuthService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -251,15 +295,21 @@ class Nip98AuthService {
       final timeDiff = (now - tagTimestamp).abs();
       if (timeDiff > 3600) {
         // 1 hour
-        Log.error('Timestamp too old: ${timeDiff}s',
-            name: 'Nip98AuthService', category: LogCategory.system);
+        Log.error(
+          'Timestamp too old: ${timeDiff}s',
+          name: 'Nip98AuthService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
       return true;
     } catch (e) {
-      Log.error('Auth event validation error: $e',
-          name: 'Nip98AuthService', category: LogCategory.system);
+      Log.error(
+        'Auth event validation error: $e',
+        name: 'Nip98AuthService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -284,24 +334,32 @@ class Nip98AuthService {
     }
 
     if (expiredKeys.isNotEmpty) {
-      Log.debug('🧹 Cleaned up ${expiredKeys.length} expired NIP-98 tokens',
-          name: 'Nip98AuthService', category: LogCategory.system);
+      Log.debug(
+        '🧹 Cleaned up ${expiredKeys.length} expired NIP-98 tokens',
+        name: 'Nip98AuthService',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Clear all cached tokens
   void clearTokenCache() {
     _tokenCache.clear();
-    Log.debug('🧹 Cleared all NIP-98 token cache',
-        name: 'Nip98AuthService', category: LogCategory.system);
+    Log.debug(
+      '🧹 Cleared all NIP-98 token cache',
+      name: 'Nip98AuthService',
+      category: LogCategory.system,
+    );
   }
 
   /// Get cache statistics
   Map<String, dynamic> get cacheStats {
-    final validTokens =
-        _tokenCache.values.where((token) => !token.isExpired).length;
-    final expiredTokens =
-        _tokenCache.values.where((token) => token.isExpired).length;
+    final validTokens = _tokenCache.values
+        .where((token) => !token.isExpired)
+        .length;
+    final expiredTokens = _tokenCache.values
+        .where((token) => token.isExpired)
+        .length;
 
     return {
       'total_cached': _tokenCache.length,
@@ -320,8 +378,11 @@ class Nip98AuthService {
   String? get currentUserPubkey => _authService.currentNpub;
 
   void dispose() {
-    Log.debug('📱️ Disposing Nip98AuthService',
-        name: 'Nip98AuthService', category: LogCategory.system);
+    Log.debug(
+      '📱️ Disposing Nip98AuthService',
+      name: 'Nip98AuthService',
+      category: LogCategory.system,
+    );
 
     _cleanupTimer?.cancel();
     _tokenCache.clear();

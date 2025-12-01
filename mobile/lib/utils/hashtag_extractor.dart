@@ -82,8 +82,10 @@ class HashtagExtractor {
     final normalized = <String>[];
 
     for (final hashtag in hashtags) {
-      final cleaned =
-          hashtag.toLowerCase().replaceAll(RegExp('[^a-z0-9_]'), '');
+      final cleaned = hashtag.toLowerCase().replaceAll(
+        RegExp('[^a-z0-9_]'),
+        '',
+      );
 
       if (isValidHashtag(cleaned) && !normalized.contains(cleaned)) {
         normalized.add(cleaned);
@@ -190,15 +192,15 @@ class HashtagExtractor {
 
   /// Extract hashtag statistics
   static HashtagStats getHashtagStats(List<String> hashtags) => HashtagStats(
-        totalCount: hashtags.length,
-        validCount: hashtags.where(isValidHashtag).length,
-        invalidCount: hashtags.where((tag) => !isValidHashtag(tag)).length,
-        averageLength: hashtags.isEmpty
-            ? 0.0
-            : hashtags.map((tag) => tag.length).reduce((a, b) => a + b) /
-                hashtags.length,
-        mostCommon: _findMostCommon(hashtags),
-      );
+    totalCount: hashtags.length,
+    validCount: hashtags.where(isValidHashtag).length,
+    invalidCount: hashtags.where((tag) => !isValidHashtag(tag)).length,
+    averageLength: hashtags.isEmpty
+        ? 0.0
+        : hashtags.map((tag) => tag.length).reduce((a, b) => a + b) /
+              hashtags.length,
+    mostCommon: _findMostCommon(hashtags),
+  );
 
   /// Find most common hashtag (for analytics)
   static String? _findMostCommon(List<String> hashtags) {
@@ -232,6 +234,7 @@ class HashtagStats {
   double get validPercentage => totalCount > 0 ? validCount / totalCount : 0.0;
 
   @override
-  String toString() => 'HashtagStats(total: $totalCount, valid: $validCount, '
+  String toString() =>
+      'HashtagStats(total: $totalCount, valid: $validCount, '
       'invalid: $invalidCount, avgLength: ${averageLength.toStringAsFixed(1)})';
 }

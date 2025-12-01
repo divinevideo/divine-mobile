@@ -41,7 +41,6 @@ class AppConfig {
   static const String appName = 'divine';
   static const String appVersion = '1.0.0';
 
-
   // External relay configuration DELETED - using embedded relay only
 
   // Debugging
@@ -70,26 +69,26 @@ class AppConfig {
     final value = const String.fromEnvironment('').isEmpty
         ? ''
         : const String.fromEnvironment('FLUTTER_TEST') == 'true'
-            ? '' // Return empty for tests to use default
-            : String.fromEnvironment(envKey);
+        ? '' // Return empty for tests to use default
+        : String.fromEnvironment(envKey);
     if (value.isEmpty) return defaultValue;
     return value.toLowerCase() == 'true';
   }
 
   /// Get configuration summary for debugging
   static Map<String, dynamic> getConfigSummary() => {
-        'environment': environment,
-        'backendUrl': backendBaseUrl,
-        'isDevelopment': isDevelopment,
-        'isProduction': isProduction,
-        'enableStreamCDN': enableStreamCDN,
-        'enableCloudinaryUpload': enableCloudinaryUpload,
-        'enableNIP96Upload': enableNIP96Upload,
-        // External relay configuration DELETED
-        // Multi-agent development flags
-        'enableCameraOptimizations': enableCameraOptimizations,
-        'enableVideoProcessingPipeline': enableVideoProcessingPipeline,
-        'enableMetadataCaching': enableMetadataCaching,
-        'enableUIImprovements': enableUIImprovements,
-      };
+    'environment': environment,
+    'backendUrl': backendBaseUrl,
+    'isDevelopment': isDevelopment,
+    'isProduction': isProduction,
+    'enableStreamCDN': enableStreamCDN,
+    'enableCloudinaryUpload': enableCloudinaryUpload,
+    'enableNIP96Upload': enableNIP96Upload,
+    // External relay configuration DELETED
+    // Multi-agent development flags
+    'enableCameraOptimizations': enableCameraOptimizations,
+    'enableVideoProcessingPipeline': enableVideoProcessingPipeline,
+    'enableMetadataCaching': enableMetadataCaching,
+    'enableUIImprovements': enableUIImprovements,
+  };
 }

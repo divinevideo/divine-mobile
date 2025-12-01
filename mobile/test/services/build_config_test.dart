@@ -41,8 +41,11 @@ void main() {
       // Should have a default for every flag
       for (final flag in FeatureFlag.values) {
         final hasDefault = config.hasDefault(flag);
-        expect(hasDefault, isTrue,
-            reason: 'Flag ${flag.name} should have a default value');
+        expect(
+          hasDefault,
+          isTrue,
+          reason: 'Flag ${flag.name} should have a default value',
+        );
       }
     });
 
@@ -52,20 +55,29 @@ void main() {
 
       // Same configuration should return same values
       for (final flag in FeatureFlag.values) {
-        expect(config1.getDefault(flag), equals(config2.getDefault(flag)),
-            reason: 'Flag ${flag.name} should have consistent default');
+        expect(
+          config1.getDefault(flag),
+          equals(config2.getDefault(flag)),
+          reason: 'Flag ${flag.name} should have consistent default',
+        );
       }
     });
 
     test('should provide environment variable key mapping', () {
       const config = BuildConfiguration();
 
-      expect(config.getEnvironmentKey(FeatureFlag.newCameraUI),
-          equals('FF_NEW_CAMERA_UI'));
-      expect(config.getEnvironmentKey(FeatureFlag.debugTools),
-          equals('FF_DEBUG_TOOLS'));
-      expect(config.getEnvironmentKey(FeatureFlag.enhancedVideoPlayer),
-          equals('FF_ENHANCED_VIDEO_PLAYER'));
+      expect(
+        config.getEnvironmentKey(FeatureFlag.newCameraUI),
+        equals('FF_NEW_CAMERA_UI'),
+      );
+      expect(
+        config.getEnvironmentKey(FeatureFlag.debugTools),
+        equals('FF_DEBUG_TOOLS'),
+      );
+      expect(
+        config.getEnvironmentKey(FeatureFlag.enhancedVideoPlayer),
+        equals('FF_ENHANCED_VIDEO_PLAYER'),
+      );
     });
   });
 }

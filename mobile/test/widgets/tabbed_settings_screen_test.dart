@@ -51,13 +51,12 @@ void main() {
         authServiceProvider.overrideWithValue(mockAuthService),
         nostrServiceProvider.overrideWithValue(mockNostrService),
         blossomUploadServiceProvider.overrideWithValue(mockBlossomService),
-        notificationServiceEnhancedProvider
-            .overrideWithValue(mockNotificationService),
+        notificationServiceEnhancedProvider.overrideWithValue(
+          mockNotificationService,
+        ),
         bugReportServiceProvider.overrideWithValue(mockBugReportService),
       ],
-      child: const MaterialApp(
-        home: SettingsScreen(),
-      ),
+      child: const MaterialApp(home: SettingsScreen()),
     );
   }
 
@@ -129,8 +128,7 @@ void main() {
   });
 
   group('Profile Tab -', () {
-    testWidgets('should display profile editing fields inline',
-        (tester) async {
+    testWidgets('should display profile editing fields inline', (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
@@ -174,15 +172,18 @@ void main() {
 
       // Should have Key Management button that navigates
       expect(find.text('Key Management'), findsOneWidget);
-      expect(find.text('Export, backup, and restore your Nostr keys'),
-          findsOneWidget);
+      expect(
+        find.text('Export, backup, and restore your Nostr keys'),
+        findsOneWidget,
+      );
     });
   });
 
   group('Network Tab -', () {
     testWidgets('should display relay list inline', (tester) async {
-      when(mockNostrService.relays)
-          .thenReturn(['wss://relay1.example.com', 'wss://relay2.example.com']);
+      when(
+        mockNostrService.relays,
+      ).thenReturn(['wss://relay1.example.com', 'wss://relay2.example.com']);
 
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
@@ -209,8 +210,9 @@ void main() {
       expect(find.text('Add Relay'), findsOneWidget);
     });
 
-    testWidgets('should display Blossom server settings inline',
-        (tester) async {
+    testWidgets('should display Blossom server settings inline', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
@@ -224,11 +226,13 @@ void main() {
       expect(find.byType(Switch), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('should show Blossom server URL field when enabled',
-        (tester) async {
+    testWidgets('should show Blossom server URL field when enabled', (
+      tester,
+    ) async {
       when(mockBlossomService.isBlossomEnabled()).thenAnswer((_) async => true);
-      when(mockBlossomService.getBlossomServer())
-          .thenAnswer((_) async => 'https://blossom.band');
+      when(
+        mockBlossomService.getBlossomServer(),
+      ).thenAnswer((_) async => 'https://blossom.band');
 
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
@@ -242,8 +246,9 @@ void main() {
       expect(find.text('https://blossom.band'), findsOneWidget);
     });
 
-    testWidgets('should have Relay Diagnostics navigation button',
-        (tester) async {
+    testWidgets('should have Relay Diagnostics navigation button', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
 
@@ -308,8 +313,7 @@ void main() {
     });
 
     testWidgets('should trigger mark all as read action', (tester) async {
-      when(mockNotificationService.markAllAsRead())
-          .thenAnswer((_) async => {});
+      when(mockNotificationService.markAllAsRead()).thenAnswer((_) async => {});
 
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();

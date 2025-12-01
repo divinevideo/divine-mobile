@@ -52,17 +52,19 @@ void main() {
         expect(service.isInitialized, true);
       });
 
-      test('should initialize with OpenVine video-optimized configuration',
-          () async {
-        await service.initialize();
+      test(
+        'should initialize with OpenVine video-optimized configuration',
+        () async {
+          await service.initialize();
 
-        // Verify configuration is set for video optimization
-        expect(service.isInitialized, true);
+          // Verify configuration is set for video optimization
+          expect(service.isInitialized, true);
 
-        // Should be ready to handle video events (kind 34236)
-        final stats = await service.getRelayStats();
-        expect(stats, isNotNull);
-      });
+          // Should be ready to handle video events (kind 34236)
+          final stats = await service.getRelayStats();
+          expect(stats, isNotNull);
+        },
+      );
     });
 
     group('Video Event Subscriptions', () {
@@ -77,7 +79,7 @@ void main() {
         // Subscribe to video events
         final stream = service.subscribeToEvents(
           filters: [
-            Filter(kinds: [34236])
+            Filter(kinds: [34236]),
           ],
         );
 
@@ -91,7 +93,7 @@ void main() {
           'id': 'test_event_id',
           'pubkey': 'test_pubkey',
           'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          'kind':        34236,
+          'kind': 34236,
           'tags': [
             ['url', 'https://example.com/video.mp4'],
             ['title', 'Test Video'],
@@ -119,7 +121,7 @@ void main() {
         // Subscribe to events from followed users
         final stream = service.subscribeToEvents(
           filters: [
-            Filter(kinds: [34236], authors: [followedPubkey])
+            Filter(kinds: [34236], authors: [followedPubkey]),
           ],
         );
 
@@ -133,7 +135,7 @@ void main() {
           'id': 'followed_event_id',
           'pubkey': followedPubkey,
           'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          'kind':        34236,
+          'kind': 34236,
           'tags': [],
           'content': 'Video from followed user',
           'sig': 'test_signature',
@@ -156,7 +158,7 @@ void main() {
           'id': 'broadcast_test_id',
           'pubkey': 'test_pubkey',
           'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          'kind':        34236,
+          'kind': 34236,
           'tags': [
             ['url', 'https://example.com/test-video.mp4'],
             ['blurhash', 'test-blurhash'],
@@ -187,15 +189,17 @@ void main() {
         expect(status['ws://localhost:7447'], true);
       });
 
-      test('should handle external relay addition for discoverability',
-          () async {
-        final externalRelay = 'wss://example-relay.com';
+      test(
+        'should handle external relay addition for discoverability',
+        () async {
+          final externalRelay = 'wss://example-relay.com';
 
-        final added = await service.addRelay(externalRelay);
+          final added = await service.addRelay(externalRelay);
 
-        expect(added, true);
-        expect(service.relays, contains(externalRelay));
-      });
+          expect(added, true);
+          expect(service.relays, contains(externalRelay));
+        },
+      );
     });
 
     group('Performance', () {
@@ -210,7 +214,7 @@ void main() {
             'id': 'perf_test_$i',
             'pubkey': 'test_pubkey',
             'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            'kind':        34236,
+            'kind': 34236,
             'tags': [],
             'content': 'Performance test video $i',
             'sig': 'test_signature',
@@ -224,7 +228,7 @@ void main() {
 
         final stream = service.subscribeToEvents(
           filters: [
-            Filter(kinds: [34236], limit: 10)
+            Filter(kinds: [34236], limit: 10),
           ],
         );
 

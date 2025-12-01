@@ -13,10 +13,7 @@ import 'package:openvine/helpers/follow_actions_helper.dart';
 
 import 'follow_actions_helper_simple_test.mocks.dart';
 
-@GenerateMocks([
-  SocialService,
-  AuthService,
-])
+@GenerateMocks([SocialService, AuthService])
 void main() {
   group('FollowActionsHelper Simple Tests', () {
     late MockSocialService mockSocialService;
@@ -27,15 +24,15 @@ void main() {
       mockAuthService = MockAuthService();
     });
 
-    testWidgets('Follow action calls socialService.followUser',
-        (WidgetTester tester) async {
+    testWidgets('Follow action calls socialService.followUser', (
+      WidgetTester tester,
+    ) async {
       const targetPubkey = 'test_pubkey_123';
 
       // Setup mocks
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockSocialService.isFollowing(targetPubkey)).thenReturn(false);
-      when(mockSocialService.followUser(targetPubkey))
-          .thenAnswer((_) async {});
+      when(mockSocialService.followUser(targetPubkey)).thenAnswer((_) async {});
 
       // Build test widget
       await tester.pumpWidget(
@@ -78,15 +75,17 @@ void main() {
       verify(mockSocialService.followUser(targetPubkey)).called(1);
     });
 
-    testWidgets('Unfollow action calls socialService.unfollowUser',
-        (WidgetTester tester) async {
+    testWidgets('Unfollow action calls socialService.unfollowUser', (
+      WidgetTester tester,
+    ) async {
       const targetPubkey = 'test_pubkey_456';
 
       // Setup mocks
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockSocialService.isFollowing(targetPubkey)).thenReturn(true);
-      when(mockSocialService.unfollowUser(targetPubkey))
-          .thenAnswer((_) async {});
+      when(
+        mockSocialService.unfollowUser(targetPubkey),
+      ).thenAnswer((_) async {});
 
       // Build test widget
       await tester.pumpWidget(
@@ -129,15 +128,15 @@ void main() {
       verify(mockSocialService.unfollowUser(targetPubkey)).called(1);
     });
 
-    testWidgets('Toggle follow calls correct method based on state',
-        (WidgetTester tester) async {
+    testWidgets('Toggle follow calls correct method based on state', (
+      WidgetTester tester,
+    ) async {
       const targetPubkey = 'test_pubkey_789';
 
       // Setup mocks - not following initially
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockSocialService.isFollowing(targetPubkey)).thenReturn(false);
-      when(mockSocialService.followUser(targetPubkey))
-          .thenAnswer((_) async {});
+      when(mockSocialService.followUser(targetPubkey)).thenAnswer((_) async {});
 
       // Build test widget
       await tester.pumpWidget(

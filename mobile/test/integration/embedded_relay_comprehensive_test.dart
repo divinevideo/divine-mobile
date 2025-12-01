@@ -4,7 +4,9 @@
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('Embedded Relay Comprehensive Tests', () {},
-      skip:
-          'Outdated API - needs major refactoring after NostrService changes');
+  group(
+    'Embedded Relay Comprehensive Tests',
+    () {},
+    skip: 'Outdated API - needs major refactoring after NostrService changes',
+  );
 }

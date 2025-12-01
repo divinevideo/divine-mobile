@@ -9,8 +9,9 @@ import 'package:openvine/router/route_utils.dart';
 
 void main() {
   group('Consolidated Route Tests', () {
-    testWidgets('Navigate /explore → /explore/0 without GlobalKey conflict',
-        (tester) async {
+    testWidgets('Navigate /explore → /explore/0 without GlobalKey conflict', (
+      tester,
+    ) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -35,58 +36,61 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Navigate /search → /search/bitcoin without GlobalKey conflict',
-        (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+    testWidgets(
+      'Navigate /search → /search/bitcoin without GlobalKey conflict',
+      (tester) async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            routerConfig: container.read(goRouterProvider),
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(
+              routerConfig: container.read(goRouterProvider),
+            ),
           ),
-        ),
-      );
+        );
 
-      // Start at /search (empty)
-      container.read(goRouterProvider).go('/search');
-      await tester.pumpAndSettle();
+        // Start at /search (empty)
+        container.read(goRouterProvider).go('/search');
+        await tester.pumpAndSettle();
 
-      // Navigate to /search/bitcoin (grid with term)
-      container.read(goRouterProvider).go('/search/bitcoin');
-      await tester.pumpAndSettle();
+        // Navigate to /search/bitcoin (grid with term)
+        container.read(goRouterProvider).go('/search/bitcoin');
+        await tester.pumpAndSettle();
 
-      // Should complete without GlobalKey conflict
-      expect(tester.takeException(), isNull);
-    });
+        // Should complete without GlobalKey conflict
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets(
-        'Navigate /hashtag/bitcoin → /hashtag/bitcoin/0 without GlobalKey conflict',
-        (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+      'Navigate /hashtag/bitcoin → /hashtag/bitcoin/0 without GlobalKey conflict',
+      (tester) async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            routerConfig: container.read(goRouterProvider),
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(
+              routerConfig: container.read(goRouterProvider),
+            ),
           ),
-        ),
-      );
+        );
 
-      // Start at /hashtag/bitcoin (grid)
-      container.read(goRouterProvider).go('/hashtag/bitcoin');
-      await tester.pumpAndSettle();
+        // Start at /hashtag/bitcoin (grid)
+        container.read(goRouterProvider).go('/hashtag/bitcoin');
+        await tester.pumpAndSettle();
 
-      // Navigate to /hashtag/bitcoin/0 (feed)
-      container.read(goRouterProvider).go('/hashtag/bitcoin/0');
-      await tester.pumpAndSettle();
+        // Navigate to /hashtag/bitcoin/0 (feed)
+        container.read(goRouterProvider).go('/hashtag/bitcoin/0');
+        await tester.pumpAndSettle();
 
-      // Should complete without GlobalKey conflict
-      expect(tester.takeException(), isNull);
-    });
+        // Should complete without GlobalKey conflict
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     test('parseRoute handles optional index for explore', () {
       final gridMode = parseRoute('/explore');

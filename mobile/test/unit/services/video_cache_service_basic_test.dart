@@ -18,18 +18,17 @@ void main() {
       required String id,
       required String pubkey,
       String? title,
-    }) =>
-        VideoEvent(
-          id: id,
-          pubkey: pubkey,
-          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          content: title ?? 'Test content',
-          timestamp: DateTime.now(),
-          title: title,
-          videoUrl: 'https://example.com/video.mp4',
-          thumbnailUrl: 'https://example.com/thumb.jpg',
-          hashtags: [],
-        );
+    }) => VideoEvent(
+      id: id,
+      pubkey: pubkey,
+      createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      content: title ?? 'Test content',
+      timestamp: DateTime.now(),
+      title: title,
+      videoUrl: 'https://example.com/video.mp4',
+      thumbnailUrl: 'https://example.com/thumb.jpg',
+      hashtags: [],
+    );
 
     test('should start with empty cache', () {
       expect(cache.cacheSize, equals(0));

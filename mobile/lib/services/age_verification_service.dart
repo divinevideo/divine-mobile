@@ -8,9 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// User preference for how adult content should be handled
 enum AdultContentPreference {
-  alwaysShow,   // Auto-send Blossom auth after 18+ verified
-  askEachTime,  // Click-through dialog per video (default)
-  neverShow,    // Filter from feed entirely
+  alwaysShow, // Auto-send Blossom auth after 18+ verified
+  askEachTime, // Click-through dialog per video (default)
+  neverShow, // Filter from feed entirely
 }
 
 class AgeVerificationService {
@@ -25,7 +25,8 @@ class AgeVerificationService {
   DateTime? _verificationDate;
   bool? _isAdultContentVerified;
   DateTime? _adultContentVerificationDate;
-  AdultContentPreference _adultContentPreference = AdultContentPreference.askEachTime;
+  AdultContentPreference _adultContentPreference =
+      AdultContentPreference.askEachTime;
 
   bool get isAgeVerified => _isAgeVerified ?? false;
   DateTime? get verificationDate => _verificationDate;
@@ -35,7 +36,8 @@ class AgeVerificationService {
 
   /// Returns true if adult content should be auto-shown without prompting
   bool get shouldAutoShowAdultContent =>
-      isAdultContentVerified && _adultContentPreference == AdultContentPreference.alwaysShow;
+      isAdultContentVerified &&
+      _adultContentPreference == AdultContentPreference.alwaysShow;
 
   /// Returns true if adult content should be filtered from feeds entirely
   bool get shouldHideAdultContent =>
@@ -62,19 +64,24 @@ class AgeVerificationService {
 
       final adultDateMillis = prefs.getInt(_adultContentVerificationDateKey);
       if (adultDateMillis != null) {
-        _adultContentVerificationDate =
-            DateTime.fromMillisecondsSinceEpoch(adultDateMillis);
+        _adultContentVerificationDate = DateTime.fromMillisecondsSinceEpoch(
+          adultDateMillis,
+        );
       }
 
       final preferenceIndex = prefs.getInt(_adultContentPreferenceKey);
       if (preferenceIndex != null &&
           preferenceIndex >= 0 &&
           preferenceIndex < AdultContentPreference.values.length) {
-        _adultContentPreference = AdultContentPreference.values[preferenceIndex];
+        _adultContentPreference =
+            AdultContentPreference.values[preferenceIndex];
       }
     } catch (e) {
-      Log.error('Error loading age verification status: $e',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.error(
+        'Error loading age verification status: $e',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -95,11 +102,17 @@ class AgeVerificationService {
 
       _isAgeVerified = verified;
 
-      Log.debug('Age verification status updated: $verified',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.debug(
+        'Age verification status updated: $verified',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error saving age verification status: $e',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.error(
+        'Error saving age verification status: $e',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -120,7 +133,9 @@ class AgeVerificationService {
       if (verified) {
         final now = DateTime.now();
         await prefs.setInt(
-            _adultContentVerificationDateKey, now.millisecondsSinceEpoch);
+          _adultContentVerificationDateKey,
+          now.millisecondsSinceEpoch,
+        );
         _adultContentVerificationDate = now;
       } else {
         await prefs.remove(_adultContentVerificationDateKey);
@@ -129,11 +144,17 @@ class AgeVerificationService {
 
       _isAdultContentVerified = verified;
 
-      Log.debug('Adult content verification status updated: $verified',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.debug(
+        'Adult content verification status updated: $verified',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error saving adult content verification status: $e',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.error(
+        'Error saving adult content verification status: $e',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -145,17 +166,25 @@ class AgeVerificationService {
     return isAdultContentVerified;
   }
 
-  Future<void> setAdultContentPreference(AdultContentPreference preference) async {
+  Future<void> setAdultContentPreference(
+    AdultContentPreference preference,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_adultContentPreferenceKey, preference.index);
       _adultContentPreference = preference;
 
-      Log.debug('Adult content preference updated: ${preference.name}',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.debug(
+        'Adult content preference updated: ${preference.name}',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error saving adult content preference: $e',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.error(
+        'Error saving adult content preference: $e',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -198,11 +227,17 @@ class AgeVerificationService {
       _adultContentVerificationDate = null;
       _adultContentPreference = AdultContentPreference.askEachTime;
 
-      Log.debug('Age verification status cleared',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.debug(
+        'Age verification status cleared',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error clearing age verification status: $e',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.error(
+        'Error clearing age verification status: $e',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
     }
   }
 }

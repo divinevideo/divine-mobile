@@ -7,10 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
-import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/screens/relay_settings_screen.dart';
 // import 'package:openvine/screens/p2p_sync_screen.dart'; // Hidden for release
-import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
@@ -43,7 +41,11 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
   }
 
   /// Launch a URL in the external browser
-  Future<void> _launchWebPage(BuildContext context, String urlString, String pageName) async {
+  Future<void> _launchWebPage(
+    BuildContext context,
+    String urlString,
+    String pageName,
+  ) async {
     final url = Uri.parse(urlString);
 
     try {
@@ -85,7 +87,12 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
             // Header
             Container(
               width: double.infinity,
-              padding: EdgeInsets.fromLTRB(20, 20 + MediaQuery.of(context).padding.top, 20, 20),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20 + MediaQuery.of(context).padding.top,
+                20,
+                20,
+              ),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [VineTheme.vineGreen, Colors.green],
@@ -129,8 +136,12 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                       icon: Icons.person,
                       title: 'Edit Profile',
                       onTap: () {
-                        print('🔍 NAV DEBUG: VineDrawer.Edit Profile - about to push /edit-profile');
-                        print('🔍 NAV DEBUG: Current location: ${GoRouterState.of(context).uri}');
+                        print(
+                          '🔍 NAV DEBUG: VineDrawer.Edit Profile - about to push /edit-profile',
+                        );
+                        print(
+                          '🔍 NAV DEBUG: Current location: ${GoRouterState.of(context).uri}',
+                        );
                         Navigator.pop(context); // Close drawer
                         context.push('/edit-profile');
                         print('🔍 NAV DEBUG: Returned from push /edit-profile');
@@ -223,7 +234,8 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                       print('🎫 Contact Support tapped');
 
                       // Check Zendesk availability BEFORE closing drawer
-                      final isZendeskAvailable = ZendeskSupportService.isAvailable;
+                      final isZendeskAvailable =
+                          ZendeskSupportService.isAvailable;
                       print('🔍 Zendesk available: $isZendeskAvailable');
 
                       // Get navigator context before closing drawer
@@ -234,7 +246,9 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                       // Wait for drawer close animation
                       await Future.delayed(const Duration(milliseconds: 300));
                       if (!navigatorContext.mounted) {
-                        print('⚠️ Navigator context not mounted after drawer close');
+                        print(
+                          '⚠️ Navigator context not mounted after drawer close',
+                        );
                         return;
                       }
 
@@ -258,8 +272,9 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                       await Future.delayed(const Duration(milliseconds: 300));
                       if (!context.mounted) return;
 
-                      final bugReportService =
-                          ref.read(bugReportServiceProvider);
+                      final bugReportService = ref.read(
+                        bugReportServiceProvider,
+                      );
                       final userPubkey = authService.currentPublicKeyHex;
 
                       // Show loading indicator
@@ -296,7 +311,11 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                     subtitle: 'How we handle your data',
                     onTap: () {
                       Navigator.pop(context); // Close drawer
-                      _launchWebPage(context, 'https://divine.video/privacy', 'Privacy Policy');
+                      _launchWebPage(
+                        context,
+                        'https://divine.video/privacy',
+                        'Privacy Policy',
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -305,7 +324,11 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                     subtitle: 'Community safety guidelines',
                     onTap: () {
                       Navigator.pop(context); // Close drawer
-                      _launchWebPage(context, 'https://divine.video/safety', 'Safety Center');
+                      _launchWebPage(
+                        context,
+                        'https://divine.video/safety',
+                        'Safety Center',
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -314,7 +337,11 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                     subtitle: 'Frequently asked questions',
                     onTap: () {
                       Navigator.pop(context); // Close drawer
-                      _launchWebPage(context, 'https://divine.video/faq', 'FAQ');
+                      _launchWebPage(
+                        context,
+                        'https://divine.video/faq',
+                        'FAQ',
+                      );
                     },
                   ),
                 ],
@@ -327,11 +354,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
               child: const Text(
                 'Decentralized video sharing\npowered by Nostr',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                  height: 1.4,
-                ),
+                style: TextStyle(color: Colors.grey, fontSize: 12, height: 1.4),
               ),
             ),
           ],
@@ -341,45 +364,41 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
   }
 
   Widget _buildSectionHeader(String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Text(
-          title.toUpperCase(),
-          style: const TextStyle(
-            color: VineTheme.vineGreen,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+    child: Text(
+      title.toUpperCase(),
+      style: const TextStyle(
+        color: VineTheme.vineGreen,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.2,
+      ),
+    ),
+  );
 
   Widget _buildDrawerItem({
     required IconData icon,
     required String title,
     String? subtitle,
     required VoidCallback onTap,
-  }) =>
-      ListTile(
-        leading: Icon(icon, color: VineTheme.vineGreen, size: 24),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        subtitle: subtitle != null
-            ? Text(
-                subtitle,
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                ),
-              )
-            : null,
-        onTap: onTap,
-      );
+  }) => ListTile(
+    leading: Icon(icon, color: VineTheme.vineGreen, size: 24),
+    title: Text(
+      title,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+      ),
+    ),
+    subtitle: subtitle != null
+        ? Text(
+            subtitle,
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
+          )
+        : null,
+    onTap: onTap,
+  );
 
   /// Show support options dialog
   void _showSupportOptionsDialog(
@@ -522,10 +541,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                   ),
                 ],
               ),
@@ -544,13 +560,13 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
     String? userPubkey,
     bool isZendeskAvailable,
   ) async {
-
     if (isZendeskAvailable) {
       // Get device and app info
       final packageInfo = await PackageInfo.fromPlatform();
       final appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
 
-      final description = '''
+      final description =
+          '''
 Please describe the bug you encountered:
 
 ---
@@ -566,11 +582,7 @@ Platform: ${Theme.of(context).platform.name}
       );
 
       if (!success && context.mounted) {
-        _showSupportFallbackWithServices(
-          context,
-          bugReportService,
-          userPubkey,
-        );
+        _showSupportFallbackWithServices(context, bugReportService, userPubkey);
       }
     } else {
       _showSupportFallbackWithServices(context, bugReportService, userPubkey);
@@ -584,7 +596,6 @@ Platform: ${Theme.of(context).platform.name}
     String? userPubkey,
     bool isZendeskAvailable,
   ) async {
-
     if (isZendeskAvailable) {
       final description = '''
 Please describe the inappropriate content:
@@ -603,11 +614,7 @@ Reason for report:
       );
 
       if (!success && context.mounted) {
-        _showSupportFallbackWithServices(
-          context,
-          bugReportService,
-          userPubkey,
-        );
+        _showSupportFallbackWithServices(context, bugReportService, userPubkey);
       }
     } else {
       _showSupportFallbackWithServices(context, bugReportService, userPubkey);

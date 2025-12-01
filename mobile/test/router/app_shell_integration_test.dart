@@ -16,9 +16,9 @@ void main() {
   ];
 
   Widget shell(ProviderContainer c) => UncontrolledProviderScope(
-        container: c,
-        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
-      );
+    container: c,
+    child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+  );
 
   String currentLocation(ProviderContainer c) {
     final router = c.read(goRouterProvider);
@@ -26,8 +26,9 @@ void main() {
   }
 
   group('A) App shell renders & normalizes', () {
-    testWidgets('renders with goRouterProvider and normalization active',
-        (tester) async {
+    testWidgets('renders with goRouterProvider and normalization active', (
+      tester,
+    ) async {
       final c = ProviderContainer(overrides: testOverrides);
       addTearDown(c.dispose);
 
@@ -45,34 +46,37 @@ void main() {
       expect(find.byType(AppShell), findsOneWidget);
     });
 
-    testWidgets('normalizes /home/-3 to /home/0 with correct bottom nav index',
-        (tester) async {
-      final c = ProviderContainer(overrides: testOverrides);
-      addTearDown(c.dispose);
+    testWidgets(
+      'normalizes /home/-3 to /home/0 with correct bottom nav index',
+      (tester) async {
+        final c = ProviderContainer(overrides: testOverrides);
+        addTearDown(c.dispose);
 
-      await tester.pumpWidget(shell(c));
+        await tester.pumpWidget(shell(c));
 
-      // Activate normalization provider
-      c.read(routeNormalizationProvider);
+        // Activate normalization provider
+        c.read(routeNormalizationProvider);
 
-      c.read(goRouterProvider).go('/home/-3');
-      await tester.pump(); // Process the navigation
-      await tester.pump(); // Process the post-frame callback redirect
+        c.read(goRouterProvider).go('/home/-3');
+        await tester.pump(); // Process the navigation
+        await tester.pump(); // Process the post-frame callback redirect
 
-      // After normalization, router location should be canonical
-      expect(currentLocation(c), '/home/0');
+        // After normalization, router location should be canonical
+        expect(currentLocation(c), '/home/0');
 
-      // Bottom nav should show Home tab (index 0) as selected
-      final bottomNav = tester.widget<BottomNavigationBar>(
-        find.byType(BottomNavigationBar),
-      );
-      expect(bottomNav.currentIndex, 0);
-    });
+        // Bottom nav should show Home tab (index 0) as selected
+        final bottomNav = tester.widget<BottomNavigationBar>(
+          find.byType(BottomNavigationBar),
+        );
+        expect(bottomNav.currentIndex, 0);
+      },
+    );
   });
 
   group('B) Deep links land in correct tab', () {
-    testWidgets('navigating to /profile/npubXYZ/2 selects Profile tab',
-        (tester) async {
+    testWidgets('navigating to /profile/npubXYZ/2 selects Profile tab', (
+      tester,
+    ) async {
       final c = ProviderContainer(overrides: testOverrides);
       addTearDown(c.dispose);
 
@@ -116,8 +120,9 @@ void main() {
       expect(bottomNav.currentIndex, 1);
     });
 
-    testWidgets('navigating to /hashtag/rust/3 selects Tags tab',
-        (tester) async {
+    testWidgets('navigating to /hashtag/rust/3 selects Tags tab', (
+      tester,
+    ) async {
       final c = ProviderContainer(overrides: testOverrides);
       addTearDown(c.dispose);
 
@@ -141,8 +146,9 @@ void main() {
   });
 
   group('C) Tab switching preserves state', () {
-    testWidgets('switching tabs preserves route within each tab',
-        (tester) async {
+    testWidgets('switching tabs preserves route within each tab', (
+      tester,
+    ) async {
       final c = ProviderContainer(overrides: testOverrides);
       addTearDown(c.dispose);
 
@@ -185,37 +191,38 @@ void main() {
     });
 
     testWidgets(
-        'per-tab navigators maintain separate state across tab switches',
-        (tester) async {
-      final c = ProviderContainer(overrides: testOverrides);
-      addTearDown(c.dispose);
+      'per-tab navigators maintain separate state across tab switches',
+      (tester) async {
+        final c = ProviderContainer(overrides: testOverrides);
+        addTearDown(c.dispose);
 
-      await tester.pumpWidget(shell(c));
+        await tester.pumpWidget(shell(c));
 
-      c.read(routeNormalizationProvider);
+        c.read(routeNormalizationProvider);
 
-      // Navigate to /explore/7
-      c.read(goRouterProvider).go('/explore/7');
-      await tester.pump();
-      await tester.pump();
+        // Navigate to /explore/7
+        c.read(goRouterProvider).go('/explore/7');
+        await tester.pump();
+        await tester.pump();
 
-      expect(currentLocation(c), '/explore/7');
+        expect(currentLocation(c), '/explore/7');
 
-      // Switch to Profile tab
-      c.read(goRouterProvider).go('/profile/me/5');
-      await tester.pump();
-      await tester.pump();
+        // Switch to Profile tab
+        c.read(goRouterProvider).go('/profile/me/5');
+        await tester.pump();
+        await tester.pump();
 
-      expect(currentLocation(c), '/profile/me/5');
+        expect(currentLocation(c), '/profile/me/5');
 
-      // Navigate directly back to explore (not via bottom nav tap)
-      c.read(goRouterProvider).go('/explore/7');
-      await tester.pump();
-      await tester.pump();
+        // Navigate directly back to explore (not via bottom nav tap)
+        c.read(goRouterProvider).go('/explore/7');
+        await tester.pump();
+        await tester.pump();
 
-      // Should be back at /explore/7
-      expect(currentLocation(c), '/explore/7');
-    });
+        // Should be back at /explore/7
+        expect(currentLocation(c), '/explore/7');
+      },
+    );
   });
 
   group('D) Back behavior', () {
@@ -250,8 +257,9 @@ void main() {
       expect(currentLocation(c), '/home/2');
     });
 
-    testWidgets('bottom nav tap navigates to canonical tab path',
-        (tester) async {
+    testWidgets('bottom nav tap navigates to canonical tab path', (
+      tester,
+    ) async {
       final c = ProviderContainer(overrides: testOverrides);
       addTearDown(c.dispose);
 

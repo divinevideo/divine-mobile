@@ -30,10 +30,7 @@ void main() {
     });
 
     test('should not include #t key when hashtags is null', () {
-      final filter = Filter(
-        kinds: [22],
-        limit: 10,
-      );
+      final filter = Filter(kinds: [22], limit: 10);
 
       final json = filter.toJson();
 
@@ -70,10 +67,7 @@ void main() {
     });
 
     test('should filter events by hashtags correctly', () {
-      final filter = Filter(
-        kinds: [22],
-        t: ['bitcoin', 'nostr'],
-      );
+      final filter = Filter(kinds: [22], t: ['bitcoin', 'nostr']);
 
       // Event with matching hashtag
       final matchingEvent = Event(
@@ -82,7 +76,10 @@ void main() {
         [
           ['t', 'bitcoin'],
           ['t', 'crypto'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video about bitcoin',
         createdAt: 1234567890,
@@ -95,7 +92,10 @@ void main() {
         [
           ['t', 'ethereum'],
           ['t', 'crypto'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video about ethereum',
         createdAt: 1234567890,
@@ -106,7 +106,10 @@ void main() {
         testPubkey3,
         22,
         [
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video without hashtags',
         createdAt: 1234567890,
@@ -118,16 +121,17 @@ void main() {
     });
 
     test('should pass all events when no hashtag filter is set', () {
-      final filter = Filter(
-        kinds: [22],
-      );
+      final filter = Filter(kinds: [22]);
 
       final event = Event(
         testPubkey1,
         22,
         [
           ['t', 'bitcoin'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video',
         createdAt: 1234567890,
@@ -137,7 +141,10 @@ void main() {
         testPubkey2,
         22,
         [
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video without hashtags',
         createdAt: 1234567890,
@@ -148,10 +155,7 @@ void main() {
     });
 
     test('should filter events with multiple hashtag matches', () {
-      final filter = Filter(
-        kinds: [22],
-        t: ['bitcoin', 'nostr', 'openvine'],
-      );
+      final filter = Filter(kinds: [22], t: ['bitcoin', 'nostr', 'openvine']);
 
       final multipleHashtagEvent = Event(
         testPubkey1,
@@ -160,7 +164,10 @@ void main() {
           ['t', 'bitcoin'],
           ['t', 'nostr'],
           ['t', 'crypto'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video with multiple hashtags',
         createdAt: 1234567890,
@@ -170,10 +177,7 @@ void main() {
     });
 
     test('should handle malformed tags gracefully', () {
-      final filter = Filter(
-        kinds: [22],
-        t: ['bitcoin'],
-      );
+      final filter = Filter(kinds: [22], t: ['bitcoin']);
 
       final malformedTagEvent = Event(
         testPubkey1,
@@ -182,7 +186,10 @@ void main() {
           ['t'], // Missing value
           ['t', 'bitcoin'], // Valid tag
           'not_a_list', // Invalid tag format
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video with malformed tags',
         createdAt: 1234567890,

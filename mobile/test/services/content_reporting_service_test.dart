@@ -12,6 +12,7 @@ import 'package:nostr_sdk/event.dart';
 
 // Mock classes
 class MockNostrService extends Mock implements INostrService {}
+
 class MockNostrKeyManager extends Mock implements NostrKeyManager {}
 
 // Fake Event for fallback values
@@ -75,26 +76,32 @@ void main() {
       );
     });
 
-    test('initialize() sets service ready when Nostr service is ready', () async {
-      await service.initialize();
+    test(
+      'initialize() sets service ready when Nostr service is ready',
+      () async {
+        await service.initialize();
 
-      // Service should be initialized (report history starts empty)
-      expect(service.reportHistory, isEmpty);
-    });
+        // Service should be initialized (report history starts empty)
+        expect(service.reportHistory, isEmpty);
+      },
+    );
 
-    test('initialize() fails gracefully when Nostr service not ready', () async {
-      when(() => mockNostrService.isInitialized).thenReturn(false);
+    test(
+      'initialize() fails gracefully when Nostr service not ready',
+      () async {
+        when(() => mockNostrService.isInitialized).thenReturn(false);
 
-      final uninitializedService = ContentReportingService(
-        nostrService: mockNostrService,
-        prefs: prefs,
-      );
+        final uninitializedService = ContentReportingService(
+          nostrService: mockNostrService,
+          prefs: prefs,
+        );
 
-      await uninitializedService.initialize();
+        await uninitializedService.initialize();
 
-      // Should not throw, but won't be fully initialized
-      expect(uninitializedService.reportHistory, isEmpty);
-    });
+        // Should not throw, but won't be fully initialized
+        expect(uninitializedService.reportHistory, isEmpty);
+      },
+    );
 
     test('reportContent() fails when service not initialized', () async {
       // Don't call initialize()
@@ -110,53 +117,68 @@ void main() {
       expect(result.error, 'Reporting service not initialized');
     });
 
-    test('reportContent() succeeds for AI-generated content after initialization', () async {
-      await service.initialize();
+    test(
+      'reportContent() succeeds for AI-generated content after initialization',
+      () async {
+        await service.initialize();
 
-      // Mock successful event broadcast
-      when(() => mockNostrService.broadcastEvent(any()))
-          .thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
+        // Mock successful event broadcast
+        when(
+          () => mockNostrService.broadcastEvent(any()),
+        ).thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
 
-      final result = await service.reportContent(
-        eventId: 'ai_video_event_id',
-        authorPubkey: 'suspicious_author',
-        reason: ContentFilterReason.aiGenerated,
-        details: 'Suspected AI-generated content',
-      );
-
-      expect(result.success, true);
-      expect(result.error, isNull);
-
-      // Verify Nostr event was broadcast
-      verify(() => mockNostrService.broadcastEvent(any())).called(1);
-    });
-
-    test('reportContent() handles all ContentFilterReason types including aiGenerated', () async {
-      await service.initialize();
-      when(() => mockNostrService.broadcastEvent(any()))
-          .thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
-
-      final reasons = ContentFilterReason.values;
-
-      for (final reason in reasons) {
         final result = await service.reportContent(
-          eventId: 'event_${reason.name}',
-          authorPubkey: 'author_123',
-          reason: reason,
-          details: 'Test report for ${reason.name}',
+          eventId: 'ai_video_event_id',
+          authorPubkey: 'suspicious_author',
+          reason: ContentFilterReason.aiGenerated,
+          details: 'Suspected AI-generated content',
         );
 
-        expect(result.success, true, reason: 'Failed for reason: ${reason.name}');
-      }
+        expect(result.success, true);
+        expect(result.error, isNull);
 
-      // Should have broadcast one event per reason
-      verify(() => mockNostrService.broadcastEvent(any())).called(reasons.length);
-    });
+        // Verify Nostr event was broadcast
+        verify(() => mockNostrService.broadcastEvent(any())).called(1);
+      },
+    );
+
+    test(
+      'reportContent() handles all ContentFilterReason types including aiGenerated',
+      () async {
+        await service.initialize();
+        when(
+          () => mockNostrService.broadcastEvent(any()),
+        ).thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
+
+        final reasons = ContentFilterReason.values;
+
+        for (final reason in reasons) {
+          final result = await service.reportContent(
+            eventId: 'event_${reason.name}',
+            authorPubkey: 'author_123',
+            reason: reason,
+            details: 'Test report for ${reason.name}',
+          );
+
+          expect(
+            result.success,
+            true,
+            reason: 'Failed for reason: ${reason.name}',
+          );
+        }
+
+        // Should have broadcast one event per reason
+        verify(
+          () => mockNostrService.broadcastEvent(any()),
+        ).called(reasons.length);
+      },
+    );
 
     test('reportContent() specifically tests aiGenerated reason', () async {
       await service.initialize();
-      when(() => mockNostrService.broadcastEvent(any()))
-          .thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
+      when(
+        () => mockNostrService.broadcastEvent(any()),
+      ).thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
 
       // This should not throw an exception due to missing switch case
       final result = await service.reportContent(
@@ -174,8 +196,9 @@ void main() {
       await service.initialize();
 
       // Mock failed broadcast
-      when(() => mockNostrService.broadcastEvent(any()))
-          .thenAnswer((inv) async => _failedBroadcast(FakeEvent()));
+      when(
+        () => mockNostrService.broadcastEvent(any()),
+      ).thenAnswer((inv) async => _failedBroadcast(FakeEvent()));
 
       final result = await service.reportContent(
         eventId: 'event_123',
@@ -195,8 +218,9 @@ void main() {
 
     test('reportContent() stores report in history on success', () async {
       await service.initialize();
-      when(() => mockNostrService.broadcastEvent(any()))
-          .thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
+      when(
+        () => mockNostrService.broadcastEvent(any()),
+      ).thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
 
       await service.reportContent(
         eventId: 'reported_event',
@@ -206,7 +230,10 @@ void main() {
       );
 
       expect(service.reportHistory, isNotEmpty);
-      expect(service.reportHistory.first.reason, ContentFilterReason.aiGenerated);
+      expect(
+        service.reportHistory.first.reason,
+        ContentFilterReason.aiGenerated,
+      );
     });
   });
 
@@ -237,8 +264,9 @@ void main() {
       await service.initialize(); // This is what the provider now does
 
       // Now reportContent should work
-      when(() => mockNostrService.broadcastEvent(any()))
-          .thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
+      when(
+        () => mockNostrService.broadcastEvent(any()),
+      ).thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
 
       final result = await service.reportContent(
         eventId: 'test',

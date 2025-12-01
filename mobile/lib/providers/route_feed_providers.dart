@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/home_feed_provider.dart';
-import 'package:openvine/providers/search_provider.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
@@ -15,7 +14,9 @@ import 'package:openvine/state/video_feed_state.dart';
 /// Temporary provider to hold the explore tab's current video list
 /// This is set by ExploreScreen when entering feed mode and consumed by both
 /// ExploreVideoScreenPure and activeVideoIdProvider to ensure they use the same list
-final exploreTabVideosProvider = StateProvider<List<VideoEvent>?>((ref) => null);
+final exploreTabVideosProvider = StateProvider<List<VideoEvent>?>(
+  (ref) => null,
+);
 
 /// Provider to persist the current tab index across widget recreation
 /// Default to 1 (Popular Videos) as initial state
@@ -24,12 +25,13 @@ final exploreTabIndexProvider = StateProvider<int>((ref) => 1);
 /// Temporary provider to hold the search screen's current video list
 /// This is set by SearchScreenPure when search results are available and consumed
 /// by activeVideoIdProvider to enable video playback from search results
-final searchScreenVideosProvider = StateProvider<List<VideoEvent>?>((ref) => null);
+final searchScreenVideosProvider = StateProvider<List<VideoEvent>?>(
+  (ref) => null,
+);
 
 /// Home feed state (follows only)
 /// Returns AsyncValue<VideoFeedState> for route-aware home screen
-final videosForHomeRouteProvider =
-    Provider<AsyncValue<VideoFeedState>>((ref) {
+final videosForHomeRouteProvider = Provider<AsyncValue<VideoFeedState>>((ref) {
   final contextAsync = ref.watch(pageContextProvider);
 
   return contextAsync.when(
@@ -50,8 +52,9 @@ final videosForHomeRouteProvider =
 /// Returns AsyncValue<VideoFeedState> for route-aware explore screen
 /// Uses tab-specific list when in feed mode, otherwise sorted by loop count
 /// Filters out broken videos to match grid UI behavior
-final videosForExploreRouteProvider =
-    Provider<AsyncValue<VideoFeedState>>((ref) {
+final videosForExploreRouteProvider = Provider<AsyncValue<VideoFeedState>>((
+  ref,
+) {
   final contextAsync = ref.watch(pageContextProvider);
 
   return contextAsync.when(
@@ -115,8 +118,9 @@ final videosForExploreRouteProvider =
 /// Search feed state (search results)
 /// Returns AsyncValue<VideoFeedState> for route-aware search screen
 /// Provides search results as a video feed when on search route
-final videosForSearchRouteProvider =
-    Provider<AsyncValue<VideoFeedState>>((ref) {
+final videosForSearchRouteProvider = Provider<AsyncValue<VideoFeedState>>((
+  ref,
+) {
   final contextAsync = ref.watch(pageContextProvider);
 
   return contextAsync.when(

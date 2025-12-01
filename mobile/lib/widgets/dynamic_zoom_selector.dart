@@ -7,10 +7,7 @@ import 'package:openvine/theme/vine_theme.dart';
 
 /// Dynamic zoom selector that builds UI based on detected physical cameras
 class DynamicZoomSelector extends StatefulWidget {
-  const DynamicZoomSelector({
-    required this.cameraInterface,
-    super.key,
-  });
+  const DynamicZoomSelector({required this.cameraInterface, super.key});
 
   final CamerAwesomeMobileCameraInterface cameraInterface;
 
@@ -41,7 +38,8 @@ class _DynamicZoomSelectorState extends State<DynamicZoomSelector> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: sensors.map((sensor) {
-          final isSelected = _selectedZoom != null &&
+          final isSelected =
+              _selectedZoom != null &&
               (sensor.zoomFactor - _selectedZoom!).abs() < 0.1;
 
           return Padding(
@@ -116,7 +114,9 @@ class _ZoomButton extends StatelessWidget {
               ? VineTheme.vineGreen.withOpacity(0.3)
               : Colors.black.withOpacity(0.4),
           border: Border.all(
-            color: isSelected ? VineTheme.vineGreen : Colors.white.withOpacity(0.5),
+            color: isSelected
+                ? VineTheme.vineGreen
+                : Colors.white.withOpacity(0.5),
             width: isSelected ? 2 : 1,
           ),
         ),

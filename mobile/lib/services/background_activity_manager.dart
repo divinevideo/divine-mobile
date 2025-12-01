@@ -38,24 +38,33 @@ class BackgroundActivityManager {
       }
     });
 
-    Log.info('Background activity manager initialized',
-        name: 'BackgroundActivityManager', category: LogCategory.system);
+    Log.info(
+      'Background activity manager initialized',
+      name: 'BackgroundActivityManager',
+      category: LogCategory.system,
+    );
   }
 
   /// Register a service for background state management
   void registerService(BackgroundAwareService service) {
     if (!_registeredServices.contains(service)) {
       _registeredServices.add(service);
-      Log.debug('Registered background-aware service: ${service.serviceName}',
-          name: 'BackgroundActivityManager', category: LogCategory.system);
+      Log.debug(
+        'Registered background-aware service: ${service.serviceName}',
+        name: 'BackgroundActivityManager',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Unregister a service
   void unregisterService(BackgroundAwareService service) {
     _registeredServices.remove(service);
-    Log.debug('Unregistered background-aware service: ${service.serviceName}',
-        name: 'BackgroundActivityManager', category: LogCategory.system);
+    Log.debug(
+      'Unregistered background-aware service: ${service.serviceName}',
+      name: 'BackgroundActivityManager',
+      category: LogCategory.system,
+    );
   }
 
   /// Handle app lifecycle state changes
@@ -73,8 +82,11 @@ class BackgroundActivityManager {
       case AppLifecycleState.inactive:
         // On desktop platforms, inactive is a normal state during UI operations
         // Don't treat it as backgrounded to avoid disrupting video playback
-        Log.debug('App became inactive (keeping foreground state)',
-            name: 'BackgroundActivityManager', category: LogCategory.system);
+        Log.debug(
+          'App became inactive (keeping foreground state)',
+          name: 'BackgroundActivityManager',
+          category: LogCategory.system,
+        );
         break;
 
       case AppLifecycleState.paused:
@@ -96,8 +108,11 @@ class BackgroundActivityManager {
 
   /// Handle app entering background
   void _onAppBackgrounded() {
-    Log.info('📱 App entered background - suspending non-critical activities',
-        name: 'BackgroundActivityManager', category: LogCategory.system);
+    Log.info(
+      '📱 App entered background - suspending non-critical activities',
+      name: 'BackgroundActivityManager',
+      category: LogCategory.system,
+    );
 
     // Cancel any existing suspension timer
     _backgroundSuspensionTimer?.cancel();
@@ -115,8 +130,11 @@ class BackgroundActivityManager {
 
   /// Handle app resuming from background
   void _onAppResumed() {
-    Log.info('📱 App resumed from background - restoring activities',
-        name: 'BackgroundActivityManager', category: LogCategory.system);
+    Log.info(
+      '📱 App resumed from background - restoring activities',
+      name: 'BackgroundActivityManager',
+      category: LogCategory.system,
+    );
 
     // Cancel background suspension timer
     _backgroundSuspensionTimer?.cancel();
@@ -127,8 +145,11 @@ class BackgroundActivityManager {
 
   /// Handle app termination
   void _onAppTerminating() {
-    Log.info('📱 App terminating - cleaning up resources',
-        name: 'BackgroundActivityManager', category: LogCategory.system);
+    Log.info(
+      '📱 App terminating - cleaning up resources',
+      name: 'BackgroundActivityManager',
+      category: LogCategory.system,
+    );
 
     _backgroundSuspensionTimer?.cancel();
     _periodicCleanupTimer?.cancel();
@@ -139,8 +160,11 @@ class BackgroundActivityManager {
 
   /// Immediate actions when app goes to background
   void _performImmediateBackgroundActions() {
-    Log.info('🔄 Performing immediate background actions',
-        name: 'BackgroundActivityManager', category: LogCategory.system);
+    Log.info(
+      '🔄 Performing immediate background actions',
+      name: 'BackgroundActivityManager',
+      category: LogCategory.system,
+    );
 
     // Process services async with timeout to prevent watchdog kills
     for (final service in _registeredServices) {
@@ -152,8 +176,11 @@ class BackgroundActivityManager {
             Future.delayed(const Duration(seconds: 1)),
           ]);
         } catch (e) {
-          Log.error('Error suspending service ${service.serviceName}: $e',
-              name: 'BackgroundActivityManager', category: LogCategory.system);
+          Log.error(
+            'Error suspending service ${service.serviceName}: $e',
+            name: 'BackgroundActivityManager',
+            category: LogCategory.system,
+          );
         }
       });
     }
@@ -161,32 +188,42 @@ class BackgroundActivityManager {
 
   /// Delayed actions after app has been in background for a while
   void _performDelayedBackgroundActions() {
-    Log.info('🔄 Performing delayed background suspension',
-        name: 'BackgroundActivityManager', category: LogCategory.system);
+    Log.info(
+      '🔄 Performing delayed background suspension',
+      name: 'BackgroundActivityManager',
+      category: LogCategory.system,
+    );
 
     for (final service in _registeredServices) {
       try {
         service.onExtendedBackground();
       } catch (e) {
         Log.error(
-            'Error in extended background handling for ${service.serviceName}: $e',
-            name: 'BackgroundActivityManager',
-            category: LogCategory.system);
+          'Error in extended background handling for ${service.serviceName}: $e',
+          name: 'BackgroundActivityManager',
+          category: LogCategory.system,
+        );
       }
     }
   }
 
   /// Restore services when app returns to foreground
   void _restoreServices() {
-    Log.info('🔄 Restoring services from background',
-        name: 'BackgroundActivityManager', category: LogCategory.system);
+    Log.info(
+      '🔄 Restoring services from background',
+      name: 'BackgroundActivityManager',
+      category: LogCategory.system,
+    );
 
     for (final service in _registeredServices) {
       try {
         service.onAppResumed();
       } catch (e) {
-        Log.error('Error restoring service ${service.serviceName}: $e',
-            name: 'BackgroundActivityManager', category: LogCategory.system);
+        Log.error(
+          'Error restoring service ${service.serviceName}: $e',
+          name: 'BackgroundActivityManager',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -197,23 +234,32 @@ class BackgroundActivityManager {
       try {
         service.onExtendedBackground();
       } catch (e) {
-        Log.error('Error force-suspending service ${service.serviceName}: $e',
-            name: 'BackgroundActivityManager', category: LogCategory.system);
+        Log.error(
+          'Error force-suspending service ${service.serviceName}: $e',
+          name: 'BackgroundActivityManager',
+          category: LogCategory.system,
+        );
       }
     }
   }
 
   /// Periodic cleanup when app is in foreground
   void _performPeriodicCleanup() {
-    Log.debug('🧹 Performing periodic cleanup',
-        name: 'BackgroundActivityManager', category: LogCategory.system);
+    Log.debug(
+      '🧹 Performing periodic cleanup',
+      name: 'BackgroundActivityManager',
+      category: LogCategory.system,
+    );
 
     for (final service in _registeredServices) {
       try {
         service.onPeriodicCleanup();
       } catch (e) {
-        Log.error('Error in periodic cleanup for ${service.serviceName}: $e',
-            name: 'BackgroundActivityManager', category: LogCategory.system);
+        Log.error(
+          'Error in periodic cleanup for ${service.serviceName}: $e',
+          name: 'BackgroundActivityManager',
+          category: LogCategory.system,
+        );
       }
     }
   }

@@ -9,11 +9,7 @@ void main() {
   group('Vine Tag Integration Tests', () {
     test('VideoEventService filters should include vine tag', () {
       // Create a filter for Kind 22 events
-      final filter = Filter(
-        kinds: [22],
-        h: ['vine'],
-        limit: 50,
-      );
+      final filter = Filter(kinds: [22], h: ['vine'], limit: 50);
 
       // Verify the filter includes vine tag
       expect(filter.h, equals(['vine']));
@@ -30,7 +26,7 @@ void main() {
       final filter = Filter(
         kinds: [0],
         authors: [
-          'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210'
+          'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
         ],
         h: ['vine'],
         limit: 1,
@@ -40,20 +36,22 @@ void main() {
       expect(filter.h, equals(['vine']));
       expect(filter.kinds, equals([0]));
       expect(
-          filter.authors,
-          equals([
-            'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210'
-          ]));
+        filter.authors,
+        equals([
+          'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
+        ]),
+      );
 
       // Test JSON serialization includes vine tag
       final json = filter.toJson();
       expect(json['#h'], equals(['vine']));
       expect(json['kinds'], equals([0]));
       expect(
-          json['authors'],
-          equals([
-            'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210'
-          ]));
+        json['authors'],
+        equals([
+          'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
+        ]),
+      );
     });
 
     test('SocialService reaction filters should include vine tag', () {
@@ -68,27 +66,26 @@ void main() {
       expect(filter.h, equals(['vine']));
       expect(filter.kinds, equals([7]));
       expect(
-          filter.e,
-          equals([
-            'f6789012345678901234567890123456789012345678901234567890abcdef12'
-          ]));
+        filter.e,
+        equals([
+          'f6789012345678901234567890123456789012345678901234567890abcdef12',
+        ]),
+      );
 
       // Test JSON serialization includes vine tag
       final json = filter.toJson();
       expect(json['#h'], equals(['vine']));
       expect(json['kinds'], equals([7]));
       expect(
-          json['#e'],
-          equals([
-            'f6789012345678901234567890123456789012345678901234567890abcdef12'
-          ]));
+        json['#e'],
+        equals([
+          'f6789012345678901234567890123456789012345678901234567890abcdef12',
+        ]),
+      );
     });
 
     test('Filter should correctly validate events with vine tag', () {
-      final filter = Filter(
-        kinds: [22],
-        h: ['vine'],
-      );
+      final filter = Filter(kinds: [22], h: ['vine']);
 
       // Create a valid event with vine tag
       final validEvent = Event(
@@ -98,7 +95,10 @@ void main() {
           ['h', 'vine'],
           ['url', 'https://example.com/video.mp4'],
           ['client', 'diVine'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -111,7 +111,10 @@ void main() {
         [
           ['url', 'https://example.com/video.mp4'],
           ['client', 'diVine'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -125,10 +128,7 @@ void main() {
     });
 
     test('Multiple h tag values should work correctly', () {
-      final filter = Filter(
-        kinds: [22],
-        h: ['vine', 'test', 'dev'],
-      );
+      final filter = Filter(kinds: [22], h: ['vine', 'test', 'dev']);
 
       // Event with vine tag should pass
       final vineEvent = Event(
@@ -137,7 +137,10 @@ void main() {
         [
           ['h', 'vine'],
           ['url', 'test.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -150,7 +153,10 @@ void main() {
         [
           ['h', 'test'],
           ['url', 'test.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -163,7 +169,10 @@ void main() {
         [
           ['h', 'dev'],
           ['url', 'test.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -176,7 +185,10 @@ void main() {
         [
           ['h', 'other'],
           ['url', 'test.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -192,7 +204,7 @@ void main() {
       final profileFilter = Filter(
         kinds: [0],
         authors: [
-          '1111111111111111111111111111111111111111111111111111111111111111'
+          '1111111111111111111111111111111111111111111111111111111111111111',
         ],
         h: ['vine'],
       );
@@ -205,7 +217,10 @@ void main() {
           ['h', 'vine'],
           ['name', 'Test User'],
           ['about', 'Test bio'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         '{"name":"Test User","about":"Test bio"}',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -218,7 +233,10 @@ void main() {
         [
           ['name', 'Test User'],
           ['about', 'Test bio'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         '{"name":"Test User","about":"Test bio"}',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -232,7 +250,7 @@ void main() {
       final contactFilter = Filter(
         kinds: [3],
         authors: [
-          '2222222222222222222222222222222222222222222222222222222222222222'
+          '2222222222222222222222222222222222222222222222222222222222222222',
         ],
         h: ['vine'],
       );
@@ -245,13 +263,16 @@ void main() {
           ['h', 'vine'],
           [
             'p',
-            '9012345678901234567890123456789012345678901234567890abcdef1234567'
+            '9012345678901234567890123456789012345678901234567890abcdef1234567',
           ],
           [
             'p',
-            '012345678901234567890123456789012345678901234567890abcdef12345678'
+            '012345678901234567890123456789012345678901234567890abcdef12345678',
           ],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         '',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -264,13 +285,16 @@ void main() {
         [
           [
             'p',
-            '9012345678901234567890123456789012345678901234567890abcdef1234567'
+            '9012345678901234567890123456789012345678901234567890abcdef1234567',
           ],
           [
             'p',
-            '012345678901234567890123456789012345678901234567890abcdef12345678'
+            '012345678901234567890123456789012345678901234567890abcdef12345678',
           ],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         '',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -285,12 +309,13 @@ void main() {
         kinds: [22],
         authors: [
           '3333333333333333333333333333333333333333333333333333333333333333',
-          '2345678901234567890123456789012345678901234567890abcdef1234567890'
+          '2345678901234567890123456789012345678901234567890abcdef1234567890',
         ],
         h: ['vine'],
         t: ['funny', 'viral'],
         limit: 25,
-        since: DateTime.now().millisecondsSinceEpoch ~/ 1000 -
+        since:
+            DateTime.now().millisecondsSinceEpoch ~/ 1000 -
             86400, // Last 24 hours
       );
 
@@ -302,7 +327,10 @@ void main() {
           ['h', 'vine'],
           ['t', 'funny'],
           ['url', 'https://example.com/funny.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Funny video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -315,7 +343,10 @@ void main() {
         [
           ['t', 'funny'],
           ['url', 'https://example.com/funny.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Funny video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -329,7 +360,10 @@ void main() {
           ['h', 'vine'],
           ['t', 'funny'],
           ['url', 'https://example.com/funny.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Funny video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,

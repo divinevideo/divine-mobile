@@ -36,65 +36,65 @@ class FeatureFlagScreen extends ConsumerWidget {
           // Feature Flags List
           Expanded(
             child: ListView.builder(
-        itemCount: FeatureFlag.values.length,
-        itemBuilder: (context, index) {
-          final flag = FeatureFlag.values[index];
-          final isEnabled = state[flag] ?? false;
-          final hasUserOverride = service.hasUserOverride(flag);
+              itemCount: FeatureFlag.values.length,
+              itemBuilder: (context, index) {
+                final flag = FeatureFlag.values[index];
+                final isEnabled = state[flag] ?? false;
+                final hasUserOverride = service.hasUserOverride(flag);
 
-          return Card(
-            margin: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 4.0,
-            ),
-            child: ListTile(
-              title: Text(
-                flag.displayName,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: hasUserOverride
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-                ),
-              ),
-              subtitle: Text(
-                flag.description,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (hasUserOverride)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: Icon(
-                        Icons.edit,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary,
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 4.0,
+                  ),
+                  child: ListTile(
+                    title: Text(
+                      flag.displayName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: hasUserOverride
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
                       ),
                     ),
-                  Switch(
-                    value: isEnabled,
-                    onChanged: (value) async {
-                      await service.setFlag(flag, value);
-                    },
-                    activeThumbColor: hasUserOverride
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
-                  ),
-                  if (hasUserOverride)
-                    IconButton(
-                      icon: const Icon(Icons.undo, size: 20),
-                      tooltip: 'Reset to default',
-                      onPressed: () async {
-                        await service.resetFlag(flag);
-                      },
+                    subtitle: Text(
+                      flag.description,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                ],
-              ),
-            ),
-          );
-        },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (hasUserOverride)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Icon(
+                              Icons.edit,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        Switch(
+                          value: isEnabled,
+                          onChanged: (value) async {
+                            await service.setFlag(flag, value);
+                          },
+                          activeThumbColor: hasUserOverride
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        if (hasUserOverride)
+                          IconButton(
+                            icon: const Icon(Icons.undo, size: 20),
+                            tooltip: 'Reset to default',
+                            onPressed: () async {
+                              await service.resetFlag(flag);
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -110,10 +110,7 @@ class FeatureFlagScreen extends ConsumerWidget {
         children: [
           const Text(
             'App Recovery',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -147,31 +144,33 @@ class FeatureFlagScreen extends ConsumerWidget {
 
   Future<void> _clearCache(BuildContext context) async {
     // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear All Cache?'),
-        content: const Text(
-          'This will clear all cached data including:\n'
-          '• Notifications\n'
-          '• User profiles\n'
-          '• Bookmarks\n'
-          '• Temporary files\n\n'
-          'You will need to log in again. Continue?'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Clear All Cache?'),
+            content: const Text(
+              'This will clear all cached data including:\n'
+              '• Notifications\n'
+              '• User profiles\n'
+              '• Bookmarks\n'
+              '• Temporary files\n\n'
+              'You will need to log in again. Continue?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                child: const Text('Clear Cache'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('Clear Cache'),
-          ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
 
     if (!confirmed) return;
 
@@ -206,8 +205,8 @@ class FeatureFlagScreen extends ConsumerWidget {
         title: Text(success ? 'Success' : 'Error'),
         content: Text(
           success
-            ? 'Cache cleared successfully. Please restart the app.'
-            : 'Failed to clear some cache items. Check logs for details.'
+              ? 'Cache cleared successfully. Please restart the app.'
+              : 'Failed to clear some cache items. Check logs for details.',
         ),
         actions: [
           TextButton(

@@ -70,7 +70,8 @@ void main() {
         expect(nostrService.isInitialized, true);
         expect(nostrService.connectedRelays.isNotEmpty, true);
         Log.info(
-            '✅ Connected to ${nostrService.connectedRelays.length} relay(s)');
+          '✅ Connected to ${nostrService.connectedRelays.length} relay(s)',
+        );
 
         // Subscribe to video feed before building UI
         Log.info('📡 Subscribing to discovery videos...');
@@ -87,33 +88,37 @@ void main() {
 
           if (attempts % 10 == 0) {
             Log.info(
-                '⏳ Waiting for events... ${videoEventService.getEventCount(SubscriptionType.discovery)} so far');
+              '⏳ Waiting for events... ${videoEventService.getEventCount(SubscriptionType.discovery)} so far',
+            );
           }
         }
 
-        final eventCount =
-            videoEventService.getEventCount(SubscriptionType.discovery);
+        final eventCount = videoEventService.getEventCount(
+          SubscriptionType.discovery,
+        );
         Log.info('📊 Received $eventCount discovery videos');
 
         // Verify we got some events
-        expect(eventCount, greaterThan(0),
-            reason: 'Should receive video events from relay');
+        expect(
+          eventCount,
+          greaterThan(0),
+          reason: 'Should receive video events from relay',
+        );
 
         // Build widget with provider overrides
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
               nostrServiceProvider.overrideWithValue(nostrService),
-              subscriptionManagerProvider
-                  .overrideWithValue(subscriptionManager),
-              videoEventServiceProvider.overrideWithValue(videoEventService),
-              tabVisibilityProvider.overrideWith(() => TabVisibility()..setActiveTab(2)), // Explore tab active
-            ],
-            child: MaterialApp(
-              home: Scaffold(
-                body: ExploreScreen(),
+              subscriptionManagerProvider.overrideWithValue(
+                subscriptionManager,
               ),
-            ),
+              videoEventServiceProvider.overrideWithValue(videoEventService),
+              tabVisibilityProvider.overrideWith(
+                () => TabVisibility()..setActiveTab(2),
+              ), // Explore tab active
+            ],
+            child: MaterialApp(home: Scaffold(body: ExploreScreen())),
           ),
         );
 
@@ -137,29 +142,40 @@ void main() {
         // Check that we're NOT showing loading indicator
         final loadingIndicators = find.byType(CircularProgressIndicator);
         Log.info(
-            '🔄 Loading indicators found: ${tester.widgetList(loadingIndicators).length}');
+          '🔄 Loading indicators found: ${tester.widgetList(loadingIndicators).length}',
+        );
 
         // Check that we're NOT showing "No videos" message
         final noVideosText = find.text('No videos in Popular Now');
-        expect(noVideosText, findsNothing,
-            reason: 'Should not show "No videos" when we have $eventCount videos');
+        expect(
+          noVideosText,
+          findsNothing,
+          reason: 'Should not show "No videos" when we have $eventCount videos',
+        );
 
         // Verify video grid is present (GridView.builder)
         final gridViews = find.byType(GridView);
         Log.info('📱 GridViews found: ${tester.widgetList(gridViews).length}');
-        expect(gridViews, findsWidgets,
-            reason: 'Should show video grid when we have videos');
+        expect(
+          gridViews,
+          findsWidgets,
+          reason: 'Should show video grid when we have videos',
+        );
 
         // Try to find video tiles (GestureDetector wrapping video content)
-        final videoTiles = find.byWidgetPredicate((widget) =>
-            widget is GestureDetector &&
-            widget.child is Container);
-        Log.info('🎬 Video tiles found: ${tester.widgetList(videoTiles).length}');
+        final videoTiles = find.byWidgetPredicate(
+          (widget) => widget is GestureDetector && widget.child is Container,
+        );
+        Log.info(
+          '🎬 Video tiles found: ${tester.widgetList(videoTiles).length}',
+        );
 
         // Log final state
         Log.info('✅ ExploreScreen integration test complete');
         Log.info('   - Videos received: $eventCount');
-        Log.info('   - UI rendered: ${find.byType(ExploreScreen).evaluate().length}');
+        Log.info(
+          '   - UI rendered: ${find.byType(ExploreScreen).evaluate().length}',
+        );
         Log.info('   - GridViews: ${tester.widgetList(gridViews).length}');
       },
       timeout: const Timeout(Duration(seconds: 90)),
@@ -174,10 +190,14 @@ void main() {
         await videoEventService.subscribeToDiscovery(limit: 10);
         await Future.delayed(const Duration(seconds: 3));
 
-        final eventCount =
-            videoEventService.getEventCount(SubscriptionType.discovery);
-        expect(eventCount, greaterThan(0),
-            reason: 'Need some videos for this test');
+        final eventCount = videoEventService.getEventCount(
+          SubscriptionType.discovery,
+        );
+        expect(
+          eventCount,
+          greaterThan(0),
+          reason: 'Need some videos for this test',
+        );
 
         Log.info('📊 Pre-loaded $eventCount videos');
 
@@ -187,13 +207,11 @@ void main() {
             overrides: [
               nostrServiceProvider.overrideWithValue(nostrService),
               videoEventServiceProvider.overrideWithValue(videoEventService),
-              tabVisibilityProvider.overrideWith(() => TabVisibility()..setActiveTab(0)), // Feed tab active
+              tabVisibilityProvider.overrideWith(
+                () => TabVisibility()..setActiveTab(0),
+              ), // Feed tab active
             ],
-            child: MaterialApp(
-              home: Scaffold(
-                body: ExploreScreen(),
-              ),
-            ),
+            child: MaterialApp(home: Scaffold(body: ExploreScreen())),
           ),
         );
 
@@ -207,13 +225,11 @@ void main() {
             overrides: [
               nostrServiceProvider.overrideWithValue(nostrService),
               videoEventServiceProvider.overrideWithValue(videoEventService),
-              tabVisibilityProvider.overrideWith(() => TabVisibility()..setActiveTab(2)), // Explore tab now active
+              tabVisibilityProvider.overrideWith(
+                () => TabVisibility()..setActiveTab(2),
+              ), // Explore tab now active
             ],
-            child: MaterialApp(
-              home: Scaffold(
-                body: ExploreScreen(),
-              ),
-            ),
+            child: MaterialApp(home: Scaffold(body: ExploreScreen())),
           ),
         );
 
@@ -223,14 +239,19 @@ void main() {
         // CRITICAL: Videos should display immediately, not show loading
         // This tests the fix where hasValue takes priority over isLoading
         final noVideosText = find.text('No videos in Popular Now');
-        expect(noVideosText, findsNothing,
-            reason:
-                'Should show cached videos immediately on tab change, not loading state');
+        expect(
+          noVideosText,
+          findsNothing,
+          reason:
+              'Should show cached videos immediately on tab change, not loading state',
+        );
 
         final gridViews = find.byType(GridView);
-        expect(gridViews, findsWidgets,
-            reason:
-                'Should display video grid immediately with cached videos');
+        expect(
+          gridViews,
+          findsWidgets,
+          reason: 'Should display video grid immediately with cached videos',
+        );
 
         Log.info('✅ AsyncValue priority test passed');
       },

@@ -99,59 +99,58 @@ class CuratedList {
     List<String>? allowedCollaborators,
     String? thumbnailEventId,
     PlayOrder? playOrder,
-  }) =>
-      CuratedList(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        description: description ?? this.description,
-        imageUrl: imageUrl ?? this.imageUrl,
-        videoEventIds: videoEventIds ?? this.videoEventIds,
-        createdAt: createdAt ?? this.createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        isPublic: isPublic ?? this.isPublic,
-        nostrEventId: nostrEventId ?? this.nostrEventId,
-        tags: tags ?? this.tags,
-        isCollaborative: isCollaborative ?? this.isCollaborative,
-        allowedCollaborators: allowedCollaborators ?? this.allowedCollaborators,
-        thumbnailEventId: thumbnailEventId ?? this.thumbnailEventId,
-        playOrder: playOrder ?? this.playOrder,
-      );
+  }) => CuratedList(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    description: description ?? this.description,
+    imageUrl: imageUrl ?? this.imageUrl,
+    videoEventIds: videoEventIds ?? this.videoEventIds,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    isPublic: isPublic ?? this.isPublic,
+    nostrEventId: nostrEventId ?? this.nostrEventId,
+    tags: tags ?? this.tags,
+    isCollaborative: isCollaborative ?? this.isCollaborative,
+    allowedCollaborators: allowedCollaborators ?? this.allowedCollaborators,
+    thumbnailEventId: thumbnailEventId ?? this.thumbnailEventId,
+    playOrder: playOrder ?? this.playOrder,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'description': description,
-        'imageUrl': imageUrl,
-        'videoEventIds': videoEventIds,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-        'isPublic': isPublic,
-        'nostrEventId': nostrEventId,
-        'tags': tags,
-        'isCollaborative': isCollaborative,
-        'allowedCollaborators': allowedCollaborators,
-        'thumbnailEventId': thumbnailEventId,
-        'playOrder': playOrder.value,
-      };
+    'id': id,
+    'name': name,
+    'description': description,
+    'imageUrl': imageUrl,
+    'videoEventIds': videoEventIds,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'isPublic': isPublic,
+    'nostrEventId': nostrEventId,
+    'tags': tags,
+    'isCollaborative': isCollaborative,
+    'allowedCollaborators': allowedCollaborators,
+    'thumbnailEventId': thumbnailEventId,
+    'playOrder': playOrder.value,
+  };
 
   static CuratedList fromJson(Map<String, dynamic> json) => CuratedList(
-        id: json['id'],
-        name: json['name'],
-        description: json['description'],
-        imageUrl: json['imageUrl'],
-        videoEventIds: List<String>.from(json['videoEventIds'] ?? []),
-        createdAt: DateTime.parse(json['createdAt']),
-        updatedAt: DateTime.parse(json['updatedAt']),
-        isPublic: json['isPublic'] ?? true,
-        nostrEventId: json['nostrEventId'],
-        tags: List<String>.from(json['tags'] ?? []),
-        isCollaborative: json['isCollaborative'] ?? false,
-        allowedCollaborators:
-            List<String>.from(json['allowedCollaborators'] ?? []),
-        thumbnailEventId: json['thumbnailEventId'],
-        playOrder:
-            PlayOrderExtension.fromString(json['playOrder'] ?? 'chronological'),
-      );
+    id: json['id'],
+    name: json['name'],
+    description: json['description'],
+    imageUrl: json['imageUrl'],
+    videoEventIds: List<String>.from(json['videoEventIds'] ?? []),
+    createdAt: DateTime.parse(json['createdAt']),
+    updatedAt: DateTime.parse(json['updatedAt']),
+    isPublic: json['isPublic'] ?? true,
+    nostrEventId: json['nostrEventId'],
+    tags: List<String>.from(json['tags'] ?? []),
+    isCollaborative: json['isCollaborative'] ?? false,
+    allowedCollaborators: List<String>.from(json['allowedCollaborators'] ?? []),
+    thumbnailEventId: json['thumbnailEventId'],
+    playOrder: PlayOrderExtension.fromString(
+      json['playOrder'] ?? 'chronological',
+    ),
+  );
 }
 
 /// Service for managing NIP-51 curated lists
@@ -161,9 +160,9 @@ class CuratedListService {
     required INostrService nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
-  })  : _nostrService = nostrService,
-        _authService = authService,
-        _prefs = prefs {
+  }) : _nostrService = nostrService,
+       _authService = authService,
+       _prefs = prefs {
     _loadLists();
     _loadSubscribedListIds();
   }
@@ -200,8 +199,11 @@ class CuratedListService {
   Future<void> initialize() async {
     try {
       if (!_authService.isAuthenticated) {
-        Log.warning('Cannot initialize curated lists - user not authenticated',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.warning(
+          'Cannot initialize curated lists - user not authenticated',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -214,11 +216,17 @@ class CuratedListService {
       await fetchUserListsFromRelays();
 
       _isInitialized = true;
-      Log.info('Curated list service initialized with ${_lists.length} lists',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.info(
+        'Curated list service initialized with ${_lists.length} lists',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to initialize curated list service: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize curated list service: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -274,13 +282,19 @@ class CuratedListService {
         await _publishListToNostr(newList);
       }
 
-      Log.info('Created new curated list: $name ($listId)',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.info(
+        'Created new curated list: $name ($listId)',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
 
       return newList;
     } catch (e) {
-      Log.error('Failed to create curated list: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to create curated list: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -290,8 +304,11 @@ class CuratedListService {
     try {
       final listIndex = _lists.indexWhere((list) => list.id == listId);
       if (listIndex == -1) {
-        Log.warning('List not found: $listId',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.warning(
+          'List not found: $listId',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -299,8 +316,11 @@ class CuratedListService {
 
       // Check if video is already in the list
       if (list.videoEventIds.contains(videoEventId)) {
-        Log.warning('Video already in list: $videoEventId',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.warning(
+          'Video already in list: $videoEventId',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return true; // Return true since it's already there
       }
 
@@ -319,13 +339,19 @@ class CuratedListService {
         await _publishListToNostr(updatedList);
       }
 
-      Log.debug('➕ Added video to list "${list.name}": $videoEventId',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.debug(
+        '➕ Added video to list "${list.name}": $videoEventId',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to add video to list: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to add video to list: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -335,14 +361,18 @@ class CuratedListService {
     try {
       final listIndex = _lists.indexWhere((list) => list.id == listId);
       if (listIndex == -1) {
-        Log.warning('List not found: $listId',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.warning(
+          'List not found: $listId',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
       final list = _lists[listIndex];
-      final updatedVideoIds =
-          list.videoEventIds.where((id) => id != videoEventId).toList();
+      final updatedVideoIds = list.videoEventIds
+          .where((id) => id != videoEventId)
+          .toList();
 
       final updatedList = list.copyWith(
         videoEventIds: updatedVideoIds,
@@ -357,13 +387,19 @@ class CuratedListService {
         await _publishListToNostr(updatedList);
       }
 
-      Log.debug('➖ Removed video from list "${list.name}": $videoEventId',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.debug(
+        '➖ Removed video from list "${list.name}": $videoEventId',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to remove video from list: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to remove video from list: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -428,13 +464,19 @@ class CuratedListService {
         await _publishListToNostr(updatedList);
       }
 
-      Log.debug('✏️ Updated list: ${updatedList.name}',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.debug(
+        '✏️ Updated list: ${updatedList.name}',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to update list: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to update list: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -444,8 +486,11 @@ class CuratedListService {
     try {
       // Don't allow deleting the default list
       if (listId == defaultListId) {
-        Log.warning('Cannot delete default list',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.warning(
+          'Cannot delete default list',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -462,13 +507,19 @@ class CuratedListService {
       _lists.removeAt(listIndex);
       await _saveLists();
 
-      Log.debug('📱️ Deleted list: ${list.name}',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.debug(
+        '📱️ Deleted list: ${list.name}',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to delete list: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to delete list: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -480,8 +531,11 @@ class CuratedListService {
     try {
       final listIndex = _lists.indexWhere((list) => list.id == listId);
       if (listIndex == -1) {
-        Log.warning('List not found: $listId',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.warning(
+          'List not found: $listId',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -493,8 +547,11 @@ class CuratedListService {
 
       if (currentVideos.difference(newOrderSet).isNotEmpty ||
           newOrderSet.difference(currentVideos).isNotEmpty) {
-        Log.warning('Invalid reorder: video lists do not match',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.warning(
+          'Invalid reorder: video lists do not match',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -512,13 +569,19 @@ class CuratedListService {
         await _publishListToNostr(updatedList);
       }
 
-      Log.debug('📱 Reordered videos in list "${list.name}"',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.debug(
+        '📱 Reordered videos in list "${list.name}"',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to reorder videos: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to reorder videos: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -552,14 +615,20 @@ class CuratedListService {
 
       final list = _lists[listIndex];
       if (!list.isCollaborative) {
-        Log.warning('Cannot add collaborator - list is not collaborative',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.warning(
+          'Cannot add collaborator - list is not collaborative',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
       if (list.allowedCollaborators.contains(pubkey)) {
-        Log.debug('User already a collaborator: $pubkey',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.debug(
+          'User already a collaborator: $pubkey',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return true;
       }
 
@@ -577,13 +646,19 @@ class CuratedListService {
         await _publishListToNostr(updatedList);
       }
 
-      Log.debug('✅ Added collaborator to list "${list.name}": $pubkey',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.debug(
+        '✅ Added collaborator to list "${list.name}": $pubkey',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to add collaborator: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to add collaborator: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -614,13 +689,19 @@ class CuratedListService {
         await _publishListToNostr(updatedList);
       }
 
-      Log.debug('➖ Removed collaborator from list "${list.name}": $pubkey',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.debug(
+        '➖ Removed collaborator from list "${list.name}": $pubkey',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to remove collaborator: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to remove collaborator: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -661,12 +742,16 @@ class CuratedListService {
 
     final lowerQuery = query.toLowerCase();
     return _lists
-        .where((list) =>
-            list.isPublic &&
-            (list.name.toLowerCase().contains(lowerQuery) ||
-                (list.description?.toLowerCase().contains(lowerQuery) ??
-                    false) ||
-                list.tags.any((tag) => tag.toLowerCase().contains(lowerQuery))))
+        .where(
+          (list) =>
+              list.isPublic &&
+              (list.name.toLowerCase().contains(lowerQuery) ||
+                  (list.description?.toLowerCase().contains(lowerQuery) ??
+                      false) ||
+                  list.tags.any(
+                    (tag) => tag.toLowerCase().contains(lowerQuery),
+                  )),
+        )
         .toList();
   }
 
@@ -691,20 +776,29 @@ class CuratedListService {
         _lists.add(listData);
         await _saveLists();
         list = listData;
-        Log.debug('Added discovered list to cache: ${listData.name}',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.debug(
+          'Added discovered list to cache: ${listData.name}',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
       }
 
       if (list == null) {
-        Log.warning('Cannot subscribe - list not found: $listId',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.warning(
+          'Cannot subscribe - list not found: $listId',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
       // Check if already subscribed
       if (_subscribedListIds.contains(listId)) {
-        Log.debug('Already subscribed to list: ${list.name}',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.debug(
+          'Already subscribed to list: ${list.name}',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return true;
       }
 
@@ -712,13 +806,19 @@ class CuratedListService {
       _subscribedListIds.add(listId);
       await _saveSubscribedListIds();
 
-      Log.info('✅ Subscribed to list: ${list.name} ($listId)',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.info(
+        '✅ Subscribed to list: ${list.name} ($listId)',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to subscribe to list: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to subscribe to list: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -728,8 +828,11 @@ class CuratedListService {
     try {
       // Check if subscribed
       if (!_subscribedListIds.contains(listId)) {
-        Log.debug('Not subscribed to list: $listId',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.debug(
+          'Not subscribed to list: $listId',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return true;
       }
 
@@ -740,13 +843,19 @@ class CuratedListService {
       _subscribedListIds.remove(listId);
       await _saveSubscribedListIds();
 
-      Log.info('➖ Unsubscribed from list: $listName ($listId)',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.info(
+        '➖ Unsubscribed from list: $listName ($listId)',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to unsubscribe from list: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to unsubscribe from list: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -797,8 +906,11 @@ class CuratedListService {
   Future<void> _publishListToNostr(CuratedList list) async {
     try {
       if (!_authService.isAuthenticated) {
-        Log.warning('Cannot publish list - user not authenticated',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.warning(
+          'Cannot publish list - user not authenticated',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -862,13 +974,19 @@ class CuratedListService {
             _lists[listIndex] = list.copyWith(nostrEventId: event.id);
             await _saveLists();
           }
-          Log.debug('Published list to Nostr: ${list.name} (${event.id})',
-              name: 'CuratedListService', category: LogCategory.system);
+          Log.debug(
+            'Published list to Nostr: ${list.name} (${event.id})',
+            name: 'CuratedListService',
+            category: LogCategory.system,
+          );
         }
       }
     } catch (e) {
-      Log.error('Failed to publish list to Nostr: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to publish list to Nostr: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -881,13 +999,20 @@ class CuratedListService {
         _lists.clear();
         _lists.addAll(
           listsData.map(
-              (json) => CuratedList.fromJson(json as Map<String, dynamic>)),
+            (json) => CuratedList.fromJson(json as Map<String, dynamic>),
+          ),
         );
-        Log.debug('📱 Loaded ${_lists.length} curated lists from storage',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.debug(
+          '📱 Loaded ${_lists.length} curated lists from storage',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.error('Failed to load curated lists: $e',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.error(
+          'Failed to load curated lists: $e',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -900,11 +1025,17 @@ class CuratedListService {
         final List<dynamic> subscribedData = jsonDecode(subscribedJson);
         _subscribedListIds.clear();
         _subscribedListIds.addAll(subscribedData.cast<String>());
-        Log.debug('📱 Loaded ${_subscribedListIds.length} subscribed lists from storage',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.debug(
+          '📱 Loaded ${_subscribedListIds.length} subscribed lists from storage',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.error('Failed to load subscribed list IDs: $e',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.error(
+          'Failed to load subscribed list IDs: $e',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -915,8 +1046,11 @@ class CuratedListService {
       final listsJson = _lists.map((list) => list.toJson()).toList();
       await _prefs.setString(listsStorageKey, jsonEncode(listsJson));
     } catch (e) {
-      Log.error('Failed to save curated lists: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to save curated lists: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -924,34 +1058,52 @@ class CuratedListService {
   Future<void> _saveSubscribedListIds() async {
     try {
       final subscribedJson = _subscribedListIds.toList();
-      await _prefs.setString(subscribedListsStorageKey, jsonEncode(subscribedJson));
-      Log.debug('💾 Saved ${_subscribedListIds.length} subscribed list IDs to storage',
-          name: 'CuratedListService', category: LogCategory.system);
+      await _prefs.setString(
+        subscribedListsStorageKey,
+        jsonEncode(subscribedJson),
+      );
+      Log.debug(
+        '💾 Saved ${_subscribedListIds.length} subscribed list IDs to storage',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to save subscribed list IDs: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to save subscribed list IDs: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Fetch user's curated lists from Nostr relays on app startup
   Future<void> fetchUserListsFromRelays() async {
     if (!_authService.isAuthenticated) {
-      Log.warning('Cannot fetch lists from relays - user not authenticated',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.warning(
+        'Cannot fetch lists from relays - user not authenticated',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return;
     }
 
     if (_hasSyncedWithRelays) {
-      Log.debug('Already synced with relays this session',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.debug(
+        'Already synced with relays this session',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return;
     }
 
     final userPubkey = _authService.currentPublicKeyHex;
     if (userPubkey == null) return;
 
-    Log.info('📋 Fetching user\'s curated lists from relays...',
-        name: 'CuratedListService', category: LogCategory.system);
+    Log.info(
+      '📋 Fetching user\'s curated lists from relays...',
+      name: 'CuratedListService',
+      category: LogCategory.system,
+    );
 
     try {
       final completer = Completer<void>();
@@ -970,8 +1122,11 @@ class CuratedListService {
       // Set a timeout for the subscription
       Timer? timeoutTimer;
       timeoutTimer = Timer(const Duration(seconds: 10), () {
-        Log.debug('Relay sync timeout reached, processing received events',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.debug(
+          'Relay sync timeout reached, processing received events',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         if (!completer.isCompleted) {
           completer.complete();
         }
@@ -981,9 +1136,10 @@ class CuratedListService {
         (event) {
           receivedEvents.add(event);
           Log.debug(
-              'Received list event from relay: ${event.id}...',
-              name: 'CuratedListService',
-              category: LogCategory.system);
+            'Received list event from relay: ${event.id}...',
+            name: 'CuratedListService',
+            category: LogCategory.system,
+          );
         },
         onDone: () {
           timeoutTimer?.cancel();
@@ -992,8 +1148,11 @@ class CuratedListService {
           }
         },
         onError: (error) {
-          Log.error('Error fetching lists from relay: $error',
-              name: 'CuratedListService', category: LogCategory.system);
+          Log.error(
+            'Error fetching lists from relay: $error',
+            name: 'CuratedListService',
+            category: LogCategory.system,
+          );
           timeoutTimer?.cancel();
           if (!completer.isCompleted) {
             completer.complete();
@@ -1010,12 +1169,16 @@ class CuratedListService {
 
       _hasSyncedWithRelays = true;
       Log.info(
-          '✅ Relay sync complete. Found ${receivedEvents.length} list events',
-          name: 'CuratedListService',
-          category: LogCategory.system);
+        '✅ Relay sync complete. Found ${receivedEvents.length} list events',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to fetch lists from relays: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to fetch lists from relays: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -1026,8 +1189,11 @@ class CuratedListService {
     int limit = 50,
     List<String>? searchTags,
   }) async {
-    Log.info('📋 Fetching public curated lists from relays...',
-        name: 'CuratedListService', category: LogCategory.system);
+    Log.info(
+      '📋 Fetching public curated lists from relays...',
+      name: 'CuratedListService',
+      category: LogCategory.system,
+    );
 
     try {
       final completer = Completer<void>();
@@ -1040,15 +1206,16 @@ class CuratedListService {
       );
 
       // Subscribe to all public Kind 30005 events (no author filter)
-      final subscription = _nostrService.subscribeToEvents(
-        filters: [filter],
-      );
+      final subscription = _nostrService.subscribeToEvents(filters: [filter]);
 
       // Set a timeout for the subscription
       Timer? timeoutTimer;
       timeoutTimer = Timer(const Duration(seconds: 10), () {
-        Log.debug('Public lists fetch timeout reached, processing received events',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.debug(
+          'Public lists fetch timeout reached, processing received events',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         if (!completer.isCompleted) {
           completer.complete();
         }
@@ -1058,9 +1225,10 @@ class CuratedListService {
         (event) {
           receivedEvents.add(event);
           Log.debug(
-              'Received public list event from relay: ${event.id}',
-              name: 'CuratedListService',
-              category: LogCategory.system);
+            'Received public list event from relay: ${event.id}',
+            name: 'CuratedListService',
+            category: LogCategory.system,
+          );
         },
         onDone: () {
           timeoutTimer?.cancel();
@@ -1069,8 +1237,11 @@ class CuratedListService {
           }
         },
         onError: (error) {
-          Log.error('Error fetching public lists from relay: $error',
-              name: 'CuratedListService', category: LogCategory.system);
+          Log.error(
+            'Error fetching public lists from relay: $error',
+            name: 'CuratedListService',
+            category: LogCategory.system,
+          );
           timeoutTimer?.cancel();
           if (!completer.isCompleted) {
             completer.complete();
@@ -1099,8 +1270,11 @@ class CuratedListService {
           }
         }
 
-        Log.debug('Processing ${eventsByDTag.length} unique public lists from relays',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.debug(
+          'Processing ${eventsByDTag.length} unique public lists from relays',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
 
         // Convert events to CuratedList objects
         for (final event in eventsByDTag.values) {
@@ -1123,14 +1297,18 @@ class CuratedListService {
       }
 
       Log.info(
-          '✅ Public lists fetch complete. Found ${publicLists.length} lists',
-          name: 'CuratedListService',
-          category: LogCategory.system);
+        '✅ Public lists fetch complete. Found ${publicLists.length} lists',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
 
       return publicLists;
     } catch (e) {
-      Log.error('Failed to fetch public lists from relays: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to fetch public lists from relays: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return [];
     }
   }
@@ -1139,9 +1317,13 @@ class CuratedListService {
   /// Uses Nostr #e filter to find kind 30005 events referencing the video
   /// Returns list of CuratedList objects (progressive loading via stream version)
   Future<List<CuratedList>> fetchPublicListsContainingVideo(
-      String videoEventId) async {
-    Log.info('📋 Fetching public lists containing video: $videoEventId',
-        name: 'CuratedListService', category: LogCategory.system);
+    String videoEventId,
+  ) async {
+    Log.info(
+      '📋 Fetching public lists containing video: $videoEventId',
+      name: 'CuratedListService',
+      category: LogCategory.system,
+    );
 
     try {
       final completer = Completer<void>();
@@ -1155,17 +1337,16 @@ class CuratedListService {
       );
 
       // Subscribe to matching events
-      final subscription = _nostrService.subscribeToEvents(
-        filters: [filter],
-      );
+      final subscription = _nostrService.subscribeToEvents(filters: [filter]);
 
       // Set a timeout for the subscription
       Timer? timeoutTimer;
       timeoutTimer = Timer(const Duration(seconds: 10), () {
         Log.debug(
-            'Public lists containing video fetch timeout, processing received events',
-            name: 'CuratedListService',
-            category: LogCategory.system);
+          'Public lists containing video fetch timeout, processing received events',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         if (!completer.isCompleted) {
           completer.complete();
         }
@@ -1174,8 +1355,11 @@ class CuratedListService {
       subscription.listen(
         (event) {
           receivedEvents.add(event);
-          Log.debug('Received public list containing video: ${event.id}',
-              name: 'CuratedListService', category: LogCategory.system);
+          Log.debug(
+            'Received public list containing video: ${event.id}',
+            name: 'CuratedListService',
+            category: LogCategory.system,
+          );
         },
         onDone: () {
           timeoutTimer?.cancel();
@@ -1184,8 +1368,11 @@ class CuratedListService {
           }
         },
         onError: (error) {
-          Log.error('Error fetching public lists containing video: $error',
-              name: 'CuratedListService', category: LogCategory.system);
+          Log.error(
+            'Error fetching public lists containing video: $error',
+            name: 'CuratedListService',
+            category: LogCategory.system,
+          );
           timeoutTimer?.cancel();
           if (!completer.isCompleted) {
             completer.complete();
@@ -1214,9 +1401,10 @@ class CuratedListService {
         }
 
         Log.debug(
-            'Processing ${eventsByDTag.length} unique public lists containing video',
-            name: 'CuratedListService',
-            category: LogCategory.system);
+          'Processing ${eventsByDTag.length} unique public lists containing video',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
 
         for (final event in eventsByDTag.values) {
           final curatedList = _eventToCuratedList(event);
@@ -1227,14 +1415,18 @@ class CuratedListService {
       }
 
       Log.info(
-          '✅ Found ${publicLists.length} public lists containing video',
-          name: 'CuratedListService',
-          category: LogCategory.system);
+        '✅ Found ${publicLists.length} public lists containing video',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
 
       return publicLists;
     } catch (e) {
-      Log.error('Failed to fetch public lists containing video: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to fetch public lists containing video: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return [];
     }
   }
@@ -1242,8 +1434,11 @@ class CuratedListService {
   /// Stream public lists containing a specific video for progressive loading
   /// Emits CuratedList objects as they arrive from relays
   Stream<CuratedList> streamPublicListsContainingVideo(String videoEventId) {
-    Log.info('📋 Streaming public lists containing video: $videoEventId',
-        name: 'CuratedListService', category: LogCategory.system);
+    Log.info(
+      '📋 Streaming public lists containing video: $videoEventId',
+      name: 'CuratedListService',
+      category: LogCategory.system,
+    );
 
     // Build filter for lists containing this video
     final filter = Filter(
@@ -1281,8 +1476,11 @@ class CuratedListService {
     try {
       final dTag = _extractDTag(event);
       if (dTag == null) {
-        Log.warning('List event missing d tag: ${event.id}',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.warning(
+          'List event missing d tag: ${event.id}',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return null;
       }
 
@@ -1333,7 +1531,8 @@ class CuratedListService {
 
       // Use title or fall back to content or default
       final contentFirstLine = event.content.split('\n').first;
-      final name = title ??
+      final name =
+          title ??
           (contentFirstLine.isNotEmpty ? contentFirstLine : 'Untitled List');
 
       return CuratedList(
@@ -1355,8 +1554,11 @@ class CuratedListService {
             : PlayOrder.chronological,
       );
     } catch (e) {
-      Log.error('Failed to convert event ${event.id} to CuratedList: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to convert event ${event.id} to CuratedList: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -1378,8 +1580,11 @@ class CuratedListService {
       }
     }
 
-    Log.debug('Processing ${eventsByDTag.length} unique lists from relays',
-        name: 'CuratedListService', category: LogCategory.system);
+    Log.debug(
+      'Processing ${eventsByDTag.length} unique lists from relays',
+      name: 'CuratedListService',
+      category: LogCategory.system,
+    );
 
     // Process each unique list
     for (final event in eventsByDTag.values) {
@@ -1405,8 +1610,11 @@ class CuratedListService {
     try {
       final dTag = _extractDTag(event);
       if (dTag == null) {
-        Log.warning('List event missing d tag: ${event.id}',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.warning(
+          'List event missing d tag: ${event.id}',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -1457,7 +1665,8 @@ class CuratedListService {
 
       // Use title or fall back to content or default
       final contentFirstLine = event.content.split('\n').first;
-      final name = title ??
+      final name =
+          title ??
           (contentFirstLine.isNotEmpty ? contentFirstLine : 'Untitled List');
 
       // Check if we already have this list locally
@@ -1468,8 +1677,11 @@ class CuratedListService {
         final existingList = _lists[existingListIndex];
         if (event.createdAt >
             existingList.updatedAt.millisecondsSinceEpoch ~/ 1000) {
-          Log.debug('Updating existing list from relay: $name',
-              name: 'CuratedListService', category: LogCategory.system);
+          Log.debug(
+            'Updating existing list from relay: $name',
+            name: 'CuratedListService',
+            category: LogCategory.system,
+          );
 
           _lists[existingListIndex] = CuratedList(
             id: dTag,
@@ -1478,8 +1690,9 @@ class CuratedListService {
             imageUrl: imageUrl,
             videoEventIds: videoEventIds,
             createdAt: existingList.createdAt, // Keep original creation time
-            updatedAt:
-                DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(
+              event.createdAt * 1000,
+            ),
             isPublic: true, // Lists from relays are public
             nostrEventId: event.id,
             tags: tags,
@@ -1491,38 +1704,51 @@ class CuratedListService {
                 : PlayOrder.chronological,
           );
         } else {
-          Log.debug('Skipping older relay version of list: $name',
-              name: 'CuratedListService', category: LogCategory.system);
+          Log.debug(
+            'Skipping older relay version of list: $name',
+            name: 'CuratedListService',
+            category: LogCategory.system,
+          );
         }
       } else {
         // Add new list from relay
-        Log.debug('Adding new list from relay: $name',
-            name: 'CuratedListService', category: LogCategory.system);
+        Log.debug(
+          'Adding new list from relay: $name',
+          name: 'CuratedListService',
+          category: LogCategory.system,
+        );
 
-        _lists.add(CuratedList(
-          id: dTag,
-          name: name,
-          description: description ?? event.content,
-          imageUrl: imageUrl,
-          videoEventIds: videoEventIds,
-          createdAt:
-              DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
-          updatedAt:
-              DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
-          isPublic: true, // Lists from relays are public
-          nostrEventId: event.id,
-          tags: tags,
-          isCollaborative: isCollaborative,
-          allowedCollaborators: allowedCollaborators,
-          thumbnailEventId: thumbnailEventId,
-          playOrder: playOrderStr != null
-              ? PlayOrderExtension.fromString(playOrderStr)
-              : PlayOrder.chronological,
-        ));
+        _lists.add(
+          CuratedList(
+            id: dTag,
+            name: name,
+            description: description ?? event.content,
+            imageUrl: imageUrl,
+            videoEventIds: videoEventIds,
+            createdAt: DateTime.fromMillisecondsSinceEpoch(
+              event.createdAt * 1000,
+            ),
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(
+              event.createdAt * 1000,
+            ),
+            isPublic: true, // Lists from relays are public
+            nostrEventId: event.id,
+            tags: tags,
+            isCollaborative: isCollaborative,
+            allowedCollaborators: allowedCollaborators,
+            thumbnailEventId: thumbnailEventId,
+            playOrder: playOrderStr != null
+                ? PlayOrderExtension.fromString(playOrderStr)
+                : PlayOrder.chronological,
+          ),
+        );
       }
     } catch (e) {
-      Log.error('Failed to process list event ${event.id}: $e',
-          name: 'CuratedListService', category: LogCategory.system);
+      Log.error(
+        'Failed to process list event ${event.id}: $e',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
     }
   }
 }

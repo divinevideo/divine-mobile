@@ -45,8 +45,9 @@ void main() {
       );
     });
 
-    testWidgets('builds widget tree correctly when thumbnail URL exists',
-        (tester) async {
+    testWidgets('builds widget tree correctly when thumbnail URL exists', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -69,8 +70,9 @@ void main() {
       expect(find.byType(VideoIconPlaceholder), findsNothing);
     });
 
-    testWidgets('displays blurhash when only blurhash is available',
-        (tester) async {
+    testWidgets('displays blurhash when only blurhash is available', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -94,50 +96,52 @@ void main() {
     });
 
     testWidgets(
-        'displays blurhash as background when both thumbnail and blurhash exist',
-        (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: VideoThumbnailWidget(
-              video: videoWithBoth,
-              width: 200,
-              height: 200,
+      'displays blurhash as background when both thumbnail and blurhash exist',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: VideoThumbnailWidget(
+                video: videoWithBoth,
+                width: 200,
+                height: 200,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Should show both BlurhashDisplay and Image in a Stack
-      expect(find.byType(BlurhashDisplay), findsOneWidget);
-      expect(find.byType(Image), findsOneWidget);
-      expect(find.byType(Stack), findsAtLeastNWidgets(1));
-    });
+        // Should show both BlurhashDisplay and Image in a Stack
+        expect(find.byType(BlurhashDisplay), findsOneWidget);
+        expect(find.byType(Image), findsOneWidget);
+        expect(find.byType(Stack), findsAtLeastNWidgets(1));
+      },
+    );
 
     testWidgets(
-        'displays icon placeholder when neither thumbnail nor blurhash exists',
-        (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: VideoThumbnailWidget(
-              video: videoWithNeither,
-              width: 200,
-              height: 200,
+      'displays icon placeholder when neither thumbnail nor blurhash exists',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: VideoThumbnailWidget(
+                video: videoWithNeither,
+                width: 200,
+                height: 200,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      // Should show VideoIconPlaceholder
-      expect(find.byType(VideoIconPlaceholder), findsOneWidget);
+        // Should show VideoIconPlaceholder
+        expect(find.byType(VideoIconPlaceholder), findsOneWidget);
 
-      // Should not show blurhash or image
-      expect(find.byType(BlurhashDisplay), findsNothing);
-      expect(find.byType(Image), findsNothing);
-    });
+        // Should not show blurhash or image
+        expect(find.byType(BlurhashDisplay), findsNothing);
+        expect(find.byType(Image), findsNothing);
+      },
+    );
 
     testWidgets('shows play icon when requested', (tester) async {
       await tester.pumpWidget(
@@ -235,8 +239,9 @@ void main() {
       expect(find.byType(VideoThumbnailWidget), findsOneWidget);
     });
 
-    testWidgets('does not try to generate thumbnails when URL is missing',
-        (tester) async {
+    testWidgets('does not try to generate thumbnails when URL is missing', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -262,8 +267,9 @@ void main() {
       expect(placeholderFinder, findsNothing);
     });
 
-    testWidgets('shows loading state briefly during initialization',
-        (tester) async {
+    testWidgets('shows loading state briefly during initialization', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(

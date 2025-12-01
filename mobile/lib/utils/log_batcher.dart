@@ -48,12 +48,10 @@ class LogBatcher {
 
   /// Force immediate flush of specific pattern
   static void flushPattern(String pattern) {
-    _batches.entries
-        .where((e) => e.value.pattern == pattern)
-        .forEach((e) {
-          e.value.flush();
-          _batches.remove(e.key);
-        });
+    _batches.entries.where((e) => e.value.pattern == pattern).forEach((e) {
+      e.value.flush();
+      _batches.remove(e.key);
+    });
   }
 }
 
@@ -65,11 +63,7 @@ class _BatchedMessage {
   final List<Map<String, dynamic>> instances = [];
   int count = 0;
 
-  _BatchedMessage({
-    required this.pattern,
-    required this.category,
-    this.name,
-  });
+  _BatchedMessage({required this.pattern, required this.category, this.name});
 
   void add(Map<String, dynamic>? data) {
     count++;
@@ -93,11 +87,7 @@ class _BatchedMessage {
     } else {
       // Multiple messages, log summary
       final summaryMessage = _buildSummaryMessage();
-      Log.debug(
-        summaryMessage,
-        name: name ?? 'LogBatcher',
-        category: category,
-      );
+      Log.debug(summaryMessage, name: name ?? 'LogBatcher', category: category);
     }
   }
 
@@ -184,26 +174,19 @@ extension VideoEventLogBatcher on LogBatcher {
       pattern: 'Received NIP-71 video event',
       category: LogCategory.video,
       name: 'VideoEventService',
-      data: {
-        'id': eventId,
-        'subscription': subscriptionType,
-      },
+      data: {'id': eventId, 'subscription': subscriptionType},
     );
   }
 }
 
 /// Extension for batching relay event logs
 extension RelayEventLogBatcher on LogBatcher {
-  static void batchRelayEvent({
-    required String subscriptionId,
-  }) {
+  static void batchRelayEvent({required String subscriptionId}) {
     LogBatcher.batch(
       pattern: 'Embedded relay returned event',
       category: LogCategory.relay,
       name: 'NostrService',
-      data: {
-        'subscription': subscriptionId,
-      },
+      data: {'subscription': subscriptionId},
     );
   }
 
@@ -215,10 +198,7 @@ extension RelayEventLogBatcher on LogBatcher {
       pattern: 'Dropping duplicate event',
       category: LogCategory.relay,
       name: 'NostrService',
-      data: {
-        'id': eventId,
-        'subscription': subscriptionId,
-      },
+      data: {'id': eventId, 'subscription': subscriptionId},
     );
   }
 }

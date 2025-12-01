@@ -39,7 +39,11 @@ void main() {
 
       // This test verifies the auth event structure
       // We'll check this in the actual implementation
-      expect(true, isTrue, reason: 'Placeholder - check auth event in implementation logs');
+      expect(
+        true,
+        isTrue,
+        reason: 'Placeholder - check auth event in implementation logs',
+      );
     });
 
     test('server URL should be blossom.divine.video for upload', () async {
@@ -50,8 +54,11 @@ void main() {
       final serverUrl = BlossomUploadService.defaultBlossomServer;
 
       // ASSERT: Should match current configuration
-      expect(serverUrl, equals(expectedBaseUrl),
-          reason: 'Blossom upload uses divine.video Blossom server');
+      expect(
+        serverUrl,
+        equals(expectedBaseUrl),
+        reason: 'Blossom upload uses divine.video Blossom server',
+      );
     });
 
     test('uploaded file should return cdn.divine.video URL', () async {
@@ -86,48 +93,71 @@ void main() {
     });
 
     // LIVE SERVER TEST (skipped by default, run manually with --dart-define=LIVE_TEST=true)
-    test('LIVE: upload to api.divine.video should return proper Blossom response',
-        skip: !const bool.fromEnvironment('LIVE_TEST'), () async {
-      // This test requires:
-      // 1. Valid Nostr keys
-      // 2. Live api.divine.video server
-      // 3. Network connection
+    test(
+      'LIVE: upload to api.divine.video should return proper Blossom response',
+      skip: !const bool.fromEnvironment('LIVE_TEST'),
+      () async {
+        // This test requires:
+        // 1. Valid Nostr keys
+        // 2. Live api.divine.video server
+        // 3. Network connection
 
-      // Run with: flutter test --dart-define=LIVE_TEST=true test/integration/blossom_upload_spec_test.dart
+        // Run with: flutter test --dart-define=LIVE_TEST=true test/integration/blossom_upload_spec_test.dart
 
-      // TODO: Implement once we have auth service properly set up
-      fail('Live test not yet implemented - needs auth service setup');
-    });
+        // TODO: Implement once we have auth service properly set up
+        fail('Live test not yet implemented - needs auth service setup');
+      },
+    );
   });
 
   group('Blossom Auth Event Validation', () {
     test('created_at must be in the past', () {
-      final futureTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600;
+      final futureTimestamp =
+          DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600;
 
       // Auth event with future created_at should be rejected by server
-      expect(futureTimestamp > DateTime.now().millisecondsSinceEpoch ~/ 1000, isTrue,
-          reason: 'created_at must be in the past per Blossom spec');
+      expect(
+        futureTimestamp > DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        isTrue,
+        reason: 'created_at must be in the past per Blossom spec',
+      );
     });
 
     test('expiration must be in the future', () {
-      final pastTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3600;
+      final pastTimestamp =
+          DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3600;
 
       // Auth event with past expiration should be rejected by server
-      expect(pastTimestamp < DateTime.now().millisecondsSinceEpoch ~/ 1000, isTrue,
-          reason: 'expiration must be in the future per Blossom spec');
+      expect(
+        pastTimestamp < DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        isTrue,
+        reason: 'expiration must be in the future per Blossom spec',
+      );
     });
 
     test('verb tag must be upload/get/list/delete', () {
       final validVerbs = ['upload', 'get', 'list', 'delete'];
 
-      expect(validVerbs, contains('upload'),
-          reason: 'upload is a valid Blossom verb');
-      expect(validVerbs, contains('get'),
-          reason: 'get is a valid Blossom verb');
-      expect(validVerbs, contains('list'),
-          reason: 'list is a valid Blossom verb');
-      expect(validVerbs, contains('delete'),
-          reason: 'delete is a valid Blossom verb');
+      expect(
+        validVerbs,
+        contains('upload'),
+        reason: 'upload is a valid Blossom verb',
+      );
+      expect(
+        validVerbs,
+        contains('get'),
+        reason: 'get is a valid Blossom verb',
+      );
+      expect(
+        validVerbs,
+        contains('list'),
+        reason: 'list is a valid Blossom verb',
+      );
+      expect(
+        validVerbs,
+        contains('delete'),
+        reason: 'delete is a valid Blossom verb',
+      );
     });
   });
 }

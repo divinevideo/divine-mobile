@@ -39,7 +39,8 @@ void main() {
 
       // Test 2: Try to subscribe to events
       Log.debug(
-          '\n2. Testing event subscription (should trigger AUTH if needed)...');
+        '\n2. Testing event subscription (should trigger AUTH if needed)...',
+      );
       final filters = [
         Filter(
           kinds: [22], // Video events
@@ -52,17 +53,22 @@ void main() {
 
       // Listen for events with timeout
       try {
-        await subscription.take(5).timeout(
-          const Duration(seconds: 10),
-          onTimeout: (sink) {
-            Log.debug(
-                'Timeout waiting for events - checking if AUTH is required');
-          },
-        ).forEach((event) {
-          events.add(event);
-          Log.debug(
-              'Received event: ${event.kind} - ${event.id.substring(0, 8)}...');
-        });
+        await subscription
+            .take(5)
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: (sink) {
+                Log.debug(
+                  'Timeout waiting for events - checking if AUTH is required',
+                );
+              },
+            )
+            .forEach((event) {
+              events.add(event);
+              Log.debug(
+                'Received event: ${event.kind} - ${event.id.substring(0, 8)}...',
+              );
+            });
       } catch (e) {
         Log.debug('Error during subscription: $e');
       }

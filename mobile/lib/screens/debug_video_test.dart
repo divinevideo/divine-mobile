@@ -27,8 +27,11 @@ class _DebugVideoTestScreenState extends ConsumerState<DebugVideoTestScreen> {
     // NOTE: Videos are now automatically synced from the video feed
     // Manual video addition not supported in new Riverpod architecture
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      Log.info('Debug video test initialized - videos come from feed',
-          name: 'DebugVideoTest', category: LogCategory.ui);
+      Log.info(
+        'Debug video test initialized - videos come from feed',
+        name: 'DebugVideoTest',
+        category: LogCategory.ui,
+      );
     });
   }
 

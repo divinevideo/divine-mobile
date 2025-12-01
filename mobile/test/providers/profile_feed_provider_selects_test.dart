@@ -31,7 +31,8 @@ Future<void> waitForPageContext(ProviderContainer container) async {
 void main() {
   test('selects author videos when profile route active', () async {
     // Test fixture
-    final testNpub = 'npub1l5sga6xg72phsz5422ykujprejwud075ggrr3z2hwyrfgr7eylqstegx9z';
+    final testNpub =
+        'npub1l5sga6xg72phsz5422ykujprejwud075ggrr3z2hwyrfgr7eylqstegx9z';
     final testHex = npubToHexOrNull(testNpub)!;
 
     final testVideo = VideoEvent(
@@ -46,7 +47,9 @@ void main() {
 
     // Create fake service with test videos
     final fakeService = _FakeVideoEventService(
-      authorVideos: {testHex: [testVideo]},
+      authorVideos: {
+        testHex: [testVideo],
+      },
     );
 
     final container = ProviderContainer(
@@ -66,8 +69,16 @@ void main() {
 
     // Assertions
     expect(result.hasValue, isTrue, reason: 'Provider should have data');
-    expect(result.value!.videos.length, 1, reason: 'Should select 1 video from author');
-    expect(result.value!.videos.first.id, 'test-video-1', reason: 'Should select correct video');
+    expect(
+      result.value!.videos.length,
+      1,
+      reason: 'Should select 1 video from author',
+    );
+    expect(
+      result.value!.videos.first.id,
+      'test-video-1',
+      reason: 'Should select correct video',
+    );
 
     container.dispose();
   });
@@ -87,7 +98,11 @@ void main() {
     final result = container.read(videosForProfileRouteProvider);
 
     expect(result.hasValue, isTrue);
-    expect(result.value!.videos, isEmpty, reason: 'Should return empty for non-profile routes');
+    expect(
+      result.value!.videos,
+      isEmpty,
+      reason: 'Should return empty for non-profile routes',
+    );
 
     container.dispose();
   });
@@ -95,13 +110,12 @@ void main() {
 
 /// Fake VideoEventService for testing
 class _FakeVideoEventService extends VideoEventService {
-  _FakeVideoEventService({
-    required Map<String, List<VideoEvent>> authorVideos,
-  }) : _authorVideos = authorVideos,
-       super(
-         _FakeNostrService(),
-         subscriptionManager: _FakeSubscriptionManager(),
-       );
+  _FakeVideoEventService({required Map<String, List<VideoEvent>> authorVideos})
+    : _authorVideos = authorVideos,
+      super(
+        _FakeNostrService(),
+        subscriptionManager: _FakeSubscriptionManager(),
+      );
 
   final Map<String, List<VideoEvent>> _authorVideos;
 

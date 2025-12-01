@@ -15,15 +15,24 @@ class NativeMacOSCamera {
   /// Initialize the native camera
   static Future<bool> initialize() async {
     try {
-      Log.debug('📱 [NativeMacOSCamera] Calling native initialize method',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.debug(
+        '📱 [NativeMacOSCamera] Calling native initialize method',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       final result = await _channel.invokeMethod<bool>('initialize');
-      Log.debug('📱 [NativeMacOSCamera] Initialize result: $result',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.debug(
+        '📱 [NativeMacOSCamera] Initialize result: $result',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return result ?? false;
     } catch (e) {
-      Log.error('[NativeMacOSCamera] Failed to initialize native camera: $e',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.error(
+        '[NativeMacOSCamera] Failed to initialize native camera: $e',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return false;
     }
   }
@@ -31,15 +40,24 @@ class NativeMacOSCamera {
   /// Start camera preview
   static Future<bool> startPreview() async {
     try {
-      Log.debug('📱 [NativeMacOSCamera] Calling startPreview method',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.debug(
+        '📱 [NativeMacOSCamera] Calling startPreview method',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       final result = await _channel.invokeMethod<bool>('startPreview');
-      Log.debug('📱 [NativeMacOSCamera] StartPreview result: $result',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.debug(
+        '📱 [NativeMacOSCamera] StartPreview result: $result',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return result ?? false;
     } catch (e) {
-      Log.error('[NativeMacOSCamera] Failed to start native camera preview: $e',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.error(
+        '[NativeMacOSCamera] Failed to start native camera preview: $e',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return false;
     }
   }
@@ -48,12 +66,18 @@ class NativeMacOSCamera {
   static Future<bool> stopPreview() async {
     try {
       final result = await _channel.invokeMethod<bool>('stopPreview');
-      Log.info('📱 Native macOS camera preview stopped: $result',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.info(
+        '📱 Native macOS camera preview stopped: $result',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return result ?? false;
     } catch (e) {
-      Log.error('Failed to stop native camera preview: $e',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.error(
+        'Failed to stop native camera preview: $e',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return false;
     }
   }
@@ -61,17 +85,24 @@ class NativeMacOSCamera {
   /// Start video recording
   static Future<bool> startRecording() async {
     try {
-      Log.debug('📱 [NativeMacOSCamera] Calling startRecording method',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.debug(
+        '📱 [NativeMacOSCamera] Calling startRecording method',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       final result = await _channel.invokeMethod<bool>('startRecording');
-      Log.debug('📱 [NativeMacOSCamera] StartRecording result: $result',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.debug(
+        '📱 [NativeMacOSCamera] StartRecording result: $result',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return result ?? false;
     } catch (e) {
       Log.error(
-          '[NativeMacOSCamera] Failed to start native camera recording: $e',
-          name: 'NativeMacosCamera',
-          category: LogCategory.video);
+        '[NativeMacOSCamera] Failed to start native camera recording: $e',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return false;
     }
   }
@@ -80,38 +111,51 @@ class NativeMacOSCamera {
   static Future<String?> stopRecording() async {
     try {
       Log.debug(
-          '📱 [NativeMacOSCamera] Calling stopRecording method with timeout',
-          name: 'NativeMacosCamera',
-          category: LogCategory.video);
-
-      // Add timeout to prevent hanging forever
-      final result =
-          await _channel.invokeMethod<String>('stopRecording').timeout(
-        const Duration(seconds: 3),
-        onTimeout: () {
-          Log.debug(
-              '⏰ [NativeMacOSCamera] stopRecording timed out after 3 seconds',
-              name: 'NativeMacosCamera',
-              category: LogCategory.video);
-          return null;
-        },
+        '📱 [NativeMacOSCamera] Calling stopRecording method with timeout',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
       );
 
-      Log.debug('📱 [NativeMacOSCamera] StopRecording result: $result',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      // Add timeout to prevent hanging forever
+      final result = await _channel
+          .invokeMethod<String>('stopRecording')
+          .timeout(
+            const Duration(seconds: 3),
+            onTimeout: () {
+              Log.debug(
+                '⏰ [NativeMacOSCamera] stopRecording timed out after 3 seconds',
+                name: 'NativeMacosCamera',
+                category: LogCategory.video,
+              );
+              return null;
+            },
+          );
+
+      Log.debug(
+        '📱 [NativeMacOSCamera] StopRecording result: $result',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       if (result != null) {
-        Log.debug('📱 [NativeMacOSCamera] Video saved to: $result',
-            name: 'NativeMacosCamera', category: LogCategory.video);
+        Log.debug(
+          '📱 [NativeMacOSCamera] Video saved to: $result',
+          name: 'NativeMacosCamera',
+          category: LogCategory.video,
+        );
       } else {
-        Log.warning('[NativeMacOSCamera] No video path returned',
-            name: 'NativeMacosCamera', category: LogCategory.video);
+        Log.warning(
+          '[NativeMacOSCamera] No video path returned',
+          name: 'NativeMacosCamera',
+          category: LogCategory.video,
+        );
       }
       return result;
     } catch (e) {
       Log.error(
-          '[NativeMacOSCamera] Failed to stop native camera recording: $e',
-          name: 'NativeMacosCamera',
-          category: LogCategory.video);
+        '[NativeMacOSCamera] Failed to stop native camera recording: $e',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return null;
     }
   }
@@ -139,12 +183,18 @@ class NativeMacOSCamera {
   static Future<bool> requestPermission() async {
     try {
       final result = await _channel.invokeMethod<bool>('requestPermission');
-      Log.debug('📱 Camera permission result: $result',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.debug(
+        '📱 Camera permission result: $result',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return result ?? false;
     } catch (e) {
-      Log.error('Failed to request camera permission: $e',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.error(
+        'Failed to request camera permission: $e',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return false;
     }
   }
@@ -155,8 +205,11 @@ class NativeMacOSCamera {
       final result = await _channel.invokeMethod<bool>('hasPermission');
       return result ?? false;
     } catch (e) {
-      Log.error('Failed to check camera permission: $e',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.error(
+        'Failed to check camera permission: $e',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return false;
     }
   }
@@ -175,8 +228,11 @@ class NativeMacOSCamera {
         return <String, dynamic>{};
       }).toList();
     } catch (e) {
-      Log.error('Failed to get available cameras: $e',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.error(
+        'Failed to get available cameras: $e',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return [];
     }
   }
@@ -187,12 +243,18 @@ class NativeMacOSCamera {
       final result = await _channel.invokeMethod<bool>('switchCamera', {
         'cameraIndex': cameraIndex,
       });
-      Log.debug('Switched to camera $cameraIndex: $result',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.debug(
+        'Switched to camera $cameraIndex: $result',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return result ?? false;
     } catch (e) {
-      Log.error('Failed to switch camera: $e',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.error(
+        'Failed to switch camera: $e',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
       return false;
     }
   }
@@ -204,11 +266,17 @@ class NativeMacOSCamera {
       _frameStreamController?.close();
       _frameStreamController = null;
       _frameStream = null;
-      Log.debug('🧹 Native macOS camera disposed',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.debug(
+        '🧹 Native macOS camera disposed',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
     } catch (e) {
-      Log.error('Error disposing native camera: $e',
-          name: 'NativeMacosCamera', category: LogCategory.video);
+      Log.error(
+        'Error disposing native camera: $e',
+        name: 'NativeMacosCamera',
+        category: LogCategory.video,
+      );
     }
   }
 }

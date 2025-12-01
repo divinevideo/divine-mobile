@@ -30,65 +30,52 @@ class AppNotification {
     required String videoTitle,
     required String nostrEventId,
     String? videoUrl,
-  }) =>
-      AppNotification(
-        title: 'Video Published!',
-        body: videoTitle.isEmpty
-            ? 'Your vine is now live on Nostr'
-            : '"$videoTitle" is now live on Nostr',
-        type: NotificationType.videoPublished,
-        data: {
-          'event_id': nostrEventId,
-          'video_url': videoUrl,
-          'action': 'open_feed',
-        },
-      );
+  }) => AppNotification(
+    title: 'Video Published!',
+    body: videoTitle.isEmpty
+        ? 'Your vine is now live on Nostr'
+        : '"$videoTitle" is now live on Nostr',
+    type: NotificationType.videoPublished,
+    data: {
+      'event_id': nostrEventId,
+      'video_url': videoUrl,
+      'action': 'open_feed',
+    },
+  );
 
   /// Create notification for upload completion
-  factory AppNotification.uploadComplete({
-    required String videoTitle,
-  }) =>
+  factory AppNotification.uploadComplete({required String videoTitle}) =>
       AppNotification(
         title: 'Upload Complete',
         body: videoTitle.isEmpty
             ? 'Your video is processing'
             : '"$videoTitle" is being processed',
         type: NotificationType.uploadComplete,
-        data: {
-          'action': 'open_uploads',
-        },
+        data: {'action': 'open_uploads'},
       );
 
   /// Create notification for upload failure
   factory AppNotification.uploadFailed({
     required String videoTitle,
     required String reason,
-  }) =>
-      AppNotification(
-        title: 'Upload Failed',
-        body: videoTitle.isEmpty
-            ? 'Video upload failed: $reason'
-            : '"$videoTitle" failed: $reason',
-        type: NotificationType.uploadFailed,
-        data: {
-          'action': 'retry_upload',
-          'reason': reason,
-        },
-      );
+  }) => AppNotification(
+    title: 'Upload Failed',
+    body: videoTitle.isEmpty
+        ? 'Video upload failed: $reason'
+        : '"$videoTitle" failed: $reason',
+    type: NotificationType.uploadFailed,
+    data: {'action': 'retry_upload', 'reason': reason},
+  );
 
   /// Create notification for processing start
-  factory AppNotification.processingStarted({
-    required String videoTitle,
-  }) =>
+  factory AppNotification.processingStarted({required String videoTitle}) =>
       AppNotification(
         title: 'Processing Started',
         body: videoTitle.isEmpty
             ? 'Your video is being processed'
             : 'Processing "$videoTitle"',
         type: NotificationType.processingStarted,
-        data: {
-          'action': 'show_progress',
-        },
+        data: {'action': 'show_progress'},
       );
   final String title;
   final String body;
@@ -142,25 +129,37 @@ class NotificationService {
   /// }
   /// ```
   Future<void> initialize() async {
-    Log.debug('🔧 Initializing NotificationService',
-        name: 'NotificationService', category: LogCategory.system);
+    Log.debug(
+      '🔧 Initializing NotificationService',
+      name: 'NotificationService',
+      category: LogCategory.system,
+    );
 
     try {
       // Request notification permissions
       await _requestPermissions();
 
-      Log.info('NotificationService initialized',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.info(
+        'NotificationService initialized',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to initialize notifications: $e',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize notifications: $e',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Show a notification
   Future<void> show(AppNotification notification) async {
-    Log.debug('📱 Showing notification: ${notification.title}',
-        name: 'NotificationService', category: LogCategory.system);
+    Log.debug(
+      '📱 Showing notification: ${notification.title}',
+      name: 'NotificationService',
+      category: LogCategory.system,
+    );
 
     // Add to internal list
     _addNotification(notification);
@@ -171,12 +170,18 @@ class NotificationService {
         await _showPlatformNotification(notification);
       } else {
         // Show in-app notification only
-        Log.warning('No notification permissions, showing in-app only',
-            name: 'NotificationService', category: LogCategory.system);
+        Log.warning(
+          'No notification permissions, showing in-app only',
+          name: 'NotificationService',
+          category: LogCategory.system,
+        );
       }
     } catch (e) {
-      Log.error('Failed to show notification: $e',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.error(
+        'Failed to show notification: $e',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -218,8 +223,11 @@ class NotificationService {
   void clearAll() {
     _notifications.clear();
 
-    Log.debug('📱️ Cleared all notifications',
-        name: 'NotificationService', category: LogCategory.system);
+    Log.debug(
+      '📱️ Cleared all notifications',
+      name: 'NotificationService',
+      category: LogCategory.system,
+    );
   }
 
   /// Clear notifications older than specified duration
@@ -233,8 +241,11 @@ class NotificationService {
 
     final removedCount = initialCount - _notifications.length;
     if (removedCount > 0) {
-      Log.debug('📱️ Cleared $removedCount old notifications',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.debug(
+        '📱️ Cleared $removedCount old notifications',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -247,15 +258,21 @@ class NotificationService {
   Future<void> ensurePermission() async {
     // Skip if already granted
     if (_permissionsGranted) {
-      Log.debug('Notification permissions already granted',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.debug(
+        'Notification permissions already granted',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
       return;
     }
 
     // Web platform doesn't support flutter_local_notifications fully
     if (kIsWeb) {
-      Log.debug('Web platform: skipping native notification permissions',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.debug(
+        'Web platform: skipping native notification permissions',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
       _permissionsGranted = true; // Allow in-app notifications
       return;
     }
@@ -273,7 +290,8 @@ class NotificationService {
         // Try to access platform implementation - this will fail in tests
         _flutterLocalNotificationsPlugin
             .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>();
+              AndroidFlutterLocalNotificationsPlugin
+            >();
       } catch (e) {
         isTestEnvironment = true;
       }
@@ -281,53 +299,66 @@ class NotificationService {
       if (isTestEnvironment) {
         // In test mode, auto-grant permissions for testing
         _permissionsGranted = true;
-        Log.debug('Test environment: auto-granting notification permissions',
-            name: 'NotificationService', category: LogCategory.system);
+        Log.debug(
+          'Test environment: auto-granting notification permissions',
+          name: 'NotificationService',
+          category: LogCategory.system,
+        );
         return;
       }
 
       // Request iOS permissions
       if (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.macOS) {
-        final granted = await _flutterLocalNotificationsPlugin
+        final granted =
+            await _flutterLocalNotificationsPlugin
                 .resolvePlatformSpecificImplementation<
-                    IOSFlutterLocalNotificationsPlugin>()
-                ?.requestPermissions(
-                  alert: true,
-                  badge: true,
-                  sound: true,
-                ) ??
+                  IOSFlutterLocalNotificationsPlugin
+                >()
+                ?.requestPermissions(alert: true, badge: true, sound: true) ??
             false;
 
         _permissionsGranted = granted;
-        Log.info('iOS notification permissions ${granted ? "granted" : "denied"}',
-            name: 'NotificationService', category: LogCategory.system);
+        Log.info(
+          'iOS notification permissions ${granted ? "granted" : "denied"}',
+          name: 'NotificationService',
+          category: LogCategory.system,
+        );
       }
       // Request Android permissions (Android 13+)
       else if (defaultTargetPlatform == TargetPlatform.android) {
-        final granted = await _flutterLocalNotificationsPlugin
+        final granted =
+            await _flutterLocalNotificationsPlugin
                 .resolvePlatformSpecificImplementation<
-                    AndroidFlutterLocalNotificationsPlugin>()
+                  AndroidFlutterLocalNotificationsPlugin
+                >()
                 ?.requestNotificationsPermission() ??
             true; // Pre-Android 13 doesn't need runtime permission
 
         _permissionsGranted = granted;
         Log.info(
-            'Android notification permissions ${granted ? "granted" : "denied"}',
-            name: 'NotificationService',
-            category: LogCategory.system);
+          'Android notification permissions ${granted ? "granted" : "denied"}',
+          name: 'NotificationService',
+          category: LogCategory.system,
+        );
       } else {
         // Other platforms (Linux, Windows) don't require runtime permissions
         _permissionsGranted = true;
-        Log.info('Platform notification permissions auto-granted',
-            name: 'NotificationService', category: LogCategory.system);
+        Log.info(
+          'Platform notification permissions auto-granted',
+          name: 'NotificationService',
+          category: LogCategory.system,
+        );
       }
     } catch (e) {
       // In case of any error (including test environment), grant permissions
       // to allow in-app notifications to work
       _permissionsGranted = true;
-      Log.error('Failed to request notification permissions: $e',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.error(
+        'Failed to request notification permissions: $e',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -336,8 +367,9 @@ class NotificationService {
     if (_pluginInitialized) return;
 
     try {
-      const androidSettings =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings = AndroidInitializationSettings(
+        '@mipmap/ic_launcher',
+      );
       const iosSettings = DarwinInitializationSettings(
         requestAlertPermission: false, // We'll request explicitly
         requestBadgePermission: false,
@@ -348,8 +380,9 @@ class NotificationService {
         requestBadgePermission: false,
         requestSoundPermission: false,
       );
-      const linuxSettings =
-          LinuxInitializationSettings(defaultActionName: 'Open notification');
+      const linuxSettings = LinuxInitializationSettings(
+        defaultActionName: 'Open notification',
+      );
 
       const initializationSettings = InitializationSettings(
         android: androidSettings,
@@ -364,12 +397,18 @@ class NotificationService {
       );
 
       _pluginInitialized = true;
-      Log.debug('Flutter local notifications plugin initialized',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.debug(
+        'Flutter local notifications plugin initialized',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
       // In test environment or platforms without native support, gracefully degrade
-      Log.error('Failed to initialize notification plugin: $e',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize notification plugin: $e',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
       // Mark as "initialized" even on failure to prevent repeated attempts
       _pluginInitialized = true;
     }
@@ -383,8 +422,11 @@ class NotificationService {
   /// - 'retry_upload': Navigate to failed upload and show retry UI
   /// - 'show_progress': Navigate to upload progress screen
   void _onNotificationTapped(NotificationResponse response) {
-    Log.debug('Notification tapped: ${response.payload}',
-        name: 'NotificationService', category: LogCategory.system);
+    Log.debug(
+      'Notification tapped: ${response.payload}',
+      name: 'NotificationService',
+      category: LogCategory.system,
+    );
     // TODO: Handle notification actions (navigate to relevant screen)
     // Example implementation:
     // final data = jsonDecode(response.payload ?? '{}');
@@ -396,12 +438,12 @@ class NotificationService {
   }
 
   /// Send a local notification with title and body
-  Future<void> sendLocal({
-    required String title,
-    required String body,
-  }) async {
-    Log.debug('📱 Sending local notification: $title',
-        name: 'NotificationService', category: LogCategory.system);
+  Future<void> sendLocal({required String title, required String body}) async {
+    Log.debug(
+      '📱 Sending local notification: $title',
+      name: 'NotificationService',
+      category: LogCategory.system,
+    );
 
     // Create AppNotification for internal tracking
     final notification = AppNotification(
@@ -416,9 +458,10 @@ class NotificationService {
     // Skip platform notification on web or without permissions
     if (kIsWeb || !_permissionsGranted) {
       Log.debug(
-          'Skipping platform notification (web: $kIsWeb, permissions: $_permissionsGranted)',
-          name: 'NotificationService',
-          category: LogCategory.system);
+        'Skipping platform notification (web: $kIsWeb, permissions: $_permissionsGranted)',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -472,11 +515,17 @@ class NotificationService {
         notificationDetails,
       );
 
-      Log.debug('Platform notification sent successfully',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.debug(
+        'Platform notification sent successfully',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to send platform notification: $e',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.error(
+        'Failed to send platform notification: $e',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -503,8 +552,11 @@ class NotificationService {
         HapticFeedback.heavyImpact();
       }
     } catch (e) {
-      Log.error('Failed to show platform notification: $e',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.error(
+        'Failed to show platform notification: $e',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -514,15 +566,19 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
-    Log.debug('📱 Sending platform notification: $title',
-        name: 'NotificationService', category: LogCategory.system);
+    Log.debug(
+      '📱 Sending platform notification: $title',
+      name: 'NotificationService',
+      category: LogCategory.system,
+    );
 
     // Skip platform notification on web or without permissions
     if (kIsWeb || !_permissionsGranted) {
       Log.debug(
-          'Skipping platform notification (web: $kIsWeb, permissions: $_permissionsGranted)',
-          name: 'NotificationService',
-          category: LogCategory.system);
+        'Skipping platform notification (web: $kIsWeb, permissions: $_permissionsGranted)',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -568,8 +624,7 @@ class NotificationService {
       );
 
       // Show the notification with unique ID from timestamp
-      final notificationId =
-          DateTime.now().millisecondsSinceEpoch % 100000;
+      final notificationId = DateTime.now().millisecondsSinceEpoch % 100000;
       await _flutterLocalNotificationsPlugin.show(
         notificationId,
         title,
@@ -577,11 +632,17 @@ class NotificationService {
         notificationDetails,
       );
 
-      Log.debug('Platform notification sent successfully',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.debug(
+        'Platform notification sent successfully',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to send platform notification: $e',
-          name: 'NotificationService', category: LogCategory.system);
+      Log.error(
+        'Failed to send platform notification: $e',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
     }
   }
 

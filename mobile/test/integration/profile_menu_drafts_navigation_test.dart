@@ -11,17 +11,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   Widget shell(ProviderContainer c) => UncontrolledProviderScope(
-        container: c,
-        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
-      );
+    container: c,
+    child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+  );
 
   group('Profile menu drafts navigation integration', () {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
     });
 
-    testWidgets('should have Drafts menu item in profile options menu', (tester) async {
-      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+    testWidgets('should have Drafts menu item in profile options menu', (
+      tester,
+    ) async {
+      const currentUserPubkey =
+          'currentuser11111111111111111111111111111111111111111111111111111111';
       final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
 
       final c = ProviderContainer();
@@ -50,40 +53,47 @@ void main() {
       }
     });
 
-    testWidgets('should navigate to VineDraftsScreen when Drafts menu item is tapped', (tester) async {
-      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
-      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+    testWidgets(
+      'should navigate to VineDraftsScreen when Drafts menu item is tapped',
+      (tester) async {
+        const currentUserPubkey =
+            'currentuser11111111111111111111111111111111111111111111111111111111';
+        final currentUserNpub = NostrEncoding.encodePublicKey(
+          currentUserPubkey,
+        );
 
-      final c = ProviderContainer();
-      addTearDown(c.dispose);
+        final c = ProviderContainer();
+        addTearDown(c.dispose);
 
-      await tester.pumpWidget(shell(c));
+        await tester.pumpWidget(shell(c));
 
-      c.read(goRouterProvider).go('/profile/$currentUserNpub/0');
-      await tester.pump();
-      await tester.pump();
+        c.read(goRouterProvider).go('/profile/$currentUserNpub/0');
+        await tester.pump();
+        await tester.pump();
 
-      // Wait for profile to initialize
-      await tester.pumpAndSettle();
-
-      // Find and tap the options menu button
-      final menuButton = find.byIcon(Icons.more_vert);
-      if (menuButton.evaluate().isNotEmpty) {
-        await tester.tap(menuButton);
+        // Wait for profile to initialize
         await tester.pumpAndSettle();
 
-        // Tap Drafts menu item
-        await tester.tap(find.text('Drafts'));
-        await tester.pumpAndSettle();
+        // Find and tap the options menu button
+        final menuButton = find.byIcon(Icons.more_vert);
+        if (menuButton.evaluate().isNotEmpty) {
+          await tester.tap(menuButton);
+          await tester.pumpAndSettle();
 
-        // Should navigate to VineDraftsScreen
-        expect(find.byType(VineDraftsScreen), findsOneWidget);
-        expect(find.text('Drafts'), findsWidgets); // Title in app bar
-      }
-    });
+          // Tap Drafts menu item
+          await tester.tap(find.text('Drafts'));
+          await tester.pumpAndSettle();
+
+          // Should navigate to VineDraftsScreen
+          expect(find.byType(VineDraftsScreen), findsOneWidget);
+          expect(find.text('Drafts'), findsWidgets); // Title in app bar
+        }
+      },
+    );
 
     testWidgets('should close menu after tapping Drafts', (tester) async {
-      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+      const currentUserPubkey =
+          'currentuser11111111111111111111111111111111111111111111111111111111';
       final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
 
       final c = ProviderContainer();
@@ -113,8 +123,11 @@ void main() {
       }
     });
 
-    testWidgets('should show Drafts menu item only for own profile', (tester) async {
-      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+    testWidgets('should show Drafts menu item only for own profile', (
+      tester,
+    ) async {
+      const currentUserPubkey =
+          'currentuser11111111111111111111111111111111111111111111111111111111';
       final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
 
       final c = ProviderContainer();

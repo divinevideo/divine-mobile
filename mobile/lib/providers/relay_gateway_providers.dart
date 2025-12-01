@@ -25,7 +25,10 @@ final relayGatewayServiceProvider = Provider<RelayGatewayService>((ref) {
 });
 
 /// Provider to check if gateway should be used for queries
-final shouldUseGatewayProvider = Provider.family<bool, List<String>>((ref, configuredRelays) {
+final shouldUseGatewayProvider = Provider.family<bool, List<String>>((
+  ref,
+  configuredRelays,
+) {
   final settings = ref.watch(relayGatewaySettingsProvider);
   return settings.shouldUseGateway(configuredRelays: configuredRelays);
 });

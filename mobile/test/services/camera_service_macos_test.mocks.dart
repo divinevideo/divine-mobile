@@ -231,10 +231,12 @@ class MockCameraController extends _i1.Mock implements _i3.CameraController {
   @override
   _i6.Future<void> startVideoRecording({
     _i3.onLatestImageAvailable? onAvailable,
+    bool? enablePersistentRecording = true,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#startVideoRecording, [], {
               #onAvailable: onAvailable,
+              #enablePersistentRecording: enablePersistentRecording,
             }),
             returnValue: _i6.Future<void>.value(),
             returnValueForMissingStub: _i6.Future<void>.value(),

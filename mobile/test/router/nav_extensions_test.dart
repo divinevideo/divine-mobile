@@ -6,19 +6,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/nav_extensions.dart';
 
 void main() {
   group('NavX.goSearch() - Phase 4 TDD', () {
-    testWidgets('goSearch("flutter") navigates to /search/flutter', (tester) async {
+    testWidgets('goSearch("flutter") navigates to /search/flutter', (
+      tester,
+    ) async {
       String? capturedRoute;
 
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          nostrServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          videoEventServiceProvider.overrideWith((ref) => throw UnimplementedError()),
+          nostrServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
+          videoEventServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
         ],
       );
 
@@ -65,14 +70,20 @@ void main() {
       expect(capturedRoute, '/search/flutter');
     });
 
-    testWidgets('goSearch("dart", 5) navigates to /search/dart/5', (tester) async {
+    testWidgets('goSearch("dart", 5) navigates to /search/dart/5', (
+      tester,
+    ) async {
       String? capturedRoute;
 
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          nostrServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          videoEventServiceProvider.overrideWith((ref) => throw UnimplementedError()),
+          nostrServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
+          videoEventServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
         ],
       );
 
@@ -119,14 +130,20 @@ void main() {
       expect(capturedRoute, '/search/dart/5');
     });
 
-    testWidgets('goSearch() with no params navigates to /search', (tester) async {
+    testWidgets('goSearch() with no params navigates to /search', (
+      tester,
+    ) async {
       String? capturedRoute;
 
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          nostrServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          videoEventServiceProvider.overrideWith((ref) => throw UnimplementedError()),
+          nostrServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
+          videoEventServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
         ],
       );
 
@@ -173,14 +190,20 @@ void main() {
       expect(capturedRoute, '/search');
     });
 
-    testWidgets('goSearch(null, 3) navigates to /search/3 (legacy format)', (tester) async {
+    testWidgets('goSearch(null, 3) navigates to /search/3 (legacy format)', (
+      tester,
+    ) async {
       String? capturedRoute;
 
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          nostrServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          videoEventServiceProvider.overrideWith((ref) => throw UnimplementedError()),
+          nostrServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
+          videoEventServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
         ],
       );
 
@@ -227,14 +250,20 @@ void main() {
       expect(capturedRoute, '/search/3');
     });
 
-    testWidgets('goSearch("ethereum", 7) navigates to /search/ethereum/7', (tester) async {
+    testWidgets('goSearch("ethereum", 7) navigates to /search/ethereum/7', (
+      tester,
+    ) async {
       String? capturedRoute;
 
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          nostrServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          videoEventServiceProvider.overrideWith((ref) => throw UnimplementedError()),
+          nostrServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
+          videoEventServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
         ],
       );
 

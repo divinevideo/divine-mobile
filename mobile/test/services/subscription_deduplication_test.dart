@@ -57,16 +57,15 @@ void main() {
       final hash1 = generateFilterHash([filter1]);
       final hash2 = generateFilterHash([filter2]);
 
-      expect(hash1, equals(hash2),
-          reason: 'Identical filters should generate the same hash');
+      expect(
+        hash1,
+        equals(hash2),
+        reason: 'Identical filters should generate the same hash',
+      );
     });
 
     test('different filters should generate different subscription IDs', () {
-      final filter1 = Filter(
-        kinds: [34236],
-        authors: ['pubkey1'],
-        limit: 100,
-      );
+      final filter1 = Filter(kinds: [34236], authors: ['pubkey1'], limit: 100);
 
       final filter2 = Filter(
         kinds: [34236],
@@ -77,8 +76,11 @@ void main() {
       final hash1 = generateFilterHash([filter1]);
       final hash2 = generateFilterHash([filter2]);
 
-      expect(hash1, isNot(equals(hash2)),
-          reason: 'Different filters should generate different hashes');
+      expect(
+        hash1,
+        isNot(equals(hash2)),
+        reason: 'Different filters should generate different hashes',
+      );
     });
 
     test('filter order should not affect hash', () {
@@ -97,16 +99,16 @@ void main() {
       final hash1 = generateFilterHash([filter1]);
       final hash2 = generateFilterHash([filter2]);
 
-      expect(hash1, equals(hash2),
-          reason: 'Filter element order should not affect the hash');
+      expect(
+        hash1,
+        equals(hash2),
+        reason: 'Filter element order should not affect the hash',
+      );
     });
 
     test('multiple discovery subscriptions should use same ID', () {
       // Simulate what happens when multiple UI components request discovery feed
-      final discoveryFilter = Filter(
-        kinds: [34236],
-        limit: 100,
-      );
+      final discoveryFilter = Filter(kinds: [34236], limit: 100);
 
       // Multiple calls with same filter (as from different UI components)
       final hash1 = generateFilterHash([discoveryFilter]);
@@ -143,17 +145,16 @@ void main() {
       final hash1 = generateFilterHash([homeFeedFilter1]);
       final hash2 = generateFilterHash([homeFeedFilter2]);
 
-      expect(hash1, equals(hash2),
-          reason:
-              'Same home feed parameters should generate same subscription ID');
+      expect(
+        hash1,
+        equals(hash2),
+        reason:
+            'Same home feed parameters should generate same subscription ID',
+      );
     });
 
     test('changing limit should create different subscription', () {
-      final filter1 = Filter(
-        kinds: [34236],
-        authors: ['pubkey1'],
-        limit: 50,
-      );
+      final filter1 = Filter(kinds: [34236], authors: ['pubkey1'], limit: 50);
 
       final filter2 = Filter(
         kinds: [34236],
@@ -164,17 +165,15 @@ void main() {
       final hash1 = generateFilterHash([filter1]);
       final hash2 = generateFilterHash([filter2]);
 
-      expect(hash1, isNot(equals(hash2)),
-          reason:
-              'Different limits should generate different subscription IDs');
+      expect(
+        hash1,
+        isNot(equals(hash2)),
+        reason: 'Different limits should generate different subscription IDs',
+      );
     });
 
     test('adding time constraints should create different subscription', () {
-      final filter1 = Filter(
-        kinds: [34236],
-        authors: ['pubkey1'],
-        limit: 100,
-      );
+      final filter1 = Filter(kinds: [34236], authors: ['pubkey1'], limit: 100);
 
       final filter2 = Filter(
         kinds: [34236],
@@ -186,9 +185,12 @@ void main() {
       final hash1 = generateFilterHash([filter1]);
       final hash2 = generateFilterHash([filter2]);
 
-      expect(hash1, isNot(equals(hash2)),
-          reason:
-              'Adding time constraints should generate different subscription IDs');
+      expect(
+        hash1,
+        isNot(equals(hash2)),
+        reason:
+            'Adding time constraints should generate different subscription IDs',
+      );
     });
   });
 }

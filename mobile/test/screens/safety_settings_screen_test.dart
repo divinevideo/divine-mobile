@@ -11,8 +11,11 @@ import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
-class MockContentBlocklistService extends Mock implements ContentBlocklistService {}
-class MockContentReportingService extends Mock implements ContentReportingService {}
+class MockContentBlocklistService extends Mock
+    implements ContentBlocklistService {}
+
+class MockContentReportingService extends Mock
+    implements ContentReportingService {}
 
 void main() {
   group('SafetySettingsScreen Widget Tests', () {
@@ -27,9 +30,13 @@ void main() {
     Widget createTestWidget() {
       final container = ProviderContainer(
         overrides: [
-          contentBlocklistServiceProvider.overrideWithValue(mockBlocklistService),
+          contentBlocklistServiceProvider.overrideWithValue(
+            mockBlocklistService,
+          ),
           // contentReportingServiceProvider is async, so wrap in AsyncValue
-          contentReportingServiceProvider.overrideWith((ref) async => mockReportingService),
+          contentReportingServiceProvider.overrideWith(
+            (ref) async => mockReportingService,
+          ),
         ],
       );
 
@@ -42,13 +49,17 @@ void main() {
       );
     }
 
-    testWidgets('should display "Safety Settings" title in app bar', (tester) async {
+    testWidgets('should display "Safety Settings" title in app bar', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget());
 
       expect(find.text('Safety Settings'), findsOneWidget);
     });
 
-    testWidgets('should display back button and navigate on tap', (tester) async {
+    testWidgets('should display back button and navigate on tap', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget());
 
       final backButton = find.byIcon(Icons.arrow_back);
@@ -59,25 +70,33 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('should display "Blocked Users" section header', (tester) async {
+    testWidgets('should display "Blocked Users" section header', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget());
 
       expect(find.text('BLOCKED USERS'), findsOneWidget);
     });
 
-    testWidgets('should display "Muted Content" section header', (tester) async {
+    testWidgets('should display "Muted Content" section header', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget());
 
       expect(find.text('MUTED CONTENT'), findsOneWidget);
     });
 
-    testWidgets('should display "Content Filters" section header', (tester) async {
+    testWidgets('should display "Content Filters" section header', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget());
 
       expect(find.text('CONTENT FILTERS'), findsOneWidget);
     });
 
-    testWidgets('should display "Report History" section header', (tester) async {
+    testWidgets('should display "Report History" section header', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget());
 
       expect(find.text('REPORT HISTORY'), findsOneWidget);
@@ -90,7 +109,9 @@ void main() {
       expect(scaffold.backgroundColor, equals(Colors.black));
     });
 
-    testWidgets('should use VineTheme.vineGreen for app bar background', (tester) async {
+    testWidgets('should use VineTheme.vineGreen for app bar background', (
+      tester,
+    ) async {
       await tester.pumpWidget(createTestWidget());
 
       final appBar = tester.widget<AppBar>(find.byType(AppBar));

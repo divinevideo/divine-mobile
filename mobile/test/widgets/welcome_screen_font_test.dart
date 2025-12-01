@@ -31,12 +31,8 @@ void main() {
       // Build the widget with provider override
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-          ],
-          child: const MaterialApp(
-            home: WelcomeScreen(),
-          ),
+          overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+          child: const MaterialApp(home: WelcomeScreen()),
         ),
       );
 
@@ -65,12 +61,8 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-          ],
-          child: const MaterialApp(
-            home: WelcomeScreen(),
-          ),
+          overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+          child: const MaterialApp(home: WelcomeScreen()),
         ),
       );
 
@@ -79,7 +71,10 @@ void main() {
 
       // Verify key elements are present
       expect(find.text('Welcome to Divine'), findsOneWidget);
-      expect(find.text('Create and share short videos on the decentralized web'), findsOneWidget);
+      expect(
+        find.text('Create and share short videos on the decentralized web'),
+        findsOneWidget,
+      );
       expect(find.text('What is Divine?'), findsOneWidget);
 
       // Note: Create/Import buttons no longer shown - app auto-creates nsec

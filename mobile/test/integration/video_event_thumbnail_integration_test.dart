@@ -51,7 +51,9 @@ void main() {
       test('returns existing thumbnail when available', () {
         final thumbnailUrl = testVideoEvent.effectiveThumbnailUrl;
         expect(
-            thumbnailUrl, equals('https://existing-thumbnail.com/thumb.jpg'));
+          thumbnailUrl,
+          equals('https://existing-thumbnail.com/thumb.jpg'),
+        );
       });
 
       test('returns null when no thumbnail available (no more picsum!)', () {
@@ -64,29 +66,31 @@ void main() {
       test('returns existing thumbnail when available', () async {
         final thumbnailUrl = await testVideoEvent.getApiThumbnailUrl();
         expect(
-            thumbnailUrl, equals('https://existing-thumbnail.com/thumb.jpg'));
+          thumbnailUrl,
+          equals('https://existing-thumbnail.com/thumb.jpg'),
+        );
       });
 
       test(
         'attempts API generation when no thumbnail available',
         () async {
-          final thumbnailUrl =
-              await videoEventWithoutThumbnail.getApiThumbnailUrl(
-            timeSeconds: 2,
-            size: ThumbnailSize.medium,
-          );
+          final thumbnailUrl = await videoEventWithoutThumbnail
+              .getApiThumbnailUrl(timeSeconds: 2, size: ThumbnailSize.medium);
 
           // May return null if generation fails (expected for test environment)
           // or return a proper API URL if successful
           if (thumbnailUrl != null) {
             expect(
-                thumbnailUrl, startsWith('https://api.openvine.co/thumbnail/'));
+              thumbnailUrl,
+              startsWith('https://api.openvine.co/thumbnail/'),
+            );
             expect(thumbnailUrl, contains(realVideoId));
             expect(thumbnailUrl, contains('t=2.0'));
             Log.info('Successfully generated API thumbnail: $thumbnailUrl');
           } else {
             Log.info(
-                'API thumbnail generation returned null (expected in test environment)');
+              'API thumbnail generation returned null (expected in test environment)',
+            );
           }
 
           expect(thumbnailUrl, anyOf(isNull, isA<String>()));
@@ -97,11 +101,8 @@ void main() {
       test(
         'respects size parameter in API call',
         () async {
-          final thumbnailUrl =
-              await videoEventWithoutThumbnail.getApiThumbnailUrl(
-            timeSeconds: 1.5,
-            size: ThumbnailSize.large,
-          );
+          final thumbnailUrl = await videoEventWithoutThumbnail
+              .getApiThumbnailUrl(timeSeconds: 1.5, size: ThumbnailSize.large);
 
           if (thumbnailUrl != null) {
             expect(thumbnailUrl, contains('size=large'));
@@ -116,7 +117,9 @@ void main() {
       test('returns existing thumbnail when available', () {
         final thumbnailUrl = testVideoEvent.getApiThumbnailUrlSync();
         expect(
-            thumbnailUrl, equals('https://existing-thumbnail.com/thumb.jpg'));
+          thumbnailUrl,
+          equals('https://existing-thumbnail.com/thumb.jpg'),
+        );
       });
 
       test('generates API URL when no thumbnail available', () {
@@ -145,15 +148,16 @@ void main() {
 
     group('Thumbnail workflow comparison', () {
       test(
-          'sync vs async methods provide consistent URLs when no generation needed',
-          () async {
-        // Both should return existing thumbnail
-        final syncUrl = testVideoEvent.getApiThumbnailUrlSync();
-        final asyncUrl = await testVideoEvent.getApiThumbnailUrl();
+        'sync vs async methods provide consistent URLs when no generation needed',
+        () async {
+          // Both should return existing thumbnail
+          final syncUrl = testVideoEvent.getApiThumbnailUrlSync();
+          final asyncUrl = await testVideoEvent.getApiThumbnailUrl();
 
-        expect(syncUrl, equals(asyncUrl));
-        expect(syncUrl, equals('https://existing-thumbnail.com/thumb.jpg'));
-      });
+          expect(syncUrl, equals(asyncUrl));
+          expect(syncUrl, equals('https://existing-thumbnail.com/thumb.jpg'));
+        },
+      );
 
       test(
         'sync method provides immediate URL while async attempts generation',
@@ -238,8 +242,10 @@ void main() {
       test('effectiveThumbnailUrl still works as before', () {
         // With thumbnail
         expect(testVideoEvent.effectiveThumbnailUrl, isNotNull);
-        expect(testVideoEvent.effectiveThumbnailUrl,
-            equals('https://existing-thumbnail.com/thumb.jpg'));
+        expect(
+          testVideoEvent.effectiveThumbnailUrl,
+          equals('https://existing-thumbnail.com/thumb.jpg'),
+        );
 
         // Without thumbnail (should return null, not picsum!)
         expect(videoEventWithoutThumbnail.effectiveThumbnailUrl, isNull);
@@ -275,7 +281,8 @@ void main() {
         final duration = stopwatch.elapsedMilliseconds;
 
         Log.info(
-            '100 sync calls took ${duration}ms (${duration / 100}ms average)');
+          '100 sync calls took ${duration}ms (${duration / 100}ms average)',
+        );
         expect(duration, lessThan(100)); // Should be very fast
       });
 

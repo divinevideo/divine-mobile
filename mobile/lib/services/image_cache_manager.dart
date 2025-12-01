@@ -15,15 +15,16 @@ class ImageCacheManager extends CacheManager {
     return _instance ??= ImageCacheManager._();
   }
 
-  ImageCacheManager._() : super(
-    Config(
-      key,
-      stalePeriod: const Duration(days: 7),
-      maxNrOfCacheObjects: 200,
-      repo: JsonCacheInfoRepository(databaseName: key),
-      fileService: _createHttpFileService(),
-    ),
-  );
+  ImageCacheManager._()
+    : super(
+        Config(
+          key,
+          stalePeriod: const Duration(days: 7),
+          maxNrOfCacheObjects: 200,
+          repo: JsonCacheInfoRepository(databaseName: key),
+          fileService: _createHttpFileService(),
+        ),
+      );
 
   static HttpFileService _createHttpFileService() {
     // Create HttpClient with iOS-optimized settings
@@ -40,7 +41,8 @@ class ImageCacheManager extends CacheManager {
 
     // In debug mode on desktop platforms, allow self-signed certificates
     // This is needed for local development and CDN certificate chain issues
-    if (kDebugMode && (Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
+    if (kDebugMode &&
+        (Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
       httpClient.badCertificateCallback = (cert, host, port) {
         // Accept all certificates in debug mode on desktop platforms
         // This helps with CDN certificate validation issues during development
@@ -48,9 +50,7 @@ class ImageCacheManager extends CacheManager {
       };
     }
 
-    return HttpFileService(
-      httpClient: IOClient(httpClient),
-    );
+    return HttpFileService(httpClient: IOClient(httpClient));
   }
 }
 

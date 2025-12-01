@@ -22,55 +22,59 @@ class UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Green border circle
-            Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: VineTheme.vineGreen,
-              ),
-            ),
-            // Inner circle with image
-            Container(
-              width: size - 4,
-              height: size - 4,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.black,
-              ),
-              child: ClipOval(
-                child: imageUrl != null && imageUrl!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: imageUrl!,
-                        width: size - 4,
-                        height: size - 4,
-                        fit: BoxFit.cover,
-                        cacheManager: openVineImageCache,
-                        placeholder: (context, url) => _buildFallback(),
-                        errorWidget: (context, url, error) {
-                          // Log the failed URL for debugging
-                          if (error.toString().contains('Invalid image data') ||
-                              error.toString().contains('Image codec failed')) {
-                            UnifiedLogger.warning('🖼️ Invalid image data for avatar URL: $url - Error: $error',
-                                name: 'UserAvatar');
-                          } else {
-                            UnifiedLogger.debug('Avatar image failed to load URL: $url - Error: $error',
-                                name: 'UserAvatar');
-                          }
-                          return _buildFallback();
-                        },
-                      )
-                    : _buildFallback(),
-              ),
-            ),
-          ],
+    onTap: onTap,
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        // Green border circle
+        Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: VineTheme.vineGreen,
+          ),
         ),
-      );
+        // Inner circle with image
+        Container(
+          width: size - 4,
+          height: size - 4,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.black,
+          ),
+          child: ClipOval(
+            child: imageUrl != null && imageUrl!.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: imageUrl!,
+                    width: size - 4,
+                    height: size - 4,
+                    fit: BoxFit.cover,
+                    cacheManager: openVineImageCache,
+                    placeholder: (context, url) => _buildFallback(),
+                    errorWidget: (context, url, error) {
+                      // Log the failed URL for debugging
+                      if (error.toString().contains('Invalid image data') ||
+                          error.toString().contains('Image codec failed')) {
+                        UnifiedLogger.warning(
+                          '🖼️ Invalid image data for avatar URL: $url - Error: $error',
+                          name: 'UserAvatar',
+                        );
+                      } else {
+                        UnifiedLogger.debug(
+                          'Avatar image failed to load URL: $url - Error: $error',
+                          name: 'UserAvatar',
+                        );
+                      }
+                      return _buildFallback();
+                    },
+                  )
+                : _buildFallback(),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildFallback() {
     return Image.asset(
@@ -91,11 +95,7 @@ class UserAvatar extends StatelessWidget {
     return Container(
       color: VineTheme.vineGreen.withValues(alpha: 0.2),
       child: Center(
-        child: Icon(
-          Icons.person,
-          color: VineTheme.vineGreen,
-          size: size * 0.5,
-        ),
+        child: Icon(Icons.person, color: VineTheme.vineGreen, size: size * 0.5),
       ),
     );
   }

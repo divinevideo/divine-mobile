@@ -16,18 +16,27 @@ class MigrationService {
     final migrator = HiveToDriftMigrator(_db);
 
     if (!await migrator.isMigrationComplete()) {
-      Log.info('Running Hive to Drift migration...',
-          name: 'MigrationService', category: LogCategory.storage);
+      Log.info(
+        'Running Hive to Drift migration...',
+        name: 'MigrationService',
+        category: LogCategory.storage,
+      );
 
       final result = await migrator.migrate();
 
       if (!result.success) {
-        Log.error('Migration failed: ${result.error}',
-            name: 'MigrationService', category: LogCategory.storage);
+        Log.error(
+          'Migration failed: ${result.error}',
+          name: 'MigrationService',
+          category: LogCategory.storage,
+        );
         // Don't block app startup, but log the error
       } else {
-        Log.info('Migration successful: ${result.profilesMigrated} profiles migrated',
-            name: 'MigrationService', category: LogCategory.storage);
+        Log.info(
+          'Migration successful: ${result.profilesMigrated} profiles migrated',
+          name: 'MigrationService',
+          category: LogCategory.storage,
+        );
       }
     }
   }
