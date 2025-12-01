@@ -49,11 +49,7 @@ dependencies:
   device_info_plus: ^10.1.2
   url_launcher: ^6.3.2
   dio: ^5.8.0
-  dio_web_adapter: ^2.1.1
 
-  # P2P Connectivity for Video Sharing
-  flutter_blue_plus: ^2.0.0  # BLE for metadata sync
-  # wifi_iot: ^0.3.18  # WiFi Direct for Android high-bandwidth sharing - Removed: not implemented, causes iOS build issues
   permission_handler: ^12.0.1  # Handle runtime permissions
 
   # Camera and media
@@ -80,15 +76,9 @@ dependencies:
   
   # Crypto (needed for Nostr)
   crypto: ^3.0.7
-  encrypt: ^5.0.3
   bech32: ^0.2.2
-  
-  
-  # Concurrency control
-  pool: ^1.5.1
-  
+
   # UI/UX
-  animations: ^2.0.11
   cached_network_image: ^3.3.1
   flutter_cache_manager: ^3.3.1
   share_plus: ^12.0.0  # Cross-platform sharing
@@ -96,11 +86,14 @@ dependencies:
   blurhash_dart: ^1.2.1  # Generate blurhash for progressive image loading
   # Nostr SDK - Local package for comprehensive Nostr support
   nostr_sdk:
-    path: ../nostr_sdk
+    git:
+      url: git@github.com:rabble/nostr_sdk.git
   
   # Embedded Nostr Relay - Local embedded relay replacing external relay infrastructure
   flutter_embedded_nostr_relay:
-    path: ../flutter_embedded_nostr_relay/flutter_embedded_nostr_relay
+    git:
+      url: git@github.com:rabble/flutter_embedded_nostr_relay.git
+      path: flutter_embedded_nostr_relay
   
   # Logging
   logging: ^1.2.0
@@ -114,7 +107,6 @@ dependencies:
   firebase_crashlytics: ^5.0.2
   firebase_analytics: ^12.0.2
   ffmpeg_kit_flutter_new: ^3.2.0
-  dart_pg: ^2.0.0
   app_device_integrity: ^1.1.0
   fc_native_video_thumbnail: ^0.17.2
   go_router: ^16.2.4
@@ -127,7 +119,6 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.40
   video_player_web_hls: ^1.3.0
   firebase_performance: ^0.11.1+1
-  openpgp: ^3.10.7
   camerawesome:
     git:
       url: https://github.com/Apparence-io/CamerAwesome.git

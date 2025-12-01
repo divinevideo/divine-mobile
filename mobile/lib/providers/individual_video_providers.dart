@@ -447,17 +447,27 @@ VideoPlayerController individualVideoController(
 /// Compute auth headers synchronously if possible (for VideoPlayerController)
 /// Returns cached headers if available, null otherwise
 Map<String, String>? _computeAuthHeadersSync(Ref ref, VideoControllerParams params) {
+  Log.debug('🔐 [AUTH-SYNC] Computing auth headers for video ${params.videoId}',
+      name: 'IndividualVideoController', category: LogCategory.video);
+
   final ageVerificationService = ref.read(ageVerificationServiceProvider);
   final blossomAuthService = ref.read(blossomAuthServiceProvider);
+
+  Log.debug('🔐 [AUTH-SYNC] isAdultContentVerified=${ageVerificationService.isAdultContentVerified}, canCreateHeaders=${blossomAuthService.canCreateHeaders}, hasVideoEvent=${params.videoEvent != null}',
+      name: 'IndividualVideoController', category: LogCategory.video);
 
   // If user hasn't verified adult content, don't add auth headers
   // This will cause 401 for NSFW videos, triggering the error overlay
   if (!ageVerificationService.isAdultContentVerified) {
+    Log.debug('🔐 [AUTH-SYNC] User has NOT verified adult content - returning null',
+        name: 'IndividualVideoController', category: LogCategory.video);
     return null;
   }
 
   // If user has verified but we can't create headers, return null
   if (!blossomAuthService.canCreateHeaders || params.videoEvent == null) {
+    Log.debug('🔐 [AUTH-SYNC] Cannot create headers or no video event - returning null',
+        name: 'IndividualVideoController', category: LogCategory.video);
     return null;
   }
 
@@ -465,13 +475,18 @@ Map<String, String>? _computeAuthHeadersSync(Ref ref, VideoControllerParams para
   final cache = ref.read(authHeadersCacheProvider);
   final cachedHeaders = cache[params.videoId];
 
+  Log.debug('🔐 [AUTH-SYNC] Cache check: cacheSize=${cache.length}, hasCachedHeaders=${cachedHeaders != null}',
+      name: 'IndividualVideoController', category: LogCategory.video);
+
   if (cachedHeaders != null) {
-    Log.debug('✅ Using cached auth headers for video ${params.videoId}',
+    Log.info('🔐 [AUTH-SYNC] ✅ Using cached auth headers for video ${params.videoId}',
         name: 'IndividualVideoController', category: LogCategory.video);
     return cachedHeaders;
   }
 
   // No cached headers - trigger async generation for next time
+  Log.warning('🔐 [AUTH-SYNC] No cached headers found - triggering async generation (this request will fail with 401)',
+      name: 'IndividualVideoController', category: LogCategory.video);
   unawaited(_generateAuthHeadersAsync(ref, params));
 
   // Return null for now - first load after verification will fail with 401

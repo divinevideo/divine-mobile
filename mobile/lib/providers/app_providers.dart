@@ -280,12 +280,13 @@ SubscriptionManager subscriptionManager(Ref ref) {
   return SubscriptionManager(nostrService);
 }
 
-/// Video event service depends on Nostr, SeenVideos, Blocklist, and SubscriptionManager services
+/// Video event service depends on Nostr, SeenVideos, Blocklist, AgeVerification, and SubscriptionManager services
 @Riverpod(keepAlive: true)
 VideoEventService videoEventService(Ref ref) {
   final nostrService = ref.watch(nostrServiceProvider);
   final subscriptionManager = ref.watch(subscriptionManagerProvider);
   final blocklistService = ref.watch(contentBlocklistServiceProvider);
+  final ageVerificationService = ref.watch(ageVerificationServiceProvider);
   final userProfileService = ref.watch(userProfileServiceProvider);
   final videoFilterBuilder = ref.watch(videoFilterBuilderProvider);
   final db = ref.watch(databaseProvider);
@@ -299,6 +300,7 @@ VideoEventService videoEventService(Ref ref) {
     videoFilterBuilder: videoFilterBuilder,
   );
   service.setBlocklistService(blocklistService);
+  service.setAgeVerificationService(ageVerificationService);
   return service;
 }
 

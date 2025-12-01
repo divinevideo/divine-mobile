@@ -965,8 +965,22 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
 
       // Only add expiration tag if user explicitly confirmed (double-check safety)
       final shouldExpire = _isExpiringPost && _expirationConfirmed;
-      final published = await videoEventPublisher.publishDirectUpload(
-        pendingUpload,
+
+      // Use current form values for metadata (not the original upload metadata)
+      // This ensures user edits to title/description are applied
+      final currentTitle = _titleController.text.trim().isEmpty
+          ? null
+          : _titleController.text.trim();
+      final currentDescription = _descriptionController.text.trim().isEmpty
+          ? null
+          : _descriptionController.text.trim();
+      final currentHashtags = _hashtags.isEmpty ? null : _hashtags;
+
+      final published = await videoEventPublisher.publishVideoEvent(
+        upload: pendingUpload,
+        title: currentTitle,
+        description: currentDescription,
+        hashtags: currentHashtags,
         expirationTimestamp: shouldExpire
             ? DateTime.now().millisecondsSinceEpoch ~/ 1000 + (_expirationHours * 3600)
             : null,

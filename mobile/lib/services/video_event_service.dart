@@ -39,6 +39,9 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/log_batcher.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/services/event_router.dart';
+import 'package:openvine/services/age_verification_service.dart';
+import 'package:openvine/services/relay_gateway_service.dart';
+import 'package:openvine/services/relay_gateway_settings.dart';
 
 /// Pagination state for tracking cursor position and loading status per subscription
 class PaginationState {
@@ -117,16 +120,22 @@ class VideoEventService extends ChangeNotifier {
     UserProfileService? userProfileService,
     EventRouter? eventRouter,
     VideoFilterBuilder? videoFilterBuilder,
+    RelayGatewayService? gatewayService,
+    RelayGatewaySettings? gatewaySettings,
   })  : _subscriptionManager = subscriptionManager,
         _userProfileService = userProfileService,
         _eventRouter = eventRouter,
-        _videoFilterBuilder = videoFilterBuilder {
+        _videoFilterBuilder = videoFilterBuilder,
+        _gatewayService = gatewayService,
+        _gatewaySettings = gatewaySettings {
     _initializePaginationStates();
   }
   final INostrService _nostrService;
   final UserProfileService? _userProfileService;
   final EventRouter? _eventRouter;
   final VideoFilterBuilder? _videoFilterBuilder;
+  final RelayGatewayService? _gatewayService;
+  final RelayGatewaySettings? _gatewaySettings;
   final ConnectionStatusService _connectionService = ConnectionStatusService();
 
   // REFACTORED: Separate event lists per subscription type
@@ -193,6 +202,7 @@ class VideoEventService extends ChangeNotifier {
 
   // Optional services for enhanced functionality
   ContentBlocklistService? _blocklistService;
+  AgeVerificationService? _ageVerificationService;
   final SubscriptionManager _subscriptionManager;
 
   // AUTH retry mechanism
@@ -203,6 +213,110 @@ class VideoEventService extends ChangeNotifier {
     _blocklistService = blocklistService;
     Log.debug('Blocklist service attached to VideoEventService',
         name: 'VideoEventService', category: LogCategory.video);
+  }
+
+  /// Set the age verification service for adult content filtering
+  void setAgeVerificationService(AgeVerificationService ageVerificationService) {
+    _ageVerificationService = ageVerificationService;
+    Log.debug('Age verification service attached to VideoEventService',
+        name: 'VideoEventService', category: LogCategory.video);
+  }
+
+  /// Returns true if adult content should be filtered from feeds
+  bool get shouldFilterAdultContent =>
+      _ageVerificationService?.shouldHideAdultContent ?? false;
+
+  /// Check if an event should be filtered based on adult content settings
+  /// Returns true if the event should be filtered OUT (not shown)
+  bool shouldFilterEvent(Event event) {
+    // If not hiding adult content, don't filter anything
+    if (!shouldFilterAdultContent) {
+      return false;
+    }
+
+    // Check for content-warning tag (indicates adult/sensitive content)
+    for (final tag in event.tags) {
+      if (tag.isNotEmpty && tag[0] == 'content-warning') {
+        Log.debug('Filtering event with content-warning tag',
+            name: 'VideoEventService', category: LogCategory.video);
+        return true;
+      }
+    }
+
+    // Check for NSFW or adult hashtags
+    for (final tag in event.tags) {
+      if (tag.length >= 2 && tag[0] == 't') {
+        final hashtag = tag[1].toLowerCase();
+        if (hashtag == 'nsfw' || hashtag == 'adult') {
+          Log.debug('Filtering event with NSFW/adult hashtag',
+              name: 'VideoEventService', category: LogCategory.video);
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Check if a VideoEvent contains adult content based on hashtags and tags
+  bool _isAdultContent(VideoEvent video) {
+    // Check for NSFW or adult hashtags
+    for (final hashtag in video.hashtags) {
+      final lowerHashtag = hashtag.toLowerCase();
+      if (lowerHashtag == 'nsfw' || lowerHashtag == 'adult') {
+        return true;
+      }
+    }
+
+    // Check for content-warning in rawTags
+    if (video.rawTags.containsKey('content-warning')) {
+      return true;
+    }
+
+    // Check isFlaggedContent flag
+    if (video.isFlaggedContent) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Filter adult content from all existing video lists
+  /// Call this when user changes preference to "Never show"
+  /// Returns the count of removed videos
+  int filterAdultContentFromExistingVideos() {
+    // If not hiding adult content, don't filter anything
+    if (!shouldFilterAdultContent) {
+      return 0;
+    }
+
+    int totalRemoved = 0;
+
+    // Iterate through all subscription types and filter each list
+    for (final subscriptionType in SubscriptionType.values) {
+      final eventList = _eventLists[subscriptionType];
+      if (eventList == null || eventList.isEmpty) continue;
+
+      final beforeCount = eventList.length;
+      eventList.removeWhere(_isAdultContent);
+      final removedFromList = beforeCount - eventList.length;
+
+      if (removedFromList > 0) {
+        Log.info(
+            'Filtered $removedFromList adult content videos from ${subscriptionType.name}',
+            name: 'VideoEventService',
+            category: LogCategory.video);
+        totalRemoved += removedFromList;
+      }
+    }
+
+    if (totalRemoved > 0) {
+      Log.info('Total adult content videos filtered: $totalRemoved',
+          name: 'VideoEventService', category: LogCategory.video);
+      notifyListeners();
+    }
+
+    return totalRemoved;
   }
 
   /// Initialize pagination states for all subscription types
@@ -225,6 +339,62 @@ class VideoEventService extends ChangeNotifier {
       _hasScheduledFrameUpdate = false;
       notifyListeners();
     });
+  }
+
+  /// Check if gateway should be used for a subscription type
+  /// Returns false if gateway dependencies are null, type is homeFeed, or settings don't allow
+  bool _shouldUseGateway(SubscriptionType type) {
+    // Gateway dependencies must be available
+    final gatewaySettings = _gatewaySettings;
+    if (_gatewayService == null || gatewaySettings == null) return false;
+
+    // Never use gateway for home feed (personalized, not cacheable)
+    if (type == SubscriptionType.homeFeed) return false;
+
+    // Check settings and relay configuration
+    return gatewaySettings.shouldUseGateway(
+      configuredRelays: _nostrService.relays,
+    );
+  }
+
+  /// Fetch events via REST gateway and import to embedded relay SQLite
+  /// Falls back to WebSocket on any failure (does not throw)
+  Future<void> _fetchViaGateway(
+    SubscriptionType type,
+    Filter filter,
+  ) async {
+    // _shouldUseGateway already checks for null, so we can safely assert non-null here
+    final gatewayService = _gatewayService;
+    if (gatewayService == null || !_shouldUseGateway(type)) return;
+
+    try {
+      Log.info(
+        'Gateway: Fetching ${type.name} via REST',
+        name: 'VideoEventService',
+        category: LogCategory.relay,
+      );
+
+      final response = await gatewayService.query(filter);
+
+      if (response.hasEvents) {
+        Log.info(
+          'Gateway: Received ${response.eventCount} events '
+          '(cached: ${response.cached}, age: ${response.cacheAgeSeconds}s)',
+          name: 'VideoEventService',
+          category: LogCategory.relay,
+        );
+
+        // Events will arrive via WebSocket subscription after import
+        // The embedded relay will notify subscribers when events are imported
+      }
+    } on GatewayException catch (e) {
+      Log.warning(
+        'Gateway fetch failed, WebSocket will handle: $e',
+        name: 'VideoEventService',
+        category: LogCategory.relay,
+      );
+      // Fall through to WebSocket - no rethrow
+    }
   }
 
   // REFACTORED: Getters now work with subscription types
@@ -786,6 +956,12 @@ class VideoEventService extends ChangeNotifier {
 
       // Store hashtag filter for event processing
       _activeHashtagFilters[subscriptionType] = hashtags;
+
+      // Try gateway BEFORE WebSocket subscription for eligible feed types
+      // Gateway pre-populates SQLite, WebSocket provides real-time updates
+      if (_shouldUseGateway(subscriptionType)) {
+        await _fetchViaGateway(subscriptionType, videoFilter);
+      }
 
       // Verify NostrService is ready
       if (!_nostrService.isInitialized) {
@@ -1356,6 +1532,15 @@ class VideoEventService extends ChangeNotifier {
         return;
       }
 
+      // Check if adult content should be filtered (user preference: never show)
+      if (shouldFilterEvent(event)) {
+        Log.verbose(
+            'Filtering adult content from event ${event.id}',
+            name: 'VideoEventService',
+            category: LogCategory.video);
+        return;
+      }
+
       // Handle different event kinds
       if (NIP71VideoKinds.isVideoKind(event.kind)) {
         // Direct video event
@@ -1649,6 +1834,15 @@ class VideoEventService extends ChangeNotifier {
       if (_blocklistService?.shouldFilterFromFeeds(event.pubkey) == true) {
         Log.verbose(
             'Filtering blocked historical content from ${event.pubkey}...',
+            name: 'VideoEventService',
+            category: LogCategory.video);
+        return;
+      }
+
+      // Check if adult content should be filtered (user preference: never show)
+      if (shouldFilterEvent(event)) {
+        Log.verbose(
+            'Filtering adult historical content from event ${event.id}',
             name: 'VideoEventService',
             category: LogCategory.video);
         return;

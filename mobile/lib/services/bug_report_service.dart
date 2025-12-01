@@ -266,7 +266,7 @@ class BugReportService {
         recipientPubkey: recipientPubkey,
         content: messageContent,
         additionalTags: [
-          ['client', 'openvine_bug_report'],
+          ['client', 'diVine_bug_report'],
           ['report_id', data.reportId],
           ['app_version', data.appVersion],
           if (bugReportUrl != null) ['bug_report_url', bugReportUrl],

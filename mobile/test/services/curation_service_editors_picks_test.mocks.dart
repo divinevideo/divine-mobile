@@ -4,7 +4,7 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
-import 'dart:ui' as _i14;
+import 'dart:ui' as _i15;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
@@ -12,14 +12,15 @@ import 'package:nostr_sdk/event.dart' as _i7;
 import 'package:nostr_sdk/filter.dart' as _i8;
 import 'package:openvine/models/nip94_metadata.dart' as _i9;
 import 'package:openvine/models/video_event.dart' as _i11;
+import 'package:openvine/services/age_verification_service.dart' as _i13;
 import 'package:openvine/services/auth_service.dart' as _i4;
 import 'package:openvine/services/content_blocklist_service.dart' as _i12;
 import 'package:openvine/services/nostr_key_manager.dart' as _i2;
 import 'package:openvine/services/nostr_service_interface.dart' as _i3;
-import 'package:openvine/services/social_service.dart' as _i15;
-import 'package:openvine/services/user_profile_service.dart' as _i16;
+import 'package:openvine/services/social_service.dart' as _i16;
+import 'package:openvine/services/user_profile_service.dart' as _i17;
 import 'package:openvine/services/video_event_service.dart' as _i10;
-import 'package:openvine/services/video_filter_builder.dart' as _i13;
+import 'package:openvine/services/video_filter_builder.dart' as _i14;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -34,7 +35,6 @@ import 'package:openvine/services/video_filter_builder.dart' as _i13;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
-// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeNostrKeyManager_0 extends _i1.SmartFake
     implements _i2.NostrKeyManager {
@@ -356,6 +356,14 @@ class MockVideoEventService extends _i1.Mock implements _i10.VideoEventService {
   }
 
   @override
+  bool get shouldFilterAdultContent =>
+      (super.noSuchMethod(
+            Invocation.getter(#shouldFilterAdultContent),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
   List<_i11.VideoEvent> get homeFeedVideos =>
       (super.noSuchMethod(
             Invocation.getter(#homeFeedVideos),
@@ -454,6 +462,30 @@ class MockVideoEventService extends _i1.Mock implements _i10.VideoEventService {
         Invocation.method(#setBlocklistService, [blocklistService]),
         returnValueForMissingStub: null,
       );
+
+  @override
+  void setAgeVerificationService(
+    _i13.AgeVerificationService? ageVerificationService,
+  ) => super.noSuchMethod(
+    Invocation.method(#setAgeVerificationService, [ageVerificationService]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  bool shouldFilterEvent(_i7.Event? event) =>
+      (super.noSuchMethod(
+            Invocation.method(#shouldFilterEvent, [event]),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  int filterAdultContentFromExistingVideos() =>
+      (super.noSuchMethod(
+            Invocation.method(#filterAdultContentFromExistingVideos, []),
+            returnValue: 0,
+          )
+          as int);
 
   @override
   List<_i11.VideoEvent> getVideos(_i10.SubscriptionType? type) =>
@@ -564,8 +596,8 @@ class MockVideoEventService extends _i1.Mock implements _i10.VideoEventService {
     int? limit = 200,
     bool? replace = true,
     bool? includeReposts = false,
-    _i13.VideoSortField? sortBy,
-    _i13.NIP50SortMode? nip50Sort,
+    _i14.VideoSortField? sortBy,
+    _i14.NIP50SortMode? nip50Sort,
     bool? force = false,
   }) =>
       (super.noSuchMethod(
@@ -639,7 +671,7 @@ class MockVideoEventService extends _i1.Mock implements _i10.VideoEventService {
   _i5.Future<void> subscribeToHomeFeed(
     List<String>? followingPubkeys, {
     int? limit = 100,
-    _i13.VideoSortField? sortBy,
+    _i14.VideoSortField? sortBy,
     bool? force = false,
   }) =>
       (super.noSuchMethod(
@@ -656,8 +688,8 @@ class MockVideoEventService extends _i1.Mock implements _i10.VideoEventService {
   @override
   _i5.Future<void> subscribeToDiscovery({
     int? limit = 100,
-    _i13.VideoSortField? sortBy,
-    _i13.NIP50SortMode? nip50Sort,
+    _i14.VideoSortField? sortBy,
+    _i14.NIP50SortMode? nip50Sort,
     bool? force = false,
   }) =>
       (super.noSuchMethod(
@@ -1021,13 +1053,13 @@ class MockVideoEventService extends _i1.Mock implements _i10.VideoEventService {
       );
 
   @override
-  void addListener(_i14.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i15.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#addListener, [listener]),
     returnValueForMissingStub: null,
   );
 
   @override
-  void removeListener(_i14.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i15.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#removeListener, [listener]),
     returnValueForMissingStub: null,
   );
@@ -1042,7 +1074,7 @@ class MockVideoEventService extends _i1.Mock implements _i10.VideoEventService {
 /// A class which mocks [SocialService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSocialService extends _i1.Mock implements _i15.SocialService {
+class MockSocialService extends _i1.Mock implements _i16.SocialService {
   MockSocialService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1064,12 +1096,12 @@ class MockSocialService extends _i1.Mock implements _i15.SocialService {
           as List<String>);
 
   @override
-  List<_i15.FollowSet> get followSets =>
+  List<_i16.FollowSet> get followSets =>
       (super.noSuchMethod(
             Invocation.getter(#followSets),
-            returnValue: <_i15.FollowSet>[],
+            returnValue: <_i16.FollowSet>[],
           )
-          as List<_i15.FollowSet>);
+          as List<_i16.FollowSet>);
 
   @override
   bool isLiked(String? eventId) =>
@@ -1110,9 +1142,9 @@ class MockSocialService extends _i1.Mock implements _i15.SocialService {
           as Map<String, int>?);
 
   @override
-  _i15.FollowSet? getFollowSetById(String? setId) =>
+  _i16.FollowSet? getFollowSetById(String? setId) =>
       (super.noSuchMethod(Invocation.method(#getFollowSetById, [setId]))
-          as _i15.FollowSet?);
+          as _i16.FollowSet?);
 
   @override
   bool isInFollowSet(String? setId, String? pubkey) =>
@@ -1185,7 +1217,7 @@ class MockSocialService extends _i1.Mock implements _i15.SocialService {
           as _i5.Future<Map<String, int>>);
 
   @override
-  _i5.Future<_i15.FollowSet?> createFollowSet({
+  _i5.Future<_i16.FollowSet?> createFollowSet({
     required String? name,
     String? description,
     String? imageUrl,
@@ -1198,9 +1230,9 @@ class MockSocialService extends _i1.Mock implements _i15.SocialService {
               #imageUrl: imageUrl,
               #initialPubkeys: initialPubkeys,
             }),
-            returnValue: _i5.Future<_i15.FollowSet?>.value(),
+            returnValue: _i5.Future<_i16.FollowSet?>.value(),
           )
-          as _i5.Future<_i15.FollowSet?>);
+          as _i5.Future<_i16.FollowSet?>);
 
   @override
   _i5.Future<bool> addToFollowSet(String? setId, String? pubkey) =>
@@ -1464,7 +1496,7 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
 
   @override
   _i5.Future<void> refreshCurrentProfile(
-    _i16.UserProfileService? userProfileService,
+    _i17.UserProfileService? userProfileService,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#refreshCurrentProfile, [userProfileService]),

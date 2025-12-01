@@ -31,19 +31,24 @@ class MediaAuthInterceptor {
           name: 'MediaAuthInterceptor',
           category: LogCategory.system);
 
-      // Check if user has already verified adult content access
-      if (_ageVerificationService.isAdultContentVerified) {
-        Log.debug('✅ User already verified for adult content',
+      // Check if user has chosen to never show adult content
+      if (_ageVerificationService.shouldHideAdultContent) {
+        Log.debug('🚫 User preference is to never show adult content',
             name: 'MediaAuthInterceptor', category: LogCategory.system);
+        return null;
+      }
 
-        // Create auth header
+      // Check if user has chosen to always show (and is verified)
+      if (_ageVerificationService.shouldAutoShowAdultContent) {
+        Log.debug('✅ Auto-showing adult content (user preference: always show)',
+            name: 'MediaAuthInterceptor', category: LogCategory.system);
         return await _blossomAuthService.createGetAuthHeader(
           sha256Hash: sha256Hash,
           serverUrl: serverUrl,
         );
       }
 
-      // User hasn't verified - show age confirmation dialog
+      // Default: ask each time - show verification dialog
       Log.debug('❓ Requesting adult content verification from user',
           name: 'MediaAuthInterceptor', category: LogCategory.system);
 
@@ -82,4 +87,7 @@ class MediaAuthInterceptor {
 
   /// Get current user's public key for auth
   String? get currentUserPubkey => _blossomAuthService.currentUserPubkey;
+
+  /// Returns true if adult content should be filtered from feeds entirely
+  bool get shouldFilterContent => _ageVerificationService.shouldHideAdultContent;
 }

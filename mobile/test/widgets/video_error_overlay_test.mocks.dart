@@ -22,7 +22,6 @@ import 'package:openvine/services/age_verification_service.dart' as _i2;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
-// ignore_for_file: invalid_use_of_internal_member
 
 /// A class which mocks [AgeVerificationService].
 ///
@@ -42,6 +41,38 @@ class MockAgeVerificationService extends _i1.Mock
   bool get isAdultContentVerified =>
       (super.noSuchMethod(
             Invocation.getter(#isAdultContentVerified),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  _i2.AdultContentPreference get adultContentPreference =>
+      (super.noSuchMethod(
+            Invocation.getter(#adultContentPreference),
+            returnValue: _i2.AdultContentPreference.alwaysShow,
+          )
+          as _i2.AdultContentPreference);
+
+  @override
+  bool get shouldAutoShowAdultContent =>
+      (super.noSuchMethod(
+            Invocation.getter(#shouldAutoShowAdultContent),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  bool get shouldHideAdultContent =>
+      (super.noSuchMethod(
+            Invocation.getter(#shouldHideAdultContent),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  bool get shouldAskForAdultContent =>
+      (super.noSuchMethod(
+            Invocation.getter(#shouldAskForAdultContent),
             returnValue: false,
           )
           as bool);
@@ -88,6 +119,17 @@ class MockAgeVerificationService extends _i1.Mock
             returnValue: _i3.Future<bool>.value(false),
           )
           as _i3.Future<bool>);
+
+  @override
+  _i3.Future<void> setAdultContentPreference(
+    _i2.AdultContentPreference? preference,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#setAdultContentPreference, [preference]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
 
   @override
   _i3.Future<bool> verifyAdultContentAccess(_i4.BuildContext? context) =>

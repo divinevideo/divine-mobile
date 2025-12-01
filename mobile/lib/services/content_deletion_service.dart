@@ -236,7 +236,7 @@ class ContentDeletionService {
       // Build NIP-09 compliant tags (kind 5)
       final tags = <List<String>>[
         ['e', originalEventId], // Event being deleted
-        ['client', 'openvine'], // Deleting client
+        ['client', 'diVine'], // Deleting client
       ];
 
       // Add additional context as tags if provided

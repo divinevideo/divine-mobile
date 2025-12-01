@@ -13,13 +13,14 @@ import 'package:nostr_sdk/filter.dart' as _i7;
 import 'package:openvine/models/nip94_metadata.dart' as _i8;
 import 'package:openvine/models/user_profile.dart' as _i10;
 import 'package:openvine/models/video_event.dart' as _i14;
+import 'package:openvine/services/age_verification_service.dart' as _i16;
 import 'package:openvine/services/content_blocklist_service.dart' as _i15;
 import 'package:openvine/services/nostr_key_manager.dart' as _i2;
 import 'package:openvine/services/nostr_service_interface.dart' as _i3;
 import 'package:openvine/services/profile_cache_service.dart' as _i11;
 import 'package:openvine/services/user_profile_service.dart' as _i9;
 import 'package:openvine/services/video_event_service.dart' as _i13;
-import 'package:openvine/services/video_filter_builder.dart' as _i16;
+import 'package:openvine/services/video_filter_builder.dart' as _i17;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -34,7 +35,6 @@ import 'package:openvine/services/video_filter_builder.dart' as _i16;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
-// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeNostrKeyManager_0 extends _i1.SmartFake
     implements _i2.NostrKeyManager {
@@ -536,6 +536,14 @@ class MockVideoEventService extends _i1.Mock implements _i13.VideoEventService {
   }
 
   @override
+  bool get shouldFilterAdultContent =>
+      (super.noSuchMethod(
+            Invocation.getter(#shouldFilterAdultContent),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
   List<_i14.VideoEvent> get homeFeedVideos =>
       (super.noSuchMethod(
             Invocation.getter(#homeFeedVideos),
@@ -634,6 +642,30 @@ class MockVideoEventService extends _i1.Mock implements _i13.VideoEventService {
         Invocation.method(#setBlocklistService, [blocklistService]),
         returnValueForMissingStub: null,
       );
+
+  @override
+  void setAgeVerificationService(
+    _i16.AgeVerificationService? ageVerificationService,
+  ) => super.noSuchMethod(
+    Invocation.method(#setAgeVerificationService, [ageVerificationService]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  bool shouldFilterEvent(_i6.Event? event) =>
+      (super.noSuchMethod(
+            Invocation.method(#shouldFilterEvent, [event]),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  int filterAdultContentFromExistingVideos() =>
+      (super.noSuchMethod(
+            Invocation.method(#filterAdultContentFromExistingVideos, []),
+            returnValue: 0,
+          )
+          as int);
 
   @override
   List<_i14.VideoEvent> getVideos(_i13.SubscriptionType? type) =>
@@ -744,8 +776,8 @@ class MockVideoEventService extends _i1.Mock implements _i13.VideoEventService {
     int? limit = 200,
     bool? replace = true,
     bool? includeReposts = false,
-    _i16.VideoSortField? sortBy,
-    _i16.NIP50SortMode? nip50Sort,
+    _i17.VideoSortField? sortBy,
+    _i17.NIP50SortMode? nip50Sort,
     bool? force = false,
   }) =>
       (super.noSuchMethod(
@@ -819,7 +851,7 @@ class MockVideoEventService extends _i1.Mock implements _i13.VideoEventService {
   _i4.Future<void> subscribeToHomeFeed(
     List<String>? followingPubkeys, {
     int? limit = 100,
-    _i16.VideoSortField? sortBy,
+    _i17.VideoSortField? sortBy,
     bool? force = false,
   }) =>
       (super.noSuchMethod(
@@ -836,8 +868,8 @@ class MockVideoEventService extends _i1.Mock implements _i13.VideoEventService {
   @override
   _i4.Future<void> subscribeToDiscovery({
     int? limit = 100,
-    _i16.VideoSortField? sortBy,
-    _i16.NIP50SortMode? nip50Sort,
+    _i17.VideoSortField? sortBy,
+    _i17.NIP50SortMode? nip50Sort,
     bool? force = false,
   }) =>
       (super.noSuchMethod(
