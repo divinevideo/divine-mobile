@@ -1489,34 +1489,36 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
       );
 
       // If we have a specific pubkey to search for
-      try {
-        // Fetch profile if not cached - this returns a Future we should await
-        if (!userProfileService.hasProfile(pubkeyToSearch)) {
-          await userProfileService.fetchProfile(pubkeyToSearch);
-        }
+      if (pubkeyToSearch != null) {
+        try {
+          // Fetch profile if not cached - this returns a Future we should await
+          if (!userProfileService.hasProfile(pubkeyToSearch)) {
+            await userProfileService.fetchProfile(pubkeyToSearch);
+          }
 
-        final profile = userProfileService.getCachedProfile(pubkeyToSearch);
-        searchResults.add(
-          ShareableUser(
-            pubkey: pubkeyToSearch,
-            displayName: profile?.bestDisplayName,
-            picture: profile?.picture,
-          ),
-        );
-      } catch (e) {
-        Log.error(
-          'Error searching for user $pubkeyToSearch: $e',
-          name: 'ShareVideoMenu',
-          category: LogCategory.ui,
-        );
-        // Still add the user without profile data
-        searchResults.add(
-          ShareableUser(
-            pubkey: pubkeyToSearch,
-            displayName: null,
-            picture: null,
-          ),
-        );
+          final profile = userProfileService.getCachedProfile(pubkeyToSearch);
+          searchResults.add(
+            ShareableUser(
+              pubkey: pubkeyToSearch,
+              displayName: profile?.bestDisplayName,
+              picture: profile?.picture,
+            ),
+          );
+        } catch (e) {
+          Log.error(
+            'Error searching for user $pubkeyToSearch: $e',
+            name: 'ShareVideoMenu',
+            category: LogCategory.ui,
+          );
+          // Still add the user without profile data
+          searchResults.add(
+            ShareableUser(
+              pubkey: pubkeyToSearch,
+              displayName: null,
+              picture: null,
+            ),
+          );
+        }
       }
 
       if (mounted) {
