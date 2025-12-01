@@ -8,8 +8,10 @@ void main() {
   group('FeatureFlag enum', () {
     test('should have display names', () {
       expect(FeatureFlag.newCameraUI.displayName, equals('New Camera UI'));
-      expect(FeatureFlag.enhancedVideoPlayer.displayName,
-          equals('Enhanced Video Player'));
+      expect(
+        FeatureFlag.enhancedVideoPlayer.displayName,
+        equals('Enhanced Video Player'),
+      );
       expect(FeatureFlag.debugTools.displayName, equals('Debug Tools'));
     });
 
@@ -40,8 +42,11 @@ void main() {
 
     test('should provide meaningful descriptions', () {
       for (final flag in FeatureFlag.values) {
-        expect(flag.description.length, greaterThan(10),
-            reason: 'Flag ${flag.name} should have meaningful description');
+        expect(
+          flag.description.length,
+          greaterThan(10),
+          reason: 'Flag ${flag.name} should have meaningful description',
+        );
       }
     });
   });

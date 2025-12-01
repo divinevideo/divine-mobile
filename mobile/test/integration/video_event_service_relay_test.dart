@@ -67,7 +67,8 @@ void main() {
         expect(nostrService.isInitialized, true);
         expect(nostrService.connectedRelays.isNotEmpty, true);
         Log.info(
-            '✅ NostrService connected to ${nostrService.connectedRelays.length} relays: ${nostrService.connectedRelays}');
+          '✅ NostrService connected to ${nostrService.connectedRelays.length} relays: ${nostrService.connectedRelays}',
+        );
 
         // Check initial state
         expect(videoEventService.getEventCount(SubscriptionType.discovery), 0);
@@ -93,7 +94,8 @@ void main() {
           if (waitAttempts % 6 == 0) {
             // Log every 3 seconds
             Log.info(
-                '⏳ Still waiting for events... attempt $waitAttempts/$maxWaitAttempts (${videoEventService.getEventCount(SubscriptionType.discovery)} events so far)');
+              '⏳ Still waiting for events... attempt $waitAttempts/$maxWaitAttempts (${videoEventService.getEventCount(SubscriptionType.discovery)} events so far)',
+            );
 
             // Log relay status (embedded relay)
             final relayStatus = nostrService.relayStatuses;
@@ -104,9 +106,11 @@ void main() {
         // Check results
         Log.info('📊 Final results after ${waitAttempts * 500}ms:');
         Log.info(
-            '  - Events received: ${videoEventService.getEventCount(SubscriptionType.discovery)}');
+          '  - Events received: ${videoEventService.getEventCount(SubscriptionType.discovery)}',
+        );
         Log.info(
-            '  - Has events: ${videoEventService.hasEvents(SubscriptionType.discovery)}');
+          '  - Has events: ${videoEventService.hasEvents(SubscriptionType.discovery)}',
+        );
         Log.info('  - Is subscribed: ${videoEventService.isSubscribed}');
         Log.info('  - Error: ${videoEventService.error}');
 
@@ -115,7 +119,8 @@ void main() {
           Log.info('📝 Received events:');
           for (final event in videoEventService.discoveryVideos.take(5)) {
             Log.info(
-                '  - Event ${event.id}: author=${event.pubkey}..., content="${event.content.length > 50 ? "${event.content.substring(0, 50)}..." : event.content}", hasVideo=${event.hasVideo}');
+              '  - Event ${event.id}: author=${event.pubkey}..., content="${event.content.length > 50 ? "${event.content.substring(0, 50)}..." : event.content}", hasVideo=${event.hasVideo}',
+            );
           }
         }
 
@@ -136,8 +141,9 @@ void main() {
         );
 
         // Verify we got video events with valid video URLs
-        final hasVideoEvents =
-            videoEventService.discoveryVideos.any((event) => event.hasVideo);
+        final hasVideoEvents = videoEventService.discoveryVideos.any(
+          (event) => event.hasVideo,
+        );
         expect(
           hasVideoEvents,
           true,
@@ -146,7 +152,8 @@ void main() {
         );
 
         Log.info(
-            '✅ Test passed! VideoEventService successfully received ${videoEventService.getEventCount(SubscriptionType.discovery)} events');
+          '✅ Test passed! VideoEventService successfully received ${videoEventService.getEventCount(SubscriptionType.discovery)} events',
+        );
       },
       timeout: const Timeout(Duration(seconds: 30)),
     );

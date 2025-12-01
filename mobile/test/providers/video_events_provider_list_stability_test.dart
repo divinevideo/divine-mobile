@@ -39,7 +39,9 @@ void main() {
       container = ProviderContainer(
         overrides: [
           videoEventServiceProvider.overrideWithValue(videoEventService),
-          appReadyProvider.overrideWith((ref) => false), // Start with gates closed
+          appReadyProvider.overrideWith(
+            (ref) => false,
+          ), // Start with gates closed
           isDiscoveryTabActiveProvider.overrideWith((ref) => false),
           isExploreTabActiveProvider.overrideWith((ref) => false),
           seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
@@ -59,21 +61,30 @@ void main() {
 
       // Just verify provider initializes
       final asyncValue = container.read(videoEventsProvider);
-      expect(asyncValue.isLoading || asyncValue.hasValue, true,
-          reason: 'Provider should initialize with list reference stability');
+      expect(
+        asyncValue.isLoading || asyncValue.hasValue,
+        true,
+        reason: 'Provider should initialize with list reference stability',
+      );
     });
 
-    test('provider emits stable list references when contents unchanged', () async {
-      // This test verifies the implementation stores references correctly
-      // The actual verification happens in explore_screen.dart's cache logic
-      // which uses identical() to check list references
+    test(
+      'provider emits stable list references when contents unchanged',
+      () async {
+        // This test verifies the implementation stores references correctly
+        // The actual verification happens in explore_screen.dart's cache logic
+        // which uses identical() to check list references
 
-      // Just verify provider builds without errors
-      final asyncValue = container.read(videoEventsProvider);
+        // Just verify provider builds without errors
+        final asyncValue = container.read(videoEventsProvider);
 
-      expect(asyncValue.isLoading || asyncValue.hasValue, true,
-          reason: 'Provider should initialize successfully');
-    });
+        expect(
+          asyncValue.isLoading || asyncValue.hasValue,
+          true,
+          reason: 'Provider should initialize successfully',
+        );
+      },
+    );
 
     test('list reference stability implementation exists', () async {
       // This test documents that the implementation stores list references
@@ -86,8 +97,11 @@ void main() {
       // Just verify provider initializes
       final asyncValue = container.read(videoEventsProvider);
 
-      expect(asyncValue.isLoading || asyncValue.hasValue, true,
-          reason: 'Provider should initialize with stable reference logic');
+      expect(
+        asyncValue.isLoading || asyncValue.hasValue,
+        true,
+        reason: 'Provider should initialize with stable reference logic',
+      );
     });
   });
 }

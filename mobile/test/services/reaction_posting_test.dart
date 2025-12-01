@@ -27,88 +27,87 @@ void main() {
       when(mockAuthService.currentPublicKeyHex).thenReturn('test_user_pubkey');
 
       // Set up default stubs for NostrService
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => Stream.fromIterable([]));
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => Stream.fromIterable([]));
 
-      socialService = SocialService(mockNostrService, mockAuthService,
-          subscriptionManager: mockSubscriptionManager);
+      socialService = SocialService(
+        mockNostrService,
+        mockAuthService,
+        subscriptionManager: mockSubscriptionManager,
+      );
     });
 
     tearDown(() {
       socialService.dispose();
     });
 
-    test('should handle relay closed state error when posting reaction', () async {
-      const testEventId = 'test_event_id_123';
-      const testAuthorPubkey = 'test_author_pubkey_456';
-      
-      // Mock event creation success
-      const privateKey =
-          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-      final publicKey = getPublicKey(privateKey);
-      final mockEvent = Event(
-        publicKey,
-        7,
-        [
+    test(
+      'should handle relay closed state error when posting reaction',
+      () async {
+        const testEventId = 'test_event_id_123';
+        const testAuthorPubkey = 'test_author_pubkey_456';
+
+        // Mock event creation success
+        const privateKey =
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        final publicKey = getPublicKey(privateKey);
+        final mockEvent = Event(publicKey, 7, [
           ['e', testEventId],
           ['p', testAuthorPubkey],
-        ],
-        '+',
-      );
-      mockEvent.sign(privateKey);
+        ], '+');
+        mockEvent.sign(privateKey);
 
-      when(
-        mockAuthService.createAndSignEvent(
-          kind: 7,
-          content: '+',
-          tags: [
-            ['e', testEventId],
-            ['p', testAuthorPubkey],
-          ],
-        ),
-      ).thenAnswer((_) async => mockEvent);
-
-      // Mock broadcast failure with "relay closed" error
-      when(mockNostrService.broadcastEvent(mockEvent)).thenAnswer(
-        (_) async => NostrBroadcastResult(
-          event: mockEvent,
-          successCount: 0,
-          totalRelays: 1,
-          results: const {'relay1': false},
-          errors: const {'relay1': 'Bad state: Cannot add new events after calling close'},
-        ),
-      );
-
-      // Test should throw exception with relay closed error
-      await expectLater(
-        () => socialService.toggleLike(testEventId, testAuthorPubkey),
-        throwsA(
-          isA<Exception>().having(
-            (e) => e.toString(),
-            'message',
-            contains('Cannot add new events after calling close'),
+        when(
+          mockAuthService.createAndSignEvent(
+            kind: 7,
+            content: '+',
+            tags: [
+              ['e', testEventId],
+              ['p', testAuthorPubkey],
+            ],
           ),
-        ),
-      );
-    });
+        ).thenAnswer((_) async => mockEvent);
+
+        // Mock broadcast failure with "relay closed" error
+        when(mockNostrService.broadcastEvent(mockEvent)).thenAnswer(
+          (_) async => NostrBroadcastResult(
+            event: mockEvent,
+            successCount: 0,
+            totalRelays: 1,
+            results: const {'relay1': false},
+            errors: const {
+              'relay1': 'Bad state: Cannot add new events after calling close',
+            },
+          ),
+        );
+
+        // Test should throw exception with relay closed error
+        await expectLater(
+          () => socialService.toggleLike(testEventId, testAuthorPubkey),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Cannot add new events after calling close'),
+            ),
+          ),
+        );
+      },
+    );
 
     test('should successfully post reaction when relay is open', () async {
       const testEventId = 'test_event_id_123';
       const testAuthorPubkey = 'test_author_pubkey_456';
-      
+
       // Mock event creation success
       const privateKey =
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
       final publicKey = getPublicKey(privateKey);
-      final mockEvent = Event(
-        publicKey,
-        7,
-        [
-          ['e', testEventId],
-          ['p', testAuthorPubkey],
-        ],
-        '+',
-      );
+      final mockEvent = Event(publicKey, 7, [
+        ['e', testEventId],
+        ['p', testAuthorPubkey],
+      ], '+');
       mockEvent.sign(privateKey);
 
       when(

@@ -13,8 +13,7 @@ import 'package:openvine/providers/tab_visibility_provider.dart';
 part 'user_profile_providers.g.dart';
 
 // Helper function for safe pubkey truncation in logs
-String _safePubkeyTrunc(String pubkey) =>
-    pubkey.length > 8 ? pubkey : pubkey;
+String _safePubkeyTrunc(String pubkey) => pubkey.length > 8 ? pubkey : pubkey;
 
 /// Async provider for loading a single user profile
 /// Delegates to UserProfileService which is the single source of truth
@@ -43,8 +42,11 @@ Future<UserProfile?> fetchUserProfile(Ref ref, String pubkey) async {
     return null;
   }
 
-  Log.debug('🔍 Loading profile for: ${_safePubkeyTrunc(pubkey)}...',
-      name: 'UserProfileProvider', category: LogCategory.ui);
+  Log.debug(
+    '🔍 Loading profile for: ${_safePubkeyTrunc(pubkey)}...',
+    name: 'UserProfileProvider',
+    category: LogCategory.ui,
+  );
 
   try {
     final profile = await userProfileService.fetchProfile(pubkey);
@@ -59,8 +61,11 @@ Future<UserProfile?> fetchUserProfile(Ref ref, String pubkey) async {
 
     return profile;
   } catch (e) {
-    Log.error('Error loading profile: $e',
-        name: 'UserProfileProvider', category: LogCategory.ui);
+    Log.error(
+      'Error loading profile: $e',
+      name: 'UserProfileProvider',
+      category: LogCategory.ui,
+    );
     return null;
   }
 }
@@ -89,20 +94,29 @@ class UserProfileNotifier extends _$UserProfileNotifier {
   Future<void> initialize() async {
     if (state.isInitialized) return;
 
-    Log.verbose('Initializing user profile notifier...',
-        name: 'UserProfileNotifier', category: LogCategory.system);
+    Log.verbose(
+      'Initializing user profile notifier...',
+      name: 'UserProfileNotifier',
+      category: LogCategory.system,
+    );
 
     final nostrService = ref.read(nostrServiceProvider);
 
     if (!nostrService.isInitialized) {
-      Log.warning('Nostr service not initialized, profile notifier will wait',
-          name: 'UserProfileNotifier', category: LogCategory.system);
+      Log.warning(
+        'Nostr service not initialized, profile notifier will wait',
+        name: 'UserProfileNotifier',
+        category: LogCategory.system,
+      );
       return;
     }
 
     state = state.copyWith(isInitialized: true);
-    Log.info('User profile notifier initialized',
-        name: 'UserProfileNotifier', category: LogCategory.system);
+    Log.info(
+      'User profile notifier initialized',
+      name: 'UserProfileNotifier',
+      category: LogCategory.system,
+    );
   }
 
   /// Get cached profile for a user
@@ -127,8 +141,10 @@ class UserProfileNotifier extends _$UserProfileNotifier {
 
   /// Fetch profile for a specific user
   /// Delegates to UserProfileService as single source of truth
-  Future<UserProfile?> fetchProfile(String pubkey,
-      {bool forceRefresh = false}) async {
+  Future<UserProfile?> fetchProfile(
+    String pubkey, {
+    bool forceRefresh = false,
+  }) async {
     if (!state.isInitialized) {
       await initialize();
     }
@@ -153,7 +169,10 @@ class UserProfileNotifier extends _$UserProfileNotifier {
 
       // Delegate to UserProfileService
       final userProfileService = ref.read(userProfileServiceProvider);
-      final profile = await userProfileService.fetchProfile(pubkey, forceRefresh: forceRefresh);
+      final profile = await userProfileService.fetchProfile(
+        pubkey,
+        forceRefresh: forceRefresh,
+      );
 
       return profile;
     } finally {
@@ -175,16 +194,18 @@ class UserProfileNotifier extends _$UserProfileNotifier {
     final isProfileActive = ref.read(isProfileTabActiveProvider);
     if (!(isFeedActive || isExploreActive || isProfileActive)) {
       Log.info(
-          '🚫 Prefetch suppressed: Feed=$isFeedActive, Explore=$isExploreActive, Profile=$isProfileActive',
-          name: 'UserProfileNotifier',
-          category: LogCategory.system);
+        '🚫 Prefetch suppressed: Feed=$isFeedActive, Explore=$isExploreActive, Profile=$isProfileActive',
+        name: 'UserProfileNotifier',
+        category: LogCategory.system,
+      );
       return;
     }
 
     Log.info(
-        '✅ Prefetch allowed: Feed=$isFeedActive, Explore=$isExploreActive, Profile=$isProfileActive',
-        name: 'UserProfileNotifier',
-        category: LogCategory.system);
+      '✅ Prefetch allowed: Feed=$isFeedActive, Explore=$isExploreActive, Profile=$isProfileActive',
+      name: 'UserProfileNotifier',
+      category: LogCategory.system,
+    );
 
     if (!state.isInitialized) {
       await initialize();
@@ -195,25 +216,34 @@ class UserProfileNotifier extends _$UserProfileNotifier {
     await userProfileService.prefetchProfilesImmediately(pubkeys);
 
     Log.debug(
-        '⚡ Prefetch request sent to UserProfileService',
-        name: 'UserProfileNotifier',
-        category: LogCategory.system);
+      '⚡ Prefetch request sent to UserProfileService',
+      name: 'UserProfileNotifier',
+      category: LogCategory.system,
+    );
   }
 
   /// Fetch multiple profiles with batching
   /// Delegates to UserProfileService which handles all caching and batching
-  Future<void> fetchMultipleProfiles(List<String> pubkeys,
-      {bool forceRefresh = false}) async {
+  Future<void> fetchMultipleProfiles(
+    List<String> pubkeys, {
+    bool forceRefresh = false,
+  }) async {
     if (!state.isInitialized) {
       await initialize();
     }
 
-    Log.info('📋 Batch fetching ${pubkeys.length} profiles',
-        name: 'UserProfileNotifier', category: LogCategory.system);
+    Log.info(
+      '📋 Batch fetching ${pubkeys.length} profiles',
+      name: 'UserProfileNotifier',
+      category: LogCategory.system,
+    );
 
     // Delegate to UserProfileService for batch fetch
     final userProfileService = ref.read(userProfileServiceProvider);
-    await userProfileService.fetchMultipleProfiles(pubkeys, forceRefresh: forceRefresh);
+    await userProfileService.fetchMultipleProfiles(
+      pubkeys,
+      forceRefresh: forceRefresh,
+    );
   }
 
   /// Mark a profile as missing to avoid spam
@@ -228,7 +258,6 @@ class UserProfileNotifier extends _$UserProfileNotifier {
       category: LogCategory.system,
     );
   }
-
 
   /// Check if we have a cached profile
   /// Delegates to UserProfileService as single source of truth

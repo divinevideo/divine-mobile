@@ -45,7 +45,9 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
   Widget build(BuildContext context) {
     _buildCount++;
     final now = DateTime.now();
-    final timeSinceLastBuild = _lastBuildTime != null ? now.difference(_lastBuildTime!).inMilliseconds : null;
+    final timeSinceLastBuild = _lastBuildTime != null
+        ? now.difference(_lastBuildTime!).inMilliseconds
+        : null;
     if (timeSinceLastBuild != null && timeSinceLastBuild < 100) {
       Log.warning(
         '⚠️ HomeScreenRouter: RAPID REBUILD #$_buildCount! Only ${timeSinceLastBuild}ms since last build',
@@ -87,11 +89,19 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.people_outline, size: 80, color: Colors.grey),
+                      const Icon(
+                        Icons.people_outline,
+                        size: 80,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(height: 24),
                       const Text(
                         'Your Home Feed is Empty',
-                        style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 22,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       const Text(
@@ -105,7 +115,10 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
                         icon: const Icon(Icons.explore),
                         label: const Text('Explore Videos'),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
                         ),
                       ),
                     ],
@@ -124,14 +137,19 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
               final safeIndex = urlIndex.clamp(0, itemCount - 1);
               _controller = PageController(initialPage: safeIndex);
               _lastUrlIndex = safeIndex;
-              _currentVideoId = videos[safeIndex].id; // Remember which video we're showing
+              _currentVideoId =
+                  videos[safeIndex].id; // Remember which video we're showing
             }
 
             // Check if video list changed (e.g., reordered due to social provider update)
             // If current video moved to different index, update URL to maintain position
             bool urlUpdatePending = false;
-            if (_currentVideoId != null && videos.isNotEmpty && !_urlUpdateScheduled) {
-              final currentVideoIndex = videos.indexWhere((v) => v.id == _currentVideoId);
+            if (_currentVideoId != null &&
+                videos.isNotEmpty &&
+                !_urlUpdateScheduled) {
+              final currentVideoIndex = videos.indexWhere(
+                (v) => v.id == _currentVideoId,
+              );
               // Only update URL if video moved to a different index
               if (currentVideoIndex != -1 && currentVideoIndex != urlIndex) {
                 // Video we're viewing is now at a different index - update URL silently
@@ -144,12 +162,14 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) return;
                   _urlUpdateScheduled = false; // Reset flag after update
-                  context.go(buildRoute(
-                    RouteContext(
-                      type: RouteType.home,
-                      videoIndex: currentVideoIndex,
+                  context.go(
+                    buildRoute(
+                      RouteContext(
+                        type: RouteType.home,
+                        videoIndex: currentVideoIndex,
+                      ),
                     ),
-                  ));
+                  );
                 });
                 urlUpdatePending = true;
               }
@@ -172,7 +192,8 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
                 category: LogCategory.video,
               );
               _lastUrlIndex = urlIndex;
-              _currentVideoId = videos[urlIndex.clamp(0, itemCount - 1)].id; // Update tracked video
+              _currentVideoId = videos[urlIndex.clamp(0, itemCount - 1)]
+                  .id; // Update tracked video
               syncPageController(
                 controller: _controller!,
                 targetIndex: urlIndex,
@@ -200,7 +221,8 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
               if (pubkeysToPrefetech.isNotEmpty) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!mounted) return;
-                  ref.read(userProfileProvider.notifier)
+                  ref
+                      .read(userProfileProvider.notifier)
                       .prefetchProfilesImmediately(pubkeysToPrefetech);
                 });
               }
@@ -208,7 +230,8 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
 
             return RefreshIndicator(
               semanticsLabel: 'searching for more videos',
-              onRefresh: () => ref.read(homeRefreshControllerProvider).refresh(),
+              onRefresh: () =>
+                  ref.read(homeRefreshControllerProvider).refresh(),
               child: PageView.builder(
                 key: const Key('home-video-page-view'),
                 itemCount: videos.length,
@@ -220,12 +243,14 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
 
                   // Guard: only navigate if URL doesn't match
                   if (newIndex != urlIndex) {
-                    context.go(buildRoute(
-                      RouteContext(
-                        type: RouteType.home,
-                        videoIndex: newIndex,
+                    context.go(
+                      buildRoute(
+                        RouteContext(
+                          type: RouteType.home,
+                          videoIndex: newIndex,
+                        ),
                       ),
-                    ));
+                    );
                   }
 
                   // Trigger pagination near end
@@ -236,8 +261,11 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
                   // Prefetch videos around current index
                   checkForPrefetch(currentIndex: newIndex, videos: videos);
 
-                  Log.debug('📄 Page changed to index $newIndex (${videos[newIndex].id}...)',
-                      name: 'HomeScreenRouter', category: LogCategory.video);
+                  Log.debug(
+                    '📄 Page changed to index $newIndex (${videos[newIndex].id}...)',
+                    name: 'HomeScreenRouter',
+                    category: LogCategory.video,
+                  );
                 },
                 itemBuilder: (context, index) {
                   return VideoFeedItem(

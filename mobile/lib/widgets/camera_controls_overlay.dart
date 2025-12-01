@@ -43,11 +43,7 @@ class _CameraControlsOverlayState extends State<CameraControlsOverlay> {
           width: 44,
           height: 44,
           alignment: Alignment.center,
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 24,
-          ),
+          child: Icon(icon, color: Colors.white, size: 24),
         ),
       ),
     );
@@ -74,9 +70,9 @@ class CameraFeaturesInfo extends StatelessWidget {
           Text(
             'Camera Controls',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: VineTheme.vineGreen,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: VineTheme.vineGreen,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
           _buildFeatureRow(Icons.touch_app, 'Tap to focus'),
@@ -97,10 +93,7 @@ class CameraFeaturesInfo extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             text,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
         ],
       ),

@@ -58,18 +58,19 @@ void main() {
       when(mockVideoEventService.discoveryVideos).thenReturn(sampleVideos);
 
       // Stub nostr service methods
-      when(mockNostrService.subscribeToEvents(
-        filters: anyNamed('filters'),
-        bypassLimits: anyNamed('bypassLimits'),
-        onEose: anyNamed('onEose'),
-      )).thenAnswer((_) => const Stream.empty());
+      when(
+        mockNostrService.subscribeToEvents(
+          filters: anyNamed('filters'),
+          bypassLimits: anyNamed('bypassLimits'),
+          onEose: anyNamed('onEose'),
+        ),
+      ).thenAnswer((_) => const Stream.empty());
 
       // Stub social service methods
       when(mockSocialService.getCachedLikeCount(any)).thenReturn(0);
     });
 
-    test('curation provider uses keepAlive to persist state',
-        () async {
+    test('curation provider uses keepAlive to persist state', () async {
       // ARRANGE: Create first container
       final container = ProviderContainer(
         overrides: [
@@ -77,7 +78,9 @@ void main() {
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           socialServiceProvider.overrideWithValue(mockSocialService),
           authServiceProvider.overrideWithValue(mockAuthService),
-          analyticsApiServiceProvider.overrideWithValue(mockAnalyticsApiService),
+          analyticsApiServiceProvider.overrideWithValue(
+            mockAnalyticsApiService,
+          ),
         ],
       );
 
@@ -85,8 +88,11 @@ void main() {
       final curationState = container.read(curationProvider);
 
       // ASSERT: Provider should initialize synchronously with loading state
-      expect(curationState.isLoading, isTrue,
-          reason: 'Provider initializes in loading state');
+      expect(
+        curationState.isLoading,
+        isTrue,
+        reason: 'Provider initializes in loading state',
+      );
 
       // The key point: with @Riverpod(keepAlive: true), the provider will:
       // 1. NOT autodispose when unwatched
@@ -100,40 +106,43 @@ void main() {
     });
 
     test(
-        'curation provider initialization completes and populates editor picks',
-        () async {
-      // ARRANGE: Create container
-      final container = ProviderContainer(
-        overrides: [
-          nostrServiceProvider.overrideWithValue(mockNostrService),
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          socialServiceProvider.overrideWithValue(mockSocialService),
-          authServiceProvider.overrideWithValue(mockAuthService),
-          analyticsApiServiceProvider.overrideWithValue(mockAnalyticsApiService),
-        ],
-      );
+      'curation provider initialization completes and populates editor picks',
+      () async {
+        // ARRANGE: Create container
+        final container = ProviderContainer(
+          overrides: [
+            nostrServiceProvider.overrideWithValue(mockNostrService),
+            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+            socialServiceProvider.overrideWithValue(mockSocialService),
+            authServiceProvider.overrideWithValue(mockAuthService),
+            analyticsApiServiceProvider.overrideWithValue(
+              mockAnalyticsApiService,
+            ),
+          ],
+        );
 
-      // ACT: Read initial state
-      final initialState = container.read(curationProvider);
+        // ACT: Read initial state
+        final initialState = container.read(curationProvider);
 
-      // ASSERT: Initially loading
-      expect(initialState.isLoading, isTrue);
-      expect(initialState.editorsPicks, isEmpty);
+        // ASSERT: Initially loading
+        expect(initialState.isLoading, isTrue);
+        expect(initialState.editorsPicks, isEmpty);
 
-      // Wait for async initialization
-      await Future.microtask(() {});
-      await Future.delayed(Duration(milliseconds: 10));
+        // Wait for async initialization
+        await Future.microtask(() {});
+        await Future.delayed(Duration(milliseconds: 10));
 
-      // ACT: Read after initialization
-      final loadedState = container.read(curationProvider);
-      final editorsPicks = container.read(editorsPicksProvider);
+        // ACT: Read after initialization
+        final loadedState = container.read(curationProvider);
+        final editorsPicks = container.read(editorsPicksProvider);
 
-      // ASSERT: Should be loaded with videos
-      expect(loadedState.isLoading, isFalse);
-      expect(editorsPicks.length, greaterThan(0));
+        // ASSERT: Should be loaded with videos
+        expect(loadedState.isLoading, isFalse);
+        expect(editorsPicks.length, greaterThan(0));
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
 
     test('curation service initializes with sample data', () {
       // ARRANGE: Create curation service directly
@@ -146,7 +155,9 @@ void main() {
 
       // ACT & ASSERT: Service should initialize with sample data
       expect(service.isLoading, isFalse);
-      final editorsPicks = service.getVideosForSetType(CurationSetType.editorsPicks);
+      final editorsPicks = service.getVideosForSetType(
+        CurationSetType.editorsPicks,
+      );
 
       // Editor's picks may be empty if no videos available, but service should not be loading
       expect(service.isLoading, isFalse);

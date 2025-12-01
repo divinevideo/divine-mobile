@@ -46,7 +46,9 @@ void main() {
       final authResult = await authService.createNewIdentity();
 
       if (!authResult.success) {
-        throw Exception('Failed to create test identity: ${authResult.errorMessage}');
+        throw Exception(
+          'Failed to create test identity: ${authResult.errorMessage}',
+        );
       }
 
       print('✅ Test identity created and authenticated');
@@ -57,9 +59,30 @@ void main() {
 
       // Write minimal MP4 header
       await testFile.writeAsBytes([
-        0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70,
-        0x69, 0x73, 0x6F, 0x6D, 0x00, 0x00, 0x02, 0x00,
-        0x69, 0x73, 0x6F, 0x6D, 0x69, 0x73, 0x6F, 0x32,
+        0x00,
+        0x00,
+        0x00,
+        0x20,
+        0x66,
+        0x74,
+        0x79,
+        0x70,
+        0x69,
+        0x73,
+        0x6F,
+        0x6D,
+        0x00,
+        0x00,
+        0x02,
+        0x00,
+        0x69,
+        0x73,
+        0x6F,
+        0x6D,
+        0x69,
+        0x73,
+        0x6F,
+        0x32,
       ]);
     });
 

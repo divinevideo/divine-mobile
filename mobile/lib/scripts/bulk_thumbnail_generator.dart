@@ -33,10 +33,14 @@ class BulkThumbnailGenerator {
 
   /// Main entry point for the script
   static Future<void> main(List<String> args) async {
-    Log.info('🚀 divine Bulk Thumbnail Generator',
-        name: 'BulkThumbnailGenerator');
-    Log.info('====================================',
-        name: 'BulkThumbnailGenerator');
+    Log.info(
+      '🚀 divine Bulk Thumbnail Generator',
+      name: 'BulkThumbnailGenerator',
+    );
+    Log.info(
+      '====================================',
+      name: 'BulkThumbnailGenerator',
+    );
 
     // Parse command line arguments
     final options = _parseArguments(args);
@@ -44,24 +48,32 @@ class BulkThumbnailGenerator {
     try {
       // Initialize logging - use existing configuration
 
-      Log.info('Starting bulk thumbnail generation...',
-          name: 'BulkThumbnailGenerator');
+      Log.info(
+        'Starting bulk thumbnail generation...',
+        name: 'BulkThumbnailGenerator',
+      );
 
       // Step 1: Fetch video events from relay
-      Log.info('Fetching video events from $relayUrl...',
-          name: 'BulkThumbnailGenerator');
-      final videoEvents =
-          await _fetchVideoEvents(options['limit'] ?? maxVideosToProcess);
+      Log.info(
+        'Fetching video events from $relayUrl...',
+        name: 'BulkThumbnailGenerator',
+      );
+      final videoEvents = await _fetchVideoEvents(
+        options['limit'] ?? maxVideosToProcess,
+      );
 
       if (videoEvents.isEmpty) {
-        Log.warning('❌ No video events found. Exiting.',
-            name: 'BulkThumbnailGenerator');
+        Log.warning(
+          '❌ No video events found. Exiting.',
+          name: 'BulkThumbnailGenerator',
+        );
         return;
       }
 
       // Step 2: Filter events without thumbnails
-      final eventsWithoutThumbnails =
-          _filterEventsWithoutThumbnails(videoEvents);
+      final eventsWithoutThumbnails = _filterEventsWithoutThumbnails(
+        videoEvents,
+      );
 
       // Step 3: Generate thumbnails in batches
       await _generateThumbnailsInBatches(eventsWithoutThumbnails, options);
@@ -136,8 +148,10 @@ Examples:
     final videoEvents = <VideoEvent>[];
 
     try {
-      Log.info('Connecting to Nostr relay to fetch video events...',
-          name: 'BulkThumbnailGenerator');
+      Log.info(
+        'Connecting to Nostr relay to fetch video events...',
+        name: 'BulkThumbnailGenerator',
+      );
 
       // Create Nostr service to connect to relay
       final keyManager = NostrKeyManager();
@@ -152,8 +166,10 @@ Examples:
         limit: limit,
       );
 
-      Log.info('Subscribing to video events with limit: $limit',
-          name: 'BulkThumbnailGenerator');
+      Log.info(
+        'Subscribing to video events with limit: $limit',
+        name: 'BulkThumbnailGenerator',
+      );
 
       // Subscribe to events and collect them
       final subscription = nostrService.subscribeToEvents(filters: [filter]);
@@ -165,16 +181,20 @@ Examples:
           videoEvents.add(videoEvent);
           eventCount[0]++;
 
-          Log.info('Received event ${eventCount[0]}/$limit: ${event.id}',
-              name: 'BulkThumbnailGenerator');
+          Log.info(
+            'Received event ${eventCount[0]}/$limit: ${event.id}',
+            name: 'BulkThumbnailGenerator',
+          );
 
           // Stop when we reach the limit
           if (eventCount[0] >= limit) {
             break;
           }
         } catch (e) {
-          Log.warning('Failed to parse event ${event.id}: $e',
-              name: 'BulkThumbnailGenerator');
+          Log.warning(
+            'Failed to parse event ${event.id}: $e',
+            name: 'BulkThumbnailGenerator',
+          );
         }
       }
 
@@ -182,12 +202,16 @@ Examples:
       await nostrService.closeAllSubscriptions();
       nostrService.dispose();
     } catch (e) {
-      Log.error('Failed to fetch events from relay: $e',
-          name: 'BulkThumbnailGenerator');
+      Log.error(
+        'Failed to fetch events from relay: $e',
+        name: 'BulkThumbnailGenerator',
+      );
 
       // Fallback: return sample events for testing
-      Log.info('Using fallback sample events for testing...',
-          name: 'BulkThumbnailGenerator');
+      Log.info(
+        'Using fallback sample events for testing...',
+        name: 'BulkThumbnailGenerator',
+      );
       return _getSampleVideoEvents();
     }
 
@@ -196,7 +220,8 @@ Examples:
 
   /// Filter events that don't have thumbnails
   static List<VideoEvent> _filterEventsWithoutThumbnails(
-      List<VideoEvent> events) {
+    List<VideoEvent> events,
+  ) {
     final filtered = <VideoEvent>[];
 
     for (final event in events) {
@@ -206,13 +231,18 @@ Examples:
       }
     }
 
-    Log.info('📊 Found $totalVideosFound total video events',
-        name: 'BulkThumbnailGenerator');
-    Log.info('📊 $videosWithoutThumbnails videos without thumbnails',
-        name: 'BulkThumbnailGenerator');
     Log.info(
-        '📊 ${totalVideosFound - videosWithoutThumbnails} videos already have thumbnails',
-        name: 'BulkThumbnailGenerator');
+      '📊 Found $totalVideosFound total video events',
+      name: 'BulkThumbnailGenerator',
+    );
+    Log.info(
+      '📊 $videosWithoutThumbnails videos without thumbnails',
+      name: 'BulkThumbnailGenerator',
+    );
+    Log.info(
+      '📊 ${totalVideosFound - videosWithoutThumbnails} videos already have thumbnails',
+      name: 'BulkThumbnailGenerator',
+    );
 
     return filtered;
   }
@@ -228,12 +258,15 @@ Examples:
 
     if (isDryRun) {
       Log.info(
-          '🔍 DRY RUN: Would generate thumbnails for ${events.length} videos');
+        '🔍 DRY RUN: Would generate thumbnails for ${events.length} videos',
+      );
       return;
     }
 
-    Log.info('🎬 Generating thumbnails for ${events.length} videos...',
-        name: 'BulkThumbnailGenerator');
+    Log.info(
+      '🎬 Generating thumbnails for ${events.length} videos...',
+      name: 'BulkThumbnailGenerator',
+    );
     Log.info('⚙️ Batch size: $batchSizeToUse', name: 'BulkThumbnailGenerator');
     Log.info('⏱️ Time offset: ${timeOffset}s', name: 'BulkThumbnailGenerator');
 
@@ -243,11 +276,13 @@ Examples:
       final totalBatches = (events.length / batchSizeToUse).ceil();
 
       Log.info(
-          '\n📦 Processing batch $batchNumber/$totalBatches (${batch.length} videos)...');
+        '\n📦 Processing batch $batchNumber/$totalBatches (${batch.length} videos)...',
+      );
 
       // Process batch concurrently but with limited concurrency
-      final futures =
-          batch.map((event) => _generateThumbnailForEvent(event, timeOffset));
+      final futures = batch.map(
+        (event) => _generateThumbnailForEvent(event, timeOffset),
+      );
       await Future.wait(futures);
 
       // Brief pause between batches to avoid overwhelming the server
@@ -259,7 +294,9 @@ Examples:
 
   /// Generate thumbnail for a single video event
   static Future<void> _generateThumbnailForEvent(
-      VideoEvent event, double timeOffset) async {
+    VideoEvent event,
+    double timeOffset,
+  ) async {
     try {
       Log.info(
         'Generating thumbnail for video ${event.id}...',
@@ -274,12 +311,10 @@ Examples:
 
       if (thumbnailUrl != null) {
         thumbnailsGenerated++;
-        Log.info(
-            '✅ Generated thumbnail for ${event.id}: $thumbnailUrl');
+        Log.info('✅ Generated thumbnail for ${event.id}: $thumbnailUrl');
       } else {
         thumbnailsFailed++;
-        Log.info(
-            '❌ Failed to generate thumbnail for ${event.id}');
+        Log.info('❌ Failed to generate thumbnail for ${event.id}');
       }
     } catch (e) {
       thumbnailsFailed++;
@@ -287,8 +322,7 @@ Examples:
         'Failed to generate thumbnail for ${event.id}: $e',
         name: 'BulkThumbnailGenerator',
       );
-      Log.info(
-          '❌ Error generating thumbnail for ${event.id}: $e');
+      Log.info('❌ Error generating thumbnail for ${event.id}: $e');
     }
   }
 
@@ -296,49 +330,61 @@ Examples:
   static void _printFinalStatistics() {
     Log.info('\n📈 FINAL STATISTICS', name: 'BulkThumbnailGenerator');
     Log.info('===================', name: 'BulkThumbnailGenerator');
-    Log.info('Total videos found: $totalVideosFound',
-        name: 'BulkThumbnailGenerator');
-    Log.info('Videos without thumbnails: $videosWithoutThumbnails',
-        name: 'BulkThumbnailGenerator');
-    Log.info('Thumbnails generated: $thumbnailsGenerated',
-        name: 'BulkThumbnailGenerator');
-    Log.info('Thumbnails failed: $thumbnailsFailed',
-        name: 'BulkThumbnailGenerator');
+    Log.info(
+      'Total videos found: $totalVideosFound',
+      name: 'BulkThumbnailGenerator',
+    );
+    Log.info(
+      'Videos without thumbnails: $videosWithoutThumbnails',
+      name: 'BulkThumbnailGenerator',
+    );
+    Log.info(
+      'Thumbnails generated: $thumbnailsGenerated',
+      name: 'BulkThumbnailGenerator',
+    );
+    Log.info(
+      'Thumbnails failed: $thumbnailsFailed',
+      name: 'BulkThumbnailGenerator',
+    );
     Log.info('Videos skipped: $videosSkipped', name: 'BulkThumbnailGenerator');
 
     final successRate = videosWithoutThumbnails > 0
         ? (thumbnailsGenerated / videosWithoutThumbnails * 100.0)
-            .toStringAsFixed(1)
+              .toStringAsFixed(1)
         : '0.0';
     Log.info('Success rate: $successRate%', name: 'BulkThumbnailGenerator');
 
     if (thumbnailsGenerated > 0) {
-      Log.info('🎉 Successfully generated $thumbnailsGenerated thumbnails!',
-          name: 'BulkThumbnailGenerator');
+      Log.info(
+        '🎉 Successfully generated $thumbnailsGenerated thumbnails!',
+        name: 'BulkThumbnailGenerator',
+      );
     }
 
     if (thumbnailsFailed > 0) {
-      Log.info('⚠️ $thumbnailsFailed thumbnails failed to generate',
-          name: 'BulkThumbnailGenerator');
+      Log.info(
+        '⚠️ $thumbnailsFailed thumbnails failed to generate',
+        name: 'BulkThumbnailGenerator',
+      );
     }
   }
 
   /// Get sample video events for testing when relay is unavailable
   static List<VideoEvent> _getSampleVideoEvents() => [
-        VideoEvent(
-          id: '87444ba2b07f28f29a8df3e9b358712e434a9d94bc67b08db5d4de61e6205344',
-          pubkey:
-              '0461fcbecc4c3374439932d6b8f11269ccdb7cc973ad7a50ae362db135a474dd',
-          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          content: 'Sample video without thumbnail',
-          timestamp: DateTime.now(),
-          videoUrl:
-              'https://blossom.primal.net/87444ba2b07f28f29a8df3e9b358712e434a9d94bc67b08db5d4de61e6205344.mp4',
-          thumbnailUrl: null, // No thumbnail
-          duration: 5,
-          hashtags: ['sample', 'test'],
-        ),
-      ];
+    VideoEvent(
+      id: '87444ba2b07f28f29a8df3e9b358712e434a9d94bc67b08db5d4de61e6205344',
+      pubkey:
+          '0461fcbecc4c3374439932d6b8f11269ccdb7cc973ad7a50ae362db135a474dd',
+      createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      content: 'Sample video without thumbnail',
+      timestamp: DateTime.now(),
+      videoUrl:
+          'https://blossom.primal.net/87444ba2b07f28f29a8df3e9b358712e434a9d94bc67b08db5d4de61e6205344.mp4',
+      thumbnailUrl: null, // No thumbnail
+      duration: 5,
+      hashtags: ['sample', 'test'],
+    ),
+  ];
 }
 
 /// Mock Nostr event for testing

@@ -34,11 +34,19 @@ void main() {
       final canStartAgain = kIsWeb ? segmentsField.isEmpty : true;
 
       if (kIsWeb) {
-        expect(canStartAgain, isFalse,
-            reason: 'Web should not allow starting recording when a segment already exists');
+        expect(
+          canStartAgain,
+          isFalse,
+          reason:
+              'Web should not allow starting recording when a segment already exists',
+        );
       } else {
-        expect(canStartAgain, isTrue,
-            reason: 'Mobile should allow starting recording even with existing segments');
+        expect(
+          canStartAgain,
+          isTrue,
+          reason:
+              'Mobile should allow starting recording even with existing segments',
+        );
       }
 
       controller.dispose();
@@ -65,8 +73,11 @@ void main() {
       }
 
       // Mobile should allow this
-      expect(controller.segments.length, equals(3),
-          reason: 'Mobile should support multiple segments');
+      expect(
+        controller.segments.length,
+        equals(3),
+        reason: 'Mobile should support multiple segments',
+      );
 
       controller.dispose();
     });
@@ -75,19 +86,27 @@ void main() {
     test('hasSegments should return true when segments exist', () {
       final controller = VineRecordingController();
 
-      expect(controller.hasSegments, isFalse,
-          reason: 'Should have no segments initially');
+      expect(
+        controller.hasSegments,
+        isFalse,
+        reason: 'Should have no segments initially',
+      );
 
       // Add a segment
-      controller.segments.add(RecordingSegment(
-        startTime: DateTime.now(),
-        endTime: DateTime.now().add(const Duration(seconds: 1)),
-        duration: const Duration(seconds: 1),
-        filePath: '/test/segment.mp4',
-      ));
+      controller.segments.add(
+        RecordingSegment(
+          startTime: DateTime.now(),
+          endTime: DateTime.now().add(const Duration(seconds: 1)),
+          duration: const Duration(seconds: 1),
+          filePath: '/test/segment.mp4',
+        ),
+      );
 
-      expect(controller.hasSegments, isTrue,
-          reason: 'Should have segments after adding one');
+      expect(
+        controller.hasSegments,
+        isTrue,
+        reason: 'Should have segments after adding one',
+      );
 
       controller.dispose();
     });
@@ -100,12 +119,14 @@ void main() {
       // (We can't test canRecord directly without initialization, but we can test the logic)
 
       // Add one segment
-      controller.segments.add(RecordingSegment(
-        startTime: DateTime.now(),
-        endTime: DateTime.now().add(const Duration(seconds: 1)),
-        duration: const Duration(seconds: 1),
-        filePath: '/test/segment.mp4',
-      ));
+      controller.segments.add(
+        RecordingSegment(
+          startTime: DateTime.now(),
+          endTime: DateTime.now().add(const Duration(seconds: 1)),
+          duration: const Duration(seconds: 1),
+          filePath: '/test/segment.mp4',
+        ),
+      );
 
       // On web, having segments should prevent further recording
       // On mobile, it should allow it

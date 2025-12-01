@@ -526,19 +526,27 @@ class _UniversalCameraScreenPureState
 
               // Square crop mask overlay (only shown in square mode)
               // Positioned OUTSIDE ClipRect so it's not clipped away
-              if (recordingState.aspectRatio == vine.AspectRatio.square && recordingState.isInitialized)
+              if (recordingState.aspectRatio == vine.AspectRatio.square &&
+                  recordingState.isInitialized)
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    Log.info('🎭 Building square crop mask overlay',
-                        name: 'UniversalCameraScreenPure', category: LogCategory.video);
+                    Log.info(
+                      '🎭 Building square crop mask overlay',
+                      name: 'UniversalCameraScreenPure',
+                      category: LogCategory.video,
+                    );
 
                     // Use screen dimensions, not camera preview dimensions
                     final screenWidth = constraints.maxWidth;
                     final screenHeight = constraints.maxHeight;
-                    final squareSize = screenWidth; // Square uses full screen width
+                    final squareSize =
+                        screenWidth; // Square uses full screen width
 
-                    Log.info('🎭 Mask dimensions: screenWidth=$screenWidth, screenHeight=$screenHeight, squareSize=$squareSize',
-                        name: 'UniversalCameraScreenPure', category: LogCategory.video);
+                    Log.info(
+                      '🎭 Mask dimensions: screenWidth=$screenWidth, screenHeight=$screenHeight, squareSize=$squareSize',
+                      name: 'UniversalCameraScreenPure',
+                      category: LogCategory.video,
+                    );
 
                     return _buildSquareCropMaskForPreview(
                       screenWidth,
@@ -583,9 +591,7 @@ class _UniversalCameraScreenPureState
                   top: 0,
                   bottom: 180, // Above the bottom recording controls
                   right: 16,
-                  child: Center(
-                    child: _buildCameraControls(recordingState),
-                  ),
+                  child: Center(child: _buildCameraControls(recordingState)),
                 ),
 
               // Countdown overlay
@@ -771,8 +777,8 @@ class _UniversalCameraScreenPureState
           child: Text(
             (!recordingState.isRecording && !recordingState.hasSegments)
                 ? (kIsWeb
-                    ? 'Tap to record' // Web: single-shot
-                    : 'Tap and hold anywhere to record') // Mobile: press-and-hold segments anywhere on screen
+                      ? 'Tap to record' // Web: single-shot
+                      : 'Tap and hold anywhere to record') // Mobile: press-and-hold segments anywhere on screen
                 : '', // Empty but reserves space
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
@@ -880,10 +886,15 @@ class _UniversalCameraScreenPureState
   }
 
   Widget _buildCameraControls(VineRecordingUIState recordingState) {
-    final cameraInterface = ref.read(vineRecordingProvider.notifier).cameraInterface;
+    final cameraInterface = ref
+        .read(vineRecordingProvider.notifier)
+        .cameraInterface;
     // Check if front camera is active for either camera interface type
-    final isFrontCamera = (cameraInterface is EnhancedMobileCameraInterface && cameraInterface.isFrontCamera) ||
-        (cameraInterface is CamerAwesomeMobileCameraInterface && cameraInterface.isFrontCamera);
+    final isFrontCamera =
+        (cameraInterface is EnhancedMobileCameraInterface &&
+            cameraInterface.isFrontCamera) ||
+        (cameraInterface is CamerAwesomeMobileCameraInterface &&
+            cameraInterface.isFrontCamera);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -898,17 +909,11 @@ class _UniversalCameraScreenPureState
         ],
         // Flash toggle (only show for rear camera - front cameras don't have flash)
         if (!isFrontCamera) ...[
-          _buildControlButton(
-            icon: _getFlashIcon(),
-            onTap: _toggleFlash,
-          ),
+          _buildControlButton(icon: _getFlashIcon(), onTap: _toggleFlash),
           const SizedBox(height: 12),
         ],
         // Timer toggle
-        _buildControlButton(
-          icon: _getTimerIcon(),
-          onTap: _toggleTimer,
-        ),
+        _buildControlButton(icon: _getTimerIcon(), onTap: _toggleTimer),
         const SizedBox(height: 12),
         // Aspect ratio toggle
         _buildAspectRatioToggle(recordingState),
@@ -955,8 +960,11 @@ class _UniversalCameraScreenPureState
                     recordingState.aspectRatio == vine.AspectRatio.square
                     ? vine.AspectRatio.vertical
                     : vine.AspectRatio.square;
-                Log.info('🎭 Aspect ratio button pressed: $currentRatio -> $newRatio',
-                    name: 'UniversalCameraScreenPure', category: LogCategory.video);
+                Log.info(
+                  '🎭 Aspect ratio button pressed: $currentRatio -> $newRatio',
+                  name: 'UniversalCameraScreenPure',
+                  category: LogCategory.video,
+                );
                 ref
                     .read(vineRecordingProvider.notifier)
                     .setAspectRatio(newRatio);
@@ -967,13 +975,13 @@ class _UniversalCameraScreenPureState
 
   /// Build dynamic zoom selector if using CamerAwesome
   Widget _buildZoomSelector() {
-    final cameraInterface = ref.read(vineRecordingProvider.notifier).getCameraInterface();
+    final cameraInterface = ref
+        .read(vineRecordingProvider.notifier)
+        .getCameraInterface();
 
     // Only show zoom selector for CamerAwesome interface (iOS)
     if (cameraInterface is CamerAwesomeMobileCameraInterface) {
-      return DynamicZoomSelector(
-        cameraInterface: cameraInterface,
-      );
+      return DynamicZoomSelector(cameraInterface: cameraInterface);
     }
 
     // No zoom selector for other camera interfaces
@@ -982,7 +990,10 @@ class _UniversalCameraScreenPureState
 
   /// Build square crop mask overlay centered on screen
   /// Shows semi-transparent overlay outside the 1:1 square
-  Widget _buildSquareCropMaskForPreview(double screenWidth, double screenHeight) {
+  Widget _buildSquareCropMaskForPreview(
+    double screenWidth,
+    double screenHeight,
+  ) {
     // Square uses full screen width
     final squareSize = screenWidth;
 
@@ -998,9 +1009,7 @@ class _UniversalCameraScreenPureState
             left: 0,
             right: 0,
             height: topBottomHeight,
-            child: Container(
-              color: Colors.black.withValues(alpha: 0.6),
-            ),
+            child: Container(color: Colors.black.withValues(alpha: 0.6)),
           ),
 
         // Bottom darkened area
@@ -1010,9 +1019,7 @@ class _UniversalCameraScreenPureState
             left: 0,
             right: 0,
             height: topBottomHeight,
-            child: Container(
-              color: Colors.black.withValues(alpha: 0.6),
-            ),
+            child: Container(color: Colors.black.withValues(alpha: 0.6)),
           ),
 
         // Square frame outline (visual guide)
@@ -1023,10 +1030,7 @@ class _UniversalCameraScreenPureState
           height: squareSize,
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(
-                color: VineTheme.vineGreen,
-                width: 3,
-              ),
+              border: Border.all(color: VineTheme.vineGreen, width: 3),
             ),
           ),
         ),
@@ -1115,7 +1119,10 @@ class _UniversalCameraScreenPureState
     // This allows the user to record multiple segments before finalizing
     try {
       final notifier = ref.read(vineRecordingProvider.notifier);
-      Log.info('📹 Stopping recording segment (not finishing)', category: LogCategory.video);
+      Log.info(
+        '📹 Stopping recording segment (not finishing)',
+        category: LogCategory.video,
+      );
       await notifier.stopSegment();
 
       Log.info(
@@ -1199,22 +1206,37 @@ class _UniversalCameraScreenPureState
   }
 
   void _switchCamera() async {
-    Log.info('🔄 _switchCamera() UI button pressed',
-        name: 'UniversalCameraScreenPure', category: LogCategory.system);
+    Log.info(
+      '🔄 _switchCamera() UI button pressed',
+      name: 'UniversalCameraScreenPure',
+      category: LogCategory.system,
+    );
 
     try {
-      Log.info('🔄 Calling vineRecordingProvider.notifier.switchCamera()...',
-          name: 'UniversalCameraScreenPure', category: LogCategory.system);
+      Log.info(
+        '🔄 Calling vineRecordingProvider.notifier.switchCamera()...',
+        name: 'UniversalCameraScreenPure',
+        category: LogCategory.system,
+      );
       await ref.read(vineRecordingProvider.notifier).switchCamera();
-      Log.info('🔄 vineRecordingProvider.notifier.switchCamera() completed',
-          name: 'UniversalCameraScreenPure', category: LogCategory.system);
+      Log.info(
+        '🔄 vineRecordingProvider.notifier.switchCamera() completed',
+        name: 'UniversalCameraScreenPure',
+        category: LogCategory.system,
+      );
 
       // Force rebuild by calling setState
-      Log.info('🔄 Calling setState() to force UI rebuild',
-          name: 'UniversalCameraScreenPure', category: LogCategory.system);
+      Log.info(
+        '🔄 Calling setState() to force UI rebuild',
+        name: 'UniversalCameraScreenPure',
+        category: LogCategory.system,
+      );
       setState(() {});
-      Log.info('🔄 setState() completed',
-          name: 'UniversalCameraScreenPure', category: LogCategory.system);
+      Log.info(
+        '🔄 setState() completed',
+        name: 'UniversalCameraScreenPure',
+        category: LogCategory.system,
+      );
     } catch (e) {
       Log.error(
         '📹 UniversalCameraScreenPure: Camera switch failed: $e',
@@ -1226,7 +1248,9 @@ class _UniversalCameraScreenPureState
   void _toggleFlash() {
     Log.info('🔦 Flash button tapped', category: LogCategory.video);
 
-    final cameraInterface = ref.read(vineRecordingProvider.notifier).cameraInterface;
+    final cameraInterface = ref
+        .read(vineRecordingProvider.notifier)
+        .cameraInterface;
 
     // Update local state to cycle through: off → torch (for video recording)
     // For video, we use torch mode (continuous light) instead of flash
@@ -1243,7 +1267,10 @@ class _UniversalCameraScreenPureState
       }
     });
 
-    Log.info('🔦 Flash mode toggled to: $_flashMode', category: LogCategory.video);
+    Log.info(
+      '🔦 Flash mode toggled to: $_flashMode',
+      category: LogCategory.video,
+    );
 
     // Apply the new flash mode to camera - support both camera interfaces
     if (cameraInterface is EnhancedMobileCameraInterface) {
@@ -1251,7 +1278,10 @@ class _UniversalCameraScreenPureState
     } else if (cameraInterface is CamerAwesomeMobileCameraInterface) {
       cameraInterface.setFlashMode(_flashMode);
     } else {
-      Log.warning('🔦 Camera interface does not support flash control', category: LogCategory.video);
+      Log.warning(
+        '🔦 Camera interface does not support flash control',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -1264,7 +1294,9 @@ class _UniversalCameraScreenPureState
         category: LogCategory.video,
       );
 
-      _showSuccessSnackBar('Maximum recording time reached. Press ✓ to publish.');
+      _showSuccessSnackBar(
+        'Maximum recording time reached. Press ✓ to publish.',
+      );
     } catch (e) {
       Log.error(
         '📹 Failed to handle auto-stop: $e',

@@ -25,13 +25,15 @@ void main() {
       final container = ProviderContainer();
 
       // Act - mark as initialized
-      container
-          .read(nostrInitializationProvider.notifier)
-          .markInitialized();
+      container.read(nostrInitializationProvider.notifier).markInitialized();
       final state = container.read(nostrInitializationProvider);
 
       // Assert
-      expect(state, isTrue, reason: 'Should be initialized after markInitialized()');
+      expect(
+        state,
+        isTrue,
+        reason: 'Should be initialized after markInitialized()',
+      );
 
       container.dispose();
     });
@@ -47,12 +49,12 @@ void main() {
       );
 
       // Act
-      container
-          .read(nostrInitializationProvider.notifier)
-          .markInitialized();
+      container.read(nostrInitializationProvider.notifier).markInitialized();
 
       // Assert
-      expect(states, [true], reason: 'Should notify with true when initialized');
+      expect(states, [
+        true,
+      ], reason: 'Should notify with true when initialized');
 
       container.dispose();
     });
@@ -77,9 +79,7 @@ void main() {
       final container = ProviderContainer();
 
       // Act - mark as initialized
-      container
-          .read(nostrInitializationProvider.notifier)
-          .markInitialized();
+      container.read(nostrInitializationProvider.notifier).markInitialized();
       final ready = container.read(nostrReadyProvider);
 
       // Assert
@@ -102,16 +102,17 @@ void main() {
       );
 
       // Act
-      container
-          .read(nostrInitializationProvider.notifier)
-          .markInitialized();
+      container.read(nostrInitializationProvider.notifier).markInitialized();
 
       // Wait for any microtasks to complete
       await Future.delayed(Duration.zero);
 
       // Assert
-      expect(readyStates, [true],
-        reason: 'nostrReadyProvider should notify when initialization changes');
+      expect(
+        readyStates,
+        [true],
+        reason: 'nostrReadyProvider should notify when initialization changes',
+      );
 
       container.dispose();
     });

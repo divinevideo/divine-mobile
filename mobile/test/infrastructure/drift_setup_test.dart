@@ -16,7 +16,12 @@ void main() {
     setUp(() async {
       // Create test database path (same pattern as nostr_sdk)
       final tempDir = await getTemporaryDirectory();
-      testDbPath = p.join(tempDir.path, 'openvine_test', 'database', 'local_relay.db');
+      testDbPath = p.join(
+        tempDir.path,
+        'openvine_test',
+        'database',
+        'local_relay.db',
+      );
 
       // Ensure directory exists
       await Directory(p.dirname(testDbPath)).create(recursive: true);

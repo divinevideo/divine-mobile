@@ -25,9 +25,7 @@ class _MacOSCameraPreviewState extends State<MacOSCameraPreview> {
     // Use AppKitView for macOS platform view
     return const AppKitView(
       viewType: 'openvine/camera_preview',
-      creationParams: <String, dynamic>{
-        'preview': true,
-      },
+      creationParams: <String, dynamic>{'preview': true},
       creationParamsCodec: StandardMessageCodec(),
     );
   }
@@ -37,10 +35,7 @@ class _MacOSCameraPreviewState extends State<MacOSCameraPreview> {
 class CameraPreviewPlaceholder extends StatelessWidget {
   final bool isRecording;
 
-  const CameraPreviewPlaceholder({
-    super.key,
-    this.isRecording = false,
-  });
+  const CameraPreviewPlaceholder({super.key, this.isRecording = false});
 
   @override
   Widget build(BuildContext context) {

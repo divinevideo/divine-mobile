@@ -14,9 +14,7 @@ void main() {
       bool includeReposts = false,
     }) {
       // Create a unique string representation of the subscription parameters
-      final parts = <String>[
-        'type:$subscriptionType',
-      ];
+      final parts = <String>['type:$subscriptionType'];
 
       // Add sorted authors to ensure consistent ordering
       if (authors != null && authors.isNotEmpty) {
@@ -217,9 +215,7 @@ void main() {
     });
 
     test('empty parameters should still generate valid ID', () {
-      final id = generateSubscriptionId(
-        subscriptionType: 'discovery',
-      );
+      final id = generateSubscriptionId(subscriptionType: 'discovery');
 
       expect(id, isNotEmpty);
       expect(id, startsWith('discovery_'));

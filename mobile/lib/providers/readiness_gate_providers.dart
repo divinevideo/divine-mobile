@@ -21,7 +21,7 @@ class NostrInitialization extends _$NostrInitialization {
 
   /// Call this when NostrService completes initialization
   void markInitialized() {
-    state = true;  // Triggers reactive update
+    state = true; // Triggers reactive update
   }
 }
 
@@ -40,8 +40,11 @@ bool appReady(Ref ref) {
   final ready = isForegrounded && isNostrReady;
 
   // Debug logging to track gate state changes
-  Log.debug('[GATE] 🚦 appReady: $ready (foreground: $isForegrounded, nostr: $isNostrReady)',
-      name: 'ReadinessGates', category: LogCategory.system);
+  Log.debug(
+    '[GATE] 🚦 appReady: $ready (foreground: $isForegrounded, nostr: $isNostrReady)',
+    name: 'ReadinessGates',
+    category: LogCategory.system,
+  );
 
   // App is ready when both foreground and Nostr are ready
   return ready;
@@ -51,18 +54,26 @@ bool appReady(Ref ref) {
 @riverpod
 bool isDiscoveryTabActive(Ref ref) {
   final context = ref.watch(pageContextProvider);
-  final isActive = context.whenOrNull(
-    data: (ctx) {
-      final active = ctx.type == RouteType.explore;
-      Log.debug('[GATE] 🎯 isDiscoveryTabActive: $active (route: ${ctx.type}, hasVideoIndex: ${ctx.videoIndex != null})',
-          name: 'ReadinessGates', category: LogCategory.system);
-      return active;
-    },
-  ) ?? false;
+  final isActive =
+      context.whenOrNull(
+        data: (ctx) {
+          final active = ctx.type == RouteType.explore;
+          Log.debug(
+            '[GATE] 🎯 isDiscoveryTabActive: $active (route: ${ctx.type}, hasVideoIndex: ${ctx.videoIndex != null})',
+            name: 'ReadinessGates',
+            category: LogCategory.system,
+          );
+          return active;
+        },
+      ) ??
+      false;
 
   if (!isActive) {
-    Log.debug('[GATE] 🎯 isDiscoveryTabActive: false (context state: ${context.runtimeType})',
-        name: 'ReadinessGates', category: LogCategory.system);
+    Log.debug(
+      '[GATE] 🎯 isDiscoveryTabActive: false (context state: ${context.runtimeType})',
+      name: 'ReadinessGates',
+      category: LogCategory.system,
+    );
   }
 
   return isActive;

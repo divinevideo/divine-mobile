@@ -24,20 +24,21 @@ void main() {
       mockAuthService = MockAuthService();
     });
 
-    testWidgets('should show Delete Account option when authenticated',
-        (tester) async {
+    testWidgets('should show Delete Account option when authenticated', (
+      tester,
+    ) async {
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentProfile).thenReturn(null);
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            accountDeletionServiceProvider.overrideWithValue(mockDeletionService),
+            accountDeletionServiceProvider.overrideWithValue(
+              mockDeletionService,
+            ),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 
@@ -51,19 +52,20 @@ void main() {
       );
     });
 
-    testWidgets('should hide Delete Account when not authenticated',
-        (tester) async {
+    testWidgets('should hide Delete Account when not authenticated', (
+      tester,
+    ) async {
       when(mockAuthService.isAuthenticated).thenReturn(false);
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            accountDeletionServiceProvider.overrideWithValue(mockDeletionService),
+            accountDeletionServiceProvider.overrideWithValue(
+              mockDeletionService,
+            ),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 
@@ -73,20 +75,21 @@ void main() {
       expect(find.text('Delete Account'), findsNothing);
     });
 
-    testWidgets('should show warning dialog when Delete Account tapped',
-        (tester) async {
+    testWidgets('should show warning dialog when Delete Account tapped', (
+      tester,
+    ) async {
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentProfile).thenReturn(null);
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            accountDeletionServiceProvider.overrideWithValue(mockDeletionService),
+            accountDeletionServiceProvider.overrideWithValue(
+              mockDeletionService,
+            ),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 
@@ -99,20 +102,21 @@ void main() {
       expect(find.textContaining('PERMANENT'), findsOneWidget);
     });
 
-    testWidgets('Delete Account tile should have red icon and text',
-        (tester) async {
+    testWidgets('Delete Account tile should have red icon and text', (
+      tester,
+    ) async {
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentProfile).thenReturn(null);
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            accountDeletionServiceProvider.overrideWithValue(mockDeletionService),
+            accountDeletionServiceProvider.overrideWithValue(
+              mockDeletionService,
+            ),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 

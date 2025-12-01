@@ -94,10 +94,14 @@ void main() {
       // Check if test video exists
       if (!await testVideoFile.exists()) {
         print('⚠️  Test video not found: ${testVideoFile.path}');
-        print('   Please ensure test_video_upload_success.mp4 exists in the project root');
+        print(
+          '   Please ensure test_video_upload_success.mp4 exists in the project root',
+        );
         // Fallback: Create a minimal MP4 (will not have extractable thumbnail)
         await _createValidTestMP4(testVideoFile);
-        print('📹 Created minimal test video (no thumbnail available): ${testVideoFile.path}');
+        print(
+          '📹 Created minimal test video (no thumbnail available): ${testVideoFile.path}',
+        );
       } else {
         print('📹 Using real test video: ${testVideoFile.path}');
       }
@@ -116,235 +120,291 @@ void main() {
 
     tearDownAll(() async {
       // Only delete if we created a minimal test file (not the real test video)
-      if (testVideoFile.path.startsWith('test_e2e_video_') && await testVideoFile.exists()) {
+      if (testVideoFile.path.startsWith('test_e2e_video_') &&
+          await testVideoFile.exists()) {
         await testVideoFile.delete();
         print('🗑️  Cleaned up test video');
       }
     });
 
-    test('should extract thumbnail, embed as data URI, and publish to Nostr', () async {
-      print('\n🎬 Starting E2E test: Video → Thumbnail → Nostr Event\n');
+    test(
+      'should extract thumbnail, embed as data URI, and publish to Nostr',
+      () async {
+        print('\n🎬 Starting E2E test: Video → Thumbnail → Nostr Event\n');
 
-      // ARRANGE: Create upload with video file
-      final upload = PendingUpload.create(
-        localVideoPath: testVideoFile.path,
-        nostrPubkey: 'test_pubkey',
-        title: 'E2E Test Video',
-        description: 'Testing thumbnail extraction and Nostr publishing',
-        hashtags: ['e2e', 'test', 'thumbnail'],
-        videoWidth: 1920,
-        videoHeight: 1080,
-        videoDuration: const Duration(seconds: 5),
-      ).copyWith(
-        videoId: 'test_video_id_123',
-        cdnUrl: 'https://cdn.divine.video/test_video_hash',
-        status: UploadStatus.readyToPublish,
-      );
+        // ARRANGE: Create upload with video file
+        final upload =
+            PendingUpload.create(
+              localVideoPath: testVideoFile.path,
+              nostrPubkey: 'test_pubkey',
+              title: 'E2E Test Video',
+              description: 'Testing thumbnail extraction and Nostr publishing',
+              hashtags: ['e2e', 'test', 'thumbnail'],
+              videoWidth: 1920,
+              videoHeight: 1080,
+              videoDuration: const Duration(seconds: 5),
+            ).copyWith(
+              videoId: 'test_video_id_123',
+              cdnUrl: 'https://cdn.divine.video/test_video_hash',
+              status: UploadStatus.readyToPublish,
+            );
 
-      print('📤 Upload prepared:');
-      print('   - Video: ${upload.localVideoPath}');
-      print('   - Title: ${upload.title}');
-      print('   - Hashtags: ${upload.hashtags}');
-      print('');
+        print('📤 Upload prepared:');
+        print('   - Video: ${upload.localVideoPath}');
+        print('   - Title: ${upload.title}');
+        print('   - Hashtags: ${upload.hashtags}');
+        print('');
 
-      // ACT: Publish the upload (this should extract thumbnail and create event)
-      print('🚀 Publishing upload...');
-      final success = await publisher.publishDirectUpload(upload);
+        // ACT: Publish the upload (this should extract thumbnail and create event)
+        print('🚀 Publishing upload...');
+        final success = await publisher.publishDirectUpload(upload);
 
-      // ASSERT: Publishing succeeded
-      expect(success, isTrue, reason: 'Publishing should succeed');
-      print('✅ Publishing succeeded\n');
+        // ASSERT: Publishing succeeded
+        expect(success, isTrue, reason: 'Publishing should succeed');
+        print('✅ Publishing succeeded\n');
 
-      // Verify event was broadcast
-      expect(mockNostrService.lastBroadcastedEvent, isNotNull,
-          reason: 'Event should be broadcasted');
+        // Verify event was broadcast
+        expect(
+          mockNostrService.lastBroadcastedEvent,
+          isNotNull,
+          reason: 'Event should be broadcasted',
+        );
 
-      final event = mockNostrService.lastBroadcastedEvent!;
+        final event = mockNostrService.lastBroadcastedEvent!;
 
-      print('📋 Broadcasted Nostr Event:');
-      print('   - ID: ${event.id}');
-      print('   - Kind: ${event.kind}');
-      print('   - Pubkey: ${event.pubkey}');
-      print('   - Content: "${event.content}"');
-      print('   - Tags: ${event.tags.length} total\n');
+        print('📋 Broadcasted Nostr Event:');
+        print('   - ID: ${event.id}');
+        print('   - Kind: ${event.kind}');
+        print('   - Pubkey: ${event.pubkey}');
+        print('   - Content: "${event.content}"');
+        print('   - Tags: ${event.tags.length} total\n');
 
-      // VERIFY 1: Event kind is NIP-71 addressable video
-      expect(event.kind, equals(34236),
-          reason: 'Event should be NIP-71 addressable short video (kind 34236)');
-      print('✅ Event kind is 34236 (NIP-71)\n');
+        // VERIFY 1: Event kind is NIP-71 addressable video
+        expect(
+          event.kind,
+          equals(34236),
+          reason: 'Event should be NIP-71 addressable short video (kind 34236)',
+        );
+        print('✅ Event kind is 34236 (NIP-71)\n');
 
-      // VERIFY 2: Event has imeta tag
-      final imetaTag = event.tags.firstWhere(
-        (tag) => tag.isNotEmpty && tag[0] == 'imeta',
-        orElse: () => <String>[],
-      );
+        // VERIFY 2: Event has imeta tag
+        final imetaTag = event.tags.firstWhere(
+          (tag) => tag.isNotEmpty && tag[0] == 'imeta',
+          orElse: () => <String>[],
+        );
 
-      expect(imetaTag, isNotEmpty, reason: 'Event should have imeta tag');
-      print('📸 imeta tag found with ${imetaTag.length - 1} components:');
-      for (var i = 1; i < imetaTag.length; i++) {
-        final component = imetaTag[i];
-        if (component.startsWith('image data:image/jpeg;base64,')) {
-          final dataUriLength = component.length;
-          final base64Length = component.substring('image data:image/jpeg;base64,'.length).length;
-          print('   - image: data:image/jpeg;base64,... (${dataUriLength} chars, ${base64Length} base64 chars)');
-        } else if (component.startsWith('blurhash ')) {
-          print('   - ${component.substring(0, 30)}...');
+        expect(imetaTag, isNotEmpty, reason: 'Event should have imeta tag');
+        print('📸 imeta tag found with ${imetaTag.length - 1} components:');
+        for (var i = 1; i < imetaTag.length; i++) {
+          final component = imetaTag[i];
+          if (component.startsWith('image data:image/jpeg;base64,')) {
+            final dataUriLength = component.length;
+            final base64Length = component
+                .substring('image data:image/jpeg;base64,'.length)
+                .length;
+            print(
+              '   - image: data:image/jpeg;base64,... (${dataUriLength} chars, ${base64Length} base64 chars)',
+            );
+          } else if (component.startsWith('blurhash ')) {
+            print('   - ${component.substring(0, 30)}...');
+          } else {
+            print('   - $component');
+          }
+        }
+        print('');
+
+        // VERIFY 3: Check for embedded thumbnail (base64 data URI)
+        // NOTE: Thumbnail extraction may fail in test environment (no FFmpeg/plugin available)
+        final imageComponent = imetaTag.firstWhere(
+          (c) => (c as String).startsWith('image '),
+          orElse: () => '',
+        );
+
+        if (imageComponent.isNotEmpty) {
+          final imageValue = imageComponent.substring('image '.length);
+          expect(
+            imageValue.startsWith('data:image/jpeg;base64,'),
+            isTrue,
+            reason: 'Image should be embedded as base64 data URI',
+          );
+
+          print('✅ Thumbnail is embedded as base64 data URI\n');
+
+          // VERIFY 4: Validate base64 data URI can be decoded
+          final base64Data = imageValue.substring(
+            'data:image/jpeg;base64,'.length,
+          );
+          expect(
+            base64Data,
+            isNotEmpty,
+            reason: 'Base64 data should not be empty',
+          );
+
+          try {
+            final decodedBytes = base64.decode(base64Data);
+            expect(
+              decodedBytes.length,
+              greaterThan(0),
+              reason: 'Decoded thumbnail should have data',
+            );
+
+            final thumbnailSizeKB = (decodedBytes.length / 1024)
+                .toStringAsFixed(1);
+            print('✅ Thumbnail decoded successfully: ${thumbnailSizeKB} KB\n');
+          } catch (e) {
+            fail('Failed to decode base64 thumbnail: $e');
+          }
         } else {
-          print('   - $component');
+          print(
+            'ℹ️  No thumbnail embedded (FFmpeg/plugin not available in test environment)\n',
+          );
         }
-      }
-      print('');
 
-      // VERIFY 3: Check for embedded thumbnail (base64 data URI)
-      // NOTE: Thumbnail extraction may fail in test environment (no FFmpeg/plugin available)
-      final imageComponent = imetaTag.firstWhere(
-        (c) => (c as String).startsWith('image '),
-        orElse: () => '',
-      );
+        // VERIFY 5: Check for blurhash component
+        final blurhashComponent = imetaTag.firstWhere(
+          (c) => (c as String).startsWith('blurhash '),
+          orElse: () => '',
+        );
 
-      if (imageComponent.isNotEmpty) {
-        final imageValue = imageComponent.substring('image '.length);
-        expect(imageValue.startsWith('data:image/jpeg;base64,'), isTrue,
-            reason: 'Image should be embedded as base64 data URI');
-
-        print('✅ Thumbnail is embedded as base64 data URI\n');
-
-        // VERIFY 4: Validate base64 data URI can be decoded
-        final base64Data = imageValue.substring('data:image/jpeg;base64,'.length);
-        expect(base64Data, isNotEmpty, reason: 'Base64 data should not be empty');
-
-        try {
-          final decodedBytes = base64.decode(base64Data);
-          expect(decodedBytes.length, greaterThan(0),
-              reason: 'Decoded thumbnail should have data');
-
-          final thumbnailSizeKB = (decodedBytes.length / 1024).toStringAsFixed(1);
-          print('✅ Thumbnail decoded successfully: ${thumbnailSizeKB} KB\n');
-        } catch (e) {
-          fail('Failed to decode base64 thumbnail: $e');
+        if (blurhashComponent.isNotEmpty) {
+          final blurhash = blurhashComponent.substring('blurhash '.length);
+          expect(
+            blurhash.length,
+            greaterThanOrEqualTo(6),
+            reason: 'Blurhash should have valid length',
+          );
+          print('✅ Blurhash generated: ${blurhash.substring(0, 20)}...\n');
+        } else {
+          print(
+            'ℹ️  Blurhash not generated (BlurhashService may not be fully implemented)\n',
+          );
         }
-      } else {
-        print('ℹ️  No thumbnail embedded (FFmpeg/plugin not available in test environment)\n');
-      }
 
-      // VERIFY 5: Check for blurhash component
-      final blurhashComponent = imetaTag.firstWhere(
-        (c) => (c as String).startsWith('blurhash '),
-        orElse: () => '',
-      );
+        // VERIFY 6: Event has video URL
+        final urlComponent = imetaTag.firstWhere(
+          (c) => (c as String).startsWith('url '),
+          orElse: () => '',
+        );
 
-      if (blurhashComponent.isNotEmpty) {
-        final blurhash = blurhashComponent.substring('blurhash '.length);
-        expect(blurhash.length, greaterThanOrEqualTo(6),
-            reason: 'Blurhash should have valid length');
-        print('✅ Blurhash generated: ${blurhash.substring(0, 20)}...\n');
-      } else {
-        print('ℹ️  Blurhash not generated (BlurhashService may not be fully implemented)\n');
-      }
+        expect(
+          urlComponent,
+          equals('url ${upload.cdnUrl}'),
+          reason: 'imeta should have correct video URL',
+        );
+        print('✅ Video URL in imeta: ${upload.cdnUrl}\n');
 
-      // VERIFY 6: Event has video URL
-      final urlComponent = imetaTag.firstWhere(
-        (c) => (c as String).startsWith('url '),
-        orElse: () => '',
-      );
+        // VERIFY 7: Event has metadata tags
+        final titleTag = event.tags.firstWhere(
+          (tag) => tag.isNotEmpty && tag[0] == 'title',
+          orElse: () => <String>[],
+        );
 
-      expect(urlComponent, equals('url ${upload.cdnUrl}'),
-          reason: 'imeta should have correct video URL');
-      print('✅ Video URL in imeta: ${upload.cdnUrl}\n');
+        expect(titleTag, isNotEmpty, reason: 'Event should have title tag');
+        expect(
+          titleTag[1],
+          equals(upload.title),
+          reason: 'Title should match upload title',
+        );
+        print('✅ Title tag: "${titleTag[1]}"\n');
 
-      // VERIFY 7: Event has metadata tags
-      final titleTag = event.tags.firstWhere(
-        (tag) => tag.isNotEmpty && tag[0] == 'title',
-        orElse: () => <String>[],
-      );
+        final summaryTag = event.tags.firstWhere(
+          (tag) => tag.isNotEmpty && tag[0] == 'summary',
+          orElse: () => <String>[],
+        );
 
-      expect(titleTag, isNotEmpty, reason: 'Event should have title tag');
-      expect(titleTag[1], equals(upload.title),
-          reason: 'Title should match upload title');
-      print('✅ Title tag: "${titleTag[1]}"\n');
+        if (summaryTag.isNotEmpty) {
+          expect(
+            summaryTag[1],
+            equals(upload.description),
+            reason: 'Summary should match upload description',
+          );
+          print('✅ Summary tag: "${summaryTag[1]}"\n');
+        }
 
-      final summaryTag = event.tags.firstWhere(
-        (tag) => tag.isNotEmpty && tag[0] == 'summary',
-        orElse: () => <String>[],
-      );
+        // VERIFY 8: Event has hashtag tags
+        final hashtagTags = event.tags
+            .where((tag) => tag.isNotEmpty && tag[0] == 't')
+            .toList();
 
-      if (summaryTag.isNotEmpty) {
-        expect(summaryTag[1], equals(upload.description),
-            reason: 'Summary should match upload description');
-        print('✅ Summary tag: "${summaryTag[1]}"\n');
-      }
+        expect(
+          hashtagTags.length,
+          equals(upload.hashtags!.length),
+          reason: 'Event should have all hashtags',
+        );
 
-      // VERIFY 8: Event has hashtag tags
-      final hashtagTags = event.tags.where(
-        (tag) => tag.isNotEmpty && tag[0] == 't',
-      ).toList();
+        print('✅ Hashtag tags (${hashtagTags.length}):');
+        for (final tag in hashtagTags) {
+          print('   - #${tag[1]}');
+        }
+        print('');
 
-      expect(hashtagTags.length, equals(upload.hashtags!.length),
-          reason: 'Event should have all hashtags');
+        // VERIFY 9: Event has file metadata (size, hash)
+        final sizeComponent = imetaTag.firstWhere(
+          (c) => (c as String).startsWith('size '),
+          orElse: () => '',
+        );
 
-      print('✅ Hashtag tags (${hashtagTags.length}):');
-      for (final tag in hashtagTags) {
-        print('   - #${tag[1]}');
-      }
-      print('');
+        final hashComponent = imetaTag.firstWhere(
+          (c) => (c as String).startsWith('x '),
+          orElse: () => '',
+        );
 
-      // VERIFY 9: Event has file metadata (size, hash)
-      final sizeComponent = imetaTag.firstWhere(
-        (c) => (c as String).startsWith('size '),
-        orElse: () => '',
-      );
+        if (sizeComponent.isNotEmpty) {
+          final fileSize = sizeComponent.substring('size '.length);
+          print('✅ File size in imeta: $fileSize bytes');
+        }
 
-      final hashComponent = imetaTag.firstWhere(
-        (c) => (c as String).startsWith('x '),
-        orElse: () => '',
-      );
+        if (hashComponent.isNotEmpty) {
+          final fileHash = hashComponent.substring('x '.length);
+          print('✅ SHA256 hash in imeta: ${fileHash.substring(0, 16)}...');
 
-      if (sizeComponent.isNotEmpty) {
-        final fileSize = sizeComponent.substring('size '.length);
-        print('✅ File size in imeta: $fileSize bytes');
-      }
+          // Verify hash is correct
+          final videoBytes = await testVideoFile.readAsBytes();
+          final expectedHash = sha256.convert(videoBytes).toString();
+          expect(
+            fileHash,
+            equals(expectedHash),
+            reason: 'SHA256 hash should match actual file hash',
+          );
+          print('   (Hash verified against actual file)\n');
+        }
 
-      if (hashComponent.isNotEmpty) {
-        final fileHash = hashComponent.substring('x '.length);
-        print('✅ SHA256 hash in imeta: ${fileHash.substring(0, 16)}...');
-
-        // Verify hash is correct
-        final videoBytes = await testVideoFile.readAsBytes();
-        final expectedHash = sha256.convert(videoBytes).toString();
-        expect(fileHash, equals(expectedHash),
-            reason: 'SHA256 hash should match actual file hash');
-        print('   (Hash verified against actual file)\n');
-      }
-
-      print('🎉 E2E TEST PASSED!\n');
-      print('Summary:');
-      print('✅ Thumbnail extracted from video at 500ms');
-      print('✅ Thumbnail encoded as base64 data URI');
-      print('✅ Blurhash generated from thumbnail');
-      print('✅ Nostr event created with kind 34236 (NIP-71)');
-      print('✅ Event contains embedded thumbnail in imeta tag');
-      print('✅ Event contains all metadata (title, description, hashtags)');
-      print('✅ Event contains file metadata (size, SHA256)');
-      print('✅ Event successfully broadcasted to relay');
-    }, timeout: const Timeout(Duration(seconds: 30)));
+        print('🎉 E2E TEST PASSED!\n');
+        print('Summary:');
+        print('✅ Thumbnail extracted from video at 500ms');
+        print('✅ Thumbnail encoded as base64 data URI');
+        print('✅ Blurhash generated from thumbnail');
+        print('✅ Nostr event created with kind 34236 (NIP-71)');
+        print('✅ Event contains embedded thumbnail in imeta tag');
+        print('✅ Event contains all metadata (title, description, hashtags)');
+        print('✅ Event contains file metadata (size, SHA256)');
+        print('✅ Event successfully broadcasted to relay');
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+    );
 
     test('should handle missing video file gracefully', () async {
       // ARRANGE: Upload with non-existent video file
-      final upload = PendingUpload.create(
-        localVideoPath: '/nonexistent/video.mp4',
-        nostrPubkey: 'test_pubkey',
-        title: 'Missing Video',
-      ).copyWith(
-        videoId: 'test_missing_video',
-        cdnUrl: 'https://cdn.divine.video/missing_video',
-        status: UploadStatus.readyToPublish,
-      );
+      final upload =
+          PendingUpload.create(
+            localVideoPath: '/nonexistent/video.mp4',
+            nostrPubkey: 'test_pubkey',
+            title: 'Missing Video',
+          ).copyWith(
+            videoId: 'test_missing_video',
+            cdnUrl: 'https://cdn.divine.video/missing_video',
+            status: UploadStatus.readyToPublish,
+          );
 
       // ACT: Publish upload
       final success = await publisher.publishDirectUpload(upload);
 
       // ASSERT: Should still succeed (thumbnail extraction fails gracefully)
-      expect(success, isTrue, reason: 'Publishing should succeed even without video file');
+      expect(
+        success,
+        isTrue,
+        reason: 'Publishing should succeed even without video file',
+      );
 
       final event = mockNostrService.lastBroadcastedEvent!;
 
@@ -361,24 +421,30 @@ void main() {
         (c) => (c as String).startsWith('image data:image/jpeg;base64,'),
       );
 
-      expect(hasEmbeddedThumbnail, isFalse,
-          reason: 'Should NOT have embedded thumbnail when video file missing');
+      expect(
+        hasEmbeddedThumbnail,
+        isFalse,
+        reason: 'Should NOT have embedded thumbnail when video file missing',
+      );
 
-      print('✅ Gracefully handled missing video file - published without thumbnail');
+      print(
+        '✅ Gracefully handled missing video file - published without thumbnail',
+      );
     });
 
     test('should use URL thumbnail fallback when provided', () async {
       // ARRANGE: Upload without local video file but with URL thumbnail
-      final upload = PendingUpload.create(
-        localVideoPath: '', // No local file
-        nostrPubkey: 'test_pubkey',
-        title: 'URL Thumbnail Video',
-        thumbnailPath: 'https://example.com/thumbnail.jpg',
-      ).copyWith(
-        videoId: 'test_url_thumb_video',
-        cdnUrl: 'https://cdn.divine.video/url_thumb_video',
-        status: UploadStatus.readyToPublish,
-      );
+      final upload =
+          PendingUpload.create(
+            localVideoPath: '', // No local file
+            nostrPubkey: 'test_pubkey',
+            title: 'URL Thumbnail Video',
+            thumbnailPath: 'https://example.com/thumbnail.jpg',
+          ).copyWith(
+            videoId: 'test_url_thumb_video',
+            cdnUrl: 'https://cdn.divine.video/url_thumb_video',
+            status: UploadStatus.readyToPublish,
+          );
 
       // ACT: Publish upload
       final success = await publisher.publishDirectUpload(upload);
@@ -397,8 +463,11 @@ void main() {
         orElse: () => '',
       );
 
-      expect(imageComponent, equals('image https://example.com/thumbnail.jpg'),
-          reason: 'Should use URL thumbnail when local video unavailable');
+      expect(
+        imageComponent,
+        equals('image https://example.com/thumbnail.jpg'),
+        reason: 'Should use URL thumbnail when local video unavailable',
+      );
 
       print('✅ Used URL thumbnail fallback when no local video file');
     });
@@ -418,7 +487,6 @@ Future<void> _createValidTestMP4(File file) async {
     0x69, 0x73, 0x6F, 0x32, // compatible brand 'iso2'
     0x61, 0x76, 0x63, 0x31, // compatible brand 'avc1'
     0x6D, 0x70, 0x34, 0x31, // compatible brand 'mp41'
-
     // moov box (movie metadata)
     0x00, 0x00, 0x00, 0x08, // box size (8 bytes - just header)
     0x6D, 0x6F, 0x6F, 0x76, // 'moov'

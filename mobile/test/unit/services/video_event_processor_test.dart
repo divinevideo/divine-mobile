@@ -145,7 +145,9 @@ void main() {
         expect(videoEvent.id, isNotEmpty);
         expect(videoEvent.title, 'Video without URL');
         expect(
-            videoEvent.videoUrl, isNull); // URL should be null, not cause error
+          videoEvent.videoUrl,
+          isNull,
+        ); // URL should be null, not cause error
 
         // Cleanup
         await subscription.cancel();
@@ -222,15 +224,17 @@ void main() {
           eventReceived = true;
         });
 
-        eventStreamController.add(Event(
-          '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-          34236, // NIP-71 addressable short video
-          [
-            ['d', 'disconnect_test_vine'], // Required for addressable events
-            ['url', 'https://example.com/video.mp4'],
-          ],
-          'Should not be processed',
-        ));
+        eventStreamController.add(
+          Event(
+            '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+            34236, // NIP-71 addressable short video
+            [
+              ['d', 'disconnect_test_vine'], // Required for addressable events
+              ['url', 'https://example.com/video.mp4'],
+            ],
+            'Should not be processed',
+          ),
+        );
 
         await Future.delayed(const Duration(milliseconds: 100));
 
@@ -258,7 +262,7 @@ void main() {
               'x abc123def456',
               'size 5242880',
               'dim 1280x720',
-              'duration 60'
+              'duration 60',
             ],
             ['title', 'Imeta Video'],
           ],
@@ -324,17 +328,18 @@ void main() {
       test('should process multiple events in sequence', () async {
         // ARRANGE
         final events = List.generate(
-            3,
-            (i) => Event(
-                  '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-                  34236, // NIP-71 addressable short video
-                  [
-                    ['d', 'sequence_test_vine_$i'], // Required for addressable events
-                    ['url', 'https://example.com/video$i.mp4'],
-                    ['title', 'Video $i'],
-                  ],
-                  'Video content $i',
-                ));
+          3,
+          (i) => Event(
+            '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+            34236, // NIP-71 addressable short video
+            [
+              ['d', 'sequence_test_vine_$i'], // Required for addressable events
+              ['url', 'https://example.com/video$i.mp4'],
+              ['title', 'Video $i'],
+            ],
+            'Video content $i',
+          ),
+        );
 
         // Subscribe to video event stream
         final receivedEvents = <VideoEvent>[];

@@ -23,10 +23,7 @@ void main() {
 
       // Act & Assert - Should allow up to 100 requests per minute
       for (var i = 0; i < 100; i++) {
-        await expectLater(
-          rateLimiter.checkLimit(endpoint),
-          completes,
-        );
+        await expectLater(rateLimiter.checkLimit(endpoint), completes);
       }
     });
 
@@ -46,7 +43,10 @@ void main() {
           isA<ApiException>()
               .having((e) => e.statusCode, 'statusCode', 429)
               .having(
-                  (e) => e.message, 'message', contains('Rate limit exceeded')),
+                (e) => e.message,
+                'message',
+                contains('Rate limit exceeded'),
+              ),
         ),
       );
     });
@@ -88,10 +88,7 @@ void main() {
       testClock.advance(const Duration(minutes: 1, seconds: 1));
 
       // Assert - Should allow requests again
-      await expectLater(
-        rateLimiter.checkLimit(endpoint),
-        completes,
-      );
+      await expectLater(rateLimiter.checkLimit(endpoint), completes);
     });
 
     test('should track requests per endpoint independently', () async {
@@ -105,10 +102,7 @@ void main() {
       }
 
       // Assert - endpoint2 should still allow requests
-      await expectLater(
-        rateLimiter.checkLimit(endpoint2),
-        completes,
-      );
+      await expectLater(rateLimiter.checkLimit(endpoint2), completes);
     });
 
     test('should use default rate limit for unknown endpoints', () async {
@@ -159,10 +153,7 @@ void main() {
       // Second 50 requests are 31 seconds old and still count
       // So we can add 50 more requests (to reach 100 total)
       for (var i = 0; i < 50; i++) {
-        await expectLater(
-          rateLimiter.checkLimit(endpoint),
-          completes,
-        );
+        await expectLater(rateLimiter.checkLimit(endpoint), completes);
       }
 
       // 51st request should be blocked
@@ -225,10 +216,7 @@ void main() {
       rateLimiter.dispose();
 
       // Assert - Should not throw when checking after dispose
-      expect(
-        () => rateLimiter.checkLimit('/test'),
-        throwsA(isA<StateError>()),
-      );
+      expect(() => rateLimiter.checkLimit('/test'), throwsA(isA<StateError>()));
     });
   });
 

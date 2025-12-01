@@ -5,12 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Verification level enum matching ProofMode implementation
-enum VerificationLevel {
-  verifiedMobile,
-  verifiedWeb,
-  basicProof,
-  unverified,
-}
+enum VerificationLevel { verifiedMobile, verifiedWeb, basicProof, unverified }
 
 /// ProofMode verification badge widget
 class ProofModeBadge extends StatelessWidget {
@@ -36,19 +31,12 @@ class ProofModeBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: config.backgroundColor,
         borderRadius: BorderRadius.circular(dimensions.borderRadius),
-        border: Border.all(
-          color: config.borderColor,
-          width: 1,
-        ),
+        border: Border.all(color: config.borderColor, width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            config.icon,
-            size: dimensions.iconSize,
-            color: config.iconColor,
-          ),
+          Icon(config.icon, size: dimensions.iconSize, color: config.iconColor),
           SizedBox(width: dimensions.iconTextSpacing),
           Text(
             config.label,
@@ -139,10 +127,7 @@ class ProofModeBadge extends StatelessWidget {
 
 /// Original content badge for user-created (non-repost) vines
 class OriginalContentBadge extends StatelessWidget {
-  const OriginalContentBadge({
-    super.key,
-    this.size = BadgeSize.small,
-  });
+  const OriginalContentBadge({super.key, this.size = BadgeSize.small});
 
   final BadgeSize size;
 
@@ -156,7 +141,9 @@ class OriginalContentBadge extends StatelessWidget {
         vertical: dimensions.verticalPadding,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFF00BCD4), // Cyan/teal - modern original content color
+        color: const Color(
+          0xFF00BCD4,
+        ), // Cyan/teal - modern original content color
         borderRadius: BorderRadius.circular(dimensions.borderRadius),
         border: Border.all(
           color: const Color(0xFF0097A7), // Darker cyan border
@@ -220,10 +207,7 @@ class OriginalContentBadge extends StatelessWidget {
 
 /// Original Vine badge for recovered vintage vines
 class OriginalVineBadge extends StatelessWidget {
-  const OriginalVineBadge({
-    super.key,
-    this.size = BadgeSize.small,
-  });
+  const OriginalVineBadge({super.key, this.size = BadgeSize.small});
 
   final BadgeSize size;
 
@@ -299,11 +283,7 @@ class OriginalVineBadge extends StatelessWidget {
 }
 
 /// Badge size enum
-enum BadgeSize {
-  small,
-  medium,
-  large,
-}
+enum BadgeSize { small, medium, large }
 
 /// Badge configuration
 class _BadgeConfig {

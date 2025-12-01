@@ -44,34 +44,35 @@ class _HashtagInputWidgetState extends State<HashtagInputWidget> {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _controller,
-            enableInteractiveSelection: true,
-            decoration: InputDecoration(
-              hintText: 'Add hashtags... #vine #nostr',
-              border: const OutlineInputBorder(),
-              suffixText: '${_hashtags.length}/${widget.maxHashtags}',
-            ),
-            onChanged: _parseHashtags,
-            maxLines: 2,
-          ),
-          if (_hashtags.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: _hashtags
-                  .map(
-                    (hashtag) => Chip(
-                      label: Text(hashtag),
-                      backgroundColor:
-                          Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      TextField(
+        controller: _controller,
+        enableInteractiveSelection: true,
+        decoration: InputDecoration(
+          hintText: 'Add hashtags... #vine #nostr',
+          border: const OutlineInputBorder(),
+          suffixText: '${_hashtags.length}/${widget.maxHashtags}',
+        ),
+        onChanged: _parseHashtags,
+        maxLines: 2,
+      ),
+      if (_hashtags.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: _hashtags
+              .map(
+                (hashtag) => Chip(
+                  label: Text(hashtag),
+                  backgroundColor: Theme.of(
+                    context,
+                  ).primaryColor.withValues(alpha: 0.1),
+                ),
+              )
+              .toList(),
+        ),
+      ],
+    ],
+  );
 }

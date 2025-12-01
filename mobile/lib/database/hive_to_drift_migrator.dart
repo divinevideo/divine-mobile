@@ -33,14 +33,20 @@ class HiveToDriftMigrator {
   /// Run full migration
   Future<MigrationResult> migrate() async {
     if (await isMigrationComplete()) {
-      Log.info('Hive to Drift migration already complete',
-          name: 'HiveToDriftMigrator', category: LogCategory.storage);
+      Log.info(
+        'Hive to Drift migration already complete',
+        name: 'HiveToDriftMigrator',
+        category: LogCategory.storage,
+      );
       return MigrationResult.alreadyComplete();
     }
 
     try {
-      Log.info('Starting Hive to Drift migration...',
-          name: 'HiveToDriftMigrator', category: LogCategory.storage);
+      Log.info(
+        'Starting Hive to Drift migration...',
+        name: 'HiveToDriftMigrator',
+        category: LogCategory.storage,
+      );
 
       // Migrate profiles
       final profileCount = await migrateProfiles();
@@ -51,14 +57,19 @@ class HiveToDriftMigrator {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_migrationFlagKey, true);
 
-      Log.info('Migration complete: $profileCount profiles migrated',
-          name: 'HiveToDriftMigrator', category: LogCategory.storage);
+      Log.info(
+        'Migration complete: $profileCount profiles migrated',
+        name: 'HiveToDriftMigrator',
+        category: LogCategory.storage,
+      );
       return MigrationResult.success(profileCount);
     } catch (e, stackTrace) {
-      Log.error('Migration failed: $e',
-          stackTrace: stackTrace,
-          name: 'HiveToDriftMigrator',
-          category: LogCategory.storage);
+      Log.error(
+        'Migration failed: $e',
+        stackTrace: stackTrace,
+        name: 'HiveToDriftMigrator',
+        category: LogCategory.storage,
+      );
       return MigrationResult.failure(e.toString());
     }
   }
@@ -71,8 +82,11 @@ class HiveToDriftMigrator {
       try {
         profileBox = await Hive.openBox<UserProfile>('profiles');
       } catch (e) {
-        Log.warning('Failed to open Hive profile box: $e',
-            name: 'HiveToDriftMigrator', category: LogCategory.storage);
+        Log.warning(
+          'Failed to open Hive profile box: $e',
+          name: 'HiveToDriftMigrator',
+          category: LogCategory.storage,
+        );
         return 0;
       }
 
@@ -84,23 +98,32 @@ class HiveToDriftMigrator {
           await _db.userProfilesDao.upsertProfile(profile);
           count++;
         } catch (e) {
-          Log.warning('Failed to migrate profile ${profile.pubkey}: $e',
-              name: 'HiveToDriftMigrator', category: LogCategory.storage);
+          Log.warning(
+            'Failed to migrate profile ${profile.pubkey}: $e',
+            name: 'HiveToDriftMigrator',
+            category: LogCategory.storage,
+          );
           failedCount++;
           // Continue with next profile - don't fail entire migration
         }
       }
 
       if (failedCount > 0) {
-        Log.warning('Migration completed with $failedCount failed profiles',
-            name: 'HiveToDriftMigrator', category: LogCategory.storage);
+        Log.warning(
+          'Migration completed with $failedCount failed profiles',
+          name: 'HiveToDriftMigrator',
+          category: LogCategory.storage,
+        );
       }
 
       await profileBox.close();
       return count;
     } catch (e) {
-      Log.error('Failed to migrate profiles: $e',
-          name: 'HiveToDriftMigrator', category: LogCategory.storage);
+      Log.error(
+        'Failed to migrate profiles: $e',
+        name: 'HiveToDriftMigrator',
+        category: LogCategory.storage,
+      );
       return 0;
     }
   }
@@ -113,8 +136,11 @@ class HiveToDriftMigrator {
     // Clear Drift tables
     await _db.customStatement('DELETE FROM user_profiles');
 
-    Log.info('Migration rolled back',
-        name: 'HiveToDriftMigrator', category: LogCategory.storage);
+    Log.info(
+      'Migration rolled back',
+      name: 'HiveToDriftMigrator',
+      category: LogCategory.storage,
+    );
   }
 }
 
@@ -124,16 +150,12 @@ class MigrationResult {
   final int profilesMigrated;
   final String? error;
 
-  MigrationResult.success(this.profilesMigrated)
-      : success = true,
-        error = null;
+  MigrationResult.success(this.profilesMigrated) : success = true, error = null;
 
-  MigrationResult.failure(this.error)
-      : success = false,
-        profilesMigrated = 0;
+  MigrationResult.failure(this.error) : success = false, profilesMigrated = 0;
 
   MigrationResult.alreadyComplete()
-      : success = true,
-        profilesMigrated = 0,
-        error = null;
+    : success = true,
+      profilesMigrated = 0,
+      error = null;
 }

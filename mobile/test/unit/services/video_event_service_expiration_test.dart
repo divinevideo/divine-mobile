@@ -26,7 +26,11 @@ void main() {
       final expiredEvent = Event.fromJson({
         'id': 'expired123',
         'pubkey': 'pubkey123',
-        'created_at': DateTime.now().subtract(Duration(hours: 2)).millisecondsSinceEpoch ~/ 1000,
+        'created_at':
+            DateTime.now()
+                .subtract(Duration(hours: 2))
+                .millisecondsSinceEpoch ~/
+            1000,
         'kind': 34236,
         'tags': [
           ['url', 'https://example.com/video.mp4'],
@@ -52,8 +56,11 @@ void main() {
 
       // Verify no expired events in the list
       final discoveryVideos = service.getVideos(SubscriptionType.discovery);
-      expect(discoveryVideos.where((v) => v.isExpired).length, equals(0),
-          reason: 'Discovery feed should not contain any expired events');
+      expect(
+        discoveryVideos.where((v) => v.isExpired).length,
+        equals(0),
+        reason: 'Discovery feed should not contain any expired events',
+      );
     });
 
     test('allows non-expired events into discovery feed', () {

@@ -9,13 +9,13 @@ import '../helpers/test_provider_overrides.dart';
 
 void main() {
   group('Search hashtag navigation', () {
-    testWidgets('tapping hashtag pushes route instead of replacing search', (tester) async {
+    testWidgets('tapping hashtag pushes route instead of replacing search', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         testProviderScope(
           child: MaterialApp(
-            home: Scaffold(
-              body: SearchScreenPure(embedded: false),
-            ),
+            home: Scaffold(body: SearchScreenPure(embedded: false)),
           ),
         ),
       );

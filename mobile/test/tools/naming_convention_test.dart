@@ -33,36 +33,39 @@ void main() {
       );
     });
 
-    test('should follow feature_component_type.dart naming pattern for screens',
-        () {
-      final screensDir = Directory('lib/screens');
-      if (!screensDir.existsSync()) return;
+    test(
+      'should follow feature_component_type.dart naming pattern for screens',
+      () {
+        final screensDir = Directory('lib/screens');
+        if (!screensDir.existsSync()) return;
 
-      final screenFiles = _findDartFiles(screensDir);
-      final invalidNames = <String>[];
+        final screenFiles = _findDartFiles(screensDir);
+        final invalidNames = <String>[];
 
-      for (final file in screenFiles) {
-        final fileName = path.basenameWithoutExtension(file.path);
+        for (final file in screenFiles) {
+          final fileName = path.basenameWithoutExtension(file.path);
 
-        // Should end with _screen
-        if (!fileName.endsWith('_screen')) {
-          invalidNames.add('${file.path} (should end with _screen)');
+          // Should end with _screen
+          if (!fileName.endsWith('_screen')) {
+            invalidNames.add('${file.path} (should end with _screen)');
+          }
+
+          // Should use lowercase_with_underscores
+          if (fileName.contains(RegExp('[A-Z]'))) {
+            invalidNames.add(
+              '${file.path} (should use lowercase_with_underscores)',
+            );
+          }
         }
 
-        // Should use lowercase_with_underscores
-        if (fileName.contains(RegExp('[A-Z]'))) {
-          invalidNames
-              .add('${file.path} (should use lowercase_with_underscores)');
-        }
-      }
-
-      expect(
-        invalidNames,
-        isEmpty,
-        reason:
-            'Screen files with invalid naming found: ${invalidNames.join(', ')}',
-      );
-    });
+        expect(
+          invalidNames,
+          isEmpty,
+          reason:
+              'Screen files with invalid naming found: ${invalidNames.join(', ')}',
+        );
+      },
+    );
 
     test('should follow PascalCase for class names matching file names', () {
       final libDir = Directory('lib');
@@ -91,8 +94,9 @@ void main() {
 
         // Only check files that define classes
         if (matches.isNotEmpty && !hasMatchingClass) {
-          violations
-              .add('${file.path}: Expected class name $expectedClassName');
+          violations.add(
+            '${file.path}: Expected class name $expectedClassName',
+          );
         }
       }
 

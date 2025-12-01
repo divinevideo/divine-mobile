@@ -23,7 +23,7 @@ void main() {
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           7,
           [
-            ['e', 'video123']
+            ['e', 'video123'],
           ],
           '-', // Not a like
         );
@@ -67,7 +67,7 @@ void main() {
           actorPubkey,
           7,
           [
-            ['e', 'video123']
+            ['e', 'video123'],
           ],
           '+',
           createdAt: 1700000000,
@@ -82,15 +82,17 @@ void main() {
           picture: 'https://example.com/alice.jpg',
         );
 
-        final video = VideoEvent.fromNostrEvent(Event(
-          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-          34236,
-          [
-            ['url', 'https://example.com/video.mp4'],
-            ['thumb', 'https://example.com/thumb.jpg'],
-          ],
-          'Test video',
-        ));
+        final video = VideoEvent.fromNostrEvent(
+          Event(
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            34236,
+            [
+              ['url', 'https://example.com/video.mp4'],
+              ['thumb', 'https://example.com/thumb.jpg'],
+            ],
+            'Test video',
+          ),
+        );
 
         // Act
         final result = parser.parseReactionEvent(
@@ -109,7 +111,10 @@ void main() {
         expect(result.targetEventId, 'video123');
         expect(result.targetVideoUrl, video.videoUrl);
         expect(result.targetVideoThumbnail, video.thumbnailUrl);
-        expect(result.timestamp, DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000));
+        expect(
+          result.timestamp,
+          DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
+        );
       });
 
       test('uses "Unknown user" when profile is null', () {
@@ -118,7 +123,7 @@ void main() {
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           7,
           [
-            ['e', 'video123']
+            ['e', 'video123'],
           ],
           '+',
         );
@@ -166,7 +171,7 @@ void main() {
           actorPubkey,
           1,
           [
-            ['e', 'video456']
+            ['e', 'video456'],
           ],
           'Great video!',
           createdAt: 1700000000,
@@ -202,13 +207,7 @@ void main() {
         // Arrange
         final actorPubkey =
             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-        final event = Event(
-          actorPubkey,
-          3,
-          [],
-          '',
-          createdAt: 1700000000,
-        );
+        final event = Event(actorPubkey, 3, [], '', createdAt: 1700000000);
 
         final profile = UserProfile(
           pubkey: actorPubkey,
@@ -219,10 +218,7 @@ void main() {
         );
 
         // Act
-        final result = parser.parseFollowEvent(
-          event,
-          actorProfile: profile,
-        );
+        final result = parser.parseFollowEvent(event, actorProfile: profile);
 
         // Assert
         expect(result, isNotNull);
@@ -255,10 +251,7 @@ void main() {
         );
 
         // Act
-        final result = parser.parseMentionEvent(
-          event,
-          actorProfile: profile,
-        );
+        final result = parser.parseMentionEvent(event, actorProfile: profile);
 
         // Assert
         expect(result, isNotNull);
@@ -298,7 +291,7 @@ void main() {
           actorPubkey,
           6,
           [
-            ['e', 'video789']
+            ['e', 'video789'],
           ],
           '',
           createdAt: 1700000000,

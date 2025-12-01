@@ -82,55 +82,55 @@ class _VisibilityAwareVideoState extends ConsumerState<VisibilityAwareVideo> {
 
   @override
   Widget build(BuildContext context) => VisibilityDetector(
-        key: Key('video-visibility-${widget.videoId}'),
-        onVisibilityChanged: (visibilityInfo) {
-          // Guard against callbacks after disposal
-          if (!_mounted) return;
+    key: Key('video-visibility-${widget.videoId}'),
+    onVisibilityChanged: (visibilityInfo) {
+      // Guard against callbacks after disposal
+      if (!_mounted) return;
 
-          // Report to centralized manager
-          try {
-            final visibilityManager = ref.read(videoVisibilityManagerProvider);
-            visibilityManager.updateVideoVisibility(
-              widget.videoId,
-              visibilityInfo.visibleFraction,
-            );
+      // Report to centralized manager
+      try {
+        final visibilityManager = ref.read(videoVisibilityManagerProvider);
+        visibilityManager.updateVideoVisibility(
+          widget.videoId,
+          visibilityInfo.visibleFraction,
+        );
 
-            Log.verbose(
-              '👁️ Visibility: ${(visibilityInfo.visibleFraction * 100).toStringAsFixed(1)}% for ${widget.videoId}',
-              name: 'VisibilityAwareVideo',
-              category: LogCategory.ui,
-            );
-          } catch (e) {
-            // Context might not be valid anymore
-            if (_mounted) {
-              Log.error('Error updating visibility: $e',
-                  name: 'VisibilityAwareVideo');
-            }
-          }
+        Log.verbose(
+          '👁️ Visibility: ${(visibilityInfo.visibleFraction * 100).toStringAsFixed(1)}% for ${widget.videoId}',
+          name: 'VisibilityAwareVideo',
+          category: LogCategory.ui,
+        );
+      } catch (e) {
+        // Context might not be valid anymore
+        if (_mounted) {
+          Log.error(
+            'Error updating visibility: $e',
+            name: 'VisibilityAwareVideo',
+          );
+        }
+      }
 
-          // Call custom handler if provided
-          if (_mounted) {
-            widget.onVisibilityChanged?.call(visibilityInfo);
-          }
-        },
-        child: Consumer(
-          builder: (context, ref, _) {
-            final visibilityManager = ref.watch(videoVisibilityManagerProvider);
-            final shouldPlay =
-                visibilityManager.shouldVideoPlay(widget.videoId);
-            final shouldAutoPlay =
-                visibilityManager.shouldAutoPlay(widget.videoId);
+      // Call custom handler if provided
+      if (_mounted) {
+        widget.onVisibilityChanged?.call(visibilityInfo);
+      }
+    },
+    child: Consumer(
+      builder: (context, ref, _) {
+        final visibilityManager = ref.watch(videoVisibilityManagerProvider);
+        final shouldPlay = visibilityManager.shouldVideoPlay(widget.videoId);
+        final shouldAutoPlay = visibilityManager.shouldAutoPlay(widget.videoId);
 
-            // Provide visibility context to child
-            return _VisibilityContext(
-              videoId: widget.videoId,
-              shouldPlay: shouldPlay,
-              shouldAutoPlay: shouldAutoPlay,
-              child: widget.child,
-            );
-          },
-        ),
-      );
+        // Provide visibility context to child
+        return _VisibilityContext(
+          videoId: widget.videoId,
+          shouldPlay: shouldPlay,
+          shouldAutoPlay: shouldAutoPlay,
+          child: widget.child,
+        );
+      },
+    ),
+  );
 }
 
 /// Internal widget to provide visibility context

@@ -34,8 +34,9 @@ MockSharedPreferences createMockSharedPreferences() {
   // Stub all FeatureFlag methods to return sensible defaults
   for (final flag in FeatureFlag.values) {
     when(mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-    when(mockPrefs.setBool('ff_${flag.name}', any))
-        .thenAnswer((_) async => true);
+    when(
+      mockPrefs.setBool('ff_${flag.name}', any),
+    ).thenAnswer((_) async => true);
     when(mockPrefs.remove('ff_${flag.name}')).thenAnswer((_) async => true);
     when(mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
   }
@@ -69,10 +70,9 @@ MockSocialService createMockSocialService() {
   final mockSocial = MockSocialService();
 
   // Stub common methods to return empty results by default
-  when(mockSocial.getFollowerStats(any)).thenAnswer((_) async => {
-    'followers': 0,
-    'following': 0,
-  });
+  when(
+    mockSocial.getFollowerStats(any),
+  ).thenAnswer((_) async => {'followers': 0, 'following': 0});
   when(mockSocial.getUserVideoCount(any)).thenAnswer((_) async => 0);
 
   return mockSocial;

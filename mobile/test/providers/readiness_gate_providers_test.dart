@@ -31,9 +31,7 @@ void main() {
         when(mockNostrService.isInitialized).thenReturn(true);
 
         final container = ProviderContainer(
-          overrides: [
-            nostrServiceProvider.overrideWithValue(mockNostrService),
-          ],
+          overrides: [nostrServiceProvider.overrideWithValue(mockNostrService)],
         );
 
         // Act
@@ -50,9 +48,7 @@ void main() {
         when(mockNostrService.isInitialized).thenReturn(false);
 
         final container = ProviderContainer(
-          overrides: [
-            nostrServiceProvider.overrideWithValue(mockNostrService),
-          ],
+          overrides: [nostrServiceProvider.overrideWithValue(mockNostrService)],
         );
 
         // Act
@@ -64,38 +60,38 @@ void main() {
         container.dispose();
       });
 
-      test('should reactively update when Nostr initialization state changes', () {
-        // Arrange - Use a fake service with mutable state instead of mock
-        final fakeNostrService = _FakeNostrService();
-        fakeNostrService.isInitialized = false;
+      test(
+        'should reactively update when Nostr initialization state changes',
+        () {
+          // Arrange - Use a fake service with mutable state instead of mock
+          final fakeNostrService = _FakeNostrService();
+          fakeNostrService.isInitialized = false;
 
-        final container = ProviderContainer(
-          overrides: [
-            nostrServiceProvider.overrideWithValue(fakeNostrService),
-          ],
-        );
+          final container = ProviderContainer(
+            overrides: [
+              nostrServiceProvider.overrideWithValue(fakeNostrService),
+            ],
+          );
 
-        final states = <bool>[];
-        container.listen(
-          nostrReadyProvider,
-          (previous, next) {
+          final states = <bool>[];
+          container.listen(nostrReadyProvider, (previous, next) {
             states.add(next);
-          },
-        );
+          });
 
-        // Initially false
-        expect(container.read(nostrReadyProvider), isFalse);
+          // Initially false
+          expect(container.read(nostrReadyProvider), isFalse);
 
-        // Act: Simulate Nostr becoming initialized
-        fakeNostrService.isInitialized = true;
-        container.invalidate(nostrReadyProvider);
+          // Act: Simulate Nostr becoming initialized
+          fakeNostrService.isInitialized = true;
+          container.invalidate(nostrReadyProvider);
 
-        // Assert: Should emit true
-        expect(container.read(nostrReadyProvider), isTrue);
-        expect(states, equals([true]));
+          // Assert: Should emit true
+          expect(container.read(nostrReadyProvider), isTrue);
+          expect(states, equals([true]));
 
-        container.dispose();
-      });
+          container.dispose();
+        },
+      );
     });
 
     group('appReadyProvider', () {
@@ -122,53 +118,65 @@ void main() {
         container.dispose();
       });
 
-      test('should return false when app is backgrounded even if Nostr is ready', () {
-        // Arrange
-        when(mockNostrService.isInitialized).thenReturn(true);
+      test(
+        'should return false when app is backgrounded even if Nostr is ready',
+        () {
+          // Arrange
+          when(mockNostrService.isInitialized).thenReturn(true);
 
-        final container = ProviderContainer(
-          overrides: [
-            nostrServiceProvider.overrideWithValue(mockNostrService),
-            appForegroundProvider.overrideWith(_FakeAppForeground.new),
-          ],
-        );
+          final container = ProviderContainer(
+            overrides: [
+              nostrServiceProvider.overrideWithValue(mockNostrService),
+              appForegroundProvider.overrideWith(_FakeAppForeground.new),
+            ],
+          );
 
-        // Set background state after initialization
-        container.read(appForegroundProvider.notifier).setForeground(false);
+          // Set background state after initialization
+          container.read(appForegroundProvider.notifier).setForeground(false);
 
-        // Act
-        final isReady = container.read(appReadyProvider);
+          // Act
+          final isReady = container.read(appReadyProvider);
 
-        // Assert
-        expect(isReady, isFalse,
-            reason: 'App should not be ready when backgrounded');
+          // Assert
+          expect(
+            isReady,
+            isFalse,
+            reason: 'App should not be ready when backgrounded',
+          );
 
-        container.dispose();
-      });
+          container.dispose();
+        },
+      );
 
-      test('should return false when Nostr is not initialized even if foregrounded', () {
-        // Arrange
-        when(mockNostrService.isInitialized).thenReturn(false);
+      test(
+        'should return false when Nostr is not initialized even if foregrounded',
+        () {
+          // Arrange
+          when(mockNostrService.isInitialized).thenReturn(false);
 
-        final container = ProviderContainer(
-          overrides: [
-            nostrServiceProvider.overrideWithValue(mockNostrService),
-            appForegroundProvider.overrideWith(_FakeAppForeground.new),
-          ],
-        );
+          final container = ProviderContainer(
+            overrides: [
+              nostrServiceProvider.overrideWithValue(mockNostrService),
+              appForegroundProvider.overrideWith(_FakeAppForeground.new),
+            ],
+          );
 
-        // Set foreground state after initialization (default is already true)
-        container.read(appForegroundProvider.notifier).setForeground(true);
+          // Set foreground state after initialization (default is already true)
+          container.read(appForegroundProvider.notifier).setForeground(true);
 
-        // Act
-        final isReady = container.read(appReadyProvider);
+          // Act
+          final isReady = container.read(appReadyProvider);
 
-        // Assert
-        expect(isReady, isFalse,
-            reason: 'App should not be ready when Nostr not initialized');
+          // Assert
+          expect(
+            isReady,
+            isFalse,
+            reason: 'App should not be ready when Nostr not initialized',
+          );
 
-        container.dispose();
-      });
+          container.dispose();
+        },
+      );
 
       test('should return false when both are not ready', () {
         // Arrange
@@ -245,8 +253,11 @@ void main() {
         // The provider should be true once data arrives, or false while loading
         // Since Stream.fromIterable emits synchronously on subscription, this should work
         // But if still loading, that's also valid behavior (returns false)
-        expect(isActive == true || container.read(pageContextProvider).isLoading, isTrue,
-            reason: 'Should be true when route is explore, or still loading');
+        expect(
+          isActive == true || container.read(pageContextProvider).isLoading,
+          isTrue,
+          reason: 'Should be true when route is explore, or still loading',
+        );
 
         container.dispose();
       });
@@ -315,8 +326,11 @@ void main() {
         final isActive = container.read(isDiscoveryTabActiveProvider);
 
         // Assert
-        expect(isActive, isFalse,
-            reason: 'Should be false while loading route context');
+        expect(
+          isActive,
+          isFalse,
+          reason: 'Should be false while loading route context',
+        );
 
         container.dispose();
       });

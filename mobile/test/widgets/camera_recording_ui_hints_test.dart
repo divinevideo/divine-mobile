@@ -13,15 +13,20 @@ import 'package:openvine/services/vine_recording_controller.dart';
 class _TestVineRecordingNotifier extends VineRecordingNotifier {
   final VineRecordingUIState _state;
 
-  _TestVineRecordingNotifier(this._state, VineRecordingController controller, Ref ref)
-      : super(controller, ref) {
+  _TestVineRecordingNotifier(
+    this._state,
+    VineRecordingController controller,
+    Ref ref,
+  ) : super(controller, ref) {
     state = _state; // Set the initial state
   }
 }
 
 void main() {
   group('Camera Recording UI Hints Tests', () {
-    testWidgets('should show "Tap to record" hint on web platform', (tester) async {
+    testWidgets('should show "Tap to record" hint on web platform', (
+      tester,
+    ) async {
       // Create a mock recording state
       final mockState = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
@@ -38,8 +43,13 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            vineRecordingProvider.overrideWith((ref) =>
-                _TestVineRecordingNotifier(mockState, VineRecordingController(), ref)),
+            vineRecordingProvider.overrideWith(
+              (ref) => _TestVineRecordingNotifier(
+                mockState,
+                VineRecordingController(),
+                ref,
+              ),
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -51,9 +61,7 @@ void main() {
                   return Column(
                     children: [
                       if (!state.isRecording && !state.hasSegments)
-                        Text(
-                          kIsWeb ? 'Tap to record' : 'Hold to record',
-                        ),
+                        Text(kIsWeb ? 'Tap to record' : 'Hold to record'),
                     ],
                   );
                 },
@@ -72,7 +80,9 @@ void main() {
       }
     });
 
-    testWidgets('should show segment count on mobile when segments exist', (tester) async {
+    testWidgets('should show segment count on mobile when segments exist', (
+      tester,
+    ) async {
       if (kIsWeb) {
         // Skip this test on web
         return;
@@ -107,8 +117,13 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            vineRecordingProvider.overrideWith((ref) =>
-                _TestVineRecordingNotifier(mockState, VineRecordingController(), ref)),
+            vineRecordingProvider.overrideWith(
+              (ref) => _TestVineRecordingNotifier(
+                mockState,
+                VineRecordingController(),
+                ref,
+              ),
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -162,8 +177,13 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            vineRecordingProvider.overrideWith((ref) =>
-                _TestVineRecordingNotifier(mockState, VineRecordingController(), ref)),
+            vineRecordingProvider.overrideWith(
+              (ref) => _TestVineRecordingNotifier(
+                mockState,
+                VineRecordingController(),
+                ref,
+              ),
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -174,9 +194,7 @@ void main() {
                   return Column(
                     children: [
                       if (!kIsWeb && state.hasSegments)
-                        Text(
-                          '${state.segments.length} segment',
-                        ),
+                        Text('${state.segments.length} segment'),
                     ],
                   );
                 },
@@ -206,8 +224,13 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            vineRecordingProvider.overrideWith((ref) =>
-                _TestVineRecordingNotifier(mockState, VineRecordingController(), ref)),
+            vineRecordingProvider.overrideWith(
+              (ref) => _TestVineRecordingNotifier(
+                mockState,
+                VineRecordingController(),
+                ref,
+              ),
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -218,9 +241,7 @@ void main() {
                   return Column(
                     children: [
                       if (!state.isRecording && !state.hasSegments)
-                        Text(
-                          kIsWeb ? 'Tap to record' : 'Hold to record',
-                        ),
+                        Text(kIsWeb ? 'Tap to record' : 'Hold to record'),
                     ],
                   );
                 },
@@ -258,8 +279,13 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            vineRecordingProvider.overrideWith((ref) =>
-                _TestVineRecordingNotifier(mockState, VineRecordingController(), ref)),
+            vineRecordingProvider.overrideWith(
+              (ref) => _TestVineRecordingNotifier(
+                mockState,
+                VineRecordingController(),
+                ref,
+              ),
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -270,9 +296,7 @@ void main() {
                   return Column(
                     children: [
                       if (!state.isRecording && !state.hasSegments)
-                        Text(
-                          kIsWeb ? 'Tap to record' : 'Hold to record',
-                        ),
+                        Text(kIsWeb ? 'Tap to record' : 'Hold to record'),
                     ],
                   );
                 },

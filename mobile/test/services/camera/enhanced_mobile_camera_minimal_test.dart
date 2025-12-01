@@ -50,8 +50,9 @@ void main() {
   });
 
   group('EnhancedCameraPreview Widget Structure', () {
-    testWidgets('should build with required parameters',
-        (WidgetTester tester) async {
+    testWidgets('should build with required parameters', (
+      WidgetTester tester,
+    ) async {
       // Create a minimal test widget
       await tester.pumpWidget(
         MaterialApp(
@@ -60,9 +61,7 @@ void main() {
               width: 100,
               height: 100,
               color: Colors.black,
-              child: const Center(
-                child: Text('Camera Preview Placeholder'),
-              ),
+              child: const Center(child: Text('Camera Preview Placeholder')),
             ),
           ),
         ),

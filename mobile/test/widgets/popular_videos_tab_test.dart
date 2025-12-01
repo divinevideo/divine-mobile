@@ -92,38 +92,38 @@ void main() {
           videoEventsProvider.overrideWith(videoEventsBuilder),
         ],
         child: MaterialApp(
-          home: Scaffold(
-            body: PopularVideosTab(
-              onVideoTap: (_, __) {},
-            ),
-          ),
+          home: Scaffold(body: PopularVideosTab(onVideoTap: (_, __) {})),
         ),
       );
     }
 
     testWidgets('shows loading indicator when data is loading', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        videoEventsBuilder: () => _MockVideoEventsLoading(),
-      ));
+      await tester.pumpWidget(
+        buildTestWidget(videoEventsBuilder: () => _MockVideoEventsLoading()),
+      );
       await tester.pump();
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
     testWidgets('shows error message when loading fails', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        videoEventsBuilder: () => _MockVideoEventsError(),
-      ));
+      await tester.pumpWidget(
+        buildTestWidget(videoEventsBuilder: () => _MockVideoEventsError()),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Failed to load trending videos'), findsOneWidget);
       expect(find.byIcon(Icons.error), findsOneWidget);
     });
 
-    testWidgets('shows trending hashtags section when data is available', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        videoEventsBuilder: () => _MockVideoEventsWithData(testVideos),
-      ));
+    testWidgets('shows trending hashtags section when data is available', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildTestWidget(
+          videoEventsBuilder: () => _MockVideoEventsWithData(testVideos),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Should show the Trending Hashtags title
@@ -131,9 +131,9 @@ void main() {
     });
 
     testWidgets('handles empty video list', (tester) async {
-      await tester.pumpWidget(buildTestWidget(
-        videoEventsBuilder: () => _MockVideoEventsWithData([]),
-      ));
+      await tester.pumpWidget(
+        buildTestWidget(videoEventsBuilder: () => _MockVideoEventsWithData([])),
+      );
       await tester.pumpAndSettle();
 
       // Should still show hashtags section even with no videos

@@ -19,15 +19,15 @@ void main() {
   embedded.DatabaseHelper.enableTestMode();
 
   // Mock platform channels for path_provider
-  const MethodChannel pathProviderChannel =
-      MethodChannel('plugins.flutter.io/path_provider');
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(
-    pathProviderChannel,
-    (MethodCall methodCall) async {
-      return '.';
-    },
+  const MethodChannel pathProviderChannel = MethodChannel(
+    'plugins.flutter.io/path_provider',
   );
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(pathProviderChannel, (
+        MethodCall methodCall,
+      ) async {
+        return '.';
+      });
 
   group('Flutter Embedded Nostr Relay Integration', () {
     late NostrService nostrService;
@@ -54,22 +54,33 @@ void main() {
     test('should initialize embedded relay with SQLite storage', () {
       expect(nostrService.isInitialized, isTrue);
       expect(
-          nostrService.connectedRelays.contains('ws://localhost:7447'), isTrue);
+        nostrService.connectedRelays.contains('ws://localhost:7447'),
+        isTrue,
+      );
       // Verify OpenVine's relay is the default
-      expect(nostrService.relays.contains('wss://staging-relay.divine.video'), isTrue);
-      expect(nostrService.primaryRelay, equals('wss://staging-relay.divine.video'));
+      expect(
+        nostrService.relays.contains('wss://staging-relay.divine.video'),
+        isTrue,
+      );
+      expect(
+        nostrService.primaryRelay,
+        equals('wss://staging-relay.divine.video'),
+      );
     });
 
     test('should persist events to SQLite database', () async {
       // Create a test event
       final event = Event(
         keyManager.publicKey!,
-               34236, // Video event
+        34236, // Video event
         [
           ['url', 'https://example.com/test.mp4'],
           ['title', 'Test Video'],
           ['t', 'test'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video content from embedded relay integration',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -91,10 +102,13 @@ void main() {
           'Embedded relay test ${DateTime.now().millisecondsSinceEpoch}';
       final event = Event(
         keyManager.publicKey!,
-               34236,
+        34236,
         [
           ['t', 'embedded-test'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         testContent,
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -107,18 +121,18 @@ void main() {
       final events = <Event>[];
       final subscription = nostrService.subscribeToEvents(
         filters: [
-          Filter(
-            kinds: [34236],
-            authors: [keyManager.publicKey!],
-          ),
+          Filter(kinds: [34236], authors: [keyManager.publicKey!]),
         ],
       );
 
       // Collect events for a short time
-      await for (final e in subscription.take(5).timeout(
-            const Duration(seconds: 2),
-            onTimeout: (sink) => sink.close(),
-          )) {
+      await for (final e
+          in subscription
+              .take(5)
+              .timeout(
+                const Duration(seconds: 2),
+                onTimeout: (sink) => sink.close(),
+              )) {
         events.add(e);
       }
 
@@ -128,22 +142,31 @@ void main() {
 
     test('should support external relay synchronization', () async {
       // Verify default OpenVine relay is configured
-      expect(nostrService.relays.contains('wss://staging-relay.divine.video'), isTrue);
-      expect(nostrService.relays.length,
-          equals(2)); // embedded + staging-relay.divine.video
+      expect(
+        nostrService.relays.contains('wss://staging-relay.divine.video'),
+        isTrue,
+      );
+      expect(
+        nostrService.relays.length,
+        equals(2),
+      ); // embedded + staging-relay.divine.video
 
       // Add a new relay
       final added = await nostrService.addRelay('wss://nos.lol');
       expect(added, isTrue);
       expect(nostrService.relays.contains('wss://nos.lol'), isTrue);
       expect(
-          nostrService.relays.length, equals(3)); // embedded + relay3 + nos.lol
+        nostrService.relays.length,
+        equals(3),
+      ); // embedded + relay3 + nos.lol
 
       // Remove the relay
       await nostrService.removeRelay('wss://nos.lol');
       expect(nostrService.relays.contains('wss://nos.lol'), isFalse);
       expect(
-          nostrService.relays.length, equals(2)); // back to embedded + relay3
+        nostrService.relays.length,
+        equals(2),
+      ); // back to embedded + relay3
     });
 
     test('should handle replaceable events correctly', () async {
@@ -153,7 +176,10 @@ void main() {
         10001, // Replaceable event kind
         [
           ['d', 'test-replaceable'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'First version',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -170,7 +196,10 @@ void main() {
         10001,
         [
           ['d', 'test-replaceable'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Second version - should replace first',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -182,28 +211,30 @@ void main() {
       // Query for the replaceable event
       final events = await nostrService.getEvents(
         filters: [
-          Filter(
-            kinds: [10001],
-            authors: [keyManager.publicKey!],
-          ),
+          Filter(kinds: [10001], authors: [keyManager.publicKey!]),
         ],
       );
 
       // Should only have the latest version
       expect(events.length, equals(1));
-      expect(events.first.content,
-          equals('Second version - should replace first'));
+      expect(
+        events.first.content,
+        equals('Second version - should replace first'),
+      );
     });
 
     test('should perform content-based search for videos', () async {
       // Create a video event with searchable content
       final event = Event(
         keyManager.publicKey!,
-               34236,
+        34236,
         [
           ['url', 'https://example.com/search-test.mp4'],
           ['title', 'Searchable Video'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'This is a searchable Flutter video about Nostr relay integration',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -219,10 +250,13 @@ void main() {
         authors: [keyManager.publicKey!],
       );
 
-      await for (final e in searchStream.take(5).timeout(
-            const Duration(seconds: 2),
-            onTimeout: (sink) => sink.close(),
-          )) {
+      await for (final e
+          in searchStream
+              .take(5)
+              .timeout(
+                const Duration(seconds: 2),
+                onTimeout: (sink) => sink.close(),
+              )) {
         searchResults.add(e);
       }
 
@@ -235,7 +269,10 @@ void main() {
         keyManager.publicKey!,
         0, // kind 0 - user metadata
         [
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         '{"name":"Test User","about":"Testing relay discovery","relays":"wss://relay.example.com"}',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -250,7 +287,10 @@ void main() {
         [
           ['r', 'wss://custom.relay.io', 'write'],
           ['r', 'wss://another.relay.com', 'read'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         '',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -279,7 +319,10 @@ void main() {
         [
           ['e', 'someeventid', 'wss://hint.relay.org'],
           ['p', 'somepubkey', 'wss://profile.relay.net'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Event with relay hints for discovery',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -294,7 +337,10 @@ void main() {
       expect(nostrService.isInitialized, isTrue);
 
       // Should still have default relays
-      expect(nostrService.relays.contains('wss://staging-relay.divine.video'), isTrue);
+      expect(
+        nostrService.relays.contains('wss://staging-relay.divine.video'),
+        isTrue,
+      );
     });
   });
 }

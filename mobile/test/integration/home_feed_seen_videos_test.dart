@@ -43,39 +43,47 @@ void main() {
         id: 'video1',
         pubkey: 'author1',
         content: 'Test video 1',
-        createdAt: now.subtract(const Duration(hours: 3)).millisecondsSinceEpoch ~/ 1000,
+        createdAt:
+            now.subtract(const Duration(hours: 3)).millisecondsSinceEpoch ~/
+            1000,
         timestamp: now.subtract(const Duration(hours: 3)),
       );
       final video2 = VideoEvent(
         id: 'video2',
         pubkey: 'author1',
         content: 'Test video 2',
-        createdAt: now.subtract(const Duration(hours: 2)).millisecondsSinceEpoch ~/ 1000,
+        createdAt:
+            now.subtract(const Duration(hours: 2)).millisecondsSinceEpoch ~/
+            1000,
         timestamp: now.subtract(const Duration(hours: 2)),
       );
       final video3 = VideoEvent(
         id: 'video3',
         pubkey: 'author1',
         content: 'Test video 3',
-        createdAt: now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch ~/ 1000,
+        createdAt:
+            now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch ~/
+            1000,
         timestamp: now.subtract(const Duration(hours: 1)),
       );
 
       // Setup mock service
-      when(mockVideoService.homeFeedVideos).thenReturn([video1, video2, video3]);
+      when(
+        mockVideoService.homeFeedVideos,
+      ).thenReturn([video1, video2, video3]);
       when(mockVideoService.isSubscribed(any)).thenReturn(false);
-      when(mockVideoService.subscribeToHomeFeed(any, limit: anyNamed('limit')))
-          .thenAnswer((_) async {});
+      when(
+        mockVideoService.subscribeToHomeFeed(any, limit: anyNamed('limit')),
+      ).thenAnswer((_) async {});
 
       // Create container with overrides
       final container = ProviderContainer(
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoService),
           socialProvider.overrideWith(() {
-            return _TestSocialNotifier(SocialState(
-              followingPubkeys: ['author1'],
-              isInitialized: true,
-            ));
+            return _TestSocialNotifier(
+              SocialState(followingPubkeys: ['author1'], isInitialized: true),
+            );
           }),
         ],
       );
@@ -137,17 +145,17 @@ void main() {
 
       when(mockVideoService.homeFeedVideos).thenReturn([video1, video2]);
       when(mockVideoService.isSubscribed(any)).thenReturn(false);
-      when(mockVideoService.subscribeToHomeFeed(any, limit: anyNamed('limit')))
-          .thenAnswer((_) async {});
+      when(
+        mockVideoService.subscribeToHomeFeed(any, limit: anyNamed('limit')),
+      ).thenAnswer((_) async {});
 
       final container = ProviderContainer(
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoService),
           socialProvider.overrideWith(() {
-            return _TestSocialNotifier(SocialState(
-              followingPubkeys: ['author1'],
-              isInitialized: true,
-            ));
+            return _TestSocialNotifier(
+              SocialState(followingPubkeys: ['author1'], isInitialized: true),
+            );
           }),
         ],
       );
@@ -170,30 +178,34 @@ void main() {
         id: 'video1',
         pubkey: 'author1',
         content: '',
-        createdAt: now.subtract(const Duration(hours: 2)).millisecondsSinceEpoch ~/ 1000,
+        createdAt:
+            now.subtract(const Duration(hours: 2)).millisecondsSinceEpoch ~/
+            1000,
         timestamp: now.subtract(const Duration(hours: 2)),
       );
       final video2 = VideoEvent(
         id: 'video2',
         pubkey: 'author1',
         content: '',
-        createdAt: now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch ~/ 1000,
+        createdAt:
+            now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch ~/
+            1000,
         timestamp: now.subtract(const Duration(hours: 1)),
       );
 
       when(mockVideoService.homeFeedVideos).thenReturn([video1, video2]);
       when(mockVideoService.isSubscribed(any)).thenReturn(false);
-      when(mockVideoService.subscribeToHomeFeed(any, limit: anyNamed('limit')))
-          .thenAnswer((_) async {});
+      when(
+        mockVideoService.subscribeToHomeFeed(any, limit: anyNamed('limit')),
+      ).thenAnswer((_) async {});
 
       final container = ProviderContainer(
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoService),
           socialProvider.overrideWith(() {
-            return _TestSocialNotifier(SocialState(
-              followingPubkeys: ['author1'],
-              isInitialized: true,
-            ));
+            return _TestSocialNotifier(
+              SocialState(followingPubkeys: ['author1'], isInitialized: true),
+            );
           }),
         ],
       );

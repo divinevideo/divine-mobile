@@ -21,20 +21,22 @@ class SeenVideosNotifier extends _$SeenVideosNotifier {
 
   void _initializeService() {
     _service = SeenVideosService();
-    _service!.initialize().then((_) {
-      // Load initial state from persistent storage
-      if (!ref.mounted) return; // Provider was disposed
+    _service!
+        .initialize()
+        .then((_) {
+          // Load initial state from persistent storage
+          if (!ref.mounted) return; // Provider was disposed
 
-      final seenIds = _service!.getSeenVideoIds();
-      state = state.copyWith(
-        seenVideoIds: seenIds,
-        isInitialized: true,
-      );
-      Log.info('SeenVideosNotifier initialized with ${seenIds.length} seen videos');
-    }).catchError((e) {
-      if (!ref.mounted) return; // Provider was disposed
-      Log.error('Failed to initialize SeenVideosNotifier: $e');
-    });
+          final seenIds = _service!.getSeenVideoIds();
+          state = state.copyWith(seenVideoIds: seenIds, isInitialized: true);
+          Log.info(
+            'SeenVideosNotifier initialized with ${seenIds.length} seen videos',
+          );
+        })
+        .catchError((e) {
+          if (!ref.mounted) return; // Provider was disposed
+          Log.error('Failed to initialize SeenVideosNotifier: $e');
+        });
   }
 
   /// Check if a video has been seen
@@ -55,7 +57,9 @@ class SeenVideosNotifier extends _$SeenVideosNotifier {
     // Persist to storage
     await _service?.markVideoAsSeen(videoId);
 
-    Log.debug('Marked video as seen: ${videoId.substring(0, videoId.length > 8 ? 8 : videoId.length)}... (total: ${newSeenIds.length})');
+    Log.debug(
+      'Marked video as seen: ${videoId.substring(0, videoId.length > 8 ? 8 : videoId.length)}... (total: ${newSeenIds.length})',
+    );
   }
 
   /// Record video view with metrics

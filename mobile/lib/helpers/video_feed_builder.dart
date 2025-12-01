@@ -48,9 +48,7 @@ class VideoFeedBuilder {
 
   /// Build a feed with the provided configuration
   /// Handles subscription, waiting for stability, and sorting
-  Future<VideoFeedState> buildFeed({
-    required VideoFeedConfig config,
-  }) async {
+  Future<VideoFeedState> buildFeed({required VideoFeedConfig config}) async {
     Log.debug(
       'VideoFeedBuilder: Building feed for ${config.subscriptionType}',
       name: 'VideoFeedBuilder',

@@ -23,11 +23,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Comprehensive share menu for videos
 class ShareVideoMenu extends ConsumerStatefulWidget {
-  const ShareVideoMenu({
-    required this.video,
-    super.key,
-    this.onDismiss,
-  });
+  const ShareVideoMenu({required this.video, super.key, this.onDismiss});
   final VideoEvent video;
   final VoidCallback? onDismiss;
 
@@ -38,133 +34,129 @@ class ShareVideoMenu extends ConsumerStatefulWidget {
 class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
   @override
   Widget build(BuildContext context) => Material(
-        color: VineTheme.backgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              _buildHeader(),
+    color: VineTheme.backgroundColor,
+    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    child: SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          _buildHeader(),
 
-              // Share options
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                      _buildVideoStatusSection(),
-                      if (!_isUserOwnContent() && !widget.video.isOriginalContent) ...[
-                        const SizedBox(height: 16),
-                        _buildQuickAIReportButton(),
-                      ],
-                      const SizedBox(height: 24),
-                      _buildShareSection(),
-                      const SizedBox(height: 24),
-                      _buildListSection(),
-                      const SizedBox(height: 24),
-                      _buildPublicListsSection(),
-                      const SizedBox(height: 24),
-                      _buildBookmarkSection(),
-                      const SizedBox(height: 24),
-                      _buildFollowSetSection(),
-                      if (_isUserOwnContent()) ...[
-                        const SizedBox(height: 24),
-                        _buildDeleteSection(),
-                      ],
-                      const SizedBox(height: 24),
-                      _buildReportSection(),
-                      const SizedBox(height: 24),
-                      _buildAdvancedSection(),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-
-  Widget _buildHeader() => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: Colors.grey.shade800, width: 1),
-          ),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.share, color: VineTheme.whiteText),
-            const SizedBox(width: 12),
-            Expanded(
+          // Share options
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Share Video',
-                    style: TextStyle(
-                      color: VineTheme.whiteText,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (widget.video.title != null)
-                    Text(
-                      widget.video.title!,
-                      style: const TextStyle(
-                        color: VineTheme.secondaryText,
-                        fontSize: 14,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  _buildVideoStatusSection(),
+                  if (!_isUserOwnContent() &&
+                      !widget.video.isOriginalContent) ...[
+                    const SizedBox(height: 16),
+                    _buildQuickAIReportButton(),
+                  ],
+                  const SizedBox(height: 24),
+                  _buildShareSection(),
+                  const SizedBox(height: 24),
+                  _buildListSection(),
+                  const SizedBox(height: 24),
+                  _buildPublicListsSection(),
+                  const SizedBox(height: 24),
+                  _buildBookmarkSection(),
+                  const SizedBox(height: 24),
+                  _buildFollowSetSection(),
+                  if (_isUserOwnContent()) ...[
+                    const SizedBox(height: 24),
+                    _buildDeleteSection(),
+                  ],
+                  const SizedBox(height: 24),
+                  _buildReportSection(),
+                  const SizedBox(height: 24),
+                  _buildAdvancedSection(),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
-            IconButton(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close, color: VineTheme.secondaryText),
-            ),
-          ],
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _buildHeader() => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      border: Border(bottom: BorderSide(color: Colors.grey.shade800, width: 1)),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.share, color: VineTheme.whiteText),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Share Video',
+                style: TextStyle(
+                  color: VineTheme.whiteText,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (widget.video.title != null)
+                Text(
+                  widget.video.title!,
+                  style: const TextStyle(
+                    color: VineTheme.secondaryText,
+                    fontSize: 14,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+            ],
+          ),
         ),
-      );
+        IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.close, color: VineTheme.secondaryText),
+        ),
+      ],
+    ),
+  );
 
   /// Build quick AI report button for one-tap reporting
   Widget _buildQuickAIReportButton() => Container(
+    decoration: BoxDecoration(
+      color: Colors.orange.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+    ),
+    child: ListTile(
+      leading: Container(
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(
-          color: Colors.orange.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+          color: Colors.orange.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(8),
         ),
-        child: ListTile(
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.psychology_alt, color: Colors.orange, size: 20),
-          ),
-          title: Text(
-            'Report AI Content',
-            style: TextStyle(
-              color: VineTheme.whiteText,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          subtitle: Text(
-            'Quick report suspected AI-generated content',
-            style: TextStyle(
-              color: VineTheme.secondaryText,
-              fontSize: 12,
-            ),
-          ),
-          trailing: Icon(Icons.arrow_forward_ios, color: Colors.orange, size: 16),
-          onTap: _quickReportAI,
+        child: Icon(Icons.psychology_alt, color: Colors.orange, size: 20),
+      ),
+      title: Text(
+        'Report AI Content',
+        style: TextStyle(
+          color: VineTheme.whiteText,
+          fontWeight: FontWeight.w600,
         ),
-      );
+      ),
+      subtitle: Text(
+        'Quick report suspected AI-generated content',
+        style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
+      ),
+      trailing: Icon(Icons.arrow_forward_ios, color: Colors.orange, size: 16),
+      onTap: _quickReportAI,
+    ),
+  );
 
   /// Quick report for AI-generated content (kind 1984 event)
   Future<void> _quickReportAI() async {
@@ -193,8 +185,9 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
         );
       }
 
-      final reportService =
-          await ref.read(contentReportingServiceProvider.future);
+      final reportService = await ref.read(
+        contentReportingServiceProvider.future,
+      );
       final result = await reportService.reportContent(
         eventId: widget.video.id,
         authorPubkey: widget.video.pubkey,
@@ -231,8 +224,11 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
         }
       }
     } catch (e) {
-      Log.error('Failed to submit AI report: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to submit AI report: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -247,275 +243,286 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
 
   /// Build video status section showing what lists the video is in
   Widget _buildVideoStatusSection() => Consumer(
-        builder: (context, ref, child) {
-          final curatedListServiceAsync = ref.watch(curatedListServiceProvider);
-          final bookmarkServiceAsync = ref.watch(bookmarkServiceProvider);
+    builder: (context, ref, child) {
+      final curatedListServiceAsync = ref.watch(curatedListServiceProvider);
+      final bookmarkServiceAsync = ref.watch(bookmarkServiceProvider);
 
-          return curatedListServiceAsync.when(
-            data: (curatedListService) {
-              return bookmarkServiceAsync.when(
-                data: (bookmarkService) {
-                  final listsContaining = curatedListService
-                      .getListsContainingVideo(widget.video.id);
-                  final bookmarkStatus =
-                      bookmarkService.getVideoBookmarkSummary(widget.video.id);
+      return curatedListServiceAsync.when(
+        data: (curatedListService) {
+          return bookmarkServiceAsync.when(
+            data: (bookmarkService) {
+              final listsContaining = curatedListService
+                  .getListsContainingVideo(widget.video.id);
+              final bookmarkStatus = bookmarkService.getVideoBookmarkSummary(
+                widget.video.id,
+              );
 
-                  final statusParts = <String>[];
+              final statusParts = <String>[];
 
-                  // Add curated lists status
-                  if (listsContaining.isNotEmpty) {
-                    if (listsContaining.length == 1) {
-                      statusParts.add('In "${listsContaining.first.name}"');
-                    } else if (listsContaining.length <= 3) {
-                      final names = listsContaining
-                          .map((list) => '"${list.name}"')
-                          .join(', ');
-                      statusParts.add('In $names');
-                    } else {
-                      statusParts.add('In ${listsContaining.length} lists');
-                    }
-                  }
+              // Add curated lists status
+              if (listsContaining.isNotEmpty) {
+                if (listsContaining.length == 1) {
+                  statusParts.add('In "${listsContaining.first.name}"');
+                } else if (listsContaining.length <= 3) {
+                  final names = listsContaining
+                      .map((list) => '"${list.name}"')
+                      .join(', ');
+                  statusParts.add('In $names');
+                } else {
+                  statusParts.add('In ${listsContaining.length} lists');
+                }
+              }
 
-                  // Add bookmark status
-                  if (bookmarkStatus != 'Not bookmarked') {
-                    statusParts.add(bookmarkStatus);
-                  }
+              // Add bookmark status
+              if (bookmarkStatus != 'Not bookmarked') {
+                statusParts.add(bookmarkStatus);
+              }
 
-                  if (statusParts.isEmpty) {
-                    return const SizedBox.shrink(); // Hide if no status to show
-                  }
+              if (statusParts.isEmpty) {
+                return const SizedBox.shrink(); // Hide if no status to show
+              }
 
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade900,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade700),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade900,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade700),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Row(
+                        Icon(
+                          Icons.info_outline,
+                          color: VineTheme.vineGreen,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Video Status',
+                          style: TextStyle(
+                            color: VineTheme.whiteText,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...statusParts.map(
+                      (status) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
                           children: [
-                            Icon(Icons.info_outline,
-                                color: VineTheme.vineGreen, size: 18),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Video Status',
-                              style: TextStyle(
-                                color: VineTheme.whiteText,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                            const SizedBox(width: 26), // Align with icon
+                            Expanded(
+                              child: Text(
+                                '• $status',
+                                style: const TextStyle(
+                                  color: VineTheme.lightText,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        ...statusParts.map((status) => Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Row(
-                                children: [
-                                  const SizedBox(width: 26), // Align with icon
-                                  Expanded(
-                                    child: Text(
-                                      '• $status',
-                                      style: const TextStyle(
-                                        color: VineTheme.lightText,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )),
-                        if (listsContaining.length > 3) ...[
-                          const SizedBox(height: 8),
-                          InkWell(
-                            onTap: () => _showAllListsDialog(listsContaining),
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 26),
-                              child: Text(
-                                'View all lists →',
-                                style: TextStyle(
-                                  color: VineTheme.vineGreen,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                      ),
+                    ),
+                    if (listsContaining.length > 3) ...[
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () => _showAllListsDialog(listsContaining),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 26),
+                          child: Text(
+                            'View all lists →',
+                            style: TextStyle(
+                              color: VineTheme.vineGreen,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        ],
-                      ],
-                    ),
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               );
             },
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
           );
         },
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
       );
+    },
+  );
 
   Widget _buildShareSection() => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Share With',
-            style: TextStyle(
-              color: VineTheme.whiteText,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Share With',
+        style: TextStyle(
+          color: VineTheme.whiteText,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 12),
 
-          // Send to user
-          _buildActionTile(
-            icon: Icons.person_add,
-            title: 'Send to Viner',
-            subtitle: 'Share privately with another user',
-            onTap: _showSendToUserDialog,
-          ),
+      // Send to user
+      _buildActionTile(
+        icon: Icons.person_add,
+        title: 'Send to Viner',
+        subtitle: 'Share privately with another user',
+        onTap: _showSendToUserDialog,
+      ),
 
-          const SizedBox(height: 8),
+      const SizedBox(height: 8),
 
-          // External share (native share sheet includes copy option)
-          _buildActionTile(
-            icon: Icons.share,
-            title: 'Share',
-            subtitle: 'Share via other apps or copy link',
-            onTap: _shareExternally,
-          ),
-        ],
-      );
+      // External share (native share sheet includes copy option)
+      _buildActionTile(
+        icon: Icons.share,
+        title: 'Share',
+        subtitle: 'Share via other apps or copy link',
+        onTap: _shareExternally,
+      ),
+    ],
+  );
 
   Widget _buildListSection() => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Lists',
-            style: TextStyle(
-              color: VineTheme.whiteText,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Lists',
+        style: TextStyle(
+          color: VineTheme.whiteText,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 12),
 
-          // Dynamic part: show which lists contain this video (loaded async)
-          Consumer(
-            builder: (context, ref, child) {
-              final listServiceAsync = ref.watch(curatedListServiceProvider);
+      // Dynamic part: show which lists contain this video (loaded async)
+      Consumer(
+        builder: (context, ref, child) {
+          final listServiceAsync = ref.watch(curatedListServiceProvider);
 
-              return listServiceAsync.when(
-                data: (listService) {
-                  final listsContainingVideo =
-                      listService.getListsContainingVideo(widget.video.id);
+          return listServiceAsync.when(
+            data: (listService) {
+              final listsContainingVideo = listService.getListsContainingVideo(
+                widget.video.id,
+              );
 
-                  if (listsContainingVideo.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
+              if (listsContainingVideo.isEmpty) {
+                return const SizedBox.shrink();
+              }
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: VineTheme.vineGreen.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: VineTheme.vineGreen.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: VineTheme.vineGreen.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: VineTheme.vineGreen.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.playlist_add_check,
-                                color: VineTheme.vineGreen,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'In ${listsContainingVideo.length} list${listsContainingVideo.length == 1 ? '' : 's'}',
-                                style: const TextStyle(
-                                  color: VineTheme.vineGreen,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                          Icon(
+                            Icons.playlist_add_check,
+                            color: VineTheme.vineGreen,
+                            size: 18,
                           ),
-                          const SizedBox(height: 8),
-                          ...listsContainingVideo.map((list) => Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: InkWell(
-                                  onTap: () => _removeFromList(list.id),
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 4, horizontal: 4),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.folder,
-                                          color: VineTheme.secondaryText,
-                                          size: 16,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            list.name,
-                                            style: const TextStyle(
-                                              color: VineTheme.whiteText,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ),
-                                        const Icon(
-                                          Icons.remove_circle_outline,
-                                          color: VineTheme.secondaryText,
-                                          size: 16,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              )),
+                          const SizedBox(width: 8),
+                          Text(
+                            'In ${listsContainingVideo.length} list${listsContainingVideo.length == 1 ? '' : 's'}',
+                            style: const TextStyle(
+                              color: VineTheme.vineGreen,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                      const SizedBox(height: 8),
+                      ...listsContainingVideo.map(
+                        (list) => Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: InkWell(
+                            onTap: () => _removeFromList(list.id),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 4,
+                                horizontal: 4,
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.folder,
+                                    color: VineTheme.secondaryText,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      list.name,
+                                      style: const TextStyle(
+                                        color: VineTheme.whiteText,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.remove_circle_outline,
+                                    color: VineTheme.secondaryText,
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               );
             },
-          ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          );
+        },
+      ),
 
-          // Static buttons - always visible immediately
-          _buildActionTile(
-            icon: Icons.playlist_add,
-            title: 'Add to List',
-            subtitle: 'Add to your curated lists',
-            onTap: _showSelectListDialog,
-          ),
+      // Static buttons - always visible immediately
+      _buildActionTile(
+        icon: Icons.playlist_add,
+        title: 'Add to List',
+        subtitle: 'Add to your curated lists',
+        onTap: _showSelectListDialog,
+      ),
 
-          const SizedBox(height: 8),
+      const SizedBox(height: 8),
 
-          _buildActionTile(
-            icon: Icons.create_new_folder,
-            title: 'Create New List',
-            subtitle: 'Start a new curated collection',
-            onTap: _showCreateListDialog,
-          ),
-        ],
-      );
+      _buildActionTile(
+        icon: Icons.create_new_folder,
+        title: 'Create New List',
+        subtitle: 'Start a new curated collection',
+        onTap: _showCreateListDialog,
+      ),
+    ],
+  );
 
   /// Remove video from a specific list
   Future<void> _removeFromList(String listId) async {
@@ -532,8 +539,11 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
         );
       }
     } catch (e) {
-      Log.error('Failed to remove from list: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to remove from list: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -547,164 +557,17 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
   }
 
   /// Build public lists section showing other users' lists containing this video
-  Widget _buildPublicListsSection() => _PublicListsSection(videoId: widget.video.id);
+  Widget _buildPublicListsSection() =>
+      _PublicListsSection(videoId: widget.video.id);
 
   /// Build bookmark section for quick bookmarking
   Widget _buildBookmarkSection() => Consumer(
-        builder: (context, ref, child) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Bookmarks',
-                style: TextStyle(
-                  color: VineTheme.whiteText,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Add to global bookmarks
-              _buildActionTile(
-                icon: Icons.bookmark_outline,
-                title: 'Add to Bookmarks',
-                subtitle: 'Save for later viewing',
-                onTap: _addToGlobalBookmarks,
-              ),
-
-              const SizedBox(height: 8),
-
-              // Add to bookmark set
-              _buildActionTile(
-                icon: Icons.bookmark_add,
-                title: 'Add to Bookmark Set',
-                subtitle: 'Organize in collections',
-                onTap: _showBookmarkSetsDialog,
-              ),
-            ],
-          );
-        },
-      );
-
-  /// Build follow set section for adding authors to follow sets
-  Widget _buildFollowSetSection() => Consumer(
-        builder: (context, ref, child) {
-          final socialService = ref.watch(socialServiceProvider);
-          final followSets = socialService.followSets;
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Follow Sets',
-                style: TextStyle(
-                  color: VineTheme.whiteText,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Create new follow set with this author
-              _buildActionTile(
-                icon: Icons.group_add,
-                title: 'Create Follow Set',
-                subtitle: 'Start new collection with this creator',
-                onTap: _showCreateFollowSetDialog,
-              ),
-
-              // Show existing follow sets if any
-              if (followSets.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                _buildActionTile(
-                  icon: Icons.people,
-                  title: 'Add to Follow Set',
-                  subtitle: '${followSets.length} follow sets available',
-                  onTap: _showSelectFollowSetDialog,
-                ),
-              ],
-            ],
-          );
-        },
-      );
-
-  Widget _buildReportSection() => Consumer(
-        builder: (context, ref, child) {
-          final reportServiceAsync = ref.watch(contentReportingServiceProvider);
-
-          return reportServiceAsync.when(
-            data: (reportService) {
-              final hasReported =
-                  reportService.hasBeenReported(widget.video.id);
-
-              // Wrap in orange warning container
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withAlpha(26), // 0.1 opacity
-                  border: Border.all(
-                    color: Colors.orange.withAlpha(77), // 0.3 opacity
-                    width: 1,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Safety Actions',
-                      style: TextStyle(
-                        color: VineTheme.whiteText,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildActionTile(
-                      icon: hasReported ? Icons.flag : Icons.flag_outlined,
-                      title: hasReported ? 'Already Reported' : 'Report Content',
-                      subtitle: hasReported
-                          ? 'You have reported this content'
-                          : 'Report for policy violations',
-                      iconColor: hasReported ? Colors.red : Colors.orange,
-                      onTap: hasReported ? null : _showReportDialog,
-                    ),
-                    // Add Block User action (only for other users' content)
-                    if (!_isUserOwnContent()) ...[
-                      const SizedBox(height: 8),
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final blocklistService = ref.watch(contentBlocklistServiceProvider);
-                          final isBlocked = blocklistService.isBlocked(widget.video.pubkey);
-                          return _buildActionTile(
-                            icon: isBlocked ? Icons.block : Icons.block_outlined,
-                            title: isBlocked ? 'Unblock User' : 'Block @${widget.video.pubkey.substring(0, 8)}',
-                            subtitle: isBlocked
-                                ? 'Show content from this user'
-                                : 'Hide content from this user',
-                            iconColor: Colors.orange,
-                            onTap: () => _handleBlockUser(ref, isBlocked),
-                          );
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          );
-        },
-      );
-
-  /// Build advanced section for developer/power-user features
-  Widget _buildAdvancedSection() => Column(
+    builder: (context, ref, child) {
+      return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Advanced',
+            'Bookmarks',
             style: TextStyle(
               color: VineTheme.whiteText,
               fontSize: 16,
@@ -713,25 +576,178 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
           ),
           const SizedBox(height: 12),
 
-          // View Source
+          // Add to global bookmarks
           _buildActionTile(
-            icon: Icons.code,
-            title: 'View Source',
-            subtitle: 'View raw Nostr event JSON',
-            onTap: _showViewSourceDialog,
+            icon: Icons.bookmark_outline,
+            title: 'Add to Bookmarks',
+            subtitle: 'Save for later viewing',
+            onTap: _addToGlobalBookmarks,
           ),
 
           const SizedBox(height: 8),
 
-          // Get Event ID
+          // Add to bookmark set
           _buildActionTile(
-            icon: Icons.fingerprint,
-            title: 'Copy Event ID',
-            subtitle: 'Copy Nostr event ID to clipboard',
-            onTap: _copyEventId,
+            icon: Icons.bookmark_add,
+            title: 'Add to Bookmark Set',
+            subtitle: 'Organize in collections',
+            onTap: _showBookmarkSetsDialog,
           ),
         ],
       );
+    },
+  );
+
+  /// Build follow set section for adding authors to follow sets
+  Widget _buildFollowSetSection() => Consumer(
+    builder: (context, ref, child) {
+      final socialService = ref.watch(socialServiceProvider);
+      final followSets = socialService.followSets;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Follow Sets',
+            style: TextStyle(
+              color: VineTheme.whiteText,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Create new follow set with this author
+          _buildActionTile(
+            icon: Icons.group_add,
+            title: 'Create Follow Set',
+            subtitle: 'Start new collection with this creator',
+            onTap: _showCreateFollowSetDialog,
+          ),
+
+          // Show existing follow sets if any
+          if (followSets.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _buildActionTile(
+              icon: Icons.people,
+              title: 'Add to Follow Set',
+              subtitle: '${followSets.length} follow sets available',
+              onTap: _showSelectFollowSetDialog,
+            ),
+          ],
+        ],
+      );
+    },
+  );
+
+  Widget _buildReportSection() => Consumer(
+    builder: (context, ref, child) {
+      final reportServiceAsync = ref.watch(contentReportingServiceProvider);
+
+      return reportServiceAsync.when(
+        data: (reportService) {
+          final hasReported = reportService.hasBeenReported(widget.video.id);
+
+          // Wrap in orange warning container
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.withAlpha(26), // 0.1 opacity
+              border: Border.all(
+                color: Colors.orange.withAlpha(77), // 0.3 opacity
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Safety Actions',
+                  style: TextStyle(
+                    color: VineTheme.whiteText,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildActionTile(
+                  icon: hasReported ? Icons.flag : Icons.flag_outlined,
+                  title: hasReported ? 'Already Reported' : 'Report Content',
+                  subtitle: hasReported
+                      ? 'You have reported this content'
+                      : 'Report for policy violations',
+                  iconColor: hasReported ? Colors.red : Colors.orange,
+                  onTap: hasReported ? null : _showReportDialog,
+                ),
+                // Add Block User action (only for other users' content)
+                if (!_isUserOwnContent()) ...[
+                  const SizedBox(height: 8),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final blocklistService = ref.watch(
+                        contentBlocklistServiceProvider,
+                      );
+                      final isBlocked = blocklistService.isBlocked(
+                        widget.video.pubkey,
+                      );
+                      return _buildActionTile(
+                        icon: isBlocked ? Icons.block : Icons.block_outlined,
+                        title: isBlocked
+                            ? 'Unblock User'
+                            : 'Block @${widget.video.pubkey.substring(0, 8)}',
+                        subtitle: isBlocked
+                            ? 'Show content from this user'
+                            : 'Hide content from this user',
+                        iconColor: Colors.orange,
+                        onTap: () => _handleBlockUser(ref, isBlocked),
+                      );
+                    },
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
+      );
+    },
+  );
+
+  /// Build advanced section for developer/power-user features
+  Widget _buildAdvancedSection() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Advanced',
+        style: TextStyle(
+          color: VineTheme.whiteText,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 12),
+
+      // View Source
+      _buildActionTile(
+        icon: Icons.code,
+        title: 'View Source',
+        subtitle: 'View raw Nostr event JSON',
+        onTap: _showViewSourceDialog,
+      ),
+
+      const SizedBox(height: 8),
+
+      // Get Event ID
+      _buildActionTile(
+        icon: Icons.fingerprint,
+        title: 'Copy Event ID',
+        subtitle: 'Copy Nostr event ID to clipboard',
+        onTap: _copyEventId,
+      ),
+    ],
+  );
 
   Widget _buildActionTile({
     required IconData icon,
@@ -739,39 +755,31 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
     required String subtitle,
     required VoidCallback? onTap,
     Color? iconColor,
-  }) =>
-      ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: VineTheme.cardBackground,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            color: iconColor ?? VineTheme.whiteText,
-            size: 20,
-          ),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: VineTheme.whiteText,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(
-            color: VineTheme.secondaryText,
-            fontSize: 12,
-          ),
-        ),
-        onTap: onTap,
-        enabled: onTap != null,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      );
+  }) => ListTile(
+    leading: Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: VineTheme.cardBackground,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, color: iconColor ?? VineTheme.whiteText, size: 20),
+    ),
+    title: Text(
+      title,
+      style: const TextStyle(
+        color: VineTheme.whiteText,
+        fontWeight: FontWeight.w500,
+      ),
+    ),
+    subtitle: Text(
+      subtitle,
+      style: const TextStyle(color: VineTheme.secondaryText, fontSize: 12),
+    ),
+    onTap: onTap,
+    enabled: onTap != null,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  );
 
   // === BOOKMARK ACTIONS ===
 
@@ -786,15 +794,19 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                success ? 'Added to bookmarks!' : 'Failed to add bookmark'),
+              success ? 'Added to bookmarks!' : 'Failed to add bookmark',
+            ),
             duration: const Duration(seconds: 2),
           ),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
-      Log.error('Failed to add bookmark: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to add bookmark: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -844,16 +856,17 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
       final sharingService = ref.read(videoSharingServiceProvider);
       final shareText = sharingService.generateShareText(widget.video);
 
-      await SharePlus.instance.share(
-        ShareParams(text: shareText),
-      );
+      await SharePlus.instance.share(ShareParams(text: shareText));
 
       if (mounted) {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      Log.error('Failed to share externally: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to share externally: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
     }
   }
 
@@ -880,8 +893,11 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      Log.error('Failed to copy event ID: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to copy event ID: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
     }
   }
 
@@ -906,9 +922,9 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
       // Unblock without confirmation
       blocklistService.unblockUser(widget.video.pubkey);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User unblocked')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('User unblocked')));
       }
     } else {
       // Block with confirmation
@@ -934,9 +950,9 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
                 blocklistService.blockUser(widget.video.pubkey);
                 Navigator.of(context).pop();
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('User blocked')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('User blocked')));
                 }
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -951,10 +967,8 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
   void _showReportDialog() {
     showDialog(
       context: context,
-      builder: (context) => ReportContentDialog(
-        video: widget.video,
-        isFromShareMenu: true,
-      ),
+      builder: (context) =>
+          ReportContentDialog(video: widget.video, isFromShareMenu: true),
     );
   }
 
@@ -969,47 +983,50 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
 
       return widget.video.pubkey == userPubkey;
     } catch (e) {
-      Log.error('Error checking content ownership: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Error checking content ownership: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
       return false;
     }
   }
 
   /// Build delete section for user's own content
   Widget _buildDeleteSection() => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Manage Content',
-            style: TextStyle(
-              color: VineTheme.whiteText,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Manage Content',
+        style: TextStyle(
+          color: VineTheme.whiteText,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 12),
 
-          // Edit content option
-          _buildActionTile(
-            icon: Icons.edit,
-            iconColor: VineTheme.vineGreen,
-            title: 'Edit Video',
-            subtitle: 'Update title, description, and hashtags',
-            onTap: _showEditDialog,
-          ),
+      // Edit content option
+      _buildActionTile(
+        icon: Icons.edit,
+        iconColor: VineTheme.vineGreen,
+        title: 'Edit Video',
+        subtitle: 'Update title, description, and hashtags',
+        onTap: _showEditDialog,
+      ),
 
-          const SizedBox(height: 8),
+      const SizedBox(height: 8),
 
-          // Delete content option
-          _buildActionTile(
-            icon: Icons.delete_outline,
-            iconColor: Colors.red,
-            title: 'Delete Video',
-            subtitle: 'Permanently remove this content',
-            onTap: _showDeleteDialog,
-          ),
-        ],
-      );
+      // Delete content option
+      _buildActionTile(
+        icon: Icons.delete_outline,
+        iconColor: Colors.red,
+        title: 'Delete Video',
+        subtitle: 'Permanently remove this content',
+        onTap: _showDeleteDialog,
+      ),
+    ],
+  );
 
   /// Show edit dialog
   void _showEditDialog() {
@@ -1063,8 +1080,10 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
                     : null,
                 trailing: Text(
                   '${list.videoEventIds.length} videos',
-                  style:
-                      const TextStyle(color: VineTheme.lightText, fontSize: 12),
+                  style: const TextStyle(
+                    color: VineTheme.lightText,
+                    fontSize: 12,
+                  ),
                 ),
               );
             },
@@ -1073,10 +1092,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Close',
-              style: TextStyle(color: VineTheme.vineGreen),
-            ),
+            child: Text('Close', style: TextStyle(color: VineTheme.vineGreen)),
           ),
         ],
       ),
@@ -1085,48 +1101,48 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
 
   /// Build delete confirmation dialog
   Widget _buildDeleteDialog(BuildContext dialogContext) => AlertDialog(
-        backgroundColor: VineTheme.cardBackground,
-        title: const Text('Delete Video',
-            style: TextStyle(color: VineTheme.whiteText)),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Are you sure you want to delete this video?',
-              style: TextStyle(color: VineTheme.whiteText),
-            ),
-            SizedBox(height: 12),
-            Text(
-              'This will send a delete request (NIP-09) to all relays. Some relays may still retain the content.',
-              style: TextStyle(
-                color: VineTheme.secondaryText,
-                fontSize: 12,
-              ),
-            ),
-          ],
+    backgroundColor: VineTheme.cardBackground,
+    title: const Text(
+      'Delete Video',
+      style: TextStyle(color: VineTheme.whiteText),
+    ),
+    content: const Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Are you sure you want to delete this video?',
+          style: TextStyle(color: VineTheme.whiteText),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              _deleteContent();
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      );
+        SizedBox(height: 12),
+        Text(
+          'This will send a delete request (NIP-09) to all relays. Some relays may still retain the content.',
+          style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(dialogContext).pop(),
+        child: const Text('Cancel'),
+      ),
+      TextButton(
+        onPressed: () {
+          Navigator.of(dialogContext).pop();
+          _deleteContent();
+        },
+        style: TextButton.styleFrom(foregroundColor: Colors.red),
+        child: const Text('Delete'),
+      ),
+    ],
+  );
 
   /// Delete the user's content using NIP-09
   Future<void> _deleteContent() async {
     try {
-      final deletionService =
-          await ref.read(contentDeletionServiceProvider.future);
+      final deletionService = await ref.read(
+        contentDeletionServiceProvider.future,
+      );
 
       // Show loading snackbar
       if (mounted) {
@@ -1186,8 +1202,11 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
         }
       }
     } catch (e) {
-      Log.error('Failed to delete content: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to delete content: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1225,122 +1244,124 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        backgroundColor: VineTheme.cardBackground,
-        title: const Text('Send to Viner',
-            style: TextStyle(color: VineTheme.whiteText)),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _searchController,
-                enableInteractiveSelection: true,
-                style: const TextStyle(color: VineTheme.whiteText),
-                decoration: const InputDecoration(
-                  hintText: 'Search by name, npub, or pubkey...',
-                  hintStyle: TextStyle(color: VineTheme.secondaryText),
-                  prefixIcon:
-                      Icon(Icons.search, color: VineTheme.secondaryText),
-                ),
-                onChanged: (value) {
-                  Log.info('🔍 TextField onChanged fired with value: "$value"',
-                      name: 'ShareVideoMenu', category: LogCategory.ui);
-                  _searchUsers(value);
-                },
+    backgroundColor: VineTheme.cardBackground,
+    title: const Text(
+      'Send to Viner',
+      style: TextStyle(color: VineTheme.whiteText),
+    ),
+    content: SizedBox(
+      width: double.maxFinite,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _searchController,
+            enableInteractiveSelection: true,
+            style: const TextStyle(color: VineTheme.whiteText),
+            decoration: const InputDecoration(
+              hintText: 'Search by name, npub, or pubkey...',
+              hintStyle: TextStyle(color: VineTheme.secondaryText),
+              prefixIcon: Icon(Icons.search, color: VineTheme.secondaryText),
+            ),
+            onChanged: (value) {
+              Log.info(
+                '🔍 TextField onChanged fired with value: "$value"',
+                name: 'ShareVideoMenu',
+                category: LogCategory.ui,
+              );
+              _searchUsers(value);
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _messageController,
+            enableInteractiveSelection: true,
+            style: const TextStyle(color: VineTheme.whiteText),
+            decoration: const InputDecoration(
+              hintText: 'Add a personal message (optional)',
+              hintStyle: TextStyle(color: VineTheme.secondaryText),
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          // Show contacts or search results
+          if (!_contactsLoaded) ...[
+            const Center(
+              child: CircularProgressIndicator(color: VineTheme.vineGreen),
+            ),
+          ] else if (_searchController.text.isEmpty &&
+              _contacts.isNotEmpty) ...[
+            // Show user's contacts when not searching
+            const Text(
+              'Your Contacts',
+              style: TextStyle(
+                color: VineTheme.whiteText,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _messageController,
-                enableInteractiveSelection: true,
-                style: const TextStyle(color: VineTheme.whiteText),
-                decoration: const InputDecoration(
-                  hintText: 'Add a personal message (optional)',
-                  hintStyle: TextStyle(color: VineTheme.secondaryText),
-                ),
-                maxLines: 2,
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 200,
+              child: ListView.builder(
+                itemCount: _contacts.length,
+                itemBuilder: (context, index) =>
+                    _buildUserTile(_contacts[index]),
               ),
-              const SizedBox(height: 16),
-              // Show contacts or search results
-              if (!_contactsLoaded) ...[
-                const Center(
-                  child: CircularProgressIndicator(color: VineTheme.vineGreen),
+            ),
+          ] else if (_searchController.text.isEmpty && _contacts.isEmpty) ...[
+            // No contacts found
+            const Center(
+              child: Text(
+                'No contacts found. Start following people to see them here.',
+                style: TextStyle(color: VineTheme.secondaryText),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ] else if (_searchController.text.isNotEmpty) ...[
+            // Show search results
+            if (_isSearching) ...[
+              const Center(
+                child: CircularProgressIndicator(color: VineTheme.vineGreen),
+              ),
+            ] else if (_searchResults.isNotEmpty) ...[
+              const Text(
+                'Search Results',
+                style: TextStyle(
+                  color: VineTheme.whiteText,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
-              ] else if (_searchController.text.isEmpty &&
-                  _contacts.isNotEmpty) ...[
-                // Show user's contacts when not searching
-                const Text(
-                  'Your Contacts',
-                  style: TextStyle(
-                    color: VineTheme.whiteText,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  itemCount: _searchResults.length,
+                  itemBuilder: (context, index) =>
+                      _buildUserTile(_searchResults[index]),
                 ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 200,
-                  child: ListView.builder(
-                    itemCount: _contacts.length,
-                    itemBuilder: (context, index) =>
-                        _buildUserTile(_contacts[index]),
-                  ),
+              ),
+            ] else ...[
+              const Center(
+                child: Text(
+                  'No users found. Try searching by name or public key.',
+                  style: TextStyle(color: VineTheme.secondaryText),
+                  textAlign: TextAlign.center,
                 ),
-              ] else if (_searchController.text.isEmpty &&
-                  _contacts.isEmpty) ...[
-                // No contacts found
-                const Center(
-                  child: Text(
-                    'No contacts found. Start following people to see them here.',
-                    style: TextStyle(color: VineTheme.secondaryText),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ] else if (_searchController.text.isNotEmpty) ...[
-                // Show search results
-                if (_isSearching) ...[
-                  const Center(
-                    child:
-                        CircularProgressIndicator(color: VineTheme.vineGreen),
-                  ),
-                ] else if (_searchResults.isNotEmpty) ...[
-                  const Text(
-                    'Search Results',
-                    style: TextStyle(
-                      color: VineTheme.whiteText,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 200,
-                    child: ListView.builder(
-                      itemCount: _searchResults.length,
-                      itemBuilder: (context, index) =>
-                          _buildUserTile(_searchResults[index]),
-                    ),
-                  ),
-                ] else ...[
-                  const Center(
-                    child: Text(
-                      'No users found. Try searching by name or public key.',
-                      style: TextStyle(color: VineTheme.secondaryText),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
+          ],
         ],
-      );
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+    ],
+  );
 
   /// Load user's contacts from their follow list (NIP-02)
   Future<void> _loadUserContacts() async {
@@ -1369,15 +1390,14 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
             ),
           );
         } catch (e) {
-          Log.error('Error loading contact profile $pubkey: $e',
-              name: 'ShareVideoMenu', category: LogCategory.ui);
+          Log.error(
+            'Error loading contact profile $pubkey: $e',
+            name: 'ShareVideoMenu',
+            category: LogCategory.ui,
+          );
           // Still add the contact without profile data
           contacts.add(
-            ShareableUser(
-              pubkey: pubkey,
-              displayName: null,
-              picture: null,
-            ),
+            ShareableUser(pubkey: pubkey, displayName: null, picture: null),
           );
         }
       }
@@ -1389,8 +1409,11 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
         });
       }
     } catch (e) {
-      Log.error('Error loading user contacts: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Error loading user contacts: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
       if (mounted) {
         setState(() {
           _contacts = [];
@@ -1408,7 +1431,8 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
 
     // Display nip05 if available, otherwise npub (never show raw hex)
     // Use normalizeToNpub to convert hex to npub format
-    final displayId = profile?.nip05 ?? normalizeToNpub(user.pubkey) ?? user.pubkey;
+    final displayId =
+        profile?.nip05 ?? normalizeToNpub(user.pubkey) ?? user.pubkey;
 
     return ListTile(
       leading: UserAvatar(
@@ -1431,12 +1455,18 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
   }
 
   Future<void> _searchUsers(String query) async {
-    Log.info('🔍 Search users called with query: "$query"',
-        name: 'ShareVideoMenu', category: LogCategory.ui);
+    Log.info(
+      '🔍 Search users called with query: "$query"',
+      name: 'ShareVideoMenu',
+      category: LogCategory.ui,
+    );
 
     if (query.trim().isEmpty) {
-      Log.debug('Search query empty, clearing results',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.debug(
+        'Search query empty, clearing results',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
       setState(() => _searchResults = []);
       return;
     }
@@ -1452,49 +1482,41 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
       // Try to normalize the query as a public identifier (npub/nprofile/hex)
       pubkeyToSearch = normalizeToHex(query);
 
-      Log.debug('Normalized query to pubkey: $pubkeyToSearch',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
-
-      if (pubkeyToSearch == null) {
-        // Search by display name - check contacts first
-        for (final contact in _contacts) {
-          if (contact.displayName != null &&
-              contact.displayName!
-                  .toLowerCase()
-                  .contains(query.toLowerCase())) {
-            searchResults.add(contact);
-          }
-        }
-      }
+      Log.debug(
+        'Normalized query to pubkey: $pubkeyToSearch',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
 
       // If we have a specific pubkey to search for
-      if (pubkeyToSearch != null) {
-        try {
-          // Fetch profile if not cached - this returns a Future we should await
-          if (!userProfileService.hasProfile(pubkeyToSearch)) {
-            await userProfileService.fetchProfile(pubkeyToSearch);
-          }
-
-          final profile = userProfileService.getCachedProfile(pubkeyToSearch);
-          searchResults.add(
-            ShareableUser(
-              pubkey: pubkeyToSearch,
-              displayName: profile?.bestDisplayName,
-              picture: profile?.picture,
-            ),
-          );
-        } catch (e) {
-          Log.error('Error searching for user $pubkeyToSearch: $e',
-              name: 'ShareVideoMenu', category: LogCategory.ui);
-          // Still add the user without profile data
-          searchResults.add(
-            ShareableUser(
-              pubkey: pubkeyToSearch,
-              displayName: null,
-              picture: null,
-            ),
-          );
+      try {
+        // Fetch profile if not cached - this returns a Future we should await
+        if (!userProfileService.hasProfile(pubkeyToSearch)) {
+          await userProfileService.fetchProfile(pubkeyToSearch);
         }
+
+        final profile = userProfileService.getCachedProfile(pubkeyToSearch);
+        searchResults.add(
+          ShareableUser(
+            pubkey: pubkeyToSearch,
+            displayName: profile?.bestDisplayName,
+            picture: profile?.picture,
+          ),
+        );
+      } catch (e) {
+        Log.error(
+          'Error searching for user $pubkeyToSearch: $e',
+          name: 'ShareVideoMenu',
+          category: LogCategory.ui,
+        );
+        // Still add the user without profile data
+        searchResults.add(
+          ShareableUser(
+            pubkey: pubkeyToSearch,
+            displayName: null,
+            picture: null,
+          ),
+        );
       }
 
       if (mounted) {
@@ -1504,8 +1526,11 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
         });
       }
     } catch (e) {
-      Log.error('Error searching users: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Error searching users: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
       if (mounted) {
         setState(() => _isSearching = false);
       }
@@ -1538,8 +1563,11 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
         );
       }
     } catch (e) {
-      Log.error('Failed to send video: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to send video: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
     }
   }
 
@@ -1567,56 +1595,57 @@ class _CreateListDialogState extends ConsumerState<_CreateListDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        backgroundColor: VineTheme.cardBackground,
-        title: const Text('Create New List',
-            style: TextStyle(color: VineTheme.whiteText)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              enableInteractiveSelection: true,
-              style: const TextStyle(color: VineTheme.whiteText),
-              decoration: const InputDecoration(
-                labelText: 'List Name',
-                labelStyle: TextStyle(color: VineTheme.secondaryText),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _descriptionController,
-              enableInteractiveSelection: true,
-              style: const TextStyle(color: VineTheme.whiteText),
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-                labelStyle: TextStyle(color: VineTheme.secondaryText),
-              ),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              title: const Text('Public List',
-                  style: TextStyle(color: VineTheme.whiteText)),
-              subtitle: const Text(
-                'Others can follow and see this list',
-                style: TextStyle(color: VineTheme.secondaryText),
-              ),
-              value: _isPublic,
-              onChanged: (value) => setState(() => _isPublic = value),
-            ),
-          ],
+    backgroundColor: VineTheme.cardBackground,
+    title: const Text(
+      'Create New List',
+      style: TextStyle(color: VineTheme.whiteText),
+    ),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _nameController,
+          enableInteractiveSelection: true,
+          style: const TextStyle(color: VineTheme.whiteText),
+          decoration: const InputDecoration(
+            labelText: 'List Name',
+            labelStyle: TextStyle(color: VineTheme.secondaryText),
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _descriptionController,
+          enableInteractiveSelection: true,
+          style: const TextStyle(color: VineTheme.whiteText),
+          decoration: const InputDecoration(
+            labelText: 'Description (optional)',
+            labelStyle: TextStyle(color: VineTheme.secondaryText),
           ),
-          TextButton(
-            onPressed: _createList,
-            child: const Text('Create'),
+          maxLines: 2,
+        ),
+        const SizedBox(height: 16),
+        SwitchListTile(
+          title: const Text(
+            'Public List',
+            style: TextStyle(color: VineTheme.whiteText),
           ),
-        ],
-      );
+          subtitle: const Text(
+            'Others can follow and see this list',
+            style: TextStyle(color: VineTheme.secondaryText),
+          ),
+          value: _isPublic,
+          onChanged: (value) => setState(() => _isPublic = value),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      TextButton(onPressed: _createList, child: const Text('Create')),
+    ],
+  );
 
   Future<void> _createList() async {
     final name = _nameController.text.trim();
@@ -1646,8 +1675,11 @@ class _CreateListDialogState extends ConsumerState<_CreateListDialog> {
         }
       }
     } catch (e) {
-      Log.error('Failed to create list: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to create list: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
     }
   }
 
@@ -1666,64 +1698,68 @@ class _SelectListDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Consumer(
-        builder: (context, ref, child) {
-          final listServiceAsync = ref.watch(curatedListServiceProvider);
+    builder: (context, ref, child) {
+      final listServiceAsync = ref.watch(curatedListServiceProvider);
 
-          return listServiceAsync.when(
-            data: (listService) {
-              final availableLists = listService.lists
-                  .where((list) => list.id != CuratedListService.defaultListId)
-                  .toList();
+      return listServiceAsync.when(
+        data: (listService) {
+          final availableLists = listService.lists
+              .where((list) => list.id != CuratedListService.defaultListId)
+              .toList();
 
-              return AlertDialog(
-                backgroundColor: VineTheme.cardBackground,
-                title: const Text('Add to List',
-                    style: TextStyle(color: VineTheme.whiteText)),
-                content: SizedBox(
-                  width: double.maxFinite,
-                  height: 300,
-                  child: ListView.builder(
-                    itemCount: availableLists.length,
-                    itemBuilder: (context, index) {
-                      final list = availableLists[index];
-                      final isInList =
-                          listService.isVideoInList(list.id, video.id);
+          return AlertDialog(
+            backgroundColor: VineTheme.cardBackground,
+            title: const Text(
+              'Add to List',
+              style: TextStyle(color: VineTheme.whiteText),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 300,
+              child: ListView.builder(
+                itemCount: availableLists.length,
+                itemBuilder: (context, index) {
+                  final list = availableLists[index];
+                  final isInList = listService.isVideoInList(list.id, video.id);
 
-                      return ListTile(
-                        leading: Icon(
-                          isInList ? Icons.check_circle : Icons.playlist_play,
-                          color: isInList
-                              ? VineTheme.vineGreen
-                              : VineTheme.whiteText,
-                        ),
-                        title: Text(
-                          list.name,
-                          style: const TextStyle(color: VineTheme.whiteText),
-                        ),
-                        subtitle: Text(
-                          '${list.videoEventIds.length} videos',
-                          style:
-                              const TextStyle(color: VineTheme.secondaryText),
-                        ),
-                        onTap: () => _toggleVideoInList(
-                            context, listService, list, isInList),
-                      );
-                    },
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Done'),
-                  ),
-                ],
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, __) => const Center(child: Text('Error loading lists')),
+                  return ListTile(
+                    leading: Icon(
+                      isInList ? Icons.check_circle : Icons.playlist_play,
+                      color: isInList
+                          ? VineTheme.vineGreen
+                          : VineTheme.whiteText,
+                    ),
+                    title: Text(
+                      list.name,
+                      style: const TextStyle(color: VineTheme.whiteText),
+                    ),
+                    subtitle: Text(
+                      '${list.videoEventIds.length} videos',
+                      style: const TextStyle(color: VineTheme.secondaryText),
+                    ),
+                    onTap: () => _toggleVideoInList(
+                      context,
+                      listService,
+                      list,
+                      isInList,
+                    ),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Done'),
+              ),
+            ],
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => const Center(child: Text('Error loading lists')),
       );
+    },
+  );
 
   Future<void> _toggleVideoInList(
     BuildContext context,
@@ -1745,12 +1781,17 @@ class _SelectListDialog extends StatelessWidget {
             : 'Added to ${list.name}';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(message), duration: const Duration(seconds: 1)),
+            content: Text(message),
+            duration: const Duration(seconds: 1),
+          ),
         );
       }
     } catch (e) {
-      Log.error('Failed to toggle video in list: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to toggle video in list: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
     }
   }
 }
@@ -1778,87 +1819,84 @@ class ReportContentDialogState extends ConsumerState<ReportContentDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        backgroundColor: VineTheme.cardBackground,
-        title: const Text('Report Content',
-            style: TextStyle(color: VineTheme.whiteText)),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Why are you reporting this content?',
-                style: TextStyle(color: VineTheme.whiteText),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Divine will act on content reports within 24 hours by removing the content and ejecting the user who provided the offending content.',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                constraints: const BoxConstraints(maxHeight: 400),
-                child: SingleChildScrollView(
-                  child: RadioGroup<ContentFilterReason>(
-                    groupValue: _selectedReason,
-                    onChanged: (value) =>
-                        setState(() => _selectedReason = value),
-                    child: Column(
-                      children: ContentFilterReason.values
-                          .map(
-                            (reason) => RadioListTile<ContentFilterReason>(
-                              title: Text(
-                                _getReasonDisplayName(reason),
-                                style: const TextStyle(
-                                    color: VineTheme.whiteText),
-                              ),
-                              value: reason,
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _detailsController,
-                enableInteractiveSelection: true,
-                style: const TextStyle(color: VineTheme.whiteText),
-                decoration: const InputDecoration(
-                  labelText: 'Additional details (optional)',
-                  labelStyle: TextStyle(color: VineTheme.secondaryText),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 8),
-              CheckboxListTile(
-                title: const Text(
-                  'Block this user',
-                  style: TextStyle(color: VineTheme.whiteText),
-                ),
-                value: _blockUser,
-                onChanged: (value) => setState(() => _blockUser = value ?? false),
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
-            ],
+    backgroundColor: VineTheme.cardBackground,
+    title: const Text(
+      'Report Content',
+      style: TextStyle(color: VineTheme.whiteText),
+    ),
+    content: SizedBox(
+      width: double.maxFinite,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Why are you reporting this content?',
+            style: TextStyle(color: VineTheme.whiteText),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+          const SizedBox(height: 8),
+          const Text(
+            'Divine will act on content reports within 24 hours by removing the content and ejecting the user who provided the offending content.',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+            ),
           ),
-          TextButton(
-            onPressed: _handleSubmitReport,
-            child: const Text('Report'),
+          const SizedBox(height: 16),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 400),
+            child: SingleChildScrollView(
+              child: RadioGroup<ContentFilterReason>(
+                groupValue: _selectedReason,
+                onChanged: (value) => setState(() => _selectedReason = value),
+                child: Column(
+                  children: ContentFilterReason.values
+                      .map(
+                        (reason) => RadioListTile<ContentFilterReason>(
+                          title: Text(
+                            _getReasonDisplayName(reason),
+                            style: const TextStyle(color: VineTheme.whiteText),
+                          ),
+                          value: reason,
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _detailsController,
+            enableInteractiveSelection: true,
+            style: const TextStyle(color: VineTheme.whiteText),
+            decoration: const InputDecoration(
+              labelText: 'Additional details (optional)',
+              labelStyle: TextStyle(color: VineTheme.secondaryText),
+            ),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 8),
+          CheckboxListTile(
+            title: const Text(
+              'Block this user',
+              style: TextStyle(color: VineTheme.whiteText),
+            ),
+            value: _blockUser,
+            onChanged: (value) => setState(() => _blockUser = value ?? false),
+            controlAffinity: ListTileControlAffinity.leading,
           ),
         ],
-      );
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      TextButton(onPressed: _handleSubmitReport, child: const Text('Report')),
+    ],
+  );
 
   void _handleSubmitReport() {
     if (_selectedReason == null) {
@@ -1901,8 +1939,9 @@ class ReportContentDialogState extends ConsumerState<ReportContentDialog> {
     if (_selectedReason == null) return;
 
     try {
-      final reportService =
-          await ref.read(contentReportingServiceProvider.future);
+      final reportService = await ref.read(
+        contentReportingServiceProvider.future,
+      );
       final result = await reportService.reportContent(
         eventId: widget.video.id,
         authorPubkey: widget.video.pubkey,
@@ -1915,7 +1954,9 @@ class ReportContentDialogState extends ConsumerState<ReportContentDialog> {
       if (mounted) {
         Navigator.of(context).pop(); // Close report dialog
         if (widget.isFromShareMenu) {
-          Navigator.of(context).pop(); // Close share menu (only if opened from share menu)
+          Navigator.of(
+            context,
+          ).pop(); // Close share menu (only if opened from share menu)
         }
 
         if (result.success) {
@@ -1925,7 +1966,8 @@ class ReportContentDialogState extends ConsumerState<ReportContentDialog> {
             await reportService.reportUser(
               userPubkey: widget.video.pubkey,
               reason: _selectedReason!,
-              details: 'User blocked for ${_getReasonDisplayName(_selectedReason!)}',
+              details:
+                  'User blocked for ${_getReasonDisplayName(_selectedReason!)}',
               relatedEventIds: [widget.video.id],
             );
 
@@ -1933,7 +1975,8 @@ class ReportContentDialogState extends ConsumerState<ReportContentDialog> {
             final muteService = await ref.read(muteServiceProvider.future);
             await muteService.muteUser(
               widget.video.pubkey,
-              reason: 'Reported and blocked for ${_getReasonDisplayName(_selectedReason!)}',
+              reason:
+                  'Reported and blocked for ${_getReasonDisplayName(_selectedReason!)}',
             );
 
             // 3. Also add to local blocklist for immediate filtering
@@ -1941,9 +1984,10 @@ class ReportContentDialogState extends ConsumerState<ReportContentDialog> {
             blocklistService.blockUser(widget.video.pubkey);
 
             Log.info(
-                'User blocked with Nostr events: kind 1984 user report + kind 10000 mute list: ${widget.video.pubkey}',
-                name: 'ShareVideoMenu',
-                category: LogCategory.ui);
+              'User blocked with Nostr events: kind 1984 user report + kind 10000 mute list: ${widget.video.pubkey}',
+              name: 'ShareVideoMenu',
+              category: LogCategory.ui,
+            );
           }
 
           // Show success confirmation dialog using root navigator
@@ -1963,8 +2007,11 @@ class ReportContentDialogState extends ConsumerState<ReportContentDialog> {
         }
       }
     } catch (e) {
-      Log.error('Failed to submit report: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to submit report: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -2001,47 +2048,46 @@ class _CreateFollowSetDialogState
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        backgroundColor: VineTheme.cardBackground,
-        title: const Text('Create Follow Set',
-            style: TextStyle(color: VineTheme.whiteText)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              enableInteractiveSelection: true,
-              style: const TextStyle(color: VineTheme.whiteText),
-              decoration: const InputDecoration(
-                labelText: 'Follow Set Name',
-                labelStyle: TextStyle(color: VineTheme.secondaryText),
-                hintText: 'e.g., Content Creators, Musicians, etc.',
-                hintStyle: TextStyle(color: VineTheme.secondaryText),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _descriptionController,
-              enableInteractiveSelection: true,
-              style: const TextStyle(color: VineTheme.whiteText),
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-                labelStyle: TextStyle(color: VineTheme.secondaryText),
-              ),
-              maxLines: 2,
-            ),
-          ],
+    backgroundColor: VineTheme.cardBackground,
+    title: const Text(
+      'Create Follow Set',
+      style: TextStyle(color: VineTheme.whiteText),
+    ),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _nameController,
+          enableInteractiveSelection: true,
+          style: const TextStyle(color: VineTheme.whiteText),
+          decoration: const InputDecoration(
+            labelText: 'Follow Set Name',
+            labelStyle: TextStyle(color: VineTheme.secondaryText),
+            hintText: 'e.g., Content Creators, Musicians, etc.',
+            hintStyle: TextStyle(color: VineTheme.secondaryText),
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _descriptionController,
+          enableInteractiveSelection: true,
+          style: const TextStyle(color: VineTheme.whiteText),
+          decoration: const InputDecoration(
+            labelText: 'Description (optional)',
+            labelStyle: TextStyle(color: VineTheme.secondaryText),
           ),
-          TextButton(
-            onPressed: _createFollowSet,
-            child: const Text('Create'),
-          ),
-        ],
-      );
+          maxLines: 2,
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      TextButton(onPressed: _createFollowSet, child: const Text('Create')),
+    ],
+  );
 
   Future<void> _createFollowSet() async {
     final name = _nameController.text.trim();
@@ -2063,12 +2109,16 @@ class _CreateFollowSetDialogState
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Created follow set "$name" and added creator')),
+            content: Text('Created follow set "$name" and added creator'),
+          ),
         );
       }
     } catch (e) {
-      Log.error('Failed to create follow set: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to create follow set: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
     }
   }
 
@@ -2087,55 +2137,59 @@ class _SelectFollowSetDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Consumer(
-        builder: (context, ref, child) {
-          final socialService = ref.watch(socialServiceProvider);
-          final followSets = socialService.followSets;
+    builder: (context, ref, child) {
+      final socialService = ref.watch(socialServiceProvider);
+      final followSets = socialService.followSets;
 
-          return AlertDialog(
-            backgroundColor: VineTheme.cardBackground,
-            title: const Text('Add to Follow Set',
-                style: TextStyle(color: VineTheme.whiteText)),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 300,
-              child: ListView.builder(
-                itemCount: followSets.length,
-                itemBuilder: (context, index) {
-                  final set = followSets[index];
-                  final isInSet =
-                      socialService.isInFollowSet(set.id, authorPubkey);
+      return AlertDialog(
+        backgroundColor: VineTheme.cardBackground,
+        title: const Text(
+          'Add to Follow Set',
+          style: TextStyle(color: VineTheme.whiteText),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 300,
+          child: ListView.builder(
+            itemCount: followSets.length,
+            itemBuilder: (context, index) {
+              final set = followSets[index];
+              final isInSet = socialService.isInFollowSet(set.id, authorPubkey);
 
-                  return ListTile(
-                    leading: Icon(
-                      isInSet ? Icons.check_circle : Icons.people,
-                      color:
-                          isInSet ? VineTheme.vineGreen : VineTheme.whiteText,
-                    ),
-                    title: Text(
-                      set.name,
-                      style: const TextStyle(color: VineTheme.whiteText),
-                    ),
-                    subtitle: Text(
-                      '${set.pubkeys.length} users${set.description != null ? ' • ${set.description}' : ''}',
-                      style: const TextStyle(color: VineTheme.secondaryText),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onTap: () => _toggleAuthorInFollowSet(
-                        context, socialService, set, isInSet),
-                  );
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Done'),
-              ),
-            ],
-          );
-        },
+              return ListTile(
+                leading: Icon(
+                  isInSet ? Icons.check_circle : Icons.people,
+                  color: isInSet ? VineTheme.vineGreen : VineTheme.whiteText,
+                ),
+                title: Text(
+                  set.name,
+                  style: const TextStyle(color: VineTheme.whiteText),
+                ),
+                subtitle: Text(
+                  '${set.pubkeys.length} users${set.description != null ? ' • ${set.description}' : ''}',
+                  style: const TextStyle(color: VineTheme.secondaryText),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () => _toggleAuthorInFollowSet(
+                  context,
+                  socialService,
+                  set,
+                  isInSet,
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Done'),
+          ),
+        ],
       );
+    },
+  );
 
   Future<void> _toggleAuthorInFollowSet(
     BuildContext context,
@@ -2157,12 +2211,17 @@ class _SelectFollowSetDialog extends StatelessWidget {
             : 'Added to ${set.name}';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(message), duration: const Duration(seconds: 1)),
+            content: Text(message),
+            duration: const Duration(seconds: 1),
+          ),
         );
       }
     } catch (e) {
-      Log.error('Failed to toggle user in follow set: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to toggle user in follow set: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
     }
   }
 }
@@ -2195,83 +2254,82 @@ class _EditVideoDialogState extends ConsumerState<_EditVideoDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        backgroundColor: VineTheme.cardBackground,
-        title: const Text('Edit Video',
-            style: TextStyle(color: VineTheme.whiteText)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _titleController,
-                enabled: !_isUpdating,
-                enableInteractiveSelection: true,
-                style: const TextStyle(color: VineTheme.whiteText),
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                  labelStyle: TextStyle(color: VineTheme.secondaryText),
-                  hintText: 'Enter video title',
-                  hintStyle: TextStyle(color: VineTheme.secondaryText),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _descriptionController,
-                enabled: !_isUpdating,
-                enableInteractiveSelection: true,
-                style: const TextStyle(color: VineTheme.whiteText),
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  labelStyle: TextStyle(color: VineTheme.secondaryText),
-                  hintText: 'Enter video description',
-                  hintStyle: TextStyle(color: VineTheme.secondaryText),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _hashtagsController,
-                enabled: !_isUpdating,
-                enableInteractiveSelection: true,
-                style: const TextStyle(color: VineTheme.whiteText),
-                decoration: const InputDecoration(
-                  labelText: 'Hashtags',
-                  labelStyle: TextStyle(color: VineTheme.secondaryText),
-                  hintText: 'comma, separated, hashtags',
-                  hintStyle: TextStyle(color: VineTheme.secondaryText),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Note: Only metadata can be edited. Video content cannot be changed.',
-                style: TextStyle(
-                  color: VineTheme.secondaryText,
-                  fontSize: 12,
-                ),
-              ),
-            ],
+    backgroundColor: VineTheme.cardBackground,
+    title: const Text(
+      'Edit Video',
+      style: TextStyle(color: VineTheme.whiteText),
+    ),
+    content: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _titleController,
+            enabled: !_isUpdating,
+            enableInteractiveSelection: true,
+            style: const TextStyle(color: VineTheme.whiteText),
+            decoration: const InputDecoration(
+              labelText: 'Title',
+              labelStyle: TextStyle(color: VineTheme.secondaryText),
+              hintText: 'Enter video title',
+              hintStyle: TextStyle(color: VineTheme.secondaryText),
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _isUpdating ? null : () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _descriptionController,
+            enabled: !_isUpdating,
+            enableInteractiveSelection: true,
+            style: const TextStyle(color: VineTheme.whiteText),
+            decoration: const InputDecoration(
+              labelText: 'Description',
+              labelStyle: TextStyle(color: VineTheme.secondaryText),
+              hintText: 'Enter video description',
+              hintStyle: TextStyle(color: VineTheme.secondaryText),
+            ),
+            maxLines: 3,
           ),
-          TextButton(
-            onPressed: _isUpdating ? null : _updateVideo,
-            child: _isUpdating
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: VineTheme.vineGreen,
-                    ),
-                  )
-                : const Text('Update'),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _hashtagsController,
+            enabled: !_isUpdating,
+            enableInteractiveSelection: true,
+            style: const TextStyle(color: VineTheme.whiteText),
+            decoration: const InputDecoration(
+              labelText: 'Hashtags',
+              labelStyle: TextStyle(color: VineTheme.secondaryText),
+              hintText: 'comma, separated, hashtags',
+              hintStyle: TextStyle(color: VineTheme.secondaryText),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Note: Only metadata can be edited. Video content cannot be changed.',
+            style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
           ),
         ],
-      );
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: _isUpdating ? null : () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      TextButton(
+        onPressed: _isUpdating ? null : _updateVideo,
+        child: _isUpdating
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: VineTheme.vineGreen,
+                ),
+              )
+            : const Text('Update'),
+      ),
+    ],
+  );
 
   Future<void> _updateVideo() async {
     setState(() => _isUpdating = true);
@@ -2282,10 +2340,10 @@ class _EditVideoDialogState extends ConsumerState<_EditVideoDialog> {
       final hashtags = hashtagsText.isEmpty
           ? <String>[]
           : hashtagsText
-              .split(',')
-              .map((tag) => tag.trim())
-              .where((tag) => tag.isNotEmpty)
-              .toList();
+                .split(',')
+                .map((tag) => tag.trim())
+                .where((tag) => tag.isNotEmpty)
+                .toList();
 
       // Get auth service to create and sign the updated event
       final authService = ref.read(authServiceProvider);
@@ -2386,8 +2444,11 @@ class _EditVideoDialogState extends ConsumerState<_EditVideoDialog> {
         );
       }
     } catch (e) {
-      Log.error('Failed to update video: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to update video: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
 
       if (mounted) {
         setState(() => _isUpdating = false);
@@ -2418,141 +2479,146 @@ class _SelectBookmarkSetDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Consumer(
-        builder: (context, ref, child) {
-          final bookmarkServiceAsync = ref.watch(bookmarkServiceProvider);
+    builder: (context, ref, child) {
+      final bookmarkServiceAsync = ref.watch(bookmarkServiceProvider);
 
-          return bookmarkServiceAsync.when(
-            data: (bookmarkService) {
-              final bookmarkSets = bookmarkService.bookmarkSets;
+      return bookmarkServiceAsync.when(
+        data: (bookmarkService) {
+          final bookmarkSets = bookmarkService.bookmarkSets;
 
-              return AlertDialog(
-                backgroundColor: VineTheme.cardBackground,
-                title: const Text('Add to Bookmark Set',
-                    style: TextStyle(color: VineTheme.whiteText)),
-                content: SizedBox(
-                  width: double.maxFinite,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Create New Set button at top
-                      ListTile(
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: VineTheme.vineGreen.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.add,
-                            color: VineTheme.vineGreen,
-                          ),
-                        ),
-                        title: const Text(
-                          'Create New Set',
-                          style: TextStyle(
-                            color: VineTheme.whiteText,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        subtitle: const Text(
-                          'Start a new bookmark collection',
-                          style: TextStyle(color: VineTheme.secondaryText),
-                        ),
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          _showCreateBookmarkSetDialog(context, ref, video);
+          return AlertDialog(
+            backgroundColor: VineTheme.cardBackground,
+            title: const Text(
+              'Add to Bookmark Set',
+              style: TextStyle(color: VineTheme.whiteText),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Create New Set button at top
+                  ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: VineTheme.vineGreen.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.add, color: VineTheme.vineGreen),
+                    ),
+                    title: const Text(
+                      'Create New Set',
+                      style: TextStyle(
+                        color: VineTheme.whiteText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Start a new bookmark collection',
+                      style: TextStyle(color: VineTheme.secondaryText),
+                    ),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _showCreateBookmarkSetDialog(context, ref, video);
+                    },
+                  ),
+
+                  // Divider if there are existing sets
+                  if (bookmarkSets.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Divider(color: Colors.grey.shade700),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // List of existing bookmark sets
+                  if (bookmarkSets.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text(
+                        'No bookmark sets yet. Create your first one!',
+                        style: TextStyle(color: VineTheme.secondaryText),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      height: 300,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: bookmarkSets.length,
+                        itemBuilder: (context, index) {
+                          final set = bookmarkSets[index];
+                          final isInSet = bookmarkService.isInBookmarkSet(
+                            set.id,
+                            video.id,
+                            'e',
+                          );
+
+                          return ListTile(
+                            leading: Icon(
+                              isInSet
+                                  ? Icons.check_circle
+                                  : Icons.bookmark_border,
+                              color: isInSet
+                                  ? VineTheme.vineGreen
+                                  : VineTheme.whiteText,
+                            ),
+                            title: Text(
+                              set.name,
+                              style: const TextStyle(
+                                color: VineTheme.whiteText,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '${set.items.length} videos${set.description != null ? ' • ${set.description}' : ''}',
+                              style: const TextStyle(
+                                color: VineTheme.secondaryText,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            onTap: () => _toggleVideoInBookmarkSet(
+                              context,
+                              ref,
+                              bookmarkService,
+                              set,
+                              video,
+                              isInSet,
+                            ),
+                          );
                         },
                       ),
-
-                      // Divider if there are existing sets
-                      if (bookmarkSets.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Divider(color: Colors.grey.shade700),
-                        const SizedBox(height: 8),
-                      ],
-
-                      // List of existing bookmark sets
-                      if (bookmarkSets.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Text(
-                            'No bookmark sets yet. Create your first one!',
-                            style: TextStyle(color: VineTheme.secondaryText),
-                            textAlign: TextAlign.center,
-                          ),
-                        )
-                      else
-                        SizedBox(
-                          height: 300,
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: bookmarkSets.length,
-                            itemBuilder: (context, index) {
-                              final set = bookmarkSets[index];
-                              final isInSet = bookmarkService.isInBookmarkSet(
-                                  set.id, video.id, 'e');
-
-                              return ListTile(
-                                leading: Icon(
-                                  isInSet
-                                      ? Icons.check_circle
-                                      : Icons.bookmark_border,
-                                  color: isInSet
-                                      ? VineTheme.vineGreen
-                                      : VineTheme.whiteText,
-                                ),
-                                title: Text(
-                                  set.name,
-                                  style:
-                                      const TextStyle(color: VineTheme.whiteText),
-                                ),
-                                subtitle: Text(
-                                  '${set.items.length} videos${set.description != null ? ' • ${set.description}' : ''}',
-                                  style: const TextStyle(
-                                      color: VineTheme.secondaryText),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                onTap: () => _toggleVideoInBookmarkSet(
-                                  context,
-                                  ref,
-                                  bookmarkService,
-                                  set,
-                                  video,
-                                  isInSet,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Done'),
-                  ),
+                    ),
                 ],
-              );
-            },
-            loading: () => const AlertDialog(
-              backgroundColor: VineTheme.cardBackground,
-              content: Center(
-                child: CircularProgressIndicator(color: VineTheme.vineGreen),
               ),
             ),
-            error: (_, __) => const AlertDialog(
-              backgroundColor: VineTheme.cardBackground,
-              title: Text('Error',
-                  style: TextStyle(color: VineTheme.whiteText)),
-              content: Text('Failed to load bookmark sets',
-                  style: TextStyle(color: VineTheme.whiteText)),
-            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Done'),
+              ),
+            ],
           );
         },
+        loading: () => const AlertDialog(
+          backgroundColor: VineTheme.cardBackground,
+          content: Center(
+            child: CircularProgressIndicator(color: VineTheme.vineGreen),
+          ),
+        ),
+        error: (_, __) => const AlertDialog(
+          backgroundColor: VineTheme.cardBackground,
+          title: Text('Error', style: TextStyle(color: VineTheme.whiteText)),
+          content: Text(
+            'Failed to load bookmark sets',
+            style: TextStyle(color: VineTheme.whiteText),
+          ),
+        ),
       );
+    },
+  );
 
   static void _showCreateBookmarkSetDialog(
     BuildContext context,
@@ -2578,11 +2644,12 @@ class _SelectBookmarkSetDialog extends StatelessWidget {
       final bookmarkItem = BookmarkItem(type: 'e', id: video.id);
 
       if (isCurrentlyInSet) {
-        success =
-            await bookmarkService.removeFromBookmarkSet(set.id, bookmarkItem);
+        success = await bookmarkService.removeFromBookmarkSet(
+          set.id,
+          bookmarkItem,
+        );
       } else {
-        success =
-            await bookmarkService.addToBookmarkSet(set.id, bookmarkItem);
+        success = await bookmarkService.addToBookmarkSet(set.id, bookmarkItem);
       }
 
       if (success && context.mounted) {
@@ -2598,12 +2665,17 @@ class _SelectBookmarkSetDialog extends StatelessWidget {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(message), duration: const Duration(seconds: 2)),
+            content: Text(message),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     } catch (e) {
-      Log.error('Failed to toggle video in bookmark set: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to toggle video in bookmark set: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
     }
   }
 }
@@ -2625,48 +2697,47 @@ class _CreateBookmarkSetDialogState
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        backgroundColor: VineTheme.cardBackground,
-        title: const Text('Create Bookmark Set',
-            style: TextStyle(color: VineTheme.whiteText)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              enableInteractiveSelection: true,
-              autofocus: true,
-              style: const TextStyle(color: VineTheme.whiteText),
-              decoration: const InputDecoration(
-                labelText: 'Set Name',
-                labelStyle: TextStyle(color: VineTheme.secondaryText),
-                hintText: 'e.g., Favorites, Watch Later, etc.',
-                hintStyle: TextStyle(color: VineTheme.secondaryText),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _descriptionController,
-              enableInteractiveSelection: true,
-              style: const TextStyle(color: VineTheme.whiteText),
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-                labelStyle: TextStyle(color: VineTheme.secondaryText),
-              ),
-              maxLines: 2,
-            ),
-          ],
+    backgroundColor: VineTheme.cardBackground,
+    title: const Text(
+      'Create Bookmark Set',
+      style: TextStyle(color: VineTheme.whiteText),
+    ),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _nameController,
+          enableInteractiveSelection: true,
+          autofocus: true,
+          style: const TextStyle(color: VineTheme.whiteText),
+          decoration: const InputDecoration(
+            labelText: 'Set Name',
+            labelStyle: TextStyle(color: VineTheme.secondaryText),
+            hintText: 'e.g., Favorites, Watch Later, etc.',
+            hintStyle: TextStyle(color: VineTheme.secondaryText),
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _descriptionController,
+          enableInteractiveSelection: true,
+          style: const TextStyle(color: VineTheme.whiteText),
+          decoration: const InputDecoration(
+            labelText: 'Description (optional)',
+            labelStyle: TextStyle(color: VineTheme.secondaryText),
           ),
-          TextButton(
-            onPressed: _createBookmarkSet,
-            child: const Text('Create'),
-          ),
-        ],
-      );
+          maxLines: 2,
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      TextButton(onPressed: _createBookmarkSet, child: const Text('Create')),
+    ],
+  );
 
   Future<void> _createBookmarkSet() async {
     final name = _nameController.text.trim();
@@ -2702,8 +2773,11 @@ class _CreateBookmarkSetDialogState
         }
       }
     } catch (e) {
-      Log.error('Failed to create bookmark set: $e',
-          name: 'ShareVideoMenu', category: LogCategory.ui);
+      Log.error(
+        'Failed to create bookmark set: $e',
+        name: 'ShareVideoMenu',
+        category: LogCategory.ui,
+      );
     }
   }
 
@@ -2729,94 +2803,85 @@ class _ReportConfirmationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        backgroundColor: VineTheme.cardBackground,
-        title: Row(
-          children: [
-            Icon(Icons.check_circle, color: VineTheme.vineGreen, size: 28),
-            const SizedBox(width: 12),
-            const Text(
-              'Report Received',
-              style: TextStyle(color: VineTheme.whiteText),
-            ),
-          ],
+    backgroundColor: VineTheme.cardBackground,
+    title: Row(
+      children: [
+        Icon(Icons.check_circle, color: VineTheme.vineGreen, size: 28),
+        const SizedBox(width: 12),
+        const Text(
+          'Report Received',
+          style: TextStyle(color: VineTheme.whiteText),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Thank you for helping keep Divine safe.',
-              style: TextStyle(
-                color: VineTheme.whiteText,
-                fontSize: 16,
-              ),
+      ],
+    ),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Thank you for helping keep Divine safe.',
+          style: TextStyle(color: VineTheme.whiteText, fontSize: 16),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Our team will review your report and take appropriate action.',
+          style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
+        ),
+        const SizedBox(height: 20),
+        InkWell(
+          onTap: () async {
+            final uri = Uri.parse('https://divine.video/safety');
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: VineTheme.backgroundColor,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: VineTheme.vineGreen),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Our team will review your report and take appropriate action.',
-              style: TextStyle(
-                color: VineTheme.secondaryText,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 20),
-            InkWell(
-              onTap: () async {
-                final uri = Uri.parse('https://divine.video/safety');
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: VineTheme.backgroundColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: VineTheme.vineGreen),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: VineTheme.vineGreen, size: 20),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Learn More',
-                            style: TextStyle(
-                              color: VineTheme.whiteText,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            'divine.video/safety',
-                            style: TextStyle(
-                              color: VineTheme.vineGreen,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: VineTheme.vineGreen, size: 20),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Learn More',
+                        style: TextStyle(
+                          color: VineTheme.whiteText,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    Icon(Icons.open_in_new, color: VineTheme.vineGreen, size: 18),
-                  ],
+                      Text(
+                        'divine.video/safety',
+                        style: TextStyle(
+                          color: VineTheme.vineGreen,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Close',
-              style: TextStyle(color: VineTheme.vineGreen),
+                Icon(Icons.open_in_new, color: VineTheme.vineGreen, size: 18),
+              ],
             ),
           ),
-        ],
-      );
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: Text('Close', style: TextStyle(color: VineTheme.vineGreen)),
+      ),
+    ],
+  );
 }
 
 /// Dialog for viewing raw Nostr event JSON
@@ -2903,7 +2968,9 @@ class _ViewSourceDialog extends ConsumerWidget {
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
-                        child: CircularProgressIndicator(color: VineTheme.vineGreen),
+                        child: CircularProgressIndicator(
+                          color: VineTheme.vineGreen,
+                        ),
                       );
                     }
 
@@ -2978,7 +3045,8 @@ class _PublicListsSection extends ConsumerStatefulWidget {
   final String videoId;
 
   @override
-  ConsumerState<_PublicListsSection> createState() => _PublicListsSectionState();
+  ConsumerState<_PublicListsSection> createState() =>
+      _PublicListsSectionState();
 }
 
 class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
@@ -2998,7 +3066,9 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
   @override
   Widget build(BuildContext context) {
     // Watch the Riverpod StreamProvider - automatically updates as lists stream in
-    final listsAsync = ref.watch(publicListsContainingVideoProvider(widget.videoId));
+    final listsAsync = ref.watch(
+      publicListsContainingVideoProvider(widget.videoId),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3017,7 +3087,9 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
             if (lists.isNotEmpty) {
               // Show lists as they arrive via Riverpod streaming
               return Column(
-                children: lists.map((list) => _buildPublicListTile(list)).toList(),
+                children: lists
+                    .map((list) => _buildPublicListTile(list))
+                    .toList(),
               );
             }
             // Empty list - check if minimum time has elapsed
@@ -3028,8 +3100,11 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
           },
           loading: () => _buildLoadingIndicator(),
           error: (error, _) {
-            Log.error('Error loading public lists: $error',
-                name: 'PublicListsSection', category: LogCategory.ui);
+            Log.error(
+              'Error loading public lists: $error',
+              name: 'PublicListsSection',
+              category: LogCategory.ui,
+            );
             if (!_minTimeElapsed) {
               return _buildLoadingIndicator();
             }
@@ -3056,10 +3131,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
           const SizedBox(width: 12),
           Text(
             'Checking public lists...',
-            style: TextStyle(
-              color: VineTheme.secondaryText,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
           ),
         ],
       ),
@@ -3071,10 +3143,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
       padding: const EdgeInsets.all(12),
       child: Text(
         'Not yet in any lists...',
-        style: TextStyle(
-          color: VineTheme.secondaryText,
-          fontSize: 14,
-        ),
+        style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
       ),
     );
   }
@@ -3101,11 +3170,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.video_library,
-                  color: VineTheme.vineGreen,
-                  size: 20,
-                ),
+                Icon(Icons.video_library, color: VineTheme.vineGreen, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -3174,18 +3239,27 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
 
       if (isSubscribed) {
         await listService.unsubscribeFromList(list.id);
-        Log.info('Unsubscribed from list: ${list.name}',
-            name: 'PublicListsSection', category: LogCategory.ui);
+        Log.info(
+          'Unsubscribed from list: ${list.name}',
+          name: 'PublicListsSection',
+          category: LogCategory.ui,
+        );
       } else {
         await listService.subscribeToList(list.id, list);
-        Log.info('Subscribed to list: ${list.name}',
-            name: 'PublicListsSection', category: LogCategory.ui);
+        Log.info(
+          'Subscribed to list: ${list.name}',
+          name: 'PublicListsSection',
+          category: LogCategory.ui,
+        );
       }
 
       if (mounted) setState(() {});
     } catch (e) {
-      Log.error('Failed to toggle subscription: $e',
-          name: 'PublicListsSection', category: LogCategory.ui);
+      Log.error(
+        'Failed to toggle subscription: $e',
+        name: 'PublicListsSection',
+        category: LogCategory.ui,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

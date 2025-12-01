@@ -59,9 +59,7 @@ void main() {
           // Mock video events with our test data
           videoEventsProvider.overrideWith(() => VideoEventsMock(mockVideos)),
           // Mock app as foreground
-          appForegroundProvider.overrideWith(
-            (ref) => Stream.value(true),
-          ),
+          appForegroundProvider.overrideWith((ref) => Stream.value(true)),
         ],
       );
 
@@ -95,8 +93,12 @@ void main() {
       expect(activeVideoId, equals('explore-video-0'));
 
       // Verify isVideoActiveProvider works correctly
-      final isVideo0Active = container.read(isVideoActiveProvider('explore-video-0'));
-      final isVideo1Active = container.read(isVideoActiveProvider('explore-video-1'));
+      final isVideo0Active = container.read(
+        isVideoActiveProvider('explore-video-0'),
+      );
+      final isVideo1Active = container.read(
+        isVideoActiveProvider('explore-video-1'),
+      );
 
       expect(isVideo0Active, isTrue);
       expect(isVideo1Active, isFalse);
@@ -114,15 +116,21 @@ void main() {
           // Mock video events with our test data
           videoEventsProvider.overrideWith(() => VideoEventsMock(mockVideos)),
           // Mock app as foreground
-          appForegroundProvider.overrideWith(
-            (ref) => Stream.value(true),
-          ),
+          appForegroundProvider.overrideWith((ref) => Stream.value(true)),
         ],
       );
 
       // Listen for streams to emit
-      container.listen(pageContextProvider, (previous, next) {}, fireImmediately: true);
-      container.listen(videoEventsProvider, (previous, next) {}, fireImmediately: true);
+      container.listen(
+        pageContextProvider,
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      container.listen(
+        videoEventsProvider,
+        (previous, next) {},
+        fireImmediately: true,
+      );
 
       // Start providers by reading them
       container.read(pageContextProvider);
@@ -138,9 +146,15 @@ void main() {
       expect(activeVideoId, equals('explore-video-1'));
 
       // Verify isVideoActiveProvider works correctly
-      final isVideo0Active = container.read(isVideoActiveProvider('explore-video-0'));
-      final isVideo1Active = container.read(isVideoActiveProvider('explore-video-1'));
-      final isVideo2Active = container.read(isVideoActiveProvider('explore-video-2'));
+      final isVideo0Active = container.read(
+        isVideoActiveProvider('explore-video-0'),
+      );
+      final isVideo1Active = container.read(
+        isVideoActiveProvider('explore-video-1'),
+      );
+      final isVideo2Active = container.read(
+        isVideoActiveProvider('explore-video-2'),
+      );
 
       expect(isVideo0Active, isFalse);
       expect(isVideo1Active, isTrue);
@@ -149,110 +163,127 @@ void main() {
       container.dispose();
     });
 
-    test('activeVideoIdProvider changes when scrolling from index 0 to 1', () async {
-      // This test reproduces the bug where scrolling doesn't update active video
-      // Use StreamController from the start to simulate URL changes
-      final locationController = StreamController<String>();
+    test(
+      'activeVideoIdProvider changes when scrolling from index 0 to 1',
+      () async {
+        // This test reproduces the bug where scrolling doesn't update active video
+        // Use StreamController from the start to simulate URL changes
+        final locationController = StreamController<String>();
 
-      final container = ProviderContainer(
-        overrides: [
-          routerLocationStreamProvider.overrideWith(
-            (ref) => locationController.stream,
-          ),
-          videoEventsProvider.overrideWith(() => VideoEventsMock(mockVideos)),
-          appForegroundProvider.overrideWith(
-            (ref) => Stream.value(true),
-          ),
-        ],
-      );
+        final container = ProviderContainer(
+          overrides: [
+            routerLocationStreamProvider.overrideWith(
+              (ref) => locationController.stream,
+            ),
+            videoEventsProvider.overrideWith(() => VideoEventsMock(mockVideos)),
+            appForegroundProvider.overrideWith((ref) => Stream.value(true)),
+          ],
+        );
 
-      // Listen for active video changes
-      final activeVideoIds = <String?>[];
-      container.listen(
-        activeVideoIdProvider,
-        (previous, next) {
+        // Listen for active video changes
+        final activeVideoIds = <String?>[];
+        container.listen(activeVideoIdProvider, (previous, next) {
           print('ACTIVE VIDEO CHANGED: $previous → $next');
           activeVideoIds.add(next);
-        },
-        fireImmediately: true,
-      );
+        }, fireImmediately: true);
 
-      // Listen for streams to emit
-      container.listen(pageContextProvider, (previous, next) {}, fireImmediately: true);
-      container.listen(videoEventsProvider, (previous, next) {}, fireImmediately: true);
+        // Listen for streams to emit
+        container.listen(
+          pageContextProvider,
+          (previous, next) {},
+          fireImmediately: true,
+        );
+        container.listen(
+          videoEventsProvider,
+          (previous, next) {},
+          fireImmediately: true,
+        );
 
-      // Start providers
-      container.read(pageContextProvider);
-      container.read(videoEventsProvider);
+        // Start providers
+        container.read(pageContextProvider);
+        container.read(videoEventsProvider);
 
-      // Emit initial location: /explore/0
-      locationController.add('/explore/0');
-      await pumpEventQueue();
+        // Emit initial location: /explore/0
+        locationController.add('/explore/0');
+        await pumpEventQueue();
 
-      // Verify we start at index 0
-      expect(container.read(activeVideoIdProvider), equals('explore-video-0'));
-      expect(activeVideoIds.last, equals('explore-video-0'));
+        // Verify we start at index 0
+        expect(
+          container.read(activeVideoIdProvider),
+          equals('explore-video-0'),
+        );
+        expect(activeVideoIds.last, equals('explore-video-0'));
 
-      // Now simulate scroll: change URL to /explore/1
-      locationController.add('/explore/1');
-      await pumpEventQueue();
+        // Now simulate scroll: change URL to /explore/1
+        locationController.add('/explore/1');
+        await pumpEventQueue();
 
-      // Active video should change to index 1
-      print('Active video IDs seen: $activeVideoIds');
-      expect(container.read(activeVideoIdProvider), equals('explore-video-1'));
-      expect(activeVideoIds, contains('explore-video-1'));
+        // Active video should change to index 1
+        print('Active video IDs seen: $activeVideoIds');
+        expect(
+          container.read(activeVideoIdProvider),
+          equals('explore-video-1'),
+        );
+        expect(activeVideoIds, contains('explore-video-1'));
 
-      locationController.close();
-      container.dispose();
-    });
+        locationController.close();
+        container.dispose();
+      },
+    );
 
-    test('activeVideoIdProvider returns null in grid mode (no videoIndex)', () async {
-      // This test verifies that when URL is /explore (no index), no video is active
-      final locationController = StreamController<String>();
+    test(
+      'activeVideoIdProvider returns null in grid mode (no videoIndex)',
+      () async {
+        // This test verifies that when URL is /explore (no index), no video is active
+        final locationController = StreamController<String>();
 
-      final container = ProviderContainer(
-        overrides: [
-          routerLocationStreamProvider.overrideWith(
-            (ref) => locationController.stream,
-          ),
-          videoEventsProvider.overrideWith(() => VideoEventsMock(mockVideos)),
-          appForegroundProvider.overrideWith(
-            (ref) => Stream.value(true),
-          ),
-        ],
-      );
+        final container = ProviderContainer(
+          overrides: [
+            routerLocationStreamProvider.overrideWith(
+              (ref) => locationController.stream,
+            ),
+            videoEventsProvider.overrideWith(() => VideoEventsMock(mockVideos)),
+            appForegroundProvider.overrideWith((ref) => Stream.value(true)),
+          ],
+        );
 
-      // Listen for active video changes
-      final activeVideoIds = <String?>[];
-      container.listen(
-        activeVideoIdProvider,
-        (previous, next) {
+        // Listen for active video changes
+        final activeVideoIds = <String?>[];
+        container.listen(activeVideoIdProvider, (previous, next) {
           print('ACTIVE VIDEO CHANGED: $previous → $next');
           activeVideoIds.add(next);
-        },
-        fireImmediately: true,
-      );
+        }, fireImmediately: true);
 
-      // Listen for streams to emit
-      container.listen(pageContextProvider, (previous, next) {}, fireImmediately: true);
-      container.listen(videoEventsProvider, (previous, next) {}, fireImmediately: true);
+        // Listen for streams to emit
+        container.listen(
+          pageContextProvider,
+          (previous, next) {},
+          fireImmediately: true,
+        );
+        container.listen(
+          videoEventsProvider,
+          (previous, next) {},
+          fireImmediately: true,
+        );
 
-      // Start providers
-      container.read(pageContextProvider);
-      container.read(videoEventsProvider);
+        // Start providers
+        container.read(pageContextProvider);
+        container.read(videoEventsProvider);
 
-      // Emit location: /explore (no index - grid mode)
-      locationController.add('/explore');
-      await pumpEventQueue();
+        // Emit location: /explore (no index - grid mode)
+        locationController.add('/explore');
+        await pumpEventQueue();
 
-      // Active video should be null (grid mode)
-      print('Active video ID in grid mode: ${container.read(activeVideoIdProvider)}');
-      expect(container.read(activeVideoIdProvider), isNull);
+        // Active video should be null (grid mode)
+        print(
+          'Active video ID in grid mode: ${container.read(activeVideoIdProvider)}',
+        );
+        expect(container.read(activeVideoIdProvider), isNull);
 
-      locationController.close();
-      container.dispose();
-    });
-
+        locationController.close();
+        container.dispose();
+      },
+    );
   });
 }
 

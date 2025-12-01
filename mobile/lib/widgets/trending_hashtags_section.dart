@@ -71,10 +71,7 @@ class _HashtagLoadingPlaceholder extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Text(
         'Loading hashtags...',
-        style: TextStyle(
-          color: VineTheme.secondaryText,
-          fontSize: 14,
-        ),
+        style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
       ),
     );
   }
@@ -82,10 +79,7 @@ class _HashtagLoadingPlaceholder extends StatelessWidget {
 
 /// Horizontal scrollable list of tappable hashtag chips.
 class _HashtagChipList extends StatelessWidget {
-  const _HashtagChipList({
-    required this.hashtags,
-    this.onHashtagTap,
-  });
+  const _HashtagChipList({required this.hashtags, this.onHashtagTap});
 
   final List<String> hashtags;
   final void Function(String hashtag)? onHashtagTap;
@@ -115,10 +109,7 @@ class _HashtagChipList extends StatelessWidget {
 
 /// Individual hashtag chip with tap behavior.
 class _HashtagChip extends StatelessWidget {
-  const _HashtagChip({
-    required this.hashtag,
-    required this.onTap,
-  });
+  const _HashtagChip({required this.hashtag, required this.onTap});
 
   final String hashtag;
   final VoidCallback onTap;

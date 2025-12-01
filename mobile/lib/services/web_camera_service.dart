@@ -31,7 +31,8 @@ class WebCameraService {
       // Check if mediaDevices API is available
       if (html.window.navigator.mediaDevices == null) {
         throw Exception(
-            'MediaDevices API not available. Please ensure you are using HTTPS.');
+          'MediaDevices API not available. Please ensure you are using HTTPS.',
+        );
       }
 
       // Request camera permissions and get media stream
@@ -46,8 +47,11 @@ class WebCameraService {
           'audio': true,
         });
       } catch (audioError) {
-        Log.warning('Failed to get audio, trying video-only: $audioError',
-            name: 'WebCameraService', category: LogCategory.system);
+        Log.warning(
+          'Failed to get audio, trying video-only: $audioError',
+          name: 'WebCameraService',
+          category: LogCategory.system,
+        );
 
         // Try without audio
         _mediaStream = await html.window.navigator.mediaDevices!.getUserMedia({
@@ -71,11 +75,17 @@ class WebCameraService {
         ..style.objectFit = 'cover';
 
       _isInitialized = true;
-      Log.info('📱 Web camera initialized successfully',
-          name: 'WebCameraService', category: LogCategory.system);
+      Log.info(
+        '📱 Web camera initialized successfully',
+        name: 'WebCameraService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Web camera initialization failed: $e',
-          name: 'WebCameraService', category: LogCategory.system);
+      Log.error(
+        'Web camera initialization failed: $e',
+        name: 'WebCameraService',
+        category: LogCategory.system,
+      );
       throw Exception('Failed to initialize web camera: $e');
     }
   }
@@ -83,15 +93,19 @@ class WebCameraService {
   /// Start recording a segment
   Future<void> startRecording() async {
     Log.info(
-        '📱 WebCameraService.startRecording() - initialized: $_isInitialized, hasStream: ${_mediaStream != null}, isRecording: $_isRecording',
-        name: 'WebCameraService',
-        category: LogCategory.system);
+      '📱 WebCameraService.startRecording() - initialized: $_isInitialized, hasStream: ${_mediaStream != null}, isRecording: $_isRecording',
+      name: 'WebCameraService',
+      category: LogCategory.system,
+    );
 
     if (!_isInitialized || _mediaStream == null || _isRecording) {
       final error =
           'Camera not initialized or already recording - initialized: $_isInitialized, hasStream: ${_mediaStream != null}, isRecording: $_isRecording';
-      Log.error('WebCameraService.startRecording() failed: $error',
-          name: 'WebCameraService', category: LogCategory.system);
+      Log.error(
+        'WebCameraService.startRecording() failed: $error',
+        name: 'WebCameraService',
+        category: LogCategory.system,
+      );
       throw Exception(error);
     }
 
@@ -117,8 +131,11 @@ class WebCameraService {
       });
 
       _mediaRecorder!.addEventListener('error', (event) {
-        Log.error('MediaRecorder error: $event',
-            name: 'WebCameraService', category: LogCategory.system);
+        Log.error(
+          'MediaRecorder error: $event',
+          name: 'WebCameraService',
+          category: LogCategory.system,
+        );
         _isRecording = false;
       });
 
@@ -126,12 +143,18 @@ class WebCameraService {
       _mediaRecorder!.start();
       _isRecording = true;
 
-      Log.info('Started web camera recording',
-          name: 'WebCameraService', category: LogCategory.system);
+      Log.info(
+        'Started web camera recording',
+        name: 'WebCameraService',
+        category: LogCategory.system,
+      );
     } catch (e) {
       _isRecording = false;
-      Log.error('Failed to start web recording: $e',
-          name: 'WebCameraService', category: LogCategory.system);
+      Log.error(
+        'Failed to start web recording: $e',
+        name: 'WebCameraService',
+        category: LogCategory.system,
+      );
       throw Exception('Failed to start recording: $e');
     }
   }
@@ -139,15 +162,19 @@ class WebCameraService {
   /// Stop recording and return the blob URL
   Future<String> stopRecording() async {
     Log.debug(
-        '📱 WebCameraService.stopRecording() - isRecording: $_isRecording, hasRecorder: ${_mediaRecorder != null}',
-        name: 'WebCameraService',
-        category: LogCategory.system);
+      '📱 WebCameraService.stopRecording() - isRecording: $_isRecording, hasRecorder: ${_mediaRecorder != null}',
+      name: 'WebCameraService',
+      category: LogCategory.system,
+    );
 
     if (!_isRecording || _mediaRecorder == null) {
       final error =
           'Not currently recording - isRecording: $_isRecording, hasRecorder: ${_mediaRecorder != null}';
-      Log.error('WebCameraService.stopRecording() failed: $error',
-          name: 'WebCameraService', category: LogCategory.system);
+      Log.error(
+        'WebCameraService.stopRecording() failed: $error',
+        name: 'WebCameraService',
+        category: LogCategory.system,
+      );
       throw Exception(error);
     }
 
@@ -159,8 +186,11 @@ class WebCameraService {
       final blobUrl = await _recordingCompleteController!.stream.first;
       return blobUrl;
     } catch (e) {
-      Log.error('Failed to stop web recording: $e',
-          name: 'WebCameraService', category: LogCategory.system);
+      Log.error(
+        'Failed to stop web recording: $e',
+        name: 'WebCameraService',
+        category: LogCategory.system,
+      );
       throw Exception('Failed to stop recording: $e');
     }
   }
@@ -178,12 +208,18 @@ class WebCameraService {
       final blobUrl = html.Url.createObjectUrl(blob);
 
       _recordingCompleteController?.add(blobUrl);
-      Log.info('Web recording completed, blob URL: $blobUrl',
-          name: 'WebCameraService', category: LogCategory.system);
+      Log.info(
+        'Web recording completed, blob URL: $blobUrl',
+        name: 'WebCameraService',
+        category: LogCategory.system,
+      );
     } catch (e) {
       _recordingCompleteController?.addError(e);
-      Log.error('Failed to create blob: $e',
-          name: 'WebCameraService', category: LogCategory.system);
+      Log.error(
+        'Failed to create blob: $e',
+        name: 'WebCameraService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -205,11 +241,14 @@ class WebCameraService {
       _mediaStream?.getTracks().forEach((track) => track.stop());
 
       // Get current facing mode
-      final currentConstraints =
-          _mediaStream?.getVideoTracks().first.getSettings();
+      final currentConstraints = _mediaStream
+          ?.getVideoTracks()
+          .first
+          .getSettings();
       final currentFacingMode = currentConstraints?['facingMode'] ?? 'user';
-      final newFacingMode =
-          currentFacingMode == 'user' ? 'environment' : 'user';
+      final newFacingMode = currentFacingMode == 'user'
+          ? 'environment'
+          : 'user';
 
       // Request new stream with different camera
       _mediaStream = await html.window.navigator.mediaDevices!.getUserMedia({
@@ -224,11 +263,17 @@ class WebCameraService {
       // Update video element
       _videoElement?.srcObject = _mediaStream;
 
-      Log.debug('Switched to $newFacingMode camera',
-          name: 'WebCameraService', category: LogCategory.system);
+      Log.debug(
+        'Switched to $newFacingMode camera',
+        name: 'WebCameraService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to switch camera: $e',
-          name: 'WebCameraService', category: LogCategory.system);
+      Log.error(
+        'Failed to switch camera: $e',
+        name: 'WebCameraService',
+        category: LogCategory.system,
+      );
       // If switching fails, try to restore original stream
       try {
         _mediaStream = await html.window.navigator.mediaDevices!.getUserMedia({
@@ -241,8 +286,11 @@ class WebCameraService {
         });
         _videoElement?.srcObject = _mediaStream;
       } catch (restoreError) {
-        Log.error('Failed to restore camera: $restoreError',
-            name: 'WebCameraService', category: LogCategory.system);
+        Log.error(
+          'Failed to restore camera: $restoreError',
+          name: 'WebCameraService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -277,8 +325,11 @@ class WebCameraService {
     anchor.click();
     anchor.remove();
 
-    Log.debug('Download triggered for $filename',
-        name: 'WebCameraService', category: LogCategory.system);
+    Log.debug(
+      'Download triggered for $filename',
+      name: 'WebCameraService',
+      category: LogCategory.system,
+    );
   }
 
   /// Revoke blob URL to free memory
@@ -286,11 +337,17 @@ class WebCameraService {
     if (blobUrl.startsWith('blob:')) {
       try {
         html.Url.revokeObjectUrl(blobUrl);
-        Log.debug('🧹 Revoked blob URL: $blobUrl',
-            name: 'WebCameraService', category: LogCategory.system);
+        Log.debug(
+          '🧹 Revoked blob URL: $blobUrl',
+          name: 'WebCameraService',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.error('Error revoking blob URL: $e',
-            name: 'WebCameraService', category: LogCategory.system);
+        Log.error(
+          'Error revoking blob URL: $e',
+          name: 'WebCameraService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -304,17 +361,17 @@ class WebCameraService {
     _recordingCompleteController?.close();
     _isInitialized = false;
     _isRecording = false; // Reset recording state
-    Log.debug('📱️ Web camera service disposed',
-        name: 'WebCameraService', category: LogCategory.system);
+    Log.debug(
+      '📱️ Web camera service disposed',
+      name: 'WebCameraService',
+      category: LogCategory.system,
+    );
   }
 }
 
 /// Flutter widget that wraps the HTML video element for web camera preview
 class WebCameraPreview extends StatefulWidget {
-  const WebCameraPreview({
-    required this.cameraService,
-    super.key,
-  });
+  const WebCameraPreview({required this.cameraService, super.key});
   final WebCameraService cameraService;
 
   @override

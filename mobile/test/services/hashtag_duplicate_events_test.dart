@@ -26,21 +26,32 @@ void main() {
       // TODO: Implement actual test with NostrService instance
       // For now, this documents the expected behavior
 
-      expect(true, true, reason: 'Test needs implementation after NostrService refactor');
+      expect(
+        true,
+        true,
+        reason: 'Test needs implementation after NostrService refactor',
+      );
     });
 
-    test('global deduplication prevents true duplicates within same subscription', () async {
-      // Even with per-subscription-type deduplication, we should still prevent
-      // the same event from being processed twice within the SAME subscription
+    test(
+      'global deduplication prevents true duplicates within same subscription',
+      () async {
+        // Even with per-subscription-type deduplication, we should still prevent
+        // the same event from being processed twice within the SAME subscription
 
-      const testEventId = 'duplicate_in_same_sub';
+        const testEventId = 'duplicate_in_same_sub';
 
-      // Expected behavior:
-      // - First delivery of event to hashtag sub: accepted
-      // - Second delivery of same event to SAME hashtag sub: dropped as duplicate
-      // - Delivery to different sub (e.g., search): accepted
+        // Expected behavior:
+        // - First delivery of event to hashtag sub: accepted
+        // - Second delivery of same event to SAME hashtag sub: dropped as duplicate
+        // - Delivery to different sub (e.g., search): accepted
 
-      expect(true, true, reason: 'Test needs implementation after NostrService refactor');
-    });
+        expect(
+          true,
+          true,
+          reason: 'Test needs implementation after NostrService refactor',
+        );
+      },
+    );
   });
 }

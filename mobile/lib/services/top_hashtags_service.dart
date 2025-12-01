@@ -45,21 +45,31 @@ class TopHashtagsService {
   /// Load top hashtags from JSON file
   Future<void> loadTopHashtags() async {
     if (_isLoaded) {
-      Log.debug('Hashtags already loaded, skipping',
-          name: 'TopHashtagsService', category: LogCategory.storage);
+      Log.debug(
+        'Hashtags already loaded, skipping',
+        name: 'TopHashtagsService',
+        category: LogCategory.storage,
+      );
       return;
     }
 
     try {
-      Log.info('🏷️ Loading top 1000 hashtags from JSON file',
-          name: 'TopHashtagsService', category: LogCategory.storage);
+      Log.info(
+        '🏷️ Loading top 1000 hashtags from JSON file',
+        name: 'TopHashtagsService',
+        category: LogCategory.storage,
+      );
 
       // Load the JSON file from assets
-      final jsonString =
-          await rootBundle.loadString('assets/top_1000_hashtags.json');
+      final jsonString = await rootBundle.loadString(
+        'assets/top_1000_hashtags.json',
+      );
 
-      Log.debug('🏷️ Loaded JSON string, length: ${jsonString.length}',
-          name: 'TopHashtagsService', category: LogCategory.storage);
+      Log.debug(
+        '🏷️ Loaded JSON string, length: ${jsonString.length}',
+        name: 'TopHashtagsService',
+        category: LogCategory.storage,
+      );
 
       final jsonData = json.decode(jsonString) as Map<String, dynamic>;
 
@@ -70,19 +80,30 @@ class TopHashtagsService {
 
       _isLoaded = true;
 
-      Log.info('✅ Loaded ${_topHashtags!.length} top hashtags',
-          name: 'TopHashtagsService', category: LogCategory.storage);
+      Log.info(
+        '✅ Loaded ${_topHashtags!.length} top hashtags',
+        name: 'TopHashtagsService',
+        category: LogCategory.storage,
+      );
 
       // Log first few for debugging
       if (_topHashtags!.isNotEmpty) {
-        final preview =
-            _topHashtags!.take(5).map((h) => '#${h.hashtag}').join(', ');
-        Log.info('🏷️ Top hashtags preview: $preview',
-            name: 'TopHashtagsService', category: LogCategory.storage);
+        final preview = _topHashtags!
+            .take(5)
+            .map((h) => '#${h.hashtag}')
+            .join(', ');
+        Log.info(
+          '🏷️ Top hashtags preview: $preview',
+          name: 'TopHashtagsService',
+          category: LogCategory.storage,
+        );
       }
     } catch (e, stackTrace) {
-      Log.error('❌ Failed to load top hashtags: $e\nStack: $stackTrace',
-          name: 'TopHashtagsService', category: LogCategory.storage);
+      Log.error(
+        '❌ Failed to load top hashtags: $e\nStack: $stackTrace',
+        name: 'TopHashtagsService',
+        category: LogCategory.storage,
+      );
       _topHashtags = [];
       _isLoaded = false;
     }

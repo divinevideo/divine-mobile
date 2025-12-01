@@ -13,10 +13,7 @@ import 'package:openvine/providers/app_providers.dart';
 
 import 'profile_follow_unfollow_test.mocks.dart';
 
-@GenerateMocks([
-  SocialService,
-  AuthService,
-])
+@GenerateMocks([SocialService, AuthService])
 void main() {
   group('Profile Follow/Unfollow Integration Tests', () {
     late MockSocialService mockSocialService;
@@ -27,15 +24,15 @@ void main() {
       mockAuthService = MockAuthService();
     });
 
-    testWidgets('Follow button triggers follow action and shows success',
-        (WidgetTester tester) async {
+    testWidgets('Follow button triggers follow action and shows success', (
+      WidgetTester tester,
+    ) async {
       const targetPubkey = 'target_user_pubkey_123';
 
       // Setup mocks
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockSocialService.isFollowing(targetPubkey)).thenReturn(false);
-      when(mockSocialService.followUser(targetPubkey))
-          .thenAnswer((_) async {});
+      when(mockSocialService.followUser(targetPubkey)).thenAnswer((_) async {});
 
       // Build a simple test widget that uses FollowActionsHelper
       await tester.pumpWidget(
@@ -88,15 +85,17 @@ void main() {
       expect(find.text('Successfully followed user'), findsOneWidget);
     });
 
-    testWidgets('Unfollow button triggers unfollow action and shows success',
-        (WidgetTester tester) async {
+    testWidgets('Unfollow button triggers unfollow action and shows success', (
+      WidgetTester tester,
+    ) async {
       const targetPubkey = 'target_user_pubkey_456';
 
       // Setup mocks
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockSocialService.isFollowing(targetPubkey)).thenReturn(true);
-      when(mockSocialService.unfollowUser(targetPubkey))
-          .thenAnswer((_) async {});
+      when(
+        mockSocialService.unfollowUser(targetPubkey),
+      ).thenAnswer((_) async {});
 
       // Build a simple test widget
       await tester.pumpWidget(
@@ -149,8 +148,9 @@ void main() {
       expect(find.text('Successfully unfollowed user'), findsOneWidget);
     });
 
-    testWidgets('Shows error when not authenticated',
-        (WidgetTester tester) async {
+    testWidgets('Shows error when not authenticated', (
+      WidgetTester tester,
+    ) async {
       const targetPubkey = 'target_user_pubkey_789';
 
       // Setup mocks - user not authenticated
@@ -200,15 +200,17 @@ void main() {
       verifyNever(mockSocialService.followUser(any));
     });
 
-    testWidgets('Shows error when follow action fails',
-        (WidgetTester tester) async {
+    testWidgets('Shows error when follow action fails', (
+      WidgetTester tester,
+    ) async {
       const targetPubkey = 'target_user_pubkey_error';
 
       // Setup mocks
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockSocialService.isFollowing(targetPubkey)).thenReturn(false);
-      when(mockSocialService.followUser(targetPubkey))
-          .thenThrow(Exception('Network error'));
+      when(
+        mockSocialService.followUser(targetPubkey),
+      ).thenThrow(Exception('Network error'));
 
       // Build a simple test widget
       await tester.pumpWidget(

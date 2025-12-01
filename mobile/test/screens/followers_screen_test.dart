@@ -26,34 +26,30 @@ void main() {
       eventStreamController = StreamController<nostr_sdk.Event>();
 
       // Setup mock to return stream
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => eventStreamController.stream);
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => eventStreamController.stream);
     });
 
     tearDown(() {
       eventStreamController.close();
     });
 
-    Widget createTestWidget({required String pubkey, required String displayName}) {
+    Widget createTestWidget({
+      required String pubkey,
+      required String displayName,
+    }) {
       return ProviderScope(
-        overrides: [
-          nostrServiceProvider.overrideWithValue(mockNostrService),
-        ],
+        overrides: [nostrServiceProvider.overrideWithValue(mockNostrService)],
         child: MaterialApp(
-          home: FollowersScreen(
-            pubkey: pubkey,
-            displayName: displayName,
-          ),
+          home: FollowersScreen(pubkey: pubkey, displayName: displayName),
         ),
       );
     }
 
     testWidgets('displays loading indicator initially', (tester) async {
       await tester.pumpWidget(
-        createTestWidget(
-          pubkey: 'test_pubkey',
-          displayName: 'Test User',
-        ),
+        createTestWidget(pubkey: 'test_pubkey', displayName: 'Test User'),
       );
 
       // Should show loading indicator
@@ -63,21 +59,21 @@ void main() {
 
     testWidgets('displays followers when events arrive', (tester) async {
       await tester.pumpWidget(
-        createTestWidget(
-          pubkey: 'target_pubkey',
-          displayName: 'Test User',
-        ),
+        createTestWidget(pubkey: 'target_pubkey', displayName: 'Test User'),
       );
 
       // Simulate follower events arriving
       final event1 = nostr_sdk.Event(
-        'follower1',  // pubkey
-        3,  // kind
+        'follower1', // pubkey
+        3, // kind
         [
           ['p', 'target_pubkey'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
-        ],  // tags
-        '',  // content
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
+        ], // tags
+        '', // content
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       );
 
@@ -91,10 +87,7 @@ void main() {
 
     testWidgets('displays empty state when no followers', (tester) async {
       await tester.pumpWidget(
-        createTestWidget(
-          pubkey: 'test_pubkey',
-          displayName: 'Test User',
-        ),
+        createTestWidget(pubkey: 'test_pubkey', displayName: 'Test User'),
       );
 
       // Wait for loading timeout
@@ -108,14 +101,12 @@ void main() {
 
     testWidgets('handles subscription errors gracefully', (tester) async {
       // Setup mock to emit error
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => Stream.error('Subscription failed'));
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => Stream.error('Subscription failed'));
 
       await tester.pumpWidget(
-        createTestWidget(
-          pubkey: 'test_pubkey',
-          displayName: 'Test User',
-        ),
+        createTestWidget(pubkey: 'test_pubkey', displayName: 'Test User'),
       );
 
       await tester.pump();
@@ -128,32 +119,35 @@ void main() {
 
     testWidgets('deduplicates follower events', (tester) async {
       await tester.pumpWidget(
-        createTestWidget(
-          pubkey: 'target_pubkey',
-          displayName: 'Test User',
-        ),
+        createTestWidget(pubkey: 'target_pubkey', displayName: 'Test User'),
       );
 
       // Add same follower twice
       final event1 = nostr_sdk.Event(
-        'follower1',  // pubkey
-        3,  // kind
+        'follower1', // pubkey
+        3, // kind
         [
           ['p', 'target_pubkey'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
-        ],  // tags
-        '',  // content
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
+        ], // tags
+        '', // content
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       );
 
       final event2 = nostr_sdk.Event(
-        'follower1',  // pubkey - Same follower
-        3,  // kind
+        'follower1', // pubkey - Same follower
+        3, // kind
         [
           ['p', 'target_pubkey'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
-        ],  // tags
-        '',  // content
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
+        ], // tags
+        '', // content
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       );
 
@@ -170,19 +164,14 @@ void main() {
 
     testWidgets('subscribes with correct filter', (tester) async {
       await tester.pumpWidget(
-        createTestWidget(
-          pubkey: 'target_pubkey',
-          displayName: 'Test User',
-        ),
+        createTestWidget(pubkey: 'target_pubkey', displayName: 'Test User'),
       );
 
       await tester.pump();
 
       // Verify subscription was called with correct filter
       final captured = verify(
-        mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-        ),
+        mockNostrService.subscribeToEvents(filters: captureAnyNamed('filters')),
       ).captured;
 
       expect(captured.length, 1);
@@ -194,10 +183,7 @@ void main() {
 
     testWidgets('back button pops navigation', (tester) async {
       await tester.pumpWidget(
-        createTestWidget(
-          pubkey: 'test_pubkey',
-          displayName: 'Test User',
-        ),
+        createTestWidget(pubkey: 'test_pubkey', displayName: 'Test User'),
       );
 
       await tester.pump();
@@ -211,14 +197,12 @@ void main() {
 
     testWidgets('retry button reloads followers', (tester) async {
       // Setup mock to emit error first
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => Stream.error('Subscription failed'));
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => Stream.error('Subscription failed'));
 
       await tester.pumpWidget(
-        createTestWidget(
-          pubkey: 'test_pubkey',
-          displayName: 'Test User',
-        ),
+        createTestWidget(pubkey: 'test_pubkey', displayName: 'Test User'),
       );
 
       await tester.pump();
@@ -228,8 +212,9 @@ void main() {
 
       // Setup mock to succeed on retry
       final retryStreamController = StreamController<nostr_sdk.Event>();
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => retryStreamController.stream);
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => retryStreamController.stream);
 
       // Tap retry
       await tester.tap(find.text('Retry'));

@@ -23,8 +23,9 @@ void main() {
       mockAuthService = MockAuthService();
     });
 
-    testWidgets('shows loading indicator when auth state is checking',
-        (tester) async {
+    testWidgets('shows loading indicator when auth state is checking', (
+      tester,
+    ) async {
       // Setup: Auth state is CHECKING
       when(mockAuthService.authState).thenReturn(AuthState.checking);
       when(mockAuthService.isAuthenticated).thenReturn(false);
@@ -35,11 +36,11 @@ void main() {
         ProviderScope(
           overrides: [
             authServiceProvider.overrideWithValue(mockAuthService),
-            authStateStreamProvider.overrideWith((ref) => Stream.value(AuthState.checking)),
+            authStateStreamProvider.overrideWith(
+              (ref) => Stream.value(AuthState.checking),
+            ),
           ],
-          child: const MaterialApp(
-            home: WelcomeScreen(),
-          ),
+          child: const MaterialApp(home: WelcomeScreen()),
         ),
       );
 
@@ -54,8 +55,9 @@ void main() {
       expect(find.text('Import Existing Identity'), findsNothing);
     });
 
-    testWidgets('shows loading indicator when auth state is authenticating',
-        (tester) async {
+    testWidgets('shows loading indicator when auth state is authenticating', (
+      tester,
+    ) async {
       // Setup: Auth state is AUTHENTICATING
       when(mockAuthService.authState).thenReturn(AuthState.authenticating);
       when(mockAuthService.isAuthenticated).thenReturn(false);
@@ -66,11 +68,11 @@ void main() {
         ProviderScope(
           overrides: [
             authServiceProvider.overrideWithValue(mockAuthService),
-            authStateStreamProvider.overrideWith((ref) => Stream.value(AuthState.authenticating)),
+            authStateStreamProvider.overrideWith(
+              (ref) => Stream.value(AuthState.authenticating),
+            ),
           ],
-          child: const MaterialApp(
-            home: WelcomeScreen(),
-          ),
+          child: const MaterialApp(home: WelcomeScreen()),
         ),
       );
 
@@ -85,8 +87,7 @@ void main() {
       expect(find.text('Import Existing Identity'), findsNothing);
     });
 
-    testWidgets('shows Continue button when authenticated',
-        (tester) async {
+    testWidgets('shows Continue button when authenticated', (tester) async {
       // Setup: Auth state is AUTHENTICATED
       when(mockAuthService.authState).thenReturn(AuthState.authenticated);
       when(mockAuthService.isAuthenticated).thenReturn(true);
@@ -97,11 +98,11 @@ void main() {
         ProviderScope(
           overrides: [
             authServiceProvider.overrideWithValue(mockAuthService),
-            authStateStreamProvider.overrideWith((ref) => Stream.value(AuthState.authenticated)),
+            authStateStreamProvider.overrideWith(
+              (ref) => Stream.value(AuthState.authenticated),
+            ),
           ],
-          child: const MaterialApp(
-            home: WelcomeScreen(),
-          ),
+          child: const MaterialApp(home: WelcomeScreen()),
         ),
       );
 
@@ -115,41 +116,40 @@ void main() {
       expect(find.text('Import Existing Identity'), findsNothing);
     });
 
-    testWidgets('shows error message when unauthenticated (auto-creation failed)',
-        (tester) async {
-      // Setup: Auth state is UNAUTHENTICATED (auto-creation failed)
-      when(mockAuthService.authState).thenReturn(AuthState.unauthenticated);
-      when(mockAuthService.isAuthenticated).thenReturn(false);
-      when(mockAuthService.lastError).thenReturn('Failed to create identity');
+    testWidgets(
+      'shows error message when unauthenticated (auto-creation failed)',
+      (tester) async {
+        // Setup: Auth state is UNAUTHENTICATED (auto-creation failed)
+        when(mockAuthService.authState).thenReturn(AuthState.unauthenticated);
+        when(mockAuthService.isAuthenticated).thenReturn(false);
+        when(mockAuthService.lastError).thenReturn('Failed to create identity');
 
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-          ],
-          child: const MaterialApp(
-            home: WelcomeScreen(),
+        await tester.binding.setSurfaceSize(const Size(800, 1200));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+            child: const MaterialApp(home: WelcomeScreen()),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      // Expect: Error message shown
-      expect(find.text('Setup Error'), findsOneWidget);
-      expect(find.textContaining('Failed to'), findsOneWidget);
+        // Expect: Error message shown
+        expect(find.text('Setup Error'), findsOneWidget);
+        expect(find.textContaining('Failed to'), findsOneWidget);
 
-      // Expect: Create/Import buttons NEVER shown
-      expect(find.text('Create New Identity'), findsNothing);
-      expect(find.text('Import Existing Identity'), findsNothing);
+        // Expect: Create/Import buttons NEVER shown
+        expect(find.text('Create New Identity'), findsNothing);
+        expect(find.text('Import Existing Identity'), findsNothing);
 
-      // Expect: Continue button NOT shown
-      expect(find.text('Continue'), findsNothing);
-    });
+        // Expect: Continue button NOT shown
+        expect(find.text('Continue'), findsNothing);
+      },
+    );
 
-    testWidgets('Continue button disabled when TOS not accepted',
-        (tester) async {
+    testWidgets('Continue button disabled when TOS not accepted', (
+      tester,
+    ) async {
       // Setup: Auth state is AUTHENTICATED
       when(mockAuthService.authState).thenReturn(AuthState.authenticated);
       when(mockAuthService.isAuthenticated).thenReturn(true);
@@ -160,11 +160,11 @@ void main() {
         ProviderScope(
           overrides: [
             authServiceProvider.overrideWithValue(mockAuthService),
-            authStateStreamProvider.overrideWith((ref) => Stream.value(AuthState.authenticated)),
+            authStateStreamProvider.overrideWith(
+              (ref) => Stream.value(AuthState.authenticated),
+            ),
           ],
-          child: const MaterialApp(
-            home: WelcomeScreen(),
-          ),
+          child: const MaterialApp(home: WelcomeScreen()),
         ),
       );
 
@@ -179,65 +179,77 @@ void main() {
       expect(buttonWidget.onPressed, isNull);
     });
 
-    testWidgets('UI updates when auth state changes from checking to authenticated (race condition test)',
-        (tester) async {
-      // This test reproduces the race condition reported by users:
-      // Auth completes but button never appears because screen doesn't rebuild
+    testWidgets(
+      'UI updates when auth state changes from checking to authenticated (race condition test)',
+      (tester) async {
+        // This test reproduces the race condition reported by users:
+        // Auth completes but button never appears because screen doesn't rebuild
 
-      // Setup: Create stream controller to simulate auth state changes
-      final authStateController = StreamController<AuthState>();
+        // Setup: Create stream controller to simulate auth state changes
+        final authStateController = StreamController<AuthState>();
 
-      // Start with auth state CHECKING
-      when(mockAuthService.authState).thenReturn(AuthState.checking);
-      when(mockAuthService.isAuthenticated).thenReturn(false);
-      when(mockAuthService.lastError).thenReturn(null);
+        // Start with auth state CHECKING
+        when(mockAuthService.authState).thenReturn(AuthState.checking);
+        when(mockAuthService.isAuthenticated).thenReturn(false);
+        when(mockAuthService.lastError).thenReturn(null);
 
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-            authStateStreamProvider.overrideWith((ref) => authStateController.stream),
-          ],
-          child: const MaterialApp(
-            home: WelcomeScreen(),
+        await tester.binding.setSurfaceSize(const Size(800, 1200));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authServiceProvider.overrideWithValue(mockAuthService),
+              authStateStreamProvider.overrideWith(
+                (ref) => authStateController.stream,
+              ),
+            ],
+            child: const MaterialApp(home: WelcomeScreen()),
           ),
-        ),
-      );
+        );
 
-      // Emit initial checking state
-      authStateController.add(AuthState.checking);
-      await tester.pump();
+        // Emit initial checking state
+        authStateController.add(AuthState.checking);
+        await tester.pump();
 
-      // Verify: Loading indicator shown initially
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'Continue'), findsNothing);
+        // Verify: Loading indicator shown initially
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.widgetWithText(ElevatedButton, 'Continue'), findsNothing);
 
-      // Simulate auth state changing to AUTHENTICATED (like in real app)
-      when(mockAuthService.authState).thenReturn(AuthState.authenticated);
-      when(mockAuthService.isAuthenticated).thenReturn(true);
-      authStateController.add(AuthState.authenticated);
+        // Simulate auth state changing to AUTHENTICATED (like in real app)
+        when(mockAuthService.authState).thenReturn(AuthState.authenticated);
+        when(mockAuthService.isAuthenticated).thenReturn(true);
+        authStateController.add(AuthState.authenticated);
 
-      // This should trigger a rebuild - the fix makes it work!
-      await tester.pump();
+        // This should trigger a rebuild - the fix makes it work!
+        await tester.pump();
 
-      // Expect: Continue button should appear after auth completes (even if disabled)
-      // The button shows "Accept Terms to Continue" when terms not accepted
-      expect(find.byType(ElevatedButton), findsOneWidget,
-          reason: 'Continue button widget should appear when auth state changes to authenticated');
-      expect(find.byType(CircularProgressIndicator), findsNothing,
-          reason: 'Loading indicator should disappear when auth completes');
+        // Expect: Continue button should appear after auth completes (even if disabled)
+        // The button shows "Accept Terms to Continue" when terms not accepted
+        expect(
+          find.byType(ElevatedButton),
+          findsOneWidget,
+          reason:
+              'Continue button widget should appear when auth state changes to authenticated',
+        );
+        expect(
+          find.byType(CircularProgressIndicator),
+          findsNothing,
+          reason: 'Loading indicator should disappear when auth completes',
+        );
 
-      // Verify the button shows proper text (may be disabled if terms not accepted)
-      final buttonText = find.descendant(
-        of: find.byType(ElevatedButton),
-        matching: find.byType(Text),
-      );
-      expect(buttonText, findsOneWidget,
-          reason: 'Button should have text widget');
+        // Verify the button shows proper text (may be disabled if terms not accepted)
+        final buttonText = find.descendant(
+          of: find.byType(ElevatedButton),
+          matching: find.byType(Text),
+        );
+        expect(
+          buttonText,
+          findsOneWidget,
+          reason: 'Button should have text widget',
+        );
 
-      // Cleanup
-      await authStateController.close();
-    });
+        // Cleanup
+        await authStateController.close();
+      },
+    );
   });
 }

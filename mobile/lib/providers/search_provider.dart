@@ -41,8 +41,11 @@ final performSearchProvider = Provider<Future<void> Function(String)>((ref) {
     try {
       searchNotifier.state = SearchState.loading(query);
 
-      Log.info('🔍 Starting search for: "$query"',
-          name: 'SearchProvider', category: LogCategory.ui);
+      Log.info(
+        '🔍 Starting search for: "$query"',
+        name: 'SearchProvider',
+        category: LogCategory.ui,
+      );
 
       // Clear previous results
       videoEventService.clearSearchResults();
@@ -55,11 +58,17 @@ final performSearchProvider = Provider<Future<void> Function(String)>((ref) {
 
       searchNotifier.state = SearchState.success(results, query);
 
-      Log.info('🔍 Search completed. Found ${results.length} results',
-          name: 'SearchProvider', category: LogCategory.ui);
+      Log.info(
+        '🔍 Search completed. Found ${results.length} results',
+        name: 'SearchProvider',
+        category: LogCategory.ui,
+      );
     } catch (e) {
-      Log.error('Search failed: $e',
-          name: 'SearchProvider', category: LogCategory.ui);
+      Log.error(
+        'Search failed: $e',
+        name: 'SearchProvider',
+        category: LogCategory.ui,
+      );
       searchNotifier.state = SearchState.error(e.toString(), query);
     }
   };
@@ -73,8 +82,11 @@ final clearSearchProvider = Provider<void Function()>((ref) {
     searchNotifier.state = const SearchState.initial();
     videoEventService.clearSearchResults();
 
-    Log.debug('Search cleared',
-        name: 'SearchProvider', category: LogCategory.ui);
+    Log.debug(
+      'Search cleared',
+      name: 'SearchProvider',
+      category: LogCategory.ui,
+    );
   };
 });
 
@@ -97,8 +109,11 @@ class SearchNotifier extends _$SearchNotifier {
     try {
       state = SearchState.loading(query);
 
-      Log.info('🔍 SearchNotifier: Starting search for: "$query"',
-          name: 'SearchProvider', category: LogCategory.ui);
+      Log.info(
+        '🔍 SearchNotifier: Starting search for: "$query"',
+        name: 'SearchProvider',
+        category: LogCategory.ui,
+      );
 
       // Clear previous results
       videoEventService.clearSearchResults();
@@ -112,12 +127,16 @@ class SearchNotifier extends _$SearchNotifier {
       state = SearchState.success(results, query);
 
       Log.info(
-          '🔍 SearchNotifier: Search completed. Found ${results.length} results',
-          name: 'SearchProvider',
-          category: LogCategory.ui);
+        '🔍 SearchNotifier: Search completed. Found ${results.length} results',
+        name: 'SearchProvider',
+        category: LogCategory.ui,
+      );
     } catch (e) {
-      Log.error('SearchNotifier: Search failed: $e',
-          name: 'SearchProvider', category: LogCategory.ui);
+      Log.error(
+        'SearchNotifier: Search failed: $e',
+        name: 'SearchProvider',
+        category: LogCategory.ui,
+      );
       state = SearchState.error(e.toString(), query);
     }
   }
@@ -128,8 +147,11 @@ class SearchNotifier extends _$SearchNotifier {
     state = const SearchState.initial();
     videoEventService.clearSearchResults();
 
-    Log.debug('SearchNotifier: Search cleared',
-        name: 'SearchProvider', category: LogCategory.ui);
+    Log.debug(
+      'SearchNotifier: Search cleared',
+      name: 'SearchProvider',
+      category: LogCategory.ui,
+    );
   }
 
   Future<void> searchByHashtag(String hashtag) async {
@@ -154,8 +176,11 @@ class SearchNotifier extends _$SearchNotifier {
     try {
       state = SearchState.loading(query);
 
-      Log.info('🔍 SearchNotifier: Starting filtered search for: "$query"',
-          name: 'SearchProvider', category: LogCategory.ui);
+      Log.info(
+        '🔍 SearchNotifier: Starting filtered search for: "$query"',
+        name: 'SearchProvider',
+        category: LogCategory.ui,
+      );
 
       // Clear previous results
       videoEventService.clearSearchResults();
@@ -175,12 +200,16 @@ class SearchNotifier extends _$SearchNotifier {
       state = SearchState.success(results, query);
 
       Log.info(
-          '🔍 SearchNotifier: Filtered search completed. Found ${results.length} results',
-          name: 'SearchProvider',
-          category: LogCategory.ui);
+        '🔍 SearchNotifier: Filtered search completed. Found ${results.length} results',
+        name: 'SearchProvider',
+        category: LogCategory.ui,
+      );
     } catch (e) {
-      Log.error('SearchNotifier: Filtered search failed: $e',
-          name: 'SearchProvider', category: LogCategory.ui);
+      Log.error(
+        'SearchNotifier: Filtered search failed: $e',
+        name: 'SearchProvider',
+        category: LogCategory.ui,
+      );
       state = SearchState.error(e.toString(), query);
     }
   }

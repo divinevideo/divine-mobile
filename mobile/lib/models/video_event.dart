@@ -51,21 +51,27 @@ class VideoEvent {
   /// Create VideoEvent from Nostr event
   factory VideoEvent.fromNostrEvent(Event event) {
     if (!NIP71VideoKinds.isVideoKind(event.kind)) {
-      throw ArgumentError('Event must be a NIP-71 video kind (${NIP71VideoKinds.getAllVideoKinds().join(', ')})');
+      throw ArgumentError(
+        'Event must be a NIP-71 video kind (${NIP71VideoKinds.getAllVideoKinds().join(', ')})',
+      );
     }
 
     developer.log(
-        '🔍 DEBUG: Parsing Kind ${event.kind} event ${event.id}',
-        name: 'VideoEvent');
-    developer.log('🔍 DEBUG: Event has ${event.tags.length} tags',
-        name: 'VideoEvent');
+      '🔍 DEBUG: Parsing Kind ${event.kind} event ${event.id}',
+      name: 'VideoEvent',
+    );
     developer.log(
-        '🔍 DEBUG: Event content: ${event.content.length > 100 ? "${event.content.substring(0, 100)}..." : event.content}',
-        name: 'VideoEvent');
+      '🔍 DEBUG: Event has ${event.tags.length} tags',
+      name: 'VideoEvent',
+    );
+    developer.log(
+      '🔍 DEBUG: Event content: ${event.content.length > 100 ? "${event.content.substring(0, 100)}..." : event.content}',
+      name: 'VideoEvent',
+    );
 
     final tags = <String, String>{};
     final hashtags = <String>[];
-    final videoUrlCandidates = <String>[];  // Collect all video URL candidates
+    final videoUrlCandidates = <String>[]; // Collect all video URL candidates
     String? videoUrl;
     String? thumbnailUrl;
     String? title;
@@ -98,73 +104,100 @@ class VideoEvent {
       final tagValue = (tag.length > 1) ? tag[1] : '';
 
       developer.log(
-          '🔍 DEBUG: Tag [$i]: $tagName = "$tagValue" (${tag.length} elements)',
-          name: 'VideoEvent');
+        '🔍 DEBUG: Tag [$i]: $tagName = "$tagValue" (${tag.length} elements)',
+        name: 'VideoEvent',
+      );
 
       switch (tagName) {
         case 'url':
-          developer.log('🔍 DEBUG: Found url tag with value: $tagValue',
-              name: 'VideoEvent');
+          developer.log(
+            '🔍 DEBUG: Found url tag with value: $tagValue',
+            name: 'VideoEvent',
+          );
           // Check if this is a valid video URL
           if (tagValue.isNotEmpty && _isValidVideoUrl(tagValue)) {
             if (tagValue.contains('apt.openvine.co')) {
               // Fix typo: apt.openvine.co -> api.openvine.co
-              final fixedUrl =
-                  tagValue.replaceAll('apt.openvine.co', 'api.openvine.co');
+              final fixedUrl = tagValue.replaceAll(
+                'apt.openvine.co',
+                'api.openvine.co',
+              );
               developer.log(
-                  '🔧 FIXED: Corrected apt.openvine.co to api.openvine.co: $fixedUrl',
-                  name: 'VideoEvent');
+                '🔧 FIXED: Corrected apt.openvine.co to api.openvine.co: $fixedUrl',
+                name: 'VideoEvent',
+              );
               videoUrlCandidates.add(fixedUrl);
             } else {
               videoUrlCandidates.add(tagValue);
-              developer.log('✅ Added video URL candidate from url tag: $tagValue',
-                  name: 'VideoEvent');
+              developer.log(
+                '✅ Added video URL candidate from url tag: $tagValue',
+                name: 'VideoEvent',
+              );
             }
           } else {
-            developer.log('⚠️ WARNING: Invalid URL in url tag: $tagValue',
-                name: 'VideoEvent');
+            developer.log(
+              '⚠️ WARNING: Invalid URL in url tag: $tagValue',
+              name: 'VideoEvent',
+            );
           }
         case 'streaming':
           // Handle streaming tag with HLS/DASH URLs
           // Format: ["streaming", "url", "format"] e.g., ["streaming", "https://cdn.divine.video/.../video.m3u8", "hls"]
           if (tagValue.isNotEmpty && _isValidVideoUrl(tagValue)) {
             videoUrlCandidates.add(tagValue);
-            developer.log('✅ Added video URL candidate from streaming tag: $tagValue',
-                name: 'VideoEvent');
+            developer.log(
+              '✅ Added video URL candidate from streaming tag: $tagValue',
+              name: 'VideoEvent',
+            );
           }
         case 'imeta':
-          developer.log('🔍 DEBUG: Found imeta tag with ${tag.length} elements',
-              name: 'VideoEvent');
-          developer.log('🔍 DEBUG: Full imeta tag contents: $tag',
-              name: 'VideoEvent');
+          developer.log(
+            '🔍 DEBUG: Found imeta tag with ${tag.length} elements',
+            name: 'VideoEvent',
+          );
+          developer.log(
+            '🔍 DEBUG: Full imeta tag contents: $tag',
+            name: 'VideoEvent',
+          );
           // Parse imeta tag which contains comma-separated metadata
           // Ensure we have a List<String> for the parser
           final iMetaTag = List<String>.from(tag);
           _parseImetaTag(iMetaTag, (key, value) {
-            developer.log('🔍 DEBUG: imeta key="$key" value="$value"',
-                name: 'VideoEvent');
+            developer.log(
+              '🔍 DEBUG: imeta key="$key" value="$value"',
+              name: 'VideoEvent',
+            );
             switch (key) {
               case 'url':
-                developer.log('🔍 DEBUG: imeta URL value: $value',
-                    name: 'VideoEvent');
+                developer.log(
+                  '🔍 DEBUG: imeta URL value: $value',
+                  name: 'VideoEvent',
+                );
                 // Check if this is a valid video URL and add to candidates
                 if (value.isNotEmpty && _isValidVideoUrl(value)) {
                   if (value.contains('apt.openvine.co')) {
                     // Fix typo: apt.openvine.co -> api.openvine.co
-                    final fixedUrl =
-                        value.replaceAll('apt.openvine.co', 'api.openvine.co');
+                    final fixedUrl = value.replaceAll(
+                      'apt.openvine.co',
+                      'api.openvine.co',
+                    );
                     developer.log(
-                        '🔧 FIXED: Corrected apt.openvine.co to api.openvine.co in imeta: $fixedUrl',
-                        name: 'VideoEvent');
+                      '🔧 FIXED: Corrected apt.openvine.co to api.openvine.co in imeta: $fixedUrl',
+                      name: 'VideoEvent',
+                    );
                     videoUrlCandidates.add(fixedUrl);
                   } else {
                     videoUrlCandidates.add(value);
-                    developer.log('✅ Added video URL candidate from imeta url: $value',
-                        name: 'VideoEvent');
+                    developer.log(
+                      '✅ Added video URL candidate from imeta url: $value',
+                      name: 'VideoEvent',
+                    );
                   }
                 } else {
-                  developer.log('⚠️ WARNING: Invalid URL in imeta: $value',
-                      name: 'VideoEvent');
+                  developer.log(
+                    '⚠️ WARNING: Invalid URL in imeta: $value',
+                    name: 'VideoEvent',
+                  );
                 }
               // POSTEL'S LAW: Accept various video URL keys that different clients may use
               case 'hls':
@@ -177,8 +210,10 @@ class VideoEvent {
                 // Alternative video URL keys - add as candidates if valid
                 if (value.isNotEmpty && _isValidVideoUrl(value)) {
                   videoUrlCandidates.add(value);
-                  developer.log('✅ Added video URL candidate from imeta $key: $value',
-                      name: 'VideoEvent');
+                  developer.log(
+                    '✅ Added video URL candidate from imeta $key: $value',
+                    name: 'VideoEvent',
+                  );
                 }
               case 'm':
                 mimeType ??= value;
@@ -194,8 +229,10 @@ class VideoEvent {
               case 'image':
                 // NIP-92 uses 'image' for thumbnail in imeta
                 thumbnailUrl ??= value;
-                developer.log('✅ Set thumbnailUrl from imeta image tag: $value',
-                    name: 'VideoEvent');
+                developer.log(
+                  '✅ Set thumbnailUrl from imeta image tag: $value',
+                  name: 'VideoEvent',
+                );
               case 'blurhash':
                 // Blurhash for progressive loading
                 blurhash ??= value;
@@ -228,8 +265,9 @@ class VideoEvent {
             // Store in tags for potential future use but don't use as main thumbnail
             tags['preview_gif'] = tagValue;
             developer.log(
-                '✅ Found preview GIF tag (not using as thumbnail): $tagValue',
-                name: 'VideoEvent');
+              '✅ Found preview GIF tag (not using as thumbnail): $tagValue',
+              name: 'VideoEvent',
+            );
           }
         case 'image':
           // Alternative to 'thumb' tag - some clients use 'image' instead
@@ -275,49 +313,59 @@ class VideoEvent {
             final url = tagValue;
             final type = tag[2];
             developer.log(
-                '🔍 DEBUG: Found r tag with type annotation: url="$url" type="$type"',
-                name: 'VideoEvent');
+              '🔍 DEBUG: Found r tag with type annotation: url="$url" type="$type"',
+              name: 'VideoEvent',
+            );
 
             if (type == 'video' && url.isNotEmpty && _isValidVideoUrl(url)) {
               videoUrl ??= url;
               developer.log(
-                  '✅ Found video URL in r tag with type annotation: $url',
-                  name: 'VideoEvent');
+                '✅ Found video URL in r tag with type annotation: $url',
+                name: 'VideoEvent',
+              );
             } else if (type == 'thumbnail' &&
                 url.isNotEmpty &&
                 !url.contains('picsum.photos')) {
               thumbnailUrl ??= url;
               developer.log(
-                  '✅ Found thumbnail URL in r tag with type annotation: $url',
-                  name: 'VideoEvent');
+                '✅ Found thumbnail URL in r tag with type annotation: $url',
+                name: 'VideoEvent',
+              );
             }
           } else if (tagValue.isNotEmpty && _isValidVideoUrl(tagValue)) {
             // Fallback: if no type annotation, treat as video URL
             videoUrlCandidates.add(tagValue);
-            developer.log('✅ Added video URL candidate from r tag: $tagValue',
-                name: 'VideoEvent');
+            developer.log(
+              '✅ Added video URL candidate from r tag: $tagValue',
+              name: 'VideoEvent',
+            );
           }
         case 'e':
           // Event reference - check if it's a media URL in disguise
           if (tagValue.isNotEmpty && _isValidVideoUrl(tagValue)) {
             videoUrlCandidates.add(tagValue);
-            developer.log('✅ Added video URL candidate from e tag: $tagValue',
-                name: 'VideoEvent');
+            developer.log(
+              '✅ Added video URL candidate from e tag: $tagValue',
+              name: 'VideoEvent',
+            );
           }
         case 'i':
           // External identity - sometimes used for media
           if (tagValue.isNotEmpty && _isValidVideoUrl(tagValue)) {
             videoUrlCandidates.add(tagValue);
-            developer.log('✅ Added video URL candidate from i tag: $tagValue',
-                name: 'VideoEvent');
+            developer.log(
+              '✅ Added video URL candidate from i tag: $tagValue',
+              name: 'VideoEvent',
+            );
           }
         default:
           // POSTEL'S LAW: Check if any unknown tag contains a valid video URL
           if (tagValue.isNotEmpty && _isValidVideoUrl(tagValue)) {
             videoUrlCandidates.add(tagValue);
             developer.log(
-                '✅ Added video URL candidate from unknown tag "$tagName": $tagValue',
-                name: 'VideoEvent');
+              '✅ Added video URL candidate from unknown tag "$tagName": $tagValue',
+              name: 'VideoEvent',
+            );
           }
       }
 
@@ -335,7 +383,10 @@ class VideoEvent {
 
     // DEBUG: Log the exact videoUrl being passed to VideoEvent constructor
     if (videoUrl?.contains('cdn.divine.video') == true) {
-      developer.log('⚠️ SUSPICIOUS: Found cdn.divine.video URL: $videoUrl', name: 'VideoEvent');
+      developer.log(
+        '⚠️ SUSPICIOUS: Found cdn.divine.video URL: $videoUrl',
+        name: 'VideoEvent',
+      );
     }
     developer.log('🔍 DEBUG: duration = $duration', name: 'VideoEvent');
 
@@ -343,12 +394,15 @@ class VideoEvent {
     // Apply comprehensive fallback logic to find video URLs
     if (videoUrl == null || videoUrl.isEmpty) {
       developer.log(
-          '🔧 FALLBACK: No video URL found in tags, searching content...',
-          name: 'VideoEvent');
+        '🔧 FALLBACK: No video URL found in tags, searching content...',
+        name: 'VideoEvent',
+      );
       videoUrl = _extractVideoUrlFromContent(event.content);
       if (videoUrl != null) {
-        developer.log('✅ FALLBACK: Found video URL in content: $videoUrl',
-            name: 'VideoEvent');
+        developer.log(
+          '✅ FALLBACK: Found video URL in content: $videoUrl',
+          name: 'VideoEvent',
+        );
       }
     }
 
@@ -356,18 +410,21 @@ class VideoEvent {
     if (videoUrlCandidates.isNotEmpty) {
       videoUrl = _selectBestVideoUrl(videoUrlCandidates);
       developer.log(
-          '🎯 Selected best video URL from ${videoUrlCandidates.length} candidates: $videoUrl',
-          name: 'VideoEvent');
+        '🎯 Selected best video URL from ${videoUrlCandidates.length} candidates: $videoUrl',
+        name: 'VideoEvent',
+      );
     } else {
       // If no candidates found, use the old fallback method
       developer.log(
-          '🔧 FALLBACK: No URL candidates found, searching all tags for any potential video URL...',
-          name: 'VideoEvent');
+        '🔧 FALLBACK: No URL candidates found, searching all tags for any potential video URL...',
+        name: 'VideoEvent',
+      );
       videoUrl = _findAnyVideoUrlInTags(event.tags);
       if (videoUrl != null) {
         developer.log(
-            '✅ FALLBACK: Found potential video URL in tags: $videoUrl',
-            name: 'VideoEvent');
+          '✅ FALLBACK: Found potential video URL in tags: $videoUrl',
+          name: 'VideoEvent',
+        );
       }
     }
 
@@ -376,30 +433,38 @@ class VideoEvent {
 
     // If we still have a broken apt.openvine.co URL (shouldn't happen now), fix it
     if (videoUrl?.contains('apt.openvine.co') == true) {
-      final fixedUrl =
-          videoUrl!.replaceAll('apt.openvine.co', 'api.openvine.co');
+      final fixedUrl = videoUrl!.replaceAll(
+        'apt.openvine.co',
+        'api.openvine.co',
+      );
       developer.log(
-          '🔧 FINAL FIX: Corrected remaining apt.openvine.co to api.openvine.co: $fixedUrl',
-          name: 'VideoEvent');
+        '🔧 FINAL FIX: Corrected remaining apt.openvine.co to api.openvine.co: $fixedUrl',
+        name: 'VideoEvent',
+      );
       videoUrl = fixedUrl;
     }
 
     developer.log(
-        '🔍 DEBUG: hasVideo = ${videoUrl != null && videoUrl.isNotEmpty}',
-        name: 'VideoEvent');
+      '🔍 DEBUG: hasVideo = ${videoUrl != null && videoUrl.isNotEmpty}',
+      name: 'VideoEvent',
+    );
 
     // Use 'd' tag if available, otherwise fallback to event ID
     // Many relays don't include 'd' tags on NIP-71 addressable events
     if (vineId == null || vineId.isEmpty) {
       developer.log(
-          '⚠️ WARNING: NIP-71 addressable event missing "d" tag, using event ID as fallback',
-          name: 'VideoEvent');
+        '⚠️ WARNING: NIP-71 addressable event missing "d" tag, using event ID as fallback',
+        name: 'VideoEvent',
+      );
       vineId = event.id; // Use event ID as unique identifier
     }
 
     // DEBUG: Log full event for cdn.divine.video thumbnails
     if (thumbnailUrl != null && thumbnailUrl!.contains('cdn.divine.video')) {
-      developer.log('🔍 DEBUG cdn.divine.video thumbnail found!', name: 'VideoEvent');
+      developer.log(
+        '🔍 DEBUG cdn.divine.video thumbnail found!',
+        name: 'VideoEvent',
+      );
       developer.log('🔍 Event ID: ${event.id}', name: 'VideoEvent');
       developer.log('🔍 Event Kind: ${event.kind}', name: 'VideoEvent');
       developer.log('🔍 Event Pubkey: ${event.pubkey}', name: 'VideoEvent');
@@ -410,18 +475,22 @@ class VideoEvent {
         developer.log('🔍   Tag[$i]: ${event.tags[i]}', name: 'VideoEvent');
       }
       developer.log('🔍 Event Content: ${event.content}', name: 'VideoEvent');
-      developer.log('🔍 Event CreatedAt: ${event.createdAt}', name: 'VideoEvent');
+      developer.log(
+        '🔍 Event CreatedAt: ${event.createdAt}',
+        name: 'VideoEvent',
+      );
     }
 
     // Generate fallback thumbnail URL if none provided
-    developer.log('🖼️ Thumbnail URL: $thumbnailUrl',
-        name: 'VideoEvent');
+    developer.log('🖼️ Thumbnail URL: $thumbnailUrl', name: 'VideoEvent');
     final String? finalThumbnailUrl =
         thumbnailUrl ?? _generateFallbackThumbnailUrl(videoUrl, event.id);
 
     if (finalThumbnailUrl != thumbnailUrl) {
-      developer.log('🔧 FALLBACK: Generated thumbnail URL: $finalThumbnailUrl',
-          name: 'VideoEvent');
+      developer.log(
+        '🔧 FALLBACK: Generated thumbnail URL: $finalThumbnailUrl',
+        name: 'VideoEvent',
+      );
     }
 
     return VideoEvent(
@@ -482,13 +551,13 @@ class VideoEvent {
   // Repost metadata fields
   final bool isRepost;
   final String? reposterId;
-  final String? reposterPubkey;  // Singular for backward compatibility
-  final List<String>? reposterPubkeys;  // Plural for multiple reposters
+  final String? reposterPubkey; // Singular for backward compatibility
+  final List<String>? reposterPubkeys; // Plural for multiple reposters
   final DateTime? repostedAt;
 
   // Content moderation fields
   final bool
-      isFlaggedContent; // Content flagged as potentially adult/inappropriate
+  isFlaggedContent; // Content flagged as potentially adult/inappropriate
   final String? moderationStatus;
 
   // Original Vine metrics (from imported data)
@@ -496,7 +565,8 @@ class VideoEvent {
   final int? originalLikes; // Original like count from classic Vine
   final int? originalComments; // Original comment count from classic Vine
   final int? originalReposts; // Original repost count from classic Vine
-  final int? expirationTimestamp; // NIP-40 expiration timestamp (Unix timestamp in seconds)
+  final int?
+  expirationTimestamp; // NIP-40 expiration timestamp (Unix timestamp in seconds)
 
   /// NIP-40: Check if this event has expired
   /// Returns true if expiration timestamp is set and current time >= expiration
@@ -529,8 +599,8 @@ class VideoEvent {
   /// ProofMode: Check if video has any proof
   bool get hasProofMode {
     return proofModeVerificationLevel != null ||
-           proofModeManifest != null ||
-           proofModePgpFingerprint != null;
+        proofModeManifest != null ||
+        proofModePgpFingerprint != null;
   }
 
   /// ProofMode: Check if video is verified mobile (highest level)
@@ -638,7 +708,9 @@ class VideoEvent {
   /// Parse imeta tag which contains space-separated key-value pairs
   /// NIP-71 format: ["imeta", "key1 value1", "key2 value2", ...]
   static void _parseImetaTag(
-      List<String> tag, void Function(String key, String value) onKeyValue) {
+    List<String> tag,
+    void Function(String key, String value) onKeyValue,
+  ) {
     // Skip the first element which is "imeta"
     // Support TWO formats:
     // 1. OLD: ["imeta", "url https://...", "m video/mp4", ...]  (space-separated key-value)
@@ -851,34 +923,33 @@ class VideoEvent {
     String? reposterPubkey,
     List<String>? reposterPubkeys,
     DateTime? repostedAt,
-  }) =>
-      VideoEvent(
-        id: id ?? this.id,
-        pubkey: pubkey ?? this.pubkey,
-        createdAt: createdAt ?? this.createdAt,
-        content: content ?? this.content,
-        title: title ?? this.title,
-        videoUrl: videoUrl ?? this.videoUrl,
-        thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
-        duration: duration ?? this.duration,
-        dimensions: dimensions ?? this.dimensions,
-        mimeType: mimeType ?? this.mimeType,
-        sha256: sha256 ?? this.sha256,
-        fileSize: fileSize ?? this.fileSize,
-        hashtags: hashtags ?? this.hashtags,
-        timestamp: timestamp ?? this.timestamp,
-        publishedAt: publishedAt ?? this.publishedAt,
-        rawTags: rawTags ?? this.rawTags,
-        vineId: vineId ?? this.vineId,
-        group: group ?? this.group,
-        altText: altText ?? this.altText,
-        blurhash: blurhash ?? this.blurhash,
-        isRepost: isRepost ?? this.isRepost,
-        reposterId: reposterId ?? this.reposterId,
-        reposterPubkey: reposterPubkey ?? this.reposterPubkey,
-        reposterPubkeys: reposterPubkeys ?? this.reposterPubkeys,
-        repostedAt: repostedAt ?? this.repostedAt,
-      );
+  }) => VideoEvent(
+    id: id ?? this.id,
+    pubkey: pubkey ?? this.pubkey,
+    createdAt: createdAt ?? this.createdAt,
+    content: content ?? this.content,
+    title: title ?? this.title,
+    videoUrl: videoUrl ?? this.videoUrl,
+    thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+    duration: duration ?? this.duration,
+    dimensions: dimensions ?? this.dimensions,
+    mimeType: mimeType ?? this.mimeType,
+    sha256: sha256 ?? this.sha256,
+    fileSize: fileSize ?? this.fileSize,
+    hashtags: hashtags ?? this.hashtags,
+    timestamp: timestamp ?? this.timestamp,
+    publishedAt: publishedAt ?? this.publishedAt,
+    rawTags: rawTags ?? this.rawTags,
+    vineId: vineId ?? this.vineId,
+    group: group ?? this.group,
+    altText: altText ?? this.altText,
+    blurhash: blurhash ?? this.blurhash,
+    isRepost: isRepost ?? this.isRepost,
+    reposterId: reposterId ?? this.reposterId,
+    reposterPubkey: reposterPubkey ?? this.reposterPubkey,
+    reposterPubkeys: reposterPubkeys ?? this.reposterPubkeys,
+    repostedAt: repostedAt ?? this.repostedAt,
+  );
 
   @override
   bool operator ==(Object other) {
@@ -890,7 +961,8 @@ class VideoEvent {
   int get hashCode => id.hashCode;
 
   @override
-  String toString() => 'VideoEvent('
+  String toString() =>
+      'VideoEvent('
       'id: $id, '
       'pubkey: $displayPubkey, '
       'title: $title, '
@@ -906,15 +978,16 @@ class VideoEvent {
     required String repostEventId,
     required String reposterPubkey,
     required DateTime repostedAt,
-    List<String>? reposterPubkeys,  // Optional: list of all reposters for consolidated reposts
-  }) =>
-      originalEvent.copyWith(
-        isRepost: true,
-        reposterId: repostEventId,
-        reposterPubkey: reposterPubkey,
-        reposterPubkeys: reposterPubkeys ?? [reposterPubkey],  // Default to single reposter
-        repostedAt: repostedAt,
-      );
+    List<String>?
+    reposterPubkeys, // Optional: list of all reposters for consolidated reposts
+  }) => originalEvent.copyWith(
+    isRepost: true,
+    reposterId: repostEventId,
+    reposterPubkey: reposterPubkey,
+    reposterPubkeys:
+        reposterPubkeys ?? [reposterPubkey], // Default to single reposter
+    repostedAt: repostedAt,
+  );
 
   /// Check if a URL is a valid video URL
   static bool _isValidVideoUrl(String url) {
@@ -942,8 +1015,10 @@ class VideoEvent {
       // The video player will determine if it can actually play the content
       return true;
     } catch (e) {
-      developer.log('🔍 INVALID URL (parse error): $correctedUrl - error: $e',
-          name: 'VideoEvent');
+      developer.log(
+        '🔍 INVALID URL (parse error): $correctedUrl - error: $e',
+        name: 'VideoEvent',
+      );
       return false;
     }
   }
@@ -960,26 +1035,30 @@ class VideoEvent {
     // Only reject URLs that are ACTUALLY from the dead vine.co domain
     if (urlLower.contains('//vine.co/') ||
         urlLower.contains('//www.vine.co/') ||
-        urlLower.startsWith('vine.co/')) return -1;
+        urlLower.startsWith('vine.co/'))
+      return -1;
 
     // POSTEL'S LAW: Deprioritize known broken URL patterns
     // The cdn.divine.video/*/manifest/video.m3u8 pattern is often broken
     // Prefer stream.divine.video HLS or direct MP4 files
     if (urlLower.contains('cdn.divine.video') &&
-        urlLower.contains('/manifest/')) return 5;
+        urlLower.contains('/manifest/'))
+      return 5;
 
     // ALWAYS prefer MP4 over HLS for short videos (6 seconds)
     // HLS adaptive bitrate is pointless for content this short
     // MP4 is simpler, faster (single file vs manifest + segments)
 
     // Direct MP4 from cdn.divine.video (blob storage) - highest priority
-    if (urlLower.contains('.mp4') && urlLower.contains('cdn.divine.video')) return 115;
+    if (urlLower.contains('.mp4') && urlLower.contains('cdn.divine.video'))
+      return 115;
 
     // Any other MP4 - still preferred
     if (urlLower.contains('.mp4')) return 110;
 
     // BunnyStream HLS (stream.divine.video) - reliable streaming
-    if (urlLower.contains('.m3u8') && urlLower.contains('stream.divine.video')) return 105;
+    if (urlLower.contains('.m3u8') && urlLower.contains('stream.divine.video'))
+      return 105;
 
     // Generic HLS fallback
     if (urlLower.contains('.m3u8') || urlLower.contains('hls')) return 100;
@@ -1021,7 +1100,10 @@ class VideoEvent {
     }
 
     if (bestUrl != null) {
-      developer.log('✅ Selected best video URL (score: $bestScore): $bestUrl', name: 'VideoEvent');
+      developer.log(
+        '✅ Selected best video URL (score: $bestScore): $bestUrl',
+        name: 'VideoEvent',
+      );
     }
 
     return bestUrl;
@@ -1076,7 +1158,9 @@ class VideoEvent {
 
   /// Generate fallback thumbnail URL when none is provided
   static String? _generateFallbackThumbnailUrl(
-      String? videoUrl, String eventId) {
+    String? videoUrl,
+    String eventId,
+  ) {
     // If no video URL, can't generate thumbnail
     if (videoUrl == null || videoUrl.isEmpty) {
       return null;
@@ -1120,19 +1204,23 @@ class VideoEvent {
         final videoPath = uri.path;
         if (videoPath.contains('/av/')) {
           // nostr.build thumbnail pattern: replace /av/ with /i/ and change extension
-          final thumbnailPath =
-              videoPath.replaceAll('/av/', '/i/').replaceAll('.mp4', '.jpg');
+          final thumbnailPath = videoPath
+              .replaceAll('/av/', '/i/')
+              .replaceAll('.mp4', '.jpg');
           return 'https://${uri.host}$thumbnailPath';
         }
       }
 
       developer.log(
-          '🔧 FALLBACK: Could not generate thumbnail URL for video host: ${uri.host}',
-          name: 'VideoEvent');
+        '🔧 FALLBACK: Could not generate thumbnail URL for video host: ${uri.host}',
+        name: 'VideoEvent',
+      );
       return null;
     } catch (e) {
-      developer.log('🔧 FALLBACK: Error generating thumbnail URL: $e',
-          name: 'VideoEvent');
+      developer.log(
+        '🔧 FALLBACK: Error generating thumbnail URL: $e',
+        name: 'VideoEvent',
+      );
       return null;
     }
   }
@@ -1159,20 +1247,23 @@ class VideoEvent {
       return videoUrl;
     }
 
-    developer.log('🎬 Attempting to resolve m3u8 URL to MP4: $videoUrl',
-        name: 'VideoEvent');
+    developer.log(
+      '🎬 Attempting to resolve m3u8 URL to MP4: $videoUrl',
+      name: 'VideoEvent',
+    );
 
     // Try to resolve to MP4
     final resolver = M3u8ResolverService();
     final resolvedUrl = await resolver.resolveM3u8ToMp4(videoUrl);
 
     if (resolvedUrl != null) {
-      developer.log('✅ Resolved m3u8 to MP4: $resolvedUrl',
-          name: 'VideoEvent');
+      developer.log('✅ Resolved m3u8 to MP4: $resolvedUrl', name: 'VideoEvent');
       return resolvedUrl;
     } else {
-      developer.log('⚠️ Failed to resolve m3u8, using original URL: $videoUrl',
-          name: 'VideoEvent');
+      developer.log(
+        '⚠️ Failed to resolve m3u8, using original URL: $videoUrl',
+        name: 'VideoEvent',
+      );
       return videoUrl; // Fallback to original if resolution fails
     }
   }

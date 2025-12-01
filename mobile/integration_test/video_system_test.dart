@@ -13,15 +13,12 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Riverpod Video System Integration Tests', () {
-    testWidgets('Video feed displays correctly with Riverpod architecture',
-        (tester) async {
+    testWidgets('Video feed displays correctly with Riverpod architecture', (
+      tester,
+    ) async {
       // Setup app with ProviderScope for Riverpod
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: const VideoFeedScreen(),
-          ),
-        ),
+        ProviderScope(child: MaterialApp(home: const VideoFeedScreen())),
       );
 
       // Wait for initialization
@@ -39,11 +36,7 @@ void main() {
 
     testWidgets('Video feed handles empty state correctly', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: const VideoFeedScreen(),
-          ),
-        ),
+        ProviderScope(child: MaterialApp(home: const VideoFeedScreen())),
       );
 
       await tester.pumpAndSettle();
@@ -55,11 +48,7 @@ void main() {
 
     testWidgets('Providers maintain state correctly', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: const VideoFeedScreen(),
-          ),
-        ),
+        ProviderScope(child: MaterialApp(home: const VideoFeedScreen())),
       );
 
       await tester.pumpAndSettle();
@@ -69,7 +58,9 @@ void main() {
 
       // Test that providers don't throw when accessed
       expect(
-          () => container.read(videoEventsProvider.notifier), returnsNormally);
+        () => container.read(videoEventsProvider.notifier),
+        returnsNormally,
+      );
       expect(() => container.read(videoFeedProvider.notifier), returnsNormally);
 
       // Verify providers have correct initial state

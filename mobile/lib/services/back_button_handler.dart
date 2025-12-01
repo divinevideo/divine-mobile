@@ -10,7 +10,9 @@ import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
 
 class BackButtonHandler {
-  static const MethodChannel _channel = MethodChannel('org.openvine/navigation');
+  static const MethodChannel _channel = MethodChannel(
+    'org.openvine/navigation',
+  );
   static GoRouter? _router;
   static dynamic _ref;
 

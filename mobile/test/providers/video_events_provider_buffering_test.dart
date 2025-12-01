@@ -39,7 +39,9 @@ void main() {
       container = ProviderContainer(
         overrides: [
           videoEventServiceProvider.overrideWithValue(videoEventService),
-          appReadyProvider.overrideWith((ref) => false), // Start with gates closed
+          appReadyProvider.overrideWith(
+            (ref) => false,
+          ), // Start with gates closed
           isDiscoveryTabActiveProvider.overrideWith((ref) => false),
           isExploreTabActiveProvider.overrideWith((ref) => false),
           seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
@@ -55,16 +57,28 @@ void main() {
       final notifier = container.read(videoEventsProvider.notifier);
 
       // bufferedCount should be 0 initially
-      expect(notifier.bufferedCount, 0,
-          reason: 'Buffering should start with empty buffer');
+      expect(
+        notifier.bufferedCount,
+        0,
+        reason: 'Buffering should start with empty buffer',
+      );
 
       // Verify buffering control methods exist
-      expect(() => notifier.enableBuffering(), returnsNormally,
-          reason: 'enableBuffering() should exist');
-      expect(() => notifier.disableBuffering(), returnsNormally,
-          reason: 'disableBuffering() should exist');
-      expect(() => notifier.loadBufferedVideos(), returnsNormally,
-          reason: 'loadBufferedVideos() should exist');
+      expect(
+        () => notifier.enableBuffering(),
+        returnsNormally,
+        reason: 'enableBuffering() should exist',
+      );
+      expect(
+        () => notifier.disableBuffering(),
+        returnsNormally,
+        reason: 'disableBuffering() should exist',
+      );
+      expect(
+        () => notifier.loadBufferedVideos(),
+        returnsNormally,
+        reason: 'loadBufferedVideos() should exist',
+      );
     });
 
     test('enableBuffering prevents auto-insertion of new videos', () async {
@@ -77,8 +91,11 @@ void main() {
       notifier.enableBuffering();
 
       // Buffered count should still be 0 (no new videos added yet)
-      expect(notifier.bufferedCount, 0,
-          reason: 'Buffering enabled but no videos buffered yet');
+      expect(
+        notifier.bufferedCount,
+        0,
+        reason: 'Buffering enabled but no videos buffered yet',
+      );
     });
 
     test('bufferedCount tracks number of buffered videos', () async {
@@ -89,27 +106,38 @@ void main() {
 
       // Buffered count provider should also be 0
       final bufferedCountProvider = container.read(bufferedVideoCountProvider);
-      expect(bufferedCountProvider, 0,
-          reason: 'bufferedVideoCountProvider should start at 0');
+      expect(
+        bufferedCountProvider,
+        0,
+        reason: 'bufferedVideoCountProvider should start at 0',
+      );
     });
 
-    test('loadBufferedVideos inserts buffered videos and clears buffer', () async {
-      final notifier = container.read(videoEventsProvider.notifier);
+    test(
+      'loadBufferedVideos inserts buffered videos and clears buffer',
+      () async {
+        final notifier = container.read(videoEventsProvider.notifier);
 
-      // Start with empty buffer
-      expect(notifier.bufferedCount, 0);
+        // Start with empty buffer
+        expect(notifier.bufferedCount, 0);
 
-      // Load buffered videos when buffer is empty (should do nothing gracefully)
-      expect(() => notifier.loadBufferedVideos(), returnsNormally,
-          reason: 'loadBufferedVideos should handle empty buffer gracefully');
+        // Load buffered videos when buffer is empty (should do nothing gracefully)
+        expect(
+          () => notifier.loadBufferedVideos(),
+          returnsNormally,
+          reason: 'loadBufferedVideos should handle empty buffer gracefully',
+        );
 
-      // Buffer should still be 0
-      expect(notifier.bufferedCount, 0);
+        // Buffer should still be 0
+        expect(notifier.bufferedCount, 0);
 
-      // Buffered count provider should be 0
-      final bufferedCountProvider = container.read(bufferedVideoCountProvider);
-      expect(bufferedCountProvider, 0);
-    });
+        // Buffered count provider should be 0
+        final bufferedCountProvider = container.read(
+          bufferedVideoCountProvider,
+        );
+        expect(bufferedCountProvider, 0);
+      },
+    );
 
     test('disableBuffering resumes auto-insertion', () async {
       final notifier = container.read(videoEventsProvider.notifier);
@@ -118,8 +146,11 @@ void main() {
       notifier.enableBuffering();
 
       // Then disable buffering
-      expect(() => notifier.disableBuffering(), returnsNormally,
-          reason: 'disableBuffering should work after enableBuffering');
+      expect(
+        () => notifier.disableBuffering(),
+        returnsNormally,
+        reason: 'disableBuffering should work after enableBuffering',
+      );
 
       // Buffer should still be empty (no videos added)
       expect(notifier.bufferedCount, 0);
@@ -129,13 +160,19 @@ void main() {
       final notifier = container.read(videoEventsProvider.notifier);
 
       // Enable buffering BEFORE provider is fully loaded
-      expect(() => notifier.enableBuffering(), returnsNormally,
-          reason: 'Should be able to enable buffering before provider loads');
+      expect(
+        () => notifier.enableBuffering(),
+        returnsNormally,
+        reason: 'Should be able to enable buffering before provider loads',
+      );
 
       // Provider should initialize successfully
       final asyncValue = container.read(videoEventsProvider);
-      expect(asyncValue.isLoading || asyncValue.hasValue, true,
-          reason: 'Provider should initialize even with buffering enabled early');
+      expect(
+        asyncValue.isLoading || asyncValue.hasValue,
+        true,
+        reason: 'Provider should initialize even with buffering enabled early',
+      );
     });
   });
 }

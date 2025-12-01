@@ -48,7 +48,8 @@ class VideoErrorOverlay extends ConsumerWidget {
     if (lowerError.contains('timeout')) {
       return 'Loading timeout';
     }
-    if (lowerError.contains('byte range') || lowerError.contains('coremediaerrordomain')) {
+    if (lowerError.contains('byte range') ||
+        lowerError.contains('coremediaerrordomain')) {
       return 'Video format error\n(Try again or use different browser)';
     }
     if (lowerError.contains('format') || lowerError.contains('codec')) {
@@ -85,10 +86,7 @@ class VideoErrorOverlay extends ConsumerWidget {
                   const SizedBox(height: 16),
                   Text(
                     _is401Error ? 'Age-restricted content' : _errorMessage,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -96,8 +94,11 @@ class VideoErrorOverlay extends ConsumerWidget {
                     onPressed: () async {
                       if (_is401Error) {
                         // Show age verification dialog
-                        final ageVerificationService = ref.read(ageVerificationServiceProvider);
-                        final verified = await ageVerificationService.verifyAdultContentAccess(context);
+                        final ageVerificationService = ref.read(
+                          ageVerificationServiceProvider,
+                        );
+                        final verified = await ageVerificationService
+                            .verifyAdultContentAccess(context);
 
                         if (verified && context.mounted) {
                           // Pre-cache auth headers before retrying
@@ -112,14 +113,19 @@ class VideoErrorOverlay extends ConsumerWidget {
                             // Video is still active - safe to invalidate and retry
                             if (context.mounted) {
                               ref.invalidate(
-                                individualVideoControllerProvider(controllerParams),
+                                individualVideoControllerProvider(
+                                  controllerParams,
+                                ),
                               );
                             }
                           } else {
                             // User swiped to different video during verification
                             // Auth headers are cached, so when user swipes back, it will work
-                            Log.debug('Age verification completed but video no longer active (active=$activeVideoId, this=${video.id})',
-                                name: 'VideoErrorOverlay', category: LogCategory.video);
+                            Log.debug(
+                              'Age verification completed but video no longer active (active=$activeVideoId, this=${video.id})',
+                              name: 'VideoErrorOverlay',
+                              category: LogCategory.video,
+                            );
                           }
                         }
                       } else {
@@ -146,11 +152,15 @@ class VideoErrorOverlay extends ConsumerWidget {
 
 /// Pre-cache authentication headers for a video before retrying
 /// This ensures the retry will have headers available immediately without a second 401 failure
-Future<void> _precacheAuthHeaders(WidgetRef ref, VideoControllerParams controllerParams) async {
+Future<void> _precacheAuthHeaders(
+  WidgetRef ref,
+  VideoControllerParams controllerParams,
+) async {
   try {
     final blossomAuthService = ref.read(blossomAuthServiceProvider);
 
-    if (!blossomAuthService.canCreateHeaders || controllerParams.videoEvent == null) {
+    if (!blossomAuthService.canCreateHeaders ||
+        controllerParams.videoEvent == null) {
       return;
     }
 

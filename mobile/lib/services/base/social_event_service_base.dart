@@ -65,7 +65,7 @@ abstract class SocialEventServiceBase {
       kind: 5,
       content: 'Deleted',
       tags: [
-        ['e', targetEventId]
+        ['e', targetEventId],
       ],
     );
   }

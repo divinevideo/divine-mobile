@@ -32,23 +32,18 @@ void main() {
       });
 
       test('throws exception for invalid private key format', () {
-        expect(
-          () => getPublicKey('invalid'),
-          throwsA(anything),
-        );
+        expect(() => getPublicKey('invalid'), throwsA(anything));
       });
 
       test('throws exception for wrong length private key', () {
-        expect(
-          () => getPublicKey('1234567890abcdef'),
-          throwsA(anything),
-        );
+        expect(() => getPublicKey('1234567890abcdef'), throwsA(anything));
       });
 
       test('throws exception for non-hex private key', () {
         expect(
           () => getPublicKey(
-              'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'),
+            'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz',
+          ),
           throwsA(anything),
         );
       });
@@ -94,7 +89,8 @@ void main() {
       test('validates valid hex keys', () {
         expect(
           _isValidHexKey(
-              '67dea2ed018072d675f5415ecfaed7d2597555e202d85b3d65ea4e58d2d92ffa'),
+            '67dea2ed018072d675f5415ecfaed7d2597555e202d85b3d65ea4e58d2d92ffa',
+          ),
           true,
         );
       });
@@ -104,7 +100,8 @@ void main() {
         expect(_isValidHexKey('1234'), false);
         expect(
           _isValidHexKey(
-              'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'),
+            'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz',
+          ),
           false,
         );
       });
@@ -150,7 +147,8 @@ void main() {
       });
 
       test('masks hex pubkeys correctly', () {
-        const hexKey = '67dea2ed018072d675f5415ecfaed7d2597555e202d85b3d65ea4e58d2d92ffa';
+        const hexKey =
+            '67dea2ed018072d675f5415ecfaed7d2597555e202d85b3d65ea4e58d2d92ffa';
         final masked = _maskKey(hexKey);
 
         expect(masked, '67dea2ed...2ffa');

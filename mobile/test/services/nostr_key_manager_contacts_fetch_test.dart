@@ -21,8 +21,10 @@ void main() {
     late AuthService authService;
 
     // Test nsec from a known keypair
-    const testNsec = 'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
-    const testPubkey = '7e7e9c42a91bfef19fa929e5fda1b72e0ebc1a4c1141673e2794234d86addf4e';
+    const testNsec =
+        'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+    const testPubkey =
+        '7e7e9c42a91bfef19fa929e5fda1b72e0ebc1a4c1141673e2794234d86addf4e';
 
     // Relay URLs that should be queried
     const relayPrimal = 'wss://relay.primal.net';
@@ -41,8 +43,12 @@ void main() {
       final keyContainer = SecureKeyContainer.fromNsec(testNsec);
 
       // Setup successful import
-      when(mockKeyStorage.importFromNsec(any, biometricPrompt: anyNamed('biometricPrompt')))
-          .thenAnswer((_) async => keyContainer);
+      when(
+        mockKeyStorage.importFromNsec(
+          any,
+          biometricPrompt: anyNamed('biometricPrompt'),
+        ),
+      ).thenAnswer((_) async => keyContainer);
 
       // Act: Import the nsec
       final result = await authService.importFromNsec(testNsec);
@@ -57,8 +63,12 @@ void main() {
 
     test('should not fetch contacts if import fails', () async {
       // Arrange: Setup failed import
-      when(mockKeyStorage.importFromNsec(any, biometricPrompt: anyNamed('biometricPrompt')))
-          .thenThrow(Exception('Invalid nsec format'));
+      when(
+        mockKeyStorage.importFromNsec(
+          any,
+          biometricPrompt: anyNamed('biometricPrompt'),
+        ),
+      ).thenThrow(Exception('Invalid nsec format'));
 
       // Act: Attempt to import invalid nsec
       final result = await authService.importFromNsec('invalid_nsec');
@@ -74,8 +84,12 @@ void main() {
       final keyContainer = SecureKeyContainer.fromNsec(testNsec);
 
       // Setup successful import
-      when(mockKeyStorage.importFromNsec(any, biometricPrompt: anyNamed('biometricPrompt')))
-          .thenAnswer((_) async => keyContainer);
+      when(
+        mockKeyStorage.importFromNsec(
+          any,
+          biometricPrompt: anyNamed('biometricPrompt'),
+        ),
+      ).thenAnswer((_) async => keyContainer);
 
       // Act: Import the nsec
       final result = await authService.importFromNsec(testNsec);

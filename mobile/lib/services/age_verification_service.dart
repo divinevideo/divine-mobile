@@ -40,12 +40,16 @@ class AgeVerificationService {
 
       final adultDateMillis = prefs.getInt(_adultContentVerificationDateKey);
       if (adultDateMillis != null) {
-        _adultContentVerificationDate =
-            DateTime.fromMillisecondsSinceEpoch(adultDateMillis);
+        _adultContentVerificationDate = DateTime.fromMillisecondsSinceEpoch(
+          adultDateMillis,
+        );
       }
     } catch (e) {
-      Log.error('Error loading age verification status: $e',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.error(
+        'Error loading age verification status: $e',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -66,11 +70,17 @@ class AgeVerificationService {
 
       _isAgeVerified = verified;
 
-      Log.debug('Age verification status updated: $verified',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.debug(
+        'Age verification status updated: $verified',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error saving age verification status: $e',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.error(
+        'Error saving age verification status: $e',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -91,7 +101,9 @@ class AgeVerificationService {
       if (verified) {
         final now = DateTime.now();
         await prefs.setInt(
-            _adultContentVerificationDateKey, now.millisecondsSinceEpoch);
+          _adultContentVerificationDateKey,
+          now.millisecondsSinceEpoch,
+        );
         _adultContentVerificationDate = now;
       } else {
         await prefs.remove(_adultContentVerificationDateKey);
@@ -100,11 +112,17 @@ class AgeVerificationService {
 
       _isAdultContentVerified = verified;
 
-      Log.debug('Adult content verification status updated: $verified',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.debug(
+        'Adult content verification status updated: $verified',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error saving adult content verification status: $e',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.error(
+        'Error saving adult content verification status: $e',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -152,11 +170,17 @@ class AgeVerificationService {
       _isAdultContentVerified = null;
       _adultContentVerificationDate = null;
 
-      Log.debug('Age verification status cleared',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.debug(
+        'Age verification status cleared',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error clearing age verification status: $e',
-          name: 'AgeVerificationService', category: LogCategory.system);
+      Log.error(
+        'Error clearing age verification status: $e',
+        name: 'AgeVerificationService',
+        category: LogCategory.system,
+      );
     }
   }
 }

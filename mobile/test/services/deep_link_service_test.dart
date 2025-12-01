@@ -174,10 +174,7 @@ void main() {
 
     group('DeepLink Data Class', () {
       test('creates video deep link with correct data', () {
-        const deepLink = DeepLink(
-          type: DeepLinkType.video,
-          videoId: 'test123',
-        );
+        const deepLink = DeepLink(type: DeepLinkType.video, videoId: 'test123');
 
         expect(deepLink.type, equals(DeepLinkType.video));
         expect(deepLink.videoId, equals('test123'));
@@ -185,10 +182,7 @@ void main() {
       });
 
       test('creates profile deep link with correct data', () {
-        const deepLink = DeepLink(
-          type: DeepLinkType.profile,
-          npub: 'npub123',
-        );
+        const deepLink = DeepLink(type: DeepLinkType.profile, npub: 'npub123');
 
         expect(deepLink.type, equals(DeepLinkType.profile));
         expect(deepLink.npub, equals('npub123'));

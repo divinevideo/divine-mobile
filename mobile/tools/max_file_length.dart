@@ -49,12 +49,14 @@ void main(List<String> args) {
     exit(0);
   } else {
     debugPrint(
-        '❌ Found ${violations.length} files exceeding $maxLines lines:\n');
+      '❌ Found ${violations.length} files exceeding $maxLines lines:\n',
+    );
 
     violations.forEach((path, lineCount) {
       final relativePath = path.replaceFirst('${Directory.current.path}/', '');
       debugPrint(
-          '  $relativePath: $lineCount lines (${lineCount - maxLines} over limit)');
+        '  $relativePath: $lineCount lines (${lineCount - maxLines} over limit)',
+      );
     });
 
     debugPrint('\nPlease refactor these files to be under $maxLines lines.');

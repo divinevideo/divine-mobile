@@ -6,7 +6,8 @@ import 'package:openvine/utils/unified_logger.dart';
 
 /// Service for tracking all user-facing alerts and messages
 class AlertAnalyticsTracker {
-  static final AlertAnalyticsTracker _instance = AlertAnalyticsTracker._internal();
+  static final AlertAnalyticsTracker _instance =
+      AlertAnalyticsTracker._internal();
   factory AlertAnalyticsTracker() => _instance;
   AlertAnalyticsTracker._internal();
 
@@ -33,7 +34,10 @@ class AlertAnalyticsTracker {
       parameters: {
         'dialog_type': dialogType,
         'title': title.substring(0, title.length > 50 ? 50 : title.length),
-        'message': message.substring(0, message.length > 100 ? 100 : message.length),
+        'message': message.substring(
+          0,
+          message.length > 100 ? 100 : message.length,
+        ),
         'location': location,
         'occurrence_count': _alertCounts[alertKey]!,
         if (primaryAction != null) 'primary_action': primaryAction,
@@ -63,7 +67,10 @@ class AlertAnalyticsTracker {
       name: 'user_snackbar_shown',
       parameters: {
         'message_type': messageType,
-        'message': message.substring(0, message.length > 100 ? 100 : message.length),
+        'message': message.substring(
+          0,
+          message.length > 100 ? 100 : message.length,
+        ),
         'location': location,
         'occurrence_count': _alertCounts[alertKey]!,
         if (actionLabel != null) 'action_label': actionLabel,
@@ -79,7 +86,8 @@ class AlertAnalyticsTracker {
 
   /// Track a permission request dialog
   void trackPermissionRequest({
-    required String permissionType, // 'camera', 'microphone', 'storage', 'notifications'
+    required String
+    permissionType, // 'camera', 'microphone', 'storage', 'notifications'
     required String location,
     String? userResponse, // 'granted', 'denied', 'dismissed'
   }) {
@@ -100,7 +108,8 @@ class AlertAnalyticsTracker {
 
   /// Track camera-specific error alerts
   void trackCameraAlert({
-    required String alertType, // 'init_failed', 'permission_denied', 'device_busy', 'unsupported_format'
+    required String
+    alertType, // 'init_failed', 'permission_denied', 'device_busy', 'unsupported_format'
     required String userMessage,
     required String technicalError,
     String? suggestedAction,
@@ -109,8 +118,14 @@ class AlertAnalyticsTracker {
       name: 'camera_alert',
       parameters: {
         'alert_type': alertType,
-        'user_message': userMessage.substring(0, userMessage.length > 100 ? 100 : userMessage.length),
-        'technical_error': technicalError.substring(0, technicalError.length > 150 ? 150 : technicalError.length),
+        'user_message': userMessage.substring(
+          0,
+          userMessage.length > 100 ? 100 : userMessage.length,
+        ),
+        'technical_error': technicalError.substring(
+          0,
+          technicalError.length > 150 ? 150 : technicalError.length,
+        ),
         if (suggestedAction != null) 'suggested_action': suggestedAction,
       },
     );
@@ -124,7 +139,8 @@ class AlertAnalyticsTracker {
   /// Track video playback error alerts
   void trackVideoPlaybackAlert({
     required String videoId,
-    required String alertType, // 'load_failed', 'playback_error', 'buffering_timeout', 'format_error'
+    required String
+    alertType, // 'load_failed', 'playback_error', 'buffering_timeout', 'format_error'
     required String userMessage,
     String? technicalError,
     int? segmentCount,
@@ -134,8 +150,15 @@ class AlertAnalyticsTracker {
       parameters: {
         'video_id': videoId,
         'alert_type': alertType,
-        'user_message': userMessage.substring(0, userMessage.length > 100 ? 100 : userMessage.length),
-        if (technicalError != null) 'technical_error': technicalError.substring(0, technicalError.length > 150 ? 150 : technicalError.length),
+        'user_message': userMessage.substring(
+          0,
+          userMessage.length > 100 ? 100 : userMessage.length,
+        ),
+        if (technicalError != null)
+          'technical_error': technicalError.substring(
+            0,
+            technicalError.length > 150 ? 150 : technicalError.length,
+          ),
         if (segmentCount != null) 'segment_count': segmentCount,
       },
     );
@@ -148,7 +171,8 @@ class AlertAnalyticsTracker {
 
   /// Track network error alerts
   void trackNetworkAlert({
-    required String alertType, // 'offline', 'timeout', 'connection_failed', 'slow_connection'
+    required String
+    alertType, // 'offline', 'timeout', 'connection_failed', 'slow_connection'
     required String userMessage,
     required String location,
     String? technicalDetails,
@@ -157,9 +181,16 @@ class AlertAnalyticsTracker {
       name: 'network_alert',
       parameters: {
         'alert_type': alertType,
-        'user_message': userMessage.substring(0, userMessage.length > 100 ? 100 : userMessage.length),
+        'user_message': userMessage.substring(
+          0,
+          userMessage.length > 100 ? 100 : userMessage.length,
+        ),
         'location': location,
-        if (technicalDetails != null) 'technical_details': technicalDetails.substring(0, technicalDetails.length > 150 ? 150 : technicalDetails.length),
+        if (technicalDetails != null)
+          'technical_details': technicalDetails.substring(
+            0,
+            technicalDetails.length > 150 ? 150 : technicalDetails.length,
+          ),
       },
     );
 
@@ -171,7 +202,8 @@ class AlertAnalyticsTracker {
 
   /// Track upload error alerts
   void trackUploadAlert({
-    required String alertType, // 'upload_failed', 'file_too_large', 'server_error', 'network_error'
+    required String
+    alertType, // 'upload_failed', 'file_too_large', 'server_error', 'network_error'
     required String userMessage,
     required String uploadType, // 'video', 'thumbnail', 'profile_image'
     int? fileSizeBytes,
@@ -181,11 +213,19 @@ class AlertAnalyticsTracker {
       name: 'upload_alert',
       parameters: {
         'alert_type': alertType,
-        'user_message': userMessage.substring(0, userMessage.length > 100 ? 100 : userMessage.length),
+        'user_message': userMessage.substring(
+          0,
+          userMessage.length > 100 ? 100 : userMessage.length,
+        ),
         'upload_type': uploadType,
         if (fileSizeBytes != null) 'file_size_bytes': fileSizeBytes,
-        if (fileSizeBytes != null) 'file_size_mb': (fileSizeBytes / 1024 / 1024).toStringAsFixed(2),
-        if (technicalError != null) 'technical_error': technicalError.substring(0, technicalError.length > 150 ? 150 : technicalError.length),
+        if (fileSizeBytes != null)
+          'file_size_mb': (fileSizeBytes / 1024 / 1024).toStringAsFixed(2),
+        if (technicalError != null)
+          'technical_error': technicalError.substring(
+            0,
+            technicalError.length > 150 ? 150 : technicalError.length,
+          ),
       },
     );
 
@@ -197,7 +237,8 @@ class AlertAnalyticsTracker {
 
   /// Track confirmation dialogs and user choice
   void trackConfirmationDialog({
-    required String confirmationType, // 'delete', 'discard', 'logout', 'report', 'block'
+    required String
+    confirmationType, // 'delete', 'discard', 'logout', 'report', 'block'
     required String location,
     required String userChoice, // 'confirmed', 'cancelled', 'dismissed'
     Map<String, dynamic>? context,
@@ -243,7 +284,8 @@ class AlertAnalyticsTracker {
 
   /// Track in-app notifications/banners
   void trackBanner({
-    required String bannerType, // 'info', 'warning', 'update_available', 'maintenance'
+    required String
+    bannerType, // 'info', 'warning', 'update_available', 'maintenance'
     required String message,
     required String location,
     String? actionTaken, // 'dismissed', 'action_clicked', 'ignored'
@@ -252,7 +294,10 @@ class AlertAnalyticsTracker {
       name: 'banner_shown',
       parameters: {
         'banner_type': bannerType,
-        'message': message.substring(0, message.length > 100 ? 100 : message.length),
+        'message': message.substring(
+          0,
+          message.length > 100 ? 100 : message.length,
+        ),
         'location': location,
         if (actionTaken != null) 'action_taken': actionTaken,
       },
@@ -274,7 +319,10 @@ class AlertAnalyticsTracker {
       name: 'validation_error',
       parameters: {
         'field_name': fieldName,
-        'error_message': errorMessage.substring(0, errorMessage.length > 100 ? 100 : errorMessage.length),
+        'error_message': errorMessage.substring(
+          0,
+          errorMessage.length > 100 ? 100 : errorMessage.length,
+        ),
         'form_name': formName,
       },
     );

@@ -62,15 +62,19 @@ void main() {
       // Setup mock responses
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
-      when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters')))
-          .thenAnswer((_) => eventStreamController.stream);
+      when(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).thenAnswer((_) => eventStreamController.stream);
 
-      final testSubscriptionManager =
-          TestSubscriptionManager(eventStreamController);
+      final testSubscriptionManager = TestSubscriptionManager(
+        eventStreamController,
+      );
 
-      videoEventService = VideoEventService(mockNostrService,
-          subscriptionManager: testSubscriptionManager);
+      videoEventService = VideoEventService(
+        mockNostrService,
+        subscriptionManager: testSubscriptionManager,
+      );
     });
 
     tearDown(() async {
@@ -88,7 +92,10 @@ void main() {
         [
           ['url', 'https://example.com/video1.mp4'],
           ['m', 'video/mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -98,7 +105,8 @@ void main() {
 
       // Subscribe to video feed
       await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery);
+        subscriptionType: SubscriptionType.discovery,
+      );
 
       // Add a small delay to ensure subscription is set up
       await Future.delayed(const Duration(milliseconds: 10));
@@ -115,8 +123,10 @@ void main() {
 
       // Verify only one event was added
       expect(videoEventService.discoveryVideos.length, equals(1));
-      expect(videoEventService.discoveryVideos.first.id,
-          equals('test-video-id-1'));
+      expect(
+        videoEventService.discoveryVideos.first.id,
+        equals('test-video-id-1'),
+      );
     });
 
     test('should add different events with unique IDs', () async {
@@ -128,7 +138,10 @@ void main() {
           [
             ['url', 'https://example.com/video$index.mp4'],
             ['m', 'video/mp4'],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'Test video content $index',
           createdAt: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + index,
@@ -139,7 +152,8 @@ void main() {
 
       // Subscribe to video feed
       await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery);
+        subscriptionType: SubscriptionType.discovery,
+      );
       await Future.delayed(const Duration(milliseconds: 10));
 
       // Send all unique events
@@ -153,11 +167,17 @@ void main() {
 
       // Verify they're in reverse chronological order (newest first)
       expect(
-          videoEventService.discoveryVideos[0].id, equals('test-video-id-2'));
+        videoEventService.discoveryVideos[0].id,
+        equals('test-video-id-2'),
+      );
       expect(
-          videoEventService.discoveryVideos[1].id, equals('test-video-id-1'));
+        videoEventService.discoveryVideos[1].id,
+        equals('test-video-id-1'),
+      );
       expect(
-          videoEventService.discoveryVideos[2].id, equals('test-video-id-0'));
+        videoEventService.discoveryVideos[2].id,
+        equals('test-video-id-0'),
+      );
     });
 
     test('should handle mix of duplicates and unique events', () async {
@@ -168,7 +188,10 @@ void main() {
         [
           ['url', 'https://example.com/video1.mp4'],
           ['m', 'video/mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video 1',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -181,7 +204,10 @@ void main() {
         [
           ['url', 'https://example.com/video2.mp4'],
           ['m', 'video/mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video 2',
         createdAt: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 1,
@@ -190,7 +216,8 @@ void main() {
 
       // Subscribe to video feed
       await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery);
+        subscriptionType: SubscriptionType.discovery,
+      );
       await Future.delayed(const Duration(milliseconds: 10));
 
       // Send events in mixed order with duplicates
@@ -214,59 +241,70 @@ void main() {
 
       // Verify order (newest first)
       expect(
-          videoEventService.discoveryVideos[0].id, equals('test-video-id-2'));
-      expect(
-          videoEventService.discoveryVideos[1].id, equals('test-video-id-1'));
-    });
-
-    test('should maintain deduplication across multiple subscriptions',
-        () async {
-      // Create test event
-      final testEvent = Event(
-        'd0aa74d68e414f0305db9f7dc96ec32e616502e6ccf5bbf5739de19a96b67f3e',
-        22,
-        [
-          ['url', 'https://example.com/video.mp4'],
-          ['m', 'video/mp4'],
-        ],
-        'Persistent test video',
-        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        videoEventService.discoveryVideos[0].id,
+        equals('test-video-id-2'),
       );
-      testEvent.id = 'persistent-video-id';
-
-      // First subscription
-      await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery);
-      await Future.delayed(const Duration(milliseconds: 10));
-
-      eventStreamController.add(testEvent);
-      await Future.delayed(const Duration(milliseconds: 10));
-
-      expect(videoEventService.discoveryVideos.length, equals(1));
-
-      // Unsubscribe and re-subscribe
-      await videoEventService.unsubscribeFromVideoFeed();
-      await Future.delayed(const Duration(milliseconds: 10));
-
-      // Create new stream controller for new subscription
-      final newEventStreamController = StreamController<Event>.broadcast();
-      when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters')))
-          .thenAnswer((_) => newEventStreamController.stream);
-
-      await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery, replace: false);
-      await Future.delayed(const Duration(milliseconds: 10));
-
-      // Try to add the same event again
-      newEventStreamController.add(testEvent);
-      await Future.delayed(const Duration(milliseconds: 10));
-
-      // Should still have only one event
-      expect(videoEventService.discoveryVideos.length, equals(1));
-
-      newEventStreamController.close();
+      expect(
+        videoEventService.discoveryVideos[1].id,
+        equals('test-video-id-1'),
+      );
     });
+
+    test(
+      'should maintain deduplication across multiple subscriptions',
+      () async {
+        // Create test event
+        final testEvent = Event(
+          'd0aa74d68e414f0305db9f7dc96ec32e616502e6ccf5bbf5739de19a96b67f3e',
+          22,
+          [
+            ['url', 'https://example.com/video.mp4'],
+            ['m', 'video/mp4'],
+          ],
+          'Persistent test video',
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        );
+        testEvent.id = 'persistent-video-id';
+
+        // First subscription
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+        );
+        await Future.delayed(const Duration(milliseconds: 10));
+
+        eventStreamController.add(testEvent);
+        await Future.delayed(const Duration(milliseconds: 10));
+
+        expect(videoEventService.discoveryVideos.length, equals(1));
+
+        // Unsubscribe and re-subscribe
+        await videoEventService.unsubscribeFromVideoFeed();
+        await Future.delayed(const Duration(milliseconds: 10));
+
+        // Create new stream controller for new subscription
+        final newEventStreamController = StreamController<Event>.broadcast();
+        when(
+          () => mockNostrService.subscribeToEvents(
+            filters: any(named: 'filters'),
+          ),
+        ).thenAnswer((_) => newEventStreamController.stream);
+
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+          replace: false,
+        );
+        await Future.delayed(const Duration(milliseconds: 10));
+
+        // Try to add the same event again
+        newEventStreamController.add(testEvent);
+        await Future.delayed(const Duration(milliseconds: 10));
+
+        // Should still have only one event
+        expect(videoEventService.discoveryVideos.length, equals(1));
+
+        newEventStreamController.close();
+      },
+    );
 
     test('should handle rapid duplicate events efficiently', () async {
       // Create test event
@@ -276,7 +314,10 @@ void main() {
         [
           ['url', 'https://example.com/rapid.mp4'],
           ['m', 'video/mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Rapid test video',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -285,7 +326,8 @@ void main() {
 
       // Subscribe to video feed
       await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery);
+        subscriptionType: SubscriptionType.discovery,
+      );
       await Future.delayed(const Duration(milliseconds: 10));
 
       // Send the same event rapidly without delays
@@ -298,8 +340,10 @@ void main() {
 
       // Should still have only one event despite rapid duplicates
       expect(videoEventService.discoveryVideos.length, equals(1));
-      expect(videoEventService.discoveryVideos.first.id,
-          equals('rapid-test-video'));
+      expect(
+        videoEventService.discoveryVideos.first.id,
+        equals('rapid-test-video'),
+      );
     });
 
     test('should handle events with invalid kind gracefully', () async {
@@ -310,7 +354,10 @@ void main() {
         [
           ['url', 'https://example.com/valid.mp4'],
           ['m', 'video/mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Valid video',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -321,7 +368,10 @@ void main() {
         'd0aa74d68e414f0305db9f7dc96ec32e616502e6ccf5bbf5739de19a96b67f3e',
         1, // Text note, not a video
         [
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Not a video',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -330,7 +380,8 @@ void main() {
 
       // Subscribe to video feed
       await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery);
+        subscriptionType: SubscriptionType.discovery,
+      );
       await Future.delayed(const Duration(milliseconds: 10));
 
       // Send both events
@@ -355,15 +406,19 @@ void main() {
 
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
-      when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters')))
-          .thenAnswer((_) => eventStreamController.stream);
+      when(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).thenAnswer((_) => eventStreamController.stream);
 
-      final testSubscriptionManager =
-          TestSubscriptionManager(eventStreamController);
+      final testSubscriptionManager = TestSubscriptionManager(
+        eventStreamController,
+      );
 
-      videoEventService = VideoEventService(mockNostrService,
-          subscriptionManager: testSubscriptionManager);
+      videoEventService = VideoEventService(
+        mockNostrService,
+        subscriptionManager: testSubscriptionManager,
+      );
     });
 
     tearDown(() async {
@@ -384,7 +439,10 @@ void main() {
         [
           ['e', originalVideoId, '', 'mention'],
           ['p', originalPubkey],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         '',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -397,7 +455,10 @@ void main() {
         [
           ['e', originalVideoId, '', 'mention'],
           ['p', originalPubkey],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         '',
         createdAt: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 1,
@@ -406,7 +467,9 @@ void main() {
 
       // Subscribe with reposts enabled
       await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery, includeReposts: true);
+        subscriptionType: SubscriptionType.discovery,
+        includeReposts: true,
+      );
       await Future.delayed(const Duration(milliseconds: 10));
 
       // Send both reposts

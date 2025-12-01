@@ -27,7 +27,9 @@ void main() {
     setUp(() async {
       // Get the actual paths that VideoCacheManager will use
       final tempDir = await getTemporaryDirectory();
-      actualCacheDir = Directory(path.join(tempDir.path, VideoCacheManager.key));
+      actualCacheDir = Directory(
+        path.join(tempDir.path, VideoCacheManager.key),
+      );
       await actualCacheDir.create(recursive: true);
 
       final dbPath = await sqflite.getDatabasesPath();
@@ -103,7 +105,9 @@ void main() {
       await database.insert('cacheObject', {
         'key': 'test_video_1',
         'relativePath': 'test_video_1.mp4',
-        'validTill': DateTime.now().add(const Duration(days: 1)).millisecondsSinceEpoch,
+        'validTill': DateTime.now()
+            .add(const Duration(days: 1))
+            .millisecondsSinceEpoch,
         'eTag': 'etag1',
       });
 
@@ -140,7 +144,9 @@ void main() {
       await database.insert('cacheObject', {
         'key': 'missing_video',
         'relativePath': 'missing.mp4',
-        'validTill': DateTime.now().add(const Duration(days: 1)).millisecondsSinceEpoch,
+        'validTill': DateTime.now()
+            .add(const Duration(days: 1))
+            .millisecondsSinceEpoch,
         'eTag': 'etag',
       });
 
@@ -156,7 +162,9 @@ void main() {
 
     test('handles corrupted database gracefully', () async {
       // ARRANGE: Create invalid database file
-      await File(actualDbPath).writeAsString('This is not a valid SQLite database');
+      await File(
+        actualDbPath,
+      ).writeAsString('This is not a valid SQLite database');
 
       // ACT: Initialize should handle error gracefully
       await cacheManager.initialize();
@@ -264,7 +272,9 @@ void main() {
     setUp(() async {
       // Get actual paths
       final tempDir = await getTemporaryDirectory();
-      actualCacheDir = Directory(path.join(tempDir.path, VideoCacheManager.key));
+      actualCacheDir = Directory(
+        path.join(tempDir.path, VideoCacheManager.key),
+      );
       await actualCacheDir.create(recursive: true);
 
       final dbPath = await sqflite.getDatabasesPath();
@@ -307,14 +317,18 @@ void main() {
         },
       );
 
-      final videoFile = File(path.join(actualCacheDir.path, 'persistent_video.mp4'));
+      final videoFile = File(
+        path.join(actualCacheDir.path, 'persistent_video.mp4'),
+      );
       await videoFile.create(recursive: true);
       testFiles.add(videoFile);
 
       await database.insert('cacheObject', {
         'key': 'persistent_video',
         'relativePath': 'persistent_video.mp4',
-        'validTill': DateTime.now().add(const Duration(days: 1)).millisecondsSinceEpoch,
+        'validTill': DateTime.now()
+            .add(const Duration(days: 1))
+            .millisecondsSinceEpoch,
         'eTag': 'etag',
       });
 
@@ -361,7 +375,9 @@ void main() {
         await database.insert('cacheObject', {
           'key': 'video_$i',
           'relativePath': 'video_$i.mp4',
-          'validTill': DateTime.now().add(const Duration(days: 1)).millisecondsSinceEpoch,
+          'validTill': DateTime.now()
+              .add(const Duration(days: 1))
+              .millisecondsSinceEpoch,
           'eTag': 'etag$i',
         });
       }

@@ -33,15 +33,15 @@ class SafetySettingsScreen extends StatelessWidget {
   }
 
   Widget _buildSectionHeader(String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-        child: Text(
-          title,
-          style: const TextStyle(
-            color: VineTheme.vineGreen,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+    child: Text(
+      title,
+      style: const TextStyle(
+        color: VineTheme.vineGreen,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.2,
+      ),
+    ),
+  );
 }

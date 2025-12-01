@@ -21,12 +21,18 @@ class NativeProofModeService {
   /// Throws [PlatformException] if proof generation fails.
   static Future<String?> generateProof(String mediaPath) async {
     try {
-      Log.info('🔐 Generating native ProofMode proof for: $mediaPath',
-          name: 'NativeProofMode', category: LogCategory.system);
+      Log.info(
+        '🔐 Generating native ProofMode proof for: $mediaPath',
+        name: 'NativeProofMode',
+        category: LogCategory.system,
+      );
 
       if (!File(mediaPath).existsSync()) {
-        Log.error('🔐 Media file does not exist: $mediaPath',
-            name: 'NativeProofMode', category: LogCategory.system);
+        Log.error(
+          '🔐 Media file does not exist: $mediaPath',
+          name: 'NativeProofMode',
+          category: LogCategory.system,
+        );
         return null;
       }
 
@@ -35,21 +41,33 @@ class NativeProofModeService {
       });
 
       if (proofHash != null) {
-        Log.info('🔐 Native ProofMode proof generated: $proofHash',
-            name: 'NativeProofMode', category: LogCategory.system);
+        Log.info(
+          '🔐 Native ProofMode proof generated: $proofHash',
+          name: 'NativeProofMode',
+          category: LogCategory.system,
+        );
       } else {
-        Log.warning('🔐 Native ProofMode proof generation returned null',
-            name: 'NativeProofMode', category: LogCategory.system);
+        Log.warning(
+          '🔐 Native ProofMode proof generation returned null',
+          name: 'NativeProofMode',
+          category: LogCategory.system,
+        );
       }
 
       return proofHash;
     } on PlatformException catch (e) {
-      Log.error('🔐 Native ProofMode proof generation failed: ${e.code} - ${e.message}',
-          name: 'NativeProofMode', category: LogCategory.system);
+      Log.error(
+        '🔐 Native ProofMode proof generation failed: ${e.code} - ${e.message}',
+        name: 'NativeProofMode',
+        category: LogCategory.system,
+      );
       return null;
     } catch (e) {
-      Log.error('🔐 Unexpected error generating native ProofMode proof: $e',
-          name: 'NativeProofMode', category: LogCategory.system);
+      Log.error(
+        '🔐 Unexpected error generating native ProofMode proof: $e',
+        name: 'NativeProofMode',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -63,26 +81,38 @@ class NativeProofModeService {
   /// - timestamp and other metadata files
   static Future<String?> getProofDir(String proofHash) async {
     try {
-      Log.debug('🔐 Getting native ProofMode proof directory for hash: $proofHash',
-          name: 'NativeProofMode', category: LogCategory.system);
+      Log.debug(
+        '🔐 Getting native ProofMode proof directory for hash: $proofHash',
+        name: 'NativeProofMode',
+        category: LogCategory.system,
+      );
 
       final String? proofDir = await _channel.invokeMethod('getProofDir', {
         'proofHash': proofHash,
       });
 
       if (proofDir != null) {
-        Log.debug('🔐 Native ProofMode proof directory: $proofDir',
-            name: 'NativeProofMode', category: LogCategory.system);
+        Log.debug(
+          '🔐 Native ProofMode proof directory: $proofDir',
+          name: 'NativeProofMode',
+          category: LogCategory.system,
+        );
       }
 
       return proofDir;
     } on PlatformException catch (e) {
-      Log.error('🔐 Failed to get native ProofMode proof directory: ${e.code} - ${e.message}',
-          name: 'NativeProofMode', category: LogCategory.system);
+      Log.error(
+        '🔐 Failed to get native ProofMode proof directory: ${e.code} - ${e.message}',
+        name: 'NativeProofMode',
+        category: LogCategory.system,
+      );
       return null;
     } catch (e) {
-      Log.error('🔐 Unexpected error getting native ProofMode proof directory: $e',
-          name: 'NativeProofMode', category: LogCategory.system);
+      Log.error(
+        '🔐 Unexpected error getting native ProofMode proof directory: $e',
+        name: 'NativeProofMode',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -94,19 +124,27 @@ class NativeProofModeService {
   /// - 'signature': OpenPGP signature
   /// - 'hash': SHA256 hash of media file
   /// - 'timestamp': Timestamp data
-  static Future<Map<String, String>?> readProofMetadata(String proofHash) async {
+  static Future<Map<String, String>?> readProofMetadata(
+    String proofHash,
+  ) async {
     try {
       final proofDir = await getProofDir(proofHash);
       if (proofDir == null) {
-        Log.warning('🔐 No proof directory found for hash: $proofHash',
-            name: 'NativeProofMode', category: LogCategory.system);
+        Log.warning(
+          '🔐 No proof directory found for hash: $proofHash',
+          name: 'NativeProofMode',
+          category: LogCategory.system,
+        );
         return null;
       }
 
       final dir = Directory(proofDir);
       if (!dir.existsSync()) {
-        Log.warning('🔐 Proof directory does not exist: $proofDir',
-            name: 'NativeProofMode', category: LogCategory.system);
+        Log.warning(
+          '🔐 Proof directory does not exist: $proofDir',
+          name: 'NativeProofMode',
+          category: LogCategory.system,
+        );
         return null;
       }
 
@@ -116,35 +154,50 @@ class NativeProofModeService {
       final csvFile = File('$proofDir/$proofHash.csv');
       if (csvFile.existsSync()) {
         metadata['csv'] = await csvFile.readAsString();
-        Log.debug('🔐 Read CSV metadata (${metadata['csv']!.length} bytes)',
-            name: 'NativeProofMode', category: LogCategory.system);
+        Log.debug(
+          '🔐 Read CSV metadata (${metadata['csv']!.length} bytes)',
+          name: 'NativeProofMode',
+          category: LogCategory.system,
+        );
       }
 
       // Read OpenPGP signature
       final sigFile = File('$proofDir/$proofHash.asc');
       if (sigFile.existsSync()) {
         metadata['signature'] = await sigFile.readAsString();
-        Log.debug('🔐 Read signature (${metadata['signature']!.length} bytes)',
-            name: 'NativeProofMode', category: LogCategory.system);
+        Log.debug(
+          '🔐 Read signature (${metadata['signature']!.length} bytes)',
+          name: 'NativeProofMode',
+          category: LogCategory.system,
+        );
       }
 
       // Read proof public key
       final pubkeyFile = File('$proofDir/$proofHash-pubkey.asc');
       if (pubkeyFile.existsSync()) {
         metadata['publicKey'] = await pubkeyFile.readAsString();
-        Log.debug('🔐 Read public key (${metadata['publicKey']!.length} bytes)',
-            name: 'NativeProofMode', category: LogCategory.system);
+        Log.debug(
+          '🔐 Read public key (${metadata['publicKey']!.length} bytes)',
+          name: 'NativeProofMode',
+          category: LogCategory.system,
+        );
       }
 
       metadata['hash'] = proofHash;
 
-      Log.info('🔐 Read native ProofMode metadata (${metadata.length} fields)',
-          name: 'NativeProofMode', category: LogCategory.system);
+      Log.info(
+        '🔐 Read native ProofMode metadata (${metadata.length} fields)',
+        name: 'NativeProofMode',
+        category: LogCategory.system,
+      );
 
       return metadata;
     } catch (e) {
-      Log.error('🔐 Failed to read native ProofMode metadata: $e',
-          name: 'NativeProofMode', category: LogCategory.system);
+      Log.error(
+        '🔐 Failed to read native ProofMode metadata: $e',
+        name: 'NativeProofMode',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -155,12 +208,18 @@ class NativeProofModeService {
       final bool? available = await _channel.invokeMethod('isAvailable');
       return available ?? false;
     } on PlatformException catch (e) {
-      Log.warning('🔐 Native ProofMode not available: ${e.code} - ${e.message}',
-          name: 'NativeProofMode', category: LogCategory.system);
+      Log.warning(
+        '🔐 Native ProofMode not available: ${e.code} - ${e.message}',
+        name: 'NativeProofMode',
+        category: LogCategory.system,
+      );
       return false;
     } catch (e) {
-      Log.warning('🔐 Error checking native ProofMode availability: $e',
-          name: 'NativeProofMode', category: LogCategory.system);
+      Log.warning(
+        '🔐 Error checking native ProofMode availability: $e',
+        name: 'NativeProofMode',
+        category: LogCategory.system,
+      );
       return false;
     }
   }

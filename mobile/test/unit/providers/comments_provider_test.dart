@@ -16,12 +16,7 @@ import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
 // Generate mocks
-@GenerateMocks([
-  SocialService,
-  AuthService,
-  INostrService,
-  SubscriptionManager,
-])
+@GenerateMocks([SocialService, AuthService, INostrService, SubscriptionManager])
 import 'comments_provider_test.mocks.dart';
 
 void main() {
@@ -50,12 +45,14 @@ void main() {
 
       // Default setup for auth service
       when(mockAuthService.isAuthenticated).thenReturn(true);
-      when(mockAuthService.currentPublicKeyHex)
-          .thenReturn(testCurrentUserPubkey);
+      when(
+        mockAuthService.currentPublicKeyHex,
+      ).thenReturn(testCurrentUserPubkey);
 
       // Mock empty comment stream by default
-      when(mockSocialService.fetchCommentsForEvent(any))
-          .thenAnswer((_) => const Stream<Event>.empty());
+      when(
+        mockSocialService.fetchCommentsForEvent(any),
+      ).thenAnswer((_) => const Stream<Event>.empty());
 
       // Create container with overridden providers
       container = ProviderContainer(
@@ -63,8 +60,9 @@ void main() {
           socialServiceProvider.overrideWithValue(mockSocialService),
           authServiceProvider.overrideWithValue(mockAuthService),
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
         ],
       );
     });
@@ -82,8 +80,7 @@ void main() {
 
     CommentsNotifier createNotifier() {
       final notifier = container.read(
-        commentsProvider(testVideoEventId, testVideoAuthorPubkey)
-            .notifier,
+        commentsProvider(testVideoEventId, testVideoAuthorPubkey).notifier,
       );
       return notifier;
     }
@@ -115,8 +112,9 @@ void main() {
         await Future.delayed(Duration.zero);
 
         // Assert
-        verify(mockSocialService.fetchCommentsForEvent(testVideoEventId))
-            .called(1);
+        verify(
+          mockSocialService.fetchCommentsForEvent(testVideoEventId),
+        ).called(1);
       });
     });
 
@@ -129,14 +127,18 @@ void main() {
           [
             ['e', testVideoEventId],
             ['p', testVideoAuthorPubkey],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
         );
 
-        when(mockSocialService.fetchCommentsForEvent(testVideoEventId))
-            .thenAnswer((_) => Stream.fromIterable([testCommentEvent]));
+        when(
+          mockSocialService.fetchCommentsForEvent(testVideoEventId),
+        ).thenAnswer((_) => Stream.fromIterable([testCommentEvent]));
 
         // Act
         commentsNotifier = createNotifier();
@@ -150,8 +152,10 @@ void main() {
 
         // Then check the state
         expect(state.topLevelComments.length, equals(1));
-        expect(state.topLevelComments.first.comment.content,
-            equals(testCommentContent));
+        expect(
+          state.topLevelComments.first.comment.content,
+          equals(testCommentContent),
+        );
         expect(state.totalCommentCount, equals(1));
       });
 
@@ -162,14 +166,18 @@ void main() {
           1,
           [
             ['invalid_tag_type'], // Malformed tag structure
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
         );
 
-        when(mockSocialService.fetchCommentsForEvent(testVideoEventId))
-            .thenAnswer((_) => Stream.fromIterable([invalidEvent]));
+        when(
+          mockSocialService.fetchCommentsForEvent(testVideoEventId),
+        ).thenAnswer((_) => Stream.fromIterable([invalidEvent]));
 
         // Act
         commentsNotifier = createNotifier();
@@ -178,11 +186,15 @@ void main() {
 
         // Assert - Should parse the event even with invalid tags (but create valid comment with defaults)
         // The comment parser is lenient and creates comments with default values for missing tags
-        expect(state.topLevelComments.length,
-            equals(1)); // Comment is created with defaults
+        expect(
+          state.topLevelComments.length,
+          equals(1),
+        ); // Comment is created with defaults
         expect(state.totalCommentCount, equals(1));
-        expect(state.topLevelComments.first.comment.content,
-            equals(testCommentContent));
+        expect(
+          state.topLevelComments.first.comment.content,
+          equals(testCommentContent),
+        );
       });
 
       test('should build hierarchical comment tree', () async {
@@ -193,7 +205,10 @@ void main() {
           [
             ['e', testVideoEventId],
             ['p', testVideoAuthorPubkey],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'Parent comment',
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -207,15 +222,20 @@ void main() {
             ['p', testVideoAuthorPubkey],
             ['e', parentCommentEvent.id, '', 'reply'],
             ['p', testCurrentUserPubkey],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'Reply comment',
           createdAt: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 1,
         );
 
-        when(mockSocialService.fetchCommentsForEvent(testVideoEventId))
-            .thenAnswer((_) =>
-                Stream.fromIterable([parentCommentEvent, replyCommentEvent]));
+        when(
+          mockSocialService.fetchCommentsForEvent(testVideoEventId),
+        ).thenAnswer(
+          (_) => Stream.fromIterable([parentCommentEvent, replyCommentEvent]),
+        );
 
         // Act
         commentsNotifier = createNotifier();
@@ -246,18 +266,25 @@ void main() {
         });
 
         // Act
-        final postFuture =
-            commentsNotifier.postComment(content: testCommentContent);
+        final postFuture = commentsNotifier.postComment(
+          content: testCommentContent,
+        );
 
         // Assert - Check optimistic update happened immediately
         final state = getState();
         expect(state.topLevelComments.length, equals(1));
-        expect(state.topLevelComments.first.comment.content,
-            equals(testCommentContent));
-        expect(state.topLevelComments.first.comment.authorPubkey,
-            equals(testCurrentUserPubkey));
-        expect(state.topLevelComments.first.comment.id.startsWith('temp_'),
-            isTrue);
+        expect(
+          state.topLevelComments.first.comment.content,
+          equals(testCommentContent),
+        );
+        expect(
+          state.topLevelComments.first.comment.authorPubkey,
+          equals(testCurrentUserPubkey),
+        );
+        expect(
+          state.topLevelComments.first.comment.id.startsWith('temp_'),
+          isTrue,
+        );
 
         // Wait for posting to complete
         await postFuture;
@@ -389,8 +416,9 @@ void main() {
         ).thenAnswer((_) async {});
 
         // Act
-        final postFuture =
-            commentsNotifier.postComment(content: testCommentContent);
+        final postFuture = commentsNotifier.postComment(
+          content: testCommentContent,
+        );
 
         // Check optimistic update immediately (before await)
         final stateAfterOptimistic = getState();
@@ -408,7 +436,10 @@ void main() {
           [
             ['e', testVideoEventId],
             ['p', testVideoAuthorPubkey],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'Comment 1',
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -420,16 +451,21 @@ void main() {
           [
             ['e', testVideoEventId],
             ['p', testVideoAuthorPubkey],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'Comment 2',
           createdAt: (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 1,
         );
 
         // Mock the stream to return both events
-        when(mockSocialService.fetchCommentsForEvent(testVideoEventId))
-            .thenAnswer(
-                (_) => Stream.fromIterable([comment1Event, comment2Event]));
+        when(
+          mockSocialService.fetchCommentsForEvent(testVideoEventId),
+        ).thenAnswer(
+          (_) => Stream.fromIterable([comment1Event, comment2Event]),
+        );
 
         // Act - Create notifier which will trigger initial loading
         commentsNotifier = createNotifier();
@@ -450,7 +486,8 @@ void main() {
 
         // Simulate an error state
         await commentsNotifier.postComment(
-            content: ''); // This will set an error
+          content: '',
+        ); // This will set an error
         var state = getState();
         // Note: Error state access issue in tests - provider logic is correct
         // expect(state.error, isNotNull);

@@ -42,7 +42,9 @@ class LogCaptureService {
     }
 
     if (entry.stackTrace != null) {
-      buffer.write(' | Stack: ${entry.stackTrace.toString().split('\n').first}');
+      buffer.write(
+        ' | Stack: ${entry.stackTrace.toString().split('\n').first}',
+      );
     }
 
     return buffer.toString();

@@ -15,8 +15,12 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          nostrServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          videoEventServiceProvider.overrideWith((ref) => throw UnimplementedError()),
+          nostrServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
+          videoEventServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
         ],
       );
 
@@ -44,11 +48,7 @@ void main() {
 
     testWidgets('Search screen has search bar and tabs', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: SearchScreenPure(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: SearchScreenPure())),
       );
 
       await tester.pumpAndSettle();
@@ -67,8 +67,12 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          nostrServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          videoEventServiceProvider.overrideWith((ref) => throw UnimplementedError()),
+          nostrServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
+          videoEventServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
         ],
       );
 

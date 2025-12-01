@@ -44,8 +44,9 @@ void main() {
       when(mockKeychain.private).thenReturn(testPrivateKey);
     });
 
-    testWidgets('complete deletion flow from settings to sign out',
-        (tester) async {
+    testWidgets('complete deletion flow from settings to sign out', (
+      tester,
+    ) async {
       // Arrange
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentProfile).thenReturn(null);
@@ -55,7 +56,9 @@ void main() {
       final mockEvent = Event(
         testPublicKey,
         62,
-        [['relay', 'ALL_RELAYS']],
+        [
+          ['relay', 'ALL_RELAYS'],
+        ],
         'User requested account deletion via diVine app',
         createdAt: 1234567890,
       );
@@ -70,8 +73,9 @@ void main() {
         ),
       );
 
-      when(mockAuthService.signOut(deleteKeys: true))
-          .thenAnswer((_) async => Future.value());
+      when(
+        mockAuthService.signOut(deleteKeys: true),
+      ).thenAnswer((_) async => Future.value());
 
       final deletionService = AccountDeletionService(
         nostrService: mockNostrService,
@@ -85,9 +89,7 @@ void main() {
             accountDeletionServiceProvider.overrideWithValue(deletionService),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 
@@ -127,7 +129,9 @@ void main() {
       final mockEvent = Event(
         testPublicKey,
         62,
-        [['relay', 'ALL_RELAYS']],
+        [
+          ['relay', 'ALL_RELAYS'],
+        ],
         'User requested account deletion via diVine app',
         createdAt: 1234567890,
       );
@@ -158,9 +162,7 @@ void main() {
             accountDeletionServiceProvider.overrideWithValue(deletionService),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 

@@ -8,10 +8,7 @@ import 'package:openvine/theme/vine_theme.dart';
 class GeoBlockedScreen extends StatelessWidget {
   final GeoBlockResponse geoInfo;
 
-  const GeoBlockedScreen({
-    super.key,
-    required this.geoInfo,
-  });
+  const GeoBlockedScreen({super.key, required this.geoInfo});
 
   @override
   Widget build(BuildContext context) {
@@ -25,11 +22,7 @@ class GeoBlockedScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Icon
-                Icon(
-                  Icons.block,
-                  size: 80,
-                  color: VineTheme.vineGreen,
-                ),
+                Icon(Icons.block, size: 80, color: VineTheme.vineGreen),
                 const SizedBox(height: 32),
 
                 // Title
@@ -111,13 +104,7 @@ class GeoBlockedScreen extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.grey,
-            fontSize: 14,
-          ),
-        ),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
         Text(
           value,
           style: TextStyle(

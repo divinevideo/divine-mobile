@@ -110,7 +110,6 @@ class EventRouter {
     }
   }
 
-
   /// Handle kind 0 (profile) event
   ///
   /// Extracts profile data and stores in UserProfiles table

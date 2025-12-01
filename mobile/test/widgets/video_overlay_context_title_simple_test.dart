@@ -61,7 +61,9 @@ void main() {
       expect(find.byIcon(Icons.tag), findsNothing);
     });
 
-    testWidgets('shows both publisher chip and contextTitle chip', (tester) async {
+    testWidgets('shows both publisher chip and contextTitle chip', (
+      tester,
+    ) async {
       final testVideo = TestVideoEventBuilder.create();
 
       await tester.pumpWidget(

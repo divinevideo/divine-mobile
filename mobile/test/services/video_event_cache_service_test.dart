@@ -86,8 +86,10 @@ void main() {
         // Add multiple classic vines and verify they're at top but in varied positions
         final classicVines = List.generate(
           5,
-          (i) => _createTestVideoEvent('classic$i',
-              pubkey: AppConstants.classicVinesPubkey),
+          (i) => _createTestVideoEvent(
+            'classic$i',
+            pubkey: AppConstants.classicVinesPubkey,
+          ),
         );
 
         for (final vine in classicVines) {
@@ -99,31 +101,37 @@ void main() {
 
         // All should have classic vine pubkey
         for (var i = 0; i < 5; i++) {
-          expect(cacheService.videoEvents[i].pubkey,
-              AppConstants.classicVinesPubkey);
+          expect(
+            cacheService.videoEvents[i].pubkey,
+            AppConstants.classicVinesPubkey,
+          );
         }
       });
 
-      test('should place default videos after classic vines but before regular',
-          () {
-        final regularVideo = _createTestVideoEvent('regular1');
-        final classicVine = _createTestVideoEvent(
-          'classic1',
-          pubkey: AppConstants.classicVinesPubkey,
-        );
-        final defaultVideo =
-            _createTestVideoEvent('default1', isDefaultContent: true);
+      test(
+        'should place default videos after classic vines but before regular',
+        () {
+          final regularVideo = _createTestVideoEvent('regular1');
+          final classicVine = _createTestVideoEvent(
+            'classic1',
+            pubkey: AppConstants.classicVinesPubkey,
+          );
+          final defaultVideo = _createTestVideoEvent(
+            'default1',
+            isDefaultContent: true,
+          );
 
-        // Add in mixed order
-        cacheService.addVideo(regularVideo);
-        cacheService.addVideo(defaultVideo);
-        cacheService.addVideo(classicVine);
+          // Add in mixed order
+          cacheService.addVideo(regularVideo);
+          cacheService.addVideo(defaultVideo);
+          cacheService.addVideo(classicVine);
 
-        // Should be ordered: classic, default, regular
-        expect(cacheService.videoEvents[0].id, 'classic1');
-        expect(cacheService.videoEvents[1].id, 'default1');
-        expect(cacheService.videoEvents[2].id, 'regular1');
-      });
+          // Should be ordered: classic, default, regular
+          expect(cacheService.videoEvents[0].id, 'classic1');
+          expect(cacheService.videoEvents[1].id, 'default1');
+          expect(cacheService.videoEvents[2].id, 'regular1');
+        },
+      );
 
       test('should maintain timestamp order within same priority', () {
         final now = DateTime.now();

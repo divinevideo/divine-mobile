@@ -29,93 +29,102 @@ void main() {
       // Setup mock responses
       when(mockNostrService.hasKeys).thenReturn(true);
       when(mockNostrService.publicKey).thenReturn('test-pubkey-123');
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => Stream.empty());
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => Stream.empty());
     });
 
     tearDown(() {
       service.dispose();
     });
 
-    test('concurrent addNotificationForTesting calls with same ID should only add once',
-        () async {
-      // Initialize the service
-      await service.initialize(
-        nostrService: mockNostrService,
-        profileService: mockProfileService,
-        videoService: mockVideoService,
-      );
+    test(
+      'concurrent addNotificationForTesting calls with same ID should only add once',
+      () async {
+        // Initialize the service
+        await service.initialize(
+          nostrService: mockNostrService,
+          profileService: mockProfileService,
+          videoService: mockVideoService,
+        );
 
-      // Create identical notifications (same ID)
-      final notification1 = NotificationModel(
-        id: 'duplicate-test-id',
-        type: NotificationType.like,
-        actorPubkey: 'actor-pubkey',
-        actorName: 'Test User',
-        message: 'Test User liked your video',
-        timestamp: DateTime.now(),
-      );
+        // Create identical notifications (same ID)
+        final notification1 = NotificationModel(
+          id: 'duplicate-test-id',
+          type: NotificationType.like,
+          actorPubkey: 'actor-pubkey',
+          actorName: 'Test User',
+          message: 'Test User liked your video',
+          timestamp: DateTime.now(),
+        );
 
-      final notification2 = NotificationModel(
-        id: 'duplicate-test-id', // Same ID - should be deduplicated
-        type: NotificationType.like,
-        actorPubkey: 'actor-pubkey',
-        actorName: 'Test User',
-        message: 'Test User liked your video',
-        timestamp: DateTime.now(),
-      );
+        final notification2 = NotificationModel(
+          id: 'duplicate-test-id', // Same ID - should be deduplicated
+          type: NotificationType.like,
+          actorPubkey: 'actor-pubkey',
+          actorName: 'Test User',
+          message: 'Test User liked your video',
+          timestamp: DateTime.now(),
+        );
 
-      // Simulate race condition: add both concurrently
-      // This tests that the fix (mutex lock) prevents duplicates
-      await Future.wait([
-        service.addNotificationForTesting(notification1),
-        service.addNotificationForTesting(notification2),
-      ]);
+        // Simulate race condition: add both concurrently
+        // This tests that the fix (mutex lock) prevents duplicates
+        await Future.wait([
+          service.addNotificationForTesting(notification1),
+          service.addNotificationForTesting(notification2),
+        ]);
 
-      // Should only have ONE notification, not two
-      expect(service.notifications.length, equals(1),
-          reason: 'Race condition: duplicate notification was added');
-      expect(service.notifications.first.id, equals('duplicate-test-id'));
-    });
+        // Should only have ONE notification, not two
+        expect(
+          service.notifications.length,
+          equals(1),
+          reason: 'Race condition: duplicate notification was added',
+        );
+        expect(service.notifications.first.id, equals('duplicate-test-id'));
+      },
+    );
 
-    test('concurrent addNotificationForTesting calls with different IDs should add both',
-        () async {
-      await service.initialize(
-        nostrService: mockNostrService,
-        profileService: mockProfileService,
-        videoService: mockVideoService,
-      );
+    test(
+      'concurrent addNotificationForTesting calls with different IDs should add both',
+      () async {
+        await service.initialize(
+          nostrService: mockNostrService,
+          profileService: mockProfileService,
+          videoService: mockVideoService,
+        );
 
-      final notification1 = NotificationModel(
-        id: 'notification-1',
-        type: NotificationType.like,
-        actorPubkey: 'actor-1',
-        actorName: 'User 1',
-        message: 'User 1 liked your video',
-        timestamp: DateTime.now(),
-      );
+        final notification1 = NotificationModel(
+          id: 'notification-1',
+          type: NotificationType.like,
+          actorPubkey: 'actor-1',
+          actorName: 'User 1',
+          message: 'User 1 liked your video',
+          timestamp: DateTime.now(),
+        );
 
-      final notification2 = NotificationModel(
-        id: 'notification-2',
-        type: NotificationType.comment,
-        actorPubkey: 'actor-2',
-        actorName: 'User 2',
-        message: 'User 2 commented on your video',
-        timestamp: DateTime.now(),
-      );
+        final notification2 = NotificationModel(
+          id: 'notification-2',
+          type: NotificationType.comment,
+          actorPubkey: 'actor-2',
+          actorName: 'User 2',
+          message: 'User 2 commented on your video',
+          timestamp: DateTime.now(),
+        );
 
-      // Add both concurrently
-      await Future.wait([
-        service.addNotificationForTesting(notification1),
-        service.addNotificationForTesting(notification2),
-      ]);
+        // Add both concurrently
+        await Future.wait([
+          service.addNotificationForTesting(notification1),
+          service.addNotificationForTesting(notification2),
+        ]);
 
-      // Should have BOTH notifications
-      expect(service.notifications.length, equals(2));
-      expect(
+        // Should have BOTH notifications
+        expect(service.notifications.length, equals(2));
+        expect(
           service.notifications.map((n) => n.id).toSet(),
-          equals({'notification-1', 'notification-2'}));
-    });
+          equals({'notification-1', 'notification-2'}),
+        );
+      },
+    );
 
     test('rapid sequential adds with same ID should only add once', () async {
       await service.initialize(
@@ -171,8 +180,11 @@ void main() {
       await Future.wait(futures);
 
       // Should only have 10 unique notifications (not 100)
-      expect(service.notifications.length, equals(10),
-          reason: 'Stress test: duplicates were not properly filtered');
+      expect(
+        service.notifications.length,
+        equals(10),
+        reason: 'Stress test: duplicates were not properly filtered',
+      );
 
       // Verify all 10 unique IDs are present
       final ids = service.notifications.map((n) => n.id).toSet();

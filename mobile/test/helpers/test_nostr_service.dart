@@ -50,9 +50,7 @@ class TestNostrService implements INostrService {
   List<String> get relays => ['wss://test.relay'];
 
   @override
-  Map<String, dynamic> get relayStatuses => {
-        'wss://test.relay': _isConnected,
-      };
+  Map<String, dynamic> get relayStatuses => {'wss://test.relay': _isConnected};
 
   @override
   String get primaryRelay => 'wss://test.relay';
@@ -322,12 +320,8 @@ class TestNostrService implements INostrService {
   Future<Map<String, dynamic>?> getRelayStats() async {
     // Return mock stats for tests
     return {
-      'database': {
-        'total_events': _storedEvents.length,
-      },
-      'subscriptions': {
-        'active_count': _subscriptions.length,
-      },
+      'database': {'total_events': _storedEvents.length},
+      'subscriptions': {'active_count': _subscriptions.length},
       'external_relays': relays.length,
     };
   }

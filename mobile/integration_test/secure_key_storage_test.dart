@@ -26,8 +26,9 @@ void main() {
       await keyManager.clearKeys();
     });
 
-    testWidgets('should initialize and generate keys on device',
-        (tester) async {
+    testWidgets('should initialize and generate keys on device', (
+      tester,
+    ) async {
       // Initialize
       await keyManager.initialize();
       expect(keyManager.isInitialized, isTrue);
@@ -48,8 +49,9 @@ void main() {
       expect(newKeyManager.publicKey, equals(keyPair.public));
     });
 
-    testWidgets('should migrate legacy keys from SharedPreferences',
-        (tester) async {
+    testWidgets('should migrate legacy keys from SharedPreferences', (
+      tester,
+    ) async {
       // Set up legacy keys
       const privateKey =
           '5dab4a6cf3b8c9b8d3c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7';
@@ -114,8 +116,9 @@ void main() {
       storageService.dispose();
     });
 
-    testWidgets('should generate and store keys with platform security',
-        (tester) async {
+    testWidgets('should generate and store keys with platform security', (
+      tester,
+    ) async {
       // Generate keys
       final keyContainer = await storageService.generateAndStoreKeys();
       expect(keyContainer, isNotNull);
