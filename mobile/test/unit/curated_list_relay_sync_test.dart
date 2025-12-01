@@ -125,7 +125,7 @@ void main() {
           ['t', 'demo'],
           ['e', 'video1'],
           ['e', 'video2'],
-          ['client', 'openvine'],
+          ['client', 'diVine'],
           [
             'expiration',
             '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',

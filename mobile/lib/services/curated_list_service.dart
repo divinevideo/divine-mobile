@@ -918,7 +918,7 @@ class CuratedListService {
       final tags = <List<String>>[
         ['d', list.id], // Identifier for replaceable event
         ['title', list.name],
-        ['client', 'openvine'],
+        ['client', 'diVine'],
       ];
 
       // Add description if present

@@ -267,7 +267,7 @@ void main() {
         recipientPubkey: recipientPubkey,
         content: 'Test message',
         additionalTags: [
-          ['client', 'openvine_bug_report'],
+          ['client', 'diVine_bug_report'],
           ['report_id', 'test-123'],
         ],
       );

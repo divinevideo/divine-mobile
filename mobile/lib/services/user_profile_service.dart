@@ -88,7 +88,8 @@ class UserProfileService extends ChangeNotifier {
   }
 
   /// Check if profile is cached
-  bool hasProfile(String pubkey) {
+  bool hasProfile(String? pubkey) {
+    if (pubkey == null || pubkey.isEmpty) return false;
     if (_profileCache.containsKey(pubkey)) return true;
 
     // Also check persistent cache
@@ -100,7 +101,8 @@ class UserProfileService extends ChangeNotifier {
   }
 
   /// Check if we should skip fetching this profile to avoid relay spam
-  bool shouldSkipProfileFetch(String pubkey) {
+  bool shouldSkipProfileFetch(String? pubkey) {
+    if (pubkey == null || pubkey.isEmpty) return false;
     // Don't fetch if we know it's missing and retry time hasn't passed
     if (_knownMissingProfiles.contains(pubkey)) {
       final retryAfter = _missingProfileRetryAfter[pubkey];
@@ -115,7 +117,8 @@ class UserProfileService extends ChangeNotifier {
   }
 
   /// Mark a pubkey as having no profile to avoid future requests
-  void markProfileAsMissing(String pubkey) {
+  void markProfileAsMissing(String? pubkey) {
+    if (pubkey == null || pubkey.isEmpty) return;
     _knownMissingProfiles.add(pubkey);
     // Retry after 10 minutes for missing profiles (reduced from 1 hour)
     _missingProfileRetryAfter[pubkey] = DateTime.now().add(

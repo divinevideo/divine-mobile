@@ -512,7 +512,7 @@ class MuteService {
 
       // Create NIP-51 kind 10000 tags
       final tags = <List<String>>[
-        ['client', 'openvine'],
+        ['client', 'diVine'],
       ];
 
       // Add muted items as tags (only non-expired, permanent mutes for Nostr)

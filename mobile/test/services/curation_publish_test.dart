@@ -150,7 +150,7 @@ void main() {
         expect(event, isNotNull);
 
         // Should include client tag
-        expect(event!.tags, contains(['client', 'openvine']));
+        expect(event!.tags, contains(['client', 'diVine']));
       });
     });
 

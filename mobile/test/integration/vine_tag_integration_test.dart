@@ -94,7 +94,7 @@ void main() {
         [
           ['h', 'vine'],
           ['url', 'https://example.com/video.mp4'],
-          ['client', 'openvine'],
+          ['client', 'diVine'],
           [
             'expiration',
             '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
@@ -110,7 +110,7 @@ void main() {
         22,
         [
           ['url', 'https://example.com/video.mp4'],
-          ['client', 'openvine'],
+          ['client', 'diVine'],
           [
             'expiration',
             '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',

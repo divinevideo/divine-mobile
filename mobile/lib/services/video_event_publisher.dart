@@ -470,7 +470,7 @@ class VideoEventPublisher {
       }
 
       // Add client tag
-      tags.add(['client', 'openvine']);
+      tags.add(['client', 'diVine']);
 
       // Add published_at tag (current timestamp)
       tags.add([

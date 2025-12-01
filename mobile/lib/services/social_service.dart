@@ -1422,7 +1422,7 @@ class SocialService {
       final tags = <List<String>>[
         ['d', set.id], // Identifier for replaceable event
         ['title', set.name],
-        ['client', 'openvine'],
+        ['client', 'diVine'],
       ];
 
       // Add description if present
