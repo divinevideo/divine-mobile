@@ -51,8 +51,9 @@ void main() {
       expect(find.text('Cancel'), findsOneWidget);
     });
 
-    testWidgets('should allow Send button even when description is empty',
-        (tester) async {
+    testWidgets('should allow Send button even when description is empty', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -66,16 +67,14 @@ void main() {
 
       // Button should be enabled even when empty (diagnostic info is more important)
       final button = tester.widget<ElevatedButton>(
-        find.ancestor(
-          of: sendButton,
-          matching: find.byType(ElevatedButton),
-        ),
+        find.ancestor(of: sendButton, matching: find.byType(ElevatedButton)),
       );
       expect(button.onPressed, isNotNull);
     });
 
-    testWidgets('should enable Send button when description is not empty',
-        (tester) async {
+    testWidgets('should enable Send button when description is not empty', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -90,16 +89,14 @@ void main() {
 
       final sendButton = find.text('Send Report');
       final button = tester.widget<ElevatedButton>(
-        find.ancestor(
-          of: sendButton,
-          matching: find.byType(ElevatedButton),
-        ),
+        find.ancestor(of: sendButton, matching: find.byType(ElevatedButton)),
       );
       expect(button.onPressed, isNotNull);
     });
 
-    testWidgets('should call collectDiagnostics and sendBugReport on submit',
-        (tester) async {
+    testWidgets('should call collectDiagnostics and sendBugReport on submit', (
+      tester,
+    ) async {
       // Setup mocks
       final testReportData = BugReportData(
         reportId: 'test-123',
@@ -111,12 +108,14 @@ void main() {
         errorCounts: {},
       );
 
-      when(mockBugReportService.collectDiagnostics(
-        userDescription: anyNamed('userDescription'),
-        currentScreen: anyNamed('currentScreen'),
-        userPubkey: anyNamed('userPubkey'),
-        additionalContext: anyNamed('additionalContext'),
-      )).thenAnswer((_) async => testReportData);
+      when(
+        mockBugReportService.collectDiagnostics(
+          userDescription: anyNamed('userDescription'),
+          currentScreen: anyNamed('currentScreen'),
+          userPubkey: anyNamed('userPubkey'),
+          additionalContext: anyNamed('additionalContext'),
+        ),
+      ).thenAnswer((_) async => testReportData);
 
       when(mockBugReportService.sendBugReport(any)).thenAnswer(
         (_) async => BugReportResult(
@@ -143,25 +142,30 @@ void main() {
       await tester.pump();
 
       // Verify service methods were called
-      verify(mockBugReportService.collectDiagnostics(
-        userDescription: 'App crashed on startup',
-        currentScreen: anyNamed('currentScreen'),
-        userPubkey: anyNamed('userPubkey'),
-        additionalContext: anyNamed('additionalContext'),
-      )).called(1);
+      verify(
+        mockBugReportService.collectDiagnostics(
+          userDescription: 'App crashed on startup',
+          currentScreen: anyNamed('currentScreen'),
+          userPubkey: anyNamed('userPubkey'),
+          additionalContext: anyNamed('additionalContext'),
+        ),
+      ).called(1);
 
       verify(mockBugReportService.sendBugReport(any)).called(1);
     });
 
-    testWidgets('should show loading indicator while submitting',
-        (tester) async {
+    testWidgets('should show loading indicator while submitting', (
+      tester,
+    ) async {
       // Setup mock with delay
-      when(mockBugReportService.collectDiagnostics(
-        userDescription: anyNamed('userDescription'),
-        currentScreen: anyNamed('currentScreen'),
-        userPubkey: anyNamed('userPubkey'),
-        additionalContext: anyNamed('additionalContext'),
-      )).thenAnswer((_) async {
+      when(
+        mockBugReportService.collectDiagnostics(
+          userDescription: anyNamed('userDescription'),
+          currentScreen: anyNamed('currentScreen'),
+          userPubkey: anyNamed('userPubkey'),
+          additionalContext: anyNamed('additionalContext'),
+        ),
+      ).thenAnswer((_) async {
         await Future.delayed(const Duration(milliseconds: 100));
         return BugReportData(
           reportId: 'test-123',
@@ -202,14 +206,18 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('should show improved success message on successful submission',
-        (tester) async {
-      when(mockBugReportService.collectDiagnostics(
-        userDescription: anyNamed('userDescription'),
-        currentScreen: anyNamed('currentScreen'),
-        userPubkey: anyNamed('userPubkey'),
-        additionalContext: anyNamed('additionalContext'),
-      )).thenAnswer((_) async => BugReportData(
+    testWidgets(
+      'should show improved success message on successful submission',
+      (tester) async {
+        when(
+          mockBugReportService.collectDiagnostics(
+            userDescription: anyNamed('userDescription'),
+            currentScreen: anyNamed('currentScreen'),
+            userPubkey: anyNamed('userPubkey'),
+            additionalContext: anyNamed('additionalContext'),
+          ),
+        ).thenAnswer(
+          (_) async => BugReportData(
             reportId: 'test-123',
             timestamp: DateTime.now(),
             userDescription: 'Test',
@@ -217,55 +225,62 @@ void main() {
             appVersion: '1.0.0',
             recentLogs: [],
             errorCounts: {},
-          ));
+          ),
+        );
 
-      when(mockBugReportService.sendBugReport(any)).thenAnswer(
-        (_) async => BugReportResult(
-          success: true,
+        when(mockBugReportService.sendBugReport(any)).thenAnswer(
+          (_) async => BugReportResult(
+            success: true,
+            reportId: 'test-123',
+            timestamp: DateTime.now(),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: BugReportDialog(bugReportService: mockBugReportService),
+            ),
+          ),
+        );
+
+        await tester.enterText(find.byType(TextField), 'Test bug');
+        await tester.pump();
+        await tester.tap(find.text('Send Report'));
+        await tester.pump();
+
+        // Wait for async to complete
+        await tester.pump();
+
+        // Should show improved success message
+        expect(
+          find.textContaining("Thank you! We've received your report"),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('should auto-dismiss dialog after 1.5 seconds on success', (
+      tester,
+    ) async {
+      when(
+        mockBugReportService.collectDiagnostics(
+          userDescription: anyNamed('userDescription'),
+          currentScreen: anyNamed('currentScreen'),
+          userPubkey: anyNamed('userPubkey'),
+          additionalContext: anyNamed('additionalContext'),
+        ),
+      ).thenAnswer(
+        (_) async => BugReportData(
           reportId: 'test-123',
           timestamp: DateTime.now(),
+          userDescription: 'Test',
+          deviceInfo: {},
+          appVersion: '1.0.0',
+          recentLogs: [],
+          errorCounts: {},
         ),
       );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: BugReportDialog(bugReportService: mockBugReportService),
-          ),
-        ),
-      );
-
-      await tester.enterText(find.byType(TextField), 'Test bug');
-      await tester.pump();
-      await tester.tap(find.text('Send Report'));
-      await tester.pump();
-
-      // Wait for async to complete
-      await tester.pump();
-
-      // Should show improved success message
-      expect(
-        find.textContaining("Thank you! We've received your report"),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('should auto-dismiss dialog after 1.5 seconds on success',
-        (tester) async {
-      when(mockBugReportService.collectDiagnostics(
-        userDescription: anyNamed('userDescription'),
-        currentScreen: anyNamed('currentScreen'),
-        userPubkey: anyNamed('userPubkey'),
-        additionalContext: anyNamed('additionalContext'),
-      )).thenAnswer((_) async => BugReportData(
-            reportId: 'test-123',
-            timestamp: DateTime.now(),
-            userDescription: 'Test',
-            deviceInfo: {},
-            appVersion: '1.0.0',
-            recentLogs: [],
-            errorCounts: {},
-          ));
 
       when(mockBugReportService.sendBugReport(any)).thenAnswer(
         (_) async => BugReportResult(
@@ -283,9 +298,8 @@ void main() {
                 onPressed: () {
                   showDialog(
                     context: context,
-                    builder: (_) => BugReportDialog(
-                      bugReportService: mockBugReportService,
-                    ),
+                    builder: (_) =>
+                        BugReportDialog(bugReportService: mockBugReportService),
                   );
                 },
                 child: const Text('Open'),
@@ -318,14 +332,18 @@ void main() {
       expect(find.text('Report a Bug'), findsNothing);
     });
 
-    testWidgets('should change Send button to Close after successful submission',
-        (tester) async {
-      when(mockBugReportService.collectDiagnostics(
-        userDescription: anyNamed('userDescription'),
-        currentScreen: anyNamed('currentScreen'),
-        userPubkey: anyNamed('userPubkey'),
-        additionalContext: anyNamed('additionalContext'),
-      )).thenAnswer((_) async => BugReportData(
+    testWidgets(
+      'should change Send button to Close after successful submission',
+      (tester) async {
+        when(
+          mockBugReportService.collectDiagnostics(
+            userDescription: anyNamed('userDescription'),
+            currentScreen: anyNamed('currentScreen'),
+            userPubkey: anyNamed('userPubkey'),
+            additionalContext: anyNamed('additionalContext'),
+          ),
+        ).thenAnswer(
+          (_) async => BugReportData(
             reportId: 'test-123',
             timestamp: DateTime.now(),
             userDescription: 'Test',
@@ -333,57 +351,64 @@ void main() {
             appVersion: '1.0.0',
             recentLogs: [],
             errorCounts: {},
-          ));
+          ),
+        );
 
-      when(mockBugReportService.sendBugReport(any)).thenAnswer(
-        (_) async => BugReportResult(
-          success: true,
+        when(mockBugReportService.sendBugReport(any)).thenAnswer(
+          (_) async => BugReportResult(
+            success: true,
+            reportId: 'test-123',
+            timestamp: DateTime.now(),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: BugReportDialog(bugReportService: mockBugReportService),
+            ),
+          ),
+        );
+
+        // Initial state - should have "Send Report" button
+        expect(find.text('Send Report'), findsOneWidget);
+        expect(find.text('Close'), findsNothing);
+
+        await tester.enterText(find.byType(TextField), 'Test bug');
+        await tester.pump();
+        await tester.tap(find.text('Send Report'));
+        await tester.pump();
+
+        // Wait for async to complete
+        await tester.pump();
+
+        // After success - should have "Close" button instead of "Send Report"
+        expect(find.text('Send Report'), findsNothing);
+        expect(find.text('Close'), findsOneWidget);
+      },
+    );
+
+    testWidgets('should show error message on failed submission', (
+      tester,
+    ) async {
+      when(
+        mockBugReportService.collectDiagnostics(
+          userDescription: anyNamed('userDescription'),
+          currentScreen: anyNamed('currentScreen'),
+          userPubkey: anyNamed('userPubkey'),
+          additionalContext: anyNamed('additionalContext'),
+        ),
+      ).thenAnswer(
+        (_) async => BugReportData(
           reportId: 'test-123',
           timestamp: DateTime.now(),
+          userDescription: 'Test',
+          deviceInfo: {},
+          appVersion: '1.0.0',
+          recentLogs: [],
+          errorCounts: {},
         ),
       );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: BugReportDialog(bugReportService: mockBugReportService),
-          ),
-        ),
-      );
-
-      // Initial state - should have "Send Report" button
-      expect(find.text('Send Report'), findsOneWidget);
-      expect(find.text('Close'), findsNothing);
-
-      await tester.enterText(find.byType(TextField), 'Test bug');
-      await tester.pump();
-      await tester.tap(find.text('Send Report'));
-      await tester.pump();
-
-      // Wait for async to complete
-      await tester.pump();
-
-      // After success - should have "Close" button instead of "Send Report"
-      expect(find.text('Send Report'), findsNothing);
-      expect(find.text('Close'), findsOneWidget);
-    });
-
-    testWidgets('should show error message on failed submission',
-        (tester) async {
-      when(mockBugReportService.collectDiagnostics(
-        userDescription: anyNamed('userDescription'),
-        currentScreen: anyNamed('currentScreen'),
-        userPubkey: anyNamed('userPubkey'),
-        additionalContext: anyNamed('additionalContext'),
-      )).thenAnswer((_) async => BugReportData(
-            reportId: 'test-123',
-            timestamp: DateTime.now(),
-            userDescription: 'Test',
-            deviceInfo: {},
-            appVersion: '1.0.0',
-            recentLogs: [],
-            errorCounts: {},
-          ));
 
       when(mockBugReportService.sendBugReport(any)).thenAnswer(
         (_) async => BugReportResult.failure(
@@ -419,9 +444,8 @@ void main() {
                 onPressed: () {
                   showDialog(
                     context: context,
-                    builder: (_) => BugReportDialog(
-                      bugReportService: mockBugReportService,
-                    ),
+                    builder: (_) =>
+                        BugReportDialog(bugReportService: mockBugReportService),
                   );
                 },
                 child: const Text('Open'),

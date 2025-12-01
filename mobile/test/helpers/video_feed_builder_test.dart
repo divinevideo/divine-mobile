@@ -9,7 +9,6 @@ import 'package:mockito/mockito.dart';
 import 'package:openvine/helpers/video_feed_builder.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/state/video_feed_state.dart';
 
 import 'video_feed_builder_test.mocks.dart';
 
@@ -25,36 +24,43 @@ void main() {
     });
 
     group('buildFeed', () {
-      test('should subscribe to video service with provided parameters', () async {
-        // Arrange
-        final config = VideoFeedConfig(
-          subscriptionType: SubscriptionType.popularNow,
-          subscribe: (service) async => service.subscribeToVideoFeed(
+      test(
+        'should subscribe to video service with provided parameters',
+        () async {
+          // Arrange
+          final config = VideoFeedConfig(
             subscriptionType: SubscriptionType.popularNow,
-            limit: 100,
-          ),
-          getVideos: (service) => [],
-          sortVideos: (videos) {
-            final sorted = List<VideoEvent>.from(videos);
-            sorted.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-            return sorted;
-          },
-        );
+            subscribe: (service) async => service.subscribeToVideoFeed(
+              subscriptionType: SubscriptionType.popularNow,
+              limit: 100,
+            ),
+            getVideos: (service) => [],
+            sortVideos: (videos) {
+              final sorted = List<VideoEvent>.from(videos);
+              sorted.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+              return sorted;
+            },
+          );
 
-        when(mockService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.popularNow,
-          limit: 100,
-        )).thenAnswer((_) async => Future.value());
+          when(
+            mockService.subscribeToVideoFeed(
+              subscriptionType: SubscriptionType.popularNow,
+              limit: 100,
+            ),
+          ).thenAnswer((_) async => Future.value());
 
-        // Act
-        await builder.buildFeed(config: config);
+          // Act
+          await builder.buildFeed(config: config);
 
-        // Assert
-        verify(mockService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.popularNow,
-          limit: 100,
-        )).called(1);
-      });
+          // Assert
+          verify(
+            mockService.subscribeToVideoFeed(
+              subscriptionType: SubscriptionType.popularNow,
+              limit: 100,
+            ),
+          ).called(1);
+        },
+      );
 
       test('should wait for video count stability before returning', () async {
         // Arrange
@@ -96,36 +102,48 @@ void main() {
         expect(stopwatch.elapsedMilliseconds, greaterThanOrEqualTo(100));
       });
 
-      test('should timeout after 3 seconds if videos never stabilize', () async {
-        // Arrange
-        final config = VideoFeedConfig(
-          subscriptionType: SubscriptionType.discovery,
-          subscribe: (service) async {
-            // Continuously add videos - never stabilize
-            Timer.periodic(Duration(milliseconds: 100), (timer) {
-              // Keep changing count
-            });
-          },
-          getVideos: (service) => [],
-          sortVideos: (videos) => videos,
-        );
+      test(
+        'should timeout after 3 seconds if videos never stabilize',
+        () async {
+          // Arrange
+          final config = VideoFeedConfig(
+            subscriptionType: SubscriptionType.discovery,
+            subscribe: (service) async {
+              // Continuously add videos - never stabilize
+              Timer.periodic(Duration(milliseconds: 100), (timer) {
+                // Keep changing count
+              });
+            },
+            getVideos: (service) => [],
+            sortVideos: (videos) => videos,
+          );
 
-        // Act
-        final stopwatch = Stopwatch()..start();
-        final state = await builder.buildFeed(config: config);
-        stopwatch.stop();
+          // Act
+          final stopwatch = Stopwatch()..start();
+          final state = await builder.buildFeed(config: config);
+          stopwatch.stop();
 
-        // Assert
-        // Should timeout at 3 seconds
-        expect(stopwatch.elapsedMilliseconds, lessThan(3500));
-        expect(stopwatch.elapsedMilliseconds, greaterThanOrEqualTo(2800));
-      });
+          // Assert
+          // Should timeout at 3 seconds
+          expect(stopwatch.elapsedMilliseconds, lessThan(3500));
+          expect(stopwatch.elapsedMilliseconds, greaterThanOrEqualTo(2800));
+        },
+      );
 
       test('should sort videos using provided comparator', () async {
         // Arrange
-        final video1 = _createMockVideo(id: 'v1', createdAt: DateTime(2025, 1, 1));
-        final video2 = _createMockVideo(id: 'v2', createdAt: DateTime(2025, 1, 3));
-        final video3 = _createMockVideo(id: 'v3', createdAt: DateTime(2025, 1, 2));
+        final video1 = _createMockVideo(
+          id: 'v1',
+          createdAt: DateTime(2025, 1, 1),
+        );
+        final video2 = _createMockVideo(
+          id: 'v2',
+          createdAt: DateTime(2025, 1, 3),
+        );
+        final video3 = _createMockVideo(
+          id: 'v3',
+          createdAt: DateTime(2025, 1, 2),
+        );
         final videos = [video1, video2, video3];
 
         final config = VideoFeedConfig(
@@ -134,7 +152,9 @@ void main() {
           getVideos: (service) => videos,
           sortVideos: (videos) {
             final sorted = List<VideoEvent>.from(videos);
-            sorted.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Newest first
+            sorted.sort(
+              (a, b) => b.timestamp.compareTo(a.timestamp),
+            ); // Newest first
             return sorted;
           },
         );
@@ -223,10 +243,7 @@ void main() {
         );
 
         // Act
-        builder.setupContinuousListener(
-          config: config,
-          onUpdate: (state) {},
-        );
+        builder.setupContinuousListener(config: config, onUpdate: (state) {});
 
         // Assert
         // Verify that the initial count was captured
@@ -245,10 +262,7 @@ void main() {
           sortVideos: (videos) => videos,
         );
 
-        builder.setupContinuousListener(
-          config: config,
-          onUpdate: (state) {},
-        );
+        builder.setupContinuousListener(config: config, onUpdate: (state) {});
 
         // Act
         builder.cleanup();

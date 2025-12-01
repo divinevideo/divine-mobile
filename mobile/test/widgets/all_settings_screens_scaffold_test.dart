@@ -12,11 +12,7 @@ void main() {
   group('All Settings Screens Scaffold Consistency', () {
     testWidgets('RelaySettingsScreen has Vine green AppBar', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: RelaySettingsScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: RelaySettingsScreen())),
       );
 
       final appBarFinder = find.byType(AppBar);
@@ -33,11 +29,7 @@ void main() {
 
     testWidgets('BlossomSettingsScreen has Vine green AppBar', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: BlossomSettingsScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: BlossomSettingsScreen())),
       );
 
       final appBarFinder = find.byType(AppBar);
@@ -60,11 +52,7 @@ void main() {
 
       for (final screen in screensToTest) {
         await tester.pumpWidget(
-          ProviderScope(
-            child: MaterialApp(
-              home: screen,
-            ),
-          ),
+          ProviderScope(child: MaterialApp(home: screen)),
         );
 
         final scaffoldFinder = find.byType(Scaffold);

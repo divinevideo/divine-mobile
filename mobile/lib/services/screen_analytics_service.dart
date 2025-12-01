@@ -6,7 +6,8 @@ import 'package:openvine/utils/unified_logger.dart';
 
 /// Service for tracking screen navigation, performance, and user engagement
 class ScreenAnalyticsService {
-  static final ScreenAnalyticsService _instance = ScreenAnalyticsService._internal();
+  static final ScreenAnalyticsService _instance =
+      ScreenAnalyticsService._internal();
   factory ScreenAnalyticsService() => _instance;
   ScreenAnalyticsService._internal();
 
@@ -207,16 +208,10 @@ class ScreenAnalyticsService {
   }
 
   /// Track tab changes
-  void trackTabChange({
-    required String screenName,
-    required String tabName,
-  }) {
+  void trackTabChange({required String screenName, required String tabName}) {
     _analytics.logEvent(
       name: 'tab_changed',
-      parameters: {
-        'screen_name': screenName,
-        'tab_name': tabName,
-      },
+      parameters: {'screen_name': screenName, 'tab_name': tabName},
     );
   }
 
@@ -232,7 +227,10 @@ class ScreenAnalyticsService {
       parameters: {
         'screen_name': screenName,
         'error_type': errorType,
-        'error_message': errorMessage.substring(0, errorMessage.length > 100 ? 100 : errorMessage.length),
+        'error_message': errorMessage.substring(
+          0,
+          errorMessage.length > 100 ? 100 : errorMessage.length,
+        ),
         if (context != null) ...context,
       },
     );

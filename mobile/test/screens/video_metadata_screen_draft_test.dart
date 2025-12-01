@@ -29,9 +29,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VideoMetadataScreenPure(draftId: draft.id),
-          ),
+          child: MaterialApp(home: VideoMetadataScreenPure(draftId: draft.id)),
         ),
       );
       await tester.pumpAndSettle();

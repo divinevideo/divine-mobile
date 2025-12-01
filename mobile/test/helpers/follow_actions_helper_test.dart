@@ -13,10 +13,7 @@ import 'package:openvine/providers/optimistic_follow_provider.dart';
 
 import 'follow_actions_helper_test.mocks.dart';
 
-@GenerateMocks([
-  AuthService,
-  OptimisticFollowMethods,
-])
+@GenerateMocks([AuthService, OptimisticFollowMethods])
 void main() {
   group('FollowActionsHelper Tests', () {
     late MockAuthService mockAuthService;
@@ -30,15 +27,18 @@ void main() {
       when(mockAuthService.isAuthenticated).thenReturn(true);
     });
 
-    testWidgets('toggleFollow should call followUser when not following',
-        (WidgetTester tester) async {
+    testWidgets('toggleFollow should call followUser when not following', (
+      WidgetTester tester,
+    ) async {
       const testPubkey = 'test_pubkey_123';
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             authServiceProvider.overrideWithValue(mockAuthService),
-            optimisticFollowMethodsProvider.overrideWithValue(mockOptimisticMethods),
+            optimisticFollowMethodsProvider.overrideWithValue(
+              mockOptimisticMethods,
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -70,48 +70,53 @@ void main() {
       verifyNever(mockOptimisticMethods.unfollowUser(any));
     });
 
-    testWidgets('toggleFollow should call unfollowUser when already following',
-        (WidgetTester tester) async {
-      const testPubkey = 'test_pubkey_456';
+    testWidgets(
+      'toggleFollow should call unfollowUser when already following',
+      (WidgetTester tester) async {
+        const testPubkey = 'test_pubkey_456';
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-            optimisticFollowMethodsProvider.overrideWithValue(mockOptimisticMethods),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: Consumer(
-                builder: (context, ref, child) => ElevatedButton(
-                  onPressed: () async {
-                    await FollowActionsHelper.toggleFollow(
-                      ref: ref,
-                      context: context,
-                      pubkey: testPubkey,
-                      isCurrentlyFollowing: true,
-                      contextName: 'Test',
-                    );
-                  },
-                  child: const Text('Toggle'),
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authServiceProvider.overrideWithValue(mockAuthService),
+              optimisticFollowMethodsProvider.overrideWithValue(
+                mockOptimisticMethods,
+              ),
+            ],
+            child: MaterialApp(
+              home: Scaffold(
+                body: Consumer(
+                  builder: (context, ref, child) => ElevatedButton(
+                    onPressed: () async {
+                      await FollowActionsHelper.toggleFollow(
+                        ref: ref,
+                        context: context,
+                        pubkey: testPubkey,
+                        isCurrentlyFollowing: true,
+                        contextName: 'Test',
+                      );
+                    },
+                    child: const Text('Toggle'),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Tap the button
-      await tester.tap(find.text('Toggle'));
-      await tester.pumpAndSettle();
+        // Tap the button
+        await tester.tap(find.text('Toggle'));
+        await tester.pumpAndSettle();
 
-      // Verify unfollowUser was called
-      verify(mockOptimisticMethods.unfollowUser(testPubkey)).called(1);
-      verifyNever(mockOptimisticMethods.followUser(any));
-    });
+        // Verify unfollowUser was called
+        verify(mockOptimisticMethods.unfollowUser(testPubkey)).called(1);
+        verifyNever(mockOptimisticMethods.followUser(any));
+      },
+    );
 
-    testWidgets('Should show error when not authenticated',
-        (WidgetTester tester) async {
+    testWidgets('Should show error when not authenticated', (
+      WidgetTester tester,
+    ) async {
       const testPubkey = 'test_pubkey_789';
 
       // Setup: User is not authenticated
@@ -121,7 +126,9 @@ void main() {
         ProviderScope(
           overrides: [
             authServiceProvider.overrideWithValue(mockAuthService),
-            optimisticFollowMethodsProvider.overrideWithValue(mockOptimisticMethods),
+            optimisticFollowMethodsProvider.overrideWithValue(
+              mockOptimisticMethods,
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -155,15 +162,18 @@ void main() {
       expect(find.text('Please login to follow users'), findsOneWidget);
     });
 
-    testWidgets('Should show success message on successful follow',
-        (WidgetTester tester) async {
+    testWidgets('Should show success message on successful follow', (
+      WidgetTester tester,
+    ) async {
       const testPubkey = 'test_pubkey_abc';
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             authServiceProvider.overrideWithValue(mockAuthService),
-            optimisticFollowMethodsProvider.overrideWithValue(mockOptimisticMethods),
+            optimisticFollowMethodsProvider.overrideWithValue(
+              mockOptimisticMethods,
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -196,19 +206,23 @@ void main() {
       expect(find.text('Successfully followed user'), findsOneWidget);
     });
 
-    testWidgets('Should show error message on follow failure',
-        (WidgetTester tester) async {
+    testWidgets('Should show error message on follow failure', (
+      WidgetTester tester,
+    ) async {
       const testPubkey = 'test_pubkey_def';
 
       // Setup: followUser throws exception
-      when(mockOptimisticMethods.followUser(testPubkey))
-          .thenThrow(Exception('Network error'));
+      when(
+        mockOptimisticMethods.followUser(testPubkey),
+      ).thenThrow(Exception('Network error'));
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             authServiceProvider.overrideWithValue(mockAuthService),
-            optimisticFollowMethodsProvider.overrideWithValue(mockOptimisticMethods),
+            optimisticFollowMethodsProvider.overrideWithValue(
+              mockOptimisticMethods,
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(

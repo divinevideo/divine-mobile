@@ -57,8 +57,7 @@ class MinimalMockNostrService implements INostrService {
     required List<Filter> filters,
     bool bypassLimits = false,
     void Function()? onEose,
-  }) =>
-      const Stream<Event>.empty();
+  }) => const Stream<Event>.empty();
 
   dynamic noSuchMethod(Invocation invocation) => null;
 }
@@ -67,11 +66,7 @@ void main() {
   group('HashtagFiltering Integration Tests', () {
     test('should create Filter with hashtag support', () {
       // Test that our Filter class now supports hashtags
-      final filter = Filter(
-        kinds: [22],
-        t: ['bitcoin', 'nostr'],
-        limit: 10,
-      );
+      final filter = Filter(kinds: [22], t: ['bitcoin', 'nostr'], limit: 10);
 
       final json = filter.toJson();
       expect(json['#t'], equals(['bitcoin', 'nostr']));
@@ -80,10 +75,7 @@ void main() {
     });
 
     test('should handle empty hashtag list in Filter', () {
-      final filter = Filter(
-        kinds: [22],
-        limit: 10,
-      );
+      final filter = Filter(kinds: [22], limit: 10);
 
       final json = filter.toJson();
       expect(json.containsKey('#t'), false);
@@ -97,8 +89,10 @@ void main() {
       // This verifies the method exists in the class definition
       final mockNostrService = MinimalMockNostrService();
       final mockSubscriptionManager = SubscriptionManager(mockNostrService);
-      final videoService = VideoEventService(mockNostrService,
-          subscriptionManager: mockSubscriptionManager);
+      final videoService = VideoEventService(
+        mockNostrService,
+        subscriptionManager: mockSubscriptionManager,
+      );
 
       // Quick test without causing disposal issues
       expect(videoService.getVideoEventsByHashtags, isA<Function>());

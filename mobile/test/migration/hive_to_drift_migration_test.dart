@@ -7,7 +7,6 @@ import 'package:hive_ce/hive.dart';
 import 'package:openvine/database/app_database.dart';
 import 'package:openvine/database/hive_to_drift_migrator.dart';
 import 'package:openvine/models/user_profile.dart';
-import 'package:openvine/hive_registrar.g.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -73,14 +72,16 @@ void main() {
       expect(isComplete, false);
     });
 
-    test('migration completion flag gets set after successful migration',
-        () async {
-      final result = await migrator.migrate();
-      expect(result.success, true);
+    test(
+      'migration completion flag gets set after successful migration',
+      () async {
+        final result = await migrator.migrate();
+        expect(result.success, true);
 
-      final isComplete = await migrator.isMigrationComplete();
-      expect(isComplete, true);
-    });
+        final isComplete = await migrator.isMigrationComplete();
+        expect(isComplete, true);
+      },
+    );
 
     test('migration can be rolled back', () async {
       // Run migration
@@ -173,8 +174,9 @@ void main() {
       expect(driftProfiles.length, 3);
 
       // Verify profile1
-      final driftProfile1 =
-          await db.userProfilesDao.getProfile('test_pubkey_1');
+      final driftProfile1 = await db.userProfilesDao.getProfile(
+        'test_pubkey_1',
+      );
       expect(driftProfile1, isNotNull);
       expect(driftProfile1!.pubkey, profile1.pubkey);
       expect(driftProfile1.name, profile1.name);
@@ -185,14 +187,16 @@ void main() {
       expect(driftProfile1.rawData['test'], 'data1');
 
       // Verify profile2
-      final driftProfile2 =
-          await db.userProfilesDao.getProfile('test_pubkey_2');
+      final driftProfile2 = await db.userProfilesDao.getProfile(
+        'test_pubkey_2',
+      );
       expect(driftProfile2, isNotNull);
       expect(driftProfile2!.name, profile2.name);
 
       // Verify profile3 (with null fields)
-      final driftProfile3 =
-          await db.userProfilesDao.getProfile('test_pubkey_3');
+      final driftProfile3 = await db.userProfilesDao.getProfile(
+        'test_pubkey_3',
+      );
       expect(driftProfile3, isNotNull);
       expect(driftProfile3!.name, profile3.name);
       expect(driftProfile3.displayName, isNull);
@@ -506,18 +510,21 @@ void main() {
       expect(driftProfiles.length, 100);
 
       // Spot check a few profiles
-      final profile0 =
-          await db.userProfilesDao.getProfile('large_test_pubkey_0');
+      final profile0 = await db.userProfilesDao.getProfile(
+        'large_test_pubkey_0',
+      );
       expect(profile0, isNotNull);
       expect(profile0!.name, 'User 0');
 
-      final profile50 =
-          await db.userProfilesDao.getProfile('large_test_pubkey_50');
+      final profile50 = await db.userProfilesDao.getProfile(
+        'large_test_pubkey_50',
+      );
       expect(profile50, isNotNull);
       expect(profile50!.name, 'User 50');
 
-      final profile99 =
-          await db.userProfilesDao.getProfile('large_test_pubkey_99');
+      final profile99 = await db.userProfilesDao.getProfile(
+        'large_test_pubkey_99',
+      );
       expect(profile99, isNotNull);
       expect(profile99!.name, 'User 99');
 

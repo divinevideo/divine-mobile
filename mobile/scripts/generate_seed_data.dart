@@ -27,18 +27,26 @@ Future<void> main() async {
     // Try multiple queries to find the curation list
     var editorPicksEvents = await relay.query({
       'kinds': [30005],
-      'ids': [editorPicksEventId]
+      'ids': [editorPicksEventId],
     });
 
     // If not found by ID, try querying all kind 30005 events
     if (editorPicksEvents.isEmpty) {
-      print('[SEED GEN] Event not found by ID, querying all kind 30005 events...');
-      editorPicksEvents = await relay.query({'kinds': [30005], 'limit': 100});
-      print('[SEED GEN] Found ${editorPicksEvents.length} kind 30005 events total');
-
+      print(
+        '[SEED GEN] Event not found by ID, querying all kind 30005 events...',
+      );
+      editorPicksEvents = await relay.query({
+        'kinds': [30005],
+        'limit': 100,
+      });
+      print(
+        '[SEED GEN] Found ${editorPicksEvents.length} kind 30005 events total',
+      );
 
       // Filter for the specific event ID
-      editorPicksEvents = editorPicksEvents.where((e) => e['id'] == editorPicksEventId).toList();
+      editorPicksEvents = editorPicksEvents
+          .where((e) => e['id'] == editorPicksEventId)
+          .toList();
       if (editorPicksEvents.isNotEmpty) {
         print('[SEED GEN] ✅ Found Editor\'s Picks in full query results');
       } else {
@@ -65,7 +73,9 @@ Future<void> main() async {
 
     if (editorPicksEvents.isNotEmpty) {
       editorPicksEvent = editorPicksEvents.first;
-      print('[SEED GEN] ✅ Found Editor\'s Picks curation list (kind ${editorPicksEvent['kind']})');
+      print(
+        '[SEED GEN] ✅ Found Editor\'s Picks curation list (kind ${editorPicksEvent['kind']})',
+      );
 
       // Parse video IDs from 'a' and 'e' tags
       final tags = editorPicksEvent['tags'] as List;
@@ -83,7 +93,9 @@ Future<void> main() async {
         }
       }
 
-      print('[SEED GEN] 📋 Found ${editorPicksVideoIds.length} video references in Editor\'s Picks');
+      print(
+        '[SEED GEN] 📋 Found ${editorPicksVideoIds.length} video references in Editor\'s Picks',
+      );
     } else {
       print('[SEED GEN] ⚠️ WARNING: Editor\'s Picks list not found!');
       print('[SEED GEN] Will proceed with only top videos by loop count...');
@@ -110,19 +122,25 @@ Future<void> main() async {
       if (directIds.isNotEmpty) {
         final directEvents = await relay.query({
           'kinds': [34236, 22],
-          'ids': directIds
+          'ids': directIds,
         });
         editorPicksVideos.addAll(directEvents);
-        print('[SEED GEN] ✅ Fetched ${directEvents.length} direct Editor\'s Picks videos');
+        print(
+          '[SEED GEN] ✅ Fetched ${directEvents.length} direct Editor\'s Picks videos',
+        );
       }
 
       // For addressable references, we query all videos and filter manually
       // This is a limitation of the simple query approach
       if (addressableRefs.isNotEmpty) {
-        print('[SEED GEN] ⚠️ Note: ${addressableRefs.length} addressable references require manual filtering');
+        print(
+          '[SEED GEN] ⚠️ Note: ${addressableRefs.length} addressable references require manual filtering',
+        );
       }
 
-      print('[SEED GEN] ✅ Total Editor\'s Picks videos fetched: ${editorPicksVideos.length}');
+      print(
+        '[SEED GEN] ✅ Total Editor\'s Picks videos fetched: ${editorPicksVideos.length}',
+      );
     }
 
     // Step 3: Query for additional popular videos to fill up to 250 total
@@ -131,7 +149,7 @@ Future<void> main() async {
 
     final allVideos = await relay.query({
       'kinds': [34236],
-      'limit': maxQueryVideos
+      'limit': maxQueryVideos,
     });
     print('[SEED GEN] Found ${allVideos.length} total videos');
 
@@ -150,7 +168,9 @@ Future<void> main() async {
       return false;
     }).toList();
 
-    print('[SEED GEN] Found ${videosWithLoops.length} videos with loop count > 0');
+    print(
+      '[SEED GEN] Found ${videosWithLoops.length} videos with loop count > 0',
+    );
 
     videosWithLoops.sort((a, b) {
       int getLoopCount(Map<String, dynamic> event) {
@@ -170,7 +190,8 @@ Future<void> main() async {
     });
 
     // Combine Editor's Picks with top popular videos
-    final selectedVideos = <String, Map<String, dynamic>>{}; // Deduplicate by ID
+    final selectedVideos =
+        <String, Map<String, dynamic>>{}; // Deduplicate by ID
 
     // Add Editor's Picks first (priority)
     for (final video in editorPicksVideos) {
@@ -185,29 +206,41 @@ Future<void> main() async {
 
     final finalVideos = selectedVideos.values.toList();
     print('[SEED GEN] ✅ Selected ${finalVideos.length} total videos');
-    print('[SEED GEN]    - Editor\'s Picks: ${editorPicksVideos.length} videos');
-    print('[SEED GEN]    - Popular videos: ${finalVideos.length - editorPicksVideos.length} videos');
+    print(
+      '[SEED GEN]    - Editor\'s Picks: ${editorPicksVideos.length} videos',
+    );
+    print(
+      '[SEED GEN]    - Popular videos: ${finalVideos.length - editorPicksVideos.length} videos',
+    );
 
     // Step 4: Extract unique author pubkeys
-    final authorPubkeys =
-        finalVideos.map((e) => e['pubkey'] as String).toSet().toList();
+    final authorPubkeys = finalVideos
+        .map((e) => e['pubkey'] as String)
+        .toSet()
+        .toList();
     print('[SEED GEN] Found ${authorPubkeys.length} unique authors');
 
     // Step 5: Query for author profiles (kind 0)
     // Batch the queries because querying 196 authors at once might timeout
-    print('[SEED GEN] Querying for author profiles (${authorPubkeys.length} authors)...');
+    print(
+      '[SEED GEN] Querying for author profiles (${authorPubkeys.length} authors)...',
+    );
     final profileEvents = <Map<String, dynamic>>[];
     final batchSize = 50;
 
     for (var i = 0; i < authorPubkeys.length; i += batchSize) {
       final batch = authorPubkeys.skip(i).take(batchSize).toList();
-      print('[SEED GEN]   Fetching profiles ${i + 1}-${i + batch.length} of ${authorPubkeys.length}...');
-      final batchProfiles = await relay.query(
-        {'kinds': [0], 'authors': batch},
-        timeoutSeconds: 20,
+      print(
+        '[SEED GEN]   Fetching profiles ${i + 1}-${i + batch.length} of ${authorPubkeys.length}...',
       );
+      final batchProfiles = await relay.query({
+        'kinds': [0],
+        'authors': batch,
+      }, timeoutSeconds: 20);
       profileEvents.addAll(batchProfiles);
-      print('[SEED GEN]   Found ${batchProfiles.length} profiles in this batch');
+      print(
+        '[SEED GEN]   Found ${batchProfiles.length} profiles in this batch',
+      );
     }
 
     print('[SEED GEN] Found ${profileEvents.length} total profiles');
@@ -233,19 +266,35 @@ Future<void> main() async {
     print('[SEED GEN]    Videos: ${finalVideos.length}');
     print('[SEED GEN]    Profiles: ${profileEvents.length}');
     print('[SEED GEN]    Curation list: ${editorPicksEvent != null ? 1 : 0}');
-    print('[SEED GEN]    Total events: ${finalVideos.length + profileEvents.length + (editorPicksEvent != null ? 1 : 0)}');
-    print('[SEED GEN]    File size: ${fileSizeMB.toStringAsFixed(2)} MB (${fileSize} bytes)');
+    print(
+      '[SEED GEN]    Total events: ${finalVideos.length + profileEvents.length + (editorPicksEvent != null ? 1 : 0)}',
+    );
+    print(
+      '[SEED GEN]    File size: ${fileSizeMB.toStringAsFixed(2)} MB (${fileSize} bytes)',
+    );
 
     // Step 8: Download media files for top videos
-    print('\n[SEED GEN] Downloading media files for top $topMediaDownloadCount videos...');
-    final mediaResult = await _downloadMediaFiles(videosWithLoops.take(topMediaDownloadCount).toList());
+    print(
+      '\n[SEED GEN] Downloading media files for top $topMediaDownloadCount videos...',
+    );
+    final mediaResult = await _downloadMediaFiles(
+      videosWithLoops.take(topMediaDownloadCount).toList(),
+    );
 
     print('\n[SEED GEN] ✅ Media download complete:');
-    print('[SEED GEN]    Videos downloaded: ${mediaResult['videosDownloaded']}/${mediaResult['videosAttempted']}');
-    print('[SEED GEN]    Thumbnails downloaded: ${mediaResult['thumbnailsDownloaded']}/${mediaResult['thumbnailsAttempted']}');
-    print('[SEED GEN]    Total size: ${(mediaResult['totalSize'] / (1024 * 1024)).toStringAsFixed(2)} MB');
+    print(
+      '[SEED GEN]    Videos downloaded: ${mediaResult['videosDownloaded']}/${mediaResult['videosAttempted']}',
+    );
+    print(
+      '[SEED GEN]    Thumbnails downloaded: ${mediaResult['thumbnailsDownloaded']}/${mediaResult['thumbnailsAttempted']}',
+    );
+    print(
+      '[SEED GEN]    Total size: ${(mediaResult['totalSize'] / (1024 * 1024)).toStringAsFixed(2)} MB',
+    );
     if (mediaResult['failures'].isNotEmpty) {
-      print('[SEED GEN]    ⚠️ Failed downloads: ${mediaResult['failures'].length}');
+      print(
+        '[SEED GEN]    ⚠️ Failed downloads: ${mediaResult['failures'].length}',
+      );
       for (final failure in mediaResult['failures']) {
         print('[SEED GEN]       - $failure');
       }
@@ -326,8 +375,11 @@ VALUES (
 
 String _generateProfileInsert(Map<String, dynamic> event) {
   try {
-    final profile = jsonDecode(event['content'] as String) as Map<String, dynamic>;
-    final createdAt = DateTime.fromMillisecondsSinceEpoch((event['created_at'] as int) * 1000);
+    final profile =
+        jsonDecode(event['content'] as String) as Map<String, dynamic>;
+    final createdAt = DateTime.fromMillisecondsSinceEpoch(
+      (event['created_at'] as int) * 1000,
+    );
 
     return '''
 INSERT OR IGNORE INTO user_profiles (
@@ -394,7 +446,9 @@ String _sqlString(dynamic value) {
 }
 
 /// Download media files for top videos
-Future<Map<String, dynamic>> _downloadMediaFiles(List<Map<String, dynamic>> videos) async {
+Future<Map<String, dynamic>> _downloadMediaFiles(
+  List<Map<String, dynamic>> videos,
+) async {
   final videosDir = Directory('assets/seed_media/videos');
   final thumbnailsDir = Directory('assets/seed_media/thumbnails');
 
@@ -417,14 +471,17 @@ Future<Map<String, dynamic>> _downloadMediaFiles(List<Map<String, dynamic>> vide
   final httpClient = HttpClient();
 
   final videosList = manifestData['videos'] as List<Map<String, dynamic>>;
-  final thumbnailsList = manifestData['thumbnails'] as List<Map<String, dynamic>>;
+  final thumbnailsList =
+      manifestData['thumbnails'] as List<Map<String, dynamic>>;
 
   for (var i = 0; i < videos.length; i++) {
     final video = videos[i];
     final eventId = video['id'] as String;
     final tags = video['tags'] as List;
 
-    print('[SEED GEN]   Processing video ${i + 1}/${videos.length} (${eventId})...');
+    print(
+      '[SEED GEN]   Processing video ${i + 1}/${videos.length} (${eventId})...',
+    );
 
     // Extract video URL and thumbnail from tags
     String? videoUrl;
@@ -454,7 +511,8 @@ Future<Map<String, dynamic>> _downloadMediaFiles(List<Map<String, dynamic>> vide
         if (url.endsWith('.mp4')) {
           videoUrl = url;
         }
-      } else if ((tagName == 'thumb' || tagName == 'image') && tag.length >= 2) {
+      } else if ((tagName == 'thumb' || tagName == 'image') &&
+          tag.length >= 2) {
         thumbnailUrl = tag[1].toString();
       }
     }
@@ -465,7 +523,9 @@ Future<Map<String, dynamic>> _downloadMediaFiles(List<Map<String, dynamic>> vide
       final videoFile = File('${videosDir.path}/$eventId.mp4');
 
       if (await videoFile.exists()) {
-        print('[SEED GEN]      ✓ Video already exists (${await videoFile.length()} bytes)');
+        print(
+          '[SEED GEN]      ✓ Video already exists (${await videoFile.length()} bytes)',
+        );
         final fileSize = await videoFile.length();
         totalSize += fileSize;
         videosDownloaded++;
@@ -477,7 +537,11 @@ Future<Map<String, dynamic>> _downloadMediaFiles(List<Map<String, dynamic>> vide
         });
       } else {
         try {
-          final downloadResult = await _downloadFile(httpClient, videoUrl, videoFile);
+          final downloadResult = await _downloadFile(
+            httpClient,
+            videoUrl,
+            videoFile,
+          );
           if (downloadResult['success']) {
             videosDownloaded++;
             final size = downloadResult['size'] as int;
@@ -491,7 +555,9 @@ Future<Map<String, dynamic>> _downloadMediaFiles(List<Map<String, dynamic>> vide
             print('[SEED GEN]      ✓ Video downloaded ($size bytes)');
           } else {
             failures.add('Video $eventId: ${downloadResult['error']}');
-            print('[SEED GEN]      ✗ Video download failed: ${downloadResult['error']}');
+            print(
+              '[SEED GEN]      ✗ Video download failed: ${downloadResult['error']}',
+            );
           }
         } catch (e) {
           failures.add('Video $eventId: $e');
@@ -505,13 +571,19 @@ Future<Map<String, dynamic>> _downloadMediaFiles(List<Map<String, dynamic>> vide
     // Download thumbnail
     if (thumbnailUrl != null) {
       thumbnailsAttempted++;
-      final ext = thumbnailUrl.endsWith('.jpg') ? 'jpg' :
-                  thumbnailUrl.endsWith('.jpeg') ? 'jpeg' :
-                  thumbnailUrl.endsWith('.png') ? 'png' : 'jpg';
+      final ext = thumbnailUrl.endsWith('.jpg')
+          ? 'jpg'
+          : thumbnailUrl.endsWith('.jpeg')
+          ? 'jpeg'
+          : thumbnailUrl.endsWith('.png')
+          ? 'png'
+          : 'jpg';
       final thumbnailFile = File('${thumbnailsDir.path}/$eventId.$ext');
 
       if (await thumbnailFile.exists()) {
-        print('[SEED GEN]      ✓ Thumbnail already exists (${await thumbnailFile.length()} bytes)');
+        print(
+          '[SEED GEN]      ✓ Thumbnail already exists (${await thumbnailFile.length()} bytes)',
+        );
         final fileSize = await thumbnailFile.length();
         totalSize += fileSize;
         thumbnailsDownloaded++;
@@ -523,7 +595,11 @@ Future<Map<String, dynamic>> _downloadMediaFiles(List<Map<String, dynamic>> vide
         });
       } else {
         try {
-          final downloadResult = await _downloadFile(httpClient, thumbnailUrl, thumbnailFile);
+          final downloadResult = await _downloadFile(
+            httpClient,
+            thumbnailUrl,
+            thumbnailFile,
+          );
           if (downloadResult['success']) {
             thumbnailsDownloaded++;
             final size = downloadResult['size'] as int;
@@ -537,7 +613,9 @@ Future<Map<String, dynamic>> _downloadMediaFiles(List<Map<String, dynamic>> vide
             print('[SEED GEN]      ✓ Thumbnail downloaded ($size bytes)');
           } else {
             failures.add('Thumbnail $eventId: ${downloadResult['error']}');
-            print('[SEED GEN]      ✗ Thumbnail download failed: ${downloadResult['error']}');
+            print(
+              '[SEED GEN]      ✗ Thumbnail download failed: ${downloadResult['error']}',
+            );
           }
         } catch (e) {
           failures.add('Thumbnail $eventId: $e');
@@ -554,7 +632,7 @@ Future<Map<String, dynamic>> _downloadMediaFiles(List<Map<String, dynamic>> vide
   // Write manifest file
   final manifestFile = File('assets/seed_media/manifest.json');
   await manifestFile.writeAsString(
-    const JsonEncoder.withIndent('  ').convert(manifestData)
+    const JsonEncoder.withIndent('  ').convert(manifestData),
   );
   print('[SEED GEN]   ✓ Manifest written to ${manifestFile.path}');
 
@@ -569,17 +647,18 @@ Future<Map<String, dynamic>> _downloadMediaFiles(List<Map<String, dynamic>> vide
 }
 
 /// Download a file from URL
-Future<Map<String, dynamic>> _downloadFile(HttpClient client, String url, File outputFile) async {
+Future<Map<String, dynamic>> _downloadFile(
+  HttpClient client,
+  String url,
+  File outputFile,
+) async {
   try {
     final uri = Uri.parse(url);
     final request = await client.getUrl(uri);
     final response = await request.close();
 
     if (response.statusCode != 200) {
-      return {
-        'success': false,
-        'error': 'HTTP ${response.statusCode}',
-      };
+      return {'success': false, 'error': 'HTTP ${response.statusCode}'};
     }
 
     final bytes = await response.fold<List<int>>(
@@ -590,23 +669,14 @@ Future<Map<String, dynamic>> _downloadFile(HttpClient client, String url, File o
     // Verify file size is reasonable
     final size = bytes.length;
     if (size < 100) {
-      return {
-        'success': false,
-        'error': 'File too small ($size bytes)',
-      };
+      return {'success': false, 'error': 'File too small ($size bytes)'};
     }
 
     await outputFile.writeAsBytes(bytes);
 
-    return {
-      'success': true,
-      'size': size,
-    };
+    return {'success': true, 'size': size};
   } catch (e) {
-    return {
-      'success': false,
-      'error': e.toString(),
-    };
+    return {'success': false, 'error': e.toString()};
   }
 }
 
@@ -641,7 +711,10 @@ class NostrRelay {
     }
   }
 
-  Future<List<Map<String, dynamic>>> query(Map<String, dynamic> filter, {int timeoutSeconds = 15}) async {
+  Future<List<Map<String, dynamic>>> query(
+    Map<String, dynamic> filter, {
+    int timeoutSeconds = 15,
+  }) async {
     final subId = 'sub_${_subCounter++}';
     _responses[subId] = [];
 

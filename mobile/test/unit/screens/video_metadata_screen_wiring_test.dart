@@ -16,7 +16,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 
 class MockUploadManager extends Mock implements UploadManager {}
+
 class MockAuthService extends Mock implements AuthService {}
+
 class MockFile extends Mock implements File {}
 
 void main() {
@@ -35,7 +37,9 @@ void main() {
       mockVideoFile = MockFile();
 
       when(() => mockVideoFile.path).thenReturn('/test/video.mp4');
-      when(() => mockAuthService.currentPublicKeyHex).thenReturn('test_pubkey_hex');
+      when(
+        () => mockAuthService.currentPublicKeyHex,
+      ).thenReturn('test_pubkey_hex');
 
       // Set up SharedPreferences with a test draft
       SharedPreferences.setMockInitialValues({});
@@ -55,8 +59,9 @@ void main() {
       await draftService.saveDraft(draft);
     });
 
-    testWidgets('should access upload manager and auth service from providers',
-        (tester) async {
+    testWidgets('should access upload manager and auth service from providers', (
+      tester,
+    ) async {
       // Arrange
       await tester.pumpWidget(
         ProviderScope(
@@ -66,9 +71,7 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(prefs),
           ],
           child: MaterialApp(
-            home: VideoMetadataScreenPure(
-              draftId: testDraftId,
-            ),
+            home: VideoMetadataScreenPure(draftId: testDraftId),
           ),
         ),
       );
@@ -85,39 +88,39 @@ void main() {
       // and the screen can read from them
     });
 
-    testWidgets('should have access to required services when publish button tapped',
-        (tester) async {
-      // This test verifies the screen CAN access the services
-      // The actual publish flow is tested in integration tests
+    testWidgets(
+      'should have access to required services when publish button tapped',
+      (tester) async {
+        // This test verifies the screen CAN access the services
+        // The actual publish flow is tested in integration tests
 
-      when(() => mockAuthService.isAuthenticated).thenReturn(true);
+        when(() => mockAuthService.isAuthenticated).thenReturn(true);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            uploadManagerProvider.overrideWithValue(mockUploadManager),
-            authServiceProvider.overrideWithValue(mockAuthService),
-            sharedPreferencesProvider.overrideWithValue(prefs),
-          ],
-          child: MaterialApp(
-            home: VideoMetadataScreenPure(
-              draftId: testDraftId,
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              uploadManagerProvider.overrideWithValue(mockUploadManager),
+              authServiceProvider.overrideWithValue(mockAuthService),
+              sharedPreferencesProvider.overrideWithValue(prefs),
+            ],
+            child: MaterialApp(
+              home: VideoMetadataScreenPure(draftId: testDraftId),
             ),
           ),
-        ),
-      );
+        );
 
-      // Pump a few frames to allow draft loading
-      // Note: We don't use pumpAndSettle() because video player never settles in tests
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+        // Pump a few frames to allow draft loading
+        // Note: We don't use pumpAndSettle() because video player never settles in tests
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
-      // Find the publish button
-      final publishButton = find.text('Publish');
-      expect(publishButton, findsOneWidget);
+        // Find the publish button
+        final publishButton = find.text('Publish');
+        expect(publishButton, findsOneWidget);
 
-      // The presence of the button with proper provider access means
-      // the wiring is correct
-    });
+        // The presence of the button with proper provider access means
+        // the wiring is correct
+      },
+    );
   });
 }

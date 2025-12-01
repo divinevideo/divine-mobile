@@ -16,8 +16,8 @@ class VideoSubscriptionService {
   VideoSubscriptionService({
     required INostrService nostrService,
     required SubscriptionManager subscriptionManager,
-  })  : _nostrService = nostrService,
-        _subscriptionManager = subscriptionManager;
+  }) : _nostrService = nostrService,
+       _subscriptionManager = subscriptionManager;
   final INostrService _nostrService;
   final SubscriptionManager _subscriptionManager;
 
@@ -60,7 +60,8 @@ class VideoSubscriptionService {
     if (_isSubscribed &&
         _parametersMatch(_currentSubscriptionParams, newParams)) {
       throw DuplicateSubscriptionException(
-          'Already subscribed with same parameters');
+        'Already subscribed with same parameters',
+      );
     }
 
     // Cancel existing subscription if any
@@ -153,6 +154,7 @@ class VideoSubscriptionService {
   }
 
   bool _parametersMatch(
-          Map<String, dynamic> params1, Map<String, dynamic> params2) =>
-      params1.toString() == params2.toString();
+    Map<String, dynamic> params1,
+    Map<String, dynamic> params2,
+  ) => params1.toString() == params2.toString();
 }

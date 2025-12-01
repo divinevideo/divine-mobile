@@ -30,13 +30,17 @@ class FakeVideoEventService extends ChangeNotifier
   @override
   List<VideoEvent> authorVideos(String pubkeyHex) {
     final videos = _authorBuckets[pubkeyHex] ?? [];
-    print('DEBUG: authorVideos($pubkeyHex) returning ${videos.length} videos. Buckets: ${_authorBuckets.keys.toList()}');
+    print(
+      'DEBUG: authorVideos($pubkeyHex) returning ${videos.length} videos. Buckets: ${_authorBuckets.keys.toList()}',
+    );
     return videos;
   }
 
   @override
-  Future<void> subscribeToHashtagVideos(List<String> hashtags,
-      {int limit = 100}) async {
+  Future<void> subscribeToHashtagVideos(
+    List<String> hashtags, {
+    int limit = 100,
+  }) async {
     subscribedHashtags.add(hashtags);
   }
 
@@ -109,10 +113,9 @@ void main() {
           videoEventServiceProvider.overrideWithValue(fakeService),
           videoPrewarmerProvider.overrideWithValue(NoopPrewarmer()),
           pageContextProvider.overrideWith((ref) {
-            return Stream.value(const RouteContext(
-              type: RouteType.profile,
-              npub: '',
-            ));
+            return Stream.value(
+              const RouteContext(type: RouteType.profile, npub: ''),
+            );
           }),
         ],
       );
@@ -132,10 +135,9 @@ void main() {
           videoEventServiceProvider.overrideWithValue(fakeService),
           videoPrewarmerProvider.overrideWithValue(NoopPrewarmer()),
           pageContextProvider.overrideWith((ref) {
-            return Stream.value(const RouteContext(
-              type: RouteType.profile,
-              npub: 'invalid-npub',
-            ));
+            return Stream.value(
+              const RouteContext(type: RouteType.profile, npub: 'invalid-npub'),
+            );
           }),
         ],
       );
@@ -332,10 +334,12 @@ void main() {
           videoEventServiceProvider.overrideWithValue(fakeService),
           videoPrewarmerProvider.overrideWithValue(NoopPrewarmer()),
           pageContextProvider.overrideWith((ref) {
-            return Stream.value(RouteContext(
-              type: RouteType.profile,
-              npub: testNpub, // Provider receives npub
-            ));
+            return Stream.value(
+              RouteContext(
+                type: RouteType.profile,
+                npub: testNpub, // Provider receives npub
+              ),
+            );
           }),
         ],
       );

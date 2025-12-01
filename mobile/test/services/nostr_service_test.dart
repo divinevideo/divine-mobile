@@ -59,15 +59,13 @@ void main() {
       test('should require initialization before broadcasting', () async {
         final privateKey = generatePrivateKey();
         final publicKey = getPublicKey(privateKey);
-        final event = Event(
-          publicKey,
-          1063,
+        final event = Event(publicKey, 1063, [
+          ['url', 'test.com'],
           [
-            ['url', 'test.com'],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
           ],
-          'Test content',
-        );
+        ], 'Test content');
         event.sign(privateKey);
 
         expect(
@@ -80,19 +78,17 @@ void main() {
         // Test that events have required fields
         final privateKey = generatePrivateKey();
         final publicKey = getPublicKey(privateKey);
-        final event = Event(
-          publicKey,
-          1063,
+        final event = Event(publicKey, 1063, [
+          ['url', 'https://example.com/file.gif'],
+          ['m', 'image/gif'],
+          ['x', 'sha256hash'],
+          ['size', '1024'],
+          ['dim', '320x240'],
           [
-            ['url', 'https://example.com/file.gif'],
-            ['m', 'image/gif'],
-            ['x', 'sha256hash'],
-            ['size', '1024'],
-            ['dim', '320x240'],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
           ],
-          'Test NIP-94 event',
-        );
+        ], 'Test NIP-94 event');
         event.sign(privateKey);
 
         expect(event.kind, equals(1063));
@@ -218,11 +214,7 @@ void main() {
 
       test('should handle home feed subscription filters', () {
         // Create a filter for home feed (following specific authors)
-        final followingPubkeys = [
-          'npub1abc123',
-          'npub2def456',
-          'npub3ghi789',
-        ];
+        final followingPubkeys = ['npub1abc123', 'npub2def456', 'npub3ghi789'];
 
         final filter = Filter(
           kinds: [34236], // Video events
@@ -336,14 +328,12 @@ void main() {
       test('should create valid broadcast result', () {
         final privateKey = generatePrivateKey();
         final publicKey = getPublicKey(privateKey);
-        final mockEvent = Event(
-          publicKey,
-          1063,
+        final mockEvent = Event(publicKey, 1063, [
           [
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
           ],
-          'Test',
-        );
+        ], 'Test');
         mockEvent.sign(privateKey);
 
         final result = NostrBroadcastResult(
@@ -356,10 +346,7 @@ void main() {
             'relay3': false,
             'relay4': false,
           },
-          errors: {
-            'relay3': 'Connection failed',
-            'relay4': 'Timeout',
-          },
+          errors: {'relay3': 'Connection failed', 'relay4': 'Timeout'},
         );
 
         expect(result.successCount, equals(2));
@@ -374,14 +361,12 @@ void main() {
       test('should handle complete success', () {
         final privateKey = generatePrivateKey();
         final publicKey = getPublicKey(privateKey);
-        final mockEvent = Event(
-          publicKey,
-          1063,
+        final mockEvent = Event(publicKey, 1063, [
           [
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
           ],
-          'Test',
-        );
+        ], 'Test');
         mockEvent.sign(privateKey);
 
         final result = NostrBroadcastResult(
@@ -401,14 +386,12 @@ void main() {
       test('should handle complete failure', () {
         final privateKey = generatePrivateKey();
         final publicKey = getPublicKey(privateKey);
-        final mockEvent = Event(
-          publicKey,
-          1063,
+        final mockEvent = Event(publicKey, 1063, [
           [
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
           ],
-          'Test',
-        );
+        ], 'Test');
         mockEvent.sign(privateKey);
 
         final result = NostrBroadcastResult(
@@ -429,14 +412,12 @@ void main() {
       test('should provide meaningful string representation', () {
         final privateKey = generatePrivateKey();
         final publicKey = getPublicKey(privateKey);
-        final mockEvent = Event(
-          publicKey,
-          1063,
+        final mockEvent = Event(publicKey, 1063, [
           [
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
           ],
-          'Test',
-        );
+        ], 'Test');
         mockEvent.sign(privateKey);
 
         final result = NostrBroadcastResult(

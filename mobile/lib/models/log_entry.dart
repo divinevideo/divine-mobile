@@ -25,27 +25,27 @@ class LogEntry {
 
   /// Convert to JSON for bug report
   Map<String, dynamic> toJson() => {
-        'timestamp': timestamp.toIso8601String(),
-        'level': level.name,
-        'message': message,
-        if (category != null) 'category': category!.name,
-        if (name != null) 'name': name,
-        if (error != null) 'error': error,
-        if (stackTrace != null) 'stackTrace': stackTrace,
-      };
+    'timestamp': timestamp.toIso8601String(),
+    'level': level.name,
+    'message': message,
+    if (category != null) 'category': category!.name,
+    if (name != null) 'name': name,
+    if (error != null) 'error': error,
+    if (stackTrace != null) 'stackTrace': stackTrace,
+  };
 
   /// Create from JSON
   factory LogEntry.fromJson(Map<String, dynamic> json) => LogEntry(
-        timestamp: DateTime.parse(json['timestamp'] as String),
-        level: LogLevel.fromString(json['level'] as String),
-        message: json['message'] as String,
-        category: json['category'] != null
-            ? LogCategory.fromString(json['category'] as String)
-            : null,
-        name: json['name'] as String?,
-        error: json['error'] as String?,
-        stackTrace: json['stackTrace'] as String?,
-      );
+    timestamp: DateTime.parse(json['timestamp'] as String),
+    level: LogLevel.fromString(json['level'] as String),
+    message: json['message'] as String,
+    category: json['category'] != null
+        ? LogCategory.fromString(json['category'] as String)
+        : null,
+    name: json['name'] as String?,
+    error: json['error'] as String?,
+    stackTrace: json['stackTrace'] as String?,
+  );
 
   /// Create formatted string for display
   String toFormattedString() {

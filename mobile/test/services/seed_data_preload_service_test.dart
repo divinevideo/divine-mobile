@@ -35,8 +35,10 @@ void main() {
         'Existing video',
         createdAt: 1234567890,
       );
-      event.id = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
-      event.sig = 'abc1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef123456789';
+      event.id =
+          'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+      event.sig =
+          'abc1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef123456789';
 
       await db.nostrEventsDao.upsertEvent(event);
 
@@ -61,19 +63,19 @@ VALUES ('seed2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd', 's
       // Override rootBundle for test
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMessageHandler('flutter/assets', (ByteData? message) async {
-        if (message == null) return null;
+            if (message == null) return null;
 
-        // The message is the asset name as UTF-8 bytes
-        final assetName = utf8.decode(message.buffer.asUint8List());
+            // The message is the asset name as UTF-8 bytes
+            final assetName = utf8.decode(message.buffer.asUint8List());
 
-        if (assetName == 'assets/seed_data/seed_events.sql') {
-          // Return the SQL content as bytes
-          final bytes = Uint8List.fromList(utf8.encode(mockSql));
-          return ByteData.sublistView(bytes);
-        }
+            if (assetName == 'assets/seed_data/seed_events.sql') {
+              // Return the SQL content as bytes
+              final bytes = Uint8List.fromList(utf8.encode(mockSql));
+              return ByteData.sublistView(bytes);
+            }
 
-        return null;
-      });
+            return null;
+          });
 
       // Database should be empty
       expect(await db.nostrEventsDao.getEventCount(), equals(0));
@@ -90,8 +92,8 @@ VALUES ('seed2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd', 's
       // Override rootBundle to return null (asset not found)
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMessageHandler('flutter/assets', (ByteData? message) async {
-        return null; // Asset not found
-      });
+            return null; // Asset not found
+          });
 
       // Should not throw, just log error
       await expectLater(
@@ -109,17 +111,17 @@ VALUES ('seed2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd', 's
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMessageHandler('flutter/assets', (ByteData? message) async {
-        if (message == null) return null;
+            if (message == null) return null;
 
-        final assetName = utf8.decode(message.buffer.asUint8List());
+            final assetName = utf8.decode(message.buffer.asUint8List());
 
-        if (assetName == 'assets/seed_data/seed_events.sql') {
-          final bytes = Uint8List.fromList(utf8.encode(badSql));
-          return ByteData.sublistView(bytes);
-        }
+            if (assetName == 'assets/seed_data/seed_events.sql') {
+              final bytes = Uint8List.fromList(utf8.encode(badSql));
+              return ByteData.sublistView(bytes);
+            }
 
-        return null;
-      });
+            return null;
+          });
 
       // Should not throw, just log error
       await expectLater(

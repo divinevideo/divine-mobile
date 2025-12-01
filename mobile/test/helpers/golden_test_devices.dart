@@ -45,10 +45,7 @@ class GoldenTestDevices {
   ];
 
   /// Minimal device set for quick tests
-  static const minimalDevices = [
-    iphone11,
-    androidPhone,
-  ];
+  static const minimalDevices = [iphone11, androidPhone];
 
   /// Comprehensive device set for critical UI components
   static const comprehensiveDevices = [
@@ -69,8 +66,5 @@ class GoldenTestDevices {
   ];
 
   /// Tablet-only device set
-  static const tabletDevices = [
-    ipadPortrait,
-    ipadLandscape,
-  ];
+  static const tabletDevices = [ipadPortrait, ipadLandscape];
 }

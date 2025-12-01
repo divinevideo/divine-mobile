@@ -17,9 +17,9 @@ enum ContentLoadingState {
 
 /// Priority for content preloading
 enum PreloadPriority {
-  current,    // Currently visible video
-  next,       // Next video in feed
-  nearby,     // Within 2-3 videos of current
+  current, // Currently visible video
+  next, // Next video in feed
+  nearby, // Within 2-3 videos of current
   background, // Background preloading
 }
 
@@ -58,7 +58,8 @@ sealed class VideoContent with _$VideoContent {
   bool get isReady => loadingState == ContentLoadingState.ready;
 
   /// Check if content is currently loading
-  bool get isLoading => loadingState == ContentLoadingState.loadingMetadata ||
+  bool get isLoading =>
+      loadingState == ContentLoadingState.loadingMetadata ||
       loadingState == ContentLoadingState.loadingThumbnail;
 
   /// Check if content has failed to load
@@ -91,12 +92,12 @@ sealed class VideoContent with _$VideoContent {
 
 /// State for the single video controller
 enum VideoControllerState {
-  idle,       // No video loaded
-  loading,    // Switching to new video
-  ready,      // Video ready and can play
-  playing,    // Video is currently playing
-  paused,     // Video is paused
-  error,      // Video failed to load/play
+  idle, // No video loaded
+  loading, // Switching to new video
+  ready, // Video ready and can play
+  playing, // Video is currently playing
+  paused, // Video is paused
+  error, // Video failed to load/play
 }
 
 /// Single video controller state
@@ -127,10 +128,7 @@ sealed class SingleVideoState with _$SingleVideoState {
 
   /// Update state with timestamp
   SingleVideoState withState(VideoControllerState newState) {
-    return copyWith(
-      state: newState,
-      lastStateChange: DateTime.now(),
-    );
+    return copyWith(state: newState, lastStateChange: DateTime.now());
   }
 }
 
@@ -165,8 +163,7 @@ sealed class VideoContentBufferState with _$VideoContentBufferState {
       content.values.where((c) => c.hasFailed).toList();
 
   /// Check if memory cleanup is needed
-  bool get needsCleanup =>
-      content.length > 50 || estimatedMemoryMB > 200;
+  bool get needsCleanup => content.length > 50 || estimatedMemoryMB > 200;
 
   /// Get content sorted by last access (for LRU cleanup)
   List<VideoContent> get contentForCleanup {

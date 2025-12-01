@@ -71,14 +71,19 @@ class _BlurhashDisplayState extends State<BlurhashDisplay> {
     // Use actual decoded image if available
     if (_blurhashData?.pixels != null) {
       return FutureBuilder<ui.Image?>(
-        future: _createImageFromPixels(_blurhashData!.pixels!,
-            _blurhashData!.width, _blurhashData!.height),
+        future: _createImageFromPixels(
+          _blurhashData!.pixels!,
+          _blurhashData!.width,
+          _blurhashData!.height,
+        ),
         builder: (context, snapshot) {
           if (snapshot.hasData && snapshot.data != null) {
             return CustomPaint(
               painter: _BlurhashImagePainter(snapshot.data!),
-              size: Size(widget.width ?? double.infinity,
-                  widget.height ?? double.infinity),
+              size: Size(
+                widget.width ?? double.infinity,
+                widget.height ?? double.infinity,
+              ),
             );
           }
           // Fall back to gradient while image is being created
@@ -100,10 +105,7 @@ class _BlurhashDisplayState extends State<BlurhashDisplay> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.grey.shade800,
-            Colors.grey.shade600,
-          ],
+          colors: [Colors.grey.shade800, Colors.grey.shade600],
         ),
       ),
     );
@@ -120,18 +122,16 @@ class _BlurhashDisplayState extends State<BlurhashDisplay> {
           end: Alignment.bottomRight,
           colors: colors.isNotEmpty
               ? (colors.length >= 2
-                  ? [
-                      Color(colors[0].toARGB32()),
-                      Color(colors[1].toARGB32()),
-                    ]
-                  : [
-                      Color(colors[0].toARGB32()),
-                      Color(colors[0].toARGB32()).withValues(alpha: 0.7),
-                    ])
+                    ? [Color(colors[0].toARGB32()), Color(colors[1].toARGB32())]
+                    : [
+                        Color(colors[0].toARGB32()),
+                        Color(colors[0].toARGB32()).withValues(alpha: 0.7),
+                      ])
               : [
                   Color(_blurhashData!.primaryColor.toARGB32()),
-                  Color(_blurhashData!.primaryColor.toARGB32())
-                      .withValues(alpha: 0.7),
+                  Color(
+                    _blurhashData!.primaryColor.toARGB32(),
+                  ).withValues(alpha: 0.7),
                 ],
         ),
       ),
@@ -139,31 +139,36 @@ class _BlurhashDisplayState extends State<BlurhashDisplay> {
   }
 
   Future<ui.Image?> _createImageFromPixels(
-      Uint8List pixels, int width, int height) async {
+    Uint8List pixels,
+    int width,
+    int height,
+  ) async {
     try {
       // Validate input data first
       if (pixels.isEmpty || width <= 0 || height <= 0) {
-        Log.warning('Invalid image data: pixels=${pixels.length}, w=$width, h=$height',
-            name: 'BlurhashDisplay', category: LogCategory.ui);
+        Log.warning(
+          'Invalid image data: pixels=${pixels.length}, w=$width, h=$height',
+          name: 'BlurhashDisplay',
+          category: LogCategory.ui,
+        );
         return null;
       }
 
       final completer = Completer<ui.Image?>();
-      ui.decodeImageFromPixels(
-        pixels,
-        width,
-        height,
-        ui.PixelFormat.rgba8888,
-        (ui.Image image) {
-          if (!completer.isCompleted) {
-            completer.complete(image);
-          }
-        },
-      );
+      ui.decodeImageFromPixels(pixels, width, height, ui.PixelFormat.rgba8888, (
+        ui.Image image,
+      ) {
+        if (!completer.isCompleted) {
+          completer.complete(image);
+        }
+      });
       return await completer.future;
     } catch (e) {
-      Log.error('Failed to create image from pixels: $e',
-          name: 'BlurhashDisplay', category: LogCategory.ui);
+      Log.error(
+        'Failed to create image from pixels: $e',
+        name: 'BlurhashDisplay',
+        category: LogCategory.ui,
+      );
       return null;
     }
   }
@@ -180,8 +185,12 @@ class _BlurhashImagePainter extends CustomPainter {
     final paint = Paint()..filterQuality = FilterQuality.low;
 
     // Scale the image to fit the widget size
-    final src =
-        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
+    final src = Rect.fromLTWH(
+      0,
+      0,
+      image.width.toDouble(),
+      image.height.toDouble(),
+    );
     final dst = Rect.fromLTWH(0, 0, size.width, size.height);
 
     canvas.drawImageRect(image, src, dst, paint);

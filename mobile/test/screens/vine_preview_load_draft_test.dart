@@ -31,9 +31,7 @@ void main() {
       // Build screen with draft ID
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VinePreviewScreenPure(draftId: draft.id),
-          ),
+          child: MaterialApp(home: VinePreviewScreenPure(draftId: draft.id)),
         ),
       );
       await tester.pumpAndSettle();
@@ -60,9 +58,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VinePreviewScreenPure(draftId: draft.id),
-          ),
+          child: MaterialApp(home: VinePreviewScreenPure(draftId: draft.id)),
         ),
       );
       await tester.pumpAndSettle();

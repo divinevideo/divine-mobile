@@ -12,7 +12,12 @@ import 'package:openvine/services/subscription_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Generate mocks
-@GenerateMocks([INostrService, AuthService, SubscriptionManager, PersonalEventCacheService])
+@GenerateMocks([
+  INostrService,
+  AuthService,
+  SubscriptionManager,
+  PersonalEventCacheService,
+])
 import 'social_service_cache_test.mocks.dart';
 
 void main() {
@@ -39,17 +44,20 @@ void main() {
       // Set up default stubs
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentPublicKeyHex).thenReturn(testUserPubkey);
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => Stream.fromIterable([]));
-      when(mockSubscriptionManager.createSubscription(
-        name: anyNamed('name'),
-        filters: anyNamed('filters'),
-        onEvent: anyNamed('onEvent'),
-        onError: anyNamed('onError'),
-        onComplete: anyNamed('onComplete'),
-        timeout: anyNamed('timeout'),
-        priority: anyNamed('priority'),
-      )).thenAnswer((_) async => 'test_subscription_id');
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => Stream.fromIterable([]));
+      when(
+        mockSubscriptionManager.createSubscription(
+          name: anyNamed('name'),
+          filters: anyNamed('filters'),
+          onEvent: anyNamed('onEvent'),
+          onError: anyNamed('onError'),
+          onComplete: anyNamed('onComplete'),
+          timeout: anyNamed('timeout'),
+          priority: anyNamed('priority'),
+        ),
+      ).thenAnswer((_) async => 'test_subscription_id');
 
       // Set up PersonalEventCacheService mocks
       when(mockPersonalEventCache.isInitialized).thenReturn(true);
@@ -70,216 +78,219 @@ void main() {
     });
 
     test(
-        'FAILING TEST: should save follow list to SharedPreferences cache immediately after followUser',
-        () async {
-      // Mock successful Kind 3 event creation
-      const privateKey =
-          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-      final publicKey = getPublicKey(privateKey);
-      final mockContactListEvent = Event(
-        publicKey,
-        3,
-        [
-          ['p', testTargetPubkey]
-        ],
-        '',
-      );
-      mockContactListEvent.sign(privateKey);
+      'FAILING TEST: should save follow list to SharedPreferences cache immediately after followUser',
+      () async {
+        // Mock successful Kind 3 event creation
+        const privateKey =
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        final publicKey = getPublicKey(privateKey);
+        final mockContactListEvent = Event(publicKey, 3, [
+          ['p', testTargetPubkey],
+        ], '');
+        mockContactListEvent.sign(privateKey);
 
-      when(
-        mockAuthService.createAndSignEvent(
-          kind: 3,
-          content: '',
-          tags: [
-            ['p', testTargetPubkey]
-          ],
-        ),
-      ).thenAnswer((_) async => mockContactListEvent);
+        when(
+          mockAuthService.createAndSignEvent(
+            kind: 3,
+            content: '',
+            tags: [
+              ['p', testTargetPubkey],
+            ],
+          ),
+        ).thenAnswer((_) async => mockContactListEvent);
 
-      when(mockNostrService.broadcastEvent(mockContactListEvent)).thenAnswer(
-        (_) async => NostrBroadcastResult(
-          event: mockContactListEvent,
-          successCount: 1,
-          totalRelays: 1,
-          results: const {'relay1': true},
-          errors: const {},
-        ),
-      );
+        when(mockNostrService.broadcastEvent(mockContactListEvent)).thenAnswer(
+          (_) async => NostrBroadcastResult(
+            event: mockContactListEvent,
+            successCount: 1,
+            totalRelays: 1,
+            results: const {'relay1': true},
+            errors: const {},
+          ),
+        );
 
-      // Follow a user
-      await socialService.followUser(testTargetPubkey);
+        // Follow a user
+        await socialService.followUser(testTargetPubkey);
 
-      // Verify the follow list is immediately cached in SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      final cachedFollowingKey = 'following_list_$testUserPubkey';
-      final cachedFollowing = prefs.getString(cachedFollowingKey);
+        // Verify the follow list is immediately cached in SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        final cachedFollowingKey = 'following_list_$testUserPubkey';
+        final cachedFollowing = prefs.getString(cachedFollowingKey);
 
-      // THIS TEST SHOULD PASS BUT CURRENTLY FAILS
-      // because SocialService.followUser() does not call _saveFollowingListToCache()
-      expect(cachedFollowing, isNotNull,
+        // THIS TEST SHOULD PASS BUT CURRENTLY FAILS
+        // because SocialService.followUser() does not call _saveFollowingListToCache()
+        expect(
+          cachedFollowing,
+          isNotNull,
           reason:
-              'Following list should be cached immediately after followUser()');
+              'Following list should be cached immediately after followUser()',
+        );
 
-      // Verify the cached data contains the followed user
-      if (cachedFollowing != null) {
-        final followingList = (jsonDecode(cachedFollowing) as List<dynamic>)
-            .cast<String>();
-        expect(followingList, contains(testTargetPubkey),
+        // Verify the cached data contains the followed user
+        if (cachedFollowing != null) {
+          final followingList = (jsonDecode(cachedFollowing) as List<dynamic>)
+              .cast<String>();
+          expect(
+            followingList,
+            contains(testTargetPubkey),
             reason:
-                'Cached following list should contain the newly followed user');
-      }
-    });
+                'Cached following list should contain the newly followed user',
+          );
+        }
+      },
+    );
 
     test(
-        'FAILING TEST: should save follow list to SharedPreferences cache immediately after unfollowUser',
-        () async {
-      // First, follow a user
-      const privateKey =
-          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-      final publicKey = getPublicKey(privateKey);
-      final followEvent = Event(
-        publicKey,
-        3,
-        [
-          ['p', testTargetPubkey]
-        ],
-        '',
-      );
-      followEvent.sign(privateKey);
+      'FAILING TEST: should save follow list to SharedPreferences cache immediately after unfollowUser',
+      () async {
+        // First, follow a user
+        const privateKey =
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        final publicKey = getPublicKey(privateKey);
+        final followEvent = Event(publicKey, 3, [
+          ['p', testTargetPubkey],
+        ], '');
+        followEvent.sign(privateKey);
 
-      when(
-        mockAuthService.createAndSignEvent(
-          kind: 3,
-          content: '',
-          tags: [
-            ['p', testTargetPubkey]
-          ],
-        ),
-      ).thenAnswer((_) async => followEvent);
+        when(
+          mockAuthService.createAndSignEvent(
+            kind: 3,
+            content: '',
+            tags: [
+              ['p', testTargetPubkey],
+            ],
+          ),
+        ).thenAnswer((_) async => followEvent);
 
-      when(mockNostrService.broadcastEvent(followEvent)).thenAnswer(
-        (_) async => NostrBroadcastResult(
-          event: followEvent,
-          successCount: 1,
-          totalRelays: 1,
-          results: const {'relay1': true},
-          errors: const {},
-        ),
-      );
+        when(mockNostrService.broadcastEvent(followEvent)).thenAnswer(
+          (_) async => NostrBroadcastResult(
+            event: followEvent,
+            successCount: 1,
+            totalRelays: 1,
+            results: const {'relay1': true},
+            errors: const {},
+          ),
+        );
 
-      await socialService.followUser(testTargetPubkey);
+        await socialService.followUser(testTargetPubkey);
 
-      // Reset mocks for unfollow
-      reset(mockAuthService);
-      reset(mockNostrService);
-      when(mockAuthService.isAuthenticated).thenReturn(true);
-      when(mockAuthService.currentPublicKeyHex).thenReturn(testUserPubkey);
+        // Reset mocks for unfollow
+        reset(mockAuthService);
+        reset(mockNostrService);
+        when(mockAuthService.isAuthenticated).thenReturn(true);
+        when(mockAuthService.currentPublicKeyHex).thenReturn(testUserPubkey);
 
-      // Now unfollow the user
-      final unfollowEvent = Event(
-        publicKey,
-        3,
-        [], // Empty tags list
-        '',
-      );
-      unfollowEvent.sign(privateKey);
+        // Now unfollow the user
+        final unfollowEvent = Event(
+          publicKey,
+          3,
+          [], // Empty tags list
+          '',
+        );
+        unfollowEvent.sign(privateKey);
 
-      when(
-        mockAuthService.createAndSignEvent(
-          kind: 3,
-          content: '',
-          tags: [],
-        ),
-      ).thenAnswer((_) async => unfollowEvent);
+        when(
+          mockAuthService.createAndSignEvent(kind: 3, content: '', tags: []),
+        ).thenAnswer((_) async => unfollowEvent);
 
-      when(mockNostrService.broadcastEvent(unfollowEvent)).thenAnswer(
-        (_) async => NostrBroadcastResult(
-          event: unfollowEvent,
-          successCount: 1,
-          totalRelays: 1,
-          results: const {'relay1': true},
-          errors: const {},
-        ),
-      );
+        when(mockNostrService.broadcastEvent(unfollowEvent)).thenAnswer(
+          (_) async => NostrBroadcastResult(
+            event: unfollowEvent,
+            successCount: 1,
+            totalRelays: 1,
+            results: const {'relay1': true},
+            errors: const {},
+          ),
+        );
 
-      await socialService.unfollowUser(testTargetPubkey);
+        await socialService.unfollowUser(testTargetPubkey);
 
-      // Verify the follow list is immediately cached in SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      final cachedFollowingKey = 'following_list_$testUserPubkey';
-      final cachedFollowing = prefs.getString(cachedFollowingKey);
+        // Verify the follow list is immediately cached in SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        final cachedFollowingKey = 'following_list_$testUserPubkey';
+        final cachedFollowing = prefs.getString(cachedFollowingKey);
 
-      // THIS TEST SHOULD PASS BUT CURRENTLY FAILS
-      // because SocialService.unfollowUser() does not call _saveFollowingListToCache()
-      expect(cachedFollowing, isNotNull,
+        // THIS TEST SHOULD PASS BUT CURRENTLY FAILS
+        // because SocialService.unfollowUser() does not call _saveFollowingListToCache()
+        expect(
+          cachedFollowing,
+          isNotNull,
           reason:
-              'Following list should be cached immediately after unfollowUser()');
+              'Following list should be cached immediately after unfollowUser()',
+        );
 
-      // Verify the cached data does NOT contain the unfollowed user
-      if (cachedFollowing != null) {
-        final followingList = (jsonDecode(cachedFollowing) as List<dynamic>)
-            .cast<String>();
-        expect(followingList, isNot(contains(testTargetPubkey)),
+        // Verify the cached data does NOT contain the unfollowed user
+        if (cachedFollowing != null) {
+          final followingList = (jsonDecode(cachedFollowing) as List<dynamic>)
+              .cast<String>();
+          expect(
+            followingList,
+            isNot(contains(testTargetPubkey)),
             reason:
-                'Cached following list should NOT contain the unfollowed user');
-        expect(followingList, isEmpty,
-            reason: 'Following list should be empty after unfollowing');
-      }
-    });
+                'Cached following list should NOT contain the unfollowed user',
+          );
+          expect(
+            followingList,
+            isEmpty,
+            reason: 'Following list should be empty after unfollowing',
+          );
+        }
+      },
+    );
 
     test(
-        'FAILING TEST: PersonalEventCacheService Kind 3 events should be used to populate cache on startup',
-        () async {
-      // Create a mock Kind 3 event that would be in PersonalEventCacheService
-      const privateKey =
-          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-      final publicKey = getPublicKey(privateKey);
-      final cachedContactListEvent = Event(
-        publicKey,
-        3,
-        [
+      'FAILING TEST: PersonalEventCacheService Kind 3 events should be used to populate cache on startup',
+      () async {
+        // Create a mock Kind 3 event that would be in PersonalEventCacheService
+        const privateKey =
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        final publicKey = getPublicKey(privateKey);
+        final cachedContactListEvent = Event(publicKey, 3, [
           ['p', 'user1'],
           ['p', 'user2'],
           ['p', 'user3'],
-        ],
-        '',
-      );
-      cachedContactListEvent.sign(privateKey);
+        ], '');
+        cachedContactListEvent.sign(privateKey);
 
-      // Mock PersonalEventCacheService to return the cached Kind 3 event
-      when(mockPersonalEventCache.getEventsByKind(3))
-          .thenReturn([cachedContactListEvent]);
+        // Mock PersonalEventCacheService to return the cached Kind 3 event
+        when(
+          mockPersonalEventCache.getEventsByKind(3),
+        ).thenReturn([cachedContactListEvent]);
 
-      // Create a new service instance (simulating app startup)
-      final newService = SocialService(
-        mockNostrService,
-        mockAuthService,
-        subscriptionManager: mockSubscriptionManager,
-        personalEventCache: mockPersonalEventCache,
-      );
+        // Create a new service instance (simulating app startup)
+        final newService = SocialService(
+          mockNostrService,
+          mockAuthService,
+          subscriptionManager: mockSubscriptionManager,
+          personalEventCache: mockPersonalEventCache,
+        );
 
-      // Wait for initialization to complete
-      await Future.delayed(const Duration(milliseconds: 100));
+        // Wait for initialization to complete
+        await Future.delayed(const Duration(milliseconds: 100));
 
-      // Verify SharedPreferences cache was updated during initialization
-      final prefs = await SharedPreferences.getInstance();
-      final cachedFollowingKey = 'following_list_$testUserPubkey';
-      final cachedFollowing = prefs.getString(cachedFollowingKey);
+        // Verify SharedPreferences cache was updated during initialization
+        final prefs = await SharedPreferences.getInstance();
+        final cachedFollowingKey = 'following_list_$testUserPubkey';
+        final cachedFollowing = prefs.getString(cachedFollowingKey);
 
-      // THIS TEST SHOULD PASS BUT CURRENTLY FAILS
-      // The PersonalEventCacheService load triggers cache save, but only if auth is ready
-      expect(cachedFollowing, isNotNull,
+        // THIS TEST SHOULD PASS BUT CURRENTLY FAILS
+        // The PersonalEventCacheService load triggers cache save, but only if auth is ready
+        expect(
+          cachedFollowing,
+          isNotNull,
           reason:
-              'Following list should be cached during initialization from PersonalEventCacheService');
+              'Following list should be cached during initialization from PersonalEventCacheService',
+        );
 
-      if (cachedFollowing != null) {
-        final followingList = (jsonDecode(cachedFollowing) as List<dynamic>)
-            .cast<String>();
-        expect(followingList.length, 3);
-        expect(followingList, containsAll(['user1', 'user2', 'user3']));
-      }
+        if (cachedFollowing != null) {
+          final followingList = (jsonDecode(cachedFollowing) as List<dynamic>)
+              .cast<String>();
+          expect(followingList.length, 3);
+          expect(followingList, containsAll(['user1', 'user2', 'user3']));
+        }
 
-      newService.dispose();
-    });
+        newService.dispose();
+      },
+    );
   });
 }

@@ -21,16 +21,12 @@ void main() {
     });
 
     test('providers wire together correctly', () async {
-      SharedPreferences.setMockInitialValues({
-        'relay_gateway_enabled': true,
-      });
+      SharedPreferences.setMockInitialValues({'relay_gateway_enabled': true});
 
       final prefs = await SharedPreferences.getInstance();
 
       final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       );
 
       // Verify settings provider works
@@ -150,7 +146,7 @@ void main() {
                   'picture': 'https://example.com/avatar.jpg',
                 }),
                 'sig': 'c' * 128,
-              }
+              },
             ],
             'eose': true,
             'cached': true,
@@ -196,7 +192,7 @@ void main() {
                 ],
                 'content': '',
                 'sig': 'c' * 128,
-              }
+              },
             ],
             'eose': true,
           }),
@@ -218,9 +214,7 @@ void main() {
 
     test('settings correctly determine gateway usage', () async {
       // Test with gateway enabled and divine relay
-      SharedPreferences.setMockInitialValues({
-        'relay_gateway_enabled': true,
-      });
+      SharedPreferences.setMockInitialValues({'relay_gateway_enabled': true});
       var prefs = await SharedPreferences.getInstance();
       var settings = RelayGatewaySettings(prefs);
 
@@ -232,9 +226,7 @@ void main() {
       );
 
       // Test with gateway disabled
-      SharedPreferences.setMockInitialValues({
-        'relay_gateway_enabled': false,
-      });
+      SharedPreferences.setMockInitialValues({'relay_gateway_enabled': false});
       prefs = await SharedPreferences.getInstance();
       settings = RelayGatewaySettings(prefs);
 
@@ -246,9 +238,7 @@ void main() {
       );
 
       // Test with gateway enabled but no divine relay
-      SharedPreferences.setMockInitialValues({
-        'relay_gateway_enabled': true,
-      });
+      SharedPreferences.setMockInitialValues({'relay_gateway_enabled': true});
       prefs = await SharedPreferences.getInstance();
       settings = RelayGatewaySettings(prefs);
 
@@ -305,9 +295,7 @@ void main() {
     });
 
     testWidgets('provider overrides work in widget tree', (tester) async {
-      SharedPreferences.setMockInitialValues({
-        'relay_gateway_enabled': true,
-      });
+      SharedPreferences.setMockInitialValues({'relay_gateway_enabled': true});
 
       final prefs = await SharedPreferences.getInstance();
 
@@ -370,11 +358,7 @@ void main() {
         capturedFilter = utf8.decode(base64Url.decode(filterParam));
 
         return http.Response(
-          jsonEncode({
-            'events': [],
-            'eose': true,
-            'complete': true,
-          }),
+          jsonEncode({'events': [], 'eose': true, 'complete': true}),
           200,
         );
       });
@@ -385,11 +369,7 @@ void main() {
       );
 
       // Create filter with hashtag using the t parameter
-      final filter = Filter(
-        kinds: [34236],
-        limit: 50,
-        t: ['nostr', 'bitcoin'],
-      );
+      final filter = Filter(kinds: [34236], limit: 50, t: ['nostr', 'bitcoin']);
 
       await service.query(filter);
 
@@ -409,9 +389,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
 
       final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       );
 
       final settings = container.read(relayGatewaySettingsProvider);

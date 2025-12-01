@@ -27,14 +27,14 @@ void main() {
     test('returns true when native initialization succeeds', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall call) async {
-        if (call.method == 'initialize') {
-          expect(call.arguments['appId'], 'test_app_id');
-          expect(call.arguments['clientId'], 'test_client_id');
-          expect(call.arguments['zendeskUrl'], 'https://test.zendesk.com');
-          return true;
-        }
-        return null;
-      });
+            if (call.method == 'initialize') {
+              expect(call.arguments['appId'], 'test_app_id');
+              expect(call.arguments['clientId'], 'test_client_id');
+              expect(call.arguments['zendeskUrl'], 'https://test.zendesk.com');
+              return true;
+            }
+            return null;
+          });
 
       final result = await ZendeskSupportService.initialize(
         appId: 'test_app_id',
@@ -49,11 +49,11 @@ void main() {
     test('returns false when native initialization fails', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall call) async {
-        if (call.method == 'initialize') {
-          throw PlatformException(code: 'INIT_FAILED', message: 'Failed');
-        }
-        return null;
-      });
+            if (call.method == 'initialize') {
+              throw PlatformException(code: 'INIT_FAILED', message: 'Failed');
+            }
+            return null;
+          });
 
       final result = await ZendeskSupportService.initialize(
         appId: 'test',
@@ -77,15 +77,15 @@ void main() {
       // Initialize first
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall call) async {
-        if (call.method == 'initialize') return true;
-        if (call.method == 'showNewTicket') {
-          expect(call.arguments['subject'], 'Test Subject');
-          expect(call.arguments['description'], 'Test Description');
-          expect(call.arguments['tags'], ['tag1', 'tag2']);
-          return null;
-        }
-        return null;
-      });
+            if (call.method == 'initialize') return true;
+            if (call.method == 'showNewTicket') {
+              expect(call.arguments['subject'], 'Test Subject');
+              expect(call.arguments['description'], 'Test Description');
+              expect(call.arguments['tags'], ['tag1', 'tag2']);
+              return null;
+            }
+            return null;
+          });
 
       await ZendeskSupportService.initialize(
         appId: 'test',
@@ -105,12 +105,12 @@ void main() {
     test('handles PlatformException gracefully', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall call) async {
-        if (call.method == 'initialize') return true;
-        if (call.method == 'showNewTicket') {
-          throw PlatformException(code: 'SHOW_FAILED', message: 'Failed');
-        }
-        return null;
-      });
+            if (call.method == 'initialize') return true;
+            if (call.method == 'showNewTicket') {
+              throw PlatformException(code: 'SHOW_FAILED', message: 'Failed');
+            }
+            return null;
+          });
 
       await ZendeskSupportService.initialize(
         appId: 'test',
@@ -136,13 +136,13 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall call) async {
-        if (call.method == 'initialize') return true;
-        if (call.method == 'showTicketList') {
-          showTicketListCalled = true;
-          return null;
-        }
-        return null;
-      });
+            if (call.method == 'initialize') return true;
+            if (call.method == 'showTicketList') {
+              showTicketListCalled = true;
+              return null;
+            }
+            return null;
+          });
 
       await ZendeskSupportService.initialize(
         appId: 'test',

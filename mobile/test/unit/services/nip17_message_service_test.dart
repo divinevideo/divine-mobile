@@ -51,7 +51,10 @@ void main() {
             'kind': 1059, // GIFT_WRAP
             'tags': [
               ['p', recipientPubkey],
-              ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+              [
+                'expiration',
+                '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+              ],
             ],
             'content': 'encrypted-content',
             'sig': 'test-signature',
@@ -124,8 +127,9 @@ void main() {
 
       // Verify: Gift wrap has p tag with recipient
       expect(capturedEvent, isNotNull);
-      final pTags =
-          capturedEvent!.tags.where((tag) => tag.isNotEmpty && tag[0] == 'p');
+      final pTags = capturedEvent!.tags.where(
+        (tag) => tag.isNotEmpty && tag[0] == 'p',
+      );
       expect(pTags, isNotEmpty);
       expect(pTags.first[1], equals(recipientPubkey));
     });
@@ -157,10 +161,7 @@ void main() {
 
       // Verify: Each gift wrap uses a different random ephemeral key
       expect(capturedEvents, hasLength(2));
-      expect(
-        capturedEvents[0].pubkey,
-        isNot(equals(capturedEvents[1].pubkey)),
-      );
+      expect(capturedEvents[0].pubkey, isNot(equals(capturedEvents[1].pubkey)));
       // And neither should be the sender's real pubkey
       expect(capturedEvents[0].pubkey, isNot(equals(testPublicKey)));
       expect(capturedEvents[1].pubkey, isNot(equals(testPublicKey)));
@@ -206,7 +207,10 @@ void main() {
             'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
             'kind': 1059,
             'tags': [
-              ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+              [
+                'expiration',
+                '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+              ],
             ],
             'content': '',
             'sig': 'test-sig',

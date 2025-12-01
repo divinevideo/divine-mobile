@@ -108,7 +108,9 @@ void main() {
       userProfileService.updateCachedProfile(newProfile);
 
       // VERIFY: Profile is in UserProfileService cache
-      final cachedProfile = userProfileService.getCachedProfile('user-pubkey-789');
+      final cachedProfile = userProfileService.getCachedProfile(
+        'user-pubkey-789',
+      );
       expect(cachedProfile, isNotNull);
       expect(cachedProfile!.displayName, equals('My New Name'));
 

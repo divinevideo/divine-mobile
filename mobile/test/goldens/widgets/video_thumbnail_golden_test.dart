@@ -4,7 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_toolkit/golden_toolkit.dart';
-import 'package:openvine/services/thumbnail_api_service.dart' show ThumbnailSize;
+import 'package:openvine/services/thumbnail_api_service.dart'
+    show ThumbnailSize;
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import '../../helpers/golden_test_devices.dart';
 import '../../builders/test_video_event_builder.dart';
@@ -32,10 +33,7 @@ void main() {
     );
 
     testGoldens('VideoThumbnailWidget states', (tester) async {
-      final builder = GoldenBuilder.grid(
-        columns: 3,
-        widthToHeightRatio: 0.75,
-      )
+      final builder = GoldenBuilder.grid(columns: 3, widthToHeightRatio: 0.75)
         ..addScenario(
           'With Blurhash',
           Container(
@@ -115,9 +113,7 @@ void main() {
 
       await tester.pumpWidgetBuilder(
         builder.build(),
-        wrapper: materialAppWrapper(
-          theme: ThemeData.dark(),
-        ),
+        wrapper: materialAppWrapper(theme: ThemeData.dark()),
       );
 
       await screenMatchesGolden(tester, 'video_thumbnail_states');
@@ -155,9 +151,7 @@ void main() {
 
       await tester.pumpWidgetBuilder(
         builder.build(),
-        wrapper: materialAppWrapper(
-          theme: ThemeData.dark(),
-        ),
+        wrapper: materialAppWrapper(theme: ThemeData.dark()),
       );
 
       await screenMatchesGolden(tester, 'video_thumbnail_aspects');
@@ -200,9 +194,7 @@ void main() {
 
       await tester.pumpWidgetBuilder(
         widget,
-        wrapper: materialAppWrapper(
-          theme: ThemeData.dark(),
-        ),
+        wrapper: materialAppWrapper(theme: ThemeData.dark()),
       );
 
       await multiScreenGolden(

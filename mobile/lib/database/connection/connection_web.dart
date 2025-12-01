@@ -8,7 +8,10 @@ import 'package:drift/web.dart';
 /// Uses IndexedDB through drift's web implementation
 QueryExecutor openConnection() {
   return LazyDatabase(() async {
-    return WebDatabase('local_relay_db', logStatements: false); // Disabled - too verbose
+    return WebDatabase(
+      'local_relay_db',
+      logStatements: false,
+    ); // Disabled - too verbose
   });
 }
 

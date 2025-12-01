@@ -33,7 +33,8 @@ void main() {
 
     test('newer video event replaces older one with same d-tag', () async {
       // Arrange: Create two versions of the same video (same pubkey + d-tag)
-      const pubkey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      const pubkey =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
       const vineId = 'test-vine-abc';
       const videoUrl = 'https://example.com/video.mp4';
 
@@ -77,7 +78,8 @@ void main() {
 
     test('older video event is rejected when newer exists', () async {
       // Arrange: Create two versions with reversed timestamps
-      const pubkey = 'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
+      const pubkey =
+          'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
       const vineId = 'test-vine-xyz';
       const videoUrl = 'https://example.com/video2.mp4';
 
@@ -121,7 +123,8 @@ void main() {
 
     test('different d-tags create separate videos', () async {
       // Arrange: Same pubkey, different d-tags
-      const pubkey = '1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff';
+      const pubkey =
+          '1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff';
       const videoUrl = 'https://example.com/video3.mp4';
 
       final event1 = sdk.Event(
@@ -158,59 +161,80 @@ void main() {
       expect(videos.map((v) => v.id).toSet(), {event1.id, event2.id});
     });
 
-    test('different subscription types track replaceable events separately', () async {
-      // Arrange: Same video, different subscription types
-      const pubkey = 'aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
-      const vineId = 'test-vine-separate';
-      const videoUrl = 'https://example.com/video4.mp4';
+    test(
+      'different subscription types track replaceable events separately',
+      () async {
+        // Arrange: Same video, different subscription types
+        const pubkey =
+            'aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
+        const vineId = 'test-vine-separate';
+        const videoUrl = 'https://example.com/video4.mp4';
 
-      final oldEvent = sdk.Event(
-        pubkey,
-        NIP71VideoKinds.addressableShortVideo,
-        [
-          ['d', vineId],
-          ['url', videoUrl],
-          ['title', 'Old'],
-        ],
-        'Old',
-        createdAt: 1000,
-      );
+        final oldEvent = sdk.Event(
+          pubkey,
+          NIP71VideoKinds.addressableShortVideo,
+          [
+            ['d', vineId],
+            ['url', videoUrl],
+            ['title', 'Old'],
+          ],
+          'Old',
+          createdAt: 1000,
+        );
 
-      final newEvent = sdk.Event(
-        pubkey,
-        NIP71VideoKinds.addressableShortVideo,
-        [
-          ['d', vineId],
-          ['url', videoUrl],
-          ['title', 'New'],
-        ],
-        'New',
-        createdAt: 2000,
-      );
+        final newEvent = sdk.Event(
+          pubkey,
+          NIP71VideoKinds.addressableShortVideo,
+          [
+            ['d', vineId],
+            ['url', videoUrl],
+            ['title', 'New'],
+          ],
+          'New',
+          createdAt: 2000,
+        );
 
-      // Act: Add old to discovery, new to homeFeed
-      service.handleEventForTesting(oldEvent, SubscriptionType.discovery);
-      service.handleEventForTesting(newEvent, SubscriptionType.homeFeed);
+        // Act: Add old to discovery, new to homeFeed
+        service.handleEventForTesting(oldEvent, SubscriptionType.discovery);
+        service.handleEventForTesting(newEvent, SubscriptionType.homeFeed);
 
-      // Then add new to discovery (should replace old)
-      service.handleEventForTesting(newEvent, SubscriptionType.discovery);
+        // Then add new to discovery (should replace old)
+        service.handleEventForTesting(newEvent, SubscriptionType.discovery);
 
-      // Assert: Discovery should have new, homeFeed should have new
-      final discoveryVideos = service.discoveryVideos;
-      final homeFeedVideos = service.homeFeedVideos;
+        // Assert: Discovery should have new, homeFeed should have new
+        final discoveryVideos = service.discoveryVideos;
+        final homeFeedVideos = service.homeFeedVideos;
 
-      expect(discoveryVideos.length, 1);
-      expect(discoveryVideos[0].id, newEvent.id, reason: 'Discovery should have newer event');
-      expect(discoveryVideos[0].createdAt, 2000, reason: 'Discovery should have newer timestamp');
+        expect(discoveryVideos.length, 1);
+        expect(
+          discoveryVideos[0].id,
+          newEvent.id,
+          reason: 'Discovery should have newer event',
+        );
+        expect(
+          discoveryVideos[0].createdAt,
+          2000,
+          reason: 'Discovery should have newer timestamp',
+        );
 
-      expect(homeFeedVideos.length, 1);
-      expect(homeFeedVideos[0].id, newEvent.id, reason: 'HomeFeed should have newer event');
-      expect(homeFeedVideos[0].createdAt, 2000, reason: 'HomeFeed should have newer timestamp');
-    });
+        expect(homeFeedVideos.length, 1);
+        expect(
+          homeFeedVideos[0].id,
+          newEvent.id,
+          reason: 'HomeFeed should have newer event',
+        );
+        expect(
+          homeFeedVideos[0].createdAt,
+          2000,
+          reason: 'HomeFeed should have newer timestamp',
+        );
+      },
+    );
 
     test('non-replaceable events (kind 22) are not deduplicated', () async {
       // Arrange: Two different kind 22 events (non-addressable)
-      const pubkey = '9876543210abcdef9876543210abcdef9876543210abcdef9876543210abcdef';
+      const pubkey =
+          '9876543210abcdef9876543210abcdef9876543210abcdef9876543210abcdef';
       const videoUrl = 'https://example.com/video5.mp4';
 
       final event1 = sdk.Event(
@@ -241,7 +265,11 @@ void main() {
 
       // Assert: Should have both videos (kind 22 is not replaceable)
       final videos = service.discoveryVideos;
-      expect(videos.length, 2, reason: 'Kind 22 events should not replace each other');
+      expect(
+        videos.length,
+        2,
+        reason: 'Kind 22 events should not replace each other',
+      );
     });
   });
 }

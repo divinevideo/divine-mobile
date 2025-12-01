@@ -4,7 +4,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
@@ -32,7 +31,7 @@ void main() {
       // Create draft with ProofMode JSON
       final testFile = File('test_video.mp4');
       final proofJson = '{"segments":[],"deviceAttestation":null}';
-      
+
       final draft = VineDraft.create(
         videoFile: testFile,
         title: 'Test Video',
@@ -62,7 +61,7 @@ void main() {
     test('should preserve ProofMode data through draft copyWith', () async {
       final testFile = File('test_video.mp4');
       final proofJson = '{"segments":[],"deviceAttestation":null}';
-      
+
       final originalDraft = VineDraft.create(
         videoFile: testFile,
         title: 'Original Title',
@@ -98,7 +97,7 @@ void main() {
 
     test('should handle draft without ProofMode data', () async {
       final testFile = File('test_video.mp4');
-      
+
       final draft = VineDraft.create(
         videoFile: testFile,
         title: 'Test Video',

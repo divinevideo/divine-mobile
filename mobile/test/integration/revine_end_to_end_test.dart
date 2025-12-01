@@ -28,8 +28,7 @@ void main() {
         isRepost: false,
       );
 
-      Log.info(
-          '   ✓ Original video created by ${authorPubkey}...');
+      Log.info('   ✓ Original video created by ${authorPubkey}...');
       Log.info('   ✓ Video URL: ${originalVideo.videoUrl}');
       Log.info('   ✓ isRepost: ${originalVideo.isRepost}\n');
 
@@ -73,7 +72,8 @@ void main() {
 
       Log.info('   ✓ Feed contains ${feedVideos.length} videos total');
       Log.info(
-          '   ✓ Original videos: ${feedVideos.where((v) => !v.isRepost).length}');
+        '   ✓ Original videos: ${feedVideos.where((v) => !v.isRepost).length}',
+      );
       Log.info('   ✓ Revines: ${feedVideos.where((v) => v.isRepost).length}\n');
 
       // Step 4: Profile filtering (what ProfileScreen._buildRepostsGrid() does)
@@ -85,8 +85,11 @@ void main() {
           .toList();
 
       Log.info('   ✓ User revines found: ${userRevines.length}');
-      expect(userRevines.length, equals(1),
-          reason: 'User should have exactly 1 revine');
+      expect(
+        userRevines.length,
+        equals(1),
+        reason: 'User should have exactly 1 revine',
+      );
 
       final userRevine = userRevines.first;
       Log.info('   ✓ Revine ID: ${userRevine.reposterId}');
@@ -104,7 +107,9 @@ void main() {
       expect(userRevine.title, equals('Test Video'));
       expect(userRevine.videoUrl, equals('https://cdn.example.com/video.mp4'));
       expect(
-          userRevine.thumbnailUrl, equals('https://cdn.example.com/thumb.jpg'));
+        userRevine.thumbnailUrl,
+        equals('https://cdn.example.com/thumb.jpg'),
+      );
       expect(userRevine.pubkey, equals(authorPubkey)); // Original author
       expect(userRevine.hashtags, contains('funny'));
 
@@ -115,7 +120,8 @@ void main() {
 
       Log.info('🎉 SUCCESS: Complete revine flow working correctly!');
       Log.info(
-          "   The revined video will now appear in the user's profile Revines tab");
+        "   The revined video will now appear in the user's profile Revines tab",
+      );
     });
 
     test('Verify edge cases are handled correctly', () {
@@ -158,9 +164,7 @@ void main() {
 
       final mixedFeed = [video1, video2, revine1, revine2];
       final userRevines = mixedFeed
-          .where(
-            (v) => v.isRepost && v.reposterPubkey == userPubkey,
-          )
+          .where((v) => v.isRepost && v.reposterPubkey == userPubkey)
           .toList();
 
       expect(userRevines.length, equals(2));
@@ -176,9 +180,7 @@ void main() {
 
       final feedWithDuplicates = [video1, revine1, otherUserRevine];
       final onlyUserRevines = feedWithDuplicates
-          .where(
-            (v) => v.isRepost && v.reposterPubkey == userPubkey,
-          )
+          .where((v) => v.isRepost && v.reposterPubkey == userPubkey)
           .toList();
 
       expect(onlyUserRevines.length, equals(1));
@@ -197,9 +199,7 @@ void main() {
 
       final feedWithIncomplete = [video1, incompleteRevine];
       final validRevines = feedWithIncomplete
-          .where(
-            (v) => v.isRepost && v.reposterPubkey == userPubkey,
-          )
+          .where((v) => v.isRepost && v.reposterPubkey == userPubkey)
           .toList();
 
       expect(validRevines.length, equals(0));

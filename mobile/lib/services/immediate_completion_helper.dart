@@ -34,7 +34,7 @@ class CompletionConfig {
   final CompletionMode mode;
   final int? expectedCount;
   final Set<String>?
-      expectedItems; // For tracking specific items (e.g., pubkeys)
+  expectedItems; // For tracking specific items (e.g., pubkeys)
   final int fallbackTimeoutSeconds;
   final LogCategory logCategory;
   final String serviceName;
@@ -118,8 +118,9 @@ class ImmediateCompletionHelper {
           case CompletionMode.all:
             // Complete when all expected items are received
             if (config.expectedItems != null) {
-              final received =
-                  receivedItems.map((e) => _getItemKey(e, config)).toSet();
+              final received = receivedItems
+                  .map((e) => _getItemKey(e, config))
+                  .toSet();
               if (received.containsAll(config.expectedItems!)) {
                 tryComplete(isEarly: true);
               }
@@ -240,17 +241,16 @@ class ProfileCompletionHelper {
       logCategory: LogCategory.ui,
     );
 
-    final result = await ImmediateCompletionHelper.queryWithImmediateCompletion<
-        Map<String, dynamic>>(
-      eventStream: eventStream,
-      config: config,
-      eventMapper: (event) => {
-        'pubkey': event.pubkey,
-        'event': event,
-      },
-      eventFilter: (event) =>
-          event.kind == 0 && requestedPubkeys.contains(event.pubkey),
-    );
+    final result =
+        await ImmediateCompletionHelper.queryWithImmediateCompletion<
+          Map<String, dynamic>
+        >(
+          eventStream: eventStream,
+          config: config,
+          eventMapper: (event) => {'pubkey': event.pubkey, 'event': event},
+          eventFilter: (event) =>
+              event.kind == 0 && requestedPubkeys.contains(event.pubkey),
+        );
 
     return {
       'profiles': result.items,
@@ -277,11 +277,11 @@ class ContactListCompletionHelper {
 
     final result =
         await ImmediateCompletionHelper.queryWithImmediateCompletion<Event>(
-      eventStream: eventStream,
-      config: config,
-      eventMapper: (event) => event,
-      eventFilter: (event) => event.kind == 3 && event.pubkey == pubkey,
-    );
+          eventStream: eventStream,
+          config: config,
+          eventMapper: (event) => event,
+          eventFilter: (event) => event.kind == 3 && event.pubkey == pubkey,
+        );
 
     return result.items.isEmpty ? null : result.items.first;
   }

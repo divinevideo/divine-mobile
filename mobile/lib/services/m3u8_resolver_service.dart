@@ -39,13 +39,17 @@ class M3u8ResolverService {
         final attributes = line.substring('#EXT-X-STREAM-INF:'.length);
 
         // Extract bandwidth
-        final bandwidthMatch = RegExp(r'BANDWIDTH=(\d+)').firstMatch(attributes);
+        final bandwidthMatch = RegExp(
+          r'BANDWIDTH=(\d+)',
+        ).firstMatch(attributes);
         if (bandwidthMatch != null) {
           currentBandwidth = int.tryParse(bandwidthMatch.group(1)!);
         }
 
         // Extract resolution (optional)
-        final resolutionMatch = RegExp(r'RESOLUTION=([^\s,]+)').firstMatch(attributes);
+        final resolutionMatch = RegExp(
+          r'RESOLUTION=([^\s,]+)',
+        ).firstMatch(attributes);
         if (resolutionMatch != null) {
           currentResolution = resolutionMatch.group(1);
         }
@@ -54,11 +58,13 @@ class M3u8ResolverService {
         if (i + 1 < lines.length && currentBandwidth != null) {
           final urlLine = lines[i + 1].trim();
           if (urlLine.isNotEmpty && !urlLine.startsWith('#')) {
-            variants.add(M3u8Variant(
-              url: urlLine,
-              bandwidth: currentBandwidth,
-              resolution: currentResolution,
-            ));
+            variants.add(
+              M3u8Variant(
+                url: urlLine,
+                bandwidth: currentBandwidth,
+                resolution: currentResolution,
+              ),
+            );
 
             // Reset for next variant
             currentBandwidth = null;
@@ -74,7 +80,8 @@ class M3u8ResolverService {
   /// Resolve relative URL to absolute URL based on base m3u8 URL
   String resolveUrl(String baseUrl, String relativeUrl) {
     // If already absolute, return as-is
-    if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://')) {
+    if (relativeUrl.startsWith('http://') ||
+        relativeUrl.startsWith('https://')) {
       return relativeUrl;
     }
 
@@ -114,15 +121,21 @@ class M3u8ResolverService {
   /// Returns null if resolution fails
   Future<String?> resolveM3u8ToMp4(String m3u8Url) async {
     try {
-      Log.info('🔍 Resolving m3u8 URL to MP4: $m3u8Url',
-          name: 'M3u8ResolverService', category: LogCategory.video);
+      Log.info(
+        '🔍 Resolving m3u8 URL to MP4: $m3u8Url',
+        name: 'M3u8ResolverService',
+        category: LogCategory.video,
+      );
 
       // Fetch the playlist
       final response = await dio.get(m3u8Url);
 
       if (response.statusCode != 200) {
-        Log.error('❌ Failed to fetch m3u8 playlist: ${response.statusCode}',
-            name: 'M3u8ResolverService', category: LogCategory.video);
+        Log.error(
+          '❌ Failed to fetch m3u8 playlist: ${response.statusCode}',
+          name: 'M3u8ResolverService',
+          category: LogCategory.video,
+        );
         return null;
       }
 
@@ -132,13 +145,19 @@ class M3u8ResolverService {
       final variants = parsePlaylist(playlistContent);
 
       if (variants.isEmpty) {
-        Log.warning('⚠️ No variants found in m3u8 playlist',
-            name: 'M3u8ResolverService', category: LogCategory.video);
+        Log.warning(
+          '⚠️ No variants found in m3u8 playlist',
+          name: 'M3u8ResolverService',
+          category: LogCategory.video,
+        );
         return null;
       }
 
-      Log.info('📋 Found ${variants.length} variants in playlist',
-          name: 'M3u8ResolverService', category: LogCategory.video);
+      Log.info(
+        '📋 Found ${variants.length} variants in playlist',
+        name: 'M3u8ResolverService',
+        category: LogCategory.video,
+      );
 
       // Select lowest bandwidth for short videos
       final selectedVariant = selectLowestBandwidth(variants);
@@ -150,17 +169,26 @@ class M3u8ResolverService {
       // Resolve to absolute URL
       final resolvedUrl = resolveUrl(m3u8Url, selectedVariant.url);
 
-      Log.info('✅ Resolved m3u8 to MP4: $resolvedUrl (bandwidth: ${selectedVariant.bandwidth})',
-          name: 'M3u8ResolverService', category: LogCategory.video);
+      Log.info(
+        '✅ Resolved m3u8 to MP4: $resolvedUrl (bandwidth: ${selectedVariant.bandwidth})',
+        name: 'M3u8ResolverService',
+        category: LogCategory.video,
+      );
 
       return resolvedUrl;
     } on DioException catch (e) {
-      Log.error('🌐 Network error resolving m3u8: ${e.message}',
-          name: 'M3u8ResolverService', category: LogCategory.video);
+      Log.error(
+        '🌐 Network error resolving m3u8: ${e.message}',
+        name: 'M3u8ResolverService',
+        category: LogCategory.video,
+      );
       return null;
     } catch (e) {
-      Log.error('💥 Unexpected error resolving m3u8: $e',
-          name: 'M3u8ResolverService', category: LogCategory.video);
+      Log.error(
+        '💥 Unexpected error resolving m3u8: $e',
+        name: 'M3u8ResolverService',
+        category: LogCategory.video,
+      );
       return null;
     }
   }

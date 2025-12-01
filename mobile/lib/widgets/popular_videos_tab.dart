@@ -111,10 +111,10 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
     if (_feedLoadStartTime != null) {
       _feedTracker?.markFirstVideosReceived('trending', videos.length);
       _feedTracker?.markFeedDisplayed('trending', videos.length);
-      _screenAnalytics?.markDataLoaded('explore_screen', dataMetrics: {
-        'tab': 'trending',
-        'video_count': videos.length,
-      });
+      _screenAnalytics?.markDataLoaded(
+        'explore_screen',
+        dataMetrics: {'tab': 'trending', 'video_count': videos.length},
+      );
       _feedLoadStartTime = null;
     }
 
@@ -160,8 +160,11 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
   }
 
   void _trackErrorState(Object? error) {
-    Log.error('❌ TrendingTab: Error state - $error',
-        name: 'ExploreScreen', category: LogCategory.video);
+    Log.error(
+      '❌ TrendingTab: Error state - $error',
+      name: 'ExploreScreen',
+      category: LogCategory.video,
+    );
 
     final loadTime = _feedLoadStartTime != null
         ? DateTime.now().difference(_feedLoadStartTime!).inMilliseconds
@@ -181,12 +184,16 @@ class _PopularVideosTabState extends ConsumerState<PopularVideosTab> {
   }
 
   void _trackLoadingState() {
-    Log.info('⏳ TrendingTab: Showing loading indicator',
-        name: 'ExploreScreen', category: LogCategory.video);
+    Log.info(
+      '⏳ TrendingTab: Showing loading indicator',
+      name: 'ExploreScreen',
+      category: LogCategory.video,
+    );
 
     if (_feedLoadStartTime != null) {
-      final elapsed =
-          DateTime.now().difference(_feedLoadStartTime!).inMilliseconds;
+      final elapsed = DateTime.now()
+          .difference(_feedLoadStartTime!)
+          .inMilliseconds;
       if (elapsed > 5000) {
         _errorTracker?.trackSlowOperation(
           operation: 'trending_feed_load',
@@ -226,8 +233,10 @@ class _PopularVideosTrendingContent extends ConsumerWidget {
             thumbnailAspectRatio: 1.0,
             onVideoTap: onVideoTap,
             onRefresh: () async {
-              Log.info('🔄 ExploreScreen: Refreshing trending tab',
-                  category: LogCategory.video);
+              Log.info(
+                '🔄 ExploreScreen: Refreshing trending tab',
+                category: LogCategory.video,
+              );
               ref.invalidate(videoEventsProvider);
               await ref.read(videoEventsProvider.future);
             },
@@ -262,10 +271,7 @@ class _PopularVideosEmptyState extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Check back later for new content',
-            style: TextStyle(
-              color: VineTheme.secondaryText,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
           ),
         ],
       ),
@@ -301,8 +307,6 @@ class _PopularVideosLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: CircularProgressIndicator(color: VineTheme.vineGreen),
-    );
+    return Center(child: CircularProgressIndicator(color: VineTheme.vineGreen));
   }
 }

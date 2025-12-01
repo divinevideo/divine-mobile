@@ -113,7 +113,8 @@ void main() {
       processor.errorStream.listen(errors.add);
 
       // Create original video event JSON (NIP-18 reposts embed the original event)
-      final originalVideoJson = '''
+      final originalVideoJson =
+          '''
 {
   "id": "original_video_id",
   "pubkey": "original_author_pubkey",
@@ -147,18 +148,38 @@ void main() {
       if (errors.isNotEmpty) {
         fail('Errors occurred: ${errors.join(", ")}');
       }
-      expect(receivedEvents.length, 1, reason: 'Should emit the original video');
-      expect(receivedEvents.first.isRepost, isTrue,
-          reason: 'Should be marked as repost');
-      expect(receivedEvents.first.reposterId, equals('repost_id'),
-          reason: 'Should have repost event ID');
-      expect(receivedEvents.first.reposterPubkey,
-          equals('1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'),
-          reason: 'Should have reposter pubkey');
-      expect(receivedEvents.first.id, equals('original_video_id'),
-          reason: 'Should preserve original video ID');
-      expect(receivedEvents.first.videoUrl, equals('https://example.com/video.mp4'),
-          reason: 'Should preserve original video URL');
+      expect(
+        receivedEvents.length,
+        1,
+        reason: 'Should emit the original video',
+      );
+      expect(
+        receivedEvents.first.isRepost,
+        isTrue,
+        reason: 'Should be marked as repost',
+      );
+      expect(
+        receivedEvents.first.reposterId,
+        equals('repost_id'),
+        reason: 'Should have repost event ID',
+      );
+      expect(
+        receivedEvents.first.reposterPubkey,
+        equals(
+          '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+        ),
+        reason: 'Should have reposter pubkey',
+      );
+      expect(
+        receivedEvents.first.id,
+        equals('original_video_id'),
+        reason: 'Should preserve original video ID',
+      );
+      expect(
+        receivedEvents.first.videoUrl,
+        equals('https://example.com/video.mp4'),
+        reason: 'Should preserve original video URL',
+      );
     });
   });
 }

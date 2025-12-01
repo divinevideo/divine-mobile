@@ -47,10 +47,12 @@ void main() {
       test('queries Nostr for kind 30005 events', () async {
         // Setup: Mock empty event stream
         final controller = StreamController<Event>();
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        )).thenAnswer((_) => controller.stream);
+        when(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+          ),
+        ).thenAnswer((_) => controller.stream);
 
         // Execute
         final future = curationService.refreshCurationSets();
@@ -62,10 +64,12 @@ void main() {
         await future;
 
         // Verify: Called with kind 30005 filter
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: true,
-        )).captured;
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+            bypassLimits: true,
+          ),
+        ).captured;
 
         expect(captured, isNotEmpty);
         final filters = captured[0] as List<Filter>;
@@ -92,10 +96,12 @@ void main() {
         });
 
         final controller = StreamController<Event>();
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        )).thenAnswer((_) => controller.stream);
+        when(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+          ),
+        ).thenAnswer((_) => controller.stream);
 
         // Execute
         final future = curationService.refreshCurationSets();
@@ -120,10 +126,12 @@ void main() {
         final curatorPubkeys = ['curator1', 'curator2'];
 
         final controller = StreamController<Event>();
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        )).thenAnswer((_) => controller.stream);
+        when(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+          ),
+        ).thenAnswer((_) => controller.stream);
 
         // Execute
         final future = curationService.refreshCurationSets(
@@ -134,10 +142,12 @@ void main() {
         await future;
 
         // Verify: Filter included curator pubkeys
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: true,
-        )).captured;
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+            bypassLimits: true,
+          ),
+        ).captured;
 
         final filters = captured[0] as List<Filter>;
         expect(filters[0].authors, curatorPubkeys);
@@ -173,10 +183,12 @@ void main() {
         });
 
         final controller = StreamController<Event>();
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        )).thenAnswer((_) => controller.stream);
+        when(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+          ),
+        ).thenAnswer((_) => controller.stream);
 
         final future = curationService.refreshCurationSets();
 
@@ -199,10 +211,12 @@ void main() {
 
       test('falls back to sample data when no sets found', () async {
         final controller = StreamController<Event>();
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        )).thenAnswer((_) => controller.stream);
+        when(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+          ),
+        ).thenAnswer((_) => controller.stream);
 
         final future = curationService.refreshCurationSets();
 
@@ -216,10 +230,12 @@ void main() {
       });
 
       test('handles errors gracefully and falls back to sample data', () async {
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        )).thenThrow(Exception('Connection error'));
+        when(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+          ),
+        ).thenThrow(Exception('Connection error'));
 
         // Should not throw
         await curationService.refreshCurationSets();
@@ -231,10 +247,12 @@ void main() {
       test('times out after 10 seconds', () async {
         // Setup: Never-completing stream
         final controller = StreamController<Event>();
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        )).thenAnswer((_) => controller.stream);
+        when(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+          ),
+        ).thenAnswer((_) => controller.stream);
 
         final stopwatch = Stopwatch()..start();
         await curationService.refreshCurationSets();
@@ -272,10 +290,12 @@ void main() {
         });
 
         final controller = StreamController<Event>();
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        )).thenAnswer((_) => controller.stream);
+        when(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+          ),
+        ).thenAnswer((_) => controller.stream);
 
         final future = curationService.refreshCurationSets();
 
@@ -304,10 +324,12 @@ void main() {
         });
 
         final controller = StreamController<Event>();
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        )).thenAnswer((_) => controller.stream);
+        when(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+          ),
+        ).thenAnswer((_) => controller.stream);
 
         // Should not throw
         final future = curationService.refreshCurationSets();
@@ -323,23 +345,25 @@ void main() {
     group('subscribeToCurationSets()', () {
       test('subscribes to kind 30005 events', () async {
         final controller = StreamController<Event>();
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-        )).thenAnswer((_) => controller.stream);
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => controller.stream);
 
         await curationService.subscribeToCurationSets();
 
         // Verify subscription was created
-        verify(mockNostrService.subscribeToEvents(
-          filters: argThat(
-            predicate<List<Filter>>((filters) {
-              if (filters.isEmpty) return false;
-              final kinds = filters[0].kinds;
-              return kinds != null && kinds.contains(30005);
-            }),
-            named: 'filters',
+        verify(
+          mockNostrService.subscribeToEvents(
+            filters: argThat(
+              predicate<List<Filter>>((filters) {
+                if (filters.isEmpty) return false;
+                final kinds = filters[0].kinds;
+                return kinds != null && kinds.contains(30005);
+              }),
+              named: 'filters',
+            ),
           ),
-        )).called(1);
+        ).called(1);
 
         await controller.close();
       });
@@ -361,9 +385,9 @@ void main() {
         });
 
         final controller = StreamController<Event>();
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-        )).thenAnswer((_) => controller.stream);
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => controller.stream);
 
         await curationService.subscribeToCurationSets();
 

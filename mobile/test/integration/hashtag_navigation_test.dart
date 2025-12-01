@@ -9,30 +9,31 @@ void main() {
 
   group('Hashtag Navigation Integration Tests', () {
     testWidgets(
-        'clicking hashtag navigates to explore screen with hashtag filter',
-        (tester) async {
-      // Start the app
-      app.main();
-      await tester.pumpAndSettle();
-
-      // Navigate to a screen with clickable hashtags
-      // This would need to be adapted based on the actual app flow
-
-      // Find a hashtag to click
-      final hashtagFinder = find.text('#vine').first;
-
-      if (hashtagFinder.evaluate().isNotEmpty) {
-        // Tap the hashtag
-        await tester.tap(hashtagFinder);
+      'clicking hashtag navigates to explore screen with hashtag filter',
+      (tester) async {
+        // Start the app
+        app.main();
         await tester.pumpAndSettle();
 
-        // Verify we're on the explore screen
-        expect(find.byType(ExploreScreen), findsOneWidget);
+        // Navigate to a screen with clickable hashtags
+        // This would need to be adapted based on the actual app flow
 
-        // Verify the hashtag filter is applied
-        // This would need to check the actual state of the explore screen
-      }
-    });
+        // Find a hashtag to click
+        final hashtagFinder = find.text('#vine').first;
+
+        if (hashtagFinder.evaluate().isNotEmpty) {
+          // Tap the hashtag
+          await tester.tap(hashtagFinder);
+          await tester.pumpAndSettle();
+
+          // Verify we're on the explore screen
+          expect(find.byType(ExploreScreen), findsOneWidget);
+
+          // Verify the hashtag filter is applied
+          // This would need to check the actual state of the explore screen
+        }
+      },
+    );
 
     testWidgets('hashtag navigation maintains footer', (tester) async {
       // Start the app

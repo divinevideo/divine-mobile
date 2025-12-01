@@ -44,7 +44,9 @@ void main() {
       print('🔑 Generated test keypair: ${testPublicKey}...');
 
       // Create a test video file with valid MP4 structure
-      testVideoFile = File('test_video_${DateTime.now().millisecondsSinceEpoch}.mp4');
+      testVideoFile = File(
+        'test_video_${DateTime.now().millisecondsSinceEpoch}.mp4',
+      );
       await _createValidTestMP4(testVideoFile);
     });
 
@@ -69,156 +71,184 @@ void main() {
       }
     });
 
-    test('should upload video, publish to Nostr, and verify on relay', () async {
-      // ARRANGE
-      final uploadManager = container.read(uploadManagerProvider);
-      final nostrService = container.read(nostrServiceProvider);
+    test(
+      'should upload video, publish to Nostr, and verify on relay',
+      () async {
+        // ARRANGE
+        final uploadManager = container.read(uploadManagerProvider);
+        final nostrService = container.read(nostrServiceProvider);
 
-      print('📤 Starting E2E test: upload → publish → verify');
-      print('   Test user: ${testPublicKey}...');
-      print('   Video file: ${testVideoFile.path}');
+        print('📤 Starting E2E test: upload → publish → verify');
+        print('   Test user: ${testPublicKey}...');
+        print('   Video file: ${testVideoFile.path}');
 
-      // ACT 1: Start upload (this triggers both Blossom upload AND Nostr publishing)
-      final upload = await uploadManager.startUpload(
-        videoFile: testVideoFile,
-        nostrPubkey: testPublicKey,
-        title: 'E2E Test Video',
-        description: 'This video tests the complete upload and publish flow',
-        hashtags: ['e2e', 'test', 'integration'],
-        videoDuration: const Duration(seconds: 1),
-      );
+        // ACT 1: Start upload (this triggers both Blossom upload AND Nostr publishing)
+        final upload = await uploadManager.startUpload(
+          videoFile: testVideoFile,
+          nostrPubkey: testPublicKey,
+          title: 'E2E Test Video',
+          description: 'This video tests the complete upload and publish flow',
+          hashtags: ['e2e', 'test', 'integration'],
+          videoDuration: const Duration(seconds: 1),
+        );
 
-      print('✅ Upload created: ${upload.id}');
-      print('   Status: ${upload.status}');
+        print('✅ Upload created: ${upload.id}');
+        print('   Status: ${upload.status}');
 
-      // ACT 2: Wait for upload to complete
-      // The upload happens in background, so we need to poll for completion
-      const maxWaitSeconds = 60;
-      var waitedSeconds = 0;
-      PendingUpload? updatedUpload;
+        // ACT 2: Wait for upload to complete
+        // The upload happens in background, so we need to poll for completion
+        const maxWaitSeconds = 60;
+        var waitedSeconds = 0;
+        PendingUpload? updatedUpload;
 
-      while (waitedSeconds < maxWaitSeconds) {
-        await Future.delayed(const Duration(seconds: 2));
-        waitedSeconds += 2;
+        while (waitedSeconds < maxWaitSeconds) {
+          await Future.delayed(const Duration(seconds: 2));
+          waitedSeconds += 2;
 
-        updatedUpload = uploadManager.getUpload(upload.id);
-        if (updatedUpload == null) {
-          print('❌ Upload disappeared from manager');
-          break;
+          updatedUpload = uploadManager.getUpload(upload.id);
+          if (updatedUpload == null) {
+            print('❌ Upload disappeared from manager');
+            break;
+          }
+
+          print('   Status after ${waitedSeconds}s: ${updatedUpload.status}');
+
+          if (updatedUpload.status == UploadStatus.published ||
+              updatedUpload.status == UploadStatus.readyToPublish) {
+            print('✅ Upload completed after ${waitedSeconds}s');
+            break;
+          }
+
+          if (updatedUpload.status == UploadStatus.failed) {
+            print('❌ Upload failed: ${updatedUpload.errorMessage}');
+            break;
+          }
         }
 
-        print('   Status after ${waitedSeconds}s: ${updatedUpload.status}');
+        // ASSERT 1: Upload should complete (or we accept it's in progress for slow networks)
+        expect(
+          updatedUpload,
+          isNotNull,
+          reason: 'Upload should exist in manager',
+        );
 
-        if (updatedUpload.status == UploadStatus.published ||
-            updatedUpload.status == UploadStatus.readyToPublish) {
-          print('✅ Upload completed after ${waitedSeconds}s');
-          break;
-        }
+        // For E2E test, we accept uploading/processing/published but not failed
+        final acceptableStatuses = [
+          UploadStatus.uploading,
+          UploadStatus.processing,
+          UploadStatus.readyToPublish,
+          UploadStatus.published,
+        ];
+
+        expect(
+          acceptableStatuses.contains(updatedUpload!.status),
+          isTrue,
+          reason:
+              'Upload should be in progress or completed, but was: ${updatedUpload.status}',
+        );
 
         if (updatedUpload.status == UploadStatus.failed) {
-          print('❌ Upload failed: ${updatedUpload.errorMessage}');
-          break;
+          print('⚠️  Upload failed with error: ${updatedUpload.errorMessage}');
+          print(
+            '⚠️  This is expected in test environment without real Blossom server',
+          );
+          print('⚠️  Skipping relay verification');
+          return;
         }
-      }
 
-      // ASSERT 1: Upload should complete (or we accept it's in progress for slow networks)
-      expect(updatedUpload, isNotNull, reason: 'Upload should exist in manager');
+        // ACT 3: Query the relay for the published event
+        print('🔍 Querying relay for published event...');
 
-      // For E2E test, we accept uploading/processing/published but not failed
-      final acceptableStatuses = [
-        UploadStatus.uploading,
-        UploadStatus.processing,
-        UploadStatus.readyToPublish,
-        UploadStatus.published,
-      ];
+        final filter = Filter()
+          ..kinds =
+              [34236] // NIP-71 video events
+          ..authors = [testPublicKey]
+          ..limit = 1;
 
-      expect(
-        acceptableStatuses.contains(updatedUpload!.status),
-        isTrue,
-        reason: 'Upload should be in progress or completed, but was: ${updatedUpload.status}',
-      );
+        // Subscribe to events and wait for response
+        final events = <Event>[];
+        final eventStream = nostrService.subscribeToEvents(filters: [filter]);
 
-      if (updatedUpload.status == UploadStatus.failed) {
-        print('⚠️  Upload failed with error: ${updatedUpload.errorMessage}');
-        print('⚠️  This is expected in test environment without real Blossom server');
-        print('⚠️  Skipping relay verification');
-        return;
-      }
+        final subscription = eventStream.listen((event) {
+          print('📥 Received event from relay: ${event.id}...');
+          events.add(event);
+        });
 
-      // ACT 3: Query the relay for the published event
-      print('🔍 Querying relay for published event...');
+        // Wait up to 10 seconds for event to arrive
+        await Future.delayed(const Duration(seconds: 10));
 
-      final filter = Filter()
-        ..kinds = [34236] // NIP-71 video events
-        ..authors = [testPublicKey]
-        ..limit = 1;
+        await subscription.cancel();
 
-      // Subscribe to events and wait for response
-      final events = <Event>[];
-      final eventStream = nostrService.subscribeToEvents(filters: [filter]);
+        // ASSERT 2: Event should be published to relay
+        if (events.isEmpty) {
+          print('⚠️  No events received from relay');
+          print('⚠️  This may be expected if:');
+          print('    - Blossom upload is still in progress');
+          print('    - Relay is slow to propagate events');
+          print('    - Test environment has no network access');
+          print('⚠️  Upload was created and tracked successfully');
+          return;
+        }
 
-      final subscription = eventStream.listen((event) {
-        print('📥 Received event from relay: ${event.id}...');
-        events.add(event);
-      });
+        final publishedEvent = events.first;
 
-      // Wait up to 10 seconds for event to arrive
-      await Future.delayed(const Duration(seconds: 10));
+        expect(
+          publishedEvent.kind,
+          equals(34236),
+          reason: 'Event should be NIP-71 video event',
+        );
+        expect(
+          publishedEvent.pubkey,
+          equals(testPublicKey),
+          reason: 'Event should be authored by test user',
+        );
 
-      await subscription.cancel();
+        // Verify video metadata is in the event
+        final contentTags = publishedEvent.tags.where((tag) => tag.isNotEmpty);
+        print('📋 Published event tags:');
+        for (final tag in contentTags) {
+          print('   - ${tag.join(", ")}');
+        }
 
-      // ASSERT 2: Event should be published to relay
-      if (events.isEmpty) {
-        print('⚠️  No events received from relay');
-        print('⚠️  This may be expected if:');
-        print('    - Blossom upload is still in progress');
-        print('    - Relay is slow to propagate events');
-        print('    - Test environment has no network access');
-        print('⚠️  Upload was created and tracked successfully');
-        return;
-      }
+        // Look for title in tags
+        final titleTag = publishedEvent.tags.firstWhere(
+          (tag) => tag.isNotEmpty && tag[0] == 'title',
+          orElse: () => [],
+        );
 
-      final publishedEvent = events.first;
+        if (titleTag.isNotEmpty) {
+          expect(
+            titleTag[1],
+            equals('E2E Test Video'),
+            reason: 'Event should contain correct video title',
+          );
+          print('✅ Event contains correct title: ${titleTag[1]}');
+        }
 
-      expect(publishedEvent.kind, equals(34236),
-        reason: 'Event should be NIP-71 video event');
-      expect(publishedEvent.pubkey, equals(testPublicKey),
-        reason: 'Event should be authored by test user');
+        // Look for hashtags
+        final hashtagTags = publishedEvent.tags.where(
+          (tag) => tag.isNotEmpty && tag[0] == 't',
+        );
 
-      // Verify video metadata is in the event
-      final contentTags = publishedEvent.tags.where((tag) => tag.isNotEmpty);
-      print('📋 Published event tags:');
-      for (final tag in contentTags) {
-        print('   - ${tag.join(", ")}');
-      }
+        print('📋 Found ${hashtagTags.length} hashtag tags');
+        expect(
+          hashtagTags.length,
+          greaterThanOrEqualTo(1),
+          reason: 'Event should contain hashtags',
+        );
 
-      // Look for title in tags
-      final titleTag = publishedEvent.tags.firstWhere(
-        (tag) => tag.isNotEmpty && tag[0] == 'title',
-        orElse: () => [],
-      );
-
-      if (titleTag.isNotEmpty) {
-        expect(titleTag[1], equals('E2E Test Video'),
-          reason: 'Event should contain correct video title');
-        print('✅ Event contains correct title: ${titleTag[1]}');
-      }
-
-      // Look for hashtags
-      final hashtagTags = publishedEvent.tags.where(
-        (tag) => tag.isNotEmpty && tag[0] == 't',
-      );
-
-      print('📋 Found ${hashtagTags.length} hashtag tags');
-      expect(hashtagTags.length, greaterThanOrEqualTo(1),
-        reason: 'Event should contain hashtags');
-
-      print('✅ E2E TEST PASSED: Video uploaded, published, and verified on relay!');
-    }, timeout: const Timeout(Duration(minutes: 2)));
+        print(
+          '✅ E2E TEST PASSED: Video uploaded, published, and verified on relay!',
+        );
+      },
+      timeout: const Timeout(Duration(minutes: 2)),
+    );
 
     test('should handle upload errors gracefully', () async {
       // Create an invalid video file (empty file)
-      final invalidVideoFile = File('invalid_${DateTime.now().millisecondsSinceEpoch}.mp4');
+      final invalidVideoFile = File(
+        'invalid_${DateTime.now().millisecondsSinceEpoch}.mp4',
+      );
       await invalidVideoFile.writeAsBytes([]);
 
       final uploadManager = container.read(uploadManagerProvider);
@@ -232,7 +262,9 @@ void main() {
         );
 
         // If we get here, the upload was created but will fail during processing
-        print('✅ Upload manager accepted invalid file (will fail during upload)');
+        print(
+          '✅ Upload manager accepted invalid file (will fail during upload)',
+        );
       } catch (e) {
         print('✅ Upload manager rejected invalid file: $e');
       } finally {
@@ -258,7 +290,6 @@ Future<void> _createValidTestMP4(File file) async {
     0x69, 0x73, 0x6F, 0x32, // compatible brand 'iso2'
     0x61, 0x76, 0x63, 0x31, // compatible brand 'avc1'
     0x6D, 0x70, 0x34, 0x31, // compatible brand 'mp41'
-
     // moov box (movie metadata)
     0x00, 0x00, 0x00, 0x08, // box size (8 bytes - just header)
     0x6D, 0x6F, 0x6F, 0x76, // 'moov'

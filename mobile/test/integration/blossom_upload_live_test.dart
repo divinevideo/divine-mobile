@@ -21,7 +21,8 @@ void main() {
     late INostrService nostrService;
     late File testVideoFile;
 
-    const stagingServer = 'https://cf-stream-service-staging.protestnet.workers.dev';
+    const stagingServer =
+        'https://cf-stream-service-staging.protestnet.workers.dev';
     const prodServer = 'https://cf-stream-service-prod.protestnet.workers.dev';
 
     setUpAll(() async {
@@ -109,40 +110,54 @@ void main() {
       }
 
       // Assert successful upload
-      expect(result.success, isTrue, reason: 'Upload should succeed: ${result.errorMessage}');
+      expect(
+        result.success,
+        isTrue,
+        reason: 'Upload should succeed: ${result.errorMessage}',
+      );
       expect(result.cdnUrl, isNotNull, reason: 'Should return CDN URL');
       expect(result.videoId, isNotNull, reason: 'Should return video ID');
-      expect(result.cdnUrl, contains(result.videoId!), reason: 'CDN URL should contain video ID');
-    });
-
-    test('should handle authentication with proper Blossom kind 24242 event', () async {
-      if (!authService.isAuthenticated) {
-        markTestSkipped('No authenticated user available for live test');
-        return;
-      }
-
-      print('🔐 Testing Blossom authentication (kind 24242)');
-
-      // This test verifies that our fixed authentication works
-      final result = await blossomService.uploadVideo(
-        videoFile: testVideoFile,
-        nostrPubkey: authService.currentPublicKeyHex!,
-        title: 'Auth Test',
+      expect(
+        result.cdnUrl,
+        contains(result.videoId!),
+        reason: 'CDN URL should contain video ID',
       );
-
-      // Should not get "unauthorized" error anymore
-      expect(result.errorMessage?.toLowerCase(), isNot(contains('unauthorized')),
-          reason: 'Should not get unauthorized error with proper Blossom auth');
-
-      if (!result.success) {
-        print('❌ Upload failed: ${result.errorMessage}');
-        // Print more details for debugging
-        print('🔍 Auth status: ${authService.isAuthenticated}');
-        print('🔍 Current pubkey: ${authService.currentPublicKeyHex}...');
-        print('🔍 Server: ${await blossomService.getBlossomServer()}');
-        print('🔍 Enabled: ${await blossomService.isBlossomEnabled()}');
-      }
     });
+
+    test(
+      'should handle authentication with proper Blossom kind 24242 event',
+      () async {
+        if (!authService.isAuthenticated) {
+          markTestSkipped('No authenticated user available for live test');
+          return;
+        }
+
+        print('🔐 Testing Blossom authentication (kind 24242)');
+
+        // This test verifies that our fixed authentication works
+        final result = await blossomService.uploadVideo(
+          videoFile: testVideoFile,
+          nostrPubkey: authService.currentPublicKeyHex!,
+          title: 'Auth Test',
+        );
+
+        // Should not get "unauthorized" error anymore
+        expect(
+          result.errorMessage?.toLowerCase(),
+          isNot(contains('unauthorized')),
+          reason: 'Should not get unauthorized error with proper Blossom auth',
+        );
+
+        if (!result.success) {
+          print('❌ Upload failed: ${result.errorMessage}');
+          // Print more details for debugging
+          print('🔍 Auth status: ${authService.isAuthenticated}');
+          print('🔍 Current pubkey: ${authService.currentPublicKeyHex}...');
+          print('🔍 Server: ${await blossomService.getBlossomServer()}');
+          print('🔍 Enabled: ${await blossomService.isBlossomEnabled()}');
+        }
+      },
+    );
 
     test('should work with production server as fallback', () async {
       if (!authService.isAuthenticated) {
@@ -170,8 +185,11 @@ void main() {
 
       // Don't require success since prod might have different restrictions
       // Just verify we're not getting auth errors
-      expect(result.errorMessage?.toLowerCase(), isNot(contains('unauthorized')),
-          reason: 'Should not get unauthorized error with proper Blossom auth');
+      expect(
+        result.errorMessage?.toLowerCase(),
+        isNot(contains('unauthorized')),
+        reason: 'Should not get unauthorized error with proper Blossom auth',
+      );
     });
   });
 }

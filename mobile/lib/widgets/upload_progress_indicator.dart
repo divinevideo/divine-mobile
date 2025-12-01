@@ -29,62 +29,62 @@ class UploadProgressIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    child: InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            upload.title ?? 'Video Upload',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            upload.statusText,
-                            style: TextStyle(
-                              color: _getStatusColor(context),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        upload.title ?? 'Video Upload',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    _buildStatusIcon(),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        upload.statusText,
+                        style: TextStyle(
+                          color: _getStatusColor(context),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 8),
-                _buildProgressBar(),
-                if (showActions &&
-                    (upload.canRetry ||
-                        upload.status == UploadStatus.uploading ||
-                        upload.status == UploadStatus.paused ||
-                        upload.status == UploadStatus.failed))
-                  const SizedBox(height: 8),
-                if (showActions &&
-                    (upload.canRetry ||
-                        upload.status == UploadStatus.uploading ||
-                        upload.status == UploadStatus.paused ||
-                        upload.status == UploadStatus.failed))
-                  _buildActionButtons(),
+                _buildStatusIcon(),
               ],
             ),
-          ),
+            const SizedBox(height: 8),
+            _buildProgressBar(),
+            if (showActions &&
+                (upload.canRetry ||
+                    upload.status == UploadStatus.uploading ||
+                    upload.status == UploadStatus.paused ||
+                    upload.status == UploadStatus.failed))
+              const SizedBox(height: 8),
+            if (showActions &&
+                (upload.canRetry ||
+                    upload.status == UploadStatus.uploading ||
+                    upload.status == UploadStatus.paused ||
+                    upload.status == UploadStatus.failed))
+              _buildActionButtons(),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _buildStatusIcon() {
     switch (upload.status) {
@@ -100,8 +100,10 @@ class UploadProgressIndicator extends StatelessWidget {
         return const SizedBox(
           width: 20,
           height: 20,
-          child:
-              CircularProgressIndicator(strokeWidth: 2, color: Colors.orange),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.orange,
+          ),
         );
       case UploadStatus.processing:
         return const Icon(Icons.settings, color: Colors.blue);
@@ -145,74 +147,72 @@ class UploadProgressIndicator extends StatelessWidget {
   }
 
   Widget _buildActionButtons() => Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          if (upload.status == UploadStatus.uploading && onPause != null)
-            ElevatedButton.icon(
-              onPressed: onPause,
-              icon: const Icon(Icons.pause),
-              label: const Text('Pause'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
+    mainAxisAlignment: MainAxisAlignment.end,
+    children: [
+      if (upload.status == UploadStatus.uploading && onPause != null)
+        ElevatedButton.icon(
+          onPressed: onPause,
+          icon: const Icon(Icons.pause),
+          label: const Text('Pause'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+          ),
+        ),
+      if (upload.status == UploadStatus.paused && onResume != null)
+        ElevatedButton.icon(
+          onPressed: onResume,
+          icon: const Icon(Icons.play_arrow),
+          label: const Text('Resume'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+          ),
+        ),
+      if (upload.status == UploadStatus.failed) ...[
+        if (onCancel != null) ...[
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: onCancel,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey[700],
+              foregroundColor: Colors.white,
             ),
-          if (upload.status == UploadStatus.paused && onResume != null)
-            ElevatedButton.icon(
-              onPressed: onResume,
-              icon: const Icon(Icons.play_arrow),
-              label: const Text('Resume'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          if (upload.status == UploadStatus.failed) ...[
-            if (onCancel != null) ...[
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: onCancel,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[700],
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Go Back'),
-              ),
-            ],
-            if (onRetry != null && upload.canRetry) ...[
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: onRetry,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                ),
-                child: Text('Retry (${3 - (upload.retryCount ?? 0)} left)'),
-              ),
-            ],
-            if (onDelete != null) ...[
-              const SizedBox(width: 8),
-              TextButton(
-                onPressed: onDelete,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
-                ),
-                child: const Text('Delete'),
-              ),
-            ],
-          ] else if (upload.canRetry && onRetry != null) ...[
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-              ),
-              child: Text('Retry (${3 - (upload.retryCount ?? 0)} left)'),
-            ),
-          ],
+            child: const Text('Go Back'),
+          ),
         ],
-      );
+        if (onRetry != null && upload.canRetry) ...[
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: onRetry,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Retry (${3 - (upload.retryCount ?? 0)} left)'),
+          ),
+        ],
+        if (onDelete != null) ...[
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: onDelete,
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ] else if (upload.canRetry && onRetry != null) ...[
+        const SizedBox(width: 8),
+        ElevatedButton(
+          onPressed: onRetry,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+          ),
+          child: Text('Retry (${3 - (upload.retryCount ?? 0)} left)'),
+        ),
+      ],
+    ],
+  );
 
   Color _getStatusColor(BuildContext context) {
     switch (upload.status) {
@@ -274,54 +274,47 @@ class UploadProgressIndicator extends StatelessWidget {
 
 /// Compact version of upload progress for notifications
 class CompactUploadProgress extends StatelessWidget {
-  const CompactUploadProgress({
-    required this.upload,
-    super.key,
-    this.onTap,
-  });
+  const CompactUploadProgress({required this.upload, super.key, this.onTap});
   final PendingUpload upload;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  value: upload.progressValue,
-                  strokeWidth: 2,
-                  backgroundColor: Colors.grey[600],
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    upload.status == UploadStatus.failed
-                        ? Colors.red
-                        : Colors.white,
-                  ),
-                ),
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              value: upload.progressValue,
+              strokeWidth: 2,
+              backgroundColor: Colors.grey[600],
+              valueColor: AlwaysStoppedAnimation<Color>(
+                upload.status == UploadStatus.failed
+                    ? Colors.red
+                    : Colors.white,
               ),
-              const SizedBox(width: 8),
-              Text(
-                upload.status == UploadStatus.uploading
-                    ? 'Uploading ${(upload.progressValue * 100).toInt()}%'
-                    : upload.status == UploadStatus.paused
-                        ? 'Paused ${(upload.progressValue * 100).toInt()}%'
-                        : upload.statusText,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      );
+          const SizedBox(width: 8),
+          Text(
+            upload.status == UploadStatus.uploading
+                ? 'Uploading ${(upload.progressValue * 100).toInt()}%'
+                : upload.status == UploadStatus.paused
+                ? 'Paused ${(upload.progressValue * 100).toInt()}%'
+                : upload.statusText,
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+          ),
+        ],
+      ),
+    ),
+  );
 }

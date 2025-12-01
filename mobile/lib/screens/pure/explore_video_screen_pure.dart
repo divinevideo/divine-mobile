@@ -30,13 +30,15 @@ class ExploreVideoScreenPure extends ConsumerStatefulWidget {
   final int? startingIndex;
   final VoidCallback? onLoadMore;
   final void Function(int index)? onNavigate;
+
   /// When true, manages active video state locally instead of via URL routing.
   /// Used for custom contexts like lists that don't have router support.
   /// When true, videos will auto-play based on page position without URL changes.
   final bool useLocalActiveState;
 
   @override
-  ConsumerState<ExploreVideoScreenPure> createState() => _ExploreVideoScreenPureState();
+  ConsumerState<ExploreVideoScreenPure> createState() =>
+      _ExploreVideoScreenPureState();
 }
 
 class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
@@ -49,8 +51,11 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
     super.initState();
 
     // Find starting video index in the tab-specific list passed from parent
-    _initialIndex = widget.startingIndex ??
-        widget.videoList.indexWhere((video) => video.id == widget.startingVideo.id);
+    _initialIndex =
+        widget.startingIndex ??
+        widget.videoList.indexWhere(
+          (video) => video.id == widget.startingVideo.id,
+        );
 
     if (_initialIndex == -1) {
       _initialIndex = 0; // Fallback to first video
@@ -58,15 +63,20 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
 
     _currentPage = _initialIndex;
 
-    Log.info('🎯 ExploreVideoScreenPure: Initialized with ${widget.videoList.length} videos, starting at index $_initialIndex, useLocalActiveState=${widget.useLocalActiveState}',
-        category: LogCategory.video);
+    Log.info(
+      '🎯 ExploreVideoScreenPure: Initialized with ${widget.videoList.length} videos, starting at index $_initialIndex, useLocalActiveState=${widget.useLocalActiveState}',
+      category: LogCategory.video,
+    );
   }
 
   @override
   void dispose() {
     // Router-driven state - no manual cleanup needed, URL navigation handles it
-    Log.info('🛑 ExploreVideoScreenPure disposing - router handles state cleanup',
-        name: 'ExploreVideoScreen', category: LogCategory.video);
+    Log.info(
+      '🛑 ExploreVideoScreenPure disposing - router handles state cleanup',
+      name: 'ExploreVideoScreen',
+      category: LogCategory.video,
+    );
     super.dispose();
   }
 
@@ -91,54 +101,59 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
     return Container(
       color: Colors.black,
       child: PageView.builder(
-          itemCount: videos.length,
-          controller: PageController(initialPage: _initialIndex),
-          scrollDirection: Axis.vertical,
-          onPageChanged: (index) {
-            Log.debug('📄 Page changed to index $index (${videos[index].id}...)',
-                name: 'ExploreVideoScreen', category: LogCategory.video);
+        itemCount: videos.length,
+        controller: PageController(initialPage: _initialIndex),
+        scrollDirection: Axis.vertical,
+        onPageChanged: (index) {
+          Log.debug(
+            '📄 Page changed to index $index (${videos[index].id}...)',
+            name: 'ExploreVideoScreen',
+            category: LogCategory.video,
+          );
 
-            // Update current page for local state management
-            if (widget.useLocalActiveState) {
-              setState(() {
-                _currentPage = index;
-              });
-            }
+          // Update current page for local state management
+          if (widget.useLocalActiveState) {
+            setState(() {
+              _currentPage = index;
+            });
+          }
 
-            // Update URL to trigger reactive video playback via router
-            // Use custom navigation callback if provided, otherwise default to explore
-            // Skip URL navigation when using local active state
-            if (widget.onNavigate != null) {
-              widget.onNavigate!(index);
-            } else if (!widget.useLocalActiveState) {
-              context.goExplore(index);
-            }
+          // Update URL to trigger reactive video playback via router
+          // Use custom navigation callback if provided, otherwise default to explore
+          // Skip URL navigation when using local active state
+          if (widget.onNavigate != null) {
+            widget.onNavigate!(index);
+          } else if (!widget.useLocalActiveState) {
+            context.goExplore(index);
+          }
 
-            // Trigger pagination when near the end if callback provided
-            if (widget.onLoadMore != null) {
-              checkForPagination(
-                currentIndex: index,
-                totalItems: videos.length,
-                onLoadMore: widget.onLoadMore!,
-              );
-            }
-
-            // Prefetch videos around current index
-            checkForPrefetch(currentIndex: index, videos: videos);
-          },
-          itemBuilder: (context, index) {
-            return VideoFeedItem(
-              key: ValueKey('video-${videos[index].id}'),
-              video: videos[index],
-              index: index,
-              hasBottomNavigation: false,
-              contextTitle: widget.contextTitle,
-              // When using local active state, override provider-based activation
-              isActiveOverride: widget.useLocalActiveState ? (_currentPage == index) : null,
-              disableTapNavigation: widget.useLocalActiveState,
+          // Trigger pagination when near the end if callback provided
+          if (widget.onLoadMore != null) {
+            checkForPagination(
+              currentIndex: index,
+              totalItems: videos.length,
+              onLoadMore: widget.onLoadMore!,
             );
-          },
-        ),
+          }
+
+          // Prefetch videos around current index
+          checkForPrefetch(currentIndex: index, videos: videos);
+        },
+        itemBuilder: (context, index) {
+          return VideoFeedItem(
+            key: ValueKey('video-${videos[index].id}'),
+            video: videos[index],
+            index: index,
+            hasBottomNavigation: false,
+            contextTitle: widget.contextTitle,
+            // When using local active state, override provider-based activation
+            isActiveOverride: widget.useLocalActiveState
+                ? (_currentPage == index)
+                : null,
+            disableTapNavigation: widget.useLocalActiveState,
+          );
+        },
+      ),
     );
   }
 }

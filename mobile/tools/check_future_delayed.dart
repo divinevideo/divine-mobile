@@ -83,8 +83,10 @@ Future<void> _checkFile(
       }
 
       final context = _getContext(lines, i);
-      violations.add('${file.path}:$lineNumber - ${line.trim()}\n'
-          '  Context:\n$context\n');
+      violations.add(
+        '${file.path}:$lineNumber - ${line.trim()}\n'
+        '  Context:\n$context\n',
+      );
     }
   }
 }

@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/app_router.dart';
-import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/pure/search_screen_pure.dart';
 
 void main() {
@@ -15,8 +14,12 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          nostrServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          videoEventServiceProvider.overrideWith((ref) => throw UnimplementedError()),
+          nostrServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
+          videoEventServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
         ],
       );
 
@@ -44,11 +47,7 @@ void main() {
 
     testWidgets('Search screen has search bar and tabs', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: SearchScreenPure(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: SearchScreenPure())),
       );
 
       await tester.pumpAndSettle();
@@ -67,8 +66,12 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          nostrServiceProvider.overrideWith((ref) => throw UnimplementedError()),
-          videoEventServiceProvider.overrideWith((ref) => throw UnimplementedError()),
+          nostrServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
+          videoEventServiceProvider.overrideWith(
+            (ref) => throw UnimplementedError(),
+          ),
         ],
       );
 

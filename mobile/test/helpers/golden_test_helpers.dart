@@ -77,16 +77,10 @@ class GoldenTestHelper {
     List<double> sizes = const [16, 24, 32, 48, 64, 96],
     int columns = 3,
   }) async {
-    final builder = GoldenBuilder.grid(
-      columns: columns,
-      widthToHeightRatio: 1,
-    );
+    final builder = GoldenBuilder.grid(columns: columns, widthToHeightRatio: 1);
 
     for (final size in sizes) {
-      builder.addScenario(
-        '${size.toInt()}px',
-        widgetBuilder(size),
-      );
+      builder.addScenario('${size.toInt()}px', widgetBuilder(size));
     }
 
     await tester.pumpWidgetBuilder(
@@ -105,15 +99,10 @@ class GoldenTestHelper {
     bool useScaffold = true,
   }) async {
     final testWidget = useScaffold
-        ? Scaffold(
-            body: Center(child: widget),
-          )
+        ? Scaffold(body: Center(child: widget))
         : widget;
 
-    await tester.pumpWidgetBuilder(
-      testWidget,
-      wrapper: materialAppWrapper(),
-    );
+    await tester.pumpWidgetBuilder(testWidget, wrapper: materialAppWrapper());
 
     await multiScreenGolden(
       tester,
@@ -131,13 +120,14 @@ class GoldenTestHelper {
     required Widget errorState,
     Widget? emptyState,
   }) async {
-    final builder = GoldenBuilder.grid(
-      columns: emptyState != null ? 2 : 3,
-      widthToHeightRatio: 1,
-    )
-      ..addScenario('Loading', loadingState)
-      ..addScenario('Success', successState)
-      ..addScenario('Error', errorState);
+    final builder =
+        GoldenBuilder.grid(
+            columns: emptyState != null ? 2 : 3,
+            widthToHeightRatio: 1,
+          )
+          ..addScenario('Loading', loadingState)
+          ..addScenario('Success', successState)
+          ..addScenario('Error', errorState);
 
     if (emptyState != null) {
       builder.addScenario('Empty', emptyState);
@@ -213,21 +203,14 @@ extension GoldenTestExtensions on WidgetTester {
 
 /// Convenience wrapper for creating themed widgets
 class ThemedWidget extends StatelessWidget {
-  const ThemedWidget({
-    super.key,
-    required this.child,
-    this.theme,
-  });
+  const ThemedWidget({super.key, required this.child, this.theme});
 
   final Widget child;
   final ThemeData? theme;
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: theme ?? Theme.of(context),
-      child: child,
-    );
+    return Theme(data: theme ?? Theme.of(context), child: child);
   }
 }
 
@@ -259,10 +242,7 @@ class GoldenScenarioBuilder {
     required String goldenName,
     int columns = 3,
   }) async {
-    final builder = GoldenBuilder.grid(
-      columns: columns,
-      widthToHeightRatio: 1,
-    );
+    final builder = GoldenBuilder.grid(columns: columns, widthToHeightRatio: 1);
 
     for (final scenario in _scenarios) {
       builder.addScenario(scenario.label, scenario.widget);

@@ -89,20 +89,15 @@ void main() {
       test('throws error when transitioning from disposed', () {
         final disposedState = VideoState(event: testEvent).toDisposed();
 
-        expect(
-          disposedState.toLoading,
-          throwsA(isA<StateError>()),
-        );
+        expect(disposedState.toLoading, throwsA(isA<StateError>()));
       });
 
       test('throws error when transitioning from permanently failed', () {
-        final permFailedState =
-            VideoState(event: testEvent).toPermanentlyFailed('Permanent error');
+        final permFailedState = VideoState(
+          event: testEvent,
+        ).toPermanentlyFailed('Permanent error');
 
-        expect(
-          permFailedState.toLoading,
-          throwsA(isA<StateError>()),
-        );
+        expect(permFailedState.toLoading, throwsA(isA<StateError>()));
       });
     });
 
@@ -116,7 +111,9 @@ void main() {
         expect(readyState.retryCount, equals(0));
         expect(readyState.isReady, isTrue);
         expect(
-            readyState.lastUpdated.isAfter(loadingState.lastUpdated), isTrue);
+          readyState.lastUpdated.isAfter(loadingState.lastUpdated),
+          isTrue,
+        );
       });
 
       test('throws error when transitioning from non-loading states', () {
@@ -156,8 +153,10 @@ void main() {
 
         // Fourth failure should go to permanently failed
         final permFailedState = state.toFailed('Error 4');
-        expect(permFailedState.loadingState,
-            equals(VideoLoadingState.permanentlyFailed));
+        expect(
+          permFailedState.loadingState,
+          equals(VideoLoadingState.permanentlyFailed),
+        );
         expect(permFailedState.errorMessage, equals('Error 4'));
         expect(permFailedState.retryCount, equals(3));
         expect(permFailedState.canRetry, isFalse);
@@ -173,8 +172,9 @@ void main() {
       });
 
       test('throws error when transitioning from permanently failed', () {
-        final permFailedState =
-            VideoState(event: testEvent).toPermanentlyFailed('Permanent error');
+        final permFailedState = VideoState(
+          event: testEvent,
+        ).toPermanentlyFailed('Permanent error');
 
         expect(
           () => permFailedState.toFailed('Another error'),
@@ -188,8 +188,10 @@ void main() {
         final state = VideoState(event: testEvent);
         final permFailedState = state.toPermanentlyFailed('Critical error');
 
-        expect(permFailedState.loadingState,
-            equals(VideoLoadingState.permanentlyFailed));
+        expect(
+          permFailedState.loadingState,
+          equals(VideoLoadingState.permanentlyFailed),
+        );
         expect(permFailedState.errorMessage, equals('Critical error'));
         expect(permFailedState.retryCount, equals(0));
         expect(permFailedState.hasFailed, isTrue);
@@ -213,14 +215,17 @@ void main() {
           VideoState(event: testEvent).toLoading(), // loading
           VideoState(event: testEvent).toLoading().toReady(), // ready
           VideoState(event: testEvent).toFailed('Error'), // failed
-          VideoState(event: testEvent)
-              .toPermanentlyFailed('Error'), // permanentlyFailed
+          VideoState(
+            event: testEvent,
+          ).toPermanentlyFailed('Error'), // permanentlyFailed
         ];
 
         for (final state in states) {
           final disposedState = state.toDisposed();
           expect(
-              disposedState.loadingState, equals(VideoLoadingState.disposed));
+            disposedState.loadingState,
+            equals(VideoLoadingState.disposed),
+          );
           expect(disposedState.isDisposed, isTrue);
           expect(disposedState.lastUpdated.isAfter(state.lastUpdated), isTrue);
         }
@@ -229,10 +234,7 @@ void main() {
       test('throws error when already disposed', () {
         final disposedState = VideoState(event: testEvent).toDisposed();
 
-        expect(
-          disposedState.toDisposed,
-          throwsA(isA<StateError>()),
-        );
+        expect(disposedState.toDisposed, throwsA(isA<StateError>()));
       });
     });
 
@@ -242,8 +244,9 @@ void main() {
         final loadingState = notLoadedState.toLoading();
         final readyState = loadingState.toReady();
         final failedState = VideoState(event: testEvent).toFailed('Error');
-        final permFailedState =
-            VideoState(event: testEvent).toPermanentlyFailed('Error');
+        final permFailedState = VideoState(
+          event: testEvent,
+        ).toPermanentlyFailed('Error');
         final disposedState = VideoState(event: testEvent).toDisposed();
 
         expect(notLoadedState.isLoading, isFalse);
@@ -274,8 +277,10 @@ void main() {
         // After max retries, should transition to permanently failed
         final finalState = state.toFailed('Final error');
         expect(finalState.canRetry, isFalse);
-        expect(finalState.loadingState,
-            equals(VideoLoadingState.permanentlyFailed));
+        expect(
+          finalState.loadingState,
+          equals(VideoLoadingState.permanentlyFailed),
+        );
       });
     });
 
@@ -334,20 +339,27 @@ void main() {
         expect(disposedState.toLoading, throwsA(isA<StateError>()));
         expect(disposedState.toReady, throwsA(isA<StateError>()));
         expect(
-            () => disposedState.toFailed('Error'), throwsA(isA<StateError>()));
-        expect(() => disposedState.toPermanentlyFailed('Error'),
-            throwsA(isA<StateError>()));
+          () => disposedState.toFailed('Error'),
+          throwsA(isA<StateError>()),
+        );
+        expect(
+          () => disposedState.toPermanentlyFailed('Error'),
+          throwsA(isA<StateError>()),
+        );
         expect(disposedState.toDisposed, throwsA(isA<StateError>()));
       });
 
       test('permanently failed state cannot transition to other states', () {
-        final permFailedState =
-            VideoState(event: testEvent).toPermanentlyFailed('Permanent error');
+        final permFailedState = VideoState(
+          event: testEvent,
+        ).toPermanentlyFailed('Permanent error');
 
         expect(permFailedState.toLoading, throwsA(isA<StateError>()));
         expect(permFailedState.toReady, throwsA(isA<StateError>()));
-        expect(() => permFailedState.toFailed('Error'),
-            throwsA(isA<StateError>()));
+        expect(
+          () => permFailedState.toFailed('Error'),
+          throwsA(isA<StateError>()),
+        );
 
         // Can still dispose permanently failed state
         expect(permFailedState.toDisposed, returnsNormally);
@@ -400,20 +412,21 @@ void main() {
       });
 
       test(
-          'full lifecycle with failure: notLoaded -> loading -> failed -> loading -> ready',
-          () {
-        var state = VideoState(event: testEvent);
+        'full lifecycle with failure: notLoaded -> loading -> failed -> loading -> ready',
+        () {
+          var state = VideoState(event: testEvent);
 
-        // First attempt fails
-        state = state.toLoading().toFailed('Network error');
-        expect(state.loadingState, equals(VideoLoadingState.failed));
-        expect(state.retryCount, equals(1));
+          // First attempt fails
+          state = state.toLoading().toFailed('Network error');
+          expect(state.loadingState, equals(VideoLoadingState.failed));
+          expect(state.retryCount, equals(1));
 
-        // Retry succeeds
-        state = state.toLoading().toReady();
-        expect(state.loadingState, equals(VideoLoadingState.ready));
-        expect(state.retryCount, equals(1)); // Count preserved
-      });
+          // Retry succeeds
+          state = state.toLoading().toReady();
+          expect(state.loadingState, equals(VideoLoadingState.ready));
+          expect(state.retryCount, equals(1)); // Count preserved
+        },
+      );
     });
   });
 }

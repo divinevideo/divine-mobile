@@ -8,11 +8,11 @@ import 'package:openvine/router/app_router.dart';
 
 void main() {
   Widget shell(ProviderContainer c) => UncontrolledProviderScope(
-        container: c,
-        child: ProviderScope(
-          child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
-        ),
-      );
+    container: c,
+    child: ProviderScope(
+      child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+    ),
+  );
 
   testWidgets('Header shows Divine on home', (tester) async {
     final c = ProviderContainer();
@@ -30,12 +30,12 @@ void main() {
     await tester.pumpWidget(shell(c));
     c.read(goRouterProvider).go('/explore/0');
     await tester.pump();
-    await tester.pump();  // Extra pump for provider updates
+    await tester.pump(); // Extra pump for provider updates
     // Find specifically in AppBar (not bottom nav)
-    expect(find.descendant(
-      of: find.byType(AppBar),
-      matching: find.text('Explore'),
-    ), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Explore')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Header shows #tag on hashtag', (tester) async {
@@ -54,10 +54,10 @@ void main() {
     c.read(goRouterProvider).go('/profile/npubXYZ/0');
     await tester.pump();
     // Find specifically in AppBar (not bottom nav)
-    expect(find.descendant(
-      of: find.byType(AppBar),
-      matching: find.text('Profile'),
-    ), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Profile')),
+      findsOneWidget,
+    );
   });
 
   group('Back button visibility', () {

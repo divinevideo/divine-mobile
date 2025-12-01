@@ -7,11 +7,7 @@ void main() {
   group('AgeVerificationDialog', () {
     testWidgets('should display all required elements', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: AgeVerificationDialog(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: AgeVerificationDialog())),
       );
 
       // Check for icon
@@ -23,7 +19,8 @@ void main() {
       // Check for explanation text
       expect(
         find.text(
-            'To use the camera and create content, you must be at least 16 years old.'),
+          'To use the camera and create content, you must be at least 16 years old.',
+        ),
         findsOneWidget,
       );
 
@@ -35,8 +32,9 @@ void main() {
       expect(find.text('Yes, I am 16+'), findsOneWidget);
     });
 
-    testWidgets('should return false when No button is pressed',
-        (tester) async {
+    testWidgets('should return false when No button is pressed', (
+      tester,
+    ) async {
       bool? result;
 
       await tester.pumpWidget(
@@ -67,8 +65,9 @@ void main() {
       expect(result, false);
     });
 
-    testWidgets('should return true when Yes button is pressed',
-        (tester) async {
+    testWidgets('should return true when Yes button is pressed', (
+      tester,
+    ) async {
       bool? result;
 
       await tester.pumpWidget(
@@ -131,11 +130,7 @@ void main() {
 
     testWidgets('should use VineTheme colors', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: AgeVerificationDialog(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: AgeVerificationDialog())),
       );
 
       // Check that the icon uses VineTheme green color
@@ -152,11 +147,7 @@ void main() {
 
     testWidgets('should have proper dialog constraints', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: AgeVerificationDialog(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: AgeVerificationDialog())),
       );
 
       // Find the Container with constraints

@@ -18,26 +18,37 @@ import 'package:openvine/utils/video_controller_cleanup.dart';
 /// Route-aware: switches feed provider based on route type
 final activeVideoIdProvider = Provider<String?>((ref) {
   // Check app foreground state - be defensive and require explicit foreground signal
-  final isFg = ref.watch(appForegroundProvider).maybeWhen(
-    data: (v) => v,
-    orElse: () => false,  // Default to background if provider not ready
-  );
+  final isFg = ref
+      .watch(appForegroundProvider)
+      .maybeWhen(
+        data: (v) => v,
+        orElse: () => false, // Default to background if provider not ready
+      );
   if (!isFg) {
-    Log.debug('[ACTIVE] ❌ App not in foreground',
-        name: 'ActiveVideoProvider', category: LogCategory.system);
+    Log.debug(
+      '[ACTIVE] ❌ App not in foreground',
+      name: 'ActiveVideoProvider',
+      category: LogCategory.system,
+    );
     return null;
   }
 
   // Get current page context from router
   final ctx = ref.watch(pageContextProvider).asData?.value;
   if (ctx == null) {
-    Log.debug('[ACTIVE] ❌ No page context available',
-        name: 'ActiveVideoProvider', category: LogCategory.system);
+    Log.debug(
+      '[ACTIVE] ❌ No page context available',
+      name: 'ActiveVideoProvider',
+      category: LogCategory.system,
+    );
     return null;
   }
 
-  Log.debug('[ACTIVE] 📍 Route context: type=${ctx.type}, videoIndex=${ctx.videoIndex}',
-      name: 'ActiveVideoProvider', category: LogCategory.system);
+  Log.debug(
+    '[ACTIVE] 📍 Route context: type=${ctx.type}, videoIndex=${ctx.videoIndex}',
+    name: 'ActiveVideoProvider',
+    category: LogCategory.system,
+  );
 
   // Select feed provider based on route type
   AsyncValue<VideoFeedState> videosAsync;
@@ -64,8 +75,11 @@ final activeVideoIdProvider = Provider<String?>((ref) {
     case RouteType.drafts:
     case RouteType.importKey:
       // Non-video routes - return null
-      Log.debug('[ACTIVE] ❌ Non-video route: ${ctx.type}',
-          name: 'ActiveVideoProvider', category: LogCategory.system);
+      Log.debug(
+        '[ACTIVE] ❌ Non-video route: ${ctx.type}',
+        name: 'ActiveVideoProvider',
+        category: LogCategory.system,
+      );
       return null;
   }
 
@@ -74,19 +88,28 @@ final activeVideoIdProvider = Provider<String?>((ref) {
     orElse: () => const <VideoEvent>[],
   );
 
-  Log.debug('[ACTIVE] 📊 Feed state: videosAsync.hasValue=${videosAsync.hasValue}, videos.length=${videos.length}',
-      name: 'ActiveVideoProvider', category: LogCategory.system);
+  Log.debug(
+    '[ACTIVE] 📊 Feed state: videosAsync.hasValue=${videosAsync.hasValue}, videos.length=${videos.length}',
+    name: 'ActiveVideoProvider',
+    category: LogCategory.system,
+  );
 
   if (videos.isEmpty) {
-    Log.debug('[ACTIVE] ❌ No videos in feed',
-        name: 'ActiveVideoProvider', category: LogCategory.system);
+    Log.debug(
+      '[ACTIVE] ❌ No videos in feed',
+      name: 'ActiveVideoProvider',
+      category: LogCategory.system,
+    );
     return null;
   }
 
   // Grid mode (no videoIndex) - no active video
   if (ctx.videoIndex == null) {
-    Log.debug('[ACTIVE] ❌ Grid mode (no videoIndex)',
-        name: 'ActiveVideoProvider', category: LogCategory.system);
+    Log.debug(
+      '[ACTIVE] ❌ Grid mode (no videoIndex)',
+      name: 'ActiveVideoProvider',
+      category: LogCategory.system,
+    );
     return null;
   }
 
@@ -94,8 +117,11 @@ final activeVideoIdProvider = Provider<String?>((ref) {
   final idx = ctx.videoIndex!.clamp(0, videos.length - 1);
   final activeVideoId = videos[idx].id;
 
-  Log.info('[ACTIVE] ✅ Active video at index $idx: $activeVideoId',
-      name: 'ActiveVideoProvider', category: LogCategory.system);
+  Log.info(
+    '[ACTIVE] ✅ Active video at index $idx: $activeVideoId',
+    name: 'ActiveVideoProvider',
+    category: LogCategory.system,
+  );
 
   return activeVideoId;
 });
@@ -114,23 +140,19 @@ final videoControllerAutoCleanupProvider = Provider<void>((ref) {
   String? previousActiveVideoId;
 
   // Listen to active video changes and dispose all controllers when it changes
-  ref.listen<String?>(
-    activeVideoIdProvider,
-    (previous, next) {
-      // When active video changes, dispose all controllers to ensure clean state
-      if (previous != next && previous != null) {
-        Log.info(
-          '🧹 Active video changed ($previous → $next), disposing all video controllers',
-          name: 'VideoControllerCleanup',
-          category: LogCategory.video,
-        );
+  ref.listen<String?>(activeVideoIdProvider, (previous, next) {
+    // When active video changes, dispose all controllers to ensure clean state
+    if (previous != next && previous != null) {
+      Log.info(
+        '🧹 Active video changed ($previous → $next), disposing all video controllers',
+        name: 'VideoControllerCleanup',
+        category: LogCategory.video,
+      );
 
-        // Dispose all controllers to force clean state
-        // The new active video will create its controller fresh
-        disposeAllVideoControllers(ref.container);
-      }
-      previousActiveVideoId = next;
-    },
-    fireImmediately: false,
-  );
+      // Dispose all controllers to force clean state
+      // The new active video will create its controller fresh
+      disposeAllVideoControllers(ref.container);
+    }
+    previousActiveVideoId = next;
+  }, fireImmediately: false);
 });

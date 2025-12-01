@@ -42,8 +42,9 @@ void main() {
       container = ProviderContainer(
         overrides: [
           videoEventsNostrServiceProvider.overrideWithValue(mockNostrService),
-          videoEventsSubscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          videoEventsSubscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
         ],
       );
     });
@@ -58,9 +59,10 @@ void main() {
 
       // Mock stream controller for events
       final streamController = StreamController<Event>();
-      when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters')))
-          .thenAnswer((_) => streamController.stream);
+      when(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).thenAnswer((_) => streamController.stream);
 
       // Start listening to the provider
       final subscription = container.listen(
@@ -73,9 +75,8 @@ void main() {
 
       // Verify subscription was created with correct filter
       verify(
-        () => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'),
-        ),
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
       ).called(1);
 
       subscription.close();
@@ -84,18 +85,25 @@ void main() {
 
     test('should filter events based on following mode', () async {
       // Setup following list
-      container
-          .read(social.socialProvider.notifier)
-          .updateFollowingList(['pubkey1', 'pubkey2']);
+      container.read(social.socialProvider.notifier).updateFollowingList([
+        'pubkey1',
+        'pubkey2',
+      ]);
 
       // Setup mock Nostr service
       when(() => mockNostrService.isInitialized).thenReturn(true);
 
       final streamController = StreamController<Event>();
-      when(() => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'))).thenAnswer((invocation) {
+      when(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).thenAnswer((invocation) {
         final filters = invocation.namedArguments[#filters] as List<Filter>;
-        expect(filters, isNotEmpty, reason: 'Filters list should contain at least one filter');
+        expect(
+          filters,
+          isNotEmpty,
+          reason: 'Filters list should contain at least one filter',
+        );
         final filter = filters.first;
 
         // Verify filter has correct authors
@@ -121,10 +129,17 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
 
       final streamController = StreamController<Event>();
-      when(() => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'))).thenAnswer((invocation) {
+      when(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).thenAnswer((invocation) {
         final filters = invocation.namedArguments[#filters] as List<Filter>;
-        expect(filters, isNotEmpty, reason: 'Filters list should contain at least one filter for classic vines fallback');
+        expect(
+          filters,
+          isNotEmpty,
+          reason:
+              'Filters list should contain at least one filter for classic vines fallback',
+        );
         final filter = filters.first;
 
         // Should use classic vines pubkey as fallback
@@ -157,9 +172,10 @@ void main() {
       ]);
 
       final streamController = StreamController<Event>();
-      when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters')))
-          .thenAnswer((_) => streamController.stream);
+      when(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).thenAnswer((_) => streamController.stream);
 
       // Track state changes
       final states = <AsyncValue<List<VideoEvent>>>[];
@@ -271,30 +287,28 @@ void main() {
         }
       }
 
-      when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters')))
-          .thenAnswer((_) => createEventStream());
+      when(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).thenAnswer((_) => createEventStream());
 
       // Track state changes
       final states = <AsyncValue<List<VideoEvent>>>[];
       final completer = Completer<void>();
 
-      container.listen(
-        videoEventsProvider,
-        (previous, next) {
-          states.add(next);
-          Log.info(
-              'New state: ${next.hasValue ? "Data(${next.value!.length})" : next}');
+      container.listen(videoEventsProvider, (previous, next) {
+        states.add(next);
+        Log.info(
+          'New state: ${next.hasValue ? "Data(${next.value!.length})" : next}',
+        );
 
-          // Complete when we have all 3 events
-          if (next.hasValue && next.value!.length == 3) {
-            if (!completer.isCompleted) {
-              completer.complete();
-            }
+        // Complete when we have all 3 events
+        if (next.hasValue && next.value!.length == 3) {
+          if (!completer.isCompleted) {
+            completer.complete();
           }
-        },
-        fireImmediately: true,
-      );
+        }
+      }, fireImmediately: true);
 
       // Force provider to start by reading it
       final _ = container.read(videoEventsProvider);
@@ -318,7 +332,8 @@ void main() {
           Log.info('State $i: AsyncData with ${state.value!.length} videos');
           if (state.value!.isNotEmpty) {
             Log.info(
-                '  Video IDs: ${state.value!.map((e) => e.id).join(', ')}');
+              '  Video IDs: ${state.value!.map((e) => e.id).join(', ')}',
+            );
           }
         } else {
           Log.info('State $i: $state');
@@ -326,19 +341,28 @@ void main() {
       }
 
       // Verify basic stream functionality works correctly
-      expect(states.length, greaterThanOrEqualTo(2),
-          reason: 'Should have at least initial loading and data states');
+      expect(
+        states.length,
+        greaterThanOrEqualTo(2),
+        reason: 'Should have at least initial loading and data states',
+      );
 
       // Find the last state with data
       final dataStates = states.where((s) => s.hasValue).toList();
-      expect(dataStates.isNotEmpty, isTrue,
-          reason: 'Should have at least one data state');
+      expect(
+        dataStates.isNotEmpty,
+        isTrue,
+        reason: 'Should have at least one data state',
+      );
 
       // Note: Stream accumulation works in practice, but test timing is complex due to
       // asynchronous nature of stream providers. The core functionality is verified by other tests.
       final finalState = dataStates.last;
-      expect(finalState.value, isA<List<VideoEvent>>(),
-          reason: 'Should have video event list');
+      expect(
+        finalState.value,
+        isA<List<VideoEvent>>(),
+        reason: 'Should have video event list',
+      );
 
       // TODO: Improve test timing to reliably test stream accumulation in future iterations
     });
@@ -347,9 +371,10 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
 
       final streamController = StreamController<Event>();
-      when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters')))
-          .thenAnswer((_) => streamController.stream);
+      when(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).thenAnswer((_) => streamController.stream);
 
       // Track state changes
       final states = <AsyncValue<List<VideoEvent>>>[];

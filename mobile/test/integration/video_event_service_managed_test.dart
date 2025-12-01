@@ -28,14 +28,18 @@ void main() {
       // Mock NostrService
       when(mockNostrService.isInitialized).thenReturn(true);
       when(mockNostrService.connectedRelayCount).thenReturn(1);
-      when(mockNostrService.subscribeToEvents(
-              filters: anyNamed('filters'),
-              bypassLimits: anyNamed('bypassLimits')))
-          .thenAnswer((_) => testEventController.stream);
+      when(
+        mockNostrService.subscribeToEvents(
+          filters: anyNamed('filters'),
+          bypassLimits: anyNamed('bypassLimits'),
+        ),
+      ).thenAnswer((_) => testEventController.stream);
 
       subscriptionManager = SubscriptionManager(mockNostrService);
-      videoEventService = VideoEventService(mockNostrService,
-          subscriptionManager: subscriptionManager);
+      videoEventService = VideoEventService(
+        mockNostrService,
+        subscriptionManager: subscriptionManager,
+      );
     });
 
     tearDown(() {
@@ -44,38 +48,53 @@ void main() {
       subscriptionManager.dispose();
     });
 
-    test('VideoEventService should use SubscriptionManager for main video feed',
-        () async {
-      Log.debug('🔍 Testing VideoEventService uses SubscriptionManager...',
-          name: 'VideoEventServiceManagedTest', category: LogCategory.system);
+    test(
+      'VideoEventService should use SubscriptionManager for main video feed',
+      () async {
+        Log.debug(
+          '🔍 Testing VideoEventService uses SubscriptionManager...',
+          name: 'VideoEventServiceManagedTest',
+          category: LogCategory.system,
+        );
 
-      // Subscribe to video feed - this should use SubscriptionManager now
-      await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery, limit: 3);
+        // Subscribe to video feed - this should use SubscriptionManager now
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+          limit: 3,
+        );
 
-      // Verify subscription was created
-      expect(videoEventService.isSubscribed(SubscriptionType.discovery), true);
+        // Verify subscription was created
+        expect(
+          videoEventService.isSubscribed(SubscriptionType.discovery),
+          true,
+        );
 
-      // Send a test event
-      final testEvent = Event(
-        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        22,
-        [
-          ['url', 'https://example.com/test.mp4']
-        ],
-        'Test video',
-      );
+        // Send a test event
+        final testEvent = Event(
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          22,
+          [
+            ['url', 'https://example.com/test.mp4'],
+          ],
+          'Test video',
+        );
 
-      testEventController.add(testEvent);
-      await Future.delayed(Duration(milliseconds: 100));
+        testEventController.add(testEvent);
+        await Future.delayed(Duration(milliseconds: 100));
 
-      // VideoEventService should have received the event through SubscriptionManager
-      expect(videoEventService.hasEvents(SubscriptionType.discovery), true);
-      expect(videoEventService.getEventCount(SubscriptionType.discovery),
-          greaterThan(0));
+        // VideoEventService should have received the event through SubscriptionManager
+        expect(videoEventService.hasEvents(SubscriptionType.discovery), true);
+        expect(
+          videoEventService.getEventCount(SubscriptionType.discovery),
+          greaterThan(0),
+        );
 
-      Log.info('✅ VideoEventService successfully uses SubscriptionManager',
-          name: 'VideoEventServiceManagedTest', category: LogCategory.system);
-    });
+        Log.info(
+          '✅ VideoEventService successfully uses SubscriptionManager',
+          name: 'VideoEventServiceManagedTest',
+          category: LogCategory.system,
+        );
+      },
+    );
   });
 }

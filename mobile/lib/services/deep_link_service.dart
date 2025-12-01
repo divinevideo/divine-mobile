@@ -6,13 +6,7 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:app_links/app_links.dart';
 
 /// Types of deep links supported by the app
-enum DeepLinkType {
-  video,
-  profile,
-  hashtag,
-  search,
-  unknown,
-}
+enum DeepLinkType { video, profile, hashtag, search, unknown }
 
 /// Represents a parsed deep link
 class DeepLink {
@@ -67,22 +61,31 @@ class DeepLinkService {
       // Check if app was opened via deep link
       final initialUri = await _appLinks.getInitialLink();
       if (initialUri != null) {
-        Log.info('📱 App opened with deep link: $initialUri',
-            name: 'DeepLinkService', category: LogCategory.ui);
+        Log.info(
+          '📱 App opened with deep link: $initialUri',
+          name: 'DeepLinkService',
+          category: LogCategory.ui,
+        );
         final deepLink = parseDeepLink(initialUri.toString());
         _controller.add(deepLink);
       }
 
       // Listen for deep links while app is running
       _subscription = _appLinks.uriLinkStream.listen((uri) {
-        Log.info('📱 Received deep link while running: $uri',
-            name: 'DeepLinkService', category: LogCategory.ui);
+        Log.info(
+          '📱 Received deep link while running: $uri',
+          name: 'DeepLinkService',
+          category: LogCategory.ui,
+        );
         final deepLink = parseDeepLink(uri.toString());
         _controller.add(deepLink);
       });
     } catch (e) {
-      Log.error('Error initializing deep link service: $e',
-          name: 'DeepLinkService', category: LogCategory.ui);
+      Log.error(
+        'Error initializing deep link service: $e',
+        name: 'DeepLinkService',
+        category: LogCategory.ui,
+      );
     }
   }
 
@@ -93,8 +96,11 @@ class DeepLinkService {
 
       // Only handle divine.video domain
       if (uri.host != 'divine.video') {
-        Log.warning('Ignoring deep link from non-divine.video domain: ${uri.host}',
-            name: 'DeepLinkService', category: LogCategory.ui);
+        Log.warning(
+          'Ignoring deep link from non-divine.video domain: ${uri.host}',
+          name: 'DeepLinkService',
+          category: LogCategory.ui,
+        );
         return const DeepLink(type: DeepLinkType.unknown);
       }
 
@@ -103,8 +109,11 @@ class DeepLinkService {
       // Handle /video/{videoId}
       if (pathSegments.length == 2 && pathSegments[0] == 'video') {
         final videoId = pathSegments[1];
-        Log.info('📱 Parsed video deep link: $videoId',
-            name: 'DeepLinkService', category: LogCategory.ui);
+        Log.info(
+          '📱 Parsed video deep link: $videoId',
+          name: 'DeepLinkService',
+          category: LogCategory.ui,
+        );
         return DeepLink(type: DeepLinkType.video, videoId: videoId);
       }
 
@@ -112,9 +121,14 @@ class DeepLinkService {
       if ((pathSegments.length == 2 || pathSegments.length == 3) &&
           pathSegments[0] == 'profile') {
         final npub = pathSegments[1];
-        final index = pathSegments.length == 3 ? int.tryParse(pathSegments[2]) : null;
-        Log.info('📱 Parsed profile deep link: $npub${index != null ? " (index: $index)" : ""}',
-            name: 'DeepLinkService', category: LogCategory.ui);
+        final index = pathSegments.length == 3
+            ? int.tryParse(pathSegments[2])
+            : null;
+        Log.info(
+          '📱 Parsed profile deep link: $npub${index != null ? " (index: $index)" : ""}',
+          name: 'DeepLinkService',
+          category: LogCategory.ui,
+        );
         return DeepLink(type: DeepLinkType.profile, npub: npub, index: index);
       }
 
@@ -122,28 +136,52 @@ class DeepLinkService {
       if ((pathSegments.length == 2 || pathSegments.length == 3) &&
           pathSegments[0] == 'hashtag') {
         final hashtag = pathSegments[1];
-        final index = pathSegments.length == 3 ? int.tryParse(pathSegments[2]) : null;
-        Log.info('📱 Parsed hashtag deep link: $hashtag${index != null ? " (index: $index)" : ""}',
-            name: 'DeepLinkService', category: LogCategory.ui);
-        return DeepLink(type: DeepLinkType.hashtag, hashtag: hashtag, index: index);
+        final index = pathSegments.length == 3
+            ? int.tryParse(pathSegments[2])
+            : null;
+        Log.info(
+          '📱 Parsed hashtag deep link: $hashtag${index != null ? " (index: $index)" : ""}',
+          name: 'DeepLinkService',
+          category: LogCategory.ui,
+        );
+        return DeepLink(
+          type: DeepLinkType.hashtag,
+          hashtag: hashtag,
+          index: index,
+        );
       }
 
       // Handle /search/{term} or /search/{term}/{index}
       if ((pathSegments.length == 2 || pathSegments.length == 3) &&
           pathSegments[0] == 'search') {
         final searchTerm = pathSegments[1];
-        final index = pathSegments.length == 3 ? int.tryParse(pathSegments[2]) : null;
-        Log.info('📱 Parsed search deep link: $searchTerm${index != null ? " (index: $index)" : ""}',
-            name: 'DeepLinkService', category: LogCategory.ui);
-        return DeepLink(type: DeepLinkType.search, searchTerm: searchTerm, index: index);
+        final index = pathSegments.length == 3
+            ? int.tryParse(pathSegments[2])
+            : null;
+        Log.info(
+          '📱 Parsed search deep link: $searchTerm${index != null ? " (index: $index)" : ""}',
+          name: 'DeepLinkService',
+          category: LogCategory.ui,
+        );
+        return DeepLink(
+          type: DeepLinkType.search,
+          searchTerm: searchTerm,
+          index: index,
+        );
       }
 
-      Log.warning('Unknown deep link path: ${uri.path}',
-          name: 'DeepLinkService', category: LogCategory.ui);
+      Log.warning(
+        'Unknown deep link path: ${uri.path}',
+        name: 'DeepLinkService',
+        category: LogCategory.ui,
+      );
       return const DeepLink(type: DeepLinkType.unknown);
     } catch (e) {
-      Log.error('Error parsing deep link: $e',
-          name: 'DeepLinkService', category: LogCategory.ui);
+      Log.error(
+        'Error parsing deep link: $e',
+        name: 'DeepLinkService',
+        category: LogCategory.ui,
+      );
       return const DeepLink(type: DeepLinkType.unknown);
     }
   }

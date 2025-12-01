@@ -48,11 +48,13 @@ void main() {
       // Mock NostrService as initialized
       when(mockNostrService.isInitialized).thenReturn(true);
       when(mockNostrService.connectedRelayCount).thenReturn(1);
-      when(mockNostrService.subscribeToEvents(
-        filters: anyNamed('filters'),
-        bypassLimits: anyNamed('bypassLimits'),
-        onEose: anyNamed('onEose'),
-      )).thenAnswer((_) => eventStreamController.stream);
+      when(
+        mockNostrService.subscribeToEvents(
+          filters: anyNamed('filters'),
+          bypassLimits: anyNamed('bypassLimits'),
+          onEose: anyNamed('onEose'),
+        ),
+      ).thenAnswer((_) => eventStreamController.stream);
 
       // Create real VideoFilterBuilder with mocked RelayCapabilityService
       filterBuilder = VideoFilterBuilder(mockRelayCapabilityService);
@@ -85,9 +87,11 @@ void main() {
           maxLimit: 200,
         );
 
-        when(mockRelayCapabilityService
-                .getRelayCapabilities(AppConstants.defaultRelayUrl))
-            .thenAnswer((_) async => divineCapabilities);
+        when(
+          mockRelayCapabilityService.getRelayCapabilities(
+            AppConstants.defaultRelayUrl,
+          ),
+        ).thenAnswer((_) async => divineCapabilities);
       });
 
       test('uses server-side sorting for trending (loop_count desc)', () async {
@@ -98,11 +102,13 @@ void main() {
         );
 
         // Verify subscribeToEvents was called
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).captured;
 
         expect(captured.isNotEmpty, true);
         final filters = captured[0] as List<Filter>;
@@ -110,8 +116,11 @@ void main() {
 
         // Check that filter includes sort field
         final filterJson = filters[0].toJson();
-        expect(filterJson['sort'], isNotNull,
-            reason: 'Filter should include sort field');
+        expect(
+          filterJson['sort'],
+          isNotNull,
+          reason: 'Filter should include sort field',
+        );
         expect(filterJson['sort']['field'], 'loop_count');
         expect(filterJson['sort']['dir'], 'desc');
         expect(filterJson['limit'], 50);
@@ -124,11 +133,13 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).captured;
 
         final filters = captured[0] as List<Filter>;
         final filterJson = filters[0].toJson();
@@ -144,11 +155,13 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).captured;
 
         final filters = captured[0] as List<Filter>;
         final filterJson = filters[0].toJson();
@@ -164,11 +177,13 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).captured;
 
         final filters = captured[0] as List<Filter>;
         final filterJson = filters[0].toJson();
@@ -186,11 +201,13 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).captured;
 
         final filters = captured[0] as List<Filter>;
         final filterJson = filters[0].toJson();
@@ -209,18 +226,23 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).captured;
 
         final filters = captured[0] as List<Filter>;
         final filterJson = filters[0].toJson();
 
         // Should NOT have sort field
-        expect(filterJson.containsKey('sort'), false,
-            reason: 'Standard filter should not include sort field');
+        expect(
+          filterJson.containsKey('sort'),
+          false,
+          reason: 'Standard filter should not include sort field',
+        );
         expect(filterJson['limit'], 50);
       });
     });
@@ -235,34 +257,43 @@ void main() {
           hasDivineExtensions: false,
         );
 
-        when(mockRelayCapabilityService
-                .getRelayCapabilities(AppConstants.defaultRelayUrl))
-            .thenAnswer((_) async => standardCapabilities);
+        when(
+          mockRelayCapabilityService.getRelayCapabilities(
+            AppConstants.defaultRelayUrl,
+          ),
+        ).thenAnswer((_) async => standardCapabilities);
       });
 
-      test('falls back to standard filter when relay does not support divine extensions',
-          () async {
-        await service.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery,
-          sortBy: VideoSortField.loopCount, // Request sorting
-          limit: 50,
-        );
+      test(
+        'falls back to standard filter when relay does not support divine extensions',
+        () async {
+          await service.subscribeToVideoFeed(
+            subscriptionType: SubscriptionType.discovery,
+            sortBy: VideoSortField.loopCount, // Request sorting
+            limit: 50,
+          );
 
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+          final captured = verify(
+            mockNostrService.subscribeToEvents(
+              filters: captureAnyNamed('filters'),
+              bypassLimits: anyNamed('bypassLimits'),
+              onEose: anyNamed('onEose'),
+            ),
+          ).captured;
 
-        final filters = captured[0] as List<Filter>;
-        final filterJson = filters[0].toJson();
+          final filters = captured[0] as List<Filter>;
+          final filterJson = filters[0].toJson();
 
-        // Should NOT have sort field (fallback to standard)
-        expect(filterJson.containsKey('sort'), false,
+          // Should NOT have sort field (fallback to standard)
+          expect(
+            filterJson.containsKey('sort'),
+            false,
             reason:
-                'Should fall back to standard filter when relay does not support divine extensions');
-        expect(filterJson['limit'], 50);
-      });
+                'Should fall back to standard filter when relay does not support divine extensions',
+          );
+          expect(filterJson['limit'], 50);
+        },
+      );
 
       test('still subscribes successfully with standard filter', () async {
         await service.subscribeToVideoFeed(
@@ -272,76 +303,93 @@ void main() {
         );
 
         // Should still call subscribeToEvents (with standard filter)
-        verify(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).called(1);
+        verify(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).called(1);
       });
     });
 
     group('Error Handling', () {
-      test('falls back to standard filter when capability check fails',
-          () async {
-        // Mock capability check failure
-        when(mockRelayCapabilityService
-                .getRelayCapabilities(AppConstants.defaultRelayUrl))
-            .thenThrow(RelayCapabilityException(
-          'Network error',
-          AppConstants.defaultRelayUrl,
-        ));
+      test(
+        'falls back to standard filter when capability check fails',
+        () async {
+          // Mock capability check failure
+          when(
+            mockRelayCapabilityService.getRelayCapabilities(
+              AppConstants.defaultRelayUrl,
+            ),
+          ).thenThrow(
+            RelayCapabilityException(
+              'Network error',
+              AppConstants.defaultRelayUrl,
+            ),
+          );
 
-        await service.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery,
-          sortBy: VideoSortField.loopCount,
-          limit: 50,
-        );
+          await service.subscribeToVideoFeed(
+            subscriptionType: SubscriptionType.discovery,
+            sortBy: VideoSortField.loopCount,
+            limit: 50,
+          );
 
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+          final captured = verify(
+            mockNostrService.subscribeToEvents(
+              filters: captureAnyNamed('filters'),
+              bypassLimits: anyNamed('bypassLimits'),
+              onEose: anyNamed('onEose'),
+            ),
+          ).captured;
 
-        final filters = captured[0] as List<Filter>;
-        final filterJson = filters[0].toJson();
+          final filters = captured[0] as List<Filter>;
+          final filterJson = filters[0].toJson();
 
-        // Should fall back to standard filter
-        expect(filterJson.containsKey('sort'), false);
-      });
+          // Should fall back to standard filter
+          expect(filterJson.containsKey('sort'), false);
+        },
+      );
 
-      test('works without VideoFilterBuilder (backward compatibility)',
-          () async {
-        // Create service WITHOUT VideoFilterBuilder
-        final serviceWithoutBuilder = VideoEventService(
-          mockNostrService,
-          subscriptionManager: mockSubscriptionManager,
-          userProfileService: mockUserProfileService,
-          eventRouter: mockEventRouter,
-          // No videoFilterBuilder parameter
-        );
+      test(
+        'works without VideoFilterBuilder (backward compatibility)',
+        () async {
+          // Create service WITHOUT VideoFilterBuilder
+          final serviceWithoutBuilder = VideoEventService(
+            mockNostrService,
+            subscriptionManager: mockSubscriptionManager,
+            userProfileService: mockUserProfileService,
+            eventRouter: mockEventRouter,
+            // No videoFilterBuilder parameter
+          );
 
-        await serviceWithoutBuilder.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery,
-          sortBy: VideoSortField.loopCount, // Request sorting
-          limit: 50,
-        );
+          await serviceWithoutBuilder.subscribeToVideoFeed(
+            subscriptionType: SubscriptionType.discovery,
+            sortBy: VideoSortField.loopCount, // Request sorting
+            limit: 50,
+          );
 
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+          final captured = verify(
+            mockNostrService.subscribeToEvents(
+              filters: captureAnyNamed('filters'),
+              bypassLimits: anyNamed('bypassLimits'),
+              onEose: anyNamed('onEose'),
+            ),
+          ).captured;
 
-        final filters = captured[0] as List<Filter>;
-        final filterJson = filters[0].toJson();
+          final filters = captured[0] as List<Filter>;
+          final filterJson = filters[0].toJson();
 
-        // Should use standard filter (builder not available)
-        expect(filterJson.containsKey('sort'), false,
-            reason: 'Should work without builder for backward compatibility');
+          // Should use standard filter (builder not available)
+          expect(
+            filterJson.containsKey('sort'),
+            false,
+            reason: 'Should work without builder for backward compatibility',
+          );
 
-        serviceWithoutBuilder.dispose();
-      });
+          serviceWithoutBuilder.dispose();
+        },
+      );
     });
 
     group('Multiple Subscription Types', () {
@@ -355,9 +403,11 @@ void main() {
           intFilterFields: ['loop_count', 'likes', 'views'],
         );
 
-        when(mockRelayCapabilityService
-                .getRelayCapabilities(AppConstants.defaultRelayUrl))
-            .thenAnswer((_) async => divineCapabilities);
+        when(
+          mockRelayCapabilityService.getRelayCapabilities(
+            AppConstants.defaultRelayUrl,
+          ),
+        ).thenAnswer((_) async => divineCapabilities);
       });
 
       test('works with home feed subscription', () async {
@@ -368,11 +418,13 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).captured;
 
         final filters = captured[0] as List<Filter>;
         final filterJson = filters[0].toJson();
@@ -389,11 +441,13 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).captured;
 
         final filters = captured[0] as List<Filter>;
         final filterJson = filters[0].toJson();
@@ -410,11 +464,13 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).captured;
 
         final filters = captured[0] as List<Filter>;
         final filterJson = filters[0].toJson();

@@ -27,12 +27,18 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
   @override
   Future<void> initialize() async {
     try {
-      Log.info('Initializing enhanced mobile camera interface...',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        'Initializing enhanced mobile camera interface...',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
 
       _availableCameras = await availableCameras();
-      Log.info('Found ${_availableCameras.length} available cameras',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        'Found ${_availableCameras.length} available cameras',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
 
       if (_availableCameras.isEmpty) {
         throw Exception('No cameras available - check camera permissions');
@@ -46,16 +52,25 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
         _currentCameraIndex = 0;
       }
 
-      Log.info('Selected camera $_currentCameraIndex: ${_availableCameras[_currentCameraIndex].name}',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        'Selected camera $_currentCameraIndex: ${_availableCameras[_currentCameraIndex].name}',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
 
       await _initializeCurrentCamera();
 
-      Log.info('Enhanced mobile camera initialized successfully',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        'Enhanced mobile camera initialized successfully',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Enhanced mobile camera initialization failed: $e',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.error(
+        'Enhanced mobile camera initialization failed: $e',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -65,8 +80,11 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
 
     try {
       final camera = _availableCameras[_currentCameraIndex];
-      Log.info('Initializing camera controller for: ${camera.name}',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        'Initializing camera controller for: ${camera.name}',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
 
       _controller = CameraController(
         camera,
@@ -76,17 +94,26 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
       );
 
       await _controller!.initialize();
-      Log.info('Camera controller initialized successfully',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        'Camera controller initialized successfully',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
 
       // Lock camera orientation to portrait up to prevent preview rotation
       await _controller!.lockCaptureOrientation(DeviceOrientation.portraitUp);
-      Log.info('Camera orientation locked to portrait up',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        'Camera orientation locked to portrait up',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
 
       await _controller!.prepareForVideoRecording();
-      Log.info('Video recording preparation complete',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        'Video recording preparation complete',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
 
       // Initialize zoom levels
       _minZoomLevel = await _controller!.getMinZoomLevel();
@@ -97,20 +124,31 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
       await _controller!.setFlashMode(_currentFlashMode);
 
       Log.info(
-          'Enhanced camera initialized - Zoom range: $_minZoomLevel to $_maxZoomLevel',
-          name: 'EnhancedMobileCamera',
-          category: LogCategory.system);
+        'Enhanced camera initialized - Zoom range: $_minZoomLevel to $_maxZoomLevel',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Camera controller initialization failed: $e',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.error(
+        'Camera controller initialization failed: $e',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
 
       // Provide more specific error messages
-      if (e.toString().contains('CameraAccessDenied') || e.toString().contains('permission')) {
-        throw Exception('Camera permission denied. Please enable camera access in iOS Settings > Privacy & Security > Camera.');
+      if (e.toString().contains('CameraAccessDenied') ||
+          e.toString().contains('permission')) {
+        throw Exception(
+          'Camera permission denied. Please enable camera access in iOS Settings > Privacy & Security > Camera.',
+        );
       } else if (e.toString().contains('CameraInUse')) {
-        throw Exception('Camera is currently in use by another app. Please close other camera apps and try again.');
+        throw Exception(
+          'Camera is currently in use by another app. Please close other camera apps and try again.',
+        );
       } else if (e.toString().contains('CameraNotFound')) {
-        throw Exception('Camera not found. This may happen on iOS Simulator - please test on a real device.');
+        throw Exception(
+          'Camera not found. This may happen on iOS Simulator - please test on a real device.',
+        );
       }
 
       rethrow;
@@ -127,22 +165,31 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
     final isActuallyRecording = _controller!.value.isRecordingVideo;
 
     if (_isRecording && isActuallyRecording) {
-      Log.warning('Already recording, skipping startVideoRecording',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.warning(
+        'Already recording, skipping startVideoRecording',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
       return;
     }
 
     // State recovery: if we think we're recording but camera says no, reset our state
     if (_isRecording && !isActuallyRecording) {
-      Log.warning('State desync detected - resetting recording state',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.warning(
+        'State desync detected - resetting recording state',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
       _isRecording = false;
     }
 
     // State recovery: if camera is recording but we think it's not, align our state
     if (!_isRecording && isActuallyRecording) {
-      Log.warning('Camera already recording - aligning state',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.warning(
+        'Camera already recording - aligning state',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
       _isRecording = true;
       return;
     }
@@ -150,13 +197,19 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
     try {
       await _controller!.startVideoRecording();
       _isRecording = true;
-      Log.info('Started enhanced camera recording',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        'Started enhanced camera recording',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
     } catch (e) {
       // Handle "Video is already recording" exception by aligning our state
       if (e.toString().contains('Video is already recording')) {
-        Log.info('Camera is already recording - aligning our state to continue with existing recording',
-            name: 'EnhancedMobileCamera', category: LogCategory.system);
+        Log.info(
+          'Camera is already recording - aligning our state to continue with existing recording',
+          name: 'EnhancedMobileCamera',
+          category: LogCategory.system,
+        );
 
         // Align our internal state with the camera's actual state
         _isRecording = true;
@@ -166,8 +219,11 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
       }
 
       _isRecording = false;
-      Log.error('Failed to start enhanced camera recording: $e',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.error(
+        'Failed to start enhanced camera recording: $e',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -182,22 +238,31 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
     final isActuallyRecording = _controller!.value.isRecordingVideo;
 
     if (!_isRecording && !isActuallyRecording) {
-      Log.warning('Not currently recording, skipping stopVideoRecording',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.warning(
+        'Not currently recording, skipping stopVideoRecording',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
       return null;
     }
 
     // State recovery: if we think we're not recording but camera says yes, align our state
     if (!_isRecording && isActuallyRecording) {
-      Log.warning('Camera is recording but state says no - aligning state',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.warning(
+        'Camera is recording but state says no - aligning state',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
       _isRecording = true;
     }
 
     // State recovery: if camera is not recording but we think it is, reset our state
     if (_isRecording && !isActuallyRecording) {
-      Log.warning('State desync detected - camera not recording, resetting state',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.warning(
+        'State desync detected - camera not recording, resetting state',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
       _isRecording = false;
       return null;
     }
@@ -205,21 +270,31 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
     try {
       final xFile = await _controller!.stopVideoRecording();
       _isRecording = false;
-      Log.info('Stopped enhanced camera recording: ${xFile.path}',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        'Stopped enhanced camera recording: ${xFile.path}',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
       return xFile.path;
     } catch (e) {
       _isRecording = false;
 
       // Handle common camera exceptions gracefully
-      if (e.toString().contains('not recording') || e.toString().contains('VideoRecordingNotStarted')) {
-        Log.warning('Camera was not recording when stop requested - state aligned',
-            name: 'EnhancedMobileCamera', category: LogCategory.system);
+      if (e.toString().contains('not recording') ||
+          e.toString().contains('VideoRecordingNotStarted')) {
+        Log.warning(
+          'Camera was not recording when stop requested - state aligned',
+          name: 'EnhancedMobileCamera',
+          category: LogCategory.system,
+        );
         return null;
       }
 
-      Log.error('Failed to stop enhanced camera recording: $e',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.error(
+        'Failed to stop enhanced camera recording: $e',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -229,8 +304,11 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
     if (_availableCameras.length <= 1) return;
 
     if (_controller == null || !_controller!.value.isInitialized) {
-      Log.warning('Cannot switch camera - controller not initialized',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.warning(
+        'Cannot switch camera - controller not initialized',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -238,8 +316,11 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
       try {
         await _controller?.stopVideoRecording();
       } catch (e) {
-        Log.error('Error stopping recording during camera switch: $e',
-            name: 'EnhancedMobileCamera', category: LogCategory.system);
+        Log.error(
+          'Error stopping recording during camera switch: $e',
+          name: 'EnhancedMobileCamera',
+          category: LogCategory.system,
+        );
       }
       _isRecording = false;
     }
@@ -258,12 +339,18 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
       // Now initialize the new camera
       await _initializeCurrentCamera();
 
-      Log.info('✅ Successfully switched to camera $_currentCameraIndex',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        '✅ Successfully switched to camera $_currentCameraIndex',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
     } catch (e) {
       _controller = oldController;
-      Log.error('Camera switch failed, restored previous camera: $e',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.error(
+        'Camera switch failed, restored previous camera: $e',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -288,7 +375,9 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00B488)), // Vine green
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(0xFF00B488),
+              ), // Vine green
               strokeWidth: 3.0,
             ),
             SizedBox(height: 16),
@@ -321,10 +410,12 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
 
   /// Check if currently using front camera
   bool get isFrontCamera {
-    if (_availableCameras.isEmpty || _currentCameraIndex >= _availableCameras.length) {
+    if (_availableCameras.isEmpty ||
+        _currentCameraIndex >= _availableCameras.length) {
       return false;
     }
-    return _availableCameras[_currentCameraIndex].lensDirection == CameraLensDirection.front;
+    return _availableCameras[_currentCameraIndex].lensDirection ==
+        CameraLensDirection.front;
   }
 
   /// Set flash mode directly
@@ -335,11 +426,17 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
       _currentFlashMode = mode;
       await _controller!.setFlashMode(mode);
 
-      Log.info('Flash mode set to $mode',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        'Flash mode set to $mode',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to set flash mode: $e',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.error(
+        'Failed to set flash mode: $e',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -349,8 +446,11 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
       try {
         _controller?.stopVideoRecording();
       } catch (e) {
-        Log.error('Error stopping recording during disposal: $e',
-            name: 'EnhancedMobileCamera', category: LogCategory.system);
+        Log.error(
+          'Error stopping recording during disposal: $e',
+          name: 'EnhancedMobileCamera',
+          category: LogCategory.system,
+        );
       }
       _isRecording = false;
     }
@@ -366,11 +466,17 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
       await _controller!.setZoomLevel(clampedZoom);
       _currentZoomLevel = clampedZoom;
 
-      Log.debug('Set zoom level to ${clampedZoom.toStringAsFixed(1)}x',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.debug(
+        'Set zoom level to ${clampedZoom.toStringAsFixed(1)}x',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to set zoom: $e',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.error(
+        'Failed to set zoom: $e',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -383,12 +489,16 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
       await _controller!.setExposurePoint(point);
 
       Log.debug(
-          'Set focus/exposure point to: (${point.dx.toStringAsFixed(2)}, ${point.dy.toStringAsFixed(2)})',
-          name: 'EnhancedMobileCamera',
-          category: LogCategory.system);
+        'Set focus/exposure point to: (${point.dx.toStringAsFixed(2)}, ${point.dy.toStringAsFixed(2)})',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to set focus point: $e',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.error(
+        'Failed to set focus point: $e',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -400,16 +510,22 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
       _currentFlashMode = _currentFlashMode == FlashMode.off
           ? FlashMode.auto
           : (_currentFlashMode == FlashMode.auto
-              ? FlashMode.torch
-              : FlashMode.off);
+                ? FlashMode.torch
+                : FlashMode.off);
 
       await _controller!.setFlashMode(_currentFlashMode);
 
-      Log.info('Flash mode changed to $_currentFlashMode',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.info(
+        'Flash mode changed to $_currentFlashMode',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to toggle flash: $e',
-          name: 'EnhancedMobileCamera', category: LogCategory.system);
+      Log.error(
+        'Failed to toggle flash: $e',
+        name: 'EnhancedMobileCamera',
+        category: LogCategory.system,
+      );
     }
   }
 }

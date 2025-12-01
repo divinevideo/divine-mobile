@@ -12,7 +12,8 @@ import 'package:openvine/utils/unified_logger.dart';
 /// Crash reporting service for production error tracking
 class CrashReportingService {
   static CrashReportingService? _instance;
-  static CrashReportingService get instance => _instance ??= CrashReportingService._();
+  static CrashReportingService get instance =>
+      _instance ??= CrashReportingService._();
 
   CrashReportingService._();
 
@@ -31,8 +32,10 @@ class CrashReportingService {
       // Pass all uncaught errors from the framework to Crashlytics
       FlutterError.onError = (errorDetails) {
         // Log locally first
-        Log.error('Flutter framework error: ${errorDetails.exception}',
-            name: 'CrashReporting');
+        Log.error(
+          'Flutter framework error: ${errorDetails.exception}',
+          name: 'CrashReporting',
+        );
 
         // Send to Crashlytics
         FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
@@ -49,36 +52,52 @@ class CrashReportingService {
       };
 
       // Catch errors in other isolates
-      Isolate.current.addErrorListener(RawReceivePort((pair) async {
-        final List<dynamic> errorAndStacktrace = pair;
-        await FirebaseCrashlytics.instance.recordError(
-          errorAndStacktrace.first,
-          errorAndStacktrace.last,
-          fatal: true,
-        );
-      }).sendPort);
+      Isolate.current.addErrorListener(
+        RawReceivePort((pair) async {
+          final List<dynamic> errorAndStacktrace = pair;
+          await FirebaseCrashlytics.instance.recordError(
+            errorAndStacktrace.first,
+            errorAndStacktrace.last,
+            fatal: true,
+          );
+        }).sendPort,
+      );
 
       // Set custom keys for debugging
-      await FirebaseCrashlytics.instance.setCustomKey('environment',
-          const String.fromEnvironment('ENVIRONMENT', defaultValue: 'production'));
-      await FirebaseCrashlytics.instance.setCustomKey('build_mode',
-          kDebugMode ? 'debug' : 'release');
+      await FirebaseCrashlytics.instance.setCustomKey(
+        'environment',
+        const String.fromEnvironment('ENVIRONMENT', defaultValue: 'production'),
+      );
+      await FirebaseCrashlytics.instance.setCustomKey(
+        'build_mode',
+        kDebugMode ? 'debug' : 'release',
+      );
 
       // Enable crash collection for all environments (including TestFlight/production)
-      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+        !kDebugMode,
+      );
 
       _initialized = true;
-      Log.info('Crash reporting initialized successfully', name: 'CrashReporting');
+      Log.info(
+        'Crash reporting initialized successfully',
+        name: 'CrashReporting',
+      );
     } catch (e) {
-      Log.error('Failed to initialize crash reporting: $e', name: 'CrashReporting');
+      Log.error(
+        'Failed to initialize crash reporting: $e',
+        name: 'CrashReporting',
+      );
       // Don't throw - app should continue even if crash reporting fails
     }
   }
 
-  
-
   /// Log a non-fatal error to Crashlytics
-  Future<void> recordError(dynamic exception, StackTrace? stack, {String? reason}) async {
+  Future<void> recordError(
+    dynamic exception,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
     if (!_initialized) return;
 
     try {
@@ -89,7 +108,10 @@ class CrashReportingService {
         fatal: false,
       );
     } catch (e) {
-      Log.error('Failed to record error to Crashlytics: $e', name: 'CrashReporting');
+      Log.error(
+        'Failed to record error to Crashlytics: $e',
+        name: 'CrashReporting',
+      );
     }
   }
 
@@ -100,7 +122,10 @@ class CrashReportingService {
     try {
       FirebaseCrashlytics.instance.log(message);
     } catch (e) {
-      Log.error('Failed to log message to Crashlytics: $e', name: 'CrashReporting');
+      Log.error(
+        'Failed to log message to Crashlytics: $e',
+        name: 'CrashReporting',
+      );
     }
   }
 
@@ -111,7 +136,10 @@ class CrashReportingService {
     try {
       await FirebaseCrashlytics.instance.setUserIdentifier(userId);
     } catch (e) {
-      Log.error('Failed to set user ID in Crashlytics: $e', name: 'CrashReporting');
+      Log.error(
+        'Failed to set user ID in Crashlytics: $e',
+        name: 'CrashReporting',
+      );
     }
   }
 
@@ -122,7 +150,10 @@ class CrashReportingService {
     try {
       await FirebaseCrashlytics.instance.setCustomKey(key, value);
     } catch (e) {
-      Log.error('Failed to set custom key in Crashlytics: $e', name: 'CrashReporting');
+      Log.error(
+        'Failed to set custom key in Crashlytics: $e',
+        name: 'CrashReporting',
+      );
     }
   }
 

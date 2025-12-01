@@ -30,11 +30,7 @@ class MockSubscriptionManager extends SubscriptionManager {
     _filters[id] = filters.first;
 
     // Set up listeners
-    controller.stream.listen(
-      onEvent,
-      onError: onError,
-      onDone: onComplete,
-    );
+    controller.stream.listen(onEvent, onError: onError, onDone: onComplete);
 
     // Auto-complete after timeout if specified
     if (timeout != null) {

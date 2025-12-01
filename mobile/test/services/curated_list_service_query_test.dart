@@ -31,8 +31,9 @@ void main() {
 
       // Setup common mocks
       when(mockAuth.isAuthenticated).thenReturn(true);
-      when(mockAuth.currentPublicKeyHex)
-          .thenReturn('test_pubkey_123456789abcdef');
+      when(
+        mockAuth.currentPublicKeyHex,
+      ).thenReturn('test_pubkey_123456789abcdef');
 
       // Mock successful event broadcasting
       when(mockNostr.broadcastEvent(any)).thenAnswer((_) async {
@@ -55,26 +56,32 @@ void main() {
       });
 
       // Mock subscribeToEvents for relay sync
-      when(mockNostr.subscribeToEvents(
-        filters: anyNamed('filters'),
-        bypassLimits: anyNamed('bypassLimits'),
-        onEose: anyNamed('onEose'),
-      )).thenAnswer((_) => Stream.empty());
+      when(
+        mockNostr.subscribeToEvents(
+          filters: anyNamed('filters'),
+          bypassLimits: anyNamed('bypassLimits'),
+          onEose: anyNamed('onEose'),
+        ),
+      ).thenAnswer((_) => Stream.empty());
 
       // Mock event creation
-      when(mockAuth.createAndSignEvent(
-        kind: anyNamed('kind'),
-        content: anyNamed('content'),
-        tags: anyNamed('tags'),
-      )).thenAnswer((_) async => Event.fromJson({
-            'id': 'test_event_id',
-            'pubkey': 'test_pubkey_123456789abcdef',
-            'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            'kind': 30005,
-            'tags': [],
-            'content': 'test content',
-            'sig': 'test_signature',
-          }));
+      when(
+        mockAuth.createAndSignEvent(
+          kind: anyNamed('kind'),
+          content: anyNamed('content'),
+          tags: anyNamed('tags'),
+        ),
+      ).thenAnswer(
+        (_) async => Event.fromJson({
+          'id': 'test_event_id',
+          'pubkey': 'test_pubkey_123456789abcdef',
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'kind': 30005,
+          'tags': [],
+          'content': 'test content',
+          'sig': 'test_signature',
+        }),
+      );
 
       // Create fresh service instance after clearing prefs
       service = CuratedListService(
@@ -172,10 +179,8 @@ void main() {
       });
 
       test('only returns public lists', () async {
-        await service.createList(
-            name: 'Public Cooking', isPublic: true);
-        await service.createList(
-            name: 'Private Cooking', isPublic: false);
+        await service.createList(name: 'Public Cooking', isPublic: true);
+        await service.createList(name: 'Private Cooking', isPublic: false);
 
         final results = service.searchLists('cooking');
 
@@ -297,7 +302,10 @@ void main() {
         final tags = service.getAllTags();
 
         expect(tags.length, greaterThanOrEqualTo(5));
-        expect(tags, containsAll(['tech', 'tutorial', 'cooking', 'food', 'news']));
+        expect(
+          tags,
+          containsAll(['tech', 'tutorial', 'cooking', 'food', 'news']),
+        );
       });
 
       test('removes duplicates', () async {
@@ -362,11 +370,7 @@ void main() {
           isPublic: true,
         );
         await Future.delayed(const Duration(milliseconds: 5));
-        await service.createList(
-          name: 'List 2',
-          tags: [],
-          isPublic: true,
-        );
+        await service.createList(name: 'List 2', tags: [], isPublic: true);
 
         final tags = service.getAllTags();
 
@@ -397,22 +401,27 @@ void main() {
         });
 
         // Setup mock to return list events when queried with #e filter
-        when(mockNostr.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).thenAnswer((_) => Stream.fromIterable([mockListEvent]));
+        when(
+          mockNostr.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).thenAnswer((_) => Stream.fromIterable([mockListEvent]));
 
         // Act
-        final lists =
-            await service.fetchPublicListsContainingVideo(targetVideoId);
+        final lists = await service.fetchPublicListsContainingVideo(
+          targetVideoId,
+        );
 
         // Assert: Verify filter includes the video ID
-        final captured = verify(mockNostr.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).captured;
+        final captured = verify(
+          mockNostr.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).captured;
         final filters = captured[0] as List<Filter>;
         expect(filters[0].kinds, contains(30005));
         expect(filters[0].e, contains(targetVideoId));
@@ -427,15 +436,18 @@ void main() {
         final targetVideoId = 'orphan_video_id_123456789abcdef';
 
         // Setup mock to return empty stream
-        when(mockNostr.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).thenAnswer((_) => Stream.empty());
+        when(
+          mockNostr.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).thenAnswer((_) => Stream.empty());
 
         // Act
-        final lists =
-            await service.fetchPublicListsContainingVideo(targetVideoId);
+        final lists = await service.fetchPublicListsContainingVideo(
+          targetVideoId,
+        );
 
         // Assert
         expect(lists, isEmpty);
@@ -471,33 +483,35 @@ void main() {
         });
 
         // Setup mock to return events progressively
-        when(mockNostr.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-          onEose: anyNamed('onEose'),
-        )).thenAnswer((_) => Stream.fromIterable([mockListEvent1, mockListEvent2]));
+        when(
+          mockNostr.subscribeToEvents(
+            filters: anyNamed('filters'),
+            bypassLimits: anyNamed('bypassLimits'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).thenAnswer(
+          (_) => Stream.fromIterable([mockListEvent1, mockListEvent2]),
+        );
 
         // Act: Use the stream version
-        final listStream =
-            service.streamPublicListsContainingVideo(targetVideoId);
+        final listStream = service.streamPublicListsContainingVideo(
+          targetVideoId,
+        );
         final lists = await listStream.toList();
 
         // Assert: Both lists received
         expect(lists.length, 2);
-        expect(lists.map((l) => l.name), containsAll(['First List', 'Second List']));
+        expect(
+          lists.map((l) => l.name),
+          containsAll(['First List', 'Second List']),
+        );
       });
     });
 
     group('Query Operations - Edge Cases', () {
       test('search handles special characters', () async {
-        await service.createList(
-          name: 'C++ Programming',
-          isPublic: true,
-        );
-        await service.createList(
-          name: 'C# Development',
-          isPublic: true,
-        );
+        await service.createList(name: 'C++ Programming', isPublic: true);
+        await service.createList(name: 'C# Development', isPublic: true);
 
         final results1 = service.searchLists('c++');
         final results2 = service.searchLists('c#');
@@ -507,14 +521,8 @@ void main() {
       });
 
       test('search handles unicode characters', () async {
-        await service.createList(
-          name: 'Español Videos',
-          isPublic: true,
-        );
-        await service.createList(
-          name: '日本語 Content',
-          isPublic: true,
-        );
+        await service.createList(name: 'Español Videos', isPublic: true);
+        await service.createList(name: '日本語 Content', isPublic: true);
 
         final results1 = service.searchLists('español');
         final results2 = service.searchLists('日本語');
@@ -524,10 +532,7 @@ void main() {
       });
 
       test('search with partial match', () async {
-        await service.createList(
-          name: 'Programming Tutorials',
-          isPublic: true,
-        );
+        await service.createList(name: 'Programming Tutorials', isPublic: true);
 
         final results = service.searchLists('program');
 
@@ -575,7 +580,10 @@ void main() {
         final results = service.searchLists('even');
         stopwatch.stop();
 
-        expect(results.length, greaterThanOrEqualTo(25)); // Should find at least 25
+        expect(
+          results.length,
+          greaterThanOrEqualTo(25),
+        ); // Should find at least 25
         expect(stopwatch.elapsedMilliseconds, lessThan(100)); // Should be fast
       });
     });

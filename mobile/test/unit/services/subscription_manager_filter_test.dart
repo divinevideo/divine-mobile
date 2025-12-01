@@ -59,16 +59,14 @@ void main() {
       expect(optimizedFilter.t, equals(['vine', 'trending', 'funny']));
       expect(optimizedFilter.kinds, equals([22]));
       expect(
-          optimizedFilter.limit, lessThanOrEqualTo(100)); // Should be optimized
+        optimizedFilter.limit,
+        lessThanOrEqualTo(100),
+      ); // Should be optimized
     });
 
     test('should preserve group (h) filters when optimizing', () async {
       // Create a filter with group
-      final originalFilter = Filter(
-        kinds: [22],
-        h: ['vine'],
-        limit: 150,
-      );
+      final originalFilter = Filter(kinds: [22], h: ['vine'], limit: 150);
 
       // Create subscription
       await subscriptionManager.createSubscription(
@@ -102,7 +100,7 @@ void main() {
         h: ['vine'],
         authors: [
           'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
-          'npub2qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq'
+          'npub2qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
         ],
         limit: 250,
       );
@@ -130,11 +128,12 @@ void main() {
       expect(optimizedFilter.t, equals(['funny', 'viral']));
       expect(optimizedFilter.h, equals(['vine']));
       expect(
-          optimizedFilter.authors,
-          equals([
-            'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
-            'npub2qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq'
-          ]));
+        optimizedFilter.authors,
+        equals([
+          'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+          'npub2qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+        ]),
+      );
       expect(optimizedFilter.kinds, equals([22]));
       expect(optimizedFilter.limit, equals(100)); // Should be capped at 100
     });
@@ -144,7 +143,7 @@ void main() {
       final originalFilter = Filter(
         kinds: [22],
         authors: [
-          'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq'
+          'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
         ],
         limit: 50,
       );
@@ -172,26 +171,19 @@ void main() {
       expect(optimizedFilter.t, isNull);
       expect(optimizedFilter.h, isNull);
       expect(
-          optimizedFilter.authors,
-          equals([
-            'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq'
-          ]));
+        optimizedFilter.authors,
+        equals([
+          'npub1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+        ]),
+      );
       expect(optimizedFilter.kinds, equals([22]));
     });
 
     test('should optimize multiple filters independently', () async {
       // Create multiple filters with different parameters
       final filters = [
-        Filter(
-          kinds: [22],
-          t: ['vine'],
-          limit: 200,
-        ),
-        Filter(
-          kinds: [16],
-          h: ['vine'],
-          limit: 150,
-        ),
+        Filter(kinds: [22], t: ['vine'], limit: 200),
+        Filter(kinds: [16], h: ['vine'], limit: 150),
       ];
 
       // Create subscription
@@ -230,11 +222,7 @@ void main() {
 
     test('should not modify limits under 100', () async {
       // Create a filter with limit under 100
-      final originalFilter = Filter(
-        kinds: [22],
-        t: ['test'],
-        limit: 50,
-      );
+      final originalFilter = Filter(kinds: [22], t: ['test'], limit: 50);
 
       // Create subscription
       await subscriptionManager.createSubscription(

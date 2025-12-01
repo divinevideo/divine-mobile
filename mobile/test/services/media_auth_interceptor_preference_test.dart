@@ -39,136 +39,173 @@ void main() {
 
   group('MediaAuthInterceptor - preference handling', () {
     test('shouldFilterContent returns true when preference is neverShow', () {
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(true);
+      when(
+        () => mockAgeVerificationService.shouldHideAdultContent,
+      ).thenReturn(true);
 
       expect(interceptor.shouldFilterContent, isTrue);
     });
 
-    test('shouldFilterContent returns false when preference is askEachTime',
-        () {
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(false);
+    test(
+      'shouldFilterContent returns false when preference is askEachTime',
+      () {
+        when(
+          () => mockAgeVerificationService.shouldHideAdultContent,
+        ).thenReturn(false);
 
-      expect(interceptor.shouldFilterContent, isFalse);
-    });
-
-    test('handleUnauthorizedMedia returns null when preference is neverShow',
-        () async {
-      // Arrange - neverShow means we should hide content
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(true);
-
-      // Act
-      final result = await interceptor.handleUnauthorizedMedia(
-        context: mockContext,
-        sha256Hash: 'abc123',
-        category: 'nudity',
-      );
-
-      // Assert - returns null immediately, no auth attempt
-      expect(result, isNull);
-      verifyNever(() => mockBlossomAuthService.createGetAuthHeader(
-            sha256Hash: any(named: 'sha256Hash'),
-            serverUrl: any(named: 'serverUrl'),
-          ));
-      verifyNever(
-          () => mockAgeVerificationService.verifyAdultContentAccess(any()));
-    });
+        expect(interceptor.shouldFilterContent, isFalse);
+      },
+    );
 
     test(
-        'handleUnauthorizedMedia auto-creates auth when alwaysShow and verified',
-        () async {
-      // Arrange - alwaysShow preference, already verified
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(false);
-      when(() => mockAgeVerificationService.shouldAutoShowAdultContent)
-          .thenReturn(true);
-      when(() => mockBlossomAuthService.createGetAuthHeader(
+      'handleUnauthorizedMedia returns null when preference is neverShow',
+      () async {
+        // Arrange - neverShow means we should hide content
+        when(
+          () => mockAgeVerificationService.shouldHideAdultContent,
+        ).thenReturn(true);
+
+        // Act
+        final result = await interceptor.handleUnauthorizedMedia(
+          context: mockContext,
+          sha256Hash: 'abc123',
+          category: 'nudity',
+        );
+
+        // Assert - returns null immediately, no auth attempt
+        expect(result, isNull);
+        verifyNever(
+          () => mockBlossomAuthService.createGetAuthHeader(
             sha256Hash: any(named: 'sha256Hash'),
             serverUrl: any(named: 'serverUrl'),
-          )).thenAnswer((_) async => 'Nostr autoToken');
-
-      // Act
-      final result = await interceptor.handleUnauthorizedMedia(
-        context: mockContext,
-        sha256Hash: 'abc123',
-        category: 'nudity',
-      );
-
-      // Assert - auto auth header created, no dialog shown
-      expect(result, equals('Nostr autoToken'));
-      verifyNever(
-          () => mockAgeVerificationService.verifyAdultContentAccess(any()));
-      verify(() => mockBlossomAuthService.createGetAuthHeader(
-            sha256Hash: 'abc123',
-            serverUrl: null,
-          )).called(1);
-    });
-
-    test('handleUnauthorizedMedia shows dialog when askEachTime and verified',
-        () async {
-      // Arrange - askEachTime preference, already verified for age
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(false);
-      when(() => mockAgeVerificationService.shouldAutoShowAdultContent)
-          .thenReturn(false);
-      when(() => mockAgeVerificationService.shouldAskForAdultContent)
-          .thenReturn(true);
-      when(() => mockContext.mounted).thenReturn(true);
-      when(() => mockAgeVerificationService.verifyAdultContentAccess(any()))
-          .thenAnswer((_) async => true);
-      when(() => mockBlossomAuthService.createGetAuthHeader(
-            sha256Hash: any(named: 'sha256Hash'),
-            serverUrl: any(named: 'serverUrl'),
-          )).thenAnswer((_) async => 'Nostr dialogToken');
-
-      // Act
-      final result = await interceptor.handleUnauthorizedMedia(
-        context: mockContext,
-        sha256Hash: 'abc123',
-        category: 'nudity',
-      );
-
-      // Assert - dialog was shown, auth header created after confirmation
-      expect(result, equals('Nostr dialogToken'));
-      verify(() => mockAgeVerificationService.verifyAdultContentAccess(any()))
-          .called(1);
-      verify(() => mockBlossomAuthService.createGetAuthHeader(
-            sha256Hash: 'abc123',
-            serverUrl: null,
-          )).called(1);
-    });
+          ),
+        );
+        verifyNever(
+          () => mockAgeVerificationService.verifyAdultContentAccess(any()),
+        );
+      },
+    );
 
     test(
-        'handleUnauthorizedMedia returns null when askEachTime and user declines',
-        () async {
-      // Arrange - askEachTime preference, user declines in dialog
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(false);
-      when(() => mockAgeVerificationService.shouldAutoShowAdultContent)
-          .thenReturn(false);
-      when(() => mockAgeVerificationService.shouldAskForAdultContent)
-          .thenReturn(true);
-      when(() => mockContext.mounted).thenReturn(true);
-      when(() => mockAgeVerificationService.verifyAdultContentAccess(any()))
-          .thenAnswer((_) async => false);
-
-      // Act
-      final result = await interceptor.handleUnauthorizedMedia(
-        context: mockContext,
-        sha256Hash: 'abc123',
-        category: 'nudity',
-      );
-
-      // Assert - user declined, no auth header
-      expect(result, isNull);
-      verify(() => mockAgeVerificationService.verifyAdultContentAccess(any()))
-          .called(1);
-      verifyNever(() => mockBlossomAuthService.createGetAuthHeader(
+      'handleUnauthorizedMedia auto-creates auth when alwaysShow and verified',
+      () async {
+        // Arrange - alwaysShow preference, already verified
+        when(
+          () => mockAgeVerificationService.shouldHideAdultContent,
+        ).thenReturn(false);
+        when(
+          () => mockAgeVerificationService.shouldAutoShowAdultContent,
+        ).thenReturn(true);
+        when(
+          () => mockBlossomAuthService.createGetAuthHeader(
             sha256Hash: any(named: 'sha256Hash'),
             serverUrl: any(named: 'serverUrl'),
-          ));
-    });
+          ),
+        ).thenAnswer((_) async => 'Nostr autoToken');
+
+        // Act
+        final result = await interceptor.handleUnauthorizedMedia(
+          context: mockContext,
+          sha256Hash: 'abc123',
+          category: 'nudity',
+        );
+
+        // Assert - auto auth header created, no dialog shown
+        expect(result, equals('Nostr autoToken'));
+        verifyNever(
+          () => mockAgeVerificationService.verifyAdultContentAccess(any()),
+        );
+        verify(
+          () => mockBlossomAuthService.createGetAuthHeader(
+            sha256Hash: 'abc123',
+            serverUrl: null,
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
+      'handleUnauthorizedMedia shows dialog when askEachTime and verified',
+      () async {
+        // Arrange - askEachTime preference, already verified for age
+        when(
+          () => mockAgeVerificationService.shouldHideAdultContent,
+        ).thenReturn(false);
+        when(
+          () => mockAgeVerificationService.shouldAutoShowAdultContent,
+        ).thenReturn(false);
+        when(
+          () => mockAgeVerificationService.shouldAskForAdultContent,
+        ).thenReturn(true);
+        when(() => mockContext.mounted).thenReturn(true);
+        when(
+          () => mockAgeVerificationService.verifyAdultContentAccess(any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockBlossomAuthService.createGetAuthHeader(
+            sha256Hash: any(named: 'sha256Hash'),
+            serverUrl: any(named: 'serverUrl'),
+          ),
+        ).thenAnswer((_) async => 'Nostr dialogToken');
+
+        // Act
+        final result = await interceptor.handleUnauthorizedMedia(
+          context: mockContext,
+          sha256Hash: 'abc123',
+          category: 'nudity',
+        );
+
+        // Assert - dialog was shown, auth header created after confirmation
+        expect(result, equals('Nostr dialogToken'));
+        verify(
+          () => mockAgeVerificationService.verifyAdultContentAccess(any()),
+        ).called(1);
+        verify(
+          () => mockBlossomAuthService.createGetAuthHeader(
+            sha256Hash: 'abc123',
+            serverUrl: null,
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
+      'handleUnauthorizedMedia returns null when askEachTime and user declines',
+      () async {
+        // Arrange - askEachTime preference, user declines in dialog
+        when(
+          () => mockAgeVerificationService.shouldHideAdultContent,
+        ).thenReturn(false);
+        when(
+          () => mockAgeVerificationService.shouldAutoShowAdultContent,
+        ).thenReturn(false);
+        when(
+          () => mockAgeVerificationService.shouldAskForAdultContent,
+        ).thenReturn(true);
+        when(() => mockContext.mounted).thenReturn(true);
+        when(
+          () => mockAgeVerificationService.verifyAdultContentAccess(any()),
+        ).thenAnswer((_) async => false);
+
+        // Act
+        final result = await interceptor.handleUnauthorizedMedia(
+          context: mockContext,
+          sha256Hash: 'abc123',
+          category: 'nudity',
+        );
+
+        // Assert - user declined, no auth header
+        expect(result, isNull);
+        verify(
+          () => mockAgeVerificationService.verifyAdultContentAccess(any()),
+        ).called(1);
+        verifyNever(
+          () => mockBlossomAuthService.createGetAuthHeader(
+            sha256Hash: any(named: 'sha256Hash'),
+            serverUrl: any(named: 'serverUrl'),
+          ),
+        );
+      },
+    );
   });
 }

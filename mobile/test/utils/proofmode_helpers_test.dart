@@ -58,10 +58,7 @@ void main() {
         createdAt: DateTime.now().millisecondsSinceEpoch,
         content: 'test video',
         timestamp: DateTime.now(),
-        rawTags: {
-          'verification': 'basic_proof',
-          'pgp_fingerprint': 'ABC123',
-        },
+        rawTags: {'verification': 'basic_proof', 'pgp_fingerprint': 'ABC123'},
       );
 
       expect(video.getVerificationLevel(), VerificationLevel.basicProof);
@@ -98,9 +95,7 @@ void main() {
         createdAt: DateTime.now().millisecondsSinceEpoch,
         content: 'test video',
         timestamp: DateTime.now(),
-        rawTags: {
-          'proofmode': '{"test": "data"}',
-        },
+        rawTags: {'proofmode': '{"test": "data"}'},
       );
 
       expect(video.hasProofMode, isTrue);
@@ -112,9 +107,7 @@ void main() {
         createdAt: DateTime.now().millisecondsSinceEpoch,
         content: 'test video',
         timestamp: DateTime.now(),
-        rawTags: {
-          'pgp_fingerprint': 'ABC123',
-        },
+        rawTags: {'pgp_fingerprint': 'ABC123'},
       );
 
       expect(video.hasProofMode, isTrue);
@@ -128,9 +121,7 @@ void main() {
         createdAt: DateTime.now().millisecondsSinceEpoch,
         content: 'test video',
         timestamp: DateTime.now(),
-        rawTags: {
-          'proofmode': manifestJson,
-        },
+        rawTags: {'proofmode': manifestJson},
       );
 
       expect(video.proofModeManifest, manifestJson);
@@ -144,9 +135,7 @@ void main() {
         createdAt: DateTime.now().millisecondsSinceEpoch,
         content: 'test video',
         timestamp: DateTime.now(),
-        rawTags: {
-          'device_attestation': attestation,
-        },
+        rawTags: {'device_attestation': attestation},
       );
 
       expect(video.proofModeDeviceAttestation, attestation);
@@ -160,9 +149,7 @@ void main() {
         createdAt: DateTime.now().millisecondsSinceEpoch,
         content: 'test video',
         timestamp: DateTime.now(),
-        rawTags: {
-          'pgp_fingerprint': fingerprint,
-        },
+        rawTags: {'pgp_fingerprint': fingerprint},
       );
 
       expect(video.proofModePgpFingerprint, fingerprint);
@@ -234,14 +221,15 @@ void main() {
         createdAt: DateTime.now().millisecondsSinceEpoch,
         content: 'verified original vine',
         timestamp: DateTime.now(),
-        rawTags: {
-          'verification': 'verified_mobile',
-        },
+        rawTags: {'verification': 'verified_mobile'},
         originalLoops: 500000,
       );
 
       expect(video.shouldShowProofModeBadge, isTrue);
-      expect(video.shouldShowVineBadge, isFalse); // ProofMode takes precedence over Vine badge
+      expect(
+        video.shouldShowVineBadge,
+        isFalse,
+      ); // ProofMode takes precedence over Vine badge
       expect(video.getVerificationLevel(), VerificationLevel.verifiedMobile);
       expect(video.isOriginalVine, isTrue);
     });
@@ -253,9 +241,7 @@ void main() {
         createdAt: DateTime.now().millisecondsSinceEpoch,
         content: 'new verified vine',
         timestamp: DateTime.now(),
-        rawTags: {
-          'verification': 'verified_web',
-        },
+        rawTags: {'verification': 'verified_web'},
       );
 
       expect(video.shouldShowProofModeBadge, isTrue);

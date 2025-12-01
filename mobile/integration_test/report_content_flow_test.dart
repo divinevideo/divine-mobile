@@ -15,8 +15,9 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Content Reporting Flow Integration Tests', () {
-    testWidgets('Complete reporting flow from share menu works end-to-end',
-        (tester) async {
+    testWidgets('Complete reporting flow from share menu works end-to-end', (
+      tester,
+    ) async {
       // Create test Nostr event (kind 34236 - addressable short video)
       final testNostrEvent = nostr.Event(
         'test_author_pubkey_67890',
@@ -86,16 +87,19 @@ void main() {
       await tester.pumpAndSettle();
 
       // Add optional details text
-      final detailsFieldFinder =
-          find.widgetWithText(TextField, 'Additional details (optional)');
+      final detailsFieldFinder = find.widgetWithText(
+        TextField,
+        'Additional details (optional)',
+      );
       expect(detailsFieldFinder, findsOneWidget);
       await tester.enterText(
-          detailsFieldFinder, 'This video is clearly spam content');
+        detailsFieldFinder,
+        'This video is clearly spam content',
+      );
       await tester.pumpAndSettle();
 
       // Submit the report
-      final reportButtonFinder =
-          find.widgetWithText(TextButton, 'Report').last;
+      final reportButtonFinder = find.widgetWithText(TextButton, 'Report').last;
       expect(reportButtonFinder, findsOneWidget);
       await tester.tap(reportButtonFinder);
       await tester.pumpAndSettle();
@@ -105,12 +109,15 @@ void main() {
       expect(find.text('Content reported successfully'), findsOneWidget);
 
       // Get the container to access services
-      final context = tester.element(find.byKey(const Key('share_video_menu_test')));
+      final context = tester.element(
+        find.byKey(const Key('share_video_menu_test')),
+      );
       final container = ProviderScope.containerOf(context);
 
       // Verify report is stored in ContentReportingService
-      final reportServiceAsync =
-          await container.read(contentReportingServiceProvider.future);
+      final reportServiceAsync = await container.read(
+        contentReportingServiceProvider.future,
+      );
       expect(reportServiceAsync.hasBeenReported(testVideo.id), isTrue);
 
       // Verify report details are correct
@@ -149,11 +156,12 @@ void main() {
       expect(find.text('You have reported this content'), findsOneWidget);
 
       // Verify report button is disabled (onTap is null)
-      final alreadyReportedTile =
-          tester.widget<ListTile>(find.ancestor(
-        of: find.text('Already Reported'),
-        matching: find.byType(ListTile),
-      ));
+      final alreadyReportedTile = tester.widget<ListTile>(
+        find.ancestor(
+          of: find.text('Already Reported'),
+          matching: find.byType(ListTile),
+        ),
+      );
       expect(alreadyReportedTile.onTap, isNull);
     });
 
@@ -206,7 +214,9 @@ void main() {
       // Verify quick AI report button is visible
       expect(find.text('Report AI Content'), findsOneWidget);
       expect(
-          find.text('Quick report suspected AI-generated content'), findsOneWidget);
+        find.text('Quick report suspected AI-generated content'),
+        findsOneWidget,
+      );
 
       // Tap quick report button
       await tester.tap(find.text('Report AI Content'));
@@ -222,20 +232,21 @@ void main() {
       expect(find.text('AI content reported successfully'), findsOneWidget);
 
       // Get the container to access services
-      final context =
-          tester.element(find.byKey(const Key('share_video_menu_ai_test')));
+      final context = tester.element(
+        find.byKey(const Key('share_video_menu_ai_test')),
+      );
       final container = ProviderScope.containerOf(context);
 
       // Verify report is stored with AI-generated reason
-      final reportServiceAsync =
-          await container.read(contentReportingServiceProvider.future);
+      final reportServiceAsync = await container.read(
+        contentReportingServiceProvider.future,
+      );
       expect(reportServiceAsync.hasBeenReported(testVideo.id), isTrue);
 
       final reports = reportServiceAsync.getReportsForEvent(testVideo.id);
       expect(reports.length, equals(1));
       expect(reports.first.reason, equals(ContentFilterReason.aiGenerated));
-      expect(
-          reports.first.details, equals('Suspected AI-generated content'));
+      expect(reports.first.details, equals('Suspected AI-generated content'));
     });
   });
 }

@@ -165,7 +165,8 @@ class P2PDiscoveryService extends ChangeNotifier {
     }
 
     debugPrint(
-        'P2P: Connecting to peer ${peer.name} via ${peer.transportType.name}');
+      'P2P: Connecting to peer ${peer.name} via ${peer.transportType.name}',
+    );
 
     try {
       embedded.TransportConnection transportConnection;
@@ -176,8 +177,9 @@ class P2PDiscoveryService extends ChangeNotifier {
           transportConnection = await _bleTransport.connect(peer.transportPeer);
           break;
         case P2PTransportType.wifiDirect:
-          transportConnection =
-              await _wifiDirectTransport.connect(peer.transportPeer);
+          transportConnection = await _wifiDirectTransport.connect(
+            peer.transportPeer,
+          );
           break;
       }
 
@@ -219,7 +221,9 @@ class P2PDiscoveryService extends ChangeNotifier {
 
   /// Send video metadata to a connected peer
   Future<bool> sendVideoMetadata(
-      String peerId, Map<String, dynamic> metadata) async {
+    String peerId,
+    Map<String, dynamic> metadata,
+  ) async {
     final connection = _activeConnections[peerId];
     if (connection == null) return false;
 
@@ -263,7 +267,9 @@ class P2PDiscoveryService extends ChangeNotifier {
   // Private methods
 
   void _onPeerDiscovered(
-      embedded.TransportPeer transportPeer, P2PTransportType transportType) {
+    embedded.TransportPeer transportPeer,
+    P2PTransportType transportType,
+  ) {
     // Filter for divine devices only
     if (!transportPeer.name.contains(appIdentifier)) {
       return;
@@ -288,8 +294,9 @@ class P2PDiscoveryService extends ChangeNotifier {
 
   Future<String> _generateDeviceName() async {
     // Generate a friendly device name for divine
-    final timestamp =
-        DateTime.now().millisecondsSinceEpoch.toString().substring(7);
+    final timestamp = DateTime.now().millisecondsSinceEpoch
+        .toString()
+        .substring(7);
     return '$appIdentifier-User-$timestamp';
   }
 
@@ -305,16 +312,11 @@ class P2PDiscoveryService extends ChangeNotifier {
     ]);
 
     // Location permissions (required for WiFi Direct and BLE on some Android versions)
-    permissions.addAll([
-      Permission.location,
-      Permission.locationWhenInUse,
-    ]);
+    permissions.addAll([Permission.location, Permission.locationWhenInUse]);
 
     // WiFi permissions for Android
     if (Platform.isAndroid) {
-      permissions.addAll([
-        Permission.nearbyWifiDevices,
-      ]);
+      permissions.addAll([Permission.nearbyWifiDevices]);
     }
 
     final statuses = await permissions.request();
@@ -358,10 +360,8 @@ class P2PConnection {
   final embedded.TransportConnection transport;
   final DateTime connectedAt;
 
-  P2PConnection({
-    required this.peer,
-    required this.transport,
-  }) : connectedAt = DateTime.now();
+  P2PConnection({required this.peer, required this.transport})
+    : connectedAt = DateTime.now();
 
   /// Stream of incoming data from this peer
   Stream<List<int>> get dataStream => transport.dataStream;
@@ -374,7 +374,4 @@ class P2PConnection {
 }
 
 /// Available P2P transport types
-enum P2PTransportType {
-  ble,
-  wifiDirect,
-}
+enum P2PTransportType { ble, wifiDirect }

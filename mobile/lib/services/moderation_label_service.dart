@@ -35,27 +35,26 @@ class ModerationLabel {
   final String? reason; // Optional context
 
   Map<String, dynamic> toJson() => {
-        'labelId': labelId,
-        'namespace': namespace,
-        'label': label,
-        'targetEventId': targetEventId,
-        'targetPubkey': targetPubkey,
-        'moderatorPubkey': moderatorPubkey,
-        'createdAt': createdAt.toIso8601String(),
-        'reason': reason,
-      };
+    'labelId': labelId,
+    'namespace': namespace,
+    'label': label,
+    'targetEventId': targetEventId,
+    'targetPubkey': targetPubkey,
+    'moderatorPubkey': moderatorPubkey,
+    'createdAt': createdAt.toIso8601String(),
+    'reason': reason,
+  };
 
-  static ModerationLabel fromJson(Map<String, dynamic> json) =>
-      ModerationLabel(
-        labelId: json['labelId'],
-        namespace: json['namespace'],
-        label: json['label'],
-        moderatorPubkey: json['moderatorPubkey'],
-        createdAt: DateTime.parse(json['createdAt']),
-        targetEventId: json['targetEventId'],
-        targetPubkey: json['targetPubkey'],
-        reason: json['reason'],
-      );
+  static ModerationLabel fromJson(Map<String, dynamic> json) => ModerationLabel(
+    labelId: json['labelId'],
+    namespace: json['namespace'],
+    label: json['label'],
+    moderatorPubkey: json['moderatorPubkey'],
+    createdAt: DateTime.parse(json['createdAt']),
+    targetEventId: json['targetEventId'],
+    targetPubkey: json['targetPubkey'],
+    reason: json['reason'],
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -74,9 +73,9 @@ class ModerationLabelService with NostrListServiceMixin {
     required INostrService nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
-  })  : _nostrService = nostrService,
-        _authService = authService,
-        _prefs = prefs {
+  }) : _nostrService = nostrService,
+       _authService = authService,
+       _prefs = prefs {
     _loadSubscribedLabelers();
     _loadLabelCache();
   }
@@ -111,8 +110,11 @@ class ModerationLabelService with NostrListServiceMixin {
   Future<void> initialize() async {
     try {
       if (!_authService.isAuthenticated) {
-        Log.warning('Cannot initialize label service - user not authenticated',
-            name: 'ModerationLabelService', category: LogCategory.system);
+        Log.warning(
+          'Cannot initialize label service - user not authenticated',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -123,12 +125,16 @@ class ModerationLabelService with NostrListServiceMixin {
 
       _isInitialized = true;
       Log.info(
-          'Label service initialized with ${_subscribedLabelers.length} labelers, ${_allLabels.length} labels',
-          name: 'ModerationLabelService',
-          category: LogCategory.system);
+        'Label service initialized with ${_subscribedLabelers.length} labelers, ${_allLabels.length} labels',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to initialize label service: $e',
-          name: 'ModerationLabelService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize label service: $e',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -136,8 +142,11 @@ class ModerationLabelService with NostrListServiceMixin {
   Future<void> subscribeToLabeler(String labelerPubkey) async {
     try {
       if (_subscribedLabelers.contains(labelerPubkey)) {
-        Log.debug('Already subscribed to labeler: $labelerPubkey',
-            name: 'ModerationLabelService', category: LogCategory.system);
+        Log.debug(
+          'Already subscribed to labeler: $labelerPubkey',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -148,13 +157,17 @@ class ModerationLabelService with NostrListServiceMixin {
       await _loadLabelsFromLabeler(labelerPubkey);
 
       Log.info(
-          'Subscribed to labeler: ${labelerPubkey}... (${_allLabels.length} total labels)',
-          name: 'ModerationLabelService',
-          category: LogCategory.system);
+        'Subscribed to labeler: ${labelerPubkey}... (${_allLabels.length} total labels)',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
     } catch (e) {
       _subscribedLabelers.remove(labelerPubkey);
-      Log.error('Failed to subscribe to labeler $labelerPubkey: $e',
-          name: 'ModerationLabelService', category: LogCategory.system);
+      Log.error(
+        'Failed to subscribe to labeler $labelerPubkey: $e',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -165,7 +178,9 @@ class ModerationLabelService with NostrListServiceMixin {
       _subscribedLabelers.remove(labelerPubkey);
 
       // Remove all labels from this labeler
-      _allLabels.removeWhere((_, label) => label.moderatorPubkey == labelerPubkey);
+      _allLabels.removeWhere(
+        (_, label) => label.moderatorPubkey == labelerPubkey,
+      );
       _eventLabels.forEach((_, labels) {
         labels.removeWhere((label) => label.moderatorPubkey == labelerPubkey);
       });
@@ -180,11 +195,17 @@ class ModerationLabelService with NostrListServiceMixin {
       await _saveSubscribedLabelers();
       await _saveLabelCache();
 
-      Log.info('Unsubscribed from labeler: ${labelerPubkey}...',
-          name: 'ModerationLabelService', category: LogCategory.system);
+      Log.info(
+        'Unsubscribed from labeler: ${labelerPubkey}...',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to unsubscribe from labeler: $e',
-          name: 'ModerationLabelService', category: LogCategory.system);
+      Log.error(
+        'Failed to unsubscribe from labeler: $e',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -200,7 +221,9 @@ class ModerationLabelService with NostrListServiceMixin {
 
   /// Get labels for event filtered by namespace
   List<ModerationLabel> getLabelsForEventByNamespace(
-      String eventId, String namespace) {
+    String eventId,
+    String namespace,
+  ) {
     final labels = _eventLabels[eventId] ?? [];
     return labels.where((label) => label.namespace == namespace).toList();
   }
@@ -237,8 +260,11 @@ class ModerationLabelService with NostrListServiceMixin {
   /// Load labels from a specific labeler
   Future<void> _loadLabelsFromLabeler(String labelerPubkey) async {
     try {
-      Log.debug('Loading labels from: ${labelerPubkey}...',
-          name: 'ModerationLabelService', category: LogCategory.system);
+      Log.debug(
+        'Loading labels from: ${labelerPubkey}...',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
 
       // Query for kind 1985 (label) events from this labeler
       final filter = Filter(
@@ -249,8 +275,11 @@ class ModerationLabelService with NostrListServiceMixin {
       final events = await _nostrService.getEvents(filters: [filter]);
 
       if (events.isEmpty) {
-        Log.debug('No labels found from labeler: ${labelerPubkey}...',
-            name: 'ModerationLabelService', category: LogCategory.system);
+        Log.debug(
+          'No labels found from labeler: ${labelerPubkey}...',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -262,12 +291,16 @@ class ModerationLabelService with NostrListServiceMixin {
       await _saveLabelCache();
 
       Log.debug(
-          'Loaded ${events.length} label events from ${labelerPubkey}...',
-          name: 'ModerationLabelService',
-          category: LogCategory.system);
+        'Loaded ${events.length} label events from ${labelerPubkey}...',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to load labels from labeler $labelerPubkey: $e',
-          name: 'ModerationLabelService', category: LogCategory.system);
+      Log.error(
+        'Failed to load labels from labeler $labelerPubkey: $e',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -322,8 +355,9 @@ class ModerationLabelService with NostrListServiceMixin {
             namespace: currentNamespace,
             label: labelValue,
             moderatorPubkey: event.pubkey,
-            createdAt:
-                DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
+            createdAt: DateTime.fromMillisecondsSinceEpoch(
+              event.createdAt * 1000,
+            ),
             targetEventId: eventId,
           );
 
@@ -337,8 +371,9 @@ class ModerationLabelService with NostrListServiceMixin {
             namespace: currentNamespace,
             label: labelValue,
             moderatorPubkey: event.pubkey,
-            createdAt:
-                DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
+            createdAt: DateTime.fromMillisecondsSinceEpoch(
+              event.createdAt * 1000,
+            ),
             targetPubkey: pubkey,
           );
 
@@ -348,12 +383,16 @@ class ModerationLabelService with NostrListServiceMixin {
       }
 
       Log.debug(
-          'Parsed ${parsedLabels.length} labels from event ${event.id}...',
-          name: 'ModerationLabelService',
-          category: LogCategory.system);
+        'Parsed ${parsedLabels.length} labels from event ${event.id}...',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to parse label event: $e',
-          name: 'ModerationLabelService', category: LogCategory.system);
+      Log.error(
+        'Failed to parse label event: $e',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -365,11 +404,17 @@ class ModerationLabelService with NostrListServiceMixin {
         final List<dynamic> labelers = jsonDecode(json);
         _subscribedLabelers.clear();
         _subscribedLabelers.addAll(labelers.cast<String>());
-        Log.debug('Loaded ${_subscribedLabelers.length} subscribed labelers',
-            name: 'ModerationLabelService', category: LogCategory.system);
+        Log.debug(
+          'Loaded ${_subscribedLabelers.length} subscribed labelers',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.error('Failed to load subscribed labelers: $e',
-            name: 'ModerationLabelService', category: LogCategory.system);
+        Log.error(
+          'Failed to load subscribed labelers: $e',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -378,10 +423,15 @@ class ModerationLabelService with NostrListServiceMixin {
   Future<void> _saveSubscribedLabelers() async {
     try {
       await _prefs.setString(
-          subscribedLabelersKey, jsonEncode(_subscribedLabelers.toList()));
+        subscribedLabelersKey,
+        jsonEncode(_subscribedLabelers.toList()),
+      );
     } catch (e) {
-      Log.error('Failed to save subscribed labelers: $e',
-          name: 'ModerationLabelService', category: LogCategory.system);
+      Log.error(
+        'Failed to save subscribed labelers: $e',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -392,26 +442,29 @@ class ModerationLabelService with NostrListServiceMixin {
       try {
         final List<dynamic> labelsJson = jsonDecode(json);
         for (final labelJson in labelsJson) {
-          final label =
-              ModerationLabel.fromJson(labelJson as Map<String, dynamic>);
+          final label = ModerationLabel.fromJson(
+            labelJson as Map<String, dynamic>,
+          );
           _allLabels[label.labelId] = label;
 
           if (label.targetEventId != null) {
-            _eventLabels
-                .putIfAbsent(label.targetEventId!, () => [])
-                .add(label);
+            _eventLabels.putIfAbsent(label.targetEventId!, () => []).add(label);
           }
           if (label.targetPubkey != null) {
-            _pubkeyLabels
-                .putIfAbsent(label.targetPubkey!, () => [])
-                .add(label);
+            _pubkeyLabels.putIfAbsent(label.targetPubkey!, () => []).add(label);
           }
         }
-        Log.debug('Loaded ${_allLabels.length} labels from cache',
-            name: 'ModerationLabelService', category: LogCategory.system);
+        Log.debug(
+          'Loaded ${_allLabels.length} labels from cache',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.error('Failed to load label cache: $e',
-            name: 'ModerationLabelService', category: LogCategory.system);
+        Log.error(
+          'Failed to load label cache: $e',
+          name: 'ModerationLabelService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -422,8 +475,11 @@ class ModerationLabelService with NostrListServiceMixin {
       final labelsJson = _allLabels.values.map((l) => l.toJson()).toList();
       await _prefs.setString(labelCacheKey, jsonEncode(labelsJson));
     } catch (e) {
-      Log.error('Failed to save label cache: $e',
-          name: 'ModerationLabelService', category: LogCategory.system);
+      Log.error(
+        'Failed to save label cache: $e',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
     }
   }
 

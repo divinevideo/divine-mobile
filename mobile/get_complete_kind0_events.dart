@@ -13,8 +13,10 @@ import 'package:nostr_sdk/relay/relay_status.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
 void main() async {
-  Log.info('📋 Fetching COMPLETE kind 0 events from OpenVine relay...\n',
-      name: 'Kind0Fetcher');
+  Log.info(
+    '📋 Fetching COMPLETE kind 0 events from OpenVine relay...\n',
+    name: 'Kind0Fetcher',
+  );
 
   final privateKey = generatePrivateKey();
   final signer = LocalNostrSigner(privateKey);
@@ -31,7 +33,9 @@ void main() async {
 
   // Connect to relay
   final relay = RelayBase(
-      'wss://relay3.openvine.co', RelayStatus('wss://relay3.openvine.co'));
+    'wss://relay3.openvine.co',
+    RelayStatus('wss://relay3.openvine.co'),
+  );
   await nostrClient.addRelay(relay, autoSubscribe: true);
   await Future.delayed(const Duration(milliseconds: 500));
 
@@ -47,8 +51,10 @@ void main() async {
   Log.info('⏳ Collecting all kind 0 events...', name: 'Kind0Fetcher');
   await Future.delayed(const Duration(seconds: 8));
 
-  Log.info('\n📊 Found ${events.length} kind 0 profile events',
-      name: 'Kind0Fetcher');
+  Log.info(
+    '\n📊 Found ${events.length} kind 0 profile events',
+    name: 'Kind0Fetcher',
+  );
 
   // Save complete data to file
   final output = StringBuffer();
@@ -91,11 +97,15 @@ void main() async {
   await file.writeAsString(output.toString());
 
   Log.info(
-      '\n✅ COMPLETE! Found ${events.length} total kind 0 events on OpenVine relay',
-      name: 'Kind0Fetcher');
-  Log.info('📝 Full data saved to: kind0_events_complete.txt',
-      name: 'Kind0Fetcher');
+    '\n✅ COMPLETE! Found ${events.length} total kind 0 events on OpenVine relay',
+    name: 'Kind0Fetcher',
+  );
   Log.info(
-      'All event data includes EVERYTHING - id, pubkey, created_at, kind, tags, content, sig',
-      name: 'Kind0Fetcher');
+    '📝 Full data saved to: kind0_events_complete.txt',
+    name: 'Kind0Fetcher',
+  );
+  Log.info(
+    'All event data includes EVERYTHING - id, pubkey, created_at, kind, tags, content, sig',
+    name: 'Kind0Fetcher',
+  );
 }

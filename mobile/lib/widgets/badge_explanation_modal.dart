@@ -43,7 +43,11 @@ class BadgeExplanationModal extends StatelessWidget {
         Expanded(
           child: Text(
             isVineArchive ? 'Original Vine Archive' : 'Video Verification',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
         ),
       ],
@@ -65,7 +69,11 @@ class _VineArchiveExplanation extends StatelessWidget {
       children: [
         const Text(
           'This video is an original Vine recovered from the Internet Archive.',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
         const SizedBox(height: 12),
         const Text(
@@ -76,7 +84,11 @@ class _VineArchiveExplanation extends StatelessWidget {
         if (video.originalLoops != null && video.originalLoops! > 0) ...[
           Text(
             'Original stats: ${video.originalLoops} loops',
-            style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.white60),
+            style: const TextStyle(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: Colors.white60,
+            ),
           ),
           const SizedBox(height: 8),
         ],
@@ -126,7 +138,11 @@ class _ProofModeExplanation extends StatelessWidget {
       children: [
         const Text(
           'This video\'s authenticity is verified using ProofMode technology.',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
         const SizedBox(height: 12),
         _VerificationLevelCard(video: video),
@@ -187,7 +203,11 @@ class _VerificationLevelCard extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               config.title,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ],
         ),
@@ -222,14 +242,16 @@ class _VerificationLevelCard extends StatelessWidget {
         icon: Icons.info_outline,
         color: Colors.orange[700]!,
         title: 'Basic Proof',
-        description: 'This video has minimal verification - just basic metadata signatures.',
+        description:
+            'This video has minimal verification - just basic metadata signatures.',
       );
     } else {
       return _VerificationConfig(
         icon: Icons.shield_outlined,
         color: Colors.grey[600]!,
         title: 'Unverified',
-        description: 'We can\'t be sure this video is real and was recorded using Divine on a user\'s phone.',
+        description:
+            'We can\'t be sure this video is real and was recorded using Divine on a user\'s phone.',
       );
     }
   }

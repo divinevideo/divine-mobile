@@ -21,7 +21,9 @@ void main() {
 
   setUp(() async {
     // Create temp directory for test Hive storage
-    testDir = await Directory.systemTemp.createTemp('upload_manager_cancel_test_');
+    testDir = await Directory.systemTemp.createTemp(
+      'upload_manager_cancel_test_',
+    );
 
     // Initialize Hive
     Hive.init(testDir.path);
@@ -38,9 +40,7 @@ void main() {
     mockBlossomService = MockBlossomUploadService();
 
     // Create upload manager
-    uploadManager = UploadManager(
-      blossomService: mockBlossomService,
-    );
+    uploadManager = UploadManager(blossomService: mockBlossomService);
 
     await uploadManager.initialize();
   });
@@ -57,73 +57,82 @@ void main() {
   });
 
   group('UploadManager.cancelUpload()', () {
-    test('should abort in-progress upload and update status to failed', () async {
-      // Arrange: Create a mock upload in uploading state
-      final testVideoFile = File('${testDir.path}/test_video.mp4');
-      await testVideoFile.writeAsString('fake video content');
+    test(
+      'should abort in-progress upload and update status to failed',
+      () async {
+        // Arrange: Create a mock upload in uploading state
+        final testVideoFile = File('${testDir.path}/test_video.mp4');
+        await testVideoFile.writeAsString('fake video content');
 
-      // Create upload record
-      final upload = PendingUpload.create(
-        localVideoPath: testVideoFile.path,
-        nostrPubkey: 'test-pubkey-123',
-        title: 'Test Video',
-      );
+        // Create upload record
+        final upload = PendingUpload.create(
+          localVideoPath: testVideoFile.path,
+          nostrPubkey: 'test-pubkey-123',
+          title: 'Test Video',
+        );
 
-      // Simulate uploading status by directly accessing the internal Hive box
-      final uploadingUpload = upload.copyWith(
-        status: UploadStatus.uploading,
-        uploadProgress: 0.5,
-      );
+        // Simulate uploading status by directly accessing the internal Hive box
+        final uploadingUpload = upload.copyWith(
+          status: UploadStatus.uploading,
+          uploadProgress: 0.5,
+        );
 
-      // Access the manager's internal box to update the upload
-      final box = Hive.box<PendingUpload>('pending_uploads');
-      await box.put(upload.id, uploadingUpload);
+        // Access the manager's internal box to update the upload
+        final box = Hive.box<PendingUpload>('pending_uploads');
+        await box.put(upload.id, uploadingUpload);
 
-      // Verify upload is in uploading state
-      final beforeCancel = uploadManager.getUpload(upload.id);
-      expect(beforeCancel?.status, equals(UploadStatus.uploading));
+        // Verify upload is in uploading state
+        final beforeCancel = uploadManager.getUpload(upload.id);
+        expect(beforeCancel?.status, equals(UploadStatus.uploading));
 
-      // Act: Cancel the upload
-      await uploadManager.cancelUpload(upload.id);
+        // Act: Cancel the upload
+        await uploadManager.cancelUpload(upload.id);
 
-      // Assert: Upload status should be failed with cancellation message
-      final cancelledUpload = uploadManager.getUpload(upload.id);
-      expect(cancelledUpload, isNotNull);
-      expect(cancelledUpload!.status, equals(UploadStatus.failed));
-      expect(cancelledUpload.errorMessage, equals('Upload cancelled by user'));
+        // Assert: Upload status should be failed with cancellation message
+        final cancelledUpload = uploadManager.getUpload(upload.id);
+        expect(cancelledUpload, isNotNull);
+        expect(cancelledUpload!.status, equals(UploadStatus.failed));
+        expect(
+          cancelledUpload.errorMessage,
+          equals('Upload cancelled by user'),
+        );
 
-      // Clean up
-      await testVideoFile.delete();
-    });
+        // Clean up
+        await testVideoFile.delete();
+      },
+    );
 
-    test('should cancel progress subscription when cancelling upload', () async {
-      // Arrange: Create upload with simulated progress subscription
-      final testVideoFile = File('${testDir.path}/test_video2.mp4');
-      await testVideoFile.writeAsString('fake video content');
+    test(
+      'should cancel progress subscription when cancelling upload',
+      () async {
+        // Arrange: Create upload with simulated progress subscription
+        final testVideoFile = File('${testDir.path}/test_video2.mp4');
+        await testVideoFile.writeAsString('fake video content');
 
-      final upload = PendingUpload.create(
-        localVideoPath: testVideoFile.path,
-        nostrPubkey: 'test-pubkey-456',
-      );
+        final upload = PendingUpload.create(
+          localVideoPath: testVideoFile.path,
+          nostrPubkey: 'test-pubkey-456',
+        );
 
-      final uploadingUpload = upload.copyWith(
-        status: UploadStatus.uploading,
-        uploadProgress: 0.3,
-      );
+        final uploadingUpload = upload.copyWith(
+          status: UploadStatus.uploading,
+          uploadProgress: 0.3,
+        );
 
-      final box = Hive.box<PendingUpload>('pending_uploads');
-      await box.put(upload.id, uploadingUpload);
+        final box = Hive.box<PendingUpload>('pending_uploads');
+        await box.put(upload.id, uploadingUpload);
 
-      // Act: Cancel the upload
-      await uploadManager.cancelUpload(upload.id);
+        // Act: Cancel the upload
+        await uploadManager.cancelUpload(upload.id);
 
-      // Assert: Upload should be cancelled
-      final cancelledUpload = uploadManager.getUpload(upload.id);
-      expect(cancelledUpload!.status, equals(UploadStatus.failed));
+        // Assert: Upload should be cancelled
+        final cancelledUpload = uploadManager.getUpload(upload.id);
+        expect(cancelledUpload!.status, equals(UploadStatus.failed));
 
-      // Clean up
-      await testVideoFile.delete();
-    });
+        // Clean up
+        await testVideoFile.delete();
+      },
+    );
 
     test('should handle cancelling non-existent upload gracefully', () async {
       // Act: Try to cancel upload that doesn't exist
@@ -133,37 +142,40 @@ void main() {
       expect(uploadManager.getUpload('non-existent-id'), isNull);
     });
 
-    test('should preserve upload record after cancellation for retry', () async {
-      // Arrange: Create upload
-      final testVideoFile = File('${testDir.path}/test_video3.mp4');
-      await testVideoFile.writeAsString('fake video content');
+    test(
+      'should preserve upload record after cancellation for retry',
+      () async {
+        // Arrange: Create upload
+        final testVideoFile = File('${testDir.path}/test_video3.mp4');
+        await testVideoFile.writeAsString('fake video content');
 
-      final upload = PendingUpload.create(
-        localVideoPath: testVideoFile.path,
-        nostrPubkey: 'test-pubkey-789',
-        title: 'Retryable Video',
-      );
+        final upload = PendingUpload.create(
+          localVideoPath: testVideoFile.path,
+          nostrPubkey: 'test-pubkey-789',
+          title: 'Retryable Video',
+        );
 
-      final uploadingUpload = upload.copyWith(
-        status: UploadStatus.uploading,
-        uploadProgress: 0.7,
-      );
+        final uploadingUpload = upload.copyWith(
+          status: UploadStatus.uploading,
+          uploadProgress: 0.7,
+        );
 
-      final box = Hive.box<PendingUpload>('pending_uploads');
-      await box.put(upload.id, uploadingUpload);
+        final box = Hive.box<PendingUpload>('pending_uploads');
+        await box.put(upload.id, uploadingUpload);
 
-      // Act: Cancel the upload
-      await uploadManager.cancelUpload(upload.id);
+        // Act: Cancel the upload
+        await uploadManager.cancelUpload(upload.id);
 
-      // Assert: Upload record still exists (not deleted)
-      final cancelledUpload = uploadManager.getUpload(upload.id);
-      expect(cancelledUpload, isNotNull);
-      expect(cancelledUpload!.localVideoPath, equals(testVideoFile.path));
-      expect(cancelledUpload.title, equals('Retryable Video'));
-      expect(cancelledUpload.status, equals(UploadStatus.failed));
+        // Assert: Upload record still exists (not deleted)
+        final cancelledUpload = uploadManager.getUpload(upload.id);
+        expect(cancelledUpload, isNotNull);
+        expect(cancelledUpload!.localVideoPath, equals(testVideoFile.path));
+        expect(cancelledUpload.title, equals('Retryable Video'));
+        expect(cancelledUpload.status, equals(UploadStatus.failed));
 
-      // Clean up
-      await testVideoFile.delete();
-    });
+        // Clean up
+        await testVideoFile.delete();
+      },
+    );
   });
 }

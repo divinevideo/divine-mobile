@@ -10,7 +10,6 @@ import 'package:http/testing.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/relay_gateway_service.dart';
 import 'package:openvine/services/relay_gateway_settings.dart';
 import 'package:openvine/services/subscription_manager.dart';
@@ -31,9 +30,7 @@ void main() {
     late RelayGatewayService gatewayService;
 
     setUp(() async {
-      SharedPreferences.setMockInitialValues({
-        'relay_gateway_enabled': true,
-      });
+      SharedPreferences.setMockInitialValues({'relay_gateway_enabled': true});
       final prefs = await SharedPreferences.getInstance();
       gatewaySettings = RelayGatewaySettings(prefs);
 
@@ -44,11 +41,13 @@ void main() {
       when(mockNostrService.isInitialized).thenReturn(true);
       when(mockNostrService.relays).thenReturn(['wss://relay.divine.video']);
       when(mockNostrService.connectedRelayCount).thenReturn(1);
-      when(mockNostrService.subscribeToEvents(
-        filters: anyNamed('filters'),
-        bypassLimits: anyNamed('bypassLimits'),
-        onEose: anyNamed('onEose'),
-      )).thenAnswer((_) => Stream<Event>.empty());
+      when(
+        mockNostrService.subscribeToEvents(
+          filters: anyNamed('filters'),
+          bypassLimits: anyNamed('bypassLimits'),
+          onEose: anyNamed('onEose'),
+        ),
+      ).thenAnswer((_) => Stream<Event>.empty());
     });
 
     test('uses gateway for discovery feed when enabled', () async {
@@ -69,7 +68,7 @@ void main() {
                 ],
                 'content': '',
                 'sig': 'c' * 128,
-              }
+              },
             ],
             'eose': true,
             'complete': true,
@@ -97,7 +96,11 @@ void main() {
         limit: 50,
       );
 
-      expect(gatewayCalled, true, reason: 'Gateway should be called for discovery feed');
+      expect(
+        gatewayCalled,
+        true,
+        reason: 'Gateway should be called for discovery feed',
+      );
     });
 
     test('skips gateway for home feed (personalized content)', () async {
@@ -125,7 +128,11 @@ void main() {
         limit: 50,
       );
 
-      expect(gatewayCalled, false, reason: 'Gateway should NOT be used for home feed');
+      expect(
+        gatewayCalled,
+        false,
+        reason: 'Gateway should NOT be used for home feed',
+      );
     });
 
     test('falls back to WebSocket on gateway failure', () async {
@@ -152,11 +159,13 @@ void main() {
       );
 
       // Verify WebSocket subscription was still created
-      verify(mockNostrService.subscribeToEvents(
-        filters: anyNamed('filters'),
-        bypassLimits: anyNamed('bypassLimits'),
-        onEose: anyNamed('onEose'),
-      )).called(1);
+      verify(
+        mockNostrService.subscribeToEvents(
+          filters: anyNamed('filters'),
+          bypassLimits: anyNamed('bypassLimits'),
+          onEose: anyNamed('onEose'),
+        ),
+      ).called(1);
     });
 
     test('skips gateway when not using divine relay', () async {
@@ -186,14 +195,16 @@ void main() {
         limit: 50,
       );
 
-      expect(gatewayCalled, false, reason: 'Gateway should not be used without divine relay');
+      expect(
+        gatewayCalled,
+        false,
+        reason: 'Gateway should not be used without divine relay',
+      );
     });
 
     test('skips gateway when gateway is disabled in settings', () async {
       // Disable gateway in settings
-      SharedPreferences.setMockInitialValues({
-        'relay_gateway_enabled': false,
-      });
+      SharedPreferences.setMockInitialValues({'relay_gateway_enabled': false});
       final prefs = await SharedPreferences.getInstance();
       gatewaySettings = RelayGatewaySettings(prefs);
 
@@ -220,7 +231,11 @@ void main() {
         limit: 50,
       );
 
-      expect(gatewayCalled, false, reason: 'Gateway should not be used when disabled');
+      expect(
+        gatewayCalled,
+        false,
+        reason: 'Gateway should not be used when disabled',
+      );
     });
 
     test('uses gateway for hashtag feed', () async {
@@ -256,7 +271,11 @@ void main() {
         limit: 50,
       );
 
-      expect(gatewayCalled, true, reason: 'Gateway should be used for hashtag feeds');
+      expect(
+        gatewayCalled,
+        true,
+        reason: 'Gateway should be used for hashtag feeds',
+      );
     });
 
     test('works without gateway dependencies (null gatewayService)', () async {
@@ -273,11 +292,13 @@ void main() {
       );
 
       // Verify WebSocket subscription was created
-      verify(mockNostrService.subscribeToEvents(
-        filters: anyNamed('filters'),
-        bypassLimits: anyNamed('bypassLimits'),
-        onEose: anyNamed('onEose'),
-      )).called(1);
+      verify(
+        mockNostrService.subscribeToEvents(
+          filters: anyNamed('filters'),
+          bypassLimits: anyNamed('bypassLimits'),
+          onEose: anyNamed('onEose'),
+        ),
+      ).called(1);
     });
   });
 }

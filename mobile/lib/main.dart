@@ -37,8 +37,11 @@ import 'package:openvine/widgets/geo_blocking_gate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
-import 'dart:io' if (dart.library.html) 'package:openvine/utils/platform_io_web.dart' as io;
-import 'package:openvine/network/vine_cdn_http_overrides.dart' if (dart.library.html) 'package:openvine/utils/platform_io_web.dart';
+import 'dart:io'
+    if (dart.library.html) 'package:openvine/utils/platform_io_web.dart'
+    as io;
+import 'package:openvine/network/vine_cdn_http_overrides.dart'
+    if (dart.library.html) 'package:openvine/utils/platform_io_web.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 Future<void> _startOpenVineApp() async {
@@ -55,9 +58,7 @@ Future<void> _startOpenVineApp() async {
       defaultTargetPlatform != TargetPlatform.windows &&
       defaultTargetPlatform != TargetPlatform.linux) {
     // CRITICAL: Lock to portraitUp ONLY for proper camera orientation
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }
 
   // Initialize startup performance monitoring FIRST
@@ -85,22 +86,34 @@ Future<void> _startOpenVineApp() async {
   StartupPerformanceService.instance.completePhase('performance_monitoring');
 
   // Now we can start logging
-  Log.info('[STARTUP] App initialization started at $startTime',
-      name: 'Main', category: LogCategory.system);
+  Log.info(
+    '[STARTUP] App initialization started at $startTime',
+    name: 'Main',
+    category: LogCategory.system,
+  );
   CrashReportingService.instance.logInitializationStep('Bindings initialized');
   StartupPerformanceService.instance.checkpoint('crash_reporting_ready');
 
   // Enable DNS override for legacy Vine CDN domains if configured (not supported on web)
   if (!kIsWeb) {
-    const bool enableVineCdnFix = bool.fromEnvironment('VINE_CDN_DNS_FIX', defaultValue: true);
-    const String cdnIp = String.fromEnvironment('VINE_CDN_IP', defaultValue: '151.101.244.157');
+    const bool enableVineCdnFix = bool.fromEnvironment(
+      'VINE_CDN_DNS_FIX',
+      defaultValue: true,
+    );
+    const String cdnIp = String.fromEnvironment(
+      'VINE_CDN_IP',
+      defaultValue: '151.101.244.157',
+    );
     if (enableVineCdnFix) {
       final ip = io.InternetAddress.tryParse(cdnIp);
       if (ip != null) {
         io.HttpOverrides.global = VineCdnHttpOverrides(overrideAddress: ip);
         Log.info('Enabled Vine CDN DNS override to $cdnIp', name: 'Networking');
       } else {
-        Log.warning('Invalid VINE_CDN_IP "$cdnIp". DNS override not applied.', name: 'Networking');
+        Log.warning(
+          'Invalid VINE_CDN_IP "$cdnIp". DNS override not applied.',
+          name: 'Networking',
+        );
       }
     }
   }
@@ -111,24 +124,31 @@ Future<void> _startOpenVineApp() async {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         StartupPerformanceService.instance.startPhase('window_manager');
-        CrashReportingService.instance.logInitializationStep('Initializing window manager');
+        CrashReportingService.instance.logInitializationStep(
+          'Initializing window manager',
+        );
         await windowManager.ensureInitialized();
 
-      // Set initial window size for desktop vine experience
-      const initialWindowOptions = WindowOptions(
-        size: Size(750, 950), // Wider, better proportioned for desktop
-        minimumSize:
-            Size(ResponsiveWrapper.baseWidth, ResponsiveWrapper.baseHeight),
-        center: true,
-        backgroundColor: Colors.black,
-        skipTaskbar: false,
-        titleBarStyle: TitleBarStyle.normal,
-      );
+        // Set initial window size for desktop vine experience
+        const initialWindowOptions = WindowOptions(
+          size: Size(750, 950), // Wider, better proportioned for desktop
+          minimumSize: Size(
+            ResponsiveWrapper.baseWidth,
+            ResponsiveWrapper.baseHeight,
+          ),
+          center: true,
+          backgroundColor: Colors.black,
+          skipTaskbar: false,
+          titleBarStyle: TitleBarStyle.normal,
+        );
 
-        await windowManager.waitUntilReadyToShow(initialWindowOptions, () async {
-          await windowManager.show();
-          await windowManager.focus();
-        });
+        await windowManager.waitUntilReadyToShow(
+          initialWindowOptions,
+          () async {
+            await windowManager.show();
+            await windowManager.focus();
+          },
+        );
 
         StartupPerformanceService.instance.completePhase('window_manager');
       } catch (e) {
@@ -141,7 +161,9 @@ Future<void> _startOpenVineApp() async {
 
   // Initialize logging configuration
   StartupPerformanceService.instance.startPhase('logging_config');
-  CrashReportingService.instance.logInitializationStep('Initializing logging configuration');
+  CrashReportingService.instance.logInitializationStep(
+    'Initializing logging configuration',
+  );
   await LoggingConfigService.instance.initialize();
 
   // Initialize log message batcher to reduce noise from repetitive native logs
@@ -150,25 +172,35 @@ Future<void> _startOpenVineApp() async {
   StartupPerformanceService.instance.completePhase('logging_config');
 
   // Initialize video cache manifest for instant cache lookups
-  if (!kIsWeb) {  // Web doesn't use file-based caching
+  if (!kIsWeb) {
+    // Web doesn't use file-based caching
     StartupPerformanceService.instance.startPhase('video_cache');
-    CrashReportingService.instance.logInitializationStep('Initializing video cache manifest');
+    CrashReportingService.instance.logInitializationStep(
+      'Initializing video cache manifest',
+    );
     try {
       await openVineVideoCache.initialize();
       StartupPerformanceService.instance.completePhase('video_cache');
     } catch (e) {
-      Log.error('[STARTUP] Video cache initialization failed: $e',
-          name: 'Main', category: LogCategory.system);
+      Log.error(
+        '[STARTUP] Video cache initialization failed: $e',
+        name: 'Main',
+        category: LogCategory.system,
+      );
       StartupPerformanceService.instance.completePhase('video_cache');
     }
   }
 
   // Log that core startup is complete
-  CrashReportingService.instance.logInitializationStep('Core app startup complete');
+  CrashReportingService.instance.logInitializationStep(
+    'Core app startup complete',
+  );
 
   // Initialize Zendesk Support SDK (gracefully degrades if credentials not configured)
   StartupPerformanceService.instance.startPhase('zendesk');
-  CrashReportingService.instance.logInitializationStep('Initializing Zendesk Support SDK');
+  CrashReportingService.instance.logInitializationStep(
+    'Initializing Zendesk Support SDK',
+  );
   try {
     final zendeskInitialized = await ZendeskSupportService.initialize(
       appId: ZendeskConfig.appId,
@@ -176,25 +208,42 @@ Future<void> _startOpenVineApp() async {
       zendeskUrl: ZendeskConfig.zendeskUrl,
     );
     if (zendeskInitialized) {
-      Log.info('[STARTUP] Zendesk Support SDK initialized successfully',
-          name: 'Main', category: LogCategory.system);
-      CrashReportingService.instance.logInitializationStep('✓ Zendesk initialized');
+      Log.info(
+        '[STARTUP] Zendesk Support SDK initialized successfully',
+        name: 'Main',
+        category: LogCategory.system,
+      );
+      CrashReportingService.instance.logInitializationStep(
+        '✓ Zendesk initialized',
+      );
     } else {
-      Log.info('[STARTUP] Zendesk Support SDK not initialized (credentials not configured)',
-          name: 'Main', category: LogCategory.system);
-      CrashReportingService.instance.logInitializationStep('○ Zendesk skipped (no credentials)');
+      Log.info(
+        '[STARTUP] Zendesk Support SDK not initialized (credentials not configured)',
+        name: 'Main',
+        category: LogCategory.system,
+      );
+      CrashReportingService.instance.logInitializationStep(
+        '○ Zendesk skipped (no credentials)',
+      );
     }
     StartupPerformanceService.instance.completePhase('zendesk');
   } catch (e) {
-    Log.warning('[STARTUP] Zendesk initialization failed: $e',
-        name: 'Main', category: LogCategory.system);
-    CrashReportingService.instance.logInitializationStep('✗ Zendesk failed: $e');
+    Log.warning(
+      '[STARTUP] Zendesk initialization failed: $e',
+      name: 'Main',
+      category: LogCategory.system,
+    );
+    CrashReportingService.instance.logInitializationStep(
+      '✗ Zendesk failed: $e',
+    );
     StartupPerformanceService.instance.completePhase('zendesk');
   }
 
   // Log startup time tracking
   final initDuration = DateTime.now().difference(startTime).inMilliseconds;
-  CrashReportingService.instance.log('[STARTUP] Initial setup took ${initDuration}ms');
+  CrashReportingService.instance.log(
+    '[STARTUP] Initial setup took ${initDuration}ms',
+  );
   StartupPerformanceService.instance.checkpoint('core_startup_complete');
 
   // Set default log level based on build mode if not already configured
@@ -203,8 +252,13 @@ Future<void> _startOpenVineApp() async {
       // Debug builds: enable debug logging for development visibility
       // RELAY category temporarily enabled for web debugging
       UnifiedLogger.setLogLevel(LogLevel.debug);
-      UnifiedLogger.enableCategories(
-          {LogCategory.system, LogCategory.auth, LogCategory.video, LogCategory.relay, LogCategory.ui});
+      UnifiedLogger.enableCategories({
+        LogCategory.system,
+        LogCategory.auth,
+        LogCategory.video,
+        LogCategory.relay,
+        LogCategory.ui,
+      });
     } else {
       // Release builds: minimal logging to reduce performance impact
       UnifiedLogger.setLogLevel(LogLevel.warning);
@@ -219,15 +273,31 @@ Future<void> _startOpenVineApp() async {
   debugPrint = (message, {wrapWidth}) {
     if (message != null && UnifiedLogger.isLevelEnabled(LogLevel.debug)) {
       // Try to batch repetitive EXTERNAL-EVENT messages from native code
-      if (message.contains('[EXTERNAL-EVENT]') && message.contains('already exists in database or was rejected')) {
+      if (message.contains('[EXTERNAL-EVENT]') &&
+          message.contains('already exists in database or was rejected')) {
         // Use our batcher for these specific messages
-        LogMessageBatcher.instance.tryBatchMessage(message, level: LogLevel.info, category: LogCategory.relay);
+        LogMessageBatcher.instance.tryBatchMessage(
+          message,
+          level: LogLevel.info,
+          category: LogCategory.relay,
+        );
         return; // Don't print the individual message
-      } else if (message.contains('[EXTERNAL-EVENT]') && message.contains('matches subscription')) {
-        LogMessageBatcher.instance.tryBatchMessage(message, level: LogLevel.debug, category: LogCategory.relay);
+      } else if (message.contains('[EXTERNAL-EVENT]') &&
+          message.contains('matches subscription')) {
+        LogMessageBatcher.instance.tryBatchMessage(
+          message,
+          level: LogLevel.debug,
+          category: LogCategory.relay,
+        );
         return; // Don't print the individual message
-      } else if (message.contains('[EXTERNAL-EVENT]') && message.contains('Received event') && message.contains('from')) {
-        LogMessageBatcher.instance.tryBatchMessage(message, level: LogLevel.debug, category: LogCategory.relay);
+      } else if (message.contains('[EXTERNAL-EVENT]') &&
+          message.contains('Received event') &&
+          message.contains('from')) {
+        LogMessageBatcher.instance.tryBatchMessage(
+          message,
+          level: LogLevel.debug,
+          category: LogCategory.relay,
+        );
         return; // Don't print the individual message
       }
 
@@ -257,20 +327,23 @@ Future<void> _startOpenVineApp() async {
     );
   };
 
-
   // Handle Flutter framework errors more gracefully
   final previousOnError = FlutterError.onError; // Preserve Crashlytics handler
   FlutterError.onError = (details) {
     // Log all errors for debugging
-    Log.error('Flutter Error: ${details.exception}',
-        name: 'Main', category: LogCategory.system);
+    Log.error(
+      'Flutter Error: ${details.exception}',
+      name: 'Main',
+      category: LogCategory.system,
+    );
 
     // Log the error but don't crash the app for known framework issues
     if (details.exception.toString().contains('KeyDownEvent') ||
         details.exception.toString().contains('HardwareKeyboard')) {
       Log.warning(
-          'Known Flutter framework keyboard issue (ignoring): ${details.exception}',
-          name: 'Main');
+        'Known Flutter framework keyboard issue (ignoring): ${details.exception}',
+        name: 'Main',
+      );
       return;
     }
 
@@ -296,14 +369,23 @@ Future<void> _startOpenVineApp() async {
     migrationDb = AppDatabase();
     final migrationService = MigrationService(migrationDb);
     await migrationService.runMigrations();
-    Log.info('[MIGRATION] ✅ Data migration complete',
-        name: 'Main', category: LogCategory.system);
+    Log.info(
+      '[MIGRATION] ✅ Data migration complete',
+      name: 'Main',
+      category: LogCategory.system,
+    );
   } catch (e, stack) {
     // Don't block app startup on migration failures
-    Log.error('[MIGRATION] ❌ Migration failed (non-critical): $e',
-        name: 'Main', category: LogCategory.system);
-    Log.verbose('[MIGRATION] Stack: $stack',
-        name: 'Main', category: LogCategory.system);
+    Log.error(
+      '[MIGRATION] ❌ Migration failed (non-critical): $e',
+      name: 'Main',
+      category: LogCategory.system,
+    );
+    Log.verbose(
+      '[MIGRATION] Stack: $stack',
+      name: 'Main',
+      category: LogCategory.system,
+    );
   } finally {
     // Close migration database to prevent multiple instances warning
     await migrationDb?.close();
@@ -318,10 +400,16 @@ Future<void> _startOpenVineApp() async {
     await SeedDataPreloadService.loadSeedDataIfNeeded(seedDb);
   } catch (e, stack) {
     // Non-critical: user will fetch from relay normally
-    Log.error('[SEED] Data preload failed (non-critical): $e',
-        name: 'Main', category: LogCategory.system);
-    Log.verbose('[SEED] Stack: $stack',
-        name: 'Main', category: LogCategory.system);
+    Log.error(
+      '[SEED] Data preload failed (non-critical): $e',
+      name: 'Main',
+      category: LogCategory.system,
+    );
+    Log.verbose(
+      '[SEED] Stack: $stack',
+      name: 'Main',
+      category: LogCategory.system,
+    );
   } finally {
     await seedDb?.close();
   }
@@ -335,10 +423,16 @@ Future<void> _startOpenVineApp() async {
       await SeedMediaPreloadService.loadSeedMediaIfNeeded();
     } catch (e, stack) {
       // Non-critical: user will download videos from network normally
-      Log.error('[SEED] Media preload failed (non-critical): $e',
-          name: 'Main', category: LogCategory.system);
-      Log.verbose('[SEED] Stack: $stack',
-          name: 'Main', category: LogCategory.system);
+      Log.error(
+        '[SEED] Media preload failed (non-critical): $e',
+        name: 'Main',
+        category: LogCategory.system,
+      );
+      Log.verbose(
+        '[SEED] Stack: $stack',
+        name: 'Main',
+        category: LogCategory.system,
+      );
     }
     StartupPerformanceService.instance.completePhase('seed_media_preload');
   }
@@ -365,15 +459,21 @@ Future<void> _startOpenVineApp() async {
 
 void main() {
   // Capture any uncaught Dart errors (foreground or background zones)
-  runZonedGuarded(() async {
-    await _startOpenVineApp();
-  }, (error, stack) async {
-    // Best-effort logging; if Crashlytics isn't ready, still print
-    try {
-      await CrashReportingService.instance
-          .recordError(error, stack, reason: 'runZonedGuarded');
-    } catch (_) {}
-  });
+  runZonedGuarded(
+    () async {
+      await _startOpenVineApp();
+    },
+    (error, stack) async {
+      // Best-effort logging; if Crashlytics isn't ready, still print
+      try {
+        await CrashReportingService.instance.recordError(
+          error,
+          stack,
+          reason: 'runZonedGuarded',
+        );
+      } catch (_) {}
+    },
+  );
 }
 
 class DivineApp extends ConsumerStatefulWidget {
@@ -401,55 +501,85 @@ class _DivineAppState extends ConsumerState<DivineApp> {
   }
 
   void _initializeDeepLinkService() {
-    Log.info('🔗 Initializing deep link service...',
-        name: 'DeepLinkHandler', category: LogCategory.ui);
+    Log.info(
+      '🔗 Initializing deep link service...',
+      name: 'DeepLinkHandler',
+      category: LogCategory.ui,
+    );
 
     // Initialize the deep link service
     final service = ref.read(deepLinkServiceProvider);
     service.initialize();
 
-    Log.info('✅ Deep link service initialized',
-        name: 'DeepLinkHandler', category: LogCategory.ui);
+    Log.info(
+      '✅ Deep link service initialized',
+      name: 'DeepLinkHandler',
+      category: LogCategory.ui,
+    );
   }
 
   Future<void> _initializeServices() async {
     try {
-      Log.info('[INIT] Starting service initialization...',
-          name: 'Main', category: LogCategory.system);
+      Log.info(
+        '[INIT] Starting service initialization...',
+        name: 'Main',
+        category: LogCategory.system,
+      );
 
       // Initialize key manager first (needed for NIP-17 bug reports and auth)
       await ref.read(nostrKeyManagerProvider).initialize();
-      Log.info('[INIT] ✅ NostrKeyManager initialized',
-          name: 'Main', category: LogCategory.system);
+      Log.info(
+        '[INIT] ✅ NostrKeyManager initialized',
+        name: 'Main',
+        category: LogCategory.system,
+      );
 
       // Initialize auth service
       await ref.read(authServiceProvider).initialize();
-      Log.info('[INIT] ✅ AuthService initialized',
-          name: 'Main', category: LogCategory.system);
+      Log.info(
+        '[INIT] ✅ AuthService initialized',
+        name: 'Main',
+        category: LogCategory.system,
+      );
 
       // Initialize Nostr service - THIS IS THE CRITICAL MISSING PIECE
       await ref.read(nostrServiceProvider).initialize();
-      Log.info('[INIT] ✅ NostrService initialized',
-          name: 'Main', category: LogCategory.system);
+      Log.info(
+        '[INIT] ✅ NostrService initialized',
+        name: 'Main',
+        category: LogCategory.system,
+      );
 
       // Initialize other services
       await ref.read(seenVideosServiceProvider).initialize();
-      Log.info('[INIT] ✅ SeenVideosService initialized',
-          name: 'Main', category: LogCategory.system);
+      Log.info(
+        '[INIT] ✅ SeenVideosService initialized',
+        name: 'Main',
+        category: LogCategory.system,
+      );
 
       await ref.read(uploadManagerProvider).initialize();
-      Log.info('[INIT] ✅ UploadManager initialized',
-          name: 'Main', category: LogCategory.system);
+      Log.info(
+        '[INIT] ✅ UploadManager initialized',
+        name: 'Main',
+        category: LogCategory.system,
+      );
 
       // Initialize social provider in background
       Future.microtask(() async {
         try {
           await ref.read(social_providers.socialProvider.notifier).initialize();
-          Log.info('[INIT] ✅ SocialProvider initialized (background)',
-              name: 'Main', category: LogCategory.system);
+          Log.info(
+            '[INIT] ✅ SocialProvider initialized (background)',
+            name: 'Main',
+            category: LogCategory.system,
+          );
         } catch (e) {
-          Log.warning('[INIT] SocialProvider failed (non-critical): $e',
-              name: 'Main', category: LogCategory.system);
+          Log.warning(
+            '[INIT] SocialProvider failed (non-critical): $e',
+            name: 'Main',
+            category: LogCategory.system,
+          );
         }
       });
 
@@ -466,22 +596,37 @@ class _DivineAppState extends ConsumerState<DivineApp> {
               nostrService,
               keyManager.publicKey!,
             );
-            Log.info('[INIT] ✅ Mutual mute list sync started (background)',
-                name: 'Main', category: LogCategory.system);
+            Log.info(
+              '[INIT] ✅ Mutual mute list sync started (background)',
+              name: 'Main',
+              category: LogCategory.system,
+            );
           }
         } catch (e) {
-          Log.warning('[INIT] Mutual mute sync failed (non-critical): $e',
-              name: 'Main', category: LogCategory.system);
+          Log.warning(
+            '[INIT] Mutual mute sync failed (non-critical): $e',
+            name: 'Main',
+            category: LogCategory.system,
+          );
         }
       });
 
-      Log.info('[INIT] ✅ All critical services initialized',
-          name: 'Main', category: LogCategory.system);
+      Log.info(
+        '[INIT] ✅ All critical services initialized',
+        name: 'Main',
+        category: LogCategory.system,
+      );
     } catch (e, stack) {
-      Log.error('[INIT] Service initialization failed: $e',
-          name: 'Main', category: LogCategory.system);
-      Log.verbose('[INIT] Stack: $stack',
-          name: 'Main', category: LogCategory.system);
+      Log.error(
+        '[INIT] Service initialization failed: $e',
+        name: 'Main',
+        category: LogCategory.system,
+      );
+      Log.verbose(
+        '[INIT] Stack: $stack',
+        name: 'Main',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -492,55 +637,89 @@ class _DivineAppState extends ConsumerState<DivineApp> {
 
     // Set up deep link listener (must be in build method per Riverpod rules)
     ref.listen<AsyncValue<DeepLink>>(deepLinksProvider, (previous, next) {
-      Log.info('🔗 Deep link event received - AsyncValue state: ${next.runtimeType}',
-          name: 'DeepLinkHandler', category: LogCategory.ui);
+      Log.info(
+        '🔗 Deep link event received - AsyncValue state: ${next.runtimeType}',
+        name: 'DeepLinkHandler',
+        category: LogCategory.ui,
+      );
 
       next.when(
         data: (deepLink) {
-          Log.info('🔗 Processing deep link: $deepLink',
-              name: 'DeepLinkHandler', category: LogCategory.ui);
+          Log.info(
+            '🔗 Processing deep link: $deepLink',
+            name: 'DeepLinkHandler',
+            category: LogCategory.ui,
+          );
 
           final router = ref.read(goRouterProvider);
-          final currentLocation = router.routeInformationProvider.value.uri.toString();
-          Log.info('🔗 Current router location: $currentLocation',
-              name: 'DeepLinkHandler', category: LogCategory.ui);
+          final currentLocation = router.routeInformationProvider.value.uri
+              .toString();
+          Log.info(
+            '🔗 Current router location: $currentLocation',
+            name: 'DeepLinkHandler',
+            category: LogCategory.ui,
+          );
 
           switch (deepLink.type) {
             case DeepLinkType.video:
               if (deepLink.videoId != null) {
                 final targetPath = '/video/${deepLink.videoId}';
-                Log.info('📱 Navigating to video: $targetPath',
-                    name: 'DeepLinkHandler', category: LogCategory.ui);
+                Log.info(
+                  '📱 Navigating to video: $targetPath',
+                  name: 'DeepLinkHandler',
+                  category: LogCategory.ui,
+                );
                 try {
                   router.go(targetPath);
-                  Log.info('✅ Navigation completed to: $targetPath',
-                      name: 'DeepLinkHandler', category: LogCategory.ui);
+                  Log.info(
+                    '✅ Navigation completed to: $targetPath',
+                    name: 'DeepLinkHandler',
+                    category: LogCategory.ui,
+                  );
                 } catch (e) {
-                  Log.error('❌ Navigation failed: $e',
-                      name: 'DeepLinkHandler', category: LogCategory.ui);
+                  Log.error(
+                    '❌ Navigation failed: $e',
+                    name: 'DeepLinkHandler',
+                    category: LogCategory.ui,
+                  );
                 }
               } else {
-                Log.warning('⚠️ Video deep link missing videoId',
-                    name: 'DeepLinkHandler', category: LogCategory.ui);
+                Log.warning(
+                  '⚠️ Video deep link missing videoId',
+                  name: 'DeepLinkHandler',
+                  category: LogCategory.ui,
+                );
               }
               break;
             case DeepLinkType.profile:
               if (deepLink.npub != null) {
                 final index = deepLink.index ?? 0;
                 final targetPath = '/profile/${deepLink.npub}/$index';
-                Log.info('📱 Navigating to profile: $targetPath',
-                    name: 'DeepLinkHandler', category: LogCategory.ui);
+                Log.info(
+                  '📱 Navigating to profile: $targetPath',
+                  name: 'DeepLinkHandler',
+                  category: LogCategory.ui,
+                );
                 try {
                   router.go(targetPath);
-                  Log.info('✅ Navigation completed to: $targetPath',
-                      name: 'DeepLinkHandler', category: LogCategory.ui);
+                  Log.info(
+                    '✅ Navigation completed to: $targetPath',
+                    name: 'DeepLinkHandler',
+                    category: LogCategory.ui,
+                  );
                 } catch (e) {
-                  Log.error('❌ Navigation failed: $e',
-                      name: 'DeepLinkHandler', category: LogCategory.ui);
+                  Log.error(
+                    '❌ Navigation failed: $e',
+                    name: 'DeepLinkHandler',
+                    category: LogCategory.ui,
+                  );
                 }
               } else {
-                Log.warning('⚠️ Profile deep link missing npub',
-                    name: 'DeepLinkHandler', category: LogCategory.ui);
+                Log.warning(
+                  '⚠️ Profile deep link missing npub',
+                  name: 'DeepLinkHandler',
+                  category: LogCategory.ui,
+                );
               }
               break;
             case DeepLinkType.hashtag:
@@ -549,19 +728,31 @@ class _DivineAppState extends ConsumerState<DivineApp> {
                 final targetPath = deepLink.index != null
                     ? '/hashtag/${deepLink.hashtag}/${deepLink.index}'
                     : '/hashtag/${deepLink.hashtag}';
-                Log.info('📱 Navigating to hashtag: $targetPath',
-                    name: 'DeepLinkHandler', category: LogCategory.ui);
+                Log.info(
+                  '📱 Navigating to hashtag: $targetPath',
+                  name: 'DeepLinkHandler',
+                  category: LogCategory.ui,
+                );
                 try {
                   router.go(targetPath);
-                  Log.info('✅ Navigation completed to: $targetPath',
-                      name: 'DeepLinkHandler', category: LogCategory.ui);
+                  Log.info(
+                    '✅ Navigation completed to: $targetPath',
+                    name: 'DeepLinkHandler',
+                    category: LogCategory.ui,
+                  );
                 } catch (e) {
-                  Log.error('❌ Navigation failed: $e',
-                      name: 'DeepLinkHandler', category: LogCategory.ui);
+                  Log.error(
+                    '❌ Navigation failed: $e',
+                    name: 'DeepLinkHandler',
+                    category: LogCategory.ui,
+                  );
                 }
               } else {
-                Log.warning('⚠️ Hashtag deep link missing hashtag',
-                    name: 'DeepLinkHandler', category: LogCategory.ui);
+                Log.warning(
+                  '⚠️ Hashtag deep link missing hashtag',
+                  name: 'DeepLinkHandler',
+                  category: LogCategory.ui,
+                );
               }
               break;
             case DeepLinkType.search:
@@ -570,39 +761,63 @@ class _DivineAppState extends ConsumerState<DivineApp> {
                 final targetPath = deepLink.index != null
                     ? '/search/${deepLink.searchTerm}/${deepLink.index}'
                     : '/search/${deepLink.searchTerm}';
-                Log.info('📱 Navigating to search: $targetPath',
-                    name: 'DeepLinkHandler', category: LogCategory.ui);
+                Log.info(
+                  '📱 Navigating to search: $targetPath',
+                  name: 'DeepLinkHandler',
+                  category: LogCategory.ui,
+                );
                 try {
                   router.go(targetPath);
-                  Log.info('✅ Navigation completed to: $targetPath',
-                      name: 'DeepLinkHandler', category: LogCategory.ui);
+                  Log.info(
+                    '✅ Navigation completed to: $targetPath',
+                    name: 'DeepLinkHandler',
+                    category: LogCategory.ui,
+                  );
                 } catch (e) {
-                  Log.error('❌ Navigation failed: $e',
-                      name: 'DeepLinkHandler', category: LogCategory.ui);
+                  Log.error(
+                    '❌ Navigation failed: $e',
+                    name: 'DeepLinkHandler',
+                    category: LogCategory.ui,
+                  );
                 }
               } else {
-                Log.warning('⚠️ Search deep link missing search term',
-                    name: 'DeepLinkHandler', category: LogCategory.ui);
+                Log.warning(
+                  '⚠️ Search deep link missing search term',
+                  name: 'DeepLinkHandler',
+                  category: LogCategory.ui,
+                );
               }
               break;
             case DeepLinkType.unknown:
-              Log.warning('📱 Unknown deep link type',
-                  name: 'DeepLinkHandler', category: LogCategory.ui);
+              Log.warning(
+                '📱 Unknown deep link type',
+                name: 'DeepLinkHandler',
+                category: LogCategory.ui,
+              );
               break;
           }
         },
         loading: () {
-          Log.info('🔗 Deep link loading...',
-              name: 'DeepLinkHandler', category: LogCategory.ui);
+          Log.info(
+            '🔗 Deep link loading...',
+            name: 'DeepLinkHandler',
+            category: LogCategory.ui,
+          );
         },
         error: (error, stack) {
-          Log.error('🔗 Deep link error: $error',
-              name: 'DeepLinkHandler', category: LogCategory.ui);
+          Log.error(
+            '🔗 Deep link error: $error',
+            name: 'DeepLinkHandler',
+            category: LogCategory.ui,
+          );
         },
       );
     });
 
-    const bool crashProbe = bool.fromEnvironment('CRASHLYTICS_PROBE', defaultValue: false);
+    const bool crashProbe = bool.fromEnvironment(
+      'CRASHLYTICS_PROBE',
+      defaultValue: false,
+    );
 
     final router = ref.read(goRouterProvider);
 
@@ -664,30 +879,28 @@ class _DivineAppState extends ConsumerState<DivineApp> {
 
     // On iOS/macOS/Windows, use PopScope. On Android, platform channel handles it
     final app = (!kIsWeb && io.Platform.isAndroid)
-      ? MaterialApp.router(
-          title: 'divine',
-          debugShowCheckedModeBanner: false,
-          theme: VineTheme.theme,
-          routerConfig: router,
-        )
-      : PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, result) async {
-            if (didPop) return;
-            await handleBackNavigation(router, ref);
-          },
-          child: MaterialApp.router(
+        ? MaterialApp.router(
             title: 'divine',
             debugShowCheckedModeBanner: false,
             theme: VineTheme.theme,
             routerConfig: router,
-          ),
-        );
+          )
+        : PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              await handleBackNavigation(router, ref);
+            },
+            child: MaterialApp.router(
+              title: 'divine',
+              debugShowCheckedModeBanner: false,
+              theme: VineTheme.theme,
+              routerConfig: router,
+            ),
+          );
 
     // Wrap with geo-blocking check first, then lifecycle handler
-    Widget wrapped = GeoBlockingGate(
-      child: AppLifecycleHandler(child: app),
-    );
+    Widget wrapped = GeoBlockingGate(child: AppLifecycleHandler(child: app));
 
     if (crashProbe) {
       // Invisible crash probe: tap top-left corner 7 times within 5s to crash
@@ -720,7 +933,8 @@ class _CrashProbeHotspotState extends State<_CrashProbeHotspot> {
 
   void _onTap() async {
     final now = DateTime.now();
-    if (_windowStart == null || now.difference(_windowStart!) > const Duration(seconds: 5)) {
+    if (_windowStart == null ||
+        now.difference(_windowStart!) > const Duration(seconds: 5)) {
       _windowStart = now;
       _taps = 0;
     }
@@ -737,10 +951,10 @@ class _CrashProbeHotspotState extends State<_CrashProbeHotspot> {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: _onTap,
-        child: const SizedBox.expand(),
-      );
+    behavior: HitTestBehavior.translucent,
+    onTap: _onTap,
+    child: const SizedBox.expand(),
+  );
 }
 
 /// AppInitializer handles the async initialization of services
@@ -782,34 +996,48 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
       timeoutTimer = Timer(const Duration(seconds: 120), () {
         if (!_isInitialized && !hasTimedOut) {
           hasTimedOut = true;
-          Log.warning('[STARTUP] WARNING: Initialization taking > 10 seconds',
-              name: 'AppInitializer', category: LogCategory.system);
+          Log.warning(
+            '[STARTUP] WARNING: Initialization taking > 10 seconds',
+            name: 'AppInitializer',
+            category: LogCategory.system,
+          );
           // Safe call to CrashReportingService since it's initialized early now
           CrashReportingService.instance.log('Startup timeout detected');
-          Log.warning('Initialization timeout: > 10 seconds elapsed',
-              name: 'AppInitializer');
+          Log.warning(
+            'Initialization timeout: > 10 seconds elapsed',
+            name: 'AppInitializer',
+          );
         }
       });
 
       if (!mounted) return;
-      setState(() => _initializationStatus =
-          'Initializing background activity manager...');
+      setState(
+        () => _initializationStatus =
+            'Initializing background activity manager...',
+      );
 
       // Initialize background activity manager early
       try {
         await StartupPerformanceService.instance.measureWork(
           'background_activity_manager',
           () async {
-            CrashReportingService.instance.logInitializationStep('Starting BackgroundActivityManager');
+            CrashReportingService.instance.logInitializationStep(
+              'Starting BackgroundActivityManager',
+            );
             await BackgroundActivityManager().initialize();
-            CrashReportingService.instance.logInitializationStep('✓ BackgroundActivityManager initialized');
-          }
+            CrashReportingService.instance.logInitializationStep(
+              '✓ BackgroundActivityManager initialized',
+            );
+          },
         );
       } catch (e) {
         CrashReportingService.instance.logInitializationStep(
-            '✗ BackgroundActivityManager failed: $e');
-        Log.warning('Failed to initialize background activity manager: $e',
-            name: 'AppInitializer');
+          '✗ BackgroundActivityManager failed: $e',
+        );
+        Log.warning(
+          'Failed to initialize background activity manager: $e',
+          name: 'AppInitializer',
+        );
       }
 
       if (!mounted) return;
@@ -818,10 +1046,14 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
       await StartupPerformanceService.instance.measureWork(
         'nostr_key_manager',
         () async {
-          CrashReportingService.instance.logInitializationStep('Starting NostrKeyManager');
+          CrashReportingService.instance.logInitializationStep(
+            'Starting NostrKeyManager',
+          );
           await ref.read(nostrKeyManagerProvider).initialize();
-          CrashReportingService.instance.logInitializationStep('✓ NostrKeyManager initialized');
-        }
+          CrashReportingService.instance.logInitializationStep(
+            '✓ NostrKeyManager initialized',
+          );
+        },
       );
 
       if (!mounted) return;
@@ -830,10 +1062,14 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
       await StartupPerformanceService.instance.measureWork(
         'auth_service',
         () async {
-          CrashReportingService.instance.logInitializationStep('Starting AuthService');
+          CrashReportingService.instance.logInitializationStep(
+            'Starting AuthService',
+          );
           await ref.read(authServiceProvider).initialize();
-          CrashReportingService.instance.logInitializationStep('✓ AuthService initialized');
-        }
+          CrashReportingService.instance.logInitializationStep(
+            '✓ AuthService initialized',
+          );
+        },
       );
 
       if (!mounted) return;
@@ -842,15 +1078,24 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
         await StartupPerformanceService.instance.measureWork(
           'nostr_service',
           () async {
-            CrashReportingService.instance.logInitializationStep('Starting NostrService');
+            CrashReportingService.instance.logInitializationStep(
+              'Starting NostrService',
+            );
             await ref.read(nostrServiceProvider).initialize();
-            CrashReportingService.instance.logInitializationStep('✓ NostrService initialized');
-          }
+            CrashReportingService.instance.logInitializationStep(
+              '✓ NostrService initialized',
+            );
+          },
         );
       } catch (e) {
-        CrashReportingService.instance.logInitializationStep('✗ NostrService failed: $e');
-        Log.error('Nostr service initialization failed: $e',
-            name: 'Main', category: LogCategory.system);
+        CrashReportingService.instance.logInitializationStep(
+          '✗ NostrService failed: $e',
+        );
+        Log.error(
+          'Nostr service initialization failed: $e',
+          name: 'Main',
+          category: LogCategory.system,
+        );
         // This is critical - rethrow
         rethrow;
       }
@@ -859,63 +1104,91 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
 
       if (!mounted) return;
       setState(
-          () => _initializationStatus = 'Initializing seen videos tracker...');
-      CrashReportingService.instance.logInitializationStep('Starting SeenVideosService');
+        () => _initializationStatus = 'Initializing seen videos tracker...',
+      );
+      CrashReportingService.instance.logInitializationStep(
+        'Starting SeenVideosService',
+      );
       final seenStart = DateTime.now();
       await ref.read(seenVideosServiceProvider).initialize();
       final seenDuration = DateTime.now().difference(seenStart).inMilliseconds;
       CrashReportingService.instance.logInitializationStep(
-          '✓ SeenVideosService initialized in ${seenDuration}ms');
+        '✓ SeenVideosService initialized in ${seenDuration}ms',
+      );
 
       // SKIP UploadManager initialization during critical startup
       // It will be initialized in background after UI is ready (deferred below)
-      Log.info('⏭️  Skipping UploadManager during critical startup (will init in background)',
-          name: 'AppInitializer', category: LogCategory.system);
+      Log.info(
+        '⏭️  Skipping UploadManager during critical startup (will init in background)',
+        name: 'AppInitializer',
+        category: LogCategory.system,
+      );
 
       if (!mounted) return;
       setState(
-          () => _initializationStatus = 'Starting background publisher...');
+        () => _initializationStatus = 'Starting background publisher...',
+      );
       try {
-        CrashReportingService.instance.logInitializationStep('Starting VideoEventPublisher');
+        CrashReportingService.instance.logInitializationStep(
+          'Starting VideoEventPublisher',
+        );
         final publisherStart = DateTime.now();
         await ref.read(videoEventPublisherProvider).initialize();
-        final publisherDuration = DateTime.now().difference(publisherStart).inMilliseconds;
+        final publisherDuration = DateTime.now()
+            .difference(publisherStart)
+            .inMilliseconds;
         CrashReportingService.instance.logInitializationStep(
-            '✓ VideoEventPublisher initialized in ${publisherDuration}ms');
+          '✓ VideoEventPublisher initialized in ${publisherDuration}ms',
+        );
       } catch (e) {
         CrashReportingService.instance.logInitializationStep(
-            '✗ VideoEventPublisher failed: $e');
+          '✗ VideoEventPublisher failed: $e',
+        );
         Log.error(
-            'VideoEventPublisher initialization failed (backend endpoint missing): $e',
-            name: 'Main',
-            category: LogCategory.system);
+          'VideoEventPublisher initialization failed (backend endpoint missing): $e',
+          name: 'Main',
+          category: LogCategory.system,
+        );
         // Continue anyway - this is for background publishing optimization
       }
 
       if (!mounted) return;
       setState(() => _initializationStatus = 'Loading curated content...');
-      CrashReportingService.instance.logInitializationStep('Starting CurationService');
+      CrashReportingService.instance.logInitializationStep(
+        'Starting CurationService',
+      );
       final curationStart = DateTime.now();
       await ref.read(curationServiceProvider).subscribeToCurationSets();
-      final curationDuration = DateTime.now().difference(curationStart).inMilliseconds;
+      final curationDuration = DateTime.now()
+          .difference(curationStart)
+          .inMilliseconds;
       CrashReportingService.instance.logInitializationStep(
-          '✓ CurationService initialized in ${curationDuration}ms');
+        '✓ CurationService initialized in ${curationDuration}ms',
+      );
 
       // Cancel timeout timer
       timeoutTimer.cancel();
       slowStartupTimer.cancel();
 
-      StartupPerformanceService.instance.completePhase('service_initialization');
+      StartupPerformanceService.instance.completePhase(
+        'service_initialization',
+      );
 
       // Mark UI as ready for interaction
       StartupPerformanceService.instance.markUIReady();
 
       // Log total initialization time
-      final totalDuration = DateTime.now().difference(initStartTime).inMilliseconds;
+      final totalDuration = DateTime.now()
+          .difference(initStartTime)
+          .inMilliseconds;
       CrashReportingService.instance.logInitializationStep(
-          'All services initialized successfully in ${totalDuration}ms');
-      Log.info('[STARTUP] All services initialized in ${totalDuration}ms',
-          name: 'AppInitializer', category: LogCategory.system);
+        'All services initialized successfully in ${totalDuration}ms',
+      );
+      Log.info(
+        '[STARTUP] All services initialized in ${totalDuration}ms',
+        name: 'AppInitializer',
+        category: LogCategory.system,
+      );
 
       if (!mounted) return;
       setState(() {
@@ -938,22 +1211,30 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
           await StartupPerformanceService.instance.measureWork(
             'social_provider',
             () async {
-              CrashReportingService.instance.logInitializationStep('Starting SocialProvider (background)');
+              CrashReportingService.instance.logInitializationStep(
+                'Starting SocialProvider (background)',
+              );
               await ref
                   .read(social_providers.socialProvider.notifier)
                   .initialize();
-              CrashReportingService.instance.logInitializationStep('✓ SocialProvider initialized (background)');
-            }
+              CrashReportingService.instance.logInitializationStep(
+                '✓ SocialProvider initialized (background)',
+              );
+            },
           );
 
-          final socialDuration = DateTime.now().difference(socialStart).inMilliseconds;
+          final socialDuration = DateTime.now()
+              .difference(socialStart)
+              .inMilliseconds;
           Log.info(
             '✅ [LIFECYCLE] SocialProvider: Background initialization COMPLETE in ${socialDuration}ms',
             name: 'Main',
             category: LogCategory.system,
           );
         } catch (e) {
-          CrashReportingService.instance.logInitializationStep('✗ SocialProvider failed: $e');
+          CrashReportingService.instance.logInitializationStep(
+            '✗ SocialProvider failed: $e',
+          );
           Log.error(
             '❌ [LIFECYCLE] SocialProvider initialization failed: $e',
             name: 'Main',
@@ -977,20 +1258,28 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
           await StartupPerformanceService.instance.measureWork(
             'upload_manager',
             () async {
-              CrashReportingService.instance.logInitializationStep('Starting UploadManager (background)');
+              CrashReportingService.instance.logInitializationStep(
+                'Starting UploadManager (background)',
+              );
               await ref.read(uploadManagerProvider).initialize();
-              CrashReportingService.instance.logInitializationStep('✓ UploadManager initialized (background)');
-            }
+              CrashReportingService.instance.logInitializationStep(
+                '✓ UploadManager initialized (background)',
+              );
+            },
           );
 
-          final uploadDuration = DateTime.now().difference(uploadStart).inMilliseconds;
+          final uploadDuration = DateTime.now()
+              .difference(uploadStart)
+              .inMilliseconds;
           Log.info(
             '✅ [LIFECYCLE] UploadManager: Background initialization COMPLETE in ${uploadDuration}ms',
             name: 'Main',
             category: LogCategory.system,
           );
         } catch (e) {
-          CrashReportingService.instance.logInitializationStep('✗ UploadManager failed: $e');
+          CrashReportingService.instance.logInitializationStep(
+            '✗ UploadManager failed: $e',
+          );
           Log.warning(
             '⚠️ [LIFECYCLE] UploadManager initialization failed (non-critical): $e',
             name: 'Main',
@@ -1007,43 +1296,70 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
           // Wait additional time to ensure this is truly low priority
           await Future.delayed(const Duration(seconds: 2));
 
-          Log.debug('Fetching user curated lists from relays (background)',
-              name: 'Main', category: LogCategory.system);
+          Log.debug(
+            'Fetching user curated lists from relays (background)',
+            name: 'Main',
+            category: LogCategory.system,
+          );
 
           // This triggers the provider which calls initialize()
           // The initialize() method creates default list and syncs from relays
           await ref.read(curatedListServiceProvider.future);
 
-          Log.debug('User curated lists fetched successfully',
-              name: 'Main', category: LogCategory.system);
+          Log.debug(
+            'User curated lists fetched successfully',
+            name: 'Main',
+            category: LogCategory.system,
+          );
         } catch (e) {
-          Log.debug('Failed to fetch user curated lists (non-critical): $e',
-              name: 'Main', category: LogCategory.system);
+          Log.debug(
+            'Failed to fetch user curated lists (non-critical): $e',
+            name: 'Main',
+            category: LogCategory.system,
+          );
         }
       }, taskName: 'curated_lists_sync');
 
-      Log.info('All services initialized successfully',
-          name: 'Main', category: LogCategory.system);
+      Log.info(
+        'All services initialized successfully',
+        name: 'Main',
+        category: LogCategory.system,
+      );
     } catch (e, stackTrace) {
       // Cancel timeout timer on error
       timeoutTimer?.cancel();
       slowStartupTimer.cancel();
 
-      final errorDuration = DateTime.now().difference(initStartTime).inMilliseconds;
+      final errorDuration = DateTime.now()
+          .difference(initStartTime)
+          .inMilliseconds;
       CrashReportingService.instance.logInitializationStep(
-          'Initialization failed after ${errorDuration}ms: $e');
-      Log.error('[STARTUP] Initialization failed after ${errorDuration}ms',
-          name: 'AppInitializer', category: LogCategory.system);
+        'Initialization failed after ${errorDuration}ms: $e',
+      );
+      Log.error(
+        '[STARTUP] Initialization failed after ${errorDuration}ms',
+        name: 'AppInitializer',
+        category: LogCategory.system,
+      );
 
-      Log.error('Service initialization failed: $e',
-          name: 'Main', category: LogCategory.system);
-      Log.verbose('📱 Stack trace: $stackTrace',
-          name: 'Main', category: LogCategory.system);
+      Log.error(
+        'Service initialization failed: $e',
+        name: 'Main',
+        category: LogCategory.system,
+      );
+      Log.verbose(
+        '📱 Stack trace: $stackTrace',
+        name: 'Main',
+        category: LogCategory.system,
+      );
 
       // Record non-fatal initialization error to Crashlytics
       try {
-        await CrashReportingService.instance
-            .recordError(e, stackTrace, reason: 'App initialization');
+        await CrashReportingService.instance.recordError(
+          e,
+          stackTrace,
+          reason: 'App initialization',
+        );
       } catch (_) {}
 
       if (mounted) {
@@ -1120,11 +1436,7 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.red,
-                  size: 64,
-                ),
+                const Icon(Icons.error_outline, color: Colors.red, size: 64),
                 const SizedBox(height: 24),
                 const Text(
                   'Unable to Start App',
@@ -1155,7 +1467,9 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
                       backgroundColor: VineTheme.vineGreen,
                       foregroundColor: VineTheme.whiteText,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 12),
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -1188,8 +1502,10 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
               const SizedBox(height: 16),
               Text(
                 _initializationStatus,
-                style:
-                    const TextStyle(color: VineTheme.primaryText, fontSize: 16),
+                style: const TextStyle(
+                  color: VineTheme.primaryText,
+                  fontSize: 16,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -1218,21 +1534,27 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline,
-                          color: Colors.red, size: 48),
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 48,
+                      ),
                       const SizedBox(height: 16),
                       const Text(
                         'Authentication Error',
                         style: TextStyle(
-                            color: VineTheme.primaryText,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold),
+                          color: VineTheme.primaryText,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         authService.lastError!,
                         style: const TextStyle(
-                            color: VineTheme.secondaryText, fontSize: 14),
+                          color: VineTheme.secondaryText,
+                          fontSize: 14,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -1260,8 +1582,10 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
                     SizedBox(height: 16),
                     Text(
                       'Creating your identity...',
-                      style:
-                          TextStyle(color: VineTheme.primaryText, fontSize: 16),
+                      style: TextStyle(
+                        color: VineTheme.primaryText,
+                        fontSize: 16,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -1283,7 +1607,9 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
                           ? 'Getting things ready...'
                           : 'Setting up your identity...',
                       style: const TextStyle(
-                          color: VineTheme.primaryText, fontSize: 16),
+                        color: VineTheme.primaryText,
+                        fontSize: 16,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -1293,16 +1619,13 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
           case AuthState.authenticated:
             // TODO(PR8): Router handles navigation now, AppInitializer just signals ready
             return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
+              body: Center(child: CircularProgressIndicator()),
             );
         }
       },
     );
   }
 }
-
 
 /// ResponsiveWrapper adapts app size based on available screen space
 class ResponsiveWrapper extends StatefulWidget {
@@ -1321,7 +1644,8 @@ class ResponsiveWrapper extends StatefulWidget {
     // For desktop vine experience, use more width while keeping vine feel
     // On web, be more generous with space since browsers can handle larger content
     final isWeb = kIsWeb;
-    final targetWidth = screenSize.width *
+    final targetWidth =
+        screenSize.width *
         (isWeb
             ? 0.7
             : 0.6); // More generous width for better desktop experience
@@ -1333,13 +1657,10 @@ class ResponsiveWrapper extends StatefulWidget {
     final heightScale = targetHeight / baseHeight;
 
     // Use the smaller scale to ensure both dimensions fit, but prioritize the classic vine aspect ratio
-    final scaleFactor =
-        (widthScale < heightScale ? widthScale : heightScale).clamp(1.2, 4.0);
+    final scaleFactor = (widthScale < heightScale ? widthScale : heightScale)
+        .clamp(1.2, 4.0);
 
-    return Size(
-      baseWidth * scaleFactor,
-      baseHeight * scaleFactor,
-    );
+    return Size(baseWidth * scaleFactor, baseHeight * scaleFactor);
   }
 
   @override
@@ -1375,10 +1696,12 @@ class _ResponsiveWrapperState extends State<ResponsiveWrapper> {
       final optimalSize = ResponsiveWrapper.getOptimalSize(context);
 
       // Update window size to accommodate the scaled content
-      await windowManager.setSize(Size(
-        optimalSize.width + 20, // Minimal padding for window chrome
-        optimalSize.height + 80, // Padding for title bar and chrome
-      ));
+      await windowManager.setSize(
+        Size(
+          optimalSize.width + 20, // Minimal padding for window chrome
+          optimalSize.height + 80, // Padding for title bar and chrome
+        ),
+      );
 
       // Re-center the window
       await windowManager.center();

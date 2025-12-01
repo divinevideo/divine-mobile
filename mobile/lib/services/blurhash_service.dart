@@ -24,8 +24,11 @@ class BlurhashService {
       // Decode image to get dimensions and pixel data
       final image = img.decodeImage(imageBytes);
       if (image == null) {
-        Log.error('Failed to decode image for blurhash generation',
-            name: 'BlurhashService', category: LogCategory.system);
+        Log.error(
+          'Failed to decode image for blurhash generation',
+          name: 'BlurhashService',
+          category: LogCategory.system,
+        );
         return null;
       }
 
@@ -40,16 +43,23 @@ class BlurhashService {
       final hashString = blurhash.hash;
 
       Log.verbose(
-          'Generated blurhash: $hashString (${image.width}x${image.height}, ${componentX}x$componentY components)',
-          name: 'BlurhashService',
-          category: LogCategory.system);
+        'Generated blurhash: $hashString (${image.width}x${image.height}, ${componentX}x$componentY components)',
+        name: 'BlurhashService',
+        category: LogCategory.system,
+      );
 
       return hashString;
     } catch (e, stackTrace) {
-      Log.error('Failed to generate blurhash: $e',
-          name: 'BlurhashService', category: LogCategory.system);
-      Log.verbose('Stack trace: $stackTrace',
-          name: 'BlurhashService', category: LogCategory.system);
+      Log.error(
+        'Failed to generate blurhash: $e',
+        name: 'BlurhashService',
+        category: LogCategory.system,
+      );
+      Log.verbose(
+        'Stack trace: $stackTrace',
+        name: 'BlurhashService',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -66,11 +76,17 @@ class BlurhashService {
       if (byteData == null) return null;
 
       final bytes = byteData.buffer.asUint8List();
-      return generateBlurhash(bytes,
-          componentX: componentX, componentY: componentY);
+      return generateBlurhash(
+        bytes,
+        componentX: componentX,
+        componentY: componentY,
+      );
     } catch (e) {
-      Log.error('Failed to generate blurhash from image: $e',
-          name: 'BlurhashService', category: LogCategory.system);
+      Log.error(
+        'Failed to generate blurhash from image: $e',
+        name: 'BlurhashService',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -92,13 +108,15 @@ class BlurhashService {
       final image = blurHashObject.toImage(width, height);
 
       // Convert image to RGBA pixels
-      final pixels =
-          Uint8List.fromList(image.getBytes(order: img.ChannelOrder.rgba));
+      final pixels = Uint8List.fromList(
+        image.getBytes(order: img.ChannelOrder.rgba),
+      );
 
       // Extract colors from the decoded pixel data
       final colors = _extractColorsFromPixels(pixels, width, height);
-      final primaryColor =
-          colors.isNotEmpty ? colors.first : const ui.Color(0xFF888888);
+      final primaryColor = colors.isNotEmpty
+          ? colors.first
+          : const ui.Color(0xFF888888);
 
       return BlurhashData(
         blurhash: blurhash,
@@ -110,8 +128,11 @@ class BlurhashService {
         pixels: pixels, // Store the actual decoded pixels
       );
     } catch (e) {
-      Log.error('Failed to decode blurhash: $e',
-          name: 'BlurhashService', category: LogCategory.system);
+      Log.error(
+        'Failed to decode blurhash: $e',
+        name: 'BlurhashService',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -165,7 +186,10 @@ class BlurhashService {
 
   /// Extract representative colors from decoded pixel data
   static List<ui.Color> _extractColorsFromPixels(
-      Uint8List pixels, int width, int height) {
+    Uint8List pixels,
+    int width,
+    int height,
+  ) {
     final colors = <ui.Color>[];
 
     if (pixels.isEmpty) return colors;
@@ -235,11 +259,10 @@ class BlurhashData {
   /// Get a gradient for placeholder background
   ui.Gradient get gradient {
     if (colors.length < 2) {
-      return ui.Gradient.linear(
-        const ui.Offset(0, 0),
-        const ui.Offset(1, 1),
-        [primaryColor, primaryColor.withValues(alpha: 0.7)],
-      );
+      return ui.Gradient.linear(const ui.Offset(0, 0), const ui.Offset(1, 1), [
+        primaryColor,
+        primaryColor.withValues(alpha: 0.7),
+      ]);
     }
 
     return ui.Gradient.linear(
@@ -256,7 +279,8 @@ class BlurhashData {
   }
 
   @override
-  String toString() => 'BlurhashData(hash: ${blurhash.substring(0, 8)}..., '
+  String toString() =>
+      'BlurhashData(hash: ${blurhash.substring(0, 8)}..., '
       'colors: ${colors.length}, primary: #${primaryColor.r.toInt().toRadixString(16).padLeft(2, '0')}${primaryColor.g.toInt().toRadixString(16).padLeft(2, '0')}${primaryColor.b.toInt().toRadixString(16).padLeft(2, '0')})';
 }
 
@@ -343,13 +367,13 @@ class BlurhashCache {
 
   /// Get cache statistics
   Map<String, dynamic> getStats() => {
-        'size': _cache.length,
-        'maxSize': maxCacheSize,
-        'oldestEntry': _cacheTimestamps.values.isEmpty
-            ? null
-            : _cacheTimestamps.values.reduce((a, b) => a.isBefore(b) ? a : b),
-        'newestEntry': _cacheTimestamps.values.isEmpty
-            ? null
-            : _cacheTimestamps.values.reduce((a, b) => a.isAfter(b) ? a : b),
-      };
+    'size': _cache.length,
+    'maxSize': maxCacheSize,
+    'oldestEntry': _cacheTimestamps.values.isEmpty
+        ? null
+        : _cacheTimestamps.values.reduce((a, b) => a.isBefore(b) ? a : b),
+    'newestEntry': _cacheTimestamps.values.isEmpty
+        ? null
+        : _cacheTimestamps.values.reduce((a, b) => a.isAfter(b) ? a : b),
+  };
 }

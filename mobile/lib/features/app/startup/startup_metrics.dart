@@ -20,8 +20,9 @@ class StartupMetrics {
   Duration get totalDuration => endTime.difference(startTime);
 
   /// Get services that took longer than threshold
-  List<String> getBottlenecks(
-          {Duration threshold = const Duration(milliseconds: 100)}) =>
+  List<String> getBottlenecks({
+    Duration threshold = const Duration(milliseconds: 100),
+  }) =>
       serviceTimings.entries
           .where((entry) => entry.value > threshold)
           .map((entry) => entry.key)
@@ -42,10 +43,8 @@ class StartupMetrics {
 
     return Map.fromEntries(
       serviceTimings.entries.map(
-        (entry) => MapEntry(
-          entry.key,
-          (entry.value.inMicroseconds / total) * 100,
-        ),
+        (entry) =>
+            MapEntry(entry.key, (entry.value.inMicroseconds / total) * 100),
       ),
     );
   }
@@ -61,7 +60,8 @@ class StartupMetrics {
     for (final entry in servicesByDuration) {
       final percentage = serviceTimePercentages[entry.key] ?? 0;
       buffer.writeln(
-          '  ${entry.key}: ${entry.value.inMilliseconds}ms (${percentage.toStringAsFixed(1)}%)');
+        '  ${entry.key}: ${entry.value.inMilliseconds}ms (${percentage.toStringAsFixed(1)}%)',
+      );
     }
 
     if (errors.isNotEmpty) {
@@ -78,7 +78,8 @@ class StartupMetrics {
       buffer.writeln('Bottlenecks (>100ms):');
       for (final service in bottlenecks) {
         buffer.writeln(
-            '  $service: ${serviceTimings[service]!.inMilliseconds}ms');
+          '  $service: ${serviceTimings[service]!.inMilliseconds}ms',
+        );
       }
     }
 
@@ -105,16 +106,18 @@ class ServiceMetrics {
 
   Duration? get duration => endTime?.difference(startTime);
 
-  ServiceMetrics complete(
-          {bool success = true, Object? error, StackTrace? stackTrace}) =>
-      ServiceMetrics(
-        name: name,
-        startTime: startTime,
-        endTime: DateTime.now(),
-        success: success,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  ServiceMetrics complete({
+    bool success = true,
+    Object? error,
+    StackTrace? stackTrace,
+  }) => ServiceMetrics(
+    name: name,
+    startTime: startTime,
+    endTime: DateTime.now(),
+    success: success,
+    error: error,
+    stackTrace: stackTrace,
+  );
 }
 
 /// Error that occurred during startup
@@ -139,15 +142,16 @@ class MetricsCollector {
 
   /// Start tracking a service
   void startService(String name) {
-    _services[name] = ServiceMetrics(
-      name: name,
-      startTime: DateTime.now(),
-    );
+    _services[name] = ServiceMetrics(name: name, startTime: DateTime.now());
   }
 
   /// Mark service as complete
-  void completeService(String name,
-      {bool success = true, Object? error, StackTrace? stackTrace}) {
+  void completeService(
+    String name, {
+    bool success = true,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
     final existing = _services[name];
     if (existing != null) {
       _services[name] = existing.complete(
@@ -158,11 +162,7 @@ class MetricsCollector {
 
       if (!success && error != null) {
         _errors.add(
-          StartupError(
-            serviceName: name,
-            error: error,
-            stackTrace: stackTrace,
-          ),
+          StartupError(serviceName: name, error: error, stackTrace: stackTrace),
         );
       }
     }

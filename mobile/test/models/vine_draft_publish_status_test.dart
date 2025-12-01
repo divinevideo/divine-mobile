@@ -129,7 +129,9 @@ void main() {
         aspectRatio: AspectRatio.square,
       );
 
-      final publishing = draft.copyWith(publishStatus: PublishStatus.publishing);
+      final publishing = draft.copyWith(
+        publishStatus: PublishStatus.publishing,
+      );
       expect(publishing.publishStatus, PublishStatus.publishing);
       expect(publishing.id, draft.id);
     });

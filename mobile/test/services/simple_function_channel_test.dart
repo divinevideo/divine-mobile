@@ -18,13 +18,19 @@ void main() {
     test('REQUIREMENT: App must NOT use localhost:7447 WebSocket', () {
       // Create config with function channel DISABLED (current state)
       final oldConfig = NostrConnectionConfig(useFunctionChannel: false);
-      expect(oldConfig.usesLocalWebSocket, isTrue,
-        reason: 'Current implementation uses WebSocket');
+      expect(
+        oldConfig.usesLocalWebSocket,
+        isTrue,
+        reason: 'Current implementation uses WebSocket',
+      );
 
       // Create config with function channel ENABLED (what we want)
       final newConfig = NostrConnectionConfig(useFunctionChannel: true);
-      expect(newConfig.usesLocalWebSocket, isFalse,
-        reason: 'New implementation must use direct function calls');
+      expect(
+        newConfig.usesLocalWebSocket,
+        isFalse,
+        reason: 'New implementation must use direct function calls',
+      );
     });
 
     test('REQUIREMENT: iOS must NOT need NSLocalNetworkUsageDescription', () {
@@ -34,8 +40,11 @@ void main() {
 
       // New approach does NOT need permission
       final newConfig = NostrConnectionConfig(useFunctionChannel: true);
-      expect(newConfig.requiresLocalNetworkPermission, isFalse,
-        reason: 'Function channels eliminate need for local network permission');
+      expect(
+        newConfig.requiresLocalNetworkPermission,
+        isFalse,
+        reason: 'Function channels eliminate need for local network permission',
+      );
     });
   });
 }

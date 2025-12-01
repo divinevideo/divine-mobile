@@ -3,7 +3,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/utils/nostr_timestamp.dart';
 import '../helpers/test_nostr_service.dart';
 
@@ -34,7 +33,10 @@ void main() {
           testPubkey1,
           1, // Kind 1 (text note)
           [
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'Test content',
           createdAt: NostrTimestamp.now(),
@@ -70,7 +72,10 @@ void main() {
             ['url', 'https://cdn.divine.video/test.mp4'],
             ['title', 'Test Video'],
             ['d', 'unique-identifier'],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'Video description',
           createdAt: NostrTimestamp.now(),
@@ -91,7 +96,10 @@ void main() {
           testPubkey1,
           0, // Kind 0 (profile)
           [
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           '{"name":"Test User","about":"Test bio"}',
           createdAt: NostrTimestamp.now(),
@@ -112,7 +120,10 @@ void main() {
           testPubkey1,
           1,
           [
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'Content 1',
           createdAt: NostrTimestamp.now(),
@@ -122,7 +133,10 @@ void main() {
           testPubkey2,
           1,
           [
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'Content 2',
           createdAt: NostrTimestamp.now(),
@@ -150,7 +164,10 @@ void main() {
           testPubkey1,
           1,
           [
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'First event content',
           createdAt: NostrTimestamp.now() - 1000,
@@ -160,7 +177,10 @@ void main() {
           testPubkey2,
           1,
           [
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'Second event content',
           createdAt: NostrTimestamp.now(),
@@ -215,7 +235,10 @@ void main() {
           testPubkey1,
           1,
           [
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'Test content',
           createdAt: NostrTimestamp.now(),
@@ -240,7 +263,10 @@ void main() {
           testPubkey1,
           1,
           [
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           'Test content',
           createdAt: NostrTimestamp.now(),

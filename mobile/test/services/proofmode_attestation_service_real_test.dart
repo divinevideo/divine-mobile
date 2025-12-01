@@ -23,8 +23,11 @@ void main() {
       test('generates real attestation token with proper format', () async {
         await attestationService.initialize();
 
-        final challenge = 'test-challenge-${DateTime.now().millisecondsSinceEpoch}';
-        final attestation = await attestationService.generateAttestation(challenge);
+        final challenge =
+            'test-challenge-${DateTime.now().millisecondsSinceEpoch}';
+        final attestation = await attestationService.generateAttestation(
+          challenge,
+        );
 
         expect(attestation, isNotNull);
 
@@ -34,7 +37,8 @@ void main() {
         final supportsHardwareAttestation =
             deviceInfo.platform == 'iOS' || deviceInfo.platform == 'Android';
 
-        if (supportsHardwareAttestation && (deviceInfo.isPhysicalDevice ?? false)) {
+        if (supportsHardwareAttestation &&
+            (deviceInfo.isPhysicalDevice ?? false)) {
           // On physical iOS/Android devices, should use real attestation
           expect(attestation!.token, isNot(startsWith('MOCK_')));
           expect(attestation.isHardwareBacked, isTrue);
@@ -45,7 +49,10 @@ void main() {
         }
 
         // Should have proper structure regardless of type
-        expect(attestation.platform, isIn(['iOS', 'Android', 'web', 'macos', 'windows', 'linux']));
+        expect(
+          attestation.platform,
+          isIn(['iOS', 'Android', 'web', 'macos', 'windows', 'linux']),
+        );
         expect(attestation.deviceId, isNotEmpty);
         expect(attestation.challenge, equals(challenge));
         expect(attestation.createdAt, isA<DateTime>());
@@ -57,11 +64,17 @@ void main() {
       test('generates unique tokens for different challenges', () async {
         await attestationService.initialize();
 
-        final challenge1 = 'challenge-1-${DateTime.now().millisecondsSinceEpoch}';
-        final challenge2 = 'challenge-2-${DateTime.now().millisecondsSinceEpoch}';
+        final challenge1 =
+            'challenge-1-${DateTime.now().millisecondsSinceEpoch}';
+        final challenge2 =
+            'challenge-2-${DateTime.now().millisecondsSinceEpoch}';
 
-        final attestation1 = await attestationService.generateAttestation(challenge1);
-        final attestation2 = await attestationService.generateAttestation(challenge2);
+        final attestation1 = await attestationService.generateAttestation(
+          challenge1,
+        );
+        final attestation2 = await attestationService.generateAttestation(
+          challenge2,
+        );
 
         // Different challenges should produce different tokens
         expect(attestation1!.token, isNot(equals(attestation2!.token)));
@@ -72,11 +85,16 @@ void main() {
       test('generates unique tokens each time for same challenge', () async {
         await attestationService.initialize();
 
-        final challenge = 'same-challenge-${DateTime.now().millisecondsSinceEpoch}';
+        final challenge =
+            'same-challenge-${DateTime.now().millisecondsSinceEpoch}';
 
-        final attestation1 = await attestationService.generateAttestation(challenge);
+        final attestation1 = await attestationService.generateAttestation(
+          challenge,
+        );
         await Future.delayed(Duration(milliseconds: 100));
-        final attestation2 = await attestationService.generateAttestation(challenge);
+        final attestation2 = await attestationService.generateAttestation(
+          challenge,
+        );
 
         // Real attestation includes nonces/timestamps, so tokens are unique
         expect(attestation1!.token, isNot(equals(attestation2!.token)));
@@ -89,7 +107,9 @@ void main() {
         final isPhysicalDevice = deviceInfo.isPhysicalDevice ?? false;
 
         final challenge = 'hw-test-${DateTime.now().millisecondsSinceEpoch}';
-        final attestation = await attestationService.generateAttestation(challenge);
+        final attestation = await attestationService.generateAttestation(
+          challenge,
+        );
 
         expect(attestation, isNotNull);
 
@@ -103,8 +123,11 @@ void main() {
       test('includes device metadata in attestation', () async {
         await attestationService.initialize();
 
-        final challenge = 'metadata-test-${DateTime.now().millisecondsSinceEpoch}';
-        final attestation = await attestationService.generateAttestation(challenge);
+        final challenge =
+            'metadata-test-${DateTime.now().millisecondsSinceEpoch}';
+        final attestation = await attestationService.generateAttestation(
+          challenge,
+        );
 
         expect(attestation, isNotNull);
         expect(attestation!.metadata, isNotNull);
@@ -125,7 +148,10 @@ void main() {
         final deviceInfo = await attestationService.getDeviceInfo();
 
         // Should have real platform info
-        expect(deviceInfo.platform, isIn(['iOS', 'Android', 'web', 'macos', 'windows', 'linux']));
+        expect(
+          deviceInfo.platform,
+          isIn(['iOS', 'Android', 'web', 'macos', 'windows', 'linux']),
+        );
         expect(deviceInfo.model, isNotEmpty);
         expect(deviceInfo.version, isNotEmpty);
         expect(deviceInfo.deviceId, isNotEmpty);
@@ -151,7 +177,8 @@ void main() {
 
     group('Real Hardware Attestation Availability', () {
       test('correctly reports hardware attestation availability', () async {
-        final isAvailable = await attestationService.isHardwareAttestationAvailable();
+        final isAvailable = await attestationService
+            .isHardwareAttestationAvailable();
 
         // Should return boolean
         expect(isAvailable, isA<bool>());
@@ -177,36 +204,51 @@ void main() {
       test('basic attestation validation checks pass', () async {
         await attestationService.initialize();
 
-        final challenge = 'verify-test-${DateTime.now().millisecondsSinceEpoch}';
-        final attestation = await attestationService.generateAttestation(challenge);
+        final challenge =
+            'verify-test-${DateTime.now().millisecondsSinceEpoch}';
+        final attestation = await attestationService.generateAttestation(
+          challenge,
+        );
 
         expect(attestation, isNotNull);
 
         // Basic validation should pass for correct challenge
-        final isValid = await attestationService.verifyAttestation(attestation!, challenge);
+        final isValid = await attestationService.verifyAttestation(
+          attestation!,
+          challenge,
+        );
         expect(isValid, isTrue);
       });
 
       test('rejects attestation with wrong challenge', () async {
         await attestationService.initialize();
 
-        final originalChallenge = 'original-${DateTime.now().millisecondsSinceEpoch}';
+        final originalChallenge =
+            'original-${DateTime.now().millisecondsSinceEpoch}';
         final wrongChallenge = 'wrong-${DateTime.now().millisecondsSinceEpoch}';
 
-        final attestation = await attestationService.generateAttestation(originalChallenge);
+        final attestation = await attestationService.generateAttestation(
+          originalChallenge,
+        );
 
         expect(attestation, isNotNull);
 
         // Verification should fail with different challenge
-        final isValid = await attestationService.verifyAttestation(attestation!, wrongChallenge);
+        final isValid = await attestationService.verifyAttestation(
+          attestation!,
+          wrongChallenge,
+        );
         expect(isValid, isFalse);
       });
 
       test('rejects expired attestation tokens', () async {
         await attestationService.initialize();
 
-        final challenge = 'expire-test-${DateTime.now().millisecondsSinceEpoch}';
-        final attestation = await attestationService.generateAttestation(challenge);
+        final challenge =
+            'expire-test-${DateTime.now().millisecondsSinceEpoch}';
+        final attestation = await attestationService.generateAttestation(
+          challenge,
+        );
 
         expect(attestation, isNotNull);
 
@@ -222,7 +264,10 @@ void main() {
         );
 
         // Verification should fail for expired token (>1 hour old)
-        final isValid = await attestationService.verifyAttestation(expiredAttestation, challenge);
+        final isValid = await attestationService.verifyAttestation(
+          expiredAttestation,
+          challenge,
+        );
         expect(isValid, isFalse);
       });
     });
@@ -248,7 +293,9 @@ void main() {
         await attestationService.initialize();
 
         final challenge = 'error-test-${DateTime.now().millisecondsSinceEpoch}';
-        final attestation = await attestationService.generateAttestation(challenge);
+        final attestation = await attestationService.generateAttestation(
+          challenge,
+        );
 
         // ProofMode crypto is always enabled, so should generate attestation
         expect(attestation, isNotNull);
@@ -267,4 +314,3 @@ void main() {
     });
   });
 }
-

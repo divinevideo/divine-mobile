@@ -85,7 +85,9 @@ class ProfileFeed extends _$ProfileFeed {
     }
 
     // Get videos for this author
-    final authorVideos = List<VideoEvent>.from(videoEventService.authorVideos(userId));
+    final authorVideos = List<VideoEvent>.from(
+      videoEventService.authorVideos(userId),
+    );
 
     Log.info(
       'ProfileFeed: Initial load complete - ${authorVideos.length} videos for user=${userId}...',
@@ -174,16 +176,20 @@ class ProfileFeed extends _$ProfileFeed {
       );
 
       // Get updated videos
-      final updatedVideos = List<VideoEvent>.from(videoEventService.authorVideos(userId));
+      final updatedVideos = List<VideoEvent>.from(
+        videoEventService.authorVideos(userId),
+      );
 
       // Update state with new videos
       if (!ref.mounted) return;
-      state = AsyncData(VideoFeedState(
-        videos: updatedVideos,
-        hasMoreContent: newEventsLoaded > 0,
-        isLoadingMore: false,
-        lastUpdated: DateTime.now(),
-      ));
+      state = AsyncData(
+        VideoFeedState(
+          videos: updatedVideos,
+          hasMoreContent: newEventsLoaded > 0,
+          isLoadingMore: false,
+          lastUpdated: DateTime.now(),
+        ),
+      );
     } catch (e) {
       Log.error(
         'ProfileFeed: Error loading more: $e',
@@ -193,10 +199,7 @@ class ProfileFeed extends _$ProfileFeed {
 
       if (!ref.mounted) return;
       state = AsyncData(
-        currentState.copyWith(
-          isLoadingMore: false,
-          error: e.toString(),
-        ),
+        currentState.copyWith(isLoadingMore: false, error: e.toString()),
       );
     }
   }

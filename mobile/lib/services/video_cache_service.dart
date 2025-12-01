@@ -32,8 +32,9 @@ class VideoCacheService {
   /// Add a single video to cache with priority-based insertion
   void addVideo(VideoEvent videoEvent) {
     // Check for duplicates - CRITICAL to prevent the same event being added multiple times
-    final existingIndex =
-        _videoEvents.indexWhere((existing) => existing.id == videoEvent.id);
+    final existingIndex = _videoEvents.indexWhere(
+      (existing) => existing.id == videoEvent.id,
+    );
     if (existingIndex != -1) {
       _duplicateVideoEventCount++;
       _logDuplicateVideoEventsAggregated();
@@ -65,16 +66,18 @@ class VideoCacheService {
 
       _videoEvents.insert(insertIndex, videoEvent);
       Log.verbose(
-          'Added CLASSIC VINE at random position $insertIndex: ${videoEvent.title ?? videoEvent.id}',
-          name: 'VideoCacheService',
-          category: LogCategory.video);
+        'Added CLASSIC VINE at random position $insertIndex: ${videoEvent.title ?? videoEvent.id}',
+        name: 'VideoCacheService',
+        category: LogCategory.video,
+      );
     } else {
       // Regular video - add to the end
       _videoEvents.add(videoEvent);
       Log.verbose(
-          'Added regular video to cache: ${videoEvent.title ?? videoEvent.id}',
-          name: 'VideoCacheService',
-          category: LogCategory.video);
+        'Added regular video to cache: ${videoEvent.title ?? videoEvent.id}',
+        name: 'VideoCacheService',
+        category: LogCategory.video,
+      );
     }
   }
 

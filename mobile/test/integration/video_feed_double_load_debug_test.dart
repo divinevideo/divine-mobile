@@ -18,13 +18,19 @@ void main() {
       debugPrint('');
       debugPrint('=== VideoFeedScreen Lifecycle Test ===');
       debugPrint('This test verifies widget initialization behavior.');
-      debugPrint('For full debugging, run the app with --dart-define=LOG_LEVEL=debug');
+      debugPrint(
+        'For full debugging, run the app with --dart-define=LOG_LEVEL=debug',
+      );
       debugPrint('and watch for RAPID REBUILD DETECTED warnings.');
       debugPrint('========================================');
       debugPrint('');
 
       // Simple verification that the widget can be created
-      expect(true, isTrue, reason: 'Placeholder test - see app logs for real debugging');
+      expect(
+        true,
+        isTrue,
+        reason: 'Placeholder test - see app logs for real debugging',
+      );
     });
 
     testWidgets('Monitor VideoFeedScreen widget lifecycle', (tester) async {
@@ -44,17 +50,27 @@ void main() {
 
                 if (firstInit == null) {
                   firstInit = timestamp;
-                  debugPrint('🏗️  [DEBUG] VideoFeedScreen initState #1 at ${timestamp.millisecondsSinceEpoch}');
+                  debugPrint(
+                    '🏗️  [DEBUG] VideoFeedScreen initState #1 at ${timestamp.millisecondsSinceEpoch}',
+                  );
                 } else if (secondInit == null) {
                   secondInit = timestamp;
-                  final timeDiff = timestamp.difference(firstInit!).inMilliseconds;
-                  debugPrint('🏗️  [DEBUG] VideoFeedScreen initState #2 at ${timestamp.millisecondsSinceEpoch} (${timeDiff}ms after first)');
-                  debugPrint('⚠️  [DEBUG] DOUBLE INIT DETECTED! Gap: ${timeDiff}ms');
+                  final timeDiff = timestamp
+                      .difference(firstInit!)
+                      .inMilliseconds;
+                  debugPrint(
+                    '🏗️  [DEBUG] VideoFeedScreen initState #2 at ${timestamp.millisecondsSinceEpoch} (${timeDiff}ms after first)',
+                  );
+                  debugPrint(
+                    '⚠️  [DEBUG] DOUBLE INIT DETECTED! Gap: ${timeDiff}ms',
+                  );
                 }
               },
               onBuild: () {
                 widgetBuildCount++;
-                debugPrint('🎨 [DEBUG] VideoFeedScreen build #$widgetBuildCount');
+                debugPrint(
+                  '🎨 [DEBUG] VideoFeedScreen build #$widgetBuildCount',
+                );
               },
               child: const VideoFeedScreen(),
             ),
@@ -76,8 +92,11 @@ void main() {
       }
       debugPrint('===============================');
 
-      expect(initStateCallCount, equals(1),
-        reason: 'VideoFeedScreen should only call initState once');
+      expect(
+        initStateCallCount,
+        equals(1),
+        reason: 'VideoFeedScreen should only call initState once',
+      );
     });
 
     testWidgets('Track provider dependency chain timing', (tester) async {

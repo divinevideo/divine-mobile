@@ -12,9 +12,7 @@ import 'package:openvine/state/search_state.dart';
 
 import 'search_provider_test.mocks.dart';
 
-@GenerateNiceMocks([
-  MockSpec<VideoEventService>(),
-])
+@GenerateNiceMocks([MockSpec<VideoEventService>()])
 void main() {
   group('Search Provider Tests', () {
     late ProviderContainer container;

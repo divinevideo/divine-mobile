@@ -37,7 +37,9 @@ void main() {
         try {
           // Initialize service with real relay
           Log.debug('🔌 Initializing NostrService with real relay...');
-          await service.initialize(customRelays: ['wss://staging-relay.divine.video']);
+          await service.initialize(
+            customRelays: ['wss://staging-relay.divine.video'],
+          );
 
           expect(service.isInitialized, true);
           expect(service.connectedRelays.isNotEmpty, true);
@@ -51,7 +53,10 @@ void main() {
             service.publicKey!,
             1, // Kind 1: Text note
             [
-              ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+              [
+                'expiration',
+                '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+              ],
             ],
             testContent,
           );
@@ -59,7 +64,8 @@ void main() {
           final publishResult = await service.broadcastEvent(testEvent);
           expect(publishResult.successCount, greaterThan(0));
           Log.debug(
-              '✅ Event published successfully to ${publishResult.successCount} relays');
+            '✅ Event published successfully to ${publishResult.successCount} relays',
+          );
           Log.debug('📋 Event ID: ${publishResult.event.id}');
 
           // Test 2: Subscribe and receive the event we just published
@@ -80,7 +86,8 @@ void main() {
           streamSub = subscription.listen((event) {
             receivedEvents.add(event);
             Log.debug(
-                '📨 Received event: ${event.id}... content: "${event.content}"');
+              '📨 Received event: ${event.id}... content: "${event.content}"',
+            );
 
             // Check if we received our test event
             if (event.content == testContent) {
@@ -97,7 +104,8 @@ void main() {
               const Duration(seconds: 10),
               onTimeout: () {
                 Log.debug(
-                    '⏱️ Timeout waiting for event - this might be normal if relay is slow');
+                  '⏱️ Timeout waiting for event - this might be normal if relay is slow',
+                );
               },
             );
           } catch (e) {
@@ -129,35 +137,38 @@ void main() {
 
           // Test 4: Publish a video event (Kind 22) - using broadcastEvent instead
           Log.debug('\n🎬 Testing video event publishing...');
-          final videoEvent = Event(
-            service.publicKey ?? '',
-            22,
+          final videoEvent = Event(service.publicKey ?? '', 22, [
+            ['url', 'https://example.com/test-video.mp4'],
+            ['title', 'Integration Test Video'],
+            ['duration', '6'],
+            ['dimensions', '1920x1080'],
             [
-              ['url', 'https://example.com/test-video.mp4'],
-              ['title', 'Integration Test Video'],
-              ['duration', '6'],
-              ['dimensions', '1920x1080'],
-              ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
             ],
-            'Test video from integration test',
-          );
+          ], 'Test video from integration test');
           final videoResult = await service.broadcastEvent(videoEvent);
 
           expect(videoResult.successCount, greaterThan(0));
           Log.debug(
-              '✅ Video event published to ${videoResult.successCount} relays');
+            '✅ Video event published to ${videoResult.successCount} relays',
+          );
 
           // Summary
           Log.debug('\n✅ Integration test completed successfully!');
           Log.debug('Summary:');
           Log.debug(
-              '  - Connected to ${service.connectedRelays.length} relays');
+            '  - Connected to ${service.connectedRelays.length} relays',
+          );
           Log.debug(
-              '  - Published ${publishResult.successCount > 0 ? "✓" : "✗"} text event');
+            '  - Published ${publishResult.successCount > 0 ? "✓" : "✗"} text event',
+          );
           Log.debug(
-              '  - Published ${videoResult.successCount > 0 ? "✓" : "✗"} video event');
+            '  - Published ${videoResult.successCount > 0 ? "✓" : "✗"} video event',
+          );
           Log.debug(
-              '  - Received ${receivedEvents.isNotEmpty ? "✓" : "✗"} events');
+            '  - Received ${receivedEvents.isNotEmpty ? "✓" : "✗"} events',
+          );
         } finally {
           service.dispose();
         }
