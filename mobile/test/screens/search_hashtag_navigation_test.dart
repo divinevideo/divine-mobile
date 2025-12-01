@@ -2,7 +2,6 @@
 // ABOUTME: Verifies search screen remains in navigation stack
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/screens/pure/search_screen_pure.dart';
 import '../helpers/test_provider_overrides.dart';

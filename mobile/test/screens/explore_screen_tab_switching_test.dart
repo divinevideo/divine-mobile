@@ -1,12 +1,9 @@
 // ABOUTME: TDD test for explore screen tab switching behavior while in feed mode
 // ABOUTME: Ensures tapping tabs exits feed mode and shows grid view correctly
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
-import 'package:openvine/screens/explore_screen.dart';
-import '../helpers/test_provider_overrides.dart';
 
 void main() {
   group('ExploreScreen Tab Switching TDD', () {

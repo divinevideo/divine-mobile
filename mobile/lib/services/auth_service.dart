@@ -4,7 +4,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/widgets.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/secure_key_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';

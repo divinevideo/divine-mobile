@@ -2,7 +2,6 @@
 // ABOUTME: Verifies NIP-09 deletion workflow and optimistic UI removal from feeds
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
 import '../builders/test_video_event_builder.dart';
 
 void main() {

@@ -3,7 +3,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/widgets/video_feed_item.dart';
 import '../builders/test_video_event_builder.dart';
 import '../helpers/test_provider_overrides.dart';

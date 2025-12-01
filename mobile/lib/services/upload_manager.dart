@@ -1002,23 +1002,21 @@ class UploadManager {
 
       // connectivity_plus 7.x returns List<ConnectivityResult>
       // Return first non-none result, or none if all are none
-      if (result is List) {
-        final resultList = result.cast<ConnectivityResult>();
-        // Prefer WiFi > Cellular > Ethernet > VPN > None
-        if (resultList.contains(ConnectivityResult.wifi)) {
-          return ConnectivityResult.wifi;
-        }
-        if (resultList.contains(ConnectivityResult.mobile)) {
-          return ConnectivityResult.mobile;
-        }
-        if (resultList.contains(ConnectivityResult.ethernet)) {
-          return ConnectivityResult.ethernet;
-        }
-        if (resultList.contains(ConnectivityResult.vpn)) {
-          return ConnectivityResult.vpn;
-        }
-        return ConnectivityResult.none;
+      final resultList = result.cast<ConnectivityResult>();
+      // Prefer WiFi > Cellular > Ethernet > VPN > None
+      if (resultList.contains(ConnectivityResult.wifi)) {
+        return ConnectivityResult.wifi;
       }
+      if (resultList.contains(ConnectivityResult.mobile)) {
+        return ConnectivityResult.mobile;
+      }
+      if (resultList.contains(ConnectivityResult.ethernet)) {
+        return ConnectivityResult.ethernet;
+      }
+      if (resultList.contains(ConnectivityResult.vpn)) {
+        return ConnectivityResult.vpn;
+      }
+      return ConnectivityResult.none;
       // Older versions return single ConnectivityResult
       return result as ConnectivityResult;
     } catch (e) {

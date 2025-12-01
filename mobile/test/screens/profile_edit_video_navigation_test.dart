@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/profile_feed_providers.dart';
-import 'package:openvine/providers/app_lifecycle_provider.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/state/video_feed_state.dart';
 

@@ -432,6 +432,14 @@ class MockEmbeddedNostrRelay extends _i1.Mock
           as _i6.Future<void>);
 
   @override
+  _i6.Future<int> importEvents(List<_i11.NostrEvent>? events) =>
+      (super.noSuchMethod(
+            Invocation.method(#importEvents, [events]),
+            returnValue: _i6.Future<int>.value(0),
+          )
+          as _i6.Future<int>);
+
+  @override
   _i4.RelayInfo getRelayInfo() =>
       (super.noSuchMethod(
             Invocation.method(#getRelayInfo, []),

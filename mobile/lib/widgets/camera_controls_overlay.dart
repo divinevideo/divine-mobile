@@ -2,7 +2,6 @@
 // ABOUTME: Works with CameraAwesome on mobile platforms to provide enhanced controls
 
 import 'package:flutter/material.dart';
-import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
 import 'package:openvine/services/vine_recording_controller.dart';
 import 'package:openvine/theme/vine_theme.dart';
 

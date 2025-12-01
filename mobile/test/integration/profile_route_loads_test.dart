@@ -17,8 +17,6 @@ import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/services/video_prewarmer.dart';
 import 'package:openvine/services/visibility_tracker.dart';
 import 'package:openvine/services/analytics_service.dart';
-import 'package:openvine/services/connection_status_service.dart';
-import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart'
     as ff;
 import 'package:shared_preferences/shared_preferences.dart';

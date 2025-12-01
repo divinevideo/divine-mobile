@@ -1,7 +1,6 @@
 // ABOUTME: Integration test for bug report upload to Blossom server
 // ABOUTME: Tests end-to-end flow: collect diagnostics → upload to Blossom → send NIP-17 DM
 
-import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
@@ -210,7 +209,7 @@ Error Counts:
       final dio = Dio();
       try {
         final downloadResponse = await dio.get(
-          uploadedUrl!,
+          uploadedUrl,
           options: Options(
             responseType: ResponseType.bytes,
             validateStatus: (status) => status != null && status < 500,

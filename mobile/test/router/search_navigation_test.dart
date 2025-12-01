@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/app_router.dart';
-import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/pure/search_screen_pure.dart';
 
 void main() {

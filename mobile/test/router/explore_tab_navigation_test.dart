@@ -6,14 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
 import 'package:openvine/router/router_location_provider.dart';
 import 'package:openvine/screens/explore_screen.dart';
-
-import 'explore_tab_navigation_test.mocks.dart';
 
 @GenerateNiceMocks([MockSpec<GoRouter>()])
 void main() {

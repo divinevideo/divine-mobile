@@ -46,6 +46,38 @@ class MockAgeVerificationService extends _i1.Mock
           as bool);
 
   @override
+  _i2.AdultContentPreference get adultContentPreference =>
+      (super.noSuchMethod(
+            Invocation.getter(#adultContentPreference),
+            returnValue: _i2.AdultContentPreference.alwaysShow,
+          )
+          as _i2.AdultContentPreference);
+
+  @override
+  bool get shouldAutoShowAdultContent =>
+      (super.noSuchMethod(
+            Invocation.getter(#shouldAutoShowAdultContent),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  bool get shouldHideAdultContent =>
+      (super.noSuchMethod(
+            Invocation.getter(#shouldHideAdultContent),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  bool get shouldAskForAdultContent =>
+      (super.noSuchMethod(
+            Invocation.getter(#shouldAskForAdultContent),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
   _i3.Future<void> initialize() =>
       (super.noSuchMethod(
             Invocation.method(#initialize, []),
@@ -87,6 +119,17 @@ class MockAgeVerificationService extends _i1.Mock
             returnValue: _i3.Future<bool>.value(false),
           )
           as _i3.Future<bool>);
+
+  @override
+  _i3.Future<void> setAdultContentPreference(
+    _i2.AdultContentPreference? preference,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#setAdultContentPreference, [preference]),
+            returnValue: _i3.Future<void>.value(),
+            returnValueForMissingStub: _i3.Future<void>.value(),
+          )
+          as _i3.Future<void>);
 
   @override
   _i3.Future<bool> verifyAdultContentAccess(_i4.BuildContext? context) =>

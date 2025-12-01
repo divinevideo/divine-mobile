@@ -139,16 +139,16 @@ void main() {
       expect(publishedEvent!.tags, isNotEmpty, reason: 'Event must have tags');
 
       // Find ProofMode tags (NIP-145 standard names)
-      final proofModeTags = publishedEvent!.tags
+      final proofModeTags = publishedEvent.tags
           .where((tag) => tag.isNotEmpty && tag[0] == 'proofmode')
           .toList();
-      final verificationTags = publishedEvent!.tags
+      final verificationTags = publishedEvent.tags
           .where((tag) => tag.isNotEmpty && tag[0] == 'verification')
           .toList();
-      final attestationTags = publishedEvent!.tags
+      final attestationTags = publishedEvent.tags
           .where((tag) => tag.isNotEmpty && tag[0] == 'device_attestation')
           .toList();
-      final pgpTags = publishedEvent!.tags
+      final pgpTags = publishedEvent.tags
           .where((tag) => tag.isNotEmpty && tag[0] == 'pgp_fingerprint')
           .toList();
 

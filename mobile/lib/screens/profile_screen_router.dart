@@ -20,8 +20,6 @@ import 'package:openvine/providers/profile_stats_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
-import 'package:openvine/screens/vine_drafts_screen.dart';
-import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/widgets/video_feed_item.dart';

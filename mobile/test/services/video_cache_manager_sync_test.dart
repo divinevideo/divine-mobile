@@ -4,7 +4,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/video_cache_manager.dart';
-import 'package:path/path.dart' as path;
 
 void main() {
   group('VideoCacheManager getCachedVideoSync() bug', () {

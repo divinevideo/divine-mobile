@@ -9,7 +9,6 @@ import 'package:mockito/mockito.dart';
 import 'package:openvine/helpers/video_feed_builder.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/state/video_feed_state.dart';
 
 import 'video_feed_builder_test.mocks.dart';
 

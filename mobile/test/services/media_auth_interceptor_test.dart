@@ -35,6 +35,14 @@ void main() {
       ageVerificationService: mockAgeVerificationService,
       blossomAuthService: mockBlossomAuthService,
     );
+
+    // Default mock behavior for preference checks
+    when(
+      () => mockAgeVerificationService.shouldHideAdultContent,
+    ).thenReturn(false);
+    when(
+      () => mockAgeVerificationService.shouldAutoShowAdultContent,
+    ).thenReturn(false);
   });
 
   group('MediaAuthInterceptor - 401 handling', () {
@@ -71,46 +79,46 @@ void main() {
       },
     );
 
-    test('creates auth header when user is already verified', () async {
-      // Arrange
-      when(
-        () => mockAgeVerificationService.isAdultContentVerified,
-      ).thenReturn(true);
-      when(
-        () => mockBlossomAuthService.createGetAuthHeader(
-          sha256Hash: any(named: 'sha256Hash'),
-          serverUrl: any(named: 'serverUrl'),
-        ),
-      ).thenAnswer((_) async => 'Nostr abc123token');
+    test(
+      'creates auth header when user has alwaysShow preference and is verified',
+      () async {
+        // Arrange - shouldAutoShowAdultContent means verified + alwaysShow preference
+        when(
+          () => mockAgeVerificationService.shouldAutoShowAdultContent,
+        ).thenReturn(true);
+        when(
+          () => mockBlossomAuthService.createGetAuthHeader(
+            sha256Hash: any(named: 'sha256Hash'),
+            serverUrl: any(named: 'serverUrl'),
+          ),
+        ).thenAnswer((_) async => 'Nostr abc123token');
 
-      // Act
-      final result = await interceptor.handleUnauthorizedMedia(
-        context: mockContext,
-        sha256Hash: 'abc123',
-        category: 'nudity',
-      );
-
-      // Assert
-      expect(result, equals('Nostr abc123token'));
-      verifyNever(
-        () => mockAgeVerificationService.verifyAdultContentAccess(any()),
-      );
-      verify(
-        () => mockBlossomAuthService.createGetAuthHeader(
+        // Act
+        final result = await interceptor.handleUnauthorizedMedia(
+          context: mockContext,
           sha256Hash: 'abc123',
-          serverUrl: null,
-        ),
-      ).called(1);
-    });
+          category: 'nudity',
+        );
+
+        // Assert
+        expect(result, equals('Nostr abc123token'));
+        verifyNever(
+          () => mockAgeVerificationService.verifyAdultContentAccess(any()),
+        );
+        verify(
+          () => mockBlossomAuthService.createGetAuthHeader(
+            sha256Hash: 'abc123',
+            serverUrl: null,
+          ),
+        ).called(1);
+      },
+    );
 
     test(
-      'creates auth header when user confirms adult content access',
+      'creates auth header when user confirms adult content access via dialog',
       () async {
-        // Arrange
+        // Arrange - default askEachTime preference (shouldAutoShowAdultContent=false)
         when(() => mockContext.mounted).thenReturn(true);
-        when(
-          () => mockAgeVerificationService.isAdultContentVerified,
-        ).thenReturn(false);
         when(
           () => mockAgeVerificationService.verifyAdultContentAccess(any()),
         ).thenAnswer((_) async => true);
@@ -143,9 +151,9 @@ void main() {
     );
 
     test('includes serverUrl in auth header when provided', () async {
-      // Arrange
+      // Arrange - auto-show mode
       when(
-        () => mockAgeVerificationService.isAdultContentVerified,
+        () => mockAgeVerificationService.shouldAutoShowAdultContent,
       ).thenReturn(true);
       when(
         () => mockBlossomAuthService.createGetAuthHeader(
@@ -173,9 +181,9 @@ void main() {
     });
 
     test('logs category for future extensibility', () async {
-      // Arrange
+      // Arrange - auto-show mode
       when(
-        () => mockAgeVerificationService.isAdultContentVerified,
+        () => mockAgeVerificationService.shouldAutoShowAdultContent,
       ).thenReturn(true);
       when(
         () => mockBlossomAuthService.createGetAuthHeader(
@@ -203,9 +211,9 @@ void main() {
     test(
       'returns null when BlossomAuthService fails to create header',
       () async {
-        // Arrange
+        // Arrange - auto-show mode but auth service returns null
         when(
-          () => mockAgeVerificationService.isAdultContentVerified,
+          () => mockAgeVerificationService.shouldAutoShowAdultContent,
         ).thenReturn(true);
         when(
           () => mockBlossomAuthService.createGetAuthHeader(

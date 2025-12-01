@@ -1,14 +1,7 @@
 // ABOUTME: Tests that VineRecordingProvider does not create duplicate drafts
 // ABOUTME: Verifies auto-draft in stopRecording() prevents duplicate on dispose
 
-import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/providers/vine_recording_provider.dart';
-import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
-import 'package:openvine/services/draft_storage_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('VineRecordingProvider - No Duplicate Drafts', () {

@@ -2,7 +2,6 @@
 // ABOUTME: Replaces Flutter camera package with CamerAwesome for seamless multi-camera support
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:flutter/material.dart';
