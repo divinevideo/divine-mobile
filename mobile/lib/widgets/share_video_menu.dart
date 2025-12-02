@@ -1486,10 +1486,10 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
       final userProfileService = ref.read(userProfileServiceProvider);
       final searchResults = <ShareableUser>[];
 
-      String? pubkeyToSearch;
-
       // Try to normalize the query as a public identifier (npub/nprofile/hex)
-      pubkeyToSearch = normalizeToHex(query);
+      // If it's not a valid public identifier, use the query as is (it's likely
+      // a username or display name)
+      final pubkeyToSearch = normalizeToHex(query) ?? query;
 
       Log.debug(
         'Normalized query to pubkey: $pubkeyToSearch',
