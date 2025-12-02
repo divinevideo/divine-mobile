@@ -1337,7 +1337,7 @@ packages:
     source: hosted
     version: "1.0.4"
   meta:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: meta
       sha256: e3641ec5d63ebf0d9b41bd43201a66e3fc79a65db5f61fc181f04cd27aab950c
@@ -1392,15 +1392,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.2"
-  nostr_sdk:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: HEAD
-      resolved-ref: aeb5a19ea2aba4135c471c31244ad7da29b06d5e
-      url: "git@github.com:rabble/nostr_sdk.git"
-    source: git
-    version: "0.1.0"
   octo_image:
     dependency: transitive
     description:
