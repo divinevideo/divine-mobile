@@ -15,9 +15,9 @@ import 'package:openvine/state/video_feed_state.dart';
 
 void main() {
   Widget _shell(ProviderContainer c) => UncontrolledProviderScope(
-        container: c,
-        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
-      );
+    container: c,
+    child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+  );
 
   final now = DateTime.now();
   final nowUnix = now.millisecondsSinceEpoch ~/ 1000;
@@ -53,15 +53,19 @@ void main() {
   ];
 
   testWidgets('PROFILE: URL ↔ PageView sync', (tester) async {
-    final c = ProviderContainer(overrides: [
-      videosForProfileRouteProvider.overrideWith((ref) {
-        return AsyncValue.data(VideoFeedState(
-          videos: mockVideos,
-          hasMoreContent: false,
-          isLoadingMore: false,
-        ));
-      }),
-    ]);
+    final c = ProviderContainer(
+      overrides: [
+        videosForProfileRouteProvider.overrideWith((ref) {
+          return AsyncValue.data(
+            VideoFeedState(
+              videos: mockVideos,
+              hasMoreContent: false,
+              isLoadingMore: false,
+            ),
+          );
+        }),
+      ],
+    );
     addTearDown(c.dispose);
 
     await tester.pumpWidget(_shell(c));
@@ -82,15 +86,19 @@ void main() {
   });
 
   testWidgets('PROFILE: Empty state shows when no videos', (tester) async {
-    final c = ProviderContainer(overrides: [
-      videosForProfileRouteProvider.overrideWith((ref) {
-        return AsyncValue.data(VideoFeedState(
-          videos: [],
-          hasMoreContent: false,
-          isLoadingMore: false,
-        ));
-      }),
-    ]);
+    final c = ProviderContainer(
+      overrides: [
+        videosForProfileRouteProvider.overrideWith((ref) {
+          return AsyncValue.data(
+            VideoFeedState(
+              videos: [],
+              hasMoreContent: false,
+              isLoadingMore: false,
+            ),
+          );
+        }),
+      ],
+    );
     addTearDown(c.dispose);
 
     await tester.pumpWidget(_shell(c));
@@ -100,24 +108,29 @@ void main() {
     expect(find.textContaining('No posts yet'), findsOneWidget);
   });
 
-  testWidgets('PROFILE: Prefetch ±1 profiles when URL index changes',
-      (tester) async {
+  testWidgets('PROFILE: Prefetch ±1 profiles when URL index changes', (
+    tester,
+  ) async {
     final prefetchedPubkeys = <String>[];
 
     final mockNotifier = FakeUserProfileNotifier(
       onPrefetch: (pubkeys) => prefetchedPubkeys.addAll(pubkeys),
     );
 
-    final c = ProviderContainer(overrides: [
-      videosForProfileRouteProvider.overrideWith((ref) {
-        return AsyncValue.data(VideoFeedState(
-          videos: mockVideos,
-          hasMoreContent: false,
-          isLoadingMore: false,
-        ));
-      }),
-      userProfileProvider.overrideWith(() => mockNotifier),
-    ]);
+    final c = ProviderContainer(
+      overrides: [
+        videosForProfileRouteProvider.overrideWith((ref) {
+          return AsyncValue.data(
+            VideoFeedState(
+              videos: mockVideos,
+              hasMoreContent: false,
+              isLoadingMore: false,
+            ),
+          );
+        }),
+        userProfileProvider.overrideWith(() => mockNotifier),
+      ],
+    );
     addTearDown(c.dispose);
 
     await tester.pumpWidget(_shell(c));
@@ -130,18 +143,23 @@ void main() {
     expect(prefetchedPubkeys.length, greaterThanOrEqualTo(1));
   });
 
-  testWidgets('PROFILE: Lifecycle pause → activeVideoId becomes null',
-      (tester) async {
-    final c = ProviderContainer(overrides: [
-      appForegroundProvider.overrideWithValue(const AsyncValue.data(false)),
-      videosForProfileRouteProvider.overrideWith((ref) {
-        return AsyncValue.data(VideoFeedState(
-          videos: mockVideos,
-          hasMoreContent: false,
-          isLoadingMore: false,
-        ));
-      }),
-    ]);
+  testWidgets('PROFILE: Lifecycle pause → activeVideoId becomes null', (
+    tester,
+  ) async {
+    final c = ProviderContainer(
+      overrides: [
+        appForegroundProvider.overrideWithValue(const AsyncValue.data(false)),
+        videosForProfileRouteProvider.overrideWith((ref) {
+          return AsyncValue.data(
+            VideoFeedState(
+              videos: mockVideos,
+              hasMoreContent: false,
+              isLoadingMore: false,
+            ),
+          );
+        }),
+      ],
+    );
     addTearDown(c.dispose);
 
     await tester.pumpWidget(_shell(c));

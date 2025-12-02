@@ -27,23 +27,35 @@ void main() {
       // VideoEvent should accept kind 34236
       final videoEvent = VideoEvent.fromNostrEvent(event);
 
-      expect(videoEvent.vineId, isNotNull,
-          reason: 'VideoEvent must successfully parse kind 34236');
+      expect(
+        videoEvent.vineId,
+        isNotNull,
+        reason: 'VideoEvent must successfully parse kind 34236',
+      );
     });
 
     test('NIP71VideoKinds should include kind 34236', () {
-      expect(NIP71VideoKinds.getAllVideoKinds(), contains(34236),
-          reason: 'Kind 34236 must be in the list of accepted video kinds');
-      expect(NIP71VideoKinds.addressableShortVideo, equals(34236),
-          reason: 'Kind 34236 is the addressable short video kind');
+      expect(
+        NIP71VideoKinds.getAllVideoKinds(),
+        contains(34236),
+        reason: 'Kind 34236 must be in the list of accepted video kinds',
+      );
+      expect(
+        NIP71VideoKinds.addressableShortVideo,
+        equals(34236),
+        reason: 'Kind 34236 is the addressable short video kind',
+      );
     });
 
     test('Kind 32222 should NOT be in NIP71VideoKinds', () {
       const deprecatedKind = 32222;
 
-      expect(NIP71VideoKinds.getAllVideoKinds(), isNot(contains(deprecatedKind)),
-          reason:
-              'Kind 32222 is deprecated and should not be in accepted video kinds');
+      expect(
+        NIP71VideoKinds.getAllVideoKinds(),
+        isNot(contains(deprecatedKind)),
+        reason:
+            'Kind 32222 is deprecated and should not be in accepted video kinds',
+      );
     });
 
     test('Addressable video IDs should use kind 34236 format', () {
@@ -53,10 +65,16 @@ void main() {
       // Addressable ID format per NIP-01: <kind>:<pubkey>:<d-tag>
       final addressableId = '34236:$pubkey:$dTag';
 
-      expect(addressableId, startsWith('34236:'),
-          reason: 'Addressable IDs must use NIP-71 kind 34236');
-      expect(addressableId, isNot(startsWith('32222:')),
-          reason: 'Must not use deprecated kind 34236 in addressable IDs');
+      expect(
+        addressableId,
+        startsWith('34236:'),
+        reason: 'Addressable IDs must use NIP-71 kind 34236',
+      );
+      expect(
+        addressableId,
+        isNot(startsWith('32222:')),
+        reason: 'Must not use deprecated kind 34236 in addressable IDs',
+      );
     });
 
     test('Repost k tag should reference kind 34236', () {
@@ -65,8 +83,11 @@ void main() {
       const deprecatedKTag = '32222';
 
       expect(correctKTag, equals('34236'));
-      expect(correctKTag, isNot(equals(deprecatedKTag)),
-          reason: 'Repost k tag must reference NIP-71 kind 34236');
+      expect(
+        correctKTag,
+        isNot(equals(deprecatedKTag)),
+        reason: 'Repost k tag must reference NIP-71 kind 34236',
+      );
     });
 
     test('Video filters should query for kind 34236', () {
@@ -74,8 +95,11 @@ void main() {
       const expectedVideoKind = 34236;
 
       // This is the kind that should be in all Filter objects for videos
-      expect(expectedVideoKind, equals(NIP71VideoKinds.addressableShortVideo),
-          reason: 'All video queries must use NIP-71 kind 34236');
+      expect(
+        expectedVideoKind,
+        equals(NIP71VideoKinds.addressableShortVideo),
+        reason: 'All video queries must use NIP-71 kind 34236',
+      );
     });
 
     test('Event with kind 34236 should have required NIP-71 tags', () {
@@ -98,10 +122,15 @@ void main() {
 
       final videoEvent = VideoEvent.fromNostrEvent(event);
 
-      expect(videoEvent.vineId, equals('unique-video-identifier'),
-          reason: 'd tag is required for addressable events');
       expect(
-          videoEvent.videoUrl, equals('https://blossom.example.com/video.mp4'));
+        videoEvent.vineId,
+        equals('unique-video-identifier'),
+        reason: 'd tag is required for addressable events',
+      );
+      expect(
+        videoEvent.videoUrl,
+        equals('https://blossom.example.com/video.mp4'),
+      );
     });
   });
 }

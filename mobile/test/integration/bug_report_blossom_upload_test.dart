@@ -1,7 +1,6 @@
 // ABOUTME: Integration test for bug report upload to Blossom server
 // ABOUTME: Tests end-to-end flow: collect diagnostics → upload to Blossom → send NIP-17 DM
 
-import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
@@ -74,8 +73,9 @@ void main() {
 
     setUpAll(() async {
       // Mock package_info_plus
-      const MethodChannel('dev.fluttercommunity.plus/package_info')
-          .setMockMethodCallHandler((MethodCall methodCall) async {
+      const MethodChannel(
+        'dev.fluttercommunity.plus/package_info',
+      ).setMockMethodCallHandler((MethodCall methodCall) async {
         if (methodCall.method == 'getAll') {
           return <String, dynamic>{
             'appName': 'OpenVine',
@@ -88,8 +88,9 @@ void main() {
       });
 
       // Mock Firebase Core
-      const MethodChannel('plugins.flutter.io/firebase_core')
-          .setMockMethodCallHandler((MethodCall methodCall) async {
+      const MethodChannel(
+        'plugins.flutter.io/firebase_core',
+      ).setMockMethodCallHandler((MethodCall methodCall) async {
         if (methodCall.method == 'Firebase#initializeCore') {
           return [
             {
@@ -101,15 +102,16 @@ void main() {
                 'projectId': 'test',
               },
               'pluginConstants': {},
-            }
+            },
           ];
         }
         return null;
       });
 
       // Mock Firebase Analytics
-      const MethodChannel('plugins.flutter.io/firebase_analytics')
-          .setMockMethodCallHandler((MethodCall methodCall) async {
+      const MethodChannel(
+        'plugins.flutter.io/firebase_analytics',
+      ).setMockMethodCallHandler((MethodCall methodCall) async {
         return null;
       });
 
@@ -118,7 +120,9 @@ void main() {
 
       // Generate test keypair
       testKeychain = Keychain.generate();
-      print('🔑 Generated test keys: ${testKeychain.public.substring(0, 16)}...');
+      print(
+        '🔑 Generated test keys: ${testKeychain.public.substring(0, 16)}...',
+      );
 
       // Create services
       final mockAuthService = MockAuthService(testKeychain);
@@ -133,9 +137,7 @@ void main() {
       await blossomService.setBlossomServer(blossomServer);
       await blossomService.setBlossomEnabled(true);
 
-      bugReportService = BugReportService(
-        blossomUploadService: blossomService,
-      );
+      bugReportService = BugReportService(blossomUploadService: blossomService);
 
       // Create test bug report file
       testBugReportFile = File('/tmp/test_bug_report_integration.txt');
@@ -192,8 +194,12 @@ Error Counts:
       // Assert: Verify upload succeeded
       expect(uploadedUrl, isNotNull, reason: 'Upload should return a URL');
       expect(uploadedUrl, contains('http'), reason: 'URL should be HTTP/HTTPS');
-      expect(uploadedUrl!.contains('cdn.divine.video') || uploadedUrl.contains('blossom.divine.video'),
-          isTrue, reason: 'URL should be from divine.video CDN');
+      expect(
+        uploadedUrl!.contains('cdn.divine.video') ||
+            uploadedUrl.contains('blossom.divine.video'),
+        isTrue,
+        reason: 'URL should be from divine.video CDN',
+      );
 
       print('✅ Upload successful!');
       print('🔗 Uploaded URL: $uploadedUrl');
@@ -203,7 +209,7 @@ Error Counts:
       final dio = Dio();
       try {
         final downloadResponse = await dio.get(
-          uploadedUrl!,
+          uploadedUrl,
           options: Options(
             responseType: ResponseType.bytes,
             validateStatus: (status) => status != null && status < 500,
@@ -219,17 +225,24 @@ Error Counts:
           print('🔐 Downloaded hash: $downloadedHash');
 
           // Verify hash matches
-          expect(downloadedHash, equals(expectedFileHash),
-              reason: 'Downloaded file hash should match uploaded file hash');
+          expect(
+            downloadedHash,
+            equals(expectedFileHash),
+            reason: 'Downloaded file hash should match uploaded file hash',
+          );
 
           print('✅ File integrity verified!');
         } else {
-          print('⚠️  Warning: File returned status ${downloadResponse.statusCode}');
+          print(
+            '⚠️  Warning: File returned status ${downloadResponse.statusCode}',
+          );
           print('   This may be expected if the server needs time to process');
         }
       } catch (e) {
         print('⚠️  Could not verify download: $e');
-        print('   This is not necessarily a failure - the upload may still be valid');
+        print(
+          '   This is not necessarily a failure - the upload may still be valid',
+        );
       }
 
       print('\n✅ Integration test complete!\n');
@@ -247,7 +260,11 @@ Error Counts:
       );
 
       // Should return null
-      expect(result, isNull, reason: 'Should return null when Blossom is disabled');
+      expect(
+        result,
+        isNull,
+        reason: 'Should return null when Blossom is disabled',
+      );
 
       print('✅ Correctly handled disabled state\n');
 
@@ -267,7 +284,10 @@ Error Counts:
 
       // Verify diagnostics
       expect(bugReportData.reportId, isNotEmpty);
-      expect(bugReportData.userDescription, equals('Integration test bug report'));
+      expect(
+        bugReportData.userDescription,
+        equals('Integration test bug report'),
+      );
       expect(bugReportData.currentScreen, equals('/test/screen'));
       expect(bugReportData.userPubkey, equals(testKeychain.public));
       expect(bugReportData.deviceInfo, isNotEmpty);
@@ -300,8 +320,11 @@ Error Counts:
       print('   Max allowed: ${BugReportConfig.maxReportSizeBytes} bytes');
 
       expect(estimatedSize, greaterThan(0), reason: 'Size should be positive');
-      expect(estimatedSize, lessThan(BugReportConfig.maxReportSizeBytes * 10),
-          reason: 'Size should be reasonable for a bug report');
+      expect(
+        estimatedSize,
+        lessThan(BugReportConfig.maxReportSizeBytes * 10),
+        reason: 'Size should be reasonable for a bug report',
+      );
 
       if (estimatedSize > BugReportConfig.maxReportSizeBytes) {
         print('⚠️  Report exceeds size limit - would need log truncation');

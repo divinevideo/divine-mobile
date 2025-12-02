@@ -206,7 +206,9 @@ void main() {
       final box = await Hive.openBox<Map>('profile_stats_cache');
       final data = box.get(expiredPubkey);
       if (data != null) {
-        final oldTimestamp = DateTime.now().subtract(const Duration(minutes: 6));
+        final oldTimestamp = DateTime.now().subtract(
+          const Duration(minutes: 6),
+        );
         data['cached_at'] = oldTimestamp.millisecondsSinceEpoch;
         await box.put(expiredPubkey, data);
       }
@@ -216,8 +218,16 @@ void main() {
       final freshRetrieved = await cacheService.getCachedStats(freshPubkey);
       final expiredRetrieved = await cacheService.getCachedStats(expiredPubkey);
 
-      expect(freshRetrieved, isNotNull, reason: 'Fresh stats should still exist');
-      expect(expiredRetrieved, isNull, reason: 'Expired stats should be cleaned up');
+      expect(
+        freshRetrieved,
+        isNotNull,
+        reason: 'Fresh stats should still exist',
+      );
+      expect(
+        expiredRetrieved,
+        isNull,
+        reason: 'Expired stats should be cleaned up',
+      );
     });
 
     test('should handle multiple concurrent saves', () async {
@@ -239,7 +249,11 @@ void main() {
 
       final retrieved = await cacheService.getCachedStats(pubkey);
 
-      expect(retrieved, isNotNull, reason: 'Should have saved at least one version');
+      expect(
+        retrieved,
+        isNotNull,
+        reason: 'Should have saved at least one version',
+      );
     });
 
     test('should persist stats across service instances', () async {

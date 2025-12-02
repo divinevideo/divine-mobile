@@ -11,9 +11,7 @@ import 'dart:io';
 
 import 'camera_service_macos_test.mocks.dart';
 
-@GenerateNiceMocks([
-  MockSpec<CameraController>(),
-])
+@GenerateNiceMocks([MockSpec<CameraController>()])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -51,7 +49,7 @@ void main() {
       final cameras = await availableCameras();
 
       if (cameras.isEmpty) {
-        return;  // Skip test if no cameras available
+        return; // Skip test if no cameras available
       }
 
       // Initialize with the first camera
@@ -69,10 +67,7 @@ void main() {
       );
 
       // Attempt to initialize should not throw, but handle error gracefully
-      await expectLater(
-        cameraService.initialize(),
-        completes,
-      );
+      await expectLater(cameraService.initialize(), completes);
 
       // Service should indicate it's not initialized
       expect(cameraService.isInitialized, isFalse);
@@ -82,7 +77,7 @@ void main() {
       final cameras = await availableCameras();
 
       if (cameras.isEmpty) {
-        return;  // Skip test if no cameras available
+        return; // Skip test if no cameras available
       }
 
       // Initialize camera
@@ -107,41 +102,46 @@ void main() {
       final cameras = await availableCameras();
 
       if (cameras.isEmpty) {
-        return;  // Skip test if no cameras available
+        return; // Skip test if no cameras available
       }
 
       // Initialize with specific resolution
-      await cameraService.initialize(preferredResolution: ResolutionPreset.high);
+      await cameraService.initialize(
+        preferredResolution: ResolutionPreset.high,
+      );
 
       // Verify initialization with resolution
       expect(cameraService.isInitialized, isTrue);
       expect(cameraService.controller, isNotNull);
     });
 
-    test('should handle camera switching on macOS if multiple cameras exist', () async {
-      final cameras = await availableCameras();
+    test(
+      'should handle camera switching on macOS if multiple cameras exist',
+      () async {
+        final cameras = await availableCameras();
 
-      if (cameras.length < 2) {
-        return;  // Skip test if multiple cameras not available
-      }
+        if (cameras.length < 2) {
+          return; // Skip test if multiple cameras not available
+        }
 
-      // Initialize with first camera
-      await cameraService.initialize();
-      final firstCamera = cameraService.selectedCamera;
+        // Initialize with first camera
+        await cameraService.initialize();
+        final firstCamera = cameraService.selectedCamera;
 
-      // Switch to another camera
-      await cameraService.switchCamera();
-      final secondCamera = cameraService.selectedCamera;
+        // Switch to another camera
+        await cameraService.switchCamera();
+        final secondCamera = cameraService.selectedCamera;
 
-      // Verify camera switched
-      expect(firstCamera, isNot(equals(secondCamera)));
-    });
+        // Verify camera switched
+        expect(firstCamera, isNot(equals(secondCamera)));
+      },
+    );
 
     test('should properly dispose camera resources', () async {
       final cameras = await availableCameras();
 
       if (cameras.isEmpty) {
-        return;  // Skip test if no cameras available
+        return; // Skip test if no cameras available
       }
 
       // Initialize and then dispose
@@ -157,7 +157,7 @@ void main() {
       final cameras = await availableCameras();
 
       if (cameras.isEmpty) {
-        return;  // Skip test if no cameras available
+        return; // Skip test if no cameras available
       }
 
       await cameraService.initialize();
@@ -179,7 +179,7 @@ void main() {
       final cameras = await availableCameras();
 
       if (cameras.isEmpty) {
-        return;  // Skip test if no cameras available
+        return; // Skip test if no cameras available
       }
 
       await cameraService.initialize();

@@ -36,9 +36,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(
-            routerConfig: router,
-          ),
+          child: MaterialApp.router(routerConfig: router),
         ),
       );
 
@@ -52,55 +50,87 @@ void main() {
       final testUserNpub = NostrEncoding.encodePublicKey(testUserHex);
 
       // Verify user is NOT blocked initially
-      expect(blocklistService.isBlocked(testUserHex), isFalse,
-          reason: 'User should not be blocked initially');
+      expect(
+        blocklistService.isBlocked(testUserHex),
+        isFalse,
+        reason: 'User should not be blocked initially',
+      );
 
       // Navigate to test user's profile
       router.go('/profile/$testUserNpub/0');
       await tester.pumpAndSettle();
 
       // STEP 1: Verify "Block User" button is visible
-      final blockButtonFinder = find.widgetWithText(OutlinedButton, 'Block User');
-      expect(blockButtonFinder, findsOneWidget,
-          reason: 'Block User button should be visible on profile');
+      final blockButtonFinder = find.widgetWithText(
+        OutlinedButton,
+        'Block User',
+      );
+      expect(
+        blockButtonFinder,
+        findsOneWidget,
+        reason: 'Block User button should be visible on profile',
+      );
 
       // STEP 2: Tap "Block User" button
       await tester.tap(blockButtonFinder);
       await tester.pumpAndSettle();
 
       // STEP 3: Verify confirmation dialog appears
-      expect(find.text('Block @'), findsOneWidget,
-          reason: 'Block confirmation dialog should appear');
       expect(
-          find.text(
-              'You won\'t see their content in feeds. They won\'t be notified. You can still visit their profile.'),
-          findsOneWidget,
-          reason: 'Dialog explanation should be present');
+        find.text('Block @'),
+        findsOneWidget,
+        reason: 'Block confirmation dialog should appear',
+      );
+      expect(
+        find.text(
+          'You won\'t see their content in feeds. They won\'t be notified. You can still visit their profile.',
+        ),
+        findsOneWidget,
+        reason: 'Dialog explanation should be present',
+      );
 
       // STEP 4: Confirm block action
       final confirmButtonFinder = find.widgetWithText(TextButton, 'Block');
-      expect(confirmButtonFinder, findsOneWidget,
-          reason: 'Block confirmation button should exist');
+      expect(
+        confirmButtonFinder,
+        findsOneWidget,
+        reason: 'Block confirmation button should exist',
+      );
 
       await tester.tap(confirmButtonFinder);
       await tester.pumpAndSettle();
 
       // STEP 5: Verify user is added to blocklist
-      expect(blocklistService.isBlocked(testUserHex), isTrue,
-          reason: 'User should be blocked after confirmation');
+      expect(
+        blocklistService.isBlocked(testUserHex),
+        isTrue,
+        reason: 'User should be blocked after confirmation',
+      );
 
       // STEP 6: Verify button changes to "Unblock"
-      final unblockButtonFinder = find.widgetWithText(OutlinedButton, 'Unblock');
-      expect(unblockButtonFinder, findsOneWidget,
-          reason: 'Button should change to "Unblock" after blocking');
+      final unblockButtonFinder = find.widgetWithText(
+        OutlinedButton,
+        'Unblock',
+      );
+      expect(
+        unblockButtonFinder,
+        findsOneWidget,
+        reason: 'Button should change to "Unblock" after blocking',
+      );
 
       // Verify "Block User" button is gone
-      expect(find.widgetWithText(OutlinedButton, 'Block User'), findsNothing,
-          reason: 'Block User button should not be visible when user is blocked');
+      expect(
+        find.widgetWithText(OutlinedButton, 'Block User'),
+        findsNothing,
+        reason: 'Block User button should not be visible when user is blocked',
+      );
 
       // Verify snackbar confirmation
-      expect(find.text('User blocked'), findsOneWidget,
-          reason: 'Success snackbar should appear');
+      expect(
+        find.text('User blocked'),
+        findsOneWidget,
+        reason: 'Success snackbar should appear',
+      );
 
       // Wait for snackbar to dismiss
       await tester.pump(const Duration(seconds: 3));
@@ -111,20 +141,32 @@ void main() {
       await tester.pumpAndSettle();
 
       // STEP 8: Verify user is removed from blocklist (no confirmation needed for unblock)
-      expect(blocklistService.isBlocked(testUserHex), isFalse,
-          reason: 'User should be unblocked after tapping Unblock');
+      expect(
+        blocklistService.isBlocked(testUserHex),
+        isFalse,
+        reason: 'User should be unblocked after tapping Unblock',
+      );
 
       // STEP 9: Verify button changes back to "Block User"
-      expect(find.widgetWithText(OutlinedButton, 'Block User'), findsOneWidget,
-          reason: 'Button should change back to "Block User" after unblocking');
+      expect(
+        find.widgetWithText(OutlinedButton, 'Block User'),
+        findsOneWidget,
+        reason: 'Button should change back to "Block User" after unblocking',
+      );
 
       // Verify "Unblock" button is gone
-      expect(find.widgetWithText(OutlinedButton, 'Unblock'), findsNothing,
-          reason: 'Unblock button should not be visible when user is not blocked');
+      expect(
+        find.widgetWithText(OutlinedButton, 'Unblock'),
+        findsNothing,
+        reason: 'Unblock button should not be visible when user is not blocked',
+      );
 
       // Verify snackbar confirmation
-      expect(find.text('User unblocked'), findsOneWidget,
-          reason: 'Success snackbar should appear');
+      expect(
+        find.text('User unblocked'),
+        findsOneWidget,
+        reason: 'Success snackbar should appear',
+      );
     });
 
     testWidgets('Cancel block action keeps user unblocked', (tester) async {
@@ -132,9 +174,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(
-            routerConfig: router,
-          ),
+          child: MaterialApp.router(routerConfig: router),
         ),
       );
 
@@ -167,16 +207,25 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify user is still NOT blocked
-      expect(blocklistService.isBlocked(testUserHex), isFalse,
-          reason: 'User should not be blocked after canceling');
+      expect(
+        blocklistService.isBlocked(testUserHex),
+        isFalse,
+        reason: 'User should not be blocked after canceling',
+      );
 
       // Verify button is still "Block User"
-      expect(find.widgetWithText(OutlinedButton, 'Block User'), findsOneWidget,
-          reason: 'Block User button should still be visible after canceling');
+      expect(
+        find.widgetWithText(OutlinedButton, 'Block User'),
+        findsOneWidget,
+        reason: 'Block User button should still be visible after canceling',
+      );
 
       // Verify no snackbar
-      expect(find.text('User blocked'), findsNothing,
-          reason: 'No success snackbar should appear when canceled');
+      expect(
+        find.text('User blocked'),
+        findsNothing,
+        reason: 'No success snackbar should appear when canceled',
+      );
     });
   });
 }

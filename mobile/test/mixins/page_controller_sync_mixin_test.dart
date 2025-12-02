@@ -7,7 +7,9 @@ import 'package:openvine/mixins/page_controller_sync_mixin.dart';
 
 void main() {
   group('PageControllerSyncMixin', () {
-    testWidgets('SPEC: should sync controller when URL index changes', (tester) async {
+    testWidgets('SPEC: should sync controller when URL index changes', (
+      tester,
+    ) async {
       final mixin = TestPageControllerSyncMixin();
       final controller = PageController(initialPage: 0);
 
@@ -41,7 +43,9 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('SPEC: should not sync if controller already at target index', (tester) async {
+    testWidgets('SPEC: should not sync if controller already at target index', (
+      tester,
+    ) async {
       final mixin = TestPageControllerSyncMixin();
       final controller = PageController(initialPage: 3);
 
@@ -74,7 +78,9 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('SPEC: should clamp target index to valid range', (tester) async {
+    testWidgets('SPEC: should clamp target index to valid range', (
+      tester,
+    ) async {
       final mixin = TestPageControllerSyncMixin();
       final controller = PageController(initialPage: 0);
 
@@ -105,7 +111,9 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('SPEC: should clamp negative target index to 0', (tester) async {
+    testWidgets('SPEC: should clamp negative target index to 0', (
+      tester,
+    ) async {
       final mixin = TestPageControllerSyncMixin();
       final controller = PageController(initialPage: 2);
 
@@ -136,7 +144,9 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('SPEC: should handle controller without clients gracefully', (tester) async {
+    testWidgets('SPEC: should handle controller without clients gracefully', (
+      tester,
+    ) async {
       final mixin = TestPageControllerSyncMixin();
       final controller = PageController(initialPage: 0);
 
@@ -199,7 +209,9 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('SPEC: shouldSync returns true when URL index changes', (tester) async {
+    testWidgets('SPEC: shouldSync returns true when URL index changes', (
+      tester,
+    ) async {
       final mixin = TestPageControllerSyncMixin();
 
       // First sync
@@ -212,50 +224,53 @@ void main() {
       expect(mixin.shouldSync(urlIndex: 5, lastUrlIndex: 5), false);
     });
 
-    testWidgets('SPEC: shouldSync returns true when controller position mismatches', (tester) async {
-      final mixin = TestPageControllerSyncMixin();
-      final controller = PageController(initialPage: 0);
+    testWidgets(
+      'SPEC: shouldSync returns true when controller position mismatches',
+      (tester) async {
+        final mixin = TestPageControllerSyncMixin();
+        final controller = PageController(initialPage: 0);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PageView.builder(
-              controller: controller,
-              itemCount: 10,
-              itemBuilder: (context, index) => Text('Page $index'),
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: PageView.builder(
+                controller: controller,
+                itemCount: 10,
+                itemBuilder: (context, index) => Text('Page $index'),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Controller at 0, URL at 5 - should sync
-      expect(
-        mixin.shouldSync(
-          urlIndex: 5,
-          lastUrlIndex: 5,
-          controller: controller,
-          targetIndex: 5,
-        ),
-        true,
-      );
+        // Controller at 0, URL at 5 - should sync
+        expect(
+          mixin.shouldSync(
+            urlIndex: 5,
+            lastUrlIndex: 5,
+            controller: controller,
+            targetIndex: 5,
+          ),
+          true,
+        );
 
-      // Move controller to index 5
-      controller.jumpToPage(5);
-      await tester.pumpAndSettle();
+        // Move controller to index 5
+        controller.jumpToPage(5);
+        await tester.pumpAndSettle();
 
-      // Controller at 5, URL at 5 - should not sync
-      expect(
-        mixin.shouldSync(
-          urlIndex: 5,
-          lastUrlIndex: 5,
-          controller: controller,
-          targetIndex: 5,
-        ),
-        false,
-      );
+        // Controller at 5, URL at 5 - should not sync
+        expect(
+          mixin.shouldSync(
+            urlIndex: 5,
+            lastUrlIndex: 5,
+            controller: controller,
+            targetIndex: 5,
+          ),
+          false,
+        );
 
-      controller.dispose();
-    });
+        controller.dispose();
+      },
+    );
   });
 }
 

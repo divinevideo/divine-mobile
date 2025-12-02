@@ -30,60 +30,73 @@ void main() {
         expect(hasFollowing, false);
       });
 
-      test('returns false when current user has no following_list cache', () async {
-        SharedPreferences.setMockInitialValues({
-          'age_verified_16_plus': true,
-          'current_user_pubkey_hex': testUserPubkey,
-          // No following_list for this user
-        });
+      test(
+        'returns false when current user has no following_list cache',
+        () async {
+          SharedPreferences.setMockInitialValues({
+            'age_verified_16_plus': true,
+            'current_user_pubkey_hex': testUserPubkey,
+            // No following_list for this user
+          });
 
-        final prefs = await SharedPreferences.getInstance();
-        final hasFollowing = await hasAnyFollowingInCache(prefs);
+          final prefs = await SharedPreferences.getInstance();
+          final hasFollowing = await hasAnyFollowingInCache(prefs);
 
-        expect(hasFollowing, false);
-      });
+          expect(hasFollowing, false);
+        },
+      );
 
-      test('returns false when current user following_list is empty array', () async {
-        SharedPreferences.setMockInitialValues({
-          'age_verified_16_plus': true,
-          'current_user_pubkey_hex': testUserPubkey,
-          'following_list_$testUserPubkey': '[]',
-        });
+      test(
+        'returns false when current user following_list is empty array',
+        () async {
+          SharedPreferences.setMockInitialValues({
+            'age_verified_16_plus': true,
+            'current_user_pubkey_hex': testUserPubkey,
+            'following_list_$testUserPubkey': '[]',
+          });
 
-        final prefs = await SharedPreferences.getInstance();
-        final hasFollowing = await hasAnyFollowingInCache(prefs);
+          final prefs = await SharedPreferences.getInstance();
+          final hasFollowing = await hasAnyFollowingInCache(prefs);
 
-        expect(hasFollowing, false);
-      });
+          expect(hasFollowing, false);
+        },
+      );
 
-      test('returns true when current user following_list has contacts', () async {
-        SharedPreferences.setMockInitialValues({
-          'age_verified_16_plus': true,
-          'current_user_pubkey_hex': testUserPubkey,
-          'following_list_$testUserPubkey': '["pubkey1","pubkey2","pubkey3"]',
-        });
+      test(
+        'returns true when current user following_list has contacts',
+        () async {
+          SharedPreferences.setMockInitialValues({
+            'age_verified_16_plus': true,
+            'current_user_pubkey_hex': testUserPubkey,
+            'following_list_$testUserPubkey': '["pubkey1","pubkey2","pubkey3"]',
+          });
 
-        final prefs = await SharedPreferences.getInstance();
-        final hasFollowing = await hasAnyFollowingInCache(prefs);
+          final prefs = await SharedPreferences.getInstance();
+          final hasFollowing = await hasAnyFollowingInCache(prefs);
 
-        expect(hasFollowing, true);
-      });
+          expect(hasFollowing, true);
+        },
+      );
 
-      test('ignores other users following_list - only checks current user', () async {
-        const otherUser = 'other_user_pubkey';
-        SharedPreferences.setMockInitialValues({
-          'age_verified_16_plus': true,
-          'current_user_pubkey_hex': testUserPubkey,
-          'following_list_$testUserPubkey': '[]', // Current user empty
-          'following_list_$otherUser': '["pubkey1"]', // Other user has contacts
-        });
+      test(
+        'ignores other users following_list - only checks current user',
+        () async {
+          const otherUser = 'other_user_pubkey';
+          SharedPreferences.setMockInitialValues({
+            'age_verified_16_plus': true,
+            'current_user_pubkey_hex': testUserPubkey,
+            'following_list_$testUserPubkey': '[]', // Current user empty
+            'following_list_$otherUser':
+                '["pubkey1"]', // Other user has contacts
+          });
 
-        final prefs = await SharedPreferences.getInstance();
-        final hasFollowing = await hasAnyFollowingInCache(prefs);
+          final prefs = await SharedPreferences.getInstance();
+          final hasFollowing = await hasAnyFollowingInCache(prefs);
 
-        // Should return false because CURRENT user has empty list
-        expect(hasFollowing, false);
-      });
+          // Should return false because CURRENT user has empty list
+          expect(hasFollowing, false);
+        },
+      );
 
       test('handles invalid JSON gracefully', () async {
         SharedPreferences.setMockInitialValues({

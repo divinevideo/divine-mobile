@@ -59,7 +59,8 @@ mixin VideoPrefetchMixin {
     // Throttle prefetch calls to avoid excessive network activity
     final now = DateTime.now();
     if (_lastPrefetchCall != null &&
-        now.difference(_lastPrefetchCall!).inSeconds < prefetchThrottleSeconds) {
+        now.difference(_lastPrefetchCall!).inSeconds <
+            prefetchThrottleSeconds) {
       Log.debug(
         'Prefetch: Skipping - too soon since last call (index=$currentIndex)',
         name: 'VideoPrefetchMixin',
@@ -71,8 +72,14 @@ mixin VideoPrefetchMixin {
     _lastPrefetchCall = now;
 
     // Calculate prefetch range using app constants
-    final startIndex = (currentIndex - AppConstants.preloadBefore).clamp(0, videos.length - 1);
-    final endIndex = (currentIndex + AppConstants.preloadAfter + 1).clamp(0, videos.length);
+    final startIndex = (currentIndex - AppConstants.preloadBefore).clamp(
+      0,
+      videos.length - 1,
+    );
+    final endIndex = (currentIndex + AppConstants.preloadAfter + 1).clamp(
+      0,
+      videos.length,
+    );
 
     final videosToPreFetch = <VideoEvent>[];
     for (int i = startIndex; i < endIndex; i++) {
@@ -102,12 +109,18 @@ mixin VideoPrefetchMixin {
     // Fire and forget - don't block on prefetch
     try {
       videoCacheManager.preCache(videoUrls, videoIds).catchError((error) {
-        Log.error('❌ Error prefetching videos: $error',
-            name: 'VideoPrefetchMixin', category: LogCategory.video);
+        Log.error(
+          '❌ Error prefetching videos: $error',
+          name: 'VideoPrefetchMixin',
+          category: LogCategory.video,
+        );
       });
     } catch (error) {
-      Log.error('❌ Error prefetching videos: $error',
-          name: 'VideoPrefetchMixin', category: LogCategory.video);
+      Log.error(
+        '❌ Error prefetching videos: $error',
+        name: 'VideoPrefetchMixin',
+        category: LogCategory.video,
+      );
     }
   }
 

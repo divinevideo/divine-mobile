@@ -27,8 +27,7 @@ class CuratedListFeedScreen extends ConsumerStatefulWidget {
       _CuratedListFeedScreenState();
 }
 
-class _CuratedListFeedScreenState
-    extends ConsumerState<CuratedListFeedScreen> {
+class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   int? _activeVideoIndex;
 
   @override
@@ -61,8 +60,11 @@ class _CuratedListFeedScreenState
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.video_library,
-                      size: 64, color: VineTheme.secondaryText),
+                  Icon(
+                    Icons.video_library,
+                    size: 64,
+                    color: VineTheme.secondaryText,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'No videos in this list',
@@ -104,18 +106,12 @@ class _CuratedListFeedScreenState
               const SizedBox(height: 16),
               Text(
                 'Failed to load list',
-                style: TextStyle(
-                  color: VineTheme.likeRed,
-                  fontSize: 18,
-                ),
+                style: TextStyle(color: VineTheme.likeRed, fontSize: 18),
               ),
               const SizedBox(height: 8),
               Text(
                 error.toString(),
-                style: TextStyle(
-                  color: VineTheme.secondaryText,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -139,8 +135,10 @@ class _CuratedListFeedScreenState
             listVideos.add(video);
           } catch (e) {
             // Video not found in cache - could fetch individually here
-            Log.warning('Video $videoId not found in cache',
-                category: LogCategory.video);
+            Log.warning(
+              'Video $videoId not found in cache',
+              category: LogCategory.video,
+            );
           }
         }
 
@@ -156,8 +154,10 @@ class _CuratedListFeedScreenState
         return ComposableVideoGrid(
           videos: listVideos,
           onVideoTap: (videos, index) {
-            Log.info('Tapped video in curated list: ${videos[index].id}',
-                category: LogCategory.ui);
+            Log.info(
+              'Tapped video in curated list: ${videos[index].id}',
+              category: LogCategory.ui,
+            );
             setState(() {
               _activeVideoIndex = index;
             });
@@ -175,9 +175,8 @@ class _CuratedListFeedScreenState
           ),
         );
       },
-      loading: () => Center(
-        child: CircularProgressIndicator(color: VineTheme.vineGreen),
-      ),
+      loading: () =>
+          Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
       error: (error, stack) => Center(
         child: Text(
           'Error loading videos',
@@ -220,7 +219,8 @@ class _CuratedListFeedScreenState
               videoList: listVideos,
               contextTitle: widget.listName,
               startingIndex: _activeVideoIndex!,
-              useLocalActiveState: true, // Use local state since not using URL routing
+              useLocalActiveState:
+                  true, // Use local state since not using URL routing
             ),
             // Back button overlay to exit video mode
             Positioned(
@@ -252,9 +252,8 @@ class _CuratedListFeedScreenState
           ],
         );
       },
-      loading: () => Center(
-        child: CircularProgressIndicator(color: VineTheme.vineGreen),
-      ),
+      loading: () =>
+          Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
       error: (error, stack) => Center(
         child: Text(
           'Error loading videos',

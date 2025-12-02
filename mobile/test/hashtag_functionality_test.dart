@@ -82,41 +82,51 @@ void main() {
       mockVideoService = MockVideoEventService();
     });
 
-    test('should create subscription with hashtag filter for relay query',
-        () async {
-      // Arrange
-      final testHashtags = ['comedy', 'dance'];
-      final expectedVideos = [
-        _createVideoWithHashtags(['comedy']),
-        _createVideoWithHashtags(['dance', 'music']),
-      ];
+    test(
+      'should create subscription with hashtag filter for relay query',
+      () async {
+        // Arrange
+        final testHashtags = ['comedy', 'dance'];
+        final expectedVideos = [
+          _createVideoWithHashtags(['comedy']),
+          _createVideoWithHashtags(['dance', 'music']),
+        ];
 
-      // Mock the subscribeToHashtagVideos method
-      when(() => mockVideoService.subscribeToHashtagVideos(
+        // Mock the subscribeToHashtagVideos method
+        when(
+          () => mockVideoService.subscribeToHashtagVideos(
             testHashtags,
             limit: any(named: 'limit'),
-          )).thenAnswer((_) async {});
+          ),
+        ).thenAnswer((_) async {});
 
-      // Mock getVideos method to return expected videos
-      when(() => mockVideoService.getVideos(SubscriptionType.hashtag))
-          .thenReturn(expectedVideos);
+        // Mock getVideos method to return expected videos
+        when(
+          () => mockVideoService.getVideos(SubscriptionType.hashtag),
+        ).thenReturn(expectedVideos);
 
-      // Act
-      await mockVideoService.subscribeToHashtagVideos(testHashtags, limit: 100);
-      final videos = mockVideoService.getVideos(SubscriptionType.hashtag);
+        // Act
+        await mockVideoService.subscribeToHashtagVideos(
+          testHashtags,
+          limit: 100,
+        );
+        final videos = mockVideoService.getVideos(SubscriptionType.hashtag);
 
-      // Assert
-      // Verify subscription was called with correct parameters
-      verify(() => mockVideoService.subscribeToHashtagVideos(
+        // Assert
+        // Verify subscription was called with correct parameters
+        verify(
+          () => mockVideoService.subscribeToHashtagVideos(
             testHashtags,
             limit: 100,
-          )).called(1);
+          ),
+        ).called(1);
 
-      // Verify videos are returned
-      expect(videos.length, equals(2));
-      expect(videos[0].hashtags, contains('comedy'));
-      expect(videos[1].hashtags, contains('dance'));
-    });
+        // Verify videos are returned
+        expect(videos.length, equals(2));
+        expect(videos[0].hashtags, contains('comedy'));
+        expect(videos[1].hashtags, contains('dance'));
+      },
+    );
 
     test('should fetch videos from relay when hashtag is clicked', () async {
       // Arrange
@@ -127,13 +137,15 @@ void main() {
       ];
 
       // Mock subscription and video fetching
-      when(() => mockVideoService.subscribeToHashtagVideos(
-            [hashtag],
-            limit: any(named: 'limit'),
-          )).thenAnswer((_) async {});
+      when(
+        () => mockVideoService.subscribeToHashtagVideos([
+          hashtag,
+        ], limit: any(named: 'limit')),
+      ).thenAnswer((_) async {});
 
-      when(() => mockVideoService.getVideos(SubscriptionType.hashtag))
-          .thenReturn(expectedVideos);
+      when(
+        () => mockVideoService.getVideos(SubscriptionType.hashtag),
+      ).thenReturn(expectedVideos);
 
       // Act - Simulate clicking a hashtag
       await mockVideoService.subscribeToHashtagVideos([hashtag], limit: 100);
@@ -141,10 +153,9 @@ void main() {
 
       // Assert
       // Verify subscription was created with the hashtag
-      verify(() => mockVideoService.subscribeToHashtagVideos(
-            [hashtag],
-            limit: 100,
-          )).called(1);
+      verify(
+        () => mockVideoService.subscribeToHashtagVideos([hashtag], limit: 100),
+      ).called(1);
 
       // Verify videos with the hashtag are returned
       expect(videos.length, equals(2));

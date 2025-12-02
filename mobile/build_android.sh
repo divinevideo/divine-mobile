@@ -55,6 +55,25 @@ echo ""
 # Change to mobile directory
 cd "$(dirname "$0")"
 
+# Load environment variables from .env file
+DART_DEFINES=""
+if [ -f .env ]; then
+    echo -e "${YELLOW}Loading environment from .env...${NC}"
+    source .env
+
+    if [ -n "$ZENDESK_APP_ID" ]; then
+        DART_DEFINES="$DART_DEFINES --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID"
+    fi
+
+    if [ -n "$ZENDESK_CLIENT_ID" ]; then
+        DART_DEFINES="$DART_DEFINES --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID"
+    fi
+
+    if [ -n "$ZENDESK_URL" ]; then
+        DART_DEFINES="$DART_DEFINES --dart-define=ZENDESK_URL=$ZENDESK_URL"
+    fi
+fi
+
 # For release builds, ALWAYS increment build number (required by Play Store)
 if [ "$BUILD_TYPE" = "release" ]; then
   echo -e "${YELLOW}🔢 Auto-incrementing build number (required for Play Store)...${NC}"
@@ -96,18 +115,18 @@ if [ "$BUILD_TYPE" = "release" ]; then
   echo ""
 
   if [ "$VERBOSE" = true ]; then
-    flutter build appbundle --release -v
+    flutter build appbundle --release $DART_DEFINES -v
   else
-    flutter build appbundle --release
+    flutter build appbundle --release $DART_DEFINES
   fi
 else
   echo -e "${YELLOW}Building Android APK ($BUILD_TYPE)...${NC}"
   echo ""
 
   if [ "$VERBOSE" = true ]; then
-    flutter build apk --$BUILD_TYPE -v
+    flutter build apk --$BUILD_TYPE $DART_DEFINES -v
   else
-    flutter build apk --$BUILD_TYPE
+    flutter build apk --$BUILD_TYPE $DART_DEFINES
   fi
 fi
 

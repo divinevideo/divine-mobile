@@ -69,19 +69,13 @@ void main() {
 
   group('buildRoute', () {
     test('builds home route with index', () {
-      final context = RouteContext(
-        type: RouteType.home,
-        videoIndex: 5,
-      );
+      final context = RouteContext(type: RouteType.home, videoIndex: 5);
 
       expect(buildRoute(context), '/home/5');
     });
 
     test('builds explore route with index', () {
-      final context = RouteContext(
-        type: RouteType.explore,
-        videoIndex: 3,
-      );
+      final context = RouteContext(type: RouteType.explore, videoIndex: 3);
 
       expect(buildRoute(context), '/explore/3');
     });

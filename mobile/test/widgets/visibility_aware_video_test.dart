@@ -16,8 +16,9 @@ void main() {
   });
 
   tearDownAll(() {
-    VisibilityDetectorController.instance.updateInterval =
-        const Duration(milliseconds: 100);
+    VisibilityDetectorController.instance.updateInterval = const Duration(
+      milliseconds: 100,
+    );
   });
 
   late VideoVisibilityManager visibilityManager;
@@ -35,21 +36,20 @@ void main() {
       required String videoId,
       required Widget child,
       Function(VisibilityInfo)? onVisibilityChanged,
-    }) =>
-        ProviderScope(
-          overrides: [
-            videoVisibilityManagerProvider.overrideWithValue(visibilityManager),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: VisibilityAwareVideo(
-                videoId: videoId,
-                onVisibilityChanged: onVisibilityChanged,
-                child: child,
-              ),
-            ),
+    }) => ProviderScope(
+      overrides: [
+        videoVisibilityManagerProvider.overrideWithValue(visibilityManager),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: VisibilityAwareVideo(
+            videoId: videoId,
+            onVisibilityChanged: onVisibilityChanged,
+            child: child,
           ),
-        );
+        ),
+      ),
+    );
 
     testWidgets('should wrap child with VisibilityDetector', (tester) async {
       await tester.pumpWidget(
@@ -67,15 +67,13 @@ void main() {
       expect(find.text('Video Player'), findsOneWidget);
     });
 
-    testWidgets('should update visibility manager when visibility changes',
-        (tester) async {
+    testWidgets('should update visibility manager when visibility changes', (
+      tester,
+    ) async {
       const videoId = 'test-video';
 
       await tester.pumpWidget(
-        createTestWidget(
-          videoId: videoId,
-          child: Container(height: 200),
-        ),
+        createTestWidget(videoId: videoId, child: Container(height: 200)),
       );
 
       await tester.pumpAndSettle();
@@ -119,8 +117,9 @@ void main() {
       widgetDisposed = true;
     });
 
-    testWidgets('should provide visibility context to children',
-        (tester) async {
+    testWidgets('should provide visibility context to children', (
+      tester,
+    ) async {
       const videoId = 'test-video';
       bool? shouldPlayInChild;
       String? videoIdInChild;
@@ -145,26 +144,29 @@ void main() {
     });
 
     testWidgets(
-        'should provide access to VideoVisibilityManager through Riverpod',
-        (tester) async {
-      const videoId = 'test-video';
+      'should provide access to VideoVisibilityManager through Riverpod',
+      (tester) async {
+        const videoId = 'test-video';
 
-      await tester.pumpWidget(
-        createTestWidget(
-          videoId: videoId,
-          child: Consumer(
-            builder: (context, ref, _) {
-              final manager = ref.watch(videoVisibilityManagerProvider);
-              // Just verify we can access the manager
-              return Text('Manager: ${manager.runtimeType}');
-            },
+        await tester.pumpWidget(
+          createTestWidget(
+            videoId: videoId,
+            child: Consumer(
+              builder: (context, ref, _) {
+                final manager = ref.watch(videoVisibilityManagerProvider);
+                // Just verify we can access the manager
+                return Text('Manager: ${manager.runtimeType}');
+              },
+            ),
           ),
-        ),
-      );
+        );
 
-      expect(find.textContaining('Manager: VideoVisibilityManager'),
-          findsOneWidget);
-    });
+        expect(
+          find.textContaining('Manager: VideoVisibilityManager'),
+          findsOneWidget,
+        );
+      },
+    );
   });
 
   group('VideoVisibilityMixin', () {
@@ -182,8 +184,9 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      final state =
-          tester.state<_TestVideoWidgetState>(find.byType(_TestVideoWidget));
+      final state = tester.state<_TestVideoWidgetState>(
+        find.byType(_TestVideoWidget),
+      );
 
       expect(state.isVisibleEnoughToPlay, isFalse);
       expect(state.playCount, equals(0));
@@ -233,8 +236,8 @@ class _TestVideoWidgetState extends ConsumerState<_TestVideoWidget>
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 200,
-        color: isVisibleEnoughToPlay ? Colors.green : Colors.red,
-        child: Text(isVisibleEnoughToPlay ? 'Playing' : 'Paused'),
-      );
+    height: 200,
+    color: isVisibleEnoughToPlay ? Colors.green : Colors.red,
+    child: Text(isVisibleEnoughToPlay ? 'Playing' : 'Paused'),
+  );
 }

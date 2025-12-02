@@ -28,8 +28,9 @@ void main() {
 
       // Setup common mocks
       when(mockAuth.isAuthenticated).thenReturn(true);
-      when(mockAuth.currentPublicKeyHex)
-          .thenReturn('test_pubkey_123456789abcdef');
+      when(
+        mockAuth.currentPublicKeyHex,
+      ).thenReturn('test_pubkey_123456789abcdef');
 
       // Mock successful event broadcasting
       when(mockNostr.broadcastEvent(any)).thenAnswer((_) async {
@@ -52,26 +53,32 @@ void main() {
       });
 
       // Mock subscribeToEvents for relay sync
-      when(mockNostr.subscribeToEvents(
-        filters: anyNamed('filters'),
-        bypassLimits: anyNamed('bypassLimits'),
-        onEose: anyNamed('onEose'),
-      )).thenAnswer((_) => Stream.empty());
+      when(
+        mockNostr.subscribeToEvents(
+          filters: anyNamed('filters'),
+          bypassLimits: anyNamed('bypassLimits'),
+          onEose: anyNamed('onEose'),
+        ),
+      ).thenAnswer((_) => Stream.empty());
 
       // Mock event creation
-      when(mockAuth.createAndSignEvent(
-        kind: anyNamed('kind'),
-        content: anyNamed('content'),
-        tags: anyNamed('tags'),
-      )).thenAnswer((_) async => Event.fromJson({
-            'id': 'test_event_id',
-            'pubkey': 'test_pubkey_123456789abcdef',
-            'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            'kind': 30005,
-            'tags': [],
-            'content': 'test content',
-            'sig': 'test_signature',
-          }));
+      when(
+        mockAuth.createAndSignEvent(
+          kind: anyNamed('kind'),
+          content: anyNamed('content'),
+          tags: anyNamed('tags'),
+        ),
+      ).thenAnswer(
+        (_) async => Event.fromJson({
+          'id': 'test_event_id',
+          'pubkey': 'test_pubkey_123456789abcdef',
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'kind': 30005,
+          'tags': [],
+          'content': 'test content',
+          'sig': 'test_signature',
+        }),
+      );
 
       service = CuratedListService(
         nostrService: mockNostr,
@@ -122,25 +129,31 @@ void main() {
 
       test('calls fetchUserListsFromRelays during initialization', () async {
         // Mock subscription for relay sync
-        when(mockNostr.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.value(Event.fromJson({
-                  'id': 'relay_list_event',
-                  'pubkey': 'test_pubkey_123456789abcdef',
-                  'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-                  'kind': 30005,
-                  'tags': [
-                    ['d', 'relay_list_1'],
-                    ['title', 'Relay List'],
-                  ],
-                  'content': 'List from relay',
-                  'sig': 'test_signature',
-                })));
+        when(
+          mockNostr.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer(
+          (_) => Stream.value(
+            Event.fromJson({
+              'id': 'relay_list_event',
+              'pubkey': 'test_pubkey_123456789abcdef',
+              'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+              'kind': 30005,
+              'tags': [
+                ['d', 'relay_list_1'],
+                ['title', 'Relay List'],
+              ],
+              'content': 'List from relay',
+              'sig': 'test_signature',
+            }),
+          ),
+        );
 
         await service.initialize();
 
         // Should have called subscribeToEvents
-        verify(mockNostr.subscribeToEvents(filters: anyNamed('filters')))
-            .called(1);
+        verify(
+          mockNostr.subscribeToEvents(filters: anyNamed('filters')),
+        ).called(1);
       });
     });
 
@@ -195,11 +208,13 @@ void main() {
         await service.createList(name: 'Public List', isPublic: true);
 
         // Should create and sign event
-        verify(mockAuth.createAndSignEvent(
-          kind: 30005,
-          content: anyNamed('content'),
-          tags: anyNamed('tags'),
-        )).called(1);
+        verify(
+          mockAuth.createAndSignEvent(
+            kind: 30005,
+            content: anyNamed('content'),
+            tags: anyNamed('tags'),
+          ),
+        ).called(1);
 
         // Should broadcast event
         verify(mockNostr.broadcastEvent(any)).called(1);
@@ -209,11 +224,13 @@ void main() {
         await service.createList(name: 'Private List', isPublic: false);
 
         // Should not create or broadcast event
-        verifyNever(mockAuth.createAndSignEvent(
-          kind: anyNamed('kind'),
-          content: anyNamed('content'),
-          tags: anyNamed('tags'),
-        ));
+        verifyNever(
+          mockAuth.createAndSignEvent(
+            kind: anyNamed('kind'),
+            content: anyNamed('content'),
+            tags: anyNamed('tags'),
+          ),
+        );
         verifyNever(mockNostr.broadcastEvent(any));
       });
 
@@ -223,11 +240,13 @@ void main() {
         await service.createList(name: 'Test List', isPublic: true);
 
         // Should not attempt to publish
-        verifyNever(mockAuth.createAndSignEvent(
-          kind: anyNamed('kind'),
-          content: anyNamed('content'),
-          tags: anyNamed('tags'),
-        ));
+        verifyNever(
+          mockAuth.createAndSignEvent(
+            kind: anyNamed('kind'),
+            content: anyNamed('content'),
+            tags: anyNamed('tags'),
+          ),
+        );
       });
 
       test('saves list to SharedPreferences', () async {
@@ -310,7 +329,10 @@ void main() {
       });
 
       test('publishes update to Nostr for public list', () async {
-        final list = await service.createList(name: 'Test List', isPublic: true);
+        final list = await service.createList(
+          name: 'Test List',
+          isPublic: true,
+        );
         reset(mockNostr); // Clear previous invocations
 
         await service.updateList(listId: list!.id, name: 'Updated Name');
@@ -319,8 +341,10 @@ void main() {
       });
 
       test('does not publish update for private list', () async {
-        final list =
-            await service.createList(name: 'Test List', isPublic: false);
+        final list = await service.createList(
+          name: 'Test List',
+          isPublic: false,
+        );
         reset(mockNostr); // Clear previous invocations
 
         await service.updateList(listId: list!.id, name: 'Updated Name');
@@ -392,7 +416,9 @@ void main() {
       test('prevents deleting default list', () async {
         await service.initialize();
 
-        final result = await service.deleteList(CuratedListService.defaultListId);
+        final result = await service.deleteList(
+          CuratedListService.defaultListId,
+        );
 
         expect(result, isFalse);
         expect(service.hasDefaultList(), isTrue);
@@ -463,13 +489,18 @@ void main() {
         final lists = service.lists;
 
         // Should not be able to modify the returned list
-        expect(() => lists.add(CuratedList(
+        expect(
+          () => lists.add(
+            CuratedList(
               id: 'fake_id',
               name: 'Fake List',
               videoEventIds: [],
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
-            )), throwsUnsupportedError);
+            ),
+          ),
+          throwsUnsupportedError,
+        );
       });
 
       test('returns all lists', () async {
@@ -480,7 +511,11 @@ void main() {
         await service.createList(name: 'List 3');
 
         expect(service.lists.length, 3);
-        expect(service.lists.map((l) => l.name), ['List 1', 'List 2', 'List 3']);
+        expect(service.lists.map((l) => l.name), [
+          'List 1',
+          'List 2',
+          'List 3',
+        ]);
       });
 
       test('returns empty list initially', () {

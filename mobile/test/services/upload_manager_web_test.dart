@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
 import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/upload_manager.dart';
@@ -53,26 +52,23 @@ void main() {
       }
     });
 
-    test('initializes successfully on web without filesystem access', () async {
-      final uploadManager = UploadManager(
-        blossomService: mockBlossomService,
-      );
+    test(
+      'initializes successfully on web without filesystem access',
+      () async {
+        final uploadManager = UploadManager(blossomService: mockBlossomService);
 
-      // Should not throw MissingPluginException for path_provider
-      await expectLater(
-        uploadManager.initialize(),
-        completes,
-      );
+        // Should not throw MissingPluginException for path_provider
+        await expectLater(uploadManager.initialize(), completes);
 
-      expect(uploadManager.isInitialized, isTrue);
+        expect(uploadManager.isInitialized, isTrue);
 
-      uploadManager.dispose();
-    }, skip: !kIsWeb ? 'Web-only test' : null);
+        uploadManager.dispose();
+      },
+      skip: !kIsWeb ? 'Web-only test' : null,
+    );
 
     test('pending uploads list works on web', () async {
-      final uploadManager = UploadManager(
-        blossomService: mockBlossomService,
-      );
+      final uploadManager = UploadManager(blossomService: mockBlossomService);
 
       await uploadManager.initialize();
       expect(uploadManager.isInitialized, isTrue);
@@ -85,9 +81,7 @@ void main() {
     }, skip: !kIsWeb ? 'Web-only test' : null);
 
     test('upload stats work on web', () async {
-      final uploadManager = UploadManager(
-        blossomService: mockBlossomService,
-      );
+      final uploadManager = UploadManager(blossomService: mockBlossomService);
 
       await uploadManager.initialize();
 
@@ -100,39 +94,38 @@ void main() {
       uploadManager.dispose();
     }, skip: !kIsWeb ? 'Web-only test' : null);
 
-    test('getUpload returns null for non-existent upload on web', () async {
-      final uploadManager = UploadManager(
-        blossomService: mockBlossomService,
-      );
+    test(
+      'getUpload returns null for non-existent upload on web',
+      () async {
+        final uploadManager = UploadManager(blossomService: mockBlossomService);
 
-      await uploadManager.initialize();
+        await uploadManager.initialize();
 
-      final upload = uploadManager.getUpload('nonexistent_id');
-      expect(upload, isNull);
+        final upload = uploadManager.getUpload('nonexistent_id');
+        expect(upload, isNull);
 
-      uploadManager.dispose();
-    }, skip: !kIsWeb ? 'Web-only test' : null);
+        uploadManager.dispose();
+      },
+      skip: !kIsWeb ? 'Web-only test' : null,
+    );
 
-    test('cleanupCompletedUploads does not crash on web', () async {
-      final uploadManager = UploadManager(
-        blossomService: mockBlossomService,
-      );
+    test(
+      'cleanupCompletedUploads does not crash on web',
+      () async {
+        final uploadManager = UploadManager(blossomService: mockBlossomService);
 
-      await uploadManager.initialize();
+        await uploadManager.initialize();
 
-      // Should not throw
-      await expectLater(
-        uploadManager.cleanupCompletedUploads(),
-        completes,
-      );
+        // Should not throw
+        await expectLater(uploadManager.cleanupCompletedUploads(), completes);
 
-      uploadManager.dispose();
-    }, skip: !kIsWeb ? 'Web-only test' : null);
+        uploadManager.dispose();
+      },
+      skip: !kIsWeb ? 'Web-only test' : null,
+    );
 
     test('performance metrics work on web', () async {
-      final uploadManager = UploadManager(
-        blossomService: mockBlossomService,
-      );
+      final uploadManager = UploadManager(blossomService: mockBlossomService);
 
       await uploadManager.initialize();
 
@@ -144,26 +137,26 @@ void main() {
       uploadManager.dispose();
     }, skip: !kIsWeb ? 'Web-only test' : null);
 
-    test('multiple initializations are safe on web', () async {
-      final uploadManager = UploadManager(
-        blossomService: mockBlossomService,
-      );
+    test(
+      'multiple initializations are safe on web',
+      () async {
+        final uploadManager = UploadManager(blossomService: mockBlossomService);
 
-      // First init
-      await uploadManager.initialize();
-      expect(uploadManager.isInitialized, isTrue);
+        // First init
+        await uploadManager.initialize();
+        expect(uploadManager.isInitialized, isTrue);
 
-      // Second init should be safe
-      await uploadManager.initialize();
-      expect(uploadManager.isInitialized, isTrue);
+        // Second init should be safe
+        await uploadManager.initialize();
+        expect(uploadManager.isInitialized, isTrue);
 
-      uploadManager.dispose();
-    }, skip: !kIsWeb ? 'Web-only test' : null);
+        uploadManager.dispose();
+      },
+      skip: !kIsWeb ? 'Web-only test' : null,
+    );
 
     test('dispose is safe on web', () async {
-      final uploadManager = UploadManager(
-        blossomService: mockBlossomService,
-      );
+      final uploadManager = UploadManager(blossomService: mockBlossomService);
 
       await uploadManager.initialize();
 
@@ -171,19 +164,21 @@ void main() {
       expect(() => uploadManager.dispose(), returnsNormally);
     }, skip: !kIsWeb ? 'Web-only test' : null);
 
-    test('crash reporting does not throw on web', () async {
-      final uploadManager = UploadManager(
-        blossomService: mockBlossomService,
-      );
+    test(
+      'crash reporting does not throw on web',
+      () async {
+        final uploadManager = UploadManager(blossomService: mockBlossomService);
 
-      await uploadManager.initialize();
+        await uploadManager.initialize();
 
-      // The platform detection helper should return 'web' instead of crashing
-      // We can't directly test the private helper, but we can verify
-      // the manager initializes without Platform.operatingSystem errors
-      expect(uploadManager.isInitialized, isTrue);
+        // The platform detection helper should return 'web' instead of crashing
+        // We can't directly test the private helper, but we can verify
+        // the manager initializes without Platform.operatingSystem errors
+        expect(uploadManager.isInitialized, isTrue);
 
-      uploadManager.dispose();
-    }, skip: !kIsWeb ? 'Web-only test' : null);
+        uploadManager.dispose();
+      },
+      skip: !kIsWeb ? 'Web-only test' : null,
+    );
   });
 }

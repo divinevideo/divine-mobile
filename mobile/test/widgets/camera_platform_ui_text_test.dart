@@ -7,15 +7,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Camera Platform UI Text Tests', () {
-    testWidgets('should render correct hint text based on platform', (tester) async {
+    testWidgets('should render correct hint text based on platform', (
+      tester,
+    ) async {
       // Build a simple widget that shows the platform-specific text
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: Center(
-              child: Text(
-                kIsWeb ? 'Tap to record' : 'Hold to record',
-              ),
+              child: Text(kIsWeb ? 'Tap to record' : 'Hold to record'),
             ),
           ),
         ),
@@ -34,28 +34,22 @@ void main() {
     testWidgets('segment counter text should format correctly', (tester) async {
       // Test single segment
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: Text('1 segment'),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: Text('1 segment'))),
       );
 
       expect(find.text('1 segment'), findsOneWidget);
 
       // Test multiple segments
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: Text('3 segments'),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: Text('3 segments'))),
       );
 
       expect(find.text('3 segments'), findsOneWidget);
     });
 
-    testWidgets('should conditionally show UI elements based on platform', (tester) async {
+    testWidgets('should conditionally show UI elements based on platform', (
+      tester,
+    ) async {
       // Simulate the conditional rendering logic
       final showSegmentCount = !kIsWeb;
 
@@ -64,10 +58,8 @@ void main() {
           home: Scaffold(
             body: Column(
               children: [
-                if (showSegmentCount)
-                  const Text('2 segments'),
-                if (!showSegmentCount)
-                  const Text('Recording...'),
+                if (showSegmentCount) const Text('2 segments'),
+                if (!showSegmentCount) const Text('Recording...'),
               ],
             ),
           ),
@@ -94,40 +86,33 @@ void main() {
       expect(formatDuration(Duration.zero), equals('00:00'));
       expect(formatDuration(const Duration(seconds: 5)), equals('00:05'));
       expect(formatDuration(const Duration(seconds: 30)), equals('00:30'));
-      expect(formatDuration(const Duration(minutes: 1, seconds: 30)), equals('01:30'));
+      expect(
+        formatDuration(const Duration(minutes: 1, seconds: 30)),
+        equals('01:30'),
+      );
       expect(formatDuration(const Duration(seconds: 63)), equals('01:03'));
     });
 
-    testWidgets('recording state text should update during lifecycle', (tester) async {
+    testWidgets('recording state text should update during lifecycle', (
+      tester,
+    ) async {
       // Test idle state
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: Text('Ready'),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: Text('Ready'))),
       );
 
       expect(find.text('Ready'), findsOneWidget);
 
       // Test recording state
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: Text('00:03'),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: Text('00:03'))),
       );
 
       expect(find.text('00:03'), findsOneWidget);
 
       // Test completed state
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: Text('Processing video...'),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: Text('Processing video...'))),
       );
 
       expect(find.text('Processing video...'), findsOneWidget);

@@ -31,7 +31,9 @@ void main() {
       Log.setLogLevel(LogLevel.debug);
 
       // Mock the CrashReportingService singleton
-      when(mockCrashReporting.logInitializationStep(any)).thenAnswer((invocation) {
+      when(mockCrashReporting.logInitializationStep(any)).thenAnswer((
+        invocation,
+      ) {
         breadcrumbs.add(invocation.positionalArguments[0] as String);
       });
     });
@@ -77,14 +79,21 @@ void main() {
       expect(metrics.serviceTimings['TestService2'], isNotNull);
 
       // Verify timing is reasonable
-      expect(metrics.serviceTimings['TestService1']!.inMilliseconds,
-             greaterThanOrEqualTo(50));
-      expect(metrics.serviceTimings['TestService2']!.inMilliseconds,
-             greaterThanOrEqualTo(30));
+      expect(
+        metrics.serviceTimings['TestService1']!.inMilliseconds,
+        greaterThanOrEqualTo(50),
+      );
+      expect(
+        metrics.serviceTimings['TestService2']!.inMilliseconds,
+        greaterThanOrEqualTo(30),
+      );
 
       // Total duration should be at least the sum of services
       expect(metrics.totalDuration.inMilliseconds, greaterThanOrEqualTo(80));
-      expect(endTime.difference(startTime).inMilliseconds, greaterThanOrEqualTo(80));
+      expect(
+        endTime.difference(startTime).inMilliseconds,
+        greaterThanOrEqualTo(80),
+      );
     });
 
     test('should log breadcrumbs for each initialization step', () async {
@@ -96,9 +105,13 @@ void main() {
         name: 'AuthService',
         phase: StartupPhase.critical,
         initialize: () async {
-          CrashReportingService.instance.logInitializationStep('Initializing service: AuthService');
+          CrashReportingService.instance.logInitializationStep(
+            'Initializing service: AuthService',
+          );
           await Future.delayed(const Duration(milliseconds: 10));
-          CrashReportingService.instance.logInitializationStep('✓ AuthService initialized successfully');
+          CrashReportingService.instance.logInitializationStep(
+            '✓ AuthService initialized successfully',
+          );
         },
       );
 
@@ -106,9 +119,13 @@ void main() {
         name: 'NostrService',
         phase: StartupPhase.essential,
         initialize: () async {
-          CrashReportingService.instance.logInitializationStep('Initializing service: NostrService');
+          CrashReportingService.instance.logInitializationStep(
+            'Initializing service: NostrService',
+          );
           await Future.delayed(const Duration(milliseconds: 10));
-          CrashReportingService.instance.logInitializationStep('✓ NostrService initialized successfully');
+          CrashReportingService.instance.logInitializationStep(
+            '✓ NostrService initialized successfully',
+          );
         },
       );
 
@@ -134,8 +151,12 @@ void main() {
         initialize: () async {
           // Start timeout detection
           timeoutTimer = Timer(const Duration(seconds: 2), () {
-            warnings.add('WARNING: SlowService initialization taking > 2 seconds');
-            CrashReportingService.instance.log('Startup timeout detected for SlowService');
+            warnings.add(
+              'WARNING: SlowService initialization taking > 2 seconds',
+            );
+            CrashReportingService.instance.log(
+              'Startup timeout detected for SlowService',
+            );
           });
 
           // Simulate slow initialization
@@ -152,7 +173,10 @@ void main() {
       await Future.delayed(const Duration(seconds: 2, milliseconds: 100));
 
       // Assert - should have timeout warning
-      expect(warnings, contains('WARNING: SlowService initialization taking > 2 seconds'));
+      expect(
+        warnings,
+        contains('WARNING: SlowService initialization taking > 2 seconds'),
+      );
 
       // Wait for completion
       await initFuture;
@@ -160,8 +184,10 @@ void main() {
 
       // Service should still complete
       final metrics = coordinator.metrics;
-      expect(metrics.serviceTimings['SlowService']!.inMilliseconds,
-             greaterThanOrEqualTo(3000));
+      expect(
+        metrics.serviceTimings['SlowService']!.inMilliseconds,
+        greaterThanOrEqualTo(3000),
+      );
     });
 
     test('should provide detailed startup metrics report', () async {
@@ -227,60 +253,70 @@ void main() {
         final metrics = coordinator.metrics;
         expect(metrics.errors.length, greaterThan(0));
         expect(metrics.errors.first.serviceName, equals('FailingService'));
-        expect(metrics.errors.first.error.toString(),
-               contains('Service initialization failed'));
+        expect(
+          metrics.errors.first.error.toString(),
+          contains('Service initialization failed'),
+        );
       }
     });
 
-    test('should support progressive initialization with phase tracking', () async {
-      // Arrange
-      final phaseCompletions = <StartupPhase>[];
-      coordinator.phaseCompleted.listen(phaseCompletions.add);
+    test(
+      'should support progressive initialization with phase tracking',
+      () async {
+        // Arrange
+        final phaseCompletions = <StartupPhase>[];
+        coordinator.phaseCompleted.listen(phaseCompletions.add);
 
-      coordinator.registerService(
-        name: 'CriticalService',
-        phase: StartupPhase.critical,
-        initialize: () async {
-          await Future.delayed(const Duration(milliseconds: 20));
-        },
-      );
+        coordinator.registerService(
+          name: 'CriticalService',
+          phase: StartupPhase.critical,
+          initialize: () async {
+            await Future.delayed(const Duration(milliseconds: 20));
+          },
+        );
 
-      coordinator.registerService(
-        name: 'EssentialService',
-        phase: StartupPhase.essential,
-        initialize: () async {
-          await Future.delayed(const Duration(milliseconds: 30));
-        },
-      );
+        coordinator.registerService(
+          name: 'EssentialService',
+          phase: StartupPhase.essential,
+          initialize: () async {
+            await Future.delayed(const Duration(milliseconds: 30));
+          },
+        );
 
-      coordinator.registerService(
-        name: 'StandardService',
-        phase: StartupPhase.standard,
-        initialize: () async {
-          await Future.delayed(const Duration(milliseconds: 10));
-        },
-      );
+        coordinator.registerService(
+          name: 'StandardService',
+          phase: StartupPhase.standard,
+          initialize: () async {
+            await Future.delayed(const Duration(milliseconds: 10));
+          },
+        );
 
-      // Act
-      await coordinator.initializeProgressive();
+        // Act
+        await coordinator.initializeProgressive();
 
-      // Assert
-      expect(phaseCompletions, containsAllInOrder([
-        StartupPhase.critical,
-        StartupPhase.essential,
-        StartupPhase.standard,
-      ]));
+        // Assert
+        expect(
+          phaseCompletions,
+          containsAllInOrder([
+            StartupPhase.critical,
+            StartupPhase.essential,
+            StartupPhase.standard,
+          ]),
+        );
 
-      // All services should be initialized
-      final metrics = coordinator.metrics;
-      expect(metrics.serviceTimings.length, equals(3));
-      expect(metrics.totalDuration.inMilliseconds, greaterThanOrEqualTo(30));
-    });
+        // All services should be initialized
+        final metrics = coordinator.metrics;
+        expect(metrics.serviceTimings.length, equals(3));
+        expect(metrics.totalDuration.inMilliseconds, greaterThanOrEqualTo(30));
+      },
+    );
 
     test('should track initialization progress percentage', () async {
       // Arrange
       final progressUpdates = <double>[];
-      final progressSubscription = coordinator.progress.listen(progressUpdates.add);
+      final progressSubscription = coordinator.progress.listen(
+        progressUpdates.add,
+      );
 
       for (int i = 1; i <= 5; i++) {
         coordinator.registerService(
@@ -305,12 +341,19 @@ void main() {
       // The progress should show meaningful updates (at least 20% per service)
       // With 5 services, each should contribute ~0.2 to progress
       final lastProgress = progressUpdates.last;
-      expect(lastProgress, greaterThanOrEqualTo(0.2),
-          reason: 'Expected progress after completing services, got: $progressUpdates');
+      expect(
+        lastProgress,
+        greaterThanOrEqualTo(0.2),
+        reason:
+            'Expected progress after completing services, got: $progressUpdates',
+      );
 
       // Progress should increase monotonically
       for (int i = 1; i < progressUpdates.length; i++) {
-        expect(progressUpdates[i], greaterThanOrEqualTo(progressUpdates[i - 1]));
+        expect(
+          progressUpdates[i],
+          greaterThanOrEqualTo(progressUpdates[i - 1]),
+        );
       }
     });
 

@@ -24,7 +24,9 @@ void main() {
       await keyManager.initialize();
 
       nostrService = NostrService(keyManager);
-      await nostrService.initialize(customRelays: ['wss://staging-relay.divine.video']);
+      await nostrService.initialize(
+        customRelays: ['wss://staging-relay.divine.video'],
+      );
 
       subscriptionManager = SubscriptionManager(nostrService);
       videoEventService = VideoEventService(
@@ -70,12 +72,23 @@ void main() {
       // If results found, verify they match the query
       if (searchResults.isNotEmpty) {
         final firstResult = searchResults.first;
-        final matchesQuery = firstResult.content.toLowerCase().contains(searchQuery.toLowerCase()) ||
-            firstResult.title?.toLowerCase().contains(searchQuery.toLowerCase()) == true ||
-            firstResult.hashtags.any((tag) => tag.toLowerCase().contains(searchQuery.toLowerCase()));
+        final matchesQuery =
+            firstResult.content.toLowerCase().contains(
+              searchQuery.toLowerCase(),
+            ) ||
+            firstResult.title?.toLowerCase().contains(
+                  searchQuery.toLowerCase(),
+                ) ==
+                true ||
+            firstResult.hashtags.any(
+              (tag) => tag.toLowerCase().contains(searchQuery.toLowerCase()),
+            );
 
-        expect(matchesQuery, isTrue,
-            reason: 'Search result should match query "$searchQuery"');
+        expect(
+          matchesQuery,
+          isTrue,
+          reason: 'Search result should match query "$searchQuery"',
+        );
       }
     });
 
@@ -108,49 +121,56 @@ void main() {
       }).toList();
 
       print('✅ Combined unique results: ${uniqueResults.length}');
-      print('   Duplicates removed: ${allResults.length - uniqueResults.length}');
+      print(
+        '   Duplicates removed: ${allResults.length - uniqueResults.length}',
+      );
 
       // Verify deduplication worked
       expect(uniqueResults.length, lessThanOrEqualTo(allResults.length));
       expect(uniqueResults.length, greaterThanOrEqualTo(localVideos.length));
     });
 
-    test('should extract unique users and hashtags from search results', () async {
-      const query = 'nostr';
+    test(
+      'should extract unique users and hashtags from search results',
+      () async {
+        const query = 'nostr';
 
-      // Perform search
-      await videoEventService.searchVideos(query, limit: 30);
-      await Future.delayed(const Duration(seconds: 2));
+        // Perform search
+        await videoEventService.searchVideos(query, limit: 30);
+        await Future.delayed(const Duration(seconds: 2));
 
-      final results = videoEventService.searchResults;
+        final results = videoEventService.searchResults;
 
-      if (results.isEmpty) {
-        print('⚠️ No results returned, skipping assertions');
-        return;
-      }
+        if (results.isEmpty) {
+          print('⚠️ No results returned, skipping assertions');
+          return;
+        }
 
-      // Extract unique users
-      final users = <String>{};
-      for (final video in results) {
-        users.add(video.pubkey);
-      }
+        // Extract unique users
+        final users = <String>{};
+        for (final video in results) {
+          users.add(video.pubkey);
+        }
 
-      // Extract unique hashtags matching query
-      final hashtags = <String>{};
-      for (final video in results) {
-        for (final tag in video.hashtags) {
-          if (tag.toLowerCase().contains(query.toLowerCase())) {
-            hashtags.add(tag);
+        // Extract unique hashtags matching query
+        final hashtags = <String>{};
+        for (final video in results) {
+          for (final tag in video.hashtags) {
+            if (tag.toLowerCase().contains(query.toLowerCase())) {
+              hashtags.add(tag);
+            }
           }
         }
-      }
 
-      print('👥 Unique users found: ${users.length}');
-      print('🏷️ Matching hashtags: ${hashtags.length} - ${hashtags.take(5).join(", ")}');
+        print('👥 Unique users found: ${users.length}');
+        print(
+          '🏷️ Matching hashtags: ${hashtags.length} - ${hashtags.take(5).join(", ")}',
+        );
 
-      expect(users.length, greaterThan(0));
-      expect(users.length, lessThanOrEqualTo(results.length));
-    });
+        expect(users.length, greaterThan(0));
+        expect(users.length, lessThanOrEqualTo(results.length));
+      },
+    );
 
     test('should handle search with no results gracefully', () async {
       const impossibleQuery = 'xyzabc123impossible456query789';
@@ -160,7 +180,9 @@ void main() {
 
       final results = videoEventService.searchResults;
 
-      print('🔍 Search for "$impossibleQuery" returned ${results.length} results');
+      print(
+        '🔍 Search for "$impossibleQuery" returned ${results.length} results',
+      );
 
       expect(results, isNotNull);
       expect(results, isEmpty);

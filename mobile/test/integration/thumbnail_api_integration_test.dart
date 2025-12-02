@@ -39,8 +39,9 @@ void main() {
       test(
         'thumbnailExists returns false for non-existent video',
         () async {
-          final exists =
-              await ThumbnailApiService.thumbnailExists(nonExistentVideoId);
+          final exists = await ThumbnailApiService.thumbnailExists(
+            nonExistentVideoId,
+          );
           expect(exists, isFalse);
         },
         timeout: const Timeout(Duration(seconds: 30)),
@@ -51,8 +52,9 @@ void main() {
         () async {
           // Test thumbnail generation for Rabble's known video
           final url = await ThumbnailApiService.getThumbnailWithFallback(
-              realVideoId,
-              timeSeconds: 1);
+            realVideoId,
+            timeSeconds: 1,
+          );
 
           if (url != null) {
             expect(url, startsWith('https://api.openvine.co/thumbnail/'));
@@ -61,7 +63,8 @@ void main() {
             Log.info('Successfully generated thumbnail: $url');
           } else {
             Log.info(
-                'Thumbnail generation failed for $realVideoId - this may be expected if already exists');
+              'Thumbnail generation failed for $realVideoId - this may be expected if already exists',
+            );
           }
 
           // The test passes if no exception is thrown, regardless of success/failure
@@ -74,7 +77,8 @@ void main() {
         'getThumbnailWithFallback handles non-existent video gracefully',
         () async {
           final url = await ThumbnailApiService.getThumbnailWithFallback(
-              nonExistentVideoId);
+            nonExistentVideoId,
+          );
           expect(url, isNull);
         },
         timeout: const Timeout(Duration(seconds: 30)),
@@ -143,7 +147,8 @@ void main() {
 
           expect(results, isA<Map<String, String>>());
           Log.info(
-              'Batch generation results: ${results.length}/${videoIds.length} successful');
+            'Batch generation results: ${results.length}/${videoIds.length} successful',
+          );
 
           // Print results for debugging
           results.forEach((videoId, url) {
@@ -163,8 +168,9 @@ void main() {
           final exists = await ThumbnailApiService.thumbnailExists(malformedId);
           expect(exists, isFalse);
 
-          final url =
-              await ThumbnailApiService.getThumbnailWithFallback(malformedId);
+          final url = await ThumbnailApiService.getThumbnailWithFallback(
+            malformedId,
+          );
           expect(url, isNull);
         },
         timeout: const Timeout(Duration(seconds: 30)),
@@ -178,27 +184,23 @@ void main() {
           final exists = await ThumbnailApiService.thumbnailExists(longId);
           expect(exists, isFalse);
 
-          final url =
-              await ThumbnailApiService.getThumbnailWithFallback(longId);
+          final url = await ThumbnailApiService.getThumbnailWithFallback(
+            longId,
+          );
           expect(url, isNull);
         },
         timeout: const Timeout(Duration(seconds: 30)),
       );
 
-      test(
-        'handles empty video ID',
-        () async {
-          const emptyId = '';
+      test('handles empty video ID', () async {
+        const emptyId = '';
 
-          final exists = await ThumbnailApiService.thumbnailExists(emptyId);
-          expect(exists, isFalse);
+        final exists = await ThumbnailApiService.thumbnailExists(emptyId);
+        expect(exists, isFalse);
 
-          final url =
-              await ThumbnailApiService.getThumbnailWithFallback(emptyId);
-          expect(url, isNull);
-        },
-        timeout: const Timeout(Duration(seconds: 30)),
-      );
+        final url = await ThumbnailApiService.getThumbnailWithFallback(emptyId);
+        expect(url, isNull);
+      }, timeout: const Timeout(Duration(seconds: 30)));
 
       test(
         'handles special characters in video ID',
@@ -209,8 +211,9 @@ void main() {
           final exists = await ThumbnailApiService.thumbnailExists(specialId);
           expect(exists, isA<bool>());
 
-          final url =
-              await ThumbnailApiService.getThumbnailWithFallback(specialId);
+          final url = await ThumbnailApiService.getThumbnailWithFallback(
+            specialId,
+          );
           expect(url, anyOf(isNull, isA<String>()));
         },
         timeout: const Timeout(Duration(seconds: 30)),
@@ -230,7 +233,9 @@ void main() {
 
           Log.info('Thumbnail generation took ${duration}ms');
           expect(
-              duration, lessThan(30000)); // Should complete within 30 seconds
+            duration,
+            lessThan(30000),
+          ); // Should complete within 30 seconds
         },
         timeout: const Timeout(Duration(seconds: 45)),
       );
@@ -248,9 +253,12 @@ void main() {
           final averagePerVideo = duration / videoIds.length;
 
           Log.info(
-              'Batch processing took ${duration}ms (${averagePerVideo.toStringAsFixed(1)}ms per video)');
+            'Batch processing took ${duration}ms (${averagePerVideo.toStringAsFixed(1)}ms per video)',
+          );
           expect(
-              duration, lessThan(60000)); // Should complete within 60 seconds
+            duration,
+            lessThan(60000),
+          ); // Should complete within 60 seconds
         },
         timeout: const Timeout(Duration(seconds: 90)),
       );
@@ -261,7 +269,8 @@ void main() {
           final futures = List.generate(
             3,
             (i) => ThumbnailApiService.thumbnailExists(
-                '$realVideoId-concurrent-$i'),
+              '$realVideoId-concurrent-$i',
+            ),
           );
 
           final results = await Future.wait(futures);
@@ -343,21 +352,17 @@ void main() {
         timeout: const Timeout(Duration(seconds: 30)),
       );
 
-      test(
-        'handles zero timestamp',
-        () async {
-          final url = await ThumbnailApiService.getThumbnailWithFallback(
-            realVideoId,
-            timeSeconds: 0,
-          );
+      test('handles zero timestamp', () async {
+        final url = await ThumbnailApiService.getThumbnailWithFallback(
+          realVideoId,
+          timeSeconds: 0,
+        );
 
-          expect(url, anyOf(isNull, isA<String>()));
-          if (url != null) {
-            expect(url, contains('t=0.0'));
-          }
-        },
-        timeout: const Timeout(Duration(seconds: 30)),
-      );
+        expect(url, anyOf(isNull, isA<String>()));
+        if (url != null) {
+          expect(url, contains('t=0.0'));
+        }
+      }, timeout: const Timeout(Duration(seconds: 30)));
     });
   });
 }

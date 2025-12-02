@@ -9,9 +9,18 @@ void main() {
   group('AdultContentPreference', () {
     test('enum has three values', () {
       expect(AdultContentPreference.values.length, 3);
-      expect(AdultContentPreference.values, contains(AdultContentPreference.alwaysShow));
-      expect(AdultContentPreference.values, contains(AdultContentPreference.askEachTime));
-      expect(AdultContentPreference.values, contains(AdultContentPreference.neverShow));
+      expect(
+        AdultContentPreference.values,
+        contains(AdultContentPreference.alwaysShow),
+      );
+      expect(
+        AdultContentPreference.values,
+        contains(AdultContentPreference.askEachTime),
+      );
+      expect(
+        AdultContentPreference.values,
+        contains(AdultContentPreference.neverShow),
+      );
     });
   });
 
@@ -25,11 +34,16 @@ void main() {
     });
 
     test('default preference is askEachTime', () {
-      expect(service.adultContentPreference, AdultContentPreference.askEachTime);
+      expect(
+        service.adultContentPreference,
+        AdultContentPreference.askEachTime,
+      );
     });
 
     test('can set preference to alwaysShow', () async {
-      await service.setAdultContentPreference(AdultContentPreference.alwaysShow);
+      await service.setAdultContentPreference(
+        AdultContentPreference.alwaysShow,
+      );
       expect(service.adultContentPreference, AdultContentPreference.alwaysShow);
     });
 
@@ -39,39 +53,58 @@ void main() {
     });
 
     test('preference persists after reinitialization', () async {
-      await service.setAdultContentPreference(AdultContentPreference.alwaysShow);
+      await service.setAdultContentPreference(
+        AdultContentPreference.alwaysShow,
+      );
 
       // Create new instance and reinitialize
       final newService = AgeVerificationService();
       await newService.initialize();
 
-      expect(newService.adultContentPreference, AdultContentPreference.alwaysShow);
+      expect(
+        newService.adultContentPreference,
+        AdultContentPreference.alwaysShow,
+      );
     });
 
     test('clearVerificationStatus also clears preference', () async {
-      await service.setAdultContentPreference(AdultContentPreference.alwaysShow);
+      await service.setAdultContentPreference(
+        AdultContentPreference.alwaysShow,
+      );
       await service.clearVerificationStatus();
 
-      expect(service.adultContentPreference, AdultContentPreference.askEachTime);
+      expect(
+        service.adultContentPreference,
+        AdultContentPreference.askEachTime,
+      );
     });
 
-    test('shouldAutoShowAdultContent returns true only when alwaysShow and verified', () async {
-      // Not verified, any preference - should be false
-      expect(service.shouldAutoShowAdultContent, false);
+    test(
+      'shouldAutoShowAdultContent returns true only when alwaysShow and verified',
+      () async {
+        // Not verified, any preference - should be false
+        expect(service.shouldAutoShowAdultContent, false);
 
-      // Verified but askEachTime - should be false
-      await service.setAdultContentVerified(true);
-      await service.setAdultContentPreference(AdultContentPreference.askEachTime);
-      expect(service.shouldAutoShowAdultContent, false);
+        // Verified but askEachTime - should be false
+        await service.setAdultContentVerified(true);
+        await service.setAdultContentPreference(
+          AdultContentPreference.askEachTime,
+        );
+        expect(service.shouldAutoShowAdultContent, false);
 
-      // Verified and alwaysShow - should be true
-      await service.setAdultContentPreference(AdultContentPreference.alwaysShow);
-      expect(service.shouldAutoShowAdultContent, true);
+        // Verified and alwaysShow - should be true
+        await service.setAdultContentPreference(
+          AdultContentPreference.alwaysShow,
+        );
+        expect(service.shouldAutoShowAdultContent, true);
 
-      // Verified but neverShow - should be false
-      await service.setAdultContentPreference(AdultContentPreference.neverShow);
-      expect(service.shouldAutoShowAdultContent, false);
-    });
+        // Verified but neverShow - should be false
+        await service.setAdultContentPreference(
+          AdultContentPreference.neverShow,
+        );
+        expect(service.shouldAutoShowAdultContent, false);
+      },
+    );
 
     test('shouldHideAdultContent returns true when neverShow', () async {
       expect(service.shouldHideAdultContent, false);
@@ -79,25 +112,34 @@ void main() {
       await service.setAdultContentPreference(AdultContentPreference.neverShow);
       expect(service.shouldHideAdultContent, true);
 
-      await service.setAdultContentPreference(AdultContentPreference.alwaysShow);
+      await service.setAdultContentPreference(
+        AdultContentPreference.alwaysShow,
+      );
       expect(service.shouldHideAdultContent, false);
     });
 
-    test('shouldAskForAdultContent returns true when askEachTime or not verified', () async {
-      // Default state - askEachTime, not verified
-      expect(service.shouldAskForAdultContent, true);
+    test(
+      'shouldAskForAdultContent returns true when askEachTime or not verified',
+      () async {
+        // Default state - askEachTime, not verified
+        expect(service.shouldAskForAdultContent, true);
 
-      // Still askEachTime even when verified
-      await service.setAdultContentVerified(true);
-      expect(service.shouldAskForAdultContent, true);
+        // Still askEachTime even when verified
+        await service.setAdultContentVerified(true);
+        expect(service.shouldAskForAdultContent, true);
 
-      // Not asking when alwaysShow and verified
-      await service.setAdultContentPreference(AdultContentPreference.alwaysShow);
-      expect(service.shouldAskForAdultContent, false);
+        // Not asking when alwaysShow and verified
+        await service.setAdultContentPreference(
+          AdultContentPreference.alwaysShow,
+        );
+        expect(service.shouldAskForAdultContent, false);
 
-      // Not asking when neverShow (we hide instead)
-      await service.setAdultContentPreference(AdultContentPreference.neverShow);
-      expect(service.shouldAskForAdultContent, false);
-    });
+        // Not asking when neverShow (we hide instead)
+        await service.setAdultContentPreference(
+          AdultContentPreference.neverShow,
+        );
+        expect(service.shouldAskForAdultContent, false);
+      },
+    );
   });
 }

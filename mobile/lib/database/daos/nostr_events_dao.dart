@@ -70,7 +70,9 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
       }
 
       // Batch upsert video metrics for video events and reposts
-      final videoEvents = events.where((e) => e.kind == 34236 || e.kind == 16).toList();
+      final videoEvents = events
+          .where((e) => e.kind == 34236 || e.kind == 16)
+          .toList();
       for (final event in videoEvents) {
         await db.videoMetricsDao.upsertVideoMetrics(event);
       }
@@ -99,9 +101,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
       'SELECT * FROM event WHERE id = ? LIMIT 1',
       variables: [Variable.withString(id)],
       readsFrom: {nostrEvents},
-    )
-        .watchSingleOrNull()
-        .map((row) => row != null ? _rowToEvent(row) : null);
+    ).watchSingleOrNull().map((row) => row != null ? _rowToEvent(row) : null);
   }
 
   /// Get events by kind (one-time fetch)
@@ -142,7 +142,10 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   /// Get events by author (one-time fetch)
   ///
   /// Returns all events from a specific pubkey.
-  Future<List<Event>> getEventsByAuthor(String pubkey, {int limit = 100}) async {
+  Future<List<Event>> getEventsByAuthor(
+    String pubkey, {
+    int limit = 100,
+  }) async {
     final rows = await customSelect(
       'SELECT * FROM event WHERE pubkey = ? ORDER BY created_at DESC LIMIT ?',
       variables: [Variable.withString(pubkey), Variable.withInt(limit)],
@@ -242,13 +245,15 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
       needsMetricsJoin = true;
 
       // Map sort field names to column names
-      final sortColumn = {
-        'loop_count': 'loop_count',
-        'likes': 'likes',
-        'views': 'views',
-        'comments': 'comments',
-        'avg_completion': 'avg_completion',
-      }[sortBy] ?? 'loop_count';
+      final sortColumn =
+          {
+            'loop_count': 'loop_count',
+            'likes': 'likes',
+            'views': 'views',
+            'comments': 'comments',
+            'avg_completion': 'avg_completion',
+          }[sortBy] ??
+          'loop_count';
 
       // COALESCE to handle null metrics (treat as 0) and sort DESC
       orderByClause = 'COALESCE(m.$sortColumn, 0) DESC, e.created_at DESC';
@@ -260,7 +265,8 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     final String sql;
     if (needsMetricsJoin) {
       // Join with video_metrics for sorted queries
-      sql = '''
+      sql =
+          '''
         SELECT e.* FROM event e
         LEFT JOIN video_metrics m ON e.id = m.event_id
         WHERE $whereClause
@@ -269,7 +275,8 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
       ''';
     } else {
       // Simple query without join
-      sql = '''
+      sql =
+          '''
         SELECT * FROM event e
         WHERE $whereClause
         ORDER BY $orderByClause
@@ -292,10 +299,9 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Removes event from database. Automatically triggers watchers.
   Future<void> deleteEvent(String id) async {
-    await customStatement(
-      'DELETE FROM event WHERE id = ?',
-      [Variable.withString(id)],
-    );
+    await customStatement('DELETE FROM event WHERE id = ?', [
+      Variable.withString(id),
+    ]);
   }
 
   /// Get total count of events in database

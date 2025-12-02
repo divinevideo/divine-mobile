@@ -70,11 +70,7 @@ void main() {
   group('NostrListFetchMixin', () {
     testWidgets('starts in loading state', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: TestListScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: TestListScreen())),
       );
 
       // Should show loading indicator initially
@@ -84,11 +80,7 @@ void main() {
     // TODO(rabble): Fix async timing - setState completes too fast for widget tree
     testWidgets('completes loading and shows list', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: TestListScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: TestListScreen())),
       );
 
       // Pump multiple times to process async setState calls
@@ -104,15 +96,13 @@ void main() {
 
     testWidgets('shows error state when error is set', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: TestListScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: TestListScreen())),
       );
 
       // Trigger error
-      final state = tester.state<_TestListScreenState>(find.byType(TestListScreen));
+      final state = tester.state<_TestListScreenState>(
+        find.byType(TestListScreen),
+      );
       state.setError('Test error message');
       await tester.pump();
 
@@ -124,14 +114,12 @@ void main() {
 
     testWidgets('shows empty state when list is empty', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: TestListScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: TestListScreen())),
       );
 
-      final state = tester.state<_TestListScreenState>(find.byType(TestListScreen));
+      final state = tester.state<_TestListScreenState>(
+        find.byType(TestListScreen),
+      );
 
       // Set empty list and complete loading
       state.userList = [];
@@ -145,14 +133,12 @@ void main() {
 
     testWidgets('retry button calls loadList', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: TestListScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: TestListScreen())),
       );
 
-      final state = tester.state<_TestListScreenState>(find.byType(TestListScreen));
+      final state = tester.state<_TestListScreenState>(
+        find.byType(TestListScreen),
+      );
 
       // Set error state
       state.setError('Test error');
@@ -170,11 +156,7 @@ void main() {
 
     testWidgets('appBar has correct title', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: TestListScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: TestListScreen())),
       );
 
       await tester.pump();

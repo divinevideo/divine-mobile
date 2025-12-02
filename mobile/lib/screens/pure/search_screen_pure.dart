@@ -20,7 +20,8 @@ import 'package:openvine/utils/unified_logger.dart';
 class SearchScreenPure extends ConsumerStatefulWidget {
   const SearchScreenPure({super.key, this.embedded = false});
 
-  final bool embedded; // When true, renders without Scaffold/AppBar (for embedding in ExploreScreen)
+  final bool
+  embedded; // When true, renders without Scaffold/AppBar (for embedding in ExploreScreen)
 
   @override
   ConsumerState<SearchScreenPure> createState() => _SearchScreenPureState();
@@ -55,12 +56,17 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
       if (mounted) {
         final pageContext = ref.read(pageContextProvider);
         pageContext.whenData((ctx) {
-          if (ctx.type == RouteType.search && ctx.searchTerm != null && ctx.searchTerm!.isNotEmpty) {
+          if (ctx.type == RouteType.search &&
+              ctx.searchTerm != null &&
+              ctx.searchTerm!.isNotEmpty) {
             // Set search controller text and trigger search
             // Pass updateUrl: false to avoid infinite loop during initialization
             _searchController.text = ctx.searchTerm!;
             _performSearch(ctx.searchTerm!, updateUrl: false);
-            Log.info('🔍 SearchScreenPure: Initialized with search term: ${ctx.searchTerm}', category: LogCategory.video);
+            Log.info(
+              '🔍 SearchScreenPure: Initialized with search term: ${ctx.searchTerm}',
+              category: LogCategory.video,
+            );
           } else {
             // Request focus for empty search
             _searchFocusNode.requestFocus();
@@ -120,20 +126,31 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
       _currentQuery = query;
     });
 
-    Log.info('🔍 SearchScreenPure: Local search for: $query', category: LogCategory.video);
+    Log.info(
+      '🔍 SearchScreenPure: Local search for: $query',
+      category: LogCategory.video,
+    );
 
     try {
       // Search local cache ONLY (embedded relay cache)
       final videoEventService = ref.read(videoEventServiceProvider);
       final videos = videoEventService.discoveryVideos;
 
-      Log.debug('🔍 SearchScreenPure: Filtering ${videos.length} cached videos', category: LogCategory.video);
+      Log.debug(
+        '🔍 SearchScreenPure: Filtering ${videos.length} cached videos',
+        category: LogCategory.video,
+      );
 
       // Filter local videos based on search query
       final filteredVideos = videos.where((video) {
-        final titleMatch = video.title?.toLowerCase().contains(query.toLowerCase()) ?? false;
-        final contentMatch = video.content.toLowerCase().contains(query.toLowerCase());
-        final hashtagMatch = video.hashtags.any((tag) => tag.toLowerCase().contains(query.toLowerCase()));
+        final titleMatch =
+            video.title?.toLowerCase().contains(query.toLowerCase()) ?? false;
+        final contentMatch = video.content.toLowerCase().contains(
+          query.toLowerCase(),
+        );
+        final hashtagMatch = video.hashtags.any(
+          (tag) => tag.toLowerCase().contains(query.toLowerCase()),
+        );
         return titleMatch || contentMatch || hashtagMatch;
       }).toList();
 
@@ -166,12 +183,18 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
         ref.read(searchScreenVideosProvider.notifier).state = filteredVideos;
       }
 
-      Log.info('🔍 SearchScreenPure: Local results: ${filteredVideos.length} videos', category: LogCategory.video);
+      Log.info(
+        '🔍 SearchScreenPure: Local results: ${filteredVideos.length} videos',
+        category: LogCategory.video,
+      );
 
       // Automatically search external relays (no button needed)
       _searchExternalRelays();
     } catch (e) {
-      Log.error('🔍 SearchScreenPure: Local search failed: $e', category: LogCategory.video);
+      Log.error(
+        '🔍 SearchScreenPure: Local search failed: $e',
+        category: LogCategory.video,
+      );
 
       if (mounted) {
         setState(() {
@@ -189,7 +212,10 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
       _isSearchingExternal = true;
     });
 
-    Log.info('🔍 SearchScreenPure: Searching external relays for: $_currentQuery', category: LogCategory.video);
+    Log.info(
+      '🔍 SearchScreenPure: Searching external relays for: $_currentQuery',
+      category: LogCategory.video,
+    );
 
     try {
       final videoEventService = ref.read(videoEventServiceProvider);
@@ -240,10 +266,15 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
         ref.read(searchScreenVideosProvider.notifier).state = uniqueVideos;
       }
 
-      Log.info('🔍 SearchScreenPure: External search complete: ${remoteResults.length} new results (total: ${uniqueVideos.length})',
-          category: LogCategory.video);
+      Log.info(
+        '🔍 SearchScreenPure: External search complete: ${remoteResults.length} new results (total: ${uniqueVideos.length})',
+        category: LogCategory.video,
+      );
     } catch (e) {
-      Log.error('🔍 SearchScreenPure: External search failed: $e', category: LogCategory.video);
+      Log.error(
+        '🔍 SearchScreenPure: External search failed: $e',
+        category: LogCategory.video,
+      );
 
       if (mounted) {
         setState(() {
@@ -286,27 +317,27 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
         hintStyle: TextStyle(color: VineTheme.whiteText.withValues(alpha: 0.6)),
         border: InputBorder.none,
         prefixIcon: _isSearching
-          ? const Padding(
-              padding: EdgeInsets.all(12.0),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: VineTheme.vineGreen,
-                  strokeWidth: 2,
+            ? const Padding(
+                padding: EdgeInsets.all(12.0),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: VineTheme.vineGreen,
+                    strokeWidth: 2,
+                  ),
                 ),
-              ),
-            )
-          : const Icon(Icons.search, color: VineTheme.whiteText),
+              )
+            : const Icon(Icons.search, color: VineTheme.whiteText),
         suffixIcon: _searchController.text.isNotEmpty
-          ? IconButton(
-              icon: const Icon(Icons.clear, color: VineTheme.whiteText),
-              onPressed: () {
-                _searchController.clear();
-                _performSearch('');
-              },
-            )
-          : null,
+            ? IconButton(
+                icon: const Icon(Icons.clear, color: VineTheme.whiteText),
+                onPressed: () {
+                  _searchController.clear();
+                  _performSearch('');
+                },
+              )
+            : null,
       ),
     );
 
@@ -326,11 +357,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
 
     final tabContent = TabBarView(
       controller: _tabController,
-      children: [
-        _buildVideosTab(),
-        _buildUsersTab(),
-        _buildHashtagsTab(),
-      ],
+      children: [_buildVideosTab(), _buildUsersTab(), _buildHashtagsTab()],
     );
 
     // Embedded mode: return content without scaffold
@@ -344,10 +371,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
               padding: const EdgeInsets.all(8),
               child: searchBar,
             ),
-            Container(
-              color: VineTheme.cardBackground,
-              child: tabBar,
-            ),
+            Container(color: VineTheme.cardBackground, child: tabBar),
             Expanded(child: tabContent),
           ],
         ),
@@ -437,22 +461,34 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
             key: const Key('search-videos-grid'),
             videos: _videoResults,
             onVideoTap: (videos, index) {
-              Log.info('🔍 SearchScreenPure: Tapped video at index $index',
-                  category: LogCategory.video);
+              Log.info(
+                '🔍 SearchScreenPure: Tapped video at index $index',
+                category: LogCategory.video,
+              );
               // Navigate using GoRouter to enable router-driven video playback
-              context.goSearch(_currentQuery.isNotEmpty ? _currentQuery : null, index);
+              context.goSearch(
+                _currentQuery.isNotEmpty ? _currentQuery : null,
+                index,
+              );
             },
             emptyBuilder: () => Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.video_library, size: 64, color: VineTheme.secondaryText),
+                  Icon(
+                    Icons.video_library,
+                    size: 64,
+                    color: VineTheme.secondaryText,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     _isSearchingExternal
                         ? 'Searching servers for "$_currentQuery"...'
                         : 'No videos found for "$_currentQuery"',
-                    style: TextStyle(color: VineTheme.primaryText, fontSize: 18),
+                    style: TextStyle(
+                      color: VineTheme.primaryText,
+                      fontSize: 18,
+                    ),
                   ),
                 ],
               ),
@@ -514,12 +550,14 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
       final profileA = profileService.getCachedProfile(a);
       final profileB = profileService.getCachedProfile(b);
 
-      final hasNameA = profileA?.bestDisplayName != null &&
-                      !profileA!.bestDisplayName.startsWith('npub') &&
-                      !profileA.bestDisplayName.startsWith('@');
-      final hasNameB = profileB?.bestDisplayName != null &&
-                      !profileB!.bestDisplayName.startsWith('npub') &&
-                      !profileB.bestDisplayName.startsWith('@');
+      final hasNameA =
+          profileA?.bestDisplayName != null &&
+          !profileA!.bestDisplayName.startsWith('npub') &&
+          !profileA.bestDisplayName.startsWith('@');
+      final hasNameB =
+          profileB?.bestDisplayName != null &&
+          !profileB!.bestDisplayName.startsWith('npub') &&
+          !profileB.bestDisplayName.startsWith('@');
 
       // Users with names come first
       if (hasNameA && !hasNameB) return -1;
@@ -537,7 +575,10 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
           pubkey: userPubkey,
           showFollowButton: false, // Hide follow button in search results
           onTap: () {
-            Log.info('🔍 SearchScreenPure: Tapped user: $userPubkey', category: LogCategory.video);
+            Log.info(
+              '🔍 SearchScreenPure: Tapped user: $userPubkey',
+              category: LogCategory.video,
+            );
             context.goProfileGrid(userPubkey);
           },
         );
@@ -599,14 +640,20 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
             leading: Icon(Icons.tag, color: VineTheme.vineGreen),
             title: Text(
               '#$hashtag',
-              style: TextStyle(color: VineTheme.primaryText, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: VineTheme.primaryText,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             subtitle: Text(
               'Tap to view videos with this hashtag',
               style: TextStyle(color: VineTheme.secondaryText),
             ),
             onTap: () {
-              Log.info('🔍 SearchScreenPure: Tapped hashtag: $hashtag', category: LogCategory.video);
+              Log.info(
+                '🔍 SearchScreenPure: Tapped hashtag: $hashtag',
+                category: LogCategory.video,
+              );
               // Navigate using GoRouter
               context.goHashtag(hashtag);
             },

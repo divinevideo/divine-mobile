@@ -4,7 +4,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mockito/mockito.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 
@@ -13,7 +12,9 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 dynamic createMockSharedPreferences(dynamic mockPrefs) {
   for (final flag in FeatureFlag.values) {
     when(mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-    when(mockPrefs.setBool('ff_${flag.name}', any)).thenAnswer((_) async => true);
+    when(
+      mockPrefs.setBool('ff_${flag.name}', any),
+    ).thenAnswer((_) async => true);
     when(mockPrefs.remove('ff_${flag.name}')).thenAnswer((_) async => true);
     when(mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
   }
@@ -21,18 +22,9 @@ dynamic createMockSharedPreferences(dynamic mockPrefs) {
 }
 
 /// Wrapper for widget tests with common provider overrides
-Widget createTestApp({
-  required Widget child,
-  required dynamic mockPrefs,
-}) {
+Widget createTestApp({required Widget child, required dynamic mockPrefs}) {
   return ProviderScope(
-    overrides: [
-      sharedPreferencesProvider.overrideWithValue(mockPrefs),
-    ],
-    child: MaterialApp(
-      home: Scaffold(
-        body: child,
-      ),
-    ),
+    overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+    child: MaterialApp(home: Scaffold(body: child)),
   );
 }

@@ -8,31 +8,37 @@ import 'package:openvine/services/vine_recording_controller.dart';
 
 void main() {
   group('Camera Initialization Performance Benchmarks', () {
-    test('Camera initialization should complete within acceptable time limits', () async {
-      final controller = VineRecordingController();
-      final stopwatch = Stopwatch()..start();
+    test(
+      'Camera initialization should complete within acceptable time limits',
+      () async {
+        final controller = VineRecordingController();
+        final stopwatch = Stopwatch()..start();
 
-      try {
-        await controller.initialize();
-        stopwatch.stop();
+        try {
+          await controller.initialize();
+          stopwatch.stop();
 
-        // Platform-specific expectations
-        final maxInitTime = _getMaxInitTime();
+          // Platform-specific expectations
+          final maxInitTime = _getMaxInitTime();
 
-        expect(stopwatch.elapsedMilliseconds, lessThan(maxInitTime),
-            reason: 'Camera initialization took ${stopwatch.elapsedMilliseconds}ms, '
-                   'expected less than ${maxInitTime}ms');
+          expect(
+            stopwatch.elapsedMilliseconds,
+            lessThan(maxInitTime),
+            reason:
+                'Camera initialization took ${stopwatch.elapsedMilliseconds}ms, '
+                'expected less than ${maxInitTime}ms',
+          );
 
-        // Log performance metrics
-        print('📊 Camera initialization metrics:');
-        print('   Platform: ${_getPlatformName()}');
-        print('   Time: ${stopwatch.elapsedMilliseconds}ms');
-        print('   Memory before: ${_getMemoryUsage()}MB');
-
-      } finally {
-        controller.dispose();
-      }
-    });
+          // Log performance metrics
+          print('📊 Camera initialization metrics:');
+          print('   Platform: ${_getPlatformName()}');
+          print('   Time: ${stopwatch.elapsedMilliseconds}ms');
+          print('   Memory before: ${_getMemoryUsage()}MB');
+        } finally {
+          controller.dispose();
+        }
+      },
+    );
 
     test('Rapid camera switching performance', () async {
       final controller = VineRecordingController();
@@ -55,7 +61,8 @@ void main() {
         }
 
         // Calculate statistics
-        final avgTime = switchTimes.reduce((a, b) => a + b) / switchTimes.length;
+        final avgTime =
+            switchTimes.reduce((a, b) => a + b) / switchTimes.length;
         final maxTime = switchTimes.reduce((a, b) => a > b ? a : b);
 
         print('📊 Camera switching performance:');
@@ -64,11 +71,16 @@ void main() {
         print('   All times: $switchTimes');
 
         // Performance assertions
-        expect(avgTime, lessThan(500),
-            reason: 'Average camera switch time should be under 500ms');
-        expect(maxTime, lessThan(1000),
-            reason: 'Maximum camera switch time should be under 1s');
-
+        expect(
+          avgTime,
+          lessThan(500),
+          reason: 'Average camera switch time should be under 500ms',
+        );
+        expect(
+          maxTime,
+          lessThan(1000),
+          reason: 'Maximum camera switch time should be under 1s',
+        );
       } finally {
         controller.dispose();
       }
@@ -98,10 +110,13 @@ void main() {
         print('   Increase: ${memoryIncrease}MB');
 
         // Memory should not increase dramatically
-        expect(memoryIncrease, lessThan(50),
-            reason: 'Memory usage increased by ${memoryIncrease}MB, '
-                   'possible memory leak detected');
-
+        expect(
+          memoryIncrease,
+          lessThan(50),
+          reason:
+              'Memory usage increased by ${memoryIncrease}MB, '
+              'possible memory leak detected',
+        );
       } finally {
         controller.dispose();
       }

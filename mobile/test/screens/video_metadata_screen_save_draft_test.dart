@@ -38,7 +38,9 @@ void main() {
       expect(find.text('Save Draft'), findsOneWidget);
     });
 
-    testWidgets('should save draft when Save Draft button is tapped', (tester) async {
+    testWidgets('should save draft when Save Draft button is tapped', (
+      tester,
+    ) async {
       final videoFile = File('/path/to/test/video.mp4');
 
       await tester.pumpWidget(
@@ -53,8 +55,14 @@ void main() {
       );
 
       // Enter metadata
-      await tester.enterText(find.byKey(const Key('title-input')), 'Test Video Title');
-      await tester.enterText(find.byKey(const Key('description-input')), 'Test video description');
+      await tester.enterText(
+        find.byKey(const Key('title-input')),
+        'Test Video Title',
+      );
+      await tester.enterText(
+        find.byKey(const Key('description-input')),
+        'Test video description',
+      );
 
       // Tap Save Draft (don't test hashtag adding in this test - it's complex UI interaction)
       await tester.tap(find.text('Save Draft'));
@@ -72,29 +80,32 @@ void main() {
     // because VideoMetadataScreenPure has video initialization that causes pumpAndSettle
     // timeouts in tests. The functionality is tested in other tests.
 
-    testWidgets('should save draft without hashtags (UI interaction is complex)', (tester) async {
-      final videoFile = File('/path/to/test/video.mp4');
+    testWidgets(
+      'should save draft without hashtags (UI interaction is complex)',
+      (tester) async {
+        final videoFile = File('/path/to/test/video.mp4');
 
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: VideoMetadataScreenPure(
-              videoFile: videoFile,
-              duration: const Duration(seconds: 6),
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              home: VideoMetadataScreenPure(
+                videoFile: videoFile,
+                duration: const Duration(seconds: 6),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Save draft without adding hashtags (testing hashtag UI interaction is too fragile)
-      await tester.tap(find.text('Save Draft'));
-      await tester.pump();
+        // Save draft without adding hashtags (testing hashtag UI interaction is too fragile)
+        await tester.tap(find.text('Save Draft'));
+        await tester.pump();
 
-      // Verify draft saved
-      final drafts = await draftService.getAllDrafts();
-      expect(drafts.length, 1);
-      expect(drafts.first.hashtags, isEmpty);
-    });
+        // Verify draft saved
+        final drafts = await draftService.getAllDrafts();
+        expect(drafts.length, 1);
+        expect(drafts.first.hashtags, isEmpty);
+      },
+    );
 
     testWidgets('should save draft with empty fields', (tester) async {
       final videoFile = File('/path/to/test/video.mp4');
@@ -122,7 +133,9 @@ void main() {
       expect(drafts.first.hashtags, isEmpty);
     });
 
-    testWidgets('should not disable Save Draft button when publishing', (tester) async {
+    testWidgets('should not disable Save Draft button when publishing', (
+      tester,
+    ) async {
       final videoFile = File('/path/to/test/video.mp4');
 
       await tester.pumpWidget(
@@ -141,10 +154,7 @@ void main() {
       expect(saveDraftButton, findsOneWidget);
 
       final textButton = tester.widget<TextButton>(
-        find.ancestor(
-          of: saveDraftButton,
-          matching: find.byType(TextButton),
-        ),
+        find.ancestor(of: saveDraftButton, matching: find.byType(TextButton)),
       );
       expect(textButton.onPressed, isNotNull);
     });

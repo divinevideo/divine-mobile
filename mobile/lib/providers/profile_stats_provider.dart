@@ -35,21 +35,19 @@ class ProfileStats {
     int? following,
     int? totalViews,
     DateTime? lastUpdated,
-  }) =>
-      ProfileStats(
-        videoCount: videoCount ?? this.videoCount,
-        totalLikes: totalLikes ?? this.totalLikes,
-        followers: followers ?? this.followers,
-        following: following ?? this.following,
-        totalViews: totalViews ?? this.totalViews,
-        lastUpdated: lastUpdated ?? this.lastUpdated,
-      );
+  }) => ProfileStats(
+    videoCount: videoCount ?? this.videoCount,
+    totalLikes: totalLikes ?? this.totalLikes,
+    followers: followers ?? this.followers,
+    following: following ?? this.following,
+    totalViews: totalViews ?? this.totalViews,
+    lastUpdated: lastUpdated ?? this.lastUpdated,
+  );
 
   @override
   String toString() =>
       'ProfileStats(videos: $videoCount, likes: $totalLikes, followers: $followers, following: $following, views: $totalViews)';
 }
-
 
 // SQLite-based persistent cache
 final _cacheService = ProfileStatsCacheService();
@@ -61,9 +59,10 @@ Future<ProfileStats?> _getCachedProfileStats(String pubkey) async {
   if (stats != null) {
     final age = DateTime.now().difference(stats.lastUpdated);
     Log.debug(
-        '📱 Using cached stats for $pubkey (age: ${age.inMinutes}min)',
-        name: 'ProfileStatsProvider',
-        category: LogCategory.ui);
+      '📱 Using cached stats for $pubkey (age: ${age.inMinutes}min)',
+      name: 'ProfileStatsProvider',
+      category: LogCategory.ui,
+    );
   }
 
   return stats;
@@ -72,15 +71,21 @@ Future<ProfileStats?> _getCachedProfileStats(String pubkey) async {
 /// Cache stats for a user
 Future<void> _cacheProfileStats(String pubkey, ProfileStats stats) async {
   await _cacheService.saveStats(pubkey, stats);
-  Log.debug('📱 Cached stats for $pubkey',
-      name: 'ProfileStatsProvider', category: LogCategory.ui);
+  Log.debug(
+    '📱 Cached stats for $pubkey',
+    name: 'ProfileStatsProvider',
+    category: LogCategory.ui,
+  );
 }
 
 /// Clear all cached stats
 Future<void> clearAllProfileStatsCache() async {
   await _cacheService.clearAll();
-  Log.debug('📱️ Cleared all stats cache',
-      name: 'ProfileStatsProvider', category: LogCategory.ui);
+  Log.debug(
+    '📱️ Cleared all stats cache',
+    name: 'ProfileStatsProvider',
+    category: LogCategory.ui,
+  );
 }
 
 /// Async provider for loading profile statistics
@@ -131,17 +136,22 @@ Future<ProfileStats> fetchProfileStats(Ref ref, String pubkey) async {
     // Cache the results
     await _cacheProfileStats(pubkey, stats);
 
-    Log.info('Profile stats loaded: $videoCount videos, ${StringUtils.formatCompactNumber(totalLoops)} views, ${StringUtils.formatCompactNumber(totalLikes)} likes',
-        name: 'ProfileStatsProvider', category: LogCategory.system);
+    Log.info(
+      'Profile stats loaded: $videoCount videos, ${StringUtils.formatCompactNumber(totalLoops)} views, ${StringUtils.formatCompactNumber(totalLikes)} likes',
+      name: 'ProfileStatsProvider',
+      category: LogCategory.system,
+    );
 
     return stats;
   } catch (e) {
-    Log.error('Error loading profile stats: $e',
-        name: 'ProfileStatsProvider', category: LogCategory.ui);
+    Log.error(
+      'Error loading profile stats: $e',
+      name: 'ProfileStatsProvider',
+      category: LogCategory.ui,
+    );
     rethrow;
   }
 }
-
 
 /// Get a formatted string for large numbers (e.g., 1234 -> "1.2k")
 /// Delegates to StringUtils.formatCompactNumber for consistent formatting

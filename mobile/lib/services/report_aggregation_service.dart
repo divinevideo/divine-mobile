@@ -32,7 +32,8 @@ class ModerationRecommendation {
   final double confidence; // 0.0 to 1.0
   final String reason;
 
-  bool get shouldHide => action == ModerationAction.hide || action == ModerationAction.block;
+  bool get shouldHide =>
+      action == ModerationAction.hide || action == ModerationAction.block;
   bool get shouldBlur => action == ModerationAction.blur || shouldHide;
 }
 
@@ -60,9 +61,7 @@ class ReportAggregation {
 
   String get primaryReason {
     if (reasonCounts.isEmpty) return 'unknown';
-    return reasonCounts.entries
-        .reduce((a, b) => a.value > b.value ? a : b)
-        .key;
+    return reasonCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
   }
 }
 
@@ -85,22 +84,22 @@ class ReportRecord {
   final DateTime timestamp;
 
   Map<String, dynamic> toJson() => {
-        'reportEventId': reportEventId,
-        'targetEventId': targetEventId,
-        'targetPubkey': targetPubkey,
-        'reporterPubkey': reporterPubkey,
-        'reportType': reportType,
-        'timestamp': timestamp.toIso8601String(),
-      };
+    'reportEventId': reportEventId,
+    'targetEventId': targetEventId,
+    'targetPubkey': targetPubkey,
+    'reporterPubkey': reporterPubkey,
+    'reportType': reportType,
+    'timestamp': timestamp.toIso8601String(),
+  };
 
   static ReportRecord fromJson(Map<String, dynamic> json) => ReportRecord(
-        reportEventId: json['reportEventId'],
-        targetEventId: json['targetEventId'],
-        targetPubkey: json['targetPubkey'],
-        reporterPubkey: json['reporterPubkey'],
-        reportType: json['reportType'],
-        timestamp: DateTime.parse(json['timestamp']),
-      );
+    reportEventId: json['reportEventId'],
+    targetEventId: json['targetEventId'],
+    targetPubkey: json['targetPubkey'],
+    reporterPubkey: json['reporterPubkey'],
+    reportType: json['reportType'],
+    timestamp: DateTime.parse(json['timestamp']),
+  );
 }
 
 /// Service for aggregating NIP-56 kind 1984 report events
@@ -109,9 +108,9 @@ class ReportAggregationService with NostrListServiceMixin {
     required INostrService nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
-  })  : _nostrService = nostrService,
-        _authService = authService,
-        _prefs = prefs {
+  }) : _nostrService = nostrService,
+       _authService = authService,
+       _prefs = prefs {
     _loadTrustedReporters();
     _loadReportCache();
   }
@@ -146,8 +145,11 @@ class ReportAggregationService with NostrListServiceMixin {
   Future<void> initialize() async {
     try {
       if (!_authService.isAuthenticated) {
-        Log.warning('Cannot initialize report service - user not authenticated',
-            name: 'ReportAggregationService', category: LogCategory.system);
+        Log.warning(
+          'Cannot initialize report service - user not authenticated',
+          name: 'ReportAggregationService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -158,12 +160,16 @@ class ReportAggregationService with NostrListServiceMixin {
 
       _isInitialized = true;
       Log.info(
-          'Report service initialized with ${_trustedReporters.length} trusted reporters, ${_reports.length} reports',
-          name: 'ReportAggregationService',
-          category: LogCategory.system);
+        'Report service initialized with ${_trustedReporters.length} trusted reporters, ${_reports.length} reports',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to initialize report service: $e',
-          name: 'ReportAggregationService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize report service: $e',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -178,12 +184,16 @@ class ReportAggregationService with NostrListServiceMixin {
       await _loadReportsFromNetwork();
 
       Log.info(
-          'Subscribed to reports from ${trustedPubkeys.length} trusted reporters',
-          name: 'ReportAggregationService',
-          category: LogCategory.system);
+        'Subscribed to reports from ${trustedPubkeys.length} trusted reporters',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to subscribe to network reports: $e',
-          name: 'ReportAggregationService', category: LogCategory.system);
+      Log.error(
+        'Failed to subscribe to network reports: $e',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -220,12 +230,16 @@ class ReportAggregationService with NostrListServiceMixin {
       await _saveReportCache();
 
       Log.debug(
-          'Added report: ${reportEventId}... for ${targetEventId ?? targetPubkey ?? "unknown"}',
-          name: 'ReportAggregationService',
-          category: LogCategory.system);
+        'Added report: ${reportEventId}... for ${targetEventId ?? targetPubkey ?? "unknown"}',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to add report: $e',
-          name: 'ReportAggregationService', category: LogCategory.system);
+      Log.error(
+        'Failed to add report: $e',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -248,7 +262,9 @@ class ReportAggregationService with NostrListServiceMixin {
   }
 
   /// Clean old reports
-  Future<void> cleanOldReports({Duration maxAge = const Duration(days: 90)}) async {
+  Future<void> cleanOldReports({
+    Duration maxAge = const Duration(days: 90),
+  }) async {
     try {
       final cutoffDate = DateTime.now().subtract(maxAge);
       final initialCount = _reports.length;
@@ -276,12 +292,18 @@ class ReportAggregationService with NostrListServiceMixin {
 
       final removedCount = initialCount - _reports.length;
       if (removedCount > 0) {
-        Log.debug('Cleaned $removedCount old reports',
-            name: 'ReportAggregationService', category: LogCategory.system);
+        Log.debug(
+          'Cleaned $removedCount old reports',
+          name: 'ReportAggregationService',
+          category: LogCategory.system,
+        );
       }
     } catch (e) {
-      Log.error('Failed to clean old reports: $e',
-          name: 'ReportAggregationService', category: LogCategory.system);
+      Log.error(
+        'Failed to clean old reports: $e',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -301,9 +323,10 @@ class ReportAggregationService with NostrListServiceMixin {
       if (_trustedReporters.isEmpty) return;
 
       Log.debug(
-          'Loading reports from ${_trustedReporters.length} trusted reporters',
-          name: 'ReportAggregationService',
-          category: LogCategory.system);
+        'Loading reports from ${_trustedReporters.length} trusted reporters',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
 
       // Query for kind 1984 (report) events from trusted reporters
       final filter = Filter(
@@ -314,8 +337,11 @@ class ReportAggregationService with NostrListServiceMixin {
       final events = await _nostrService.getEvents(filters: [filter]);
 
       if (events.isEmpty) {
-        Log.debug('No reports found from trusted network',
-            name: 'ReportAggregationService', category: LogCategory.system);
+        Log.debug(
+          'No reports found from trusted network',
+          name: 'ReportAggregationService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -326,11 +352,17 @@ class ReportAggregationService with NostrListServiceMixin {
 
       await _saveReportCache();
 
-      Log.debug('Loaded ${events.length} report events from trusted network',
-          name: 'ReportAggregationService', category: LogCategory.system);
+      Log.debug(
+        'Loaded ${events.length} report events from trusted network',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to load reports from network: $e',
-          name: 'ReportAggregationService', category: LogCategory.system);
+      Log.error(
+        'Failed to load reports from network: $e',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -379,13 +411,19 @@ class ReportAggregationService with NostrListServiceMixin {
         timestamp: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
       );
     } catch (e) {
-      Log.error('Failed to parse report event: $e',
-          name: 'ReportAggregationService', category: LogCategory.system);
+      Log.error(
+        'Failed to parse report event: $e',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Aggregate reports and generate recommendation
-  ReportAggregation _aggregateReports(String targetId, List<ReportRecord> reports) {
+  ReportAggregation _aggregateReports(
+    String targetId,
+    List<ReportRecord> reports,
+  ) {
     if (reports.isEmpty) {
       return ReportAggregation(
         targetId: targetId,
@@ -406,7 +444,8 @@ class ReportAggregationService with NostrListServiceMixin {
     // Count reasons
     final reasonCounts = <String, int>{};
     for (final report in reports) {
-      reasonCounts[report.reportType] = (reasonCounts[report.reportType] ?? 0) + 1;
+      reasonCounts[report.reportType] =
+          (reasonCounts[report.reportType] ?? 0) + 1;
     }
 
     // Count trusted reporters
@@ -416,7 +455,9 @@ class ReportAggregationService with NostrListServiceMixin {
 
     // Count recent reports (last 7 days)
     final weekAgo = DateTime.now().subtract(const Duration(days: 7));
-    final recentCount = reports.where((r) => r.timestamp.isAfter(weekAgo)).length;
+    final recentCount = reports
+        .where((r) => r.timestamp.isAfter(weekAgo))
+        .length;
 
     // Generate recommendation
     final recommendation = _generateRecommendation(
@@ -496,11 +537,17 @@ class ReportAggregationService with NostrListServiceMixin {
         final List<dynamic> reporters = jsonDecode(json);
         _trustedReporters.clear();
         _trustedReporters.addAll(reporters.cast<String>());
-        Log.debug('Loaded ${_trustedReporters.length} trusted reporters',
-            name: 'ReportAggregationService', category: LogCategory.system);
+        Log.debug(
+          'Loaded ${_trustedReporters.length} trusted reporters',
+          name: 'ReportAggregationService',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.error('Failed to load trusted reporters: $e',
-            name: 'ReportAggregationService', category: LogCategory.system);
+        Log.error(
+          'Failed to load trusted reporters: $e',
+          name: 'ReportAggregationService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -509,10 +556,15 @@ class ReportAggregationService with NostrListServiceMixin {
   Future<void> _saveTrustedReporters() async {
     try {
       await _prefs.setString(
-          trustedReportersKey, jsonEncode(_trustedReporters.toList()));
+        trustedReportersKey,
+        jsonEncode(_trustedReporters.toList()),
+      );
     } catch (e) {
-      Log.error('Failed to save trusted reporters: $e',
-          name: 'ReportAggregationService', category: LogCategory.system);
+      Log.error(
+        'Failed to save trusted reporters: $e',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -527,8 +579,9 @@ class ReportAggregationService with NostrListServiceMixin {
         _pubkeyReports.clear();
 
         for (final reportJson in reportsJson) {
-          final report =
-              ReportRecord.fromJson(reportJson as Map<String, dynamic>);
+          final report = ReportRecord.fromJson(
+            reportJson as Map<String, dynamic>,
+          );
           _reports.add(report);
 
           if (report.targetEventId != null) {
@@ -543,11 +596,17 @@ class ReportAggregationService with NostrListServiceMixin {
           }
         }
 
-        Log.debug('Loaded ${_reports.length} reports from cache',
-            name: 'ReportAggregationService', category: LogCategory.system);
+        Log.debug(
+          'Loaded ${_reports.length} reports from cache',
+          name: 'ReportAggregationService',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.error('Failed to load report cache: $e',
-            name: 'ReportAggregationService', category: LogCategory.system);
+        Log.error(
+          'Failed to load report cache: $e',
+          name: 'ReportAggregationService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -558,8 +617,11 @@ class ReportAggregationService with NostrListServiceMixin {
       final reportsJson = _reports.map((r) => r.toJson()).toList();
       await _prefs.setString(reportCacheKey, jsonEncode(reportsJson));
     } catch (e) {
-      Log.error('Failed to save report cache: $e',
-          name: 'ReportAggregationService', category: LogCategory.system);
+      Log.error(
+        'Failed to save report cache: $e',
+        name: 'ReportAggregationService',
+        category: LogCategory.system,
+      );
     }
   }
 

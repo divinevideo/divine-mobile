@@ -11,21 +11,24 @@ import '../helpers/golden_test_devices.dart';
 void main() {
   group('UserAvatar - Comprehensive Tests', () {
     group('Basic Widget Structure', () {
-      testWidgets('creates correct widget structure with default values', (tester) async {
+      testWidgets('creates correct widget structure with default values', (
+        tester,
+      ) async {
         await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(),
-            ),
-          ),
+          const MaterialApp(home: Scaffold(body: UserAvatar())),
         );
 
         expect(find.byType(GestureDetector), findsOneWidget);
-        expect(find.byType(Container), findsNWidgets(2)); // Outer container and inner fallback container
+        expect(
+          find.byType(Container),
+          findsNWidgets(2),
+        ); // Outer container and inner fallback container
         expect(find.byType(ClipRRect), findsOneWidget);
 
         // Get the outer container (first one)
-        final container = tester.widget<Container>(find.byType(Container).first);
+        final container = tester.widget<Container>(
+          find.byType(Container).first,
+        );
         expect(container.constraints?.maxWidth, 40);
         expect(container.constraints?.maxHeight, 40);
         expect(container.decoration, isA<BoxDecoration>());
@@ -40,14 +43,14 @@ void main() {
 
         await tester.pumpWidget(
           const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(size: customSize),
-            ),
+            home: Scaffold(body: UserAvatar(size: customSize)),
           ),
         );
 
         // Get the outer container (first one)
-        final container = tester.widget<Container>(find.byType(Container).first);
+        final container = tester.widget<Container>(
+          find.byType(Container).first,
+        );
         expect(container.constraints?.maxWidth, customSize);
         expect(container.constraints?.maxHeight, customSize);
 
@@ -57,20 +60,22 @@ void main() {
     });
 
     group('Image Loading States', () {
-      testWidgets('shows CachedNetworkImage when imageUrl is provided', (tester) async {
+      testWidgets('shows CachedNetworkImage when imageUrl is provided', (
+        tester,
+      ) async {
         const testImageUrl = 'https://example.com/avatar.jpg';
 
         await tester.pumpWidget(
           const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(imageUrl: testImageUrl),
-            ),
+            home: Scaffold(body: UserAvatar(imageUrl: testImageUrl)),
           ),
         );
 
         expect(find.byType(CachedNetworkImage), findsOneWidget);
 
-        final cachedImage = tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage));
+        final cachedImage = tester.widget<CachedNetworkImage>(
+          find.byType(CachedNetworkImage),
+        );
         expect(cachedImage.imageUrl, testImageUrl);
         expect(cachedImage.fit, BoxFit.cover);
         expect(cachedImage.width, 40); // default size
@@ -80,9 +85,7 @@ void main() {
       testWidgets('shows fallback when imageUrl is null', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(name: 'Test User'),
-            ),
+            home: Scaffold(body: UserAvatar(name: 'Test User')),
           ),
         );
 
@@ -95,10 +98,7 @@ void main() {
         await tester.pumpWidget(
           const MaterialApp(
             home: Scaffold(
-              body: UserAvatar(
-                imageUrl: '',
-                name: 'Test User',
-              ),
+              body: UserAvatar(imageUrl: '', name: 'Test User'),
             ),
           ),
         );
@@ -106,12 +106,12 @@ void main() {
         expect(find.byType(CachedNetworkImage), findsNothing);
       });
 
-      testWidgets('shows fallback with user initial when name is provided', (tester) async {
+      testWidgets('shows fallback with user initial when name is provided', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(name: 'John Doe'),
-            ),
+            home: Scaffold(body: UserAvatar(name: 'John Doe')),
           ),
         );
 
@@ -119,13 +119,11 @@ void main() {
         expect(find.text('J'), findsOneWidget);
       });
 
-      testWidgets('shows default icon when no name is provided', (tester) async {
+      testWidgets('shows default icon when no name is provided', (
+        tester,
+      ) async {
         await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(),
-            ),
-          ),
+          const MaterialApp(home: Scaffold(body: UserAvatar())),
         );
 
         expect(find.text('?'), findsOneWidget);
@@ -134,9 +132,7 @@ void main() {
       testWidgets('handles single name correctly for initials', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(name: 'Madonna'),
-            ),
+            home: Scaffold(body: UserAvatar(name: 'Madonna')),
           ),
         );
 
@@ -146,9 +142,7 @@ void main() {
       testWidgets('handles empty name correctly', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(name: ''),
-            ),
+            home: Scaffold(body: UserAvatar(name: '')),
           ),
         );
 
@@ -159,7 +153,9 @@ void main() {
         await tester.pumpWidget(
           const MaterialApp(
             home: Scaffold(
-              body: UserAvatar(name: 'Very Long First Name And Very Long Last Name'),
+              body: UserAvatar(
+                name: 'Very Long First Name And Very Long Last Name',
+              ),
             ),
           ),
         );
@@ -169,23 +165,24 @@ void main() {
     });
 
     group('Image Error Handling', () {
-      testWidgets('shows error widget when image fails to load', (tester) async {
+      testWidgets('shows error widget when image fails to load', (
+        tester,
+      ) async {
         const failingImageUrl = 'https://example.com/nonexistent.jpg';
 
         await tester.pumpWidget(
           const MaterialApp(
             home: Scaffold(
-              body: UserAvatar(
-                imageUrl: failingImageUrl,
-                name: 'Test User',
-              ),
+              body: UserAvatar(imageUrl: failingImageUrl, name: 'Test User'),
             ),
           ),
         );
 
         await tester.pumpAndSettle();
 
-        final cachedImage = tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage));
+        final cachedImage = tester.widget<CachedNetworkImage>(
+          find.byType(CachedNetworkImage),
+        );
         expect(cachedImage.errorWidget, isNotNull);
 
         // The error widget should show the fallback
@@ -199,15 +196,14 @@ void main() {
         await tester.pumpWidget(
           const MaterialApp(
             home: Scaffold(
-              body: UserAvatar(
-                imageUrl: testImageUrl,
-                name: 'Test User',
-              ),
+              body: UserAvatar(imageUrl: testImageUrl, name: 'Test User'),
             ),
           ),
         );
 
-        final cachedImage = tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage));
+        final cachedImage = tester.widget<CachedNetworkImage>(
+          find.byType(CachedNetworkImage),
+        );
         expect(cachedImage.placeholder, isNotNull);
       });
     });
@@ -218,11 +214,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(
-                onTap: () => tapped = true,
-              ),
-            ),
+            home: Scaffold(body: UserAvatar(onTap: () => tapped = true)),
           ),
         );
 
@@ -232,13 +224,11 @@ void main() {
         expect(tapped, isTrue);
       });
 
-      testWidgets('does not respond to taps when onTap is null', (tester) async {
+      testWidgets('does not respond to taps when onTap is null', (
+        tester,
+      ) async {
         await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(),
-            ),
-          ),
+          const MaterialApp(home: Scaffold(body: UserAvatar())),
         );
 
         // Should not throw when tapped
@@ -274,10 +264,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: UserAvatar(
-                name: 'Test User',
-                onTap: () => tapped = true,
-              ),
+              body: UserAvatar(name: 'Test User', onTap: () => tapped = true),
             ),
           ),
         );
@@ -296,16 +283,15 @@ void main() {
         await tester.pumpWidget(
           const MaterialApp(
             home: Scaffold(
-              body: UserAvatar(
-                size: smallSize,
-                name: 'Test',
-              ),
+              body: UserAvatar(size: smallSize, name: 'Test'),
             ),
           ),
         );
 
         // Get the outer container (first one)
-        final container = tester.widget<Container>(find.byType(Container).first);
+        final container = tester.widget<Container>(
+          find.byType(Container).first,
+        );
         expect(container.constraints?.maxWidth, smallSize);
         expect(container.constraints?.maxHeight, smallSize);
       });
@@ -316,16 +302,15 @@ void main() {
         await tester.pumpWidget(
           const MaterialApp(
             home: Scaffold(
-              body: UserAvatar(
-                size: largeSize,
-                name: 'Test',
-              ),
+              body: UserAvatar(size: largeSize, name: 'Test'),
             ),
           ),
         );
 
         // Get the outer container (first one)
-        final container = tester.widget<Container>(find.byType(Container).first);
+        final container = tester.widget<Container>(
+          find.byType(Container).first,
+        );
         expect(container.constraints?.maxWidth, largeSize);
         expect(container.constraints?.maxHeight, largeSize);
       });
@@ -337,15 +322,14 @@ void main() {
         await tester.pumpWidget(
           const MaterialApp(
             home: Scaffold(
-              body: UserAvatar(
-                size: customSize,
-                imageUrl: testImageUrl,
-              ),
+              body: UserAvatar(size: customSize, imageUrl: testImageUrl),
             ),
           ),
         );
 
-        final cachedImage = tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage));
+        final cachedImage = tester.widget<CachedNetworkImage>(
+          find.byType(CachedNetworkImage),
+        );
         expect(cachedImage.width, customSize);
         expect(cachedImage.height, customSize);
       });
@@ -355,12 +339,7 @@ void main() {
       testWidgets('fallback text has appropriate styling', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(
-                name: 'Test User',
-                size: 50,
-              ),
-            ),
+            home: Scaffold(body: UserAvatar(name: 'Test User', size: 50)),
           ),
         );
 
@@ -372,11 +351,7 @@ void main() {
 
       testWidgets('fallback icon has appropriate styling', (tester) async {
         await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(size: 50),
-            ),
-          ),
+          const MaterialApp(home: Scaffold(body: UserAvatar(size: 50))),
         );
 
         final text = tester.widget<Text>(find.text('?'));
@@ -388,11 +363,7 @@ void main() {
     group('Edge Cases and Robustness', () {
       testWidgets('handles zero size gracefully', (tester) async {
         await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(size: 0),
-            ),
-          ),
+          const MaterialApp(home: Scaffold(body: UserAvatar(size: 0))),
         );
 
         // Should not crash
@@ -404,9 +375,7 @@ void main() {
       testWidgets('handles names with special characters', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(name: 'José María'),
-            ),
+            home: Scaffold(body: UserAvatar(name: 'José María')),
           ),
         );
 
@@ -416,9 +385,7 @@ void main() {
       testWidgets('handles names with numbers', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(name: 'User123 Test456'),
-            ),
+            home: Scaffold(body: UserAvatar(name: 'User123 Test456')),
           ),
         );
 
@@ -428,9 +395,7 @@ void main() {
       testWidgets('handles whitespace-only names', (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            home: Scaffold(
-              body: UserAvatar(name: '   '),
-            ),
+            home: Scaffold(body: UserAvatar(name: '   ')),
           ),
         );
 
@@ -466,7 +431,10 @@ void main() {
                 children: const [
                   UserAvatar(name: 'User One', size: 40),
                   UserAvatar(name: 'User Two', size: 50),
-                  UserAvatar(imageUrl: 'https://example.com/avatar.jpg', size: 60),
+                  UserAvatar(
+                    imageUrl: 'https://example.com/avatar.jpg',
+                    size: 60,
+                  ),
                 ],
               ),
             ),
@@ -474,7 +442,10 @@ void main() {
         );
 
         expect(find.byType(UserAvatar), findsNWidgets(3));
-        expect(find.text('U'), findsNWidgets(2)); // Both 'User One' and 'User Two' start with 'U'
+        expect(
+          find.text('U'),
+          findsNWidgets(2),
+        ); // Both 'User One' and 'User Two' start with 'U'
         expect(find.byType(CachedNetworkImage), findsOneWidget);
       });
     });
@@ -482,26 +453,14 @@ void main() {
     // Golden Tests Section
     group('Golden Tests', () {
       testGoldens('UserAvatar - different states visual test', (tester) async {
-        final builder = GoldenBuilder.grid(
-          columns: 3,
-          widthToHeightRatio: 1,
-        )
+        final builder = GoldenBuilder.grid(columns: 3, widthToHeightRatio: 1)
           ..addScenario(
             'With Name',
             const UserAvatar(name: 'John Doe', size: 60),
           )
-          ..addScenario(
-            'Empty Name',
-            const UserAvatar(name: '', size: 60),
-          )
-          ..addScenario(
-            'No Name',
-            const UserAvatar(size: 60),
-          )
-          ..addScenario(
-            'Single Letter',
-            const UserAvatar(name: 'A', size: 60),
-          )
+          ..addScenario('Empty Name', const UserAvatar(name: '', size: 60))
+          ..addScenario('No Name', const UserAvatar(size: 60))
+          ..addScenario('Single Letter', const UserAvatar(name: 'A', size: 60))
           ..addScenario(
             'Special Chars',
             const UserAvatar(name: '@user!', size: 60),
@@ -519,30 +478,12 @@ void main() {
       });
 
       testGoldens('UserAvatar - size variations visual test', (tester) async {
-        final builder = GoldenBuilder.grid(
-          columns: 4,
-          widthToHeightRatio: 1,
-        )
-          ..addScenario(
-            'XS (16px)',
-            const UserAvatar(name: 'User', size: 16),
-          )
-          ..addScenario(
-            'S (24px)',
-            const UserAvatar(name: 'User', size: 24),
-          )
-          ..addScenario(
-            'M (40px)',
-            const UserAvatar(name: 'User', size: 40),
-          )
-          ..addScenario(
-            'L (60px)',
-            const UserAvatar(name: 'User', size: 60),
-          )
-          ..addScenario(
-            'XL (80px)',
-            const UserAvatar(name: 'User', size: 80),
-          )
+        final builder = GoldenBuilder.grid(columns: 4, widthToHeightRatio: 1)
+          ..addScenario('XS (16px)', const UserAvatar(name: 'User', size: 16))
+          ..addScenario('S (24px)', const UserAvatar(name: 'User', size: 24))
+          ..addScenario('M (40px)', const UserAvatar(name: 'User', size: 40))
+          ..addScenario('L (60px)', const UserAvatar(name: 'User', size: 60))
+          ..addScenario('XL (80px)', const UserAvatar(name: 'User', size: 80))
           ..addScenario(
             'XXL (100px)',
             const UserAvatar(name: 'User', size: 100),
@@ -629,10 +570,7 @@ void main() {
           ),
         );
 
-        await tester.pumpWidgetBuilder(
-          widget,
-          wrapper: materialAppWrapper(),
-        );
+        await tester.pumpWidgetBuilder(widget, wrapper: materialAppWrapper());
 
         await multiScreenGolden(
           tester,

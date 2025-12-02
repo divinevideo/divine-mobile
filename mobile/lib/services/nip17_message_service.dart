@@ -17,8 +17,8 @@ class NIP17MessageService {
   NIP17MessageService({
     required NostrKeyManager keyManager,
     required INostrService nostrService,
-  })  : _keyManager = keyManager,
-        _nostrService = nostrService;
+  }) : _keyManager = keyManager,
+       _nostrService = nostrService;
 
   final NostrKeyManager _keyManager;
   final INostrService _nostrService;
@@ -43,8 +43,10 @@ class NIP17MessageService {
     List<List<String>> additionalTags = const [],
   }) async {
     try {
-      Log.info('Sending NIP-17 encrypted message to recipient',
-          category: LogCategory.system);
+      Log.info(
+        'Sending NIP-17 encrypted message to recipient',
+        category: LogCategory.system,
+      );
 
       // Validate we have keys
       if (!_keyManager.hasKeys || _keyManager.privateKey == null) {
@@ -82,24 +84,29 @@ class NIP17MessageService {
       Log.debug('Created kind 14 rumor event', category: LogCategory.system);
 
       // Use GiftWrapUtil to create the three-layer encrypted gift wrap
-      final giftWrapEvent =
-          await GiftWrapUtil.getGiftWrapEvent(nostr, rumorEvent, recipientPubkey);
+      final giftWrapEvent = await GiftWrapUtil.getGiftWrapEvent(
+        nostr,
+        rumorEvent,
+        recipientPubkey,
+      );
 
       if (giftWrapEvent == null) {
         return NIP17SendResult.failure('Failed to create gift wrap event');
       }
 
       Log.debug(
-          'Created kind 1059 gift wrap event with ephemeral key: ${giftWrapEvent.pubkey}',
-          category: LogCategory.system);
+        'Created kind 1059 gift wrap event with ephemeral key: ${giftWrapEvent.pubkey}',
+        category: LogCategory.system,
+      );
 
       // Broadcast the gift wrap event
-      final broadcastResult =
-          await _nostrService.broadcastEvent(giftWrapEvent);
+      final broadcastResult = await _nostrService.broadcastEvent(giftWrapEvent);
 
       if (broadcastResult.successCount > 0) {
-        Log.info('Successfully broadcast NIP-17 message',
-            category: LogCategory.system);
+        Log.info(
+          'Successfully broadcast NIP-17 message',
+          category: LogCategory.system,
+        );
         return NIP17SendResult.createSuccess(
           messageEventId: giftWrapEvent.id,
           recipientPubkey: recipientPubkey,
@@ -111,8 +118,12 @@ class NIP17MessageService {
         return NIP17SendResult.failure(errorMsg);
       }
     } catch (e, stackTrace) {
-      Log.error('Failed to send NIP-17 message: $e',
-          category: LogCategory.system, error: e, stackTrace: stackTrace);
+      Log.error(
+        'Failed to send NIP-17 message: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
       return NIP17SendResult.failure('Failed to send message: $e');
     }
   }
@@ -120,6 +131,8 @@ class NIP17MessageService {
   /// Dummy relay generator - we don't use relays in this Nostr instance
   /// Only needed for Nostr constructor, but not actually called
   Relay _dummyRelayGenerator(String url) {
-    throw UnimplementedError('Relay generation not needed for signing-only Nostr instance');
+    throw UnimplementedError(
+      'Relay generation not needed for signing-only Nostr instance',
+    );
   }
 }

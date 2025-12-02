@@ -23,11 +23,7 @@ void main(List<String> args) async {
       abbr: 'p',
       help: 'Pattern file to follow for test structure',
     )
-    ..addOption(
-      'flow',
-      abbr: 'f',
-      help: 'Flow name for integration tests',
-    )
+    ..addOption('flow', abbr: 'f', help: 'Flow name for integration tests')
     ..addFlag(
       'help',
       abbr: 'h',
@@ -89,8 +85,11 @@ Future<void> generateServiceTest(String inputPath, String? patternPath) async {
 
   String testContent;
   if (patternPath != null) {
-    testContent =
-        await _generateFromPattern(inputFile, File(patternPath), 'service');
+    testContent = await _generateFromPattern(
+      inputFile,
+      File(patternPath),
+      'service',
+    );
   } else {
     testContent = _generateDefaultServiceTest(className, inputPath);
   }
@@ -165,7 +164,9 @@ String _extractClassName(File file) {
 
 String _toSnakeCase(String input) => input
     .replaceAllMapped(
-        RegExp('[A-Z]'), (match) => '_${match.group(0)!.toLowerCase()}')
+      RegExp('[A-Z]'),
+      (match) => '_${match.group(0)!.toLowerCase()}',
+    )
     .replaceFirst(RegExp('^_'), '');
 
 String _toPascalCase(String input) => input
@@ -174,7 +175,10 @@ String _toPascalCase(String input) => input
     .join('');
 
 Future<String> _generateFromPattern(
-    File inputFile, File patternFile, String type) async {
+  File inputFile,
+  File patternFile,
+  String type,
+) async {
   if (!patternFile.existsSync()) {
     throw Exception('Pattern file not found: ${patternFile.path}');
   }

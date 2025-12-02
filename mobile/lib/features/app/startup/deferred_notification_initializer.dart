@@ -79,19 +79,21 @@ class DeferredNotificationInitializer {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Check if critical services are ready
       AsyncUtils.waitForCondition(
-        condition: () =>
-            _areServicesReady(nostrService, profileService, videoService),
-        timeout: _webDeferralTime,
-        debugName: 'notification-service-readiness',
-      ).then((_) {
-        readyCompleter.complete();
-      }).catchError((e) {
-        Log.warning(
-          'Timeout waiting for services, initializing notification service anyway',
-          name: 'NotificationInit',
-        );
-        readyCompleter.complete();
-      });
+            condition: () =>
+                _areServicesReady(nostrService, profileService, videoService),
+            timeout: _webDeferralTime,
+            debugName: 'notification-service-readiness',
+          )
+          .then((_) {
+            readyCompleter.complete();
+          })
+          .catchError((e) {
+            Log.warning(
+              'Timeout waiting for services, initializing notification service anyway',
+              name: 'NotificationInit',
+            );
+            readyCompleter.complete();
+          });
     });
 
     // Initialize when ready

@@ -88,9 +88,8 @@ class VideoMetricsDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Called when the parent event is deleted (automatically via foreign key cascade).
   Future<void> deleteVideoMetrics(String eventId) async {
-    await customStatement(
-      'DELETE FROM video_metrics WHERE event_id = ?',
-      [Variable.withString(eventId)],
-    );
+    await customStatement('DELETE FROM video_metrics WHERE event_id = ?', [
+      Variable.withString(eventId),
+    ]);
   }
 }

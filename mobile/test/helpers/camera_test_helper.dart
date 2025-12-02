@@ -16,8 +16,13 @@ class CameraTestHelper {
   static Future<void> setUp() async {
     // Create test directory
     final tempDir = await getTemporaryDirectory();
-    _testDirectory = Directory(path.join(tempDir.path, 'camera_tests',
-        DateTime.now().millisecondsSinceEpoch.toString()));
+    _testDirectory = Directory(
+      path.join(
+        tempDir.path,
+        'camera_tests',
+        DateTime.now().millisecondsSinceEpoch.toString(),
+      ),
+    );
     _testDirectory.createSync(recursive: true);
 
     // Cache available cameras

@@ -97,10 +97,7 @@ class Analytics extends _$Analytics {
       final prefs = await ref.read(sharedPreferencesProvider.future);
       await prefs.setBool(_analyticsEnabledKey, enabled);
 
-      state = state.copyWith(
-        analyticsEnabled: enabled,
-        error: null,
-      );
+      state = state.copyWith(analyticsEnabled: enabled, error: null);
 
       Log.info(
         'Analytics ${enabled ? 'enabled' : 'disabled'} by user',
@@ -118,8 +115,10 @@ class Analytics extends _$Analytics {
   }
 
   /// Track a video view
-  Future<void> trackVideoView(VideoEvent video,
-      {String source = 'mobile'}) async {
+  Future<void> trackVideoView(
+    VideoEvent video, {
+    String source = 'mobile',
+  }) async {
     // Check if analytics is enabled
     if (!state.analyticsEnabled) {
       Log.debug(
@@ -190,10 +189,7 @@ class Analytics extends _$Analytics {
 
       if (response.statusCode == 200) {
         // Update state with successful tracking
-        state = state.copyWith(
-          lastEvent: video.id,
-          error: null,
-        );
+        state = state.copyWith(lastEvent: video.id, error: null);
 
         Log.debug(
           '✅ Successfully tracked view for video ${video.id.length > 8 ? video.id : video.id}...',
@@ -225,8 +221,10 @@ class Analytics extends _$Analytics {
   }
 
   /// Track multiple video views in batch (for feed loading)
-  Future<void> trackVideoViews(List<VideoEvent> videos,
-      {String source = 'mobile'}) async {
+  Future<void> trackVideoViews(
+    List<VideoEvent> videos, {
+    String source = 'mobile',
+  }) async {
     if (!state.analyticsEnabled || videos.isEmpty) return;
 
     // Track each video view with a small delay between them

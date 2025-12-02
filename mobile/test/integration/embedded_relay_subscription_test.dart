@@ -28,20 +28,21 @@ void main() {
       await nostrService.dispose();
     });
 
-    test('should forward subscription to external relay and receive events',
-        () async {
+    test('should forward subscription to external relay and receive events', () async {
       Log.info('\n=== EMBEDDED RELAY SUBSCRIPTION TEST ===\n');
 
       // Test 1: Check relay connection
       Log.info('1. Checking relay connection status...');
       final connectedRelays = nostrService.connectedRelays;
       Log.info('   Connected relays: $connectedRelays');
-      expect(connectedRelays, isNotEmpty,
-          reason: 'Should be connected to at least one relay');
+      expect(
+        connectedRelays,
+        isNotEmpty,
+        reason: 'Should be connected to at least one relay',
+      );
 
       // Test 2: Create a subscription for known authors with videos
-      Log.info(
-          '\n2. Creating subscription for known video authors...');
+      Log.info('\n2. Creating subscription for known video authors...');
 
       // These are authors we know have videos from the discovery feed logs
       final knownVideoAuthors = [
@@ -57,7 +58,8 @@ void main() {
       );
 
       Log.info(
-          '   Filter: kinds=${filter.kinds}, authors=${filter.authors?.length} (first=${filter.authors?.first})');
+        '   Filter: kinds=${filter.kinds}, authors=${filter.authors?.length} (first=${filter.authors?.first})',
+      );
 
       // Test 3: Subscribe and collect events
       Log.info('\n3. Subscribing and waiting for events...');
@@ -70,9 +72,9 @@ void main() {
           .take(5) // Take up to 5 events
           .toList()
           .catchError((error) {
-        Log.info('   Timeout or error: $error');
-        return events;
-      });
+            Log.info('   Timeout or error: $error');
+            return events;
+          });
 
       // Wait for events
       final receivedEvents = await eventFuture;
@@ -86,43 +88,40 @@ void main() {
         Log.info('   ❌ NO EVENTS RECEIVED!');
         Log.info('   This means either:');
         Log.info(
-            '   - The embedded relay is NOT forwarding subscriptions to external relays');
+          '   - The embedded relay is NOT forwarding subscriptions to external relays',
+        );
         Log.info('   - The external relay is not returning events');
         Log.info(
-            '   - The embedded relay is not passing events back to the app');
+          '   - The embedded relay is not passing events back to the app',
+        );
       } else {
         Log.info('   ✅ Received ${receivedEvents.length} events');
         for (var i = 0; i < receivedEvents.length && i < 3; i++) {
           final event = receivedEvents[i];
-          Log.info(
-              '   Event $i: kind=${event.kind}, author=${event.pubkey}');
+          Log.info('   Event $i: kind=${event.kind}, author=${event.pubkey}');
         }
       }
 
       // Test 5: Try a subscription with NO author filter
       Log.info('\n5. Testing subscription with no author filter...');
 
-      final openFilter = Filter(
-        kinds: [34236],
-        limit: 10,
+      final openFilter = Filter(kinds: [34236], limit: 10);
+
+      Log.info('   Filter: kinds=${openFilter.kinds}, no author filter');
+
+      final openSubscription = nostrService.subscribeToEvents(
+        filters: [openFilter],
       );
-
-      Log.info(
-          '   Filter: kinds=${openFilter.kinds}, no author filter');
-
-      final openSubscription =
-          nostrService.subscribeToEvents(filters: [openFilter]);
       final openEvents = await openSubscription
           .timeout(Duration(seconds: 5))
           .take(5)
           .toList()
           .catchError((error) {
-        Log.info('   Timeout or error: $error');
-        return <Event>[];
-      });
+            Log.info('   Timeout or error: $error');
+            return <Event>[];
+          });
 
-      Log.info(
-          '   Received ${openEvents.length} events with open filter');
+      Log.info('   Received ${openEvents.length} events with open filter');
 
       // Compare results
       Log.info('\n=== TEST RESULTS ===');
@@ -131,17 +130,22 @@ void main() {
 
       if (receivedEvents.isEmpty && openEvents.isNotEmpty) {
         Log.info(
-            '❌ PROBLEM IDENTIFIED: Embedded relay works but fails with author filters!');
+          '❌ PROBLEM IDENTIFIED: Embedded relay works but fails with author filters!',
+        );
       } else if (receivedEvents.isEmpty && openEvents.isEmpty) {
         Log.info(
-            '❌ PROBLEM IDENTIFIED: Embedded relay is not forwarding ANY subscriptions!');
+          '❌ PROBLEM IDENTIFIED: Embedded relay is not forwarding ANY subscriptions!',
+        );
       } else {
         Log.info('✅ Embedded relay appears to be working correctly');
       }
 
       // We expect to receive SOME events for known authors
-      expect(receivedEvents.length + openEvents.length, greaterThan(0),
-          reason: 'Should receive at least some events from the relay');
+      expect(
+        receivedEvents.length + openEvents.length,
+        greaterThan(0),
+        reason: 'Should receive at least some events from the relay',
+      );
     });
 
     test('should receive events for followed users if they exist', () async {
@@ -154,14 +158,9 @@ void main() {
         '1f90a3fdecb318d01a150e0e6980de03359659895e94669ba2a0c889d531d879',
       ];
 
-      final filter = Filter(
-        kinds: [34236],
-        authors: followedUsers,
-        limit: 50,
-      );
+      final filter = Filter(kinds: [34236], authors: followedUsers, limit: 50);
 
-      Log.info(
-          'Testing with ${followedUsers.length} followed users...');
+      Log.info('Testing with ${followedUsers.length} followed users...');
 
       final subscription = nostrService.subscribeToEvents(filters: [filter]);
       final events = await subscription
@@ -170,19 +169,16 @@ void main() {
           .toList()
           .catchError((error) => <Event>[]);
 
-      Log.info(
-          'Received ${events.length} events from followed users');
+      Log.info('Received ${events.length} events from followed users');
 
       if (events.isEmpty) {
         Log.info('❌ No videos found from followed users');
         Log.info('Possible reasons:');
-        Log.info(
-            '1. These users have never posted kind 34236 video events');
+        Log.info('1. These users have never posted kind 34236 video events');
         Log.info('2. The relay doesn\'t have their video events');
         Log.info('3. There\'s a bug in author filtering');
       } else {
-        Log.info(
-            '✅ Found ${events.length} videos from followed users');
+        Log.info('✅ Found ${events.length} videos from followed users');
       }
     });
   });

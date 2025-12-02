@@ -81,13 +81,9 @@ void main() {
 
       // Act - Subscribe to video events provider
       final states = <AsyncValue<List<VideoEvent>>>[];
-      final listener = container.listen(
-        videoEventsProvider,
-        (prev, next) {
-          states.add(next);
-        },
-        fireImmediately: true,
-      );
+      final listener = container.listen(videoEventsProvider, (prev, next) {
+        states.add(next);
+      }, fireImmediately: true);
 
       await pumpEventQueue();
 
@@ -97,15 +93,24 @@ void main() {
       verify(mockVideoEventService.subscribeToDiscovery(limit: 100)).called(1);
 
       // 2. Listener should be attached to service
-      verify(mockVideoEventService.removeListener(any)).called(greaterThanOrEqualTo(1));
-      verify(mockVideoEventService.addListener(any)).called(greaterThanOrEqualTo(1));
+      verify(
+        mockVideoEventService.removeListener(any),
+      ).called(greaterThanOrEqualTo(1));
+      verify(
+        mockVideoEventService.addListener(any),
+      ).called(greaterThanOrEqualTo(1));
 
       // 3. Provider should emit videos from service
-      expect(states.any((s) => s.hasValue && s.value!.length == 10), isTrue,
-          reason: 'Provider should emit all 10 test videos');
+      expect(
+        states.any((s) => s.hasValue && s.value!.length == 10),
+        isTrue,
+        reason: 'Provider should emit all 10 test videos',
+      );
 
       // 4. Videos should be in correct state
-      final videoState = states.firstWhere((s) => s.hasValue && s.value!.isNotEmpty);
+      final videoState = states.firstWhere(
+        (s) => s.hasValue && s.value!.isNotEmpty,
+      );
       expect(videoState.value!.first.id, equals('video_0'));
       expect(videoState.value!.length, equals(10));
 
@@ -136,13 +141,9 @@ void main() {
       );
 
       final states = <AsyncValue<List<VideoEvent>>>[];
-      final listener = container.listen(
-        videoEventsProvider,
-        (prev, next) {
-          states.add(next);
-        },
-        fireImmediately: true,
-      );
+      final listener = container.listen(videoEventsProvider, (prev, next) {
+        states.add(next);
+      }, fireImmediately: true);
 
       await pumpEventQueue();
 
@@ -158,8 +159,12 @@ void main() {
       await pumpEventQueue();
 
       // Assert - Provider should emit updated videos
-      expect(states.any((s) => s.hasValue && s.value!.length == 10), isTrue,
-          reason: 'Provider should emit updated video list after service notification');
+      expect(
+        states.any((s) => s.hasValue && s.value!.length == 10),
+        isTrue,
+        reason:
+            'Provider should emit updated video list after service notification',
+      );
 
       listener.close();
     });
@@ -188,40 +193,60 @@ void main() {
 
       // Act
       final states = <AsyncValue<List<VideoEvent>>>[];
-      final listener = container.listen(
-        videoEventsProvider,
-        (prev, next) {
-          states.add(next);
-        },
-        fireImmediately: true,
-      );
+      final listener = container.listen(videoEventsProvider, (prev, next) {
+        states.add(next);
+      }, fireImmediately: true);
 
       await pumpEventQueue();
 
       // Assert - Unseen videos should be first
-      final dataStates = states.where((s) => s.hasValue && s.value!.isNotEmpty).toList();
+      final dataStates = states
+          .where((s) => s.hasValue && s.value!.isNotEmpty)
+          .toList();
       expect(dataStates.isNotEmpty, isTrue, reason: 'Should have data states');
 
       final videos = dataStates.last.value!;
 
       // First video should be unseen (video_3 or higher)
-      expect(int.parse(videos.first.id.split('_').last) >= 3, isTrue,
-          reason: 'First video should be unseen (index 3+)');
+      expect(
+        int.parse(videos.first.id.split('_').last) >= 3,
+        isTrue,
+        reason: 'First video should be unseen (index 3+)',
+      );
 
       // Seen videos should be at the end
       final seenState = container.read(seenVideosProvider);
-      final seenVideosInList = videos.where((v) => seenState.seenVideoIds.contains(v.id)).toList();
-      final unseenVideosInList = videos.where((v) => !seenState.seenVideoIds.contains(v.id)).toList();
+      final seenVideosInList = videos
+          .where((v) => seenState.seenVideoIds.contains(v.id))
+          .toList();
+      final unseenVideosInList = videos
+          .where((v) => !seenState.seenVideoIds.contains(v.id))
+          .toList();
 
-      expect(unseenVideosInList.length, equals(7), reason: 'Should have 7 unseen videos');
-      expect(seenVideosInList.length, equals(3), reason: 'Should have 3 seen videos');
+      expect(
+        unseenVideosInList.length,
+        equals(7),
+        reason: 'Should have 7 unseen videos',
+      );
+      expect(
+        seenVideosInList.length,
+        equals(3),
+        reason: 'Should have 3 seen videos',
+      );
 
       // Unseen should come before seen in the list
-      final firstSeenIndex = videos.indexWhere((v) => seenState.seenVideoIds.contains(v.id));
-      final lastUnseenIndex = videos.lastIndexWhere((v) => !seenState.seenVideoIds.contains(v.id));
+      final firstSeenIndex = videos.indexWhere(
+        (v) => seenState.seenVideoIds.contains(v.id),
+      );
+      final lastUnseenIndex = videos.lastIndexWhere(
+        (v) => !seenState.seenVideoIds.contains(v.id),
+      );
 
-      expect(lastUnseenIndex < firstSeenIndex, isTrue,
-          reason: 'All unseen videos should come before seen videos');
+      expect(
+        lastUnseenIndex < firstSeenIndex,
+        isTrue,
+        reason: 'All unseen videos should come before seen videos',
+      );
 
       listener.close();
     });
@@ -242,22 +267,23 @@ void main() {
         ],
       );
 
-      final listener = container.listen(
-        videoEventsProvider,
-        (prev, next) {},
-      );
+      final listener = container.listen(videoEventsProvider, (prev, next) {});
 
       await pumpEventQueue();
 
       // Verify listener was attached
-      verify(mockVideoEventService.addListener(any)).called(greaterThanOrEqualTo(1));
+      verify(
+        mockVideoEventService.addListener(any),
+      ).called(greaterThanOrEqualTo(1));
 
       // Act - Dispose provider
       listener.close();
       container.dispose();
 
       // Assert - Listener should be removed
-      verify(mockVideoEventService.removeListener(any)).called(greaterThanOrEqualTo(1));
+      verify(
+        mockVideoEventService.removeListener(any),
+      ).called(greaterThanOrEqualTo(1));
     });
 
     test('flow: empty state when gates not satisfied', () async {
@@ -269,7 +295,10 @@ void main() {
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           pageContextProvider.overrideWith((ref) {
             return Stream.value(
-              const RouteContext(type: RouteType.home, videoIndex: 0), // NOT explore
+              const RouteContext(
+                type: RouteType.home,
+                videoIndex: 0,
+              ), // NOT explore
             );
           }),
           seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
@@ -278,23 +307,25 @@ void main() {
 
       // Act
       final states = <AsyncValue<List<VideoEvent>>>[];
-      final listener = container.listen(
-        videoEventsProvider,
-        (prev, next) {
-          states.add(next);
-        },
-        fireImmediately: true,
-      );
+      final listener = container.listen(videoEventsProvider, (prev, next) {
+        states.add(next);
+      }, fireImmediately: true);
 
       await pumpEventQueue();
 
       // Assert - Should emit empty list
       final dataStates = states.where((s) => s.hasValue).toList();
       expect(dataStates.isNotEmpty, isTrue);
-      expect(dataStates.last.value!, isEmpty, reason: 'Should emit empty when not on explore tab');
+      expect(
+        dataStates.last.value!,
+        isEmpty,
+        reason: 'Should emit empty when not on explore tab',
+      );
 
       // Should NOT subscribe when gates not satisfied
-      verifyNever(mockVideoEventService.subscribeToDiscovery(limit: anyNamed('limit')));
+      verifyNever(
+        mockVideoEventService.subscribeToDiscovery(limit: anyNamed('limit')),
+      );
 
       listener.close();
     });

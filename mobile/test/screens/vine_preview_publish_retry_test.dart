@@ -37,9 +37,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VinePreviewScreenPure(draftId: draft.id),
-          ),
+          child: MaterialApp(home: VinePreviewScreenPure(draftId: draft.id)),
         ),
       );
       await tester.pumpAndSettle();
@@ -52,7 +50,9 @@ void main() {
       expect(find.text('Publish'), findsNothing);
     });
 
-    testWidgets('publishing status should show loading indicator', (tester) async {
+    testWidgets('publishing status should show loading indicator', (
+      tester,
+    ) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final draftStorage = DraftStorageService(prefs);
@@ -76,9 +76,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VinePreviewScreenPure(draftId: draft.id),
-          ),
+          child: MaterialApp(home: VinePreviewScreenPure(draftId: draft.id)),
         ),
       );
       // Use pump instead of pumpAndSettle since CircularProgressIndicator animates forever

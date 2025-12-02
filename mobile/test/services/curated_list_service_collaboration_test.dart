@@ -27,8 +27,9 @@ void main() {
       prefs = await SharedPreferences.getInstance();
 
       when(mockAuth.isAuthenticated).thenReturn(true);
-      when(mockAuth.currentPublicKeyHex)
-          .thenReturn('test_pubkey_123456789abcdef');
+      when(
+        mockAuth.currentPublicKeyHex,
+      ).thenReturn('test_pubkey_123456789abcdef');
 
       when(mockNostr.broadcastEvent(any)).thenAnswer((_) async {
         final event = Event.fromJson({
@@ -49,25 +50,31 @@ void main() {
         );
       });
 
-      when(mockNostr.subscribeToEvents(
-        filters: anyNamed('filters'),
-        bypassLimits: anyNamed('bypassLimits'),
-        onEose: anyNamed('onEose'),
-      )).thenAnswer((_) => Stream.empty());
+      when(
+        mockNostr.subscribeToEvents(
+          filters: anyNamed('filters'),
+          bypassLimits: anyNamed('bypassLimits'),
+          onEose: anyNamed('onEose'),
+        ),
+      ).thenAnswer((_) => Stream.empty());
 
-      when(mockAuth.createAndSignEvent(
-        kind: anyNamed('kind'),
-        content: anyNamed('content'),
-        tags: anyNamed('tags'),
-      )).thenAnswer((_) async => Event.fromJson({
-            'id': 'test_event_id',
-            'pubkey': 'test_pubkey_123456789abcdef',
-            'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            'kind': 30005,
-            'tags': [],
-            'content': 'test',
-            'sig': 'test_sig',
-          }));
+      when(
+        mockAuth.createAndSignEvent(
+          kind: anyNamed('kind'),
+          content: anyNamed('content'),
+          tags: anyNamed('tags'),
+        ),
+      ).thenAnswer(
+        (_) async => Event.fromJson({
+          'id': 'test_event_id',
+          'pubkey': 'test_pubkey_123456789abcdef',
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'kind': 30005,
+          'tags': [],
+          'content': 'test',
+          'sig': 'test_sig',
+        }),
+      );
 
       service = CuratedListService(
         nostrService: mockNostr,
@@ -90,8 +97,10 @@ void main() {
 
         expect(result, isTrue);
         final updatedList = service.getListById(list.id);
-        expect(updatedList!.allowedCollaborators,
-            contains('collaborator_pubkey_123'));
+        expect(
+          updatedList!.allowedCollaborators,
+          contains('collaborator_pubkey_123'),
+        );
       });
 
       test('adds multiple collaborators', () async {
@@ -107,8 +116,10 @@ void main() {
 
         final updatedList = service.getListById(listId);
         expect(updatedList!.allowedCollaborators.length, 3);
-        expect(updatedList.allowedCollaborators,
-            containsAll(['collaborator_1', 'collaborator_2', 'collaborator_3']));
+        expect(
+          updatedList.allowedCollaborators,
+          containsAll(['collaborator_1', 'collaborator_2', 'collaborator_3']),
+        );
       });
 
       test('returns false when adding to non-collaborative list', () async {
@@ -137,10 +148,11 @@ void main() {
 
         final updatedList = service.getListById(listId);
         expect(
-            updatedList!.allowedCollaborators
-                .where((c) => c == 'collaborator_1')
-                .length,
-            1);
+          updatedList!.allowedCollaborators
+              .where((c) => c == 'collaborator_1')
+              .length,
+          1,
+        );
       });
 
       test('returns false for non-existent list', () async {
@@ -191,12 +203,18 @@ void main() {
         await service.addCollaborator(listId, 'collaborator_1');
         await service.addCollaborator(listId, 'collaborator_2');
 
-        final result = await service.removeCollaborator(listId, 'collaborator_1');
+        final result = await service.removeCollaborator(
+          listId,
+          'collaborator_1',
+        );
 
         expect(result, isTrue);
         final updatedList = service.getListById(listId);
         expect(updatedList!.allowedCollaborators, ['collaborator_2']);
-        expect(updatedList.allowedCollaborators, isNot(contains('collaborator_1')));
+        expect(
+          updatedList.allowedCollaborators,
+          isNot(contains('collaborator_1')),
+        );
       });
 
       test('returns false for non-existent list', () async {
@@ -316,33 +334,35 @@ void main() {
           isCollaborative: false,
         );
 
-        await service.updateList(
-          listId: list!.id,
-          isCollaborative: true,
-        );
+        await service.updateList(listId: list!.id, isCollaborative: true);
 
         // Now should be able to add collaborators
         final result = await service.addCollaborator(list.id, 'collaborator_1');
         expect(result, isTrue);
       });
 
-      test('converting collaborative list to non-collaborative preserves collaborators', () async {
-        final list = await service.createList(
-          name: 'Test List',
-          isCollaborative: true,
-        );
-        await service.addCollaborator(list!.id, 'collaborator_1');
+      test(
+        'converting collaborative list to non-collaborative preserves collaborators',
+        () async {
+          final list = await service.createList(
+            name: 'Test List',
+            isCollaborative: true,
+          );
+          await service.addCollaborator(list!.id, 'collaborator_1');
 
-        await service.updateList(
-          listId: list.id,
-          isCollaborative: false,
-        );
+          await service.updateList(listId: list.id, isCollaborative: false);
 
-        final updatedList = service.getListById(list.id);
-        expect(updatedList!.isCollaborative, isFalse);
-        expect(updatedList.allowedCollaborators, ['collaborator_1']); // Preserved
-        expect(service.canCollaborate(list.id, 'collaborator_1'), isFalse); // But can't edit
-      });
+          final updatedList = service.getListById(list.id);
+          expect(updatedList!.isCollaborative, isFalse);
+          expect(updatedList.allowedCollaborators, [
+            'collaborator_1',
+          ]); // Preserved
+          expect(
+            service.canCollaborate(list.id, 'collaborator_1'),
+            isFalse,
+          ); // But can't edit
+        },
+      );
 
       test('adding collaborator with empty pubkey', () async {
         final list = await service.createList(
@@ -372,8 +392,10 @@ void main() {
         );
 
         final loadedList = service2.getListById(list.id);
-        expect(loadedList!.allowedCollaborators,
-            containsAll(['collaborator_1', 'collaborator_2']));
+        expect(
+          loadedList!.allowedCollaborators,
+          containsAll(['collaborator_1', 'collaborator_2']),
+        );
       });
 
       test('many collaborators (100)', () async {

@@ -28,13 +28,17 @@ class VideoFrameExtractor {
     int height = 480,
   }) async {
     try {
-      Log.debug('Starting FFmpeg frame extraction from: $videoPath',
-          name: 'VideoFrameExtractor', category: LogCategory.video);
+      Log.debug(
+        'Starting FFmpeg frame extraction from: $videoPath',
+        name: 'VideoFrameExtractor',
+        category: LogCategory.video,
+      );
 
       // Create temporary directory for frame images
       final tempDir = await getTemporaryDirectory();
       final framesDir = Directory(
-          '${tempDir.path}/frames_${DateTime.now().millisecondsSinceEpoch}');
+        '${tempDir.path}/frames_${DateTime.now().millisecondsSinceEpoch}',
+      );
       await framesDir.create(recursive: true);
 
       // Calculate frame extraction rate
@@ -50,16 +54,23 @@ class VideoFrameExtractor {
         outputPattern,
       ].join(' ');
 
-      Log.debug('FFmpeg command: ffmpeg $command',
-          name: 'VideoFrameExtractor', category: LogCategory.video);
+      Log.debug(
+        'FFmpeg command: ffmpeg $command',
+        name: 'VideoFrameExtractor',
+        category: LogCategory.video,
+      );
 
       // FFmpeg is temporarily disabled due to macOS compatibility issues
       throw UnsupportedError(
-          'FFmpeg frame extraction is currently disabled due to dependency conflicts. '
-          'Use camera-based frame capture instead.');
+        'FFmpeg frame extraction is currently disabled due to dependency conflicts. '
+        'Use camera-based frame capture instead.',
+      );
     } catch (e) {
-      Log.error('Video frame extraction failed: $e',
-          name: 'VideoFrameExtractor', category: LogCategory.video);
+      Log.error(
+        'Video frame extraction failed: $e',
+        name: 'VideoFrameExtractor',
+        category: LogCategory.video,
+      );
       rethrow;
     }
   }
@@ -71,22 +82,30 @@ class VideoFrameExtractor {
   /// Returns a map with video metadata
   static Future<Map<String, dynamic>> getVideoInfo(String videoPath) async {
     try {
-      Log.debug('Getting video info for: $videoPath',
-          name: 'VideoFrameExtractor', category: LogCategory.video);
+      Log.debug(
+        'Getting video info for: $videoPath',
+        name: 'VideoFrameExtractor',
+        category: LogCategory.video,
+      );
 
       // FFprobe command to get video information in JSON format
       // Note: Command construction for future FFmpeg integration
       Log.debug(
-          'Would execute FFprobe with: -v quiet -print_format json -show_format -show_streams $videoPath',
-          name: 'VideoFrameExtractor',
-          category: LogCategory.video);
+        'Would execute FFprobe with: -v quiet -print_format json -show_format -show_streams $videoPath',
+        name: 'VideoFrameExtractor',
+        category: LogCategory.video,
+      );
 
       // FFmpeg is temporarily disabled due to macOS compatibility issues
       throw UnsupportedError(
-          'FFprobe video info extraction is currently disabled due to dependency conflicts.');
+        'FFprobe video info extraction is currently disabled due to dependency conflicts.',
+      );
     } catch (e) {
-      Log.error('Failed to get video info: $e',
-          name: 'VideoFrameExtractor', category: LogCategory.video);
+      Log.error(
+        'Failed to get video info: $e',
+        name: 'VideoFrameExtractor',
+        category: LogCategory.video,
+      );
       return {'success': false, 'error': e.toString()};
     }
   }

@@ -55,13 +55,15 @@ void main(List<String> args) {
       debugPrint('  $relativePath:');
       for (final violation in fileViolations) {
         debugPrint(
-            '    - ${violation.functionName} at line ${violation.startLine}: '
-            '${violation.lineCount} lines (${violation.lineCount - maxFunctionLines} over limit)');
+          '    - ${violation.functionName} at line ${violation.startLine}: '
+          '${violation.lineCount} lines (${violation.lineCount - maxFunctionLines} over limit)',
+        );
       }
     });
 
     debugPrint(
-        '\nPlease refactor these functions to be under $maxFunctionLines lines.');
+      '\nPlease refactor these functions to be under $maxFunctionLines lines.',
+    );
     exit(1);
   }
 }

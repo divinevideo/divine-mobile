@@ -4,15 +4,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mockito/mockito.dart';
-import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/subscription_manager.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
 
 import '../helpers/test_provider_overrides.mocks.dart';
 
@@ -39,7 +36,9 @@ void main() {
       container = ProviderContainer(
         overrides: [
           videoEventServiceProvider.overrideWithValue(videoEventService),
-          appReadyProvider.overrideWith((ref) => false), // Start with gates closed
+          appReadyProvider.overrideWith(
+            (ref) => false,
+          ), // Start with gates closed
           isDiscoveryTabActiveProvider.overrideWith((ref) => false),
           isExploreTabActiveProvider.overrideWith((ref) => false),
           seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
@@ -59,21 +58,30 @@ void main() {
 
       // Just verify provider initializes
       final asyncValue = container.read(videoEventsProvider);
-      expect(asyncValue.isLoading || asyncValue.hasValue, true,
-          reason: 'Provider should initialize with list reference stability');
+      expect(
+        asyncValue.isLoading || asyncValue.hasValue,
+        true,
+        reason: 'Provider should initialize with list reference stability',
+      );
     });
 
-    test('provider emits stable list references when contents unchanged', () async {
-      // This test verifies the implementation stores references correctly
-      // The actual verification happens in explore_screen.dart's cache logic
-      // which uses identical() to check list references
+    test(
+      'provider emits stable list references when contents unchanged',
+      () async {
+        // This test verifies the implementation stores references correctly
+        // The actual verification happens in explore_screen.dart's cache logic
+        // which uses identical() to check list references
 
-      // Just verify provider builds without errors
-      final asyncValue = container.read(videoEventsProvider);
+        // Just verify provider builds without errors
+        final asyncValue = container.read(videoEventsProvider);
 
-      expect(asyncValue.isLoading || asyncValue.hasValue, true,
-          reason: 'Provider should initialize successfully');
-    });
+        expect(
+          asyncValue.isLoading || asyncValue.hasValue,
+          true,
+          reason: 'Provider should initialize successfully',
+        );
+      },
+    );
 
     test('list reference stability implementation exists', () async {
       // This test documents that the implementation stores list references
@@ -86,8 +94,11 @@ void main() {
       // Just verify provider initializes
       final asyncValue = container.read(videoEventsProvider);
 
-      expect(asyncValue.isLoading || asyncValue.hasValue, true,
-          reason: 'Provider should initialize with stable reference logic');
+      expect(
+        asyncValue.isLoading || asyncValue.hasValue,
+        true,
+        reason: 'Provider should initialize with stable reference logic',
+      );
     });
   });
 }

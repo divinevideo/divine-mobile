@@ -67,14 +67,18 @@ void main() {
 
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
-      when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters')))
-          .thenAnswer((_) => eventStreamController.stream);
+      when(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).thenAnswer((_) => eventStreamController.stream);
 
-      final testSubscriptionManager =
-          TestSubscriptionManager(eventStreamController);
-      videoEventService = VideoEventService(mockNostrService,
-          subscriptionManager: testSubscriptionManager);
+      final testSubscriptionManager = TestSubscriptionManager(
+        eventStreamController,
+      );
+      videoEventService = VideoEventService(
+        mockNostrService,
+        subscriptionManager: testSubscriptionManager,
+      );
     });
 
     tearDown(() async {
@@ -171,7 +175,8 @@ void main() {
 
       // Subscribe and add events
       await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery);
+        subscriptionType: SubscriptionType.discovery,
+      );
       await Future.delayed(const Duration(milliseconds: 10));
 
       // Add events in random order
@@ -191,10 +196,14 @@ void main() {
       expect(videoEventService.discoveryVideos.length, equals(4));
 
       // Classic vines should be at top (sorted by timestamp among themselves)
-      expect(videoEventService.discoveryVideos[0].id,
-          equals('classic-1')); // Newer classic vine
-      expect(videoEventService.discoveryVideos[1].id,
-          equals('classic-2')); // Older classic vine
+      expect(
+        videoEventService.discoveryVideos[0].id,
+        equals('classic-1'),
+      ); // Newer classic vine
+      expect(
+        videoEventService.discoveryVideos[1].id,
+        equals('classic-2'),
+      ); // Older classic vine
 
       // Editor's pick should come after classic vines
       expect(videoEventService.discoveryVideos[2].id, equals('editor-1'));
@@ -204,100 +213,114 @@ void main() {
     });
 
     test(
-        'should maintain classic vines priority when adding new regular videos',
-        () async {
-      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      'should maintain classic vines priority when adding new regular videos',
+      () async {
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
-      // Add a classic vine first
-      final classicVine = Event(
-        classicVinesPubkey,
-        22,
-        [
-          ['url', 'https://example.com/classic.mp4'],
-          ['m', 'video/mp4'],
-        ],
-        'Classic vine',
-        createdAt: now - 1000, // Old classic vine
-      );
-      classicVine.id = 'classic-old';
-
-      await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery);
-      await Future.delayed(const Duration(milliseconds: 10));
-
-      eventStreamController.add(classicVine);
-      await Future.delayed(const Duration(milliseconds: 10));
-
-      // Add multiple new regular videos
-      for (var i = 0; i < 5; i++) {
-        final newVideo = Event(
-          regularUserPubkey,
-          22,
-          [
-            ['url', 'https://example.com/new$i.mp4'],
-            ['m', 'video/mp4'],
-          ],
-          'New video $i',
-          createdAt: now + i * 10, // Progressively newer
-        );
-        newVideo.id = 'new-$i';
-
-        eventStreamController.add(newVideo);
-        await Future.delayed(const Duration(milliseconds: 10));
-      }
-
-      // Classic vine should still be first despite being oldest
-      expect(videoEventService.discoveryVideos.length, equals(6));
-      expect(videoEventService.discoveryVideos.first.id, equals('classic-old'));
-      expect(videoEventService.discoveryVideos.first.pubkey,
-          equals(classicVinesPubkey));
-    });
-
-    test('should handle multiple classic vines with correct internal ordering',
-        () async {
-      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-
-      // Create classic vines with different timestamps
-      final classicVines = List.generate(5, (index) {
-        final event = Event(
+        // Add a classic vine first
+        final classicVine = Event(
           classicVinesPubkey,
           22,
           [
-            ['url', 'https://example.com/classic$index.mp4'],
+            ['url', 'https://example.com/classic.mp4'],
             ['m', 'video/mp4'],
           ],
-          'Classic vine $index',
-          createdAt: now - index * 100, // Each one older than the last
+          'Classic vine',
+          createdAt: now - 1000, // Old classic vine
         );
-        event.id = 'classic-$index';
-        return event;
-      });
+        classicVine.id = 'classic-old';
 
-      await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery);
-      await Future.delayed(const Duration(milliseconds: 10));
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+        );
+        await Future.delayed(const Duration(milliseconds: 10));
 
-      // Add in random order
-      eventStreamController.add(classicVines[2]);
-      eventStreamController.add(classicVines[0]);
-      eventStreamController.add(classicVines[4]);
-      eventStreamController.add(classicVines[1]);
-      eventStreamController.add(classicVines[3]);
+        eventStreamController.add(classicVine);
+        await Future.delayed(const Duration(milliseconds: 10));
 
-      await Future.delayed(const Duration(milliseconds: 50));
+        // Add multiple new regular videos
+        for (var i = 0; i < 5; i++) {
+          final newVideo = Event(
+            regularUserPubkey,
+            22,
+            [
+              ['url', 'https://example.com/new$i.mp4'],
+              ['m', 'video/mp4'],
+            ],
+            'New video $i',
+            createdAt: now + i * 10, // Progressively newer
+          );
+          newVideo.id = 'new-$i';
 
-      // All should be classic vines
-      expect(videoEventService.discoveryVideos.length, equals(5));
+          eventStreamController.add(newVideo);
+          await Future.delayed(const Duration(milliseconds: 10));
+        }
 
-      // Should be ordered by timestamp (newest first) within classic vines
-      expect(videoEventService.discoveryVideos[0].id,
-          equals('classic-0')); // Newest
-      expect(videoEventService.discoveryVideos[1].id, equals('classic-1'));
-      expect(videoEventService.discoveryVideos[2].id, equals('classic-2'));
-      expect(videoEventService.discoveryVideos[3].id, equals('classic-3'));
-      expect(videoEventService.discoveryVideos[4].id,
-          equals('classic-4')); // Oldest
-    });
+        // Classic vine should still be first despite being oldest
+        expect(videoEventService.discoveryVideos.length, equals(6));
+        expect(
+          videoEventService.discoveryVideos.first.id,
+          equals('classic-old'),
+        );
+        expect(
+          videoEventService.discoveryVideos.first.pubkey,
+          equals(classicVinesPubkey),
+        );
+      },
+    );
+
+    test(
+      'should handle multiple classic vines with correct internal ordering',
+      () async {
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+        // Create classic vines with different timestamps
+        final classicVines = List.generate(5, (index) {
+          final event = Event(
+            classicVinesPubkey,
+            22,
+            [
+              ['url', 'https://example.com/classic$index.mp4'],
+              ['m', 'video/mp4'],
+            ],
+            'Classic vine $index',
+            createdAt: now - index * 100, // Each one older than the last
+          );
+          event.id = 'classic-$index';
+          return event;
+        });
+
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+        );
+        await Future.delayed(const Duration(milliseconds: 10));
+
+        // Add in random order
+        eventStreamController.add(classicVines[2]);
+        eventStreamController.add(classicVines[0]);
+        eventStreamController.add(classicVines[4]);
+        eventStreamController.add(classicVines[1]);
+        eventStreamController.add(classicVines[3]);
+
+        await Future.delayed(const Duration(milliseconds: 50));
+
+        // All should be classic vines
+        expect(videoEventService.discoveryVideos.length, equals(5));
+
+        // Should be ordered by timestamp (newest first) within classic vines
+        expect(
+          videoEventService.discoveryVideos[0].id,
+          equals('classic-0'),
+        ); // Newest
+        expect(videoEventService.discoveryVideos[1].id, equals('classic-1'));
+        expect(videoEventService.discoveryVideos[2].id, equals('classic-2'));
+        expect(videoEventService.discoveryVideos[3].id, equals('classic-3'));
+        expect(
+          videoEventService.discoveryVideos[4].id,
+          equals('classic-4'),
+        ); // Oldest
+      },
+    );
 
     test('should correctly order all priority levels', () async {
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -308,7 +331,7 @@ void main() {
         22,
         [
           ['url', 'https://example.com/classic.mp4'],
-          ['m', 'video/mp4']
+          ['m', 'video/mp4'],
         ],
         'Classic',
         createdAt: now - 1000,
@@ -320,7 +343,7 @@ void main() {
         22,
         [
           ['url', 'https://example.com/editor.mp4'],
-          ['m', 'video/mp4']
+          ['m', 'video/mp4'],
         ],
         'Editor',
         createdAt: now + 1000, // Newer than classic
@@ -332,7 +355,7 @@ void main() {
         22,
         [
           ['url', 'https://example.com/regular.mp4'],
-          ['m', 'video/mp4']
+          ['m', 'video/mp4'],
         ],
         'Regular',
         createdAt: now + 2000, // Newest
@@ -340,7 +363,8 @@ void main() {
       regularVideo.id = 'regular';
 
       await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery);
+        subscriptionType: SubscriptionType.discovery,
+      );
       await Future.delayed(const Duration(milliseconds: 10));
 
       // Add in reverse priority order
@@ -352,12 +376,18 @@ void main() {
 
       // Verify priority ordering
       expect(videoEventService.discoveryVideos.length, equals(3));
-      expect(videoEventService.discoveryVideos[0].id,
-          equals('classic')); // Classic vine first
-      expect(videoEventService.discoveryVideos[1].id,
-          equals('editor')); // Editor pick second
-      expect(videoEventService.discoveryVideos[2].id,
-          equals('regular')); // Regular last
+      expect(
+        videoEventService.discoveryVideos[0].id,
+        equals('classic'),
+      ); // Classic vine first
+      expect(
+        videoEventService.discoveryVideos[1].id,
+        equals('editor'),
+      ); // Editor pick second
+      expect(
+        videoEventService.discoveryVideos[2].id,
+        equals('regular'),
+      ); // Regular last
     });
   });
 }

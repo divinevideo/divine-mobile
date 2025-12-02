@@ -27,7 +27,8 @@ class NostrEncoding {
   static String encodePublicKey(String hexPubkey) {
     if (hexPubkey.length != 64) {
       throw const NostrEncodingException(
-          'Public key must be 64 hex characters');
+        'Public key must be 64 hex characters',
+      );
     }
 
     try {
@@ -43,7 +44,8 @@ class NostrEncoding {
   static String decodePublicKey(String npub) {
     if (!npub.startsWith('npub1')) {
       throw const NostrEncodingException(
-          'Invalid npub format - must start with npub1');
+        'Invalid npub format - must start with npub1',
+      );
     }
 
     try {
@@ -55,7 +57,8 @@ class NostrEncoding {
 
       if (hexKey.isEmpty || hexKey.length != 64) {
         throw const NostrEncodingException(
-            'Decoded public key has invalid length');
+          'Decoded public key has invalid length',
+        );
       }
 
       return hexKey;
@@ -72,7 +75,8 @@ class NostrEncoding {
   static String encodePrivateKey(String hexPrivkey) {
     if (hexPrivkey.length != 64) {
       throw const NostrEncodingException(
-          'Private key must be 64 hex characters');
+        'Private key must be 64 hex characters',
+      );
     }
 
     try {
@@ -88,7 +92,8 @@ class NostrEncoding {
   static String decodePrivateKey(String nsec) {
     if (!nsec.startsWith('nsec1')) {
       throw const NostrEncodingException(
-          'Invalid nsec format - must start with nsec1');
+        'Invalid nsec format - must start with nsec1',
+      );
     }
 
     try {
@@ -100,7 +105,8 @@ class NostrEncoding {
 
       if (hexKey.isEmpty || hexKey.length != 64) {
         throw const NostrEncodingException(
-            'Decoded private key has invalid length');
+          'Decoded private key has invalid length',
+        );
       }
 
       return hexKey;

@@ -12,10 +12,7 @@ import 'package:openvine/utils/unified_logger.dart';
 class VideoProcessingStatusWidget extends ConsumerWidget {
   final String uploadId;
 
-  const VideoProcessingStatusWidget({
-    super.key,
-    required this.uploadId,
-  });
+  const VideoProcessingStatusWidget({super.key, required this.uploadId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -104,10 +101,7 @@ class VideoProcessingStatusWidget extends ConsumerWidget {
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
         if (upload.status == UploadStatus.processing) ...[
@@ -135,7 +129,9 @@ class VideoProcessingStatusWidget extends ConsumerWidget {
         LinearProgressIndicator(
           value: progress,
           backgroundColor: Colors.grey[300],
-          valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor(upload.status)),
+          valueColor: AlwaysStoppedAnimation<Color>(
+            _getProgressColor(upload.status),
+          ),
           minHeight: 4,
         ),
         const SizedBox(height: 4),
@@ -184,10 +180,7 @@ class VideoProcessingStatusWidget extends ConsumerWidget {
 
     return Text(
       message,
-      style: TextStyle(
-        fontSize: 14,
-        color: textColor ?? Colors.grey[700],
-      ),
+      style: TextStyle(fontSize: 14, color: textColor ?? Colors.grey[700]),
     );
   }
 
@@ -200,11 +193,17 @@ class VideoProcessingStatusWidget extends ConsumerWidget {
             final uploadManager = ref.read(uploadManagerProvider);
             await uploadManager.retryUpload(uploadId);
 
-            Log.info('Retrying upload: $uploadId',
-                name: 'VideoProcessingStatusWidget', category: LogCategory.ui);
+            Log.info(
+              'Retrying upload: $uploadId',
+              name: 'VideoProcessingStatusWidget',
+              category: LogCategory.ui,
+            );
           } catch (e) {
-            Log.error('Failed to retry upload: $e',
-                name: 'VideoProcessingStatusWidget', category: LogCategory.ui);
+            Log.error(
+              'Failed to retry upload: $e',
+              name: 'VideoProcessingStatusWidget',
+              category: LogCategory.ui,
+            );
 
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -241,4 +240,3 @@ class VideoProcessingStatusWidget extends ConsumerWidget {
     }
   }
 }
-

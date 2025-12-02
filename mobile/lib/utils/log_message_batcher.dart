@@ -40,7 +40,11 @@ class LogMessageBatcher {
 
   /// Add a message to the batch if it matches a known pattern
   /// Returns true if the message was batched, false if it should be logged immediately
-  bool tryBatchMessage(String message, {LogLevel level = LogLevel.info, LogCategory? category}) {
+  bool tryBatchMessage(
+    String message, {
+    LogLevel level = LogLevel.info,
+    LogCategory? category,
+  }) {
     // Check for patterns that should be batched
     final pattern = _extractPattern(message);
     if (pattern == null) {
@@ -83,7 +87,9 @@ class LogMessageBatcher {
     }
 
     // Pattern for "Received event ... from ... - kind:"
-    if (message.contains('Received event') && message.contains('from') && message.contains('kind:')) {
+    if (message.contains('Received event') &&
+        message.contains('from') &&
+        message.contains('kind:')) {
       return 'events_received';
     }
 
@@ -151,7 +157,9 @@ class LogMessageBatcher {
 
   /// Get current batch statistics for debugging
   Map<String, int> getBatchStats() {
-    return _batchedMessages.map((pattern, info) => MapEntry(pattern, info.count));
+    return _batchedMessages.map(
+      (pattern, info) => MapEntry(pattern, info.count),
+    );
   }
 }
 
@@ -164,18 +172,22 @@ class _BatchInfo {
   DateTime lastSeen = DateTime.now();
   final Queue<String> examples = Queue<String>();
 
-  _BatchInfo({
-    required this.pattern,
-    required this.level,
-    this.category,
-  });
+  _BatchInfo({required this.pattern, required this.level, this.category});
 }
 
 /// Extension to add batching capabilities to Log class
 extension LogBatcher on Log {
   /// Log a message with automatic batching for repetitive patterns
-  static void batchableInfo(String message, {String? name, LogCategory? category}) {
-    if (LogMessageBatcher.instance.tryBatchMessage(message, level: LogLevel.info, category: category)) {
+  static void batchableInfo(
+    String message, {
+    String? name,
+    LogCategory? category,
+  }) {
+    if (LogMessageBatcher.instance.tryBatchMessage(
+      message,
+      level: LogLevel.info,
+      category: category,
+    )) {
       return; // Message was batched
     }
     // Log normally if not batchable
@@ -183,16 +195,32 @@ extension LogBatcher on Log {
   }
 
   /// Log a debug message with automatic batching
-  static void batchableDebug(String message, {String? name, LogCategory? category}) {
-    if (LogMessageBatcher.instance.tryBatchMessage(message, level: LogLevel.debug, category: category)) {
+  static void batchableDebug(
+    String message, {
+    String? name,
+    LogCategory? category,
+  }) {
+    if (LogMessageBatcher.instance.tryBatchMessage(
+      message,
+      level: LogLevel.debug,
+      category: category,
+    )) {
       return; // Message was batched
     }
     Log.debug(message, name: name, category: category);
   }
 
   /// Log a warning message with automatic batching
-  static void batchableWarning(String message, {String? name, LogCategory? category}) {
-    if (LogMessageBatcher.instance.tryBatchMessage(message, level: LogLevel.warning, category: category)) {
+  static void batchableWarning(
+    String message, {
+    String? name,
+    LogCategory? category,
+  }) {
+    if (LogMessageBatcher.instance.tryBatchMessage(
+      message,
+      level: LogLevel.warning,
+      category: category,
+    )) {
       return; // Message was batched
     }
     Log.warning(message, name: name, category: category);

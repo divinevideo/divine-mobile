@@ -26,8 +26,9 @@ void main() {
       expect(service.isAgeVerified, true);
       expect(service.verificationDate, isNotNull);
       expect(
-          service.verificationDate!.difference(DateTime.now()).inSeconds.abs(),
-          lessThan(2));
+        service.verificationDate!.difference(DateTime.now()).inSeconds.abs(),
+        lessThan(2),
+      );
     });
 
     test('should save age verification status as false', () async {
@@ -68,19 +69,21 @@ void main() {
       expect(service.verificationDate, isNull);
     });
 
-    test('checkAgeVerification should load status if not initialized',
-        () async {
-      // Don't call initialize
-      SharedPreferences.setMockInitialValues({
-        'age_verified': true,
-        'age_verification_date': DateTime.now().millisecondsSinceEpoch,
-      });
+    test(
+      'checkAgeVerification should load status if not initialized',
+      () async {
+        // Don't call initialize
+        SharedPreferences.setMockInitialValues({
+          'age_verified': true,
+          'age_verification_date': DateTime.now().millisecondsSinceEpoch,
+        });
 
-      final result = await service.checkAgeVerification();
+        final result = await service.checkAgeVerification();
 
-      expect(result, true);
-      expect(service.isAgeVerified, true);
-    });
+        expect(result, true);
+        expect(service.isAgeVerified, true);
+      },
+    );
 
     test('should handle SharedPreferences errors gracefully', () async {
       // This test would require mocking SharedPreferences to throw errors

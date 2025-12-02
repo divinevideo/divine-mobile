@@ -29,7 +29,8 @@ jobs:
     - name: Build web
       run: |
         cd mobile
-        flutter build web --release
+        flutter build web --release \
+          --dart-define=ZENDESK_API_TOKEN=${{ secrets.ZENDESK_API_TOKEN }}
     
     - name: Deploy to Cloudflare Pages
       uses: cloudflare/pages-action@v1

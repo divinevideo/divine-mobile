@@ -12,19 +12,21 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   Widget shell(ProviderContainer c) => UncontrolledProviderScope(
-        container: c,
-        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
-      );
+    container: c,
+    child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+  );
 
   group('Profile Screen Share and Edit Buttons', () {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
     });
 
-    testWidgets('Share Profile and Edit Profile buttons exist on own profile',
-        (tester) async {
+    testWidgets('Share Profile and Edit Profile buttons exist on own profile', (
+      tester,
+    ) async {
       // Use a dummy pubkey for current user
-      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+      const currentUserPubkey =
+          'currentuser11111111111111111111111111111111111111111111111111111111';
       final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
 
       final c = ProviderContainer();
@@ -49,20 +51,27 @@ void main() {
       // If buttons are rendered, verify they exist
       // This might fail if profile hasn't loaded, which is okay
       if (shareButton.evaluate().isNotEmpty) {
-        expect(shareButton, findsOneWidget,
-            reason: 'Share Profile button should exist');
+        expect(
+          shareButton,
+          findsOneWidget,
+          reason: 'Share Profile button should exist',
+        );
       }
 
       if (editButton.evaluate().isNotEmpty) {
-        expect(editButton, findsOneWidget,
-            reason: 'Edit Profile button should exist');
+        expect(
+          editButton,
+          findsOneWidget,
+          reason: 'Edit Profile button should exist',
+        );
       }
     });
 
-    testWidgets(
-        'Share Profile button should be tappable when it exists',
-        (tester) async {
-      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+    testWidgets('Share Profile button should be tappable when it exists', (
+      tester,
+    ) async {
+      const currentUserPubkey =
+          'currentuser11111111111111111111111111111111111111111111111111111111';
       final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
 
       final c = ProviderContainer();
@@ -87,10 +96,11 @@ void main() {
       }
     });
 
-    testWidgets(
-        'Edit Profile button should be tappable when it exists',
-        (tester) async {
-      const currentUserPubkey = 'currentuser11111111111111111111111111111111111111111111111111111111';
+    testWidgets('Edit Profile button should be tappable when it exists', (
+      tester,
+    ) async {
+      const currentUserPubkey =
+          'currentuser11111111111111111111111111111111111111111111111111111111';
       final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
 
       final c = ProviderContainer();
@@ -115,9 +125,9 @@ void main() {
       }
     });
 
-    testWidgets(
-        'Buttons should not appear when viewing other users profile',
-        (tester) async {
+    testWidgets('Buttons should not appear when viewing other users profile', (
+      tester,
+    ) async {
       const otherUserPubkey =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
       final otherUserNpub = NostrEncoding.encodePublicKey(otherUserPubkey);
@@ -137,10 +147,16 @@ void main() {
       final editButton = find.text('Edit Profile');
 
       // Should NOT find these buttons on other user's profile
-      expect(shareButton, findsNothing,
-          reason: 'Share Profile should not appear on other user profiles');
-      expect(editButton, findsNothing,
-          reason: 'Edit Profile should not appear on other user profiles');
+      expect(
+        shareButton,
+        findsNothing,
+        reason: 'Share Profile should not appear on other user profiles',
+      );
+      expect(
+        editButton,
+        findsNothing,
+        reason: 'Edit Profile should not appear on other user profiles',
+      );
     });
   });
 }

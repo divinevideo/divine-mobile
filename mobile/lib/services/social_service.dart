@@ -47,49 +47,50 @@ class FollowSet {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? nostrEventId,
-  }) =>
-      FollowSet(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        description: description ?? this.description,
-        imageUrl: imageUrl ?? this.imageUrl,
-        pubkeys: pubkeys ?? this.pubkeys,
-        createdAt: createdAt ?? this.createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        nostrEventId: nostrEventId ?? this.nostrEventId,
-      );
+  }) => FollowSet(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    description: description ?? this.description,
+    imageUrl: imageUrl ?? this.imageUrl,
+    pubkeys: pubkeys ?? this.pubkeys,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    nostrEventId: nostrEventId ?? this.nostrEventId,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'description': description,
-        'imageUrl': imageUrl,
-        'pubkeys': pubkeys,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-        'nostrEventId': nostrEventId,
-      };
+    'id': id,
+    'name': name,
+    'description': description,
+    'imageUrl': imageUrl,
+    'pubkeys': pubkeys,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'nostrEventId': nostrEventId,
+  };
 
   static FollowSet fromJson(Map<String, dynamic> json) => FollowSet(
-        id: json['id'],
-        name: json['name'],
-        description: json['description'],
-        imageUrl: json['imageUrl'],
-        pubkeys: List<String>.from(json['pubkeys'] ?? []),
-        createdAt: DateTime.parse(json['createdAt']),
-        updatedAt: DateTime.parse(json['updatedAt']),
-        nostrEventId: json['nostrEventId'],
-      );
+    id: json['id'],
+    name: json['name'],
+    description: json['description'],
+    imageUrl: json['imageUrl'],
+    pubkeys: List<String>.from(json['pubkeys'] ?? []),
+    createdAt: DateTime.parse(json['createdAt']),
+    updatedAt: DateTime.parse(json['updatedAt']),
+    nostrEventId: json['nostrEventId'],
+  );
 }
 
 /// Service for managing social interactions on Nostr
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class SocialService {
-  SocialService(this._nostrService, this._authService,
-      {required SubscriptionManager subscriptionManager,
-      PersonalEventCacheService? personalEventCache})
-      : _subscriptionManager = subscriptionManager,
-        _personalEventCache = personalEventCache {
+  SocialService(
+    this._nostrService,
+    this._authService, {
+    required SubscriptionManager subscriptionManager,
+    PersonalEventCacheService? personalEventCache,
+  }) : _subscriptionManager = subscriptionManager,
+       _personalEventCache = personalEventCache {
     _initialize();
   }
   final INostrService _nostrService;
@@ -134,8 +135,11 @@ class SocialService {
 
   /// Initialize the service
   Future<void> _initialize() async {
-    Log.debug('🤝 Initializing SocialService',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      '🤝 Initializing SocialService',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     try {
       // Initialize current user's social data if authenticated
@@ -151,11 +155,17 @@ class SocialService {
         await fetchCurrentUserFollowList();
       }
 
-      Log.info('SocialService initialized',
-          name: 'SocialService', category: LogCategory.system);
+      Log.info(
+        'SocialService initialized',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('SocialService initialization error: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'SocialService initialization error: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -163,9 +173,10 @@ class SocialService {
   Future<void> _loadCachedPersonalEvents() async {
     if (_personalEventCache?.isInitialized != true) {
       Log.debug(
-          'PersonalEventCache not initialized, skipping cached event loading',
-          name: 'SocialService',
-          category: LogCategory.system);
+        'PersonalEventCache not initialized, skipping cached event loading',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -173,8 +184,9 @@ class SocialService {
       // Load cached likes (Kind 7 events) to populate _likedEventIds
       final cachedLikes = _personalEventCache!.getEventsByKind(7);
       for (final likeEvent in cachedLikes) {
-        final eTags =
-            likeEvent.tags.where((tag) => tag.isNotEmpty && tag[0] == 'e');
+        final eTags = likeEvent.tags.where(
+          (tag) => tag.isNotEmpty && tag[0] == 'e',
+        );
         for (final eTag in eTags) {
           if (eTag.length > 1) {
             final likedEventId = eTag[1];
@@ -196,8 +208,9 @@ class SocialService {
         // Use the most recent contact list event
         final latestContactList =
             cachedContactLists.first; // Already sorted by creation time
-        final pTags = latestContactList.tags
-            .where((tag) => tag.isNotEmpty && tag[0] == 'p');
+        final pTags = latestContactList.tags.where(
+          (tag) => tag.isNotEmpty && tag[0] == 'p',
+        );
         final pubkeys = pTags
             .map((tag) => tag.length > 1 ? tag[1] : '')
             .where((pubkey) => pubkey.isNotEmpty)
@@ -214,21 +227,42 @@ class SocialService {
       }
 
       final stats = _personalEventCache.getCacheStats();
-      Log.info('📋 Loaded cached personal events on startup:',
-          name: 'SocialService', category: LogCategory.system);
-      Log.info('  - Total events: ${stats['total_events']}',
-          name: 'SocialService', category: LogCategory.system);
-      Log.info('  - Likes loaded: ${cachedLikes.length}',
-          name: 'SocialService', category: LogCategory.system);
-      Log.info('  - Reposts loaded: ${cachedReposts.length}',
-          name: 'SocialService', category: LogCategory.system);
-      Log.info('  - Contact lists loaded: ${cachedContactLists.length}',
-          name: 'SocialService', category: LogCategory.system);
-      Log.info('  - Following count: ${_followingPubkeys.length}',
-          name: 'SocialService', category: LogCategory.system);
+      Log.info(
+        '📋 Loaded cached personal events on startup:',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
+      Log.info(
+        '  - Total events: ${stats['total_events']}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
+      Log.info(
+        '  - Likes loaded: ${cachedLikes.length}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
+      Log.info(
+        '  - Reposts loaded: ${cachedReposts.length}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
+      Log.info(
+        '  - Contact lists loaded: ${cachedContactLists.length}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
+      Log.info(
+        '  - Following count: ${_followingPubkeys.length}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to load cached personal events: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Failed to load cached personal events: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -289,13 +323,19 @@ class SocialService {
   /// Likes or unlikes a Nostr event using proper NIP-09 deletion
   Future<void> toggleLike(String eventId, String authorPubkey) async {
     if (!_authService.isAuthenticated) {
-      Log.error('Cannot like - user not authenticated',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Cannot like - user not authenticated',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return;
     }
 
-    Log.debug('❤️ Toggling like for event: $eventId',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      '❤️ Toggling like for event: $eventId',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     try {
       final wasLiked = _likedEventIds.contains(eventId);
@@ -313,8 +353,11 @@ class SocialService {
           final currentCount = _likeCounts[eventId] ?? 0;
           _likeCounts[eventId] = currentCount + 1;
 
-          Log.info('Like published for event: $eventId',
-              name: 'SocialService', category: LogCategory.system);
+          Log.info(
+            'Like published for event: $eventId',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
         }
       } else {
         // Unlike by publishing NIP-09 deletion event
@@ -333,12 +376,16 @@ class SocialService {
           }
 
           Log.info(
-              'Unlike (deletion) published for event: $eventId',
-              name: 'SocialService',
-              category: LogCategory.system);
+            'Unlike (deletion) published for event: $eventId',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
         } else {
-          Log.warning('Cannot unlike - reaction event ID not found',
-              name: 'SocialService', category: LogCategory.system);
+          Log.warning(
+            'Cannot unlike - reaction event ID not found',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
 
           // Fallback: remove from local state only
           _likedEventIds.remove(eventId);
@@ -349,8 +396,11 @@ class SocialService {
         }
       }
     } catch (e) {
-      Log.error('Error toggling like: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error toggling like: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -383,12 +433,18 @@ class SocialService {
         throw Exception('Failed to broadcast like event: $errorMessages');
       }
 
-      Log.debug('Like event broadcasted: ${event.id}',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        'Like event broadcasted: ${event.id}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return event.id;
     } catch (e) {
-      Log.error('Error publishing like: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error publishing like: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -420,11 +476,17 @@ class SocialService {
         throw Exception('Failed to broadcast deletion event: $errorMessages');
       }
 
-      Log.debug('Deletion event broadcasted: ${event.id}',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        'Deletion event broadcasted: ${event.id}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error publishing deletion: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error publishing deletion: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -432,8 +494,11 @@ class SocialService {
   /// Fetches like count and determines if current user has liked an event
   /// Returns {'count': int, 'user_liked': bool}
   Future<Map<String, dynamic>> getLikeStatus(String eventId) async {
-    Log.debug('Fetching like status for event: $eventId',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      'Fetching like status for event: $eventId',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     try {
       // Check cache first
@@ -441,12 +506,12 @@ class SocialService {
       final userLiked = _likedEventIds.contains(eventId);
 
       if (cachedCount != null) {
-        Log.debug('📱 Using cached like count: $cachedCount',
-            name: 'SocialService', category: LogCategory.system);
-        return {
-          'count': cachedCount,
-          'user_liked': userLiked,
-        };
+        Log.debug(
+          '📱 Using cached like count: $cachedCount',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
+        return {'count': cachedCount, 'user_liked': userLiked};
       }
 
       // Fetch from network
@@ -455,20 +520,20 @@ class SocialService {
       // Cache the result
       _likeCounts[eventId] = likeCount;
 
-      Log.debug('Like count fetched: $likeCount',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        'Like count fetched: $likeCount',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
 
-      return {
-        'count': likeCount,
-        'user_liked': userLiked,
-      };
+      return {'count': likeCount, 'user_liked': userLiked};
     } catch (e) {
-      Log.error('Error fetching like status: $e',
-          name: 'SocialService', category: LogCategory.system);
-      return {
-        'count': 0,
-        'user_liked': false,
-      };
+      Log.error(
+        'Error fetching like status: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
+      return {'count': 0, 'user_liked': false};
     }
   }
 
@@ -482,10 +547,7 @@ class SocialService {
       await _subscriptionManager.createSubscription(
         name: 'like_count_$eventId',
         filters: [
-          Filter(
-            kinds: [7],
-            e: [eventId],
-          ),
+          Filter(kinds: [7], e: [eventId]),
         ],
         onEvent: (event) {
           // Only count '+' reactions as likes
@@ -494,8 +556,11 @@ class SocialService {
           }
         },
         onError: (error) {
-          Log.error('Error in like count subscription: $error',
-              name: 'SocialService', category: LogCategory.system);
+          Log.error(
+            'Error in like count subscription: $error',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
           if (!completer.isCompleted) {
             completer.complete(0);
           }
@@ -511,8 +576,11 @@ class SocialService {
 
       return await completer.future;
     } catch (e) {
-      Log.error('Error fetching like count: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error fetching like count: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return 0;
     }
   }
@@ -526,18 +594,16 @@ class SocialService {
       if (currentUserPubkey == null) return;
 
       Log.debug(
-          'Loading user liked events for: $currentUserPubkey',
-          name: 'SocialService',
-          category: LogCategory.system);
+        'Loading user liked events for: $currentUserPubkey',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
 
       // Subscribe to current user's reactions (Kind 7) using SubscriptionManager
       _userLikesSubscriptionId = await _subscriptionManager.createSubscription(
         name: 'user_likes_$currentUserPubkey',
         filters: [
-          Filter(
-            authors: [currentUserPubkey],
-            kinds: [7],
-          ),
+          Filter(authors: [currentUserPubkey], kinds: [7]),
         ],
         onEvent: (event) {
           // Only process '+' reactions as likes
@@ -550,21 +616,28 @@ class SocialService {
                 // Store the reaction event ID for future deletion
                 _likeEventIdToReactionId[likedEventId] = event.id;
                 Log.debug(
-                    '📱 Cached user like: $likedEventId (reaction: ${event.id})',
-                    name: 'SocialService',
-                    category: LogCategory.system);
+                  '📱 Cached user like: $likedEventId (reaction: ${event.id})',
+                  name: 'SocialService',
+                  category: LogCategory.system,
+                );
                 break;
               }
             }
           }
         },
-        onError: (error) => Log.error('Error loading user likes: $error',
-            name: 'SocialService', category: LogCategory.system),
+        onError: (error) => Log.error(
+          'Error loading user likes: $error',
+          name: 'SocialService',
+          category: LogCategory.system,
+        ),
         priority: 3, // Lower priority for historical data
       );
     } catch (e) {
-      Log.error('Error loading user liked events: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error loading user liked events: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -577,37 +650,47 @@ class SocialService {
       if (currentUserPubkey == null) return;
 
       Log.debug(
-          'Loading user reposted events for: $currentUserPubkey',
-          name: 'SocialService',
-          category: LogCategory.system);
+        'Loading user reposted events for: $currentUserPubkey',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
 
       // Subscribe to current user's reposts (Kind 6) using SubscriptionManager
-      _userRepostsSubscriptionId =
-          await _subscriptionManager.createSubscription(
-        name: 'user_reposts_$currentUserPubkey',
-        filters: [
-          Filter(
-            authors: [currentUserPubkey],
-            kinds: [16], // Generic repost (NIP-18) for video events
-          ),
-        ],
-        onEvent: (event) {
-          _processRepostEvent(event);
-        },
-        onError: (error) => Log.error('Error loading user reposts: $error',
-            name: 'SocialService', category: LogCategory.system),
-        priority: 3, // Lower priority for historical data
-      );
+      _userRepostsSubscriptionId = await _subscriptionManager
+          .createSubscription(
+            name: 'user_reposts_$currentUserPubkey',
+            filters: [
+              Filter(
+                authors: [currentUserPubkey],
+                kinds: [16], // Generic repost (NIP-18) for video events
+              ),
+            ],
+            onEvent: (event) {
+              _processRepostEvent(event);
+            },
+            onError: (error) => Log.error(
+              'Error loading user reposts: $error',
+              name: 'SocialService',
+              category: LogCategory.system,
+            ),
+            priority: 3, // Lower priority for historical data
+          );
     } catch (e) {
-      Log.error('Error loading user reposted events: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error loading user reposted events: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Fetches all events liked by a specific user
   Future<List<Event>> fetchLikedEvents(String pubkey) async {
-    Log.debug('Fetching liked events for user: $pubkey',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      'Fetching liked events for user: $pubkey',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     try {
       final likedEvents = <Event>[];
@@ -639,8 +722,11 @@ class SocialService {
           }
         },
         onError: (error) {
-          Log.error('Error fetching liked events: $error',
-              name: 'SocialService', category: LogCategory.system);
+          Log.error(
+            'Error fetching liked events: $error',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
           if (!completer.isCompleted) {
             completer.complete([]);
           }
@@ -650,18 +736,17 @@ class SocialService {
           if (likedEventIds.isNotEmpty) {
             try {
               final eventSubscription = _nostrService.subscribeToEvents(
-                filters: [
-                  Filter(
-                    ids: likedEventIds.toList(),
-                  ),
-                ],
+                filters: [Filter(ids: likedEventIds.toList())],
               );
 
               eventSubscription.listen(
                 likedEvents.add,
                 onError: (error) {
-                  Log.error('Error fetching liked event details: $error',
-                      name: 'SocialService', category: LogCategory.system);
+                  Log.error(
+                    'Error fetching liked event details: $error',
+                    name: 'SocialService',
+                    category: LogCategory.system,
+                  );
                   if (!completer.isCompleted) {
                     completer.complete(likedEvents);
                   }
@@ -673,8 +758,11 @@ class SocialService {
                 },
               );
             } catch (e) {
-              Log.error('Error fetching liked event details: $e',
-                  name: 'SocialService', category: LogCategory.system);
+              Log.error(
+                'Error fetching liked event details: $e',
+                name: 'SocialService',
+                category: LogCategory.system,
+              );
               if (!completer.isCompleted) {
                 completer.complete([]);
               }
@@ -688,12 +776,18 @@ class SocialService {
       );
 
       final result = await completer.future;
-      Log.info('Fetched ${result.length} liked events',
-          name: 'SocialService', category: LogCategory.system);
+      Log.info(
+        'Fetched ${result.length} liked events',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return result;
     } catch (e) {
-      Log.error('Error fetching liked events: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error fetching liked events: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return [];
     }
   }
@@ -709,9 +803,10 @@ class SocialService {
       if (currentUserPubkey == null) return;
 
       Log.debug(
-          '📱 Loading follow list for: $currentUserPubkey',
-          name: 'SocialService',
-          category: LogCategory.system);
+        '📱 Loading follow list for: $currentUserPubkey',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
 
       // ✅ Use immediate completion for contact list query
       final eventStream = _nostrService.subscribeToEvents(
@@ -726,10 +821,10 @@ class SocialService {
 
       final contactListEvent =
           await ContactListCompletionHelper.queryContactList(
-        eventStream: eventStream,
-        pubkey: currentUserPubkey,
-        fallbackTimeoutSeconds: 10,
-      );
+            eventStream: eventStream,
+            pubkey: currentUserPubkey,
+            fallbackTimeoutSeconds: 10,
+          );
 
       if (contactListEvent != null) {
         Log.debug(
@@ -746,8 +841,11 @@ class SocialService {
         );
       }
     } catch (e) {
-      Log.error('Error fetching follow list: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error fetching follow list: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -767,8 +865,11 @@ class SocialService {
       }
 
       _followingPubkeys = followedPubkeys;
-      Log.info('Updated follow list: ${_followingPubkeys.length} following',
-          name: 'SocialService', category: LogCategory.system);
+      Log.info(
+        'Updated follow list: ${_followingPubkeys.length} following',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
 
       // Persist following list to local storage for aggressive caching
       _saveFollowingListToCache();
@@ -778,21 +879,28 @@ class SocialService {
   /// Follow a user by adding them to the contact list
   Future<void> followUser(String pubkeyToFollow) async {
     if (!_authService.isAuthenticated) {
-      Log.error('Cannot follow - user not authenticated',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Cannot follow - user not authenticated',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return;
     }
 
     if (_followingPubkeys.contains(pubkeyToFollow)) {
       Log.debug(
-          'ℹ️ Already following user: $pubkeyToFollow',
-          name: 'SocialService',
-          category: LogCategory.system);
+        'ℹ️ Already following user: $pubkeyToFollow',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return;
     }
 
-    Log.debug('📱 Following user: $pubkeyToFollow',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      '📱 Following user: $pubkeyToFollow',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     // Optimistically update local state for immediate UI feedback
     final previousFollowList = List<String>.from(_followingPubkeys);
@@ -838,12 +946,16 @@ class SocialService {
       _saveFollowingListToCache();
 
       Log.info(
-          'Successfully followed user: $pubkeyToFollow',
-          name: 'SocialService',
-          category: LogCategory.system);
+        'Successfully followed user: $pubkeyToFollow',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error following user: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error following user: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -851,19 +963,28 @@ class SocialService {
   /// Unfollow a user by removing them from the contact list
   Future<void> unfollowUser(String pubkeyToUnfollow) async {
     if (!_authService.isAuthenticated) {
-      Log.error('Cannot unfollow - user not authenticated',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Cannot unfollow - user not authenticated',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return;
     }
 
     if (!_followingPubkeys.contains(pubkeyToUnfollow)) {
-      Log.debug('ℹ️ Not following user: $pubkeyToUnfollow',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        'ℹ️ Not following user: $pubkeyToUnfollow',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return;
     }
 
-    Log.debug('📱 Unfollowing user: $pubkeyToUnfollow',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      '📱 Unfollowing user: $pubkeyToUnfollow',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     // Optimistically update local state for immediate UI feedback
     final previousFollowList = List<String>.from(_followingPubkeys);
@@ -909,27 +1030,37 @@ class SocialService {
       _saveFollowingListToCache();
 
       Log.info(
-          'Successfully unfollowed user: $pubkeyToUnfollow',
-          name: 'SocialService',
-          category: LogCategory.system);
+        'Successfully unfollowed user: $pubkeyToUnfollow',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error unfollowing user: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error unfollowing user: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
 
   /// Get follower and following counts for a specific pubkey
   Future<Map<String, int>> getFollowerStats(String pubkey) async {
-    Log.debug('Fetching follower stats for: $pubkey',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      'Fetching follower stats for: $pubkey',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     try {
       // Check cache first
       final cachedStats = _followerStats[pubkey];
       if (cachedStats != null) {
-        Log.debug('📱 Using cached follower stats: $cachedStats',
-            name: 'SocialService', category: LogCategory.system);
+        Log.debug(
+          '📱 Using cached follower stats: $cachedStats',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
         return cachedStats;
       }
 
@@ -939,12 +1070,18 @@ class SocialService {
       // Cache the result
       _followerStats[pubkey] = stats;
 
-      Log.debug('Follower stats fetched: $stats',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        'Follower stats fetched: $stats',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return stats;
     } catch (e) {
-      Log.error('Error fetching follower stats: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error fetching follower stats: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return {'followers': 0, 'following': 0};
     }
   }
@@ -959,11 +1096,7 @@ class SocialService {
       // 1. ✅ Get following count with immediate completion
       final followingEventStream = _nostrService.subscribeToEvents(
         filters: [
-          Filter(
-            authors: [pubkey],
-            kinds: [3],
-            limit: 1,
-          ),
+          Filter(authors: [pubkey], kinds: [3], limit: 1),
         ],
       );
 
@@ -1024,8 +1157,11 @@ class SocialService {
           }
         },
         onError: (error) {
-          Log.error('Error fetching followers count: $error',
-              name: 'SocialService', category: LogCategory.system);
+          Log.error(
+            'Error fetching followers count: $error',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
           if (!followersCompleter.isCompleted) {
             followersCompleter.complete(followerPubkeys.length);
           }
@@ -1034,13 +1170,13 @@ class SocialService {
 
       await followersCompleter.future;
 
-      return {
-        'followers': followersCount,
-        'following': followingCount,
-      };
+      return {'followers': followersCount, 'following': followingCount};
     } catch (e) {
-      Log.error('Error fetching follower stats: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error fetching follower stats: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return {'followers': 0, 'following': 0};
     }
   }
@@ -1056,8 +1192,11 @@ class SocialService {
   }) async {
     try {
       if (!_authService.isAuthenticated) {
-        Log.error('Cannot create follow set - user not authenticated',
-            name: 'SocialService', category: LogCategory.system);
+        Log.error(
+          'Cannot create follow set - user not authenticated',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
         return null;
       }
 
@@ -1079,13 +1218,19 @@ class SocialService {
       // Publish to Nostr
       await _publishFollowSetToNostr(newSet);
 
-      Log.info('Created new follow set: $name ($setId)',
-          name: 'SocialService', category: LogCategory.system);
+      Log.info(
+        'Created new follow set: $name ($setId)',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
 
       return newSet;
     } catch (e) {
-      Log.error('Failed to create follow set: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Failed to create follow set: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -1095,8 +1240,11 @@ class SocialService {
     try {
       final setIndex = _followSets.indexWhere((set) => set.id == setId);
       if (setIndex == -1) {
-        Log.warning('Follow set not found: $setId',
-            name: 'SocialService', category: LogCategory.system);
+        Log.warning(
+          'Follow set not found: $setId',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -1104,8 +1252,11 @@ class SocialService {
 
       // Check if pubkey is already in the set
       if (set.pubkeys.contains(pubkey)) {
-        Log.debug('Pubkey already in follow set: $pubkey',
-            name: 'SocialService', category: LogCategory.system);
+        Log.debug(
+          'Pubkey already in follow set: $pubkey',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
         return true;
       }
 
@@ -1120,13 +1271,19 @@ class SocialService {
       // Update on Nostr
       await _publishFollowSetToNostr(updatedSet);
 
-      Log.debug('➕ Added pubkey to follow set "${set.name}": $pubkey',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        '➕ Added pubkey to follow set "${set.name}": $pubkey',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to add to follow set: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Failed to add to follow set: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -1136,8 +1293,11 @@ class SocialService {
     try {
       final setIndex = _followSets.indexWhere((set) => set.id == setId);
       if (setIndex == -1) {
-        Log.warning('Follow set not found: $setId',
-            name: 'SocialService', category: LogCategory.system);
+        Log.warning(
+          'Follow set not found: $setId',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -1154,13 +1314,19 @@ class SocialService {
       // Update on Nostr
       await _publishFollowSetToNostr(updatedSet);
 
-      Log.debug('➖ Removed pubkey from follow set "${set.name}": $pubkey',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        '➖ Removed pubkey from follow set "${set.name}": $pubkey',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to remove from follow set: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Failed to remove from follow set: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -1191,13 +1357,19 @@ class SocialService {
       // Update on Nostr
       await _publishFollowSetToNostr(updatedSet);
 
-      Log.debug('✏️ Updated follow set: ${updatedSet.name}',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        '✏️ Updated follow set: ${updatedSet.name}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to update follow set: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Failed to update follow set: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -1217,13 +1389,19 @@ class SocialService {
 
       _followSets.removeAt(setIndex);
 
-      Log.debug('🗑️ Deleted follow set: ${set.name}',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        '🗑️ Deleted follow set: ${set.name}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to delete follow set: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Failed to delete follow set: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -1232,8 +1410,11 @@ class SocialService {
   Future<void> _publishFollowSetToNostr(FollowSet set) async {
     try {
       if (!_authService.isAuthenticated) {
-        Log.warning('Cannot publish follow set - user not authenticated',
-            name: 'SocialService', category: LogCategory.system);
+        Log.warning(
+          'Cannot publish follow set - user not authenticated',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -1278,13 +1459,19 @@ class SocialService {
           if (setIndex != -1) {
             _followSets[setIndex] = set.copyWith(nostrEventId: event.id);
           }
-          Log.debug('Published follow set to Nostr: ${set.name} (${event.id})',
-              name: 'SocialService', category: LogCategory.system);
+          Log.debug(
+            'Published follow set to Nostr: ${set.name} (${event.id})',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
         }
       }
     } catch (e) {
-      Log.error('Failed to publish follow set to Nostr: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Failed to publish follow set to Nostr: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -1292,8 +1479,11 @@ class SocialService {
 
   /// Get video count for a specific user
   Future<int> getUserVideoCount(String pubkey) async {
-    Log.debug('📱 Fetching video count for: $pubkey',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      '📱 Fetching video count for: $pubkey',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     try {
       final completer = Completer<int>();
@@ -1304,7 +1494,8 @@ class SocialService {
         filters: [
           Filter(
             authors: [pubkey],
-            kinds: NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video kinds: 22, 21, 34236, 34235
+            kinds:
+                NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video kinds: 22, 21, 34236, 34235
           ),
         ],
       );
@@ -1319,8 +1510,11 @@ class SocialService {
           }
         },
         onError: (error) {
-          Log.error('Error fetching video count: $error',
-              name: 'SocialService', category: LogCategory.system);
+          Log.error(
+            'Error fetching video count: $error',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
           if (!completer.isCompleted) {
             completer.complete(0);
           }
@@ -1328,20 +1522,29 @@ class SocialService {
       );
 
       final result = await completer.future;
-      Log.debug('📱 Video count fetched: $result',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        '📱 Video count fetched: $result',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return result;
     } catch (e) {
-      Log.error('Error fetching video count: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error fetching video count: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return 0;
     }
   }
 
   /// Get total likes across all videos for a specific user
   Future<int> getUserTotalLikes(String pubkey) async {
-    Log.debug('❤️ Fetching total likes for: $pubkey',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      '❤️ Fetching total likes for: $pubkey',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     try {
       // First, get all video events by this user
@@ -1352,7 +1555,8 @@ class SocialService {
         filters: [
           Filter(
             authors: [pubkey],
-            kinds: NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video kinds: 22, 21, 34236, 34235
+            kinds:
+                NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video kinds: 22, 21, 34236, 34235
           ),
         ],
       );
@@ -1367,8 +1571,11 @@ class SocialService {
           }
         },
         onError: (error) {
-          Log.error('Error fetching user videos: $error',
-              name: 'SocialService', category: LogCategory.system);
+          Log.error(
+            'Error fetching user videos: $error',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
           if (!videoCompleter.isCompleted) {
             videoCompleter.complete([]);
           }
@@ -1378,13 +1585,19 @@ class SocialService {
       final videoIds = await videoCompleter.future;
 
       if (videoIds.isEmpty) {
-        Log.info('❤️ No videos found, total likes: 0',
-            name: 'SocialService', category: LogCategory.system);
+        Log.info(
+          '❤️ No videos found, total likes: 0',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
         return 0;
       }
 
-      Log.info('📱 Found ${videoIds.length} videos, fetching likes...',
-          name: 'SocialService', category: LogCategory.system);
+      Log.info(
+        '📱 Found ${videoIds.length} videos, fetching likes...',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
 
       // Now get likes for all these videos
       final likesCompleter = Completer<int>();
@@ -1412,8 +1625,11 @@ class SocialService {
           }
         },
         onError: (error) {
-          Log.error('Error fetching likes: $error',
-              name: 'SocialService', category: LogCategory.system);
+          Log.error(
+            'Error fetching likes: $error',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
           if (!likesCompleter.isCompleted) {
             likesCompleter.complete(totalLikes);
           }
@@ -1421,12 +1637,18 @@ class SocialService {
       );
 
       final result = await likesCompleter.future;
-      Log.debug('❤️ Total likes fetched: $result',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        '❤️ Total likes fetched: $result',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return result;
     } catch (e) {
-      Log.error('Error fetching total likes: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error fetching total likes: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return 0;
     }
   }
@@ -1442,19 +1664,28 @@ class SocialService {
     String? replyToAuthorPubkey,
   }) async {
     if (!_authService.isAuthenticated) {
-      Log.error('Cannot post comment - user not authenticated',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Cannot post comment - user not authenticated',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       throw Exception('User not authenticated');
     }
 
     if (content.trim().isEmpty) {
-      Log.error('Cannot post empty comment',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Cannot post empty comment',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       throw Exception('Comment content cannot be empty');
     }
 
-    Log.debug('📱 Posting comment to event: $rootEventId',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      '📱 Posting comment to event: $rootEventId',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     try {
       // We don't need the keyPair directly since createAndSignEvent handles signing
@@ -1496,11 +1727,17 @@ class SocialService {
         throw Exception('Failed to broadcast comment: $errorMessages');
       }
 
-      Log.info('Comment posted successfully: ${event.id}',
-          name: 'SocialService', category: LogCategory.system);
+      Log.info(
+        'Comment posted successfully: ${event.id}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error posting comment: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error posting comment: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -1508,9 +1745,10 @@ class SocialService {
   /// Fetches all comments for a given root event ID
   Stream<Event> fetchCommentsForEvent(String rootEventId) {
     Log.debug(
-        '📱 Fetching comments for event: $rootEventId',
-        name: 'SocialService',
-        category: LogCategory.system);
+      '📱 Fetching comments for event: $rootEventId',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     // Create filter for comments
     // Comments are Kind 1 events that have an 'e' tag pointing to the root event
@@ -1527,38 +1765,43 @@ class SocialService {
     // Comments should stay live to receive new comments after EOSE
     _subscriptionManager
         .createSubscription(
-      name: 'comments_$rootEventId',
-      filters: [
-        Filter(
-          kinds: filter.kinds,
-          e: filter.e,
-          h: filter.h,
-          limit: 50, // Limit comment fetching
-        ),
-      ],
-      onEvent: (event) {
-        if (!controller.isClosed) {
-          controller.add(event);
-        }
-      },
-      onError: (error) {
-        if (!controller.isClosed) {
-          controller.addError(error);
-        }
-      },
-      // Removed onComplete callback to keep subscription open for real-time comments
-      // Only timeout or explicit cancellation will close this stream
-      timeout: const Duration(minutes: 5), // Longer timeout for live comment subscriptions
-      priority: 6, // Lower priority for comments
-    )
+          name: 'comments_$rootEventId',
+          filters: [
+            Filter(
+              kinds: filter.kinds,
+              e: filter.e,
+              h: filter.h,
+              limit: 50, // Limit comment fetching
+            ),
+          ],
+          onEvent: (event) {
+            if (!controller.isClosed) {
+              controller.add(event);
+            }
+          },
+          onError: (error) {
+            if (!controller.isClosed) {
+              controller.addError(error);
+            }
+          },
+          // Removed onComplete callback to keep subscription open for real-time comments
+          // Only timeout or explicit cancellation will close this stream
+          timeout: const Duration(
+            minutes: 5,
+          ), // Longer timeout for live comment subscriptions
+          priority: 6, // Lower priority for comments
+        )
         .catchError((error) {
-      Log.error('Failed to create comment subscription: $error',
-          name: 'SocialService', category: LogCategory.system);
-      if (!controller.isClosed) {
-        controller.addError(error);
-      }
-      return 'error_subscription'; // Return a placeholder subscription ID
-    });
+          Log.error(
+            'Failed to create comment subscription: $error',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
+          if (!controller.isClosed) {
+            controller.addError(error);
+          }
+          return 'error_subscription'; // Return a placeholder subscription ID
+        });
 
     return controller.stream;
   }
@@ -1566,9 +1809,10 @@ class SocialService {
   /// Fetches comment count for an event
   Future<int> getCommentCount(String rootEventId) async {
     Log.debug(
-        'Fetching comment count for event: $rootEventId',
-        name: 'SocialService',
-        category: LogCategory.system);
+      'Fetching comment count for event: $rootEventId',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     try {
       final completer = Completer<int>();
@@ -1588,8 +1832,11 @@ class SocialService {
           commentCount++;
         },
         onError: (error) {
-          Log.error('Error fetching comment count: $error',
-              name: 'SocialService', category: LogCategory.system);
+          Log.error(
+            'Error fetching comment count: $error',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
           if (!completer.isCompleted) {
             completer.complete(commentCount);
           }
@@ -1604,23 +1851,35 @@ class SocialService {
       );
 
       final result = await completer.future;
-      Log.debug('📱 Comment count fetched: $result',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        '📱 Comment count fetched: $result',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return result;
     } catch (e) {
-      Log.error('Error fetching comment count: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error fetching comment count: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       return 0;
     }
   }
 
   /// Cancel comment subscriptions for a specific video (call when video scrolls out of view)
   Future<void> cancelCommentSubscriptions(String rootEventId) async {
-    await _subscriptionManager.cancelSubscriptionsByName('comments_$rootEventId');
-    await _subscriptionManager
-        .cancelSubscriptionsByName('comment_count_$rootEventId');
-    Log.debug('🗑️ Cancelled comment subscriptions for: $rootEventId',
-        name: 'SocialService', category: LogCategory.system);
+    await _subscriptionManager.cancelSubscriptionsByName(
+      'comments_$rootEventId',
+    );
+    await _subscriptionManager.cancelSubscriptionsByName(
+      'comment_count_$rootEventId',
+    );
+    Log.debug(
+      '🗑️ Cancelled comment subscriptions for: $rootEventId',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
   }
 
   // === REPOST SYSTEM (NIP-18) ===
@@ -1629,13 +1888,19 @@ class SocialService {
   /// Uses NIP-18 for repost (Kind 6) and NIP-09 for unrepost (Kind 5)
   Future<void> toggleRepost(VideoEvent videoToRepost) async {
     if (!_authService.isAuthenticated) {
-      Log.error('Cannot repost - user not authenticated',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Cannot repost - user not authenticated',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       throw Exception('User not authenticated');
     }
 
-    Log.debug('🔄 Toggling repost for video: ${videoToRepost.id}',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      '🔄 Toggling repost for video: ${videoToRepost.id}',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     // Extract d-tag from video's rawTags
     final dTagValue = videoToRepost.rawTags['d'];
@@ -1650,8 +1915,11 @@ class SocialService {
     try {
       if (!wasReposted) {
         // Repost the video
-        Log.debug('➕ Adding repost for video: ${videoToRepost.id}',
-            name: 'SocialService', category: LogCategory.system);
+        Log.debug(
+          '➕ Adding repost for video: ${videoToRepost.id}',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
 
         // Create NIP-18 generic repost event (Kind 16) for non-kind-1 events
         final event = await _authService.createAndSignEvent(
@@ -1682,12 +1950,18 @@ class SocialService {
         _repostedEventIds.add(addressableId);
         _repostEventIdToRepostId[addressableId] = event.id;
 
-        Log.info('Repost published for video: ${videoToRepost.id}',
-            name: 'SocialService', category: LogCategory.system);
+        Log.info(
+          'Repost published for video: ${videoToRepost.id}',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
       } else {
         // Unrepost by publishing NIP-09 deletion event
-        Log.debug('➖ Removing repost for video: ${videoToRepost.id}',
-            name: 'SocialService', category: LogCategory.system);
+        Log.debug(
+          '➖ Removing repost for video: ${videoToRepost.id}',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
 
         final repostEventId = _repostEventIdToRepostId[addressableId];
         if (repostEventId != null) {
@@ -1697,19 +1971,28 @@ class SocialService {
           _repostedEventIds.remove(addressableId);
           _repostEventIdToRepostId.remove(addressableId);
 
-          Log.info('Unrepost (deletion) published for video: ${videoToRepost.id}',
-              name: 'SocialService', category: LogCategory.system);
+          Log.info(
+            'Unrepost (deletion) published for video: ${videoToRepost.id}',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
         } else {
-          Log.warning('Cannot unrepost - repost event ID not found',
-              name: 'SocialService', category: LogCategory.system);
+          Log.warning(
+            'Cannot unrepost - repost event ID not found',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
 
           // Fallback: remove from local state only
           _repostedEventIds.remove(addressableId);
         }
       }
     } catch (e) {
-      Log.error('Error toggling repost: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error toggling repost: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -1740,11 +2023,17 @@ class SocialService {
         throw Exception('Failed to broadcast unrepost: $errorMessages');
       }
 
-      Log.debug('Unrepost deletion event broadcasted: ${event.id}',
-          name: 'SocialService', category: LogCategory.system);
+      Log.debug(
+        'Unrepost deletion event broadcasted: ${event.id}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error publishing unrepost deletion: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error publishing unrepost deletion: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -1752,13 +2041,19 @@ class SocialService {
   /// Reposts a Nostr event (Kind 6)
   Future<void> repostEvent(Event eventToRepost) async {
     if (!_authService.isAuthenticated) {
-      Log.error('Cannot repost - user not authenticated',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Cannot repost - user not authenticated',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       throw Exception('User not authenticated');
     }
 
-    Log.debug('Reposting event: ${eventToRepost.id}',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      'Reposting event: ${eventToRepost.id}',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     try {
       // Create NIP-18 repost event (Kind 6)
@@ -1808,11 +2103,17 @@ class SocialService {
       _repostedEventIds.add(addressableId);
       _repostEventIdToRepostId[addressableId] = event.id;
 
-      Log.info('Event reposted successfully: ${event.id}',
-          name: 'SocialService', category: LogCategory.system);
+      Log.info(
+        'Event reposted successfully: ${event.id}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error reposting event: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error reposting event: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -1820,13 +2121,19 @@ class SocialService {
   /// Publishes a NIP-62 "right to be forgotten" deletion request event
   Future<void> publishRightToBeForgotten() async {
     if (!_authService.isAuthenticated) {
-      Log.error('Cannot publish deletion request - user not authenticated',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Cannot publish deletion request - user not authenticated',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       throw Exception('User not authenticated');
     }
 
-    Log.debug('📱️ Publishing NIP-62 right to be forgotten event...',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      '📱️ Publishing NIP-62 right to be forgotten event...',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     try {
       // Create NIP-62 deletion request event (Kind 5 with special formatting)
@@ -1843,7 +2150,7 @@ class SocialService {
           ['k', '7'], // Request deletion of Kind 7 (reaction) events
           [
             'k',
-            '34236'
+            '34236',
           ], // Request deletion of Kind 34236 (addressable short video) events per NIP-71
         ],
       );
@@ -1861,12 +2168,16 @@ class SocialService {
       }
 
       Log.info(
-          'NIP-62 deletion request published: ${event.id}',
-          name: 'SocialService',
-          category: LogCategory.system);
+        'NIP-62 deletion request published: ${event.id}',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error publishing deletion request: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Error publishing deletion request: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -1880,13 +2191,17 @@ class SocialService {
         final key = 'following_list_$currentUserPubkey';
         await prefs.setString(key, jsonEncode(_followingPubkeys));
         Log.debug(
-            '💾 Saved following list to cache: ${_followingPubkeys.length} users',
-            name: 'SocialService',
-            category: LogCategory.system);
+          '💾 Saved following list to cache: ${_followingPubkeys.length} users',
+          name: 'SocialService',
+          category: LogCategory.system,
+        );
       }
     } catch (e) {
-      Log.error('Failed to save following list to cache: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Failed to save following list to cache: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -1902,20 +2217,27 @@ class SocialService {
           final List<dynamic> decoded = jsonDecode(cached);
           _followingPubkeys = decoded.cast<String>();
           Log.info(
-              '📋 Loaded cached following list: ${_followingPubkeys.length} users',
-              name: 'SocialService',
-              category: LogCategory.system);
+            '📋 Loaded cached following list: ${_followingPubkeys.length} users',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
         }
       }
     } catch (e) {
-      Log.error('Failed to load following list from cache: $e',
-          name: 'SocialService', category: LogCategory.system);
+      Log.error(
+        'Failed to load following list from cache: $e',
+        name: 'SocialService',
+        category: LogCategory.system,
+      );
     }
   }
 
   void dispose() {
-    Log.debug('📱️ Disposing SocialService',
-        name: 'SocialService', category: LogCategory.system);
+    Log.debug(
+      '📱️ Disposing SocialService',
+      name: 'SocialService',
+      category: LogCategory.system,
+    );
 
     // Cancel all managed subscriptions
     if (_likeSubscriptionId != null) {
@@ -1953,9 +2275,10 @@ class SocialService {
           _repostedEventIds.add(addressableId);
           _repostEventIdToRepostId[addressableId] = repostEvent.id;
           Log.debug(
-              '📱 Cached user repost of addressable event: $addressableId (repost: ${repostEvent.id})',
-              name: 'SocialService',
-              category: LogCategory.system);
+            '📱 Cached user repost of addressable event: $addressableId (repost: ${repostEvent.id})',
+            name: 'SocialService',
+            category: LogCategory.system,
+          );
           return;
         }
       }

@@ -3,7 +3,8 @@
 
 import 'dart:async';
 // Platform detection with web compatibility
-import 'dart:io' if (dart.library.html) 'stubs/platform_stub.dart'
+import 'dart:io'
+    if (dart.library.html) 'stubs/platform_stub.dart'
     show Platform;
 
 import 'package:flutter/foundation.dart';
@@ -14,8 +15,11 @@ import 'package:openvine/utils/unified_logger.dart';
 
 /// Exception thrown by platform secure storage operations
 class PlatformSecureStorageException implements Exception {
-  const PlatformSecureStorageException(this.message,
-      {this.code, this.platform});
+  const PlatformSecureStorageException(
+    this.message, {
+    this.code,
+    this.platform,
+  });
   final String message;
   final String? code;
   final String? platform;
@@ -79,8 +83,9 @@ bool get _isLinux => !kIsWeb && Platform.isLinux;
 /// Platform-specific secure storage service
 class PlatformSecureStorage {
   PlatformSecureStorage._();
-  static const MethodChannel _channel =
-      MethodChannel('openvine.secure_storage');
+  static const MethodChannel _channel = MethodChannel(
+    'openvine.secure_storage',
+  );
 
   static PlatformSecureStorage? _instance;
   static PlatformSecureStorage get instance =>
@@ -88,22 +93,14 @@ class PlatformSecureStorage {
 
   // Flutter secure storage fallback for platforms without native implementation
   static const FlutterSecureStorage _fallbackStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
-    iOptions: IOSOptions(
-      accessibility: KeychainAccessibility.first_unlock,
-    ),
-    mOptions: MacOsOptions(
-      accessibility: KeychainAccessibility.first_unlock,
-    ),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+    mOptions: MacOsOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
   // Legacy storage with old accessibility settings for migration
   static const FlutterSecureStorage _legacyStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(
       accessibility: KeychainAccessibility.first_unlock_this_device,
     ),
@@ -121,8 +118,11 @@ class PlatformSecureStorage {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    Log.debug('Initializing platform-specific secure storage',
-        name: 'PlatformSecureStorage', category: LogCategory.system);
+    Log.debug(
+      'Initializing platform-specific secure storage',
+      name: 'PlatformSecureStorage',
+      category: LogCategory.system,
+    );
 
     try {
       // Check platform capabilities
@@ -149,13 +149,20 @@ class PlatformSecureStorage {
       }
 
       _isInitialized = true;
-      Log.info('Platform secure storage initialized for $_platformName',
-          name: 'PlatformSecureStorage', category: LogCategory.system);
+      Log.info(
+        'Platform secure storage initialized for $_platformName',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
       debugPrint(
-          '📊 Capabilities: ${_capabilities.map((c) => c.name).join(', ')}');
+        '📊 Capabilities: ${_capabilities.map((c) => c.name).join(', ')}',
+      );
     } catch (e) {
-      Log.error('Failed to initialize platform secure storage: $e',
-          name: 'PlatformSecureStorage', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize platform secure storage: $e',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -169,18 +176,23 @@ class PlatformSecureStorage {
   }) async {
     await _ensureInitialized();
 
-    Log.debug('📱 Storing key with ID: $keyId',
-        name: 'PlatformSecureStorage', category: LogCategory.system);
     Log.debug(
-        '⚙️ Requirements - Hardware: $requireHardwareBacked, Biometrics: $requireBiometrics',
-        name: 'PlatformSecureStorage',
-        category: LogCategory.system);
+      '📱 Storing key with ID: $keyId',
+      name: 'PlatformSecureStorage',
+      category: LogCategory.system,
+    );
+    Log.debug(
+      '⚙️ Requirements - Hardware: $requireHardwareBacked, Biometrics: $requireBiometrics',
+      name: 'PlatformSecureStorage',
+      category: LogCategory.system,
+    );
 
     try {
       // Check if we can meet the security requirements
       if (requireHardwareBacked &&
-          !_capabilities
-              .contains(SecureStorageCapability.hardwareBackedSecurity)) {
+          !_capabilities.contains(
+            SecureStorageCapability.hardwareBackedSecurity,
+          )) {
         throw const PlatformSecureStorageException(
           'Hardware-backed security required but not available',
           code: 'hardware_not_available',
@@ -188,8 +200,9 @@ class PlatformSecureStorage {
       }
 
       if (requireBiometrics &&
-          !_capabilities
-              .contains(SecureStorageCapability.biometricAuthentication)) {
+          !_capabilities.contains(
+            SecureStorageCapability.biometricAuthentication,
+          )) {
         throw const PlatformSecureStorageException(
           'Biometric authentication required but not available',
           code: 'biometrics_not_available',
@@ -197,8 +210,9 @@ class PlatformSecureStorage {
       }
 
       // Store the key using platform-specific implementation or fallback
-      return await keyContainer
-          .withPrivateKey<Future<SecureStorageResult>>((privateKeyHex) async {
+      return await keyContainer.withPrivateKey<Future<SecureStorageResult>>((
+        privateKeyHex,
+      ) async {
         if (_useFallbackStorage) {
           // Use flutter_secure_storage fallback
           try {
@@ -210,8 +224,9 @@ class PlatformSecureStorage {
 
             await _fallbackStorage.write(
               key: keyId,
-              value:
-                  keyData.entries.map((e) => '${e.key}:${e.value}').join('|'),
+              value: keyData.entries
+                  .map((e) => '${e.key}:${e.value}')
+                  .join('|'),
             );
 
             return const SecureStorageResult(
@@ -223,11 +238,13 @@ class PlatformSecureStorage {
             // This occurs when an existing item was stored with first_unlock_this_device
             // and we're now trying to store with first_unlock
             if (e is PlatformException &&
-                (e.code.contains('-25299') || e.message?.contains('already exists') == true)) {
+                (e.code.contains('-25299') ||
+                    e.message?.contains('already exists') == true)) {
               Log.warning(
-                  'Keychain duplicate item detected (-25299) - attempting migration from old accessibility',
-                  name: 'PlatformSecureStorage',
-                  category: LogCategory.system);
+                'Keychain duplicate item detected (-25299) - attempting migration from old accessibility',
+                name: 'PlatformSecureStorage',
+                category: LogCategory.system,
+              );
 
               try {
                 // CRITICAL: Read from legacy storage (old accessibility settings)
@@ -237,29 +254,29 @@ class PlatformSecureStorage {
                   // Can't read from legacy storage either - this is a real problem
                   return const SecureStorageResult(
                     success: false,
-                    error: 'Keychain item exists but cannot be read with old or new accessibility. Manual migration required.',
+                    error:
+                        'Keychain item exists but cannot be read with old or new accessibility. Manual migration required.',
                   );
                 }
 
                 Log.info(
-                    'Successfully read existing key from legacy storage - preserving data during migration',
-                    name: 'PlatformSecureStorage',
-                    category: LogCategory.system);
+                  'Successfully read existing key from legacy storage - preserving data during migration',
+                  name: 'PlatformSecureStorage',
+                  category: LogCategory.system,
+                );
 
                 // Delete the old item using legacy storage
                 await _legacyStorage.delete(key: keyId);
 
                 // Re-store the EXISTING data with new accessibility
                 // This preserves the user's original key!
-                await _fallbackStorage.write(
-                  key: keyId,
-                  value: legacyData,
-                );
+                await _fallbackStorage.write(key: keyId, value: legacyData);
 
                 Log.info(
-                    '✅ Successfully migrated keychain item from first_unlock_this_device to first_unlock (data preserved)',
-                    name: 'PlatformSecureStorage',
-                    category: LogCategory.system);
+                  '✅ Successfully migrated keychain item from first_unlock_this_device to first_unlock (data preserved)',
+                  name: 'PlatformSecureStorage',
+                  category: LogCategory.system,
+                );
 
                 return const SecureStorageResult(
                   success: true,
@@ -280,35 +297,42 @@ class PlatformSecureStorage {
           }
         }
 
-        final result =
-            await _channel.invokeMethod<Map<dynamic, dynamic>>('storeKey', {
-          'keyId': keyId,
-          'privateKeyHex': privateKeyHex,
-          'publicKeyHex': keyContainer.publicKeyHex,
-          'npub': keyContainer.npub,
-          'requireBiometrics': requireBiometrics,
-          'requireHardwareBacked': requireHardwareBacked,
-        });
+        final result = await _channel
+            .invokeMethod<Map<dynamic, dynamic>>('storeKey', {
+              'keyId': keyId,
+              'privateKeyHex': privateKeyHex,
+              'publicKeyHex': keyContainer.publicKeyHex,
+              'npub': keyContainer.npub,
+              'requireBiometrics': requireBiometrics,
+              'requireHardwareBacked': requireHardwareBacked,
+            });
 
         if (result == null) {
           throw const PlatformSecureStorageException(
-              'Platform returned null result');
+            'Platform returned null result',
+          );
         }
 
         return SecureStorageResult(
           success: result['success'] as bool,
           error: result['error'] as String?,
-          securityLevel:
-              _parseSecurityLevel(result['securityLevel'] as String?),
+          securityLevel: _parseSecurityLevel(
+            result['securityLevel'] as String?,
+          ),
           metadata: result['metadata'] as Map<String, dynamic>?,
         );
       });
     } catch (e) {
-      Log.error('Failed to store key: $e',
-          name: 'PlatformSecureStorage', category: LogCategory.system);
+      Log.error(
+        'Failed to store key: $e',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
       if (e is PlatformSecureStorageException) rethrow;
-      throw PlatformSecureStorageException('Storage operation failed: $e',
-          platform: _platformName);
+      throw PlatformSecureStorageException(
+        'Storage operation failed: $e',
+        platform: _platformName,
+      );
     }
   }
 
@@ -319,8 +343,11 @@ class PlatformSecureStorage {
   }) async {
     await _ensureInitialized();
 
-    Log.debug('📱 Retrieving key with ID: $keyId',
-        name: 'PlatformSecureStorage', category: LogCategory.system);
+    Log.debug(
+      '📱 Retrieving key with ID: $keyId',
+      name: 'PlatformSecureStorage',
+      category: LogCategory.system,
+    );
 
     try {
       if (_useFallbackStorage) {
@@ -335,8 +362,11 @@ class PlatformSecureStorage {
         }
 
         if (keyDataString == null) {
-          Log.warning('Key not found in fallback or legacy storage',
-              name: 'PlatformSecureStorage', category: LogCategory.system);
+          Log.warning(
+            'Key not found in fallback or legacy storage',
+            name: 'PlatformSecureStorage',
+            category: LogCategory.system,
+          );
           return null;
         }
 
@@ -351,58 +381,83 @@ class PlatformSecureStorage {
 
         final privateKeyHex = keyData['privateKeyHex'];
         if (privateKeyHex == null) {
-          Log.error('Invalid key data in storage',
-              name: 'PlatformSecureStorage', category: LogCategory.system);
+          Log.error(
+            'Invalid key data in storage',
+            name: 'PlatformSecureStorage',
+            category: LogCategory.system,
+          );
           return null;
         }
 
         if (fromLegacy) {
-          Log.info('Key retrieved from LEGACY storage - will be migrated on next write',
-              name: 'PlatformSecureStorage', category: LogCategory.system);
+          Log.info(
+            'Key retrieved from LEGACY storage - will be migrated on next write',
+            name: 'PlatformSecureStorage',
+            category: LogCategory.system,
+          );
         } else {
-          Log.info('Key retrieved successfully from storage',
-              name: 'PlatformSecureStorage', category: LogCategory.system);
+          Log.info(
+            'Key retrieved successfully from storage',
+            name: 'PlatformSecureStorage',
+            category: LogCategory.system,
+          );
         }
 
         return SecureKeyContainer.fromPrivateKeyHex(privateKeyHex);
       }
 
-      final result =
-          await _channel.invokeMethod<Map<dynamic, dynamic>>('retrieveKey', {
-        'keyId': keyId,
-        'biometricPrompt':
-            biometricPrompt ?? 'Authenticate to access your Nostr identity key',
-      });
+      final result = await _channel
+          .invokeMethod<Map<dynamic, dynamic>>('retrieveKey', {
+            'keyId': keyId,
+            'biometricPrompt':
+                biometricPrompt ??
+                'Authenticate to access your Nostr identity key',
+          });
 
       if (result == null) {
-        Log.warning('Key not found or access denied',
-            name: 'PlatformSecureStorage', category: LogCategory.system);
+        Log.warning(
+          'Key not found or access denied',
+          name: 'PlatformSecureStorage',
+          category: LogCategory.system,
+        );
         return null;
       }
 
       final success = result['success'] as bool;
       if (!success) {
         final error = result['error'] as String?;
-        Log.error('Key retrieval failed: $error',
-            name: 'PlatformSecureStorage', category: LogCategory.system);
+        Log.error(
+          'Key retrieval failed: $error',
+          name: 'PlatformSecureStorage',
+          category: LogCategory.system,
+        );
         return null;
       }
 
       final privateKeyHex = result['privateKeyHex'] as String?;
       if (privateKeyHex == null) {
         throw const PlatformSecureStorageException(
-            'Platform returned null private key');
+          'Platform returned null private key',
+        );
       }
 
-      Log.info('Key retrieved successfully',
-          name: 'PlatformSecureStorage', category: LogCategory.system);
+      Log.info(
+        'Key retrieved successfully',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
       return SecureKeyContainer.fromPrivateKeyHex(privateKeyHex);
     } catch (e) {
-      Log.error('Failed to retrieve key: $e',
-          name: 'PlatformSecureStorage', category: LogCategory.system);
+      Log.error(
+        'Failed to retrieve key: $e',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
       if (e is PlatformSecureStorageException) rethrow;
-      throw PlatformSecureStorageException('Retrieval operation failed: $e',
-          platform: _platformName);
+      throw PlatformSecureStorageException(
+        'Retrieval operation failed: $e',
+        platform: _platformName,
+      );
     }
   }
 
@@ -413,45 +468,64 @@ class PlatformSecureStorage {
   }) async {
     await _ensureInitialized();
 
-    Log.debug('📱️ Deleting key with ID: $keyId',
-        name: 'PlatformSecureStorage', category: LogCategory.system);
+    Log.debug(
+      '📱️ Deleting key with ID: $keyId',
+      name: 'PlatformSecureStorage',
+      category: LogCategory.system,
+    );
 
     try {
       if (_useFallbackStorage) {
         // Use flutter_secure_storage fallback
         try {
           await _fallbackStorage.delete(key: keyId);
-          Log.info('Key deleted successfully from fallback storage',
-              name: 'PlatformSecureStorage', category: LogCategory.system);
+          Log.info(
+            'Key deleted successfully from fallback storage',
+            name: 'PlatformSecureStorage',
+            category: LogCategory.system,
+          );
           return true;
         } catch (e) {
-          Log.error('Key deletion failed in fallback storage: $e',
-              name: 'PlatformSecureStorage', category: LogCategory.system);
+          Log.error(
+            'Key deletion failed in fallback storage: $e',
+            name: 'PlatformSecureStorage',
+            category: LogCategory.system,
+          );
           return false;
         }
       }
 
-      final result =
-          await _channel.invokeMethod<Map<dynamic, dynamic>>('deleteKey', {
-        'keyId': keyId,
-        'biometricPrompt':
-            biometricPrompt ?? 'Authenticate to delete your Nostr identity key',
-      });
+      final result = await _channel
+          .invokeMethod<Map<dynamic, dynamic>>('deleteKey', {
+            'keyId': keyId,
+            'biometricPrompt':
+                biometricPrompt ??
+                'Authenticate to delete your Nostr identity key',
+          });
 
       final success = result?['success'] as bool? ?? false;
       if (!success) {
         final error = result?['error'] as String?;
-        Log.error('Key deletion failed: $error',
-            name: 'PlatformSecureStorage', category: LogCategory.system);
+        Log.error(
+          'Key deletion failed: $error',
+          name: 'PlatformSecureStorage',
+          category: LogCategory.system,
+        );
       } else {
-        Log.info('Key deleted successfully',
-            name: 'PlatformSecureStorage', category: LogCategory.system);
+        Log.info(
+          'Key deleted successfully',
+          name: 'PlatformSecureStorage',
+          category: LogCategory.system,
+        );
       }
 
       return success;
     } catch (e) {
-      Log.error('Failed to delete key: $e',
-          name: 'PlatformSecureStorage', category: LogCategory.system);
+      Log.error(
+        'Failed to delete key: $e',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -473,12 +547,16 @@ class PlatformSecureStorage {
         return legacyValue != null;
       }
 
-      final result =
-          await _channel.invokeMethod<bool>('hasKey', {'keyId': keyId});
+      final result = await _channel.invokeMethod<bool>('hasKey', {
+        'keyId': keyId,
+      });
       return result ?? false;
     } catch (e) {
-      Log.error('Failed to check key existence: $e',
-          name: 'PlatformSecureStorage', category: LogCategory.system);
+      Log.error(
+        'Failed to check key existence: $e',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -511,9 +589,10 @@ class PlatformSecureStorage {
       // For iOS, use flutter_secure_storage directly (no custom MethodChannel)
       if (_isIOS) {
         Log.debug(
-            '📱 iOS detected - using flutter_secure_storage for keychain access',
-            name: 'PlatformSecureStorage',
-            category: LogCategory.system);
+          '📱 iOS detected - using flutter_secure_storage for keychain access',
+          name: 'PlatformSecureStorage',
+          category: LogCategory.system,
+        );
         _useFallbackStorage = true;
         _platformName = 'iOS';
         _capabilities = {SecureStorageCapability.basicSecureStorage};
@@ -521,8 +600,9 @@ class PlatformSecureStorage {
       }
 
       // For other platforms, try the custom MethodChannel
-      final result =
-          await _channel.invokeMethod<Map<dynamic, dynamic>>('getCapabilities');
+      final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+        'getCapabilities',
+      );
 
       if (result != null) {
         _platformName = result['platform'] as String?;
@@ -536,8 +616,11 @@ class PlatformSecureStorage {
             .toSet();
       }
     } catch (e) {
-      Log.error('Failed to detect capabilities, using fallback: $e',
-          name: 'PlatformSecureStorage', category: LogCategory.system);
+      Log.error(
+        'Failed to detect capabilities, using fallback: $e',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
 
       // If it's a MissingPluginException, enable fallback storage
       if (e is MissingPluginException) {
@@ -558,14 +641,18 @@ class PlatformSecureStorage {
   /// Initialize iOS-specific secure storage
   Future<void> _initializeIOS() async {
     Log.debug(
-        '🔧 Initializing iOS Keychain integration via flutter_secure_storage',
-        name: 'PlatformSecureStorage',
-        category: LogCategory.system);
+      '🔧 Initializing iOS Keychain integration via flutter_secure_storage',
+      name: 'PlatformSecureStorage',
+      category: LogCategory.system,
+    );
 
     try {
       // For iOS, always use flutter_secure_storage which has proper keychain integration
-      Log.info('Using flutter_secure_storage for iOS (native keychain access)',
-          name: 'PlatformSecureStorage', category: LogCategory.system);
+      Log.info(
+        'Using flutter_secure_storage for iOS (native keychain access)',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
 
       // Enable fallback storage for iOS since we don't have custom native implementation
       _useFallbackStorage = true;
@@ -577,8 +664,11 @@ class PlatformSecureStorage {
       };
       _platformName = 'iOS';
 
-      Log.info('iOS secure storage initialized using flutter_secure_storage',
-          name: 'PlatformSecureStorage', category: LogCategory.system);
+      Log.info(
+        'iOS secure storage initialized using flutter_secure_storage',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
     } catch (e) {
       throw PlatformSecureStorageException(
         'iOS initialization failed: $e',
@@ -589,8 +679,11 @@ class PlatformSecureStorage {
 
   /// Initialize Android-specific secure storage
   Future<void> _initializeAndroid() async {
-    Log.debug('🤖 Initializing Android Keystore integration',
-        name: 'PlatformSecureStorage', category: LogCategory.system);
+    Log.debug(
+      '🤖 Initializing Android Keystore integration',
+      name: 'PlatformSecureStorage',
+      category: LogCategory.system,
+    );
 
     try {
       final result = await _channel.invokeMethod<bool>('initializeAndroid');
@@ -604,9 +697,10 @@ class PlatformSecureStorage {
       // If native Android Keystore plugin is not available, use fallback storage
       // (same pattern as macOS - see _initializeMacOS)
       Log.warning(
-          'Android native plugin not available, using flutter_secure_storage fallback: $e',
-          name: 'PlatformSecureStorage',
-          category: LogCategory.system);
+        'Android native plugin not available, using flutter_secure_storage fallback: $e',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
 
       // Enable fallback storage for Android
       _useFallbackStorage = true;
@@ -618,22 +712,29 @@ class PlatformSecureStorage {
       };
       _platformName = 'Android (fallback)';
 
-      Log.info('Android using flutter_secure_storage fallback',
-          name: 'PlatformSecureStorage', category: LogCategory.system);
+      Log.info(
+        'Android using flutter_secure_storage fallback',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Initialize macOS-specific secure storage (using Keychain)
   Future<void> _initializeMacOS() async {
-    Log.debug('📱️ Initializing macOS Keychain integration',
-        name: 'PlatformSecureStorage', category: LogCategory.system);
+    Log.debug(
+      '📱️ Initializing macOS Keychain integration',
+      name: 'PlatformSecureStorage',
+      category: LogCategory.system,
+    );
 
     try {
       // For macOS, use flutter_secure_storage as fallback since we don't have native implementation
       Log.warning(
-          'macOS uses software-based Keychain storage (no hardware backing)',
-          name: 'PlatformSecureStorage',
-          category: LogCategory.system);
+        'macOS uses software-based Keychain storage (no hardware backing)',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
 
       // Enable fallback storage for macOS
       _useFallbackStorage = true;
@@ -645,8 +746,11 @@ class PlatformSecureStorage {
       };
       _platformName = 'macOS';
 
-      Log.info('Platform secure storage initialized for $_platformName',
-          name: 'PlatformSecureStorage', category: LogCategory.system);
+      Log.info(
+        'Platform secure storage initialized for $_platformName',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
     } catch (e) {
       throw PlatformSecureStorageException(
         'macOS initialization failed: $e',
@@ -657,19 +761,21 @@ class PlatformSecureStorage {
 
   /// Initialize Windows-specific secure storage
   Future<void> _initializeWindows() async {
-    Log.debug('🪟 Initializing Windows Credential Store integration',
-        name: 'PlatformSecureStorage', category: LogCategory.system);
+    Log.debug(
+      '🪟 Initializing Windows Credential Store integration',
+      name: 'PlatformSecureStorage',
+      category: LogCategory.system,
+    );
 
     try {
       // For Windows, use software-only approach with Windows Credential Store
       Log.warning(
-          'Windows uses software-based Credential Store (no hardware backing)',
-          name: 'PlatformSecureStorage',
-          category: LogCategory.system);
+        'Windows uses software-based Credential Store (no hardware backing)',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
 
-      _capabilities = {
-        SecureStorageCapability.basicSecureStorage,
-      };
+      _capabilities = {SecureStorageCapability.basicSecureStorage};
       _platformName = 'Windows';
     } catch (e) {
       throw PlatformSecureStorageException(
@@ -681,19 +787,21 @@ class PlatformSecureStorage {
 
   /// Initialize Linux-specific secure storage
   Future<void> _initializeLinux() async {
-    Log.debug('🔧 Initializing Linux Secret Service integration',
-        name: 'PlatformSecureStorage', category: LogCategory.system);
+    Log.debug(
+      '🔧 Initializing Linux Secret Service integration',
+      name: 'PlatformSecureStorage',
+      category: LogCategory.system,
+    );
 
     try {
       // For Linux, use software-only approach with Secret Service
       Log.warning(
-          'Linux uses software-based Secret Service (no hardware backing)',
-          name: 'PlatformSecureStorage',
-          category: LogCategory.system);
+        'Linux uses software-based Secret Service (no hardware backing)',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
 
-      _capabilities = {
-        SecureStorageCapability.basicSecureStorage,
-      };
+      _capabilities = {SecureStorageCapability.basicSecureStorage};
       _platformName = 'Linux';
     } catch (e) {
       throw PlatformSecureStorageException(
@@ -705,15 +813,19 @@ class PlatformSecureStorage {
 
   /// Initialize web-specific secure storage
   Future<void> _initializeWeb() async {
-    Log.debug('🔧 Initializing Web browser storage integration',
-        name: 'PlatformSecureStorage', category: LogCategory.system);
+    Log.debug(
+      '🔧 Initializing Web browser storage integration',
+      name: 'PlatformSecureStorage',
+      category: LogCategory.system,
+    );
 
     try {
       // For web, use browser storage - IndexedDB for persistence between sessions
       Log.warning(
-          'Web uses browser storage (IndexedDB/localStorage) - no hardware backing',
-          name: 'PlatformSecureStorage',
-          category: LogCategory.system);
+        'Web uses browser storage (IndexedDB/localStorage) - no hardware backing',
+        name: 'PlatformSecureStorage',
+        category: LogCategory.system,
+      );
 
       // Always use fallback storage for web platform
       _useFallbackStorage = true;

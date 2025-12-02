@@ -4,17 +4,14 @@ import 'package:openvine/widgets/clickable_hashtag_text.dart';
 
 void main() {
   group('ClickableHashtagText', () {
-    testWidgets('displays plain text without hashtags correctly',
-        (tester) async {
+    testWidgets('displays plain text without hashtags correctly', (
+      tester,
+    ) async {
       const plainText = 'This is a simple text without hashtags';
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClickableHashtagText(
-              text: plainText,
-            ),
-          ),
+          home: Scaffold(body: ClickableHashtagText(text: plainText)),
         ),
       );
 
@@ -27,11 +24,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClickableHashtagText(
-              text: textWithHashtag,
-            ),
-          ),
+          home: Scaffold(body: ClickableHashtagText(text: textWithHashtag)),
         ),
       );
 
@@ -45,11 +38,7 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClickableHashtagText(
-              text: textWithHashtags,
-            ),
-          ),
+          home: Scaffold(body: ClickableHashtagText(text: textWithHashtags)),
         ),
       );
 
@@ -63,9 +52,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: ClickableHashtagText(
-              text: textWithTrailingHashtag,
-            ),
+            body: ClickableHashtagText(text: textWithTrailingHashtag),
           ),
         ),
       );
@@ -74,16 +61,15 @@ void main() {
       expect(find.byType(SelectableText), findsOneWidget);
     });
 
-    testWidgets('handles hashtags with underscores and numbers',
-        (tester) async {
+    testWidgets('handles hashtags with underscores and numbers', (
+      tester,
+    ) async {
       const textWithComplexHashtags = 'Testing #vine_2024 and #test_123';
 
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: ClickableHashtagText(
-              text: textWithComplexHashtags,
-            ),
+            body: ClickableHashtagText(text: textWithComplexHashtags),
           ),
         ),
       );
@@ -93,7 +79,8 @@ void main() {
     });
 
     testWidgets('respects maxLines property', (tester) async {
-      const longText = 'This is a very long text with #hashtag1 and #hashtag2 '
+      const longText =
+          'This is a very long text with #hashtag1 and #hashtag2 '
           'that should be truncated based on maxLines property. '
           'Here is more text with #hashtag3 and #hashtag4 '
           'that might not be visible due to line limits.';
@@ -101,27 +88,21 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: ClickableHashtagText(
-              text: longText,
-              maxLines: 2,
-            ),
+            body: ClickableHashtagText(text: longText, maxLines: 2),
           ),
         ),
       );
 
-      final selectableText =
-          tester.widget<SelectableText>(find.byType(SelectableText));
+      final selectableText = tester.widget<SelectableText>(
+        find.byType(SelectableText),
+      );
       expect(selectableText.maxLines, 2);
     });
 
     testWidgets('handles empty text', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClickableHashtagText(
-              text: '',
-            ),
-          ),
+          home: Scaffold(body: ClickableHashtagText(text: '')),
         ),
       );
 
@@ -133,11 +114,7 @@ void main() {
     testWidgets('handles text with only spaces', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: ClickableHashtagText(
-              text: '   ',
-            ),
-          ),
+          home: Scaffold(body: ClickableHashtagText(text: '   ')),
         ),
       );
 
@@ -165,11 +142,7 @@ void main() {
       for (final testText in testCases) {
         await tester.pumpWidget(
           MaterialApp(
-            home: Scaffold(
-              body: ClickableHashtagText(
-                text: testText,
-              ),
-            ),
+            home: Scaffold(body: ClickableHashtagText(text: testText)),
           ),
         );
 

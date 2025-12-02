@@ -41,8 +41,9 @@ class VideoFeed extends _$VideoFeed {
       ref.read(videoEventsProvider);
     }
 
-    final sourceVideos =
-        List<VideoEvent>.from(videoEventService.discoveryVideos);
+    final sourceVideos = List<VideoEvent>.from(
+      videoEventService.discoveryVideos,
+    );
 
     Log.info(
       '✅ VideoFeed: Retrieved ${sourceVideos.length} video events for discovery',
@@ -130,14 +131,18 @@ class VideoFeed extends _$VideoFeed {
 
     try {
       final videoEventService = ref.read(videoEventServiceProvider);
-      final eventCountBefore =
-          videoEventService.getEventCount(SubscriptionType.discovery);
+      final eventCountBefore = videoEventService.getEventCount(
+        SubscriptionType.discovery,
+      );
 
-      await videoEventService.loadMoreEvents(SubscriptionType.discovery,
-          limit: 50);
+      await videoEventService.loadMoreEvents(
+        SubscriptionType.discovery,
+        limit: 50,
+      );
 
-      final eventCountAfter =
-          videoEventService.getEventCount(SubscriptionType.discovery);
+      final eventCountAfter = videoEventService.getEventCount(
+        SubscriptionType.discovery,
+      );
       final newEventsLoaded = eventCountAfter - eventCountBefore;
 
       Log.info(
@@ -148,10 +153,12 @@ class VideoFeed extends _$VideoFeed {
 
       // Reset loading state - state will auto-update via dependencies
       final newState = await future;
-      state = AsyncData(newState.copyWith(
-        isLoadingMore: false,
-        hasMoreContent: newEventsLoaded > 0,
-      ));
+      state = AsyncData(
+        newState.copyWith(
+          isLoadingMore: false,
+          hasMoreContent: newEventsLoaded > 0,
+        ),
+      );
     } catch (e) {
       Log.error(
         'VideoFeed: Error loading more: $e',
@@ -161,10 +168,7 @@ class VideoFeed extends _$VideoFeed {
 
       final currentState = await future;
       state = AsyncData(
-        currentState.copyWith(
-          isLoadingMore: false,
-          error: e.toString(),
-        ),
+        currentState.copyWith(isLoadingMore: false, error: e.toString()),
       );
     }
   }

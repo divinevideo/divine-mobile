@@ -54,7 +54,8 @@ class VideoFeedScreen extends ConsumerStatefulWidget {
   final VideoEvent? startingVideo;
   final FeedContext context;
   final String? contextValue;
-  final bool disableNavigation; // Set to true to prevent context.go() calls (e.g., for deep links)
+  final bool
+  disableNavigation; // Set to true to prevent context.go() calls (e.g., for deep links)
 
   @override
   ConsumerState<VideoFeedScreen> createState() => _VideoFeedScreenState();
@@ -94,7 +95,11 @@ class VideoFeedScreen extends ConsumerStatefulWidget {
 }
 
 class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
-    with WidgetsBindingObserver, PaginationMixin, VideoPrefetchMixin, AsyncValueUIHelpersMixin {
+    with
+        WidgetsBindingObserver,
+        PaginationMixin,
+        VideoPrefetchMixin,
+        AsyncValueUIHelpersMixin {
   late PageController _pageController;
   int _currentIndex = 0;
   bool _isRefreshing = false; // Track if feed is currently refreshing
@@ -156,8 +161,11 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
     _pageController.dispose();
 
     // Pause all videos when screen is disposed
-    Log.debug('📱 Callback firing: dispose._pauseAllVideos, widget mounted: $mounted',
-        name: 'VideoFeedScreen', category: LogCategory.ui);
+    Log.debug(
+      '📱 Callback firing: dispose._pauseAllVideos, widget mounted: $mounted',
+      name: 'VideoFeedScreen',
+      category: LogCategory.ui,
+    );
     _pauseAllVideos();
 
     // NOTE: With Riverpod-native lifecycle, controllers autodispose via 30s timeout
@@ -169,43 +177,65 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    Log.debug('🌍 AppLifecycle: $state, timestamp: ${DateTime.now()}, mounted: $mounted',
-        name: 'VideoFeedScreen', category: LogCategory.ui);
+    Log.debug(
+      '🌍 AppLifecycle: $state, timestamp: ${DateTime.now()}, mounted: $mounted',
+      name: 'VideoFeedScreen',
+      category: LogCategory.ui,
+    );
 
     // On macOS/desktop, don't pause videos for brief focus changes (inactive)
     // This prevents excessive pausing that was preventing videos from playing
-    final isDesktop = Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+    final isDesktop =
+        Platform.isMacOS || Platform.isWindows || Platform.isLinux;
 
     switch (state) {
       case AppLifecycleState.paused:
-        Log.debug('📱 App paused - pausing videos, state: $state',
-            name: 'VideoFeedScreen', category: LogCategory.ui);
+        Log.debug(
+          '📱 App paused - pausing videos, state: $state',
+          name: 'VideoFeedScreen',
+          category: LogCategory.ui,
+        );
         _pauseAllVideos();
 
       case AppLifecycleState.inactive:
         if (!isDesktop) {
           // Only pause for inactive on mobile platforms
-          Log.debug('📱 App inactive (mobile) - pausing videos, state: $state',
-              name: 'VideoFeedScreen', category: LogCategory.ui);
+          Log.debug(
+            '📱 App inactive (mobile) - pausing videos, state: $state',
+            name: 'VideoFeedScreen',
+            category: LogCategory.ui,
+          );
           _pauseAllVideos();
         } else {
-          Log.debug('🖥️ App inactive (desktop) - ignoring to prevent excessive pausing, state: $state',
-              name: 'VideoFeedScreen', category: LogCategory.ui);
+          Log.debug(
+            '🖥️ App inactive (desktop) - ignoring to prevent excessive pausing, state: $state',
+            name: 'VideoFeedScreen',
+            category: LogCategory.ui,
+          );
         }
 
       case AppLifecycleState.resumed:
-        Log.debug('📱 App resumed - derived provider will handle video resumption, state: $state',
-            name: 'VideoFeedScreen', category: LogCategory.ui);
-        // appForegroundProvider will update → activeVideoIdProvider recomputes → VideoFeedItem plays
+        Log.debug(
+          '📱 App resumed - derived provider will handle video resumption, state: $state',
+          name: 'VideoFeedScreen',
+          category: LogCategory.ui,
+        );
+      // appForegroundProvider will update → activeVideoIdProvider recomputes → VideoFeedItem plays
 
       case AppLifecycleState.detached:
-        Log.debug('📱 App detached - pausing videos, state: $state',
-            name: 'VideoFeedScreen', category: LogCategory.ui);
+        Log.debug(
+          '📱 App detached - pausing videos, state: $state',
+          name: 'VideoFeedScreen',
+          category: LogCategory.ui,
+        );
         _pauseAllVideos();
 
       case AppLifecycleState.hidden:
-        Log.debug('📱 App hidden - pausing videos, state: $state',
-            name: 'VideoFeedScreen', category: LogCategory.ui);
+        Log.debug(
+          '📱 App hidden - pausing videos, state: $state',
+          name: 'VideoFeedScreen',
+          category: LogCategory.ui,
+        );
         _pauseAllVideos();
     }
   }
@@ -214,16 +244,22 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
     // Store the previous index before updating
     final previousIndex = _currentIndex;
 
-    Log.debug('📱 Callback firing: _onPageChanged($index), widget mounted: $mounted, previousIndex: $previousIndex',
-        name: 'VideoFeedScreen', category: LogCategory.ui);
+    Log.debug(
+      '📱 Callback firing: _onPageChanged($index), widget mounted: $mounted, previousIndex: $previousIndex',
+      name: 'VideoFeedScreen',
+      category: LogCategory.ui,
+    );
 
     setState(() {
       _currentIndex = index;
     });
 
     // Get current videos from home feed state
-    Log.debug('🔍 Attempting ref.read(homeFeedProvider) from VideoFeedScreen._onPageChanged, mounted: $mounted',
-        name: 'VideoFeedScreen', category: LogCategory.ui);
+    Log.debug(
+      '🔍 Attempting ref.read(homeFeedProvider) from VideoFeedScreen._onPageChanged, mounted: $mounted',
+      name: 'VideoFeedScreen',
+      category: LogCategory.ui,
+    );
     final asyncState = ref.read(homeFeedProvider);
     final feedState = asyncState.hasValue ? asyncState.value : null;
     if (feedState == null) return;
@@ -252,8 +288,11 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
   // Legacy methods removed - active video is now derived from URL via activeVideoIdProvider
 
   void _pauseAllVideos() {
-    Log.debug('📱 _pauseAllVideos called - derived provider handles pause automatically',
-        name: 'VideoFeedScreen', category: LogCategory.ui);
+    Log.debug(
+      '📱 _pauseAllVideos called - derived provider handles pause automatically',
+      name: 'VideoFeedScreen',
+      category: LogCategory.ui,
+    );
     // When app backgrounds, appForegroundProvider updates → activeVideoIdProvider returns null → VideoFeedItem pauses
   }
 
@@ -336,13 +375,19 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
     return buildAsyncUI(
       videoFeedAsync,
       onLoading: () {
-        Log.info('🎬 VideoFeedScreen: Showing loading state',
-            name: 'VideoFeedScreen', category: LogCategory.ui);
+        Log.info(
+          '🎬 VideoFeedScreen: Showing loading state',
+          name: 'VideoFeedScreen',
+          category: LogCategory.ui,
+        );
         return _buildLoadingState();
       },
       onError: (error, stackTrace) {
-        Log.error('🎬 VideoFeedScreen: Error state - $error',
-            name: 'VideoFeedScreen', category: LogCategory.ui);
+        Log.error(
+          '🎬 VideoFeedScreen: Error state - $error',
+          name: 'VideoFeedScreen',
+          category: LogCategory.ui,
+        );
         return _buildErrorState(error.toString());
       },
       onData: (feedState) {
@@ -361,18 +406,15 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
   }
 
   Widget _buildLoadingState() => const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Colors.white),
-            SizedBox(height: 16),
-            Text(
-              'Loading videos...',
-              style: TextStyle(color: Colors.white),
-            ),
-          ],
-        ),
-      );
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        CircularProgressIndicator(color: Colors.white),
+        SizedBox(height: 16),
+        Text('Loading videos...', style: TextStyle(color: Colors.white)),
+      ],
+    ),
+  );
 
   Widget _buildEmptyState() {
     // Check if user is following anyone to show appropriate message
@@ -380,12 +422,13 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
     final isFollowingAnyone = socialData.followingPubkeys.isNotEmpty;
 
     Log.info(
-        '🔍 VideoFeedScreen: Empty state - '
-        'isFollowingAnyone=$isFollowingAnyone, '
-        'socialInitialized=${socialData.isInitialized}, '
-        'followingCount=${socialData.followingPubkeys.length}',
-        name: 'VideoFeedScreen',
-        category: LogCategory.ui);
+      '🔍 VideoFeedScreen: Empty state - '
+      'isFollowingAnyone=$isFollowingAnyone, '
+      'socialInitialized=${socialData.isInitialized}, '
+      'followingCount=${socialData.followingPubkeys.length}',
+      name: 'VideoFeedScreen',
+      category: LogCategory.ui,
+    );
 
     if (!isFollowingAnyone) {
       // Show educational message about divine's non-algorithmic approach
@@ -395,11 +438,7 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.people_outline,
-                size: 64,
-                color: Colors.white54,
-              ),
+              const Icon(Icons.people_outline, size: 64, color: Colors.white54),
               const SizedBox(height: 24),
               const Text(
                 'Your Feed, Your Choice',
@@ -439,8 +478,10 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: VineTheme.vineGreen,
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
                 ),
                 child: const Text('Explore Vines'),
               ),
@@ -454,26 +495,16 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.video_library_outlined,
-              size: 64,
-              color: Colors.white54,
-            ),
+            Icon(Icons.video_library_outlined, size: 64, color: Colors.white54),
             SizedBox(height: 16),
             Text(
               'No videos available',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 18),
             ),
             SizedBox(height: 8),
             Text(
               'Check your connection and try again',
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.white54, fontSize: 14),
             ),
           ],
         ),
@@ -482,45 +513,36 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
   }
 
   Widget _buildErrorState(String error) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Error loading videos',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => ref.invalidate(homeFeedProvider),
-              child: const Text('Retry'),
-            ),
-          ],
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(Icons.error_outline, size: 64, color: Colors.red),
+        const SizedBox(height: 16),
+        const Text(
+          'Error loading videos',
+          style: TextStyle(color: Colors.white, fontSize: 18),
         ),
-      );
+        const SizedBox(height: 8),
+        Text(
+          error,
+          style: const TextStyle(color: Colors.white54, fontSize: 14),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: () => ref.invalidate(homeFeedProvider),
+          child: const Text('Retry'),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildVideoFeed(List<VideoEvent> videos, VideoFeedState feedState) {
     Log.info(
-        '🎬 VideoFeedScreen: Building home video feed with ${videos.length} videos from following',
-        name: 'VideoFeedScreen',
-        category: LogCategory.ui);
+      '🎬 VideoFeedScreen: Building home video feed with ${videos.length} videos from following',
+      name: 'VideoFeedScreen',
+      category: LogCategory.ui,
+    );
 
     return PageView.builder(
       itemCount: videos.length,
@@ -537,8 +559,11 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
           onLoadMore: () => ref.read(homeFeedProvider.notifier).loadMore(),
         );
 
-        Log.debug('📄 Page changed to index $index (${videos[index].id}...)',
-            name: 'VideoFeedScreen', category: LogCategory.video);
+        Log.debug(
+          '📄 Page changed to index $index (${videos[index].id}...)',
+          name: 'VideoFeedScreen',
+          category: LogCategory.video,
+        );
       },
       itemBuilder: (context, index) {
         return VideoFeedItem(
@@ -561,8 +586,11 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
     });
 
     try {
-      Log.info('🔄 Pull-to-refresh triggered - refreshing feed',
-          name: 'VideoFeedScreen', category: LogCategory.ui);
+      Log.info(
+        '🔄 Pull-to-refresh triggered - refreshing feed',
+        name: 'VideoFeedScreen',
+        category: LogCategory.ui,
+      );
 
       // Refresh the home feed using Riverpod
       await ref.read(homeFeedProvider.notifier).refresh();
@@ -570,11 +598,17 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
       // Clear pagination throttle after refresh
       resetPagination();
 
-      Log.info('✅ Feed refresh completed',
-          name: 'VideoFeedScreen', category: LogCategory.ui);
+      Log.info(
+        '✅ Feed refresh completed',
+        name: 'VideoFeedScreen',
+        category: LogCategory.ui,
+      );
     } catch (e) {
-      Log.error('❌ Feed refresh failed: $e',
-          name: 'VideoFeedScreen', category: LogCategory.ui);
+      Log.error(
+        '❌ Feed refresh failed: $e',
+        name: 'VideoFeedScreen',
+        category: LogCategory.ui,
+      );
 
       // Show error feedback to user
       if (mounted) {
@@ -597,7 +631,9 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
 
   /// Batch fetch profiles for videos around the current position
   void _batchFetchProfilesAroundIndex(
-      int currentIndex, List<VideoEvent> videos) {
+    int currentIndex,
+    List<VideoEvent> videos,
+  ) {
     if (videos.isEmpty) return;
 
     // Only fetch profile for the currently visible video
@@ -623,7 +659,6 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
     userProfilesNotifier.prefetchProfilesImmediately(pubkeysToFetch.toList());
   }
 
-
   // Note: Keyboard navigation methods removed to avoid unused warnings
   // Would be implemented for accessibility support when needed
 }
@@ -642,64 +677,57 @@ class VideoErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ColoredBox(
-        color: Colors.black,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error,
-                size: 48,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Network error',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              if (onGoBack != null || onRetry != null) ...[
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (onGoBack != null) ...[
-                      ElevatedButton(
-                        onPressed: onGoBack,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[700],
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Go Back'),
-                      ),
-                      if (onRetry != null) const SizedBox(width: 16),
-                    ],
-                    if (onRetry != null)
-                      ElevatedButton(
-                        onPressed: onRetry,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                        ),
-                        child: const Text('Retry'),
-                      ),
-                  ],
-                ),
-              ],
-            ],
+    color: Colors.black,
+    child: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error, size: 48, color: Colors.red),
+          const SizedBox(height: 16),
+          const Text(
+            'Network error',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-      );
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
+          if (onGoBack != null || onRetry != null) ...[
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (onGoBack != null) ...[
+                  ElevatedButton(
+                    onPressed: onGoBack,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[700],
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Go Back'),
+                  ),
+                  if (onRetry != null) const SizedBox(width: 16),
+                ],
+                if (onRetry != null)
+                  ElevatedButton(
+                    onPressed: onRetry,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                    ),
+                    child: const Text('Retry'),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
 }

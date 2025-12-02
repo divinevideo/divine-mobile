@@ -95,10 +95,12 @@ class UserProfileTile extends ConsumerWidget {
                         onPressed: () =>
                             _toggleFollow(context, ref, pubkey, isFollowing),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              isFollowing ? Colors.white : VineTheme.vineGreen,
-                          foregroundColor:
-                              isFollowing ? VineTheme.vineGreen : Colors.white,
+                          backgroundColor: isFollowing
+                              ? Colors.white
+                              : VineTheme.vineGreen,
+                          foregroundColor: isFollowing
+                              ? VineTheme.vineGreen
+                              : Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -120,8 +122,12 @@ class UserProfileTile extends ConsumerWidget {
     );
   }
 
-  Future<void> _toggleFollow(BuildContext context, WidgetRef ref, String pubkey,
-      bool isCurrentlyFollowing) async {
+  Future<void> _toggleFollow(
+    BuildContext context,
+    WidgetRef ref,
+    String pubkey,
+    bool isCurrentlyFollowing,
+  ) async {
     await FollowActionsHelper.toggleFollow(
       ref: ref,
       context: context,

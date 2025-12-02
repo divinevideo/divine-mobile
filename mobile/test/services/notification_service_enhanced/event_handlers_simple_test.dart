@@ -28,8 +28,7 @@ class FakeNostrService implements INostrService {
     required List<Filter> filters,
     bool bypassLimits = false,
     void Function()? onEose,
-  }) =>
-      _eventController.stream;
+  }) => _eventController.stream;
 
   @override
   String? get publicKey => _pubkey;
@@ -61,9 +60,10 @@ class FakeUserProfileService implements UserProfileService {
   }
 
   @override
-  Future<UserProfile?> fetchProfile(String pubkey,
-          {bool forceRefresh = false}) async =>
-      _profiles[pubkey];
+  Future<UserProfile?> fetchProfile(
+    String pubkey, {
+    bool forceRefresh = false,
+  }) async => _profiles[pubkey];
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -132,7 +132,8 @@ void main() {
 
     test('reaction event with "+" creates like notification', () async {
       // Arrange
-      final actorPubkey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final actorPubkey =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
       final videoEventId = 'video123';
 
       // Add profile (use factory method)
@@ -151,7 +152,7 @@ void main() {
       // Add video (use factory method)
       final videoNostrEvent = Event(
         'user123',
-               34236,
+        34236,
         [
           ['url', 'https://example.com/video.mp4'],
         ],
@@ -168,7 +169,7 @@ void main() {
         actorPubkey,
         7,
         [
-          ['e', videoEventId]
+          ['e', videoEventId],
         ],
         '+',
         createdAt: 1700000000,
@@ -192,7 +193,7 @@ void main() {
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         7,
         [
-          ['e', 'video123']
+          ['e', 'video123'],
         ],
         '-', // Not a like
         createdAt: 1700000000,
@@ -226,7 +227,8 @@ void main() {
 
     test('comment event creates comment notification', () async {
       // Arrange
-      final actorPubkey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final actorPubkey =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
       final videoEventId = 'video_comment';
 
       // Add profile
@@ -245,7 +247,7 @@ void main() {
       // Add video
       final videoNostrEvent = Event(
         'user123',
-               34236,
+        34236,
         [
           ['url', 'https://example.com/video.mp4'],
         ],
@@ -262,7 +264,7 @@ void main() {
         actorPubkey,
         1,
         [
-          ['e', videoEventId]
+          ['e', videoEventId],
         ],
         'Great video!',
         createdAt: 1700000000,
@@ -282,7 +284,8 @@ void main() {
 
     test('follow event creates follow notification', () async {
       // Arrange
-      final actorPubkey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final actorPubkey =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
       // Add profile
       final profileEvent = Event(
@@ -298,13 +301,7 @@ void main() {
       );
 
       // Create follow event
-      final followEvent = Event(
-        actorPubkey,
-        3,
-        [],
-        '',
-        createdAt: 1700000000,
-      );
+      final followEvent = Event(actorPubkey, 3, [], '', createdAt: 1700000000);
 
       // Act
       fakeNostrService.injectEvent(followEvent);
@@ -319,7 +316,8 @@ void main() {
 
     test('duplicate notifications are not added', () async {
       // Arrange
-      final actorPubkey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final actorPubkey =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
       // Add profile
       final profileEvent = Event(
@@ -335,13 +333,7 @@ void main() {
       );
 
       // Create follow event with same ID
-      final followEvent = Event(
-        actorPubkey,
-        3,
-        [],
-        '',
-        createdAt: 1700000000,
-      );
+      final followEvent = Event(actorPubkey, 3, [], '', createdAt: 1700000000);
 
       // Act - inject same event twice
       fakeNostrService.injectEvent(followEvent);
@@ -355,7 +347,8 @@ void main() {
 
     test('markAsRead marks notification as read', () async {
       // Arrange
-      final actorPubkey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final actorPubkey =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
       final profileEvent = Event(
         actorPubkey,
@@ -369,32 +362,35 @@ void main() {
         UserProfile.fromNostrEvent(profileEvent),
       );
 
-      final followEvent = Event(
-        actorPubkey,
-        3,
-        [],
-        '',
-        createdAt: 1700000000,
-      );
+      final followEvent = Event(actorPubkey, 3, [], '', createdAt: 1700000000);
 
       fakeNostrService.injectEvent(followEvent);
       await Future.delayed(Duration(milliseconds: 200));
 
-      expect(service.notifications, isNotEmpty, reason: 'Should have at least one notification after follow event');
+      expect(
+        service.notifications,
+        isNotEmpty,
+        reason: 'Should have at least one notification after follow event',
+      );
       final notificationId = service.notifications.first.id;
 
       // Act
       await service.markAsRead(notificationId);
 
       // Assert
-      expect(service.notifications, isNotEmpty, reason: 'Notifications should still exist after marking as read');
+      expect(
+        service.notifications,
+        isNotEmpty,
+        reason: 'Notifications should still exist after marking as read',
+      );
       expect(service.notifications.first.isRead, isTrue);
       expect(service.unreadCount, 0);
     });
 
     test('markAllAsRead marks all notifications as read', () async {
       // Arrange - create multiple notifications
-      final actorPubkey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final actorPubkey =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
       final profileEvent = Event(
         actorPubkey,
@@ -409,13 +405,7 @@ void main() {
       );
 
       // Create two different follow events
-      final followEvent1 = Event(
-        actorPubkey,
-        3,
-        [],
-        '',
-        createdAt: 1700000000,
-      );
+      final followEvent1 = Event(actorPubkey, 3, [], '', createdAt: 1700000000);
 
       final followEvent2 = Event(
         actorPubkey,
@@ -443,7 +433,8 @@ void main() {
 
     test('clearAll removes all notifications', () async {
       // Arrange
-      final actorPubkey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final actorPubkey =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
       final profileEvent = Event(
         actorPubkey,
@@ -457,13 +448,7 @@ void main() {
         UserProfile.fromNostrEvent(profileEvent),
       );
 
-      final followEvent = Event(
-        actorPubkey,
-        3,
-        [],
-        '',
-        createdAt: 1700000000,
-      );
+      final followEvent = Event(actorPubkey, 3, [], '', createdAt: 1700000000);
 
       fakeNostrService.injectEvent(followEvent);
       await Future.delayed(Duration(milliseconds: 200));
@@ -478,77 +463,88 @@ void main() {
       expect(service.unreadCount, 0);
     });
 
-    test('actor name resolution priority: name > displayName > nip05 > Unknown user', () async {
-      // Test 1: name is used
-      final pubkey1 = '1111111111111111111111111111111111111111111111111111111111111111';
-      final profileEvent1 = Event(
-        pubkey1,
-        0,
-        [],
-        '{"name":"NameValue","display_name":"DisplayValue","nip05":"nip@example.com"}',
-        createdAt: 1700000000,
-      );
-      fakeProfileService.addProfile(
-        pubkey1,
-        UserProfile.fromNostrEvent(profileEvent1),
-      );
+    test(
+      'actor name resolution priority: name > displayName > nip05 > Unknown user',
+      () async {
+        // Test 1: name is used
+        final pubkey1 =
+            '1111111111111111111111111111111111111111111111111111111111111111';
+        final profileEvent1 = Event(
+          pubkey1,
+          0,
+          [],
+          '{"name":"NameValue","display_name":"DisplayValue","nip05":"nip@example.com"}',
+          createdAt: 1700000000,
+        );
+        fakeProfileService.addProfile(
+          pubkey1,
+          UserProfile.fromNostrEvent(profileEvent1),
+        );
 
-      final followEvent1 = Event(pubkey1, 3, [], '', createdAt: 1700000000);
-      fakeNostrService.injectEvent(followEvent1);
-      await Future.delayed(Duration(milliseconds: 200));
+        final followEvent1 = Event(pubkey1, 3, [], '', createdAt: 1700000000);
+        fakeNostrService.injectEvent(followEvent1);
+        await Future.delayed(Duration(milliseconds: 200));
 
-      expect(service.notifications, isNotEmpty, reason: 'Should have notification for first follow event');
-      expect(service.notifications.last.actorName, 'NameValue');
+        expect(
+          service.notifications,
+          isNotEmpty,
+          reason: 'Should have notification for first follow event',
+        );
+        expect(service.notifications.last.actorName, 'NameValue');
 
-      // Test 2: displayName is used when name is missing
-      final pubkey2 = '2222222222222222222222222222222222222222222222222222222222222222';
-      final profileEvent2 = Event(
-        pubkey2,
-        0,
-        [],
-        '{"display_name":"DisplayValue","nip05":"nip@example.com"}',
-        createdAt: 1700000000,
-      );
-      fakeProfileService.addProfile(
-        pubkey2,
-        UserProfile.fromNostrEvent(profileEvent2),
-      );
+        // Test 2: displayName is used when name is missing
+        final pubkey2 =
+            '2222222222222222222222222222222222222222222222222222222222222222';
+        final profileEvent2 = Event(
+          pubkey2,
+          0,
+          [],
+          '{"display_name":"DisplayValue","nip05":"nip@example.com"}',
+          createdAt: 1700000000,
+        );
+        fakeProfileService.addProfile(
+          pubkey2,
+          UserProfile.fromNostrEvent(profileEvent2),
+        );
 
-      final followEvent2 = Event(pubkey2, 3, [], '', createdAt: 1700000001);
-      fakeNostrService.injectEvent(followEvent2);
-      await Future.delayed(Duration(milliseconds: 200));
+        final followEvent2 = Event(pubkey2, 3, [], '', createdAt: 1700000001);
+        fakeNostrService.injectEvent(followEvent2);
+        await Future.delayed(Duration(milliseconds: 200));
 
-      expect(service.notifications.last.actorName, 'DisplayValue');
+        expect(service.notifications.last.actorName, 'DisplayValue');
 
-      // Test 3: nip05 username is used when name and displayName are missing
-      final pubkey3 = '3333333333333333333333333333333333333333333333333333333333333333';
-      final profileEvent3 = Event(
-        pubkey3,
-        0,
-        [],
-        '{"nip05":"username@example.com"}',
-        createdAt: 1700000000,
-      );
-      fakeProfileService.addProfile(
-        pubkey3,
-        UserProfile.fromNostrEvent(profileEvent3),
-      );
+        // Test 3: nip05 username is used when name and displayName are missing
+        final pubkey3 =
+            '3333333333333333333333333333333333333333333333333333333333333333';
+        final profileEvent3 = Event(
+          pubkey3,
+          0,
+          [],
+          '{"nip05":"username@example.com"}',
+          createdAt: 1700000000,
+        );
+        fakeProfileService.addProfile(
+          pubkey3,
+          UserProfile.fromNostrEvent(profileEvent3),
+        );
 
-      final followEvent3 = Event(pubkey3, 3, [], '', createdAt: 1700000002);
-      fakeNostrService.injectEvent(followEvent3);
-      await Future.delayed(Duration(milliseconds: 200));
+        final followEvent3 = Event(pubkey3, 3, [], '', createdAt: 1700000002);
+        fakeNostrService.injectEvent(followEvent3);
+        await Future.delayed(Duration(milliseconds: 200));
 
-      expect(service.notifications.last.actorName, 'username');
+        expect(service.notifications.last.actorName, 'username');
 
-      // Test 4: "Unknown user" is used when no profile data exists
-      final pubkey4 = '4444444444444444444444444444444444444444444444444444444444444444';
-      // No profile added for pubkey4
+        // Test 4: "Unknown user" is used when no profile data exists
+        final pubkey4 =
+            '4444444444444444444444444444444444444444444444444444444444444444';
+        // No profile added for pubkey4
 
-      final followEvent4 = Event(pubkey4, 3, [], '', createdAt: 1700000003);
-      fakeNostrService.injectEvent(followEvent4);
-      await Future.delayed(Duration(milliseconds: 200));
+        final followEvent4 = Event(pubkey4, 3, [], '', createdAt: 1700000003);
+        fakeNostrService.injectEvent(followEvent4);
+        await Future.delayed(Duration(milliseconds: 200));
 
-      expect(service.notifications.last.actorName, 'Unknown user');
-    });
+        expect(service.notifications.last.actorName, 'Unknown user');
+      },
+    );
   });
 }

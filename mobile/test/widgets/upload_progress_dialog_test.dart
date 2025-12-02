@@ -17,16 +17,14 @@ class MockUploadManager {
 
 void main() {
   group('UploadProgressDialog', () {
-    testWidgets('displays current upload progress percentage',
-        (WidgetTester tester) async {
+    testWidgets('displays current upload progress percentage', (
+      WidgetTester tester,
+    ) async {
       // Arrange: Create mock upload at 50% progress
       final mockUpload = PendingUpload.create(
         localVideoPath: '/test/video.mp4',
         nostrPubkey: 'test_pubkey',
-      ).copyWith(
-        status: UploadStatus.uploading,
-        uploadProgress: 0.5,
-      );
+      ).copyWith(status: UploadStatus.uploading, uploadProgress: 0.5);
 
       final mockManager = MockUploadManager(mockUpload: mockUpload);
 
@@ -50,16 +48,14 @@ void main() {
       expect(find.text('Uploading video...'), findsOneWidget);
     });
 
-    testWidgets('dialog is non-dismissible (barrierDismissible: false)',
-        (WidgetTester tester) async {
+    testWidgets('dialog is non-dismissible (barrierDismissible: false)', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       final mockUpload = PendingUpload.create(
         localVideoPath: '/test/video.mp4',
         nostrPubkey: 'test_pubkey',
-      ).copyWith(
-        status: UploadStatus.uploading,
-        uploadProgress: 0.3,
-      );
+      ).copyWith(status: UploadStatus.uploading, uploadProgress: 0.3);
 
       final mockManager = MockUploadManager(mockUpload: mockUpload);
 
@@ -104,81 +100,78 @@ void main() {
       expect(find.text('Uploading video...'), findsOneWidget);
     });
 
-    testWidgets('dialog auto-closes when upload reaches readyToPublish status',
-        (WidgetTester tester) async {
-      // Arrange: Start with uploading status
-      var mockUpload = PendingUpload.create(
-        localVideoPath: '/test/video.mp4',
-        nostrPubkey: 'test_pubkey',
-      ).copyWith(
-        status: UploadStatus.uploading,
-        uploadProgress: 0.8,
-      );
+    testWidgets(
+      'dialog auto-closes when upload reaches readyToPublish status',
+      (WidgetTester tester) async {
+        // Arrange: Start with uploading status
+        var mockUpload = PendingUpload.create(
+          localVideoPath: '/test/video.mp4',
+          nostrPubkey: 'test_pubkey',
+        ).copyWith(status: UploadStatus.uploading, uploadProgress: 0.8);
 
-      final mockManager = MockUploadManager(mockUpload: mockUpload);
-      bool dialogPopped = false;
+        final mockManager = MockUploadManager(mockUpload: mockUpload);
+        bool dialogPopped = false;
 
-      // Act: Show dialog
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) {
-                return ElevatedButton(
-                  onPressed: () async {
-                    await showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (_) => UploadProgressDialog(
-                        uploadId: mockUpload.id,
-                        uploadManager: mockManager,
-                      ),
-                    );
-                    dialogPopped = true;
-                  },
-                  child: const Text('Show Dialog'),
-                );
-              },
+        // Act: Show dialog
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  return ElevatedButton(
+                    onPressed: () async {
+                      await showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) => UploadProgressDialog(
+                          uploadId: mockUpload.id,
+                          uploadManager: mockManager,
+                        ),
+                      );
+                      dialogPopped = true;
+                    },
+                    child: const Text('Show Dialog'),
+                  );
+                },
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Tap button to show dialog
-      await tester.tap(find.text('Show Dialog'));
-      await tester.pumpAndSettle();
+        // Tap button to show dialog
+        await tester.tap(find.text('Show Dialog'));
+        await tester.pumpAndSettle();
 
-      // Verify dialog is shown
-      expect(find.text('Uploading video...'), findsOneWidget);
-      expect(dialogPopped, false);
+        // Verify dialog is shown
+        expect(find.text('Uploading video...'), findsOneWidget);
+        expect(dialogPopped, false);
 
-      // Simulate upload completion by updating mock upload
-      mockManager.mockUpload = mockUpload.copyWith(
-        status: UploadStatus.readyToPublish,
-        uploadProgress: 1.0,
-      );
+        // Simulate upload completion by updating mock upload
+        mockManager.mockUpload = mockUpload.copyWith(
+          status: UploadStatus.readyToPublish,
+          uploadProgress: 1.0,
+        );
 
-      // Wait for polling cycle to detect completion
-      await tester.pump(const Duration(milliseconds: 600));
-      await tester.pumpAndSettle();
+        // Wait for polling cycle to detect completion
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.pumpAndSettle();
 
-      // Assert: Dialog should be closed
-      expect(find.text('Uploading video...'), findsNothing);
-      expect(dialogPopped, true);
-    });
+        // Assert: Dialog should be closed
+        expect(find.text('Uploading video...'), findsNothing);
+        expect(dialogPopped, true);
+      },
+    );
 
-    testWidgets('dialog polls UploadManager every 500ms for status updates',
-        (WidgetTester tester) async {
+    testWidgets('dialog polls UploadManager every 500ms for status updates', (
+      WidgetTester tester,
+    ) async {
       // Arrange: Track how many times getUpload was called
       int pollCount = 0;
       var mockUpload = PendingUpload.create(
         localVideoPath: '/test/video.mp4',
         nostrPubkey: 'test_pubkey',
-      ).copyWith(
-        status: UploadStatus.uploading,
-        uploadProgress: 0.3,
-      );
+      ).copyWith(status: UploadStatus.uploading, uploadProgress: 0.3);
 
       final mockManager = _CountingMockUploadManager(
         mockUpload: mockUpload,

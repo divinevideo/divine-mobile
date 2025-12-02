@@ -46,7 +46,9 @@ void main() {
 
       // Setup default mock behavior
       when(mockAuthService.isAuthenticated).thenReturn(true);
-      when(mockAuthService.currentPublicKeyHex).thenReturn('current_user_pubkey');
+      when(
+        mockAuthService.currentPublicKeyHex,
+      ).thenReturn('current_user_pubkey');
       when(mockReportingService.hasBeenReported(any)).thenReturn(false);
       when(mockBlocklistService.isBlocked(any)).thenReturn(false);
     });
@@ -56,14 +58,16 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            contentReportingServiceProvider.overrideWith((ref) async => mockReportingService),
-            contentBlocklistServiceProvider.overrideWithValue(mockBlocklistService),
+            contentReportingServiceProvider.overrideWith(
+              (ref) async => mockReportingService,
+            ),
+            contentBlocklistServiceProvider.overrideWithValue(
+              mockBlocklistService,
+            ),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
           child: MaterialApp(
-            home: Scaffold(
-              body: ShareVideoMenu(video: testVideo),
-            ),
+            home: Scaffold(body: ShareVideoMenu(video: testVideo)),
           ),
         ),
       );
@@ -74,7 +78,8 @@ void main() {
       expect(
         find.text('Safety Actions'),
         findsOneWidget,
-        reason: 'Section header should be renamed from "Content Actions" to "Safety Actions"',
+        reason:
+            'Section header should be renamed from "Content Actions" to "Safety Actions"',
       );
 
       // RED: Verify old name doesn't exist
@@ -86,18 +91,22 @@ void main() {
     });
 
     // RED TEST 2: Safety Actions section should have orange warning styling
-    testWidgets('Safety Actions section has orange warning styling', (tester) async {
+    testWidgets('Safety Actions section has orange warning styling', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            contentReportingServiceProvider.overrideWith((ref) async => mockReportingService),
-            contentBlocklistServiceProvider.overrideWithValue(mockBlocklistService),
+            contentReportingServiceProvider.overrideWith(
+              (ref) async => mockReportingService,
+            ),
+            contentBlocklistServiceProvider.overrideWithValue(
+              mockBlocklistService,
+            ),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
           child: MaterialApp(
-            home: Scaffold(
-              body: ShareVideoMenu(video: testVideo),
-            ),
+            home: Scaffold(body: ShareVideoMenu(video: testVideo)),
           ),
         ),
       );
@@ -117,7 +126,8 @@ void main() {
       expect(
         containerFinder,
         findsAtLeastNWidgets(1),
-        reason: 'Safety Actions section should be wrapped in a styled Container',
+        reason:
+            'Safety Actions section should be wrapped in a styled Container',
       );
 
       // RED: Verify orange color is used (will check decoration in actual container)
@@ -130,18 +140,22 @@ void main() {
     });
 
     // RED TEST 3: Safety Actions section should contain "Report Content" action
-    testWidgets('Safety Actions contains Report Content action', (tester) async {
+    testWidgets('Safety Actions contains Report Content action', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            contentReportingServiceProvider.overrideWith((ref) async => mockReportingService),
-            contentBlocklistServiceProvider.overrideWithValue(mockBlocklistService),
+            contentReportingServiceProvider.overrideWith(
+              (ref) async => mockReportingService,
+            ),
+            contentBlocklistServiceProvider.overrideWithValue(
+              mockBlocklistService,
+            ),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
           child: MaterialApp(
-            home: Scaffold(
-              body: ShareVideoMenu(video: testVideo),
-            ),
+            home: Scaffold(body: ShareVideoMenu(video: testVideo)),
           ),
         ),
       );
@@ -161,14 +175,16 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            contentReportingServiceProvider.overrideWith((ref) async => mockReportingService),
-            contentBlocklistServiceProvider.overrideWithValue(mockBlocklistService),
+            contentReportingServiceProvider.overrideWith(
+              (ref) async => mockReportingService,
+            ),
+            contentBlocklistServiceProvider.overrideWithValue(
+              mockBlocklistService,
+            ),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
           child: MaterialApp(
-            home: Scaffold(
-              body: ShareVideoMenu(video: testVideo),
-            ),
+            home: Scaffold(body: ShareVideoMenu(video: testVideo)),
           ),
         ),
       );
@@ -184,7 +200,9 @@ void main() {
     });
 
     // RED TEST 5: Block User action should NOT appear for own content
-    testWidgets('Block User action does not appear for own content', (tester) async {
+    testWidgets('Block User action does not appear for own content', (
+      tester,
+    ) async {
       // Setup: video belongs to current user
       final ownVideo = VideoEvent(
         id: 'own_video_123',
@@ -202,14 +220,16 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            contentReportingServiceProvider.overrideWith((ref) async => mockReportingService),
-            contentBlocklistServiceProvider.overrideWithValue(mockBlocklistService),
+            contentReportingServiceProvider.overrideWith(
+              (ref) async => mockReportingService,
+            ),
+            contentBlocklistServiceProvider.overrideWithValue(
+              mockBlocklistService,
+            ),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
           child: MaterialApp(
-            home: Scaffold(
-              body: ShareVideoMenu(video: ownVideo),
-            ),
+            home: Scaffold(body: ShareVideoMenu(video: ownVideo)),
           ),
         ),
       );

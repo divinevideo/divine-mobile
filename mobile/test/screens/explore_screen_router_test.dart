@@ -45,8 +45,7 @@ void main() {
       ),
     ];
 
-    testWidgets('initial URL /explore/0 renders first video',
-        (tester) async {
+    testWidgets('initial URL /explore/0 renders first video', (tester) async {
       final container = ProviderContainer(
         overrides: [
           videoEventsProvider.overrideWith(() => VideoEventsMock(mockVideos)),

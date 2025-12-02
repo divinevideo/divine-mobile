@@ -29,9 +29,9 @@ class MockVideoEventsNoTimers extends VideoEvents {
 @GenerateMocks([NotificationServiceEnhanced])
 void main() {
   Widget shell(ProviderContainer c) => UncontrolledProviderScope(
-        container: c,
-        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
-      );
+    container: c,
+    child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+  );
 
   String currentLocation(ProviderContainer c) {
     final router = c.read(goRouterProvider);
@@ -65,59 +65,65 @@ void main() {
         ),
       ];
 
-      when(mockNotificationService.notifications)
-          .thenReturn(testNotifications);
-      when(mockNotificationService.getNotificationsByType(any))
-          .thenReturn([]);
-      when(mockNotificationService.markAsRead(any))
-          .thenAnswer((_) async {});
+      when(mockNotificationService.notifications).thenReturn(testNotifications);
+      when(mockNotificationService.getNotificationsByType(any)).thenReturn([]);
+      when(mockNotificationService.markAsRead(any)).thenAnswer((_) async {});
     });
 
-    testWidgets('tapping notification with video shows error when video not found',
-        (WidgetTester tester) async {
-      // Arrange - No video event service override, so video won't be found
-      final c = ProviderContainer(overrides: [
-        notificationServiceEnhancedProvider
-            .overrideWith((ref) => mockNotificationService),
-        // Override videoEventsProvider to prevent timer issues in tests
-        videoEventsProvider.overrideWith(() => MockVideoEventsNoTimers()),
-      ]);
-      addTearDown(c.dispose);
+    testWidgets(
+      'tapping notification with video shows error when video not found',
+      (WidgetTester tester) async {
+        // Arrange - No video event service override, so video won't be found
+        final c = ProviderContainer(
+          overrides: [
+            notificationServiceEnhancedProvider.overrideWith(
+              (ref) => mockNotificationService,
+            ),
+            // Override videoEventsProvider to prevent timer issues in tests
+            videoEventsProvider.overrideWith(() => MockVideoEventsNoTimers()),
+          ],
+        );
+        addTearDown(c.dispose);
 
-      await tester.pumpWidget(shell(c));
+        await tester.pumpWidget(shell(c));
 
-      // Navigate to notifications
-      c.read(goRouterProvider).go('/notifications/0');
-      await tester.pump();
-      await tester.pump();
+        // Navigate to notifications
+        c.read(goRouterProvider).go('/notifications/0');
+        await tester.pump();
+        await tester.pump();
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      // Act: Tap on first notification (with video ID that doesn't exist)
-      final firstNotification = find.byType(NotificationListItem).first;
-      await tester.tap(firstNotification);
-      await tester.pump(); // Trigger tap
-      await tester.pump(); // Process tap and show snackbar
+        // Act: Tap on first notification (with video ID that doesn't exist)
+        final firstNotification = find.byType(NotificationListItem).first;
+        await tester.tap(firstNotification);
+        await tester.pump(); // Trigger tap
+        await tester.pump(); // Process tap and show snackbar
 
-      // Assert: Should show "Video not found" snackbar instead of navigating
-      expect(find.text('Video not found'), findsOneWidget);
-      expect(find.byType(ExploreVideoScreenPure), findsNothing);
+        // Assert: Should show "Video not found" snackbar instead of navigating
+        expect(find.text('Video not found'), findsOneWidget);
+        expect(find.byType(ExploreVideoScreenPure), findsNothing);
 
-      // Verify markAsRead was called
-      verify(mockNotificationService.markAsRead('notif1')).called(1);
-    });
+        // Verify markAsRead was called
+        verify(mockNotificationService.markAsRead('notif1')).called(1);
+      },
+    );
 
-    testWidgets('tapping notification without video navigates to profile',
-        (WidgetTester tester) async {
+    testWidgets('tapping notification without video navigates to profile', (
+      WidgetTester tester,
+    ) async {
       final user456Npub = NostrEncoding.encodePublicKey('user456abcdef');
 
       // Arrange
-      final c = ProviderContainer(overrides: [
-        notificationServiceEnhancedProvider
-            .overrideWith((ref) => mockNotificationService),
-        // Override videoEventsProvider to prevent timer issues in tests
-        videoEventsProvider.overrideWith(() => MockVideoEventsNoTimers()),
-      ]);
+      final c = ProviderContainer(
+        overrides: [
+          notificationServiceEnhancedProvider.overrideWith(
+            (ref) => mockNotificationService,
+          ),
+          // Override videoEventsProvider to prevent timer issues in tests
+          videoEventsProvider.overrideWith(() => MockVideoEventsNoTimers()),
+        ],
+      );
       addTearDown(c.dispose);
 
       await tester.pumpWidget(shell(c));

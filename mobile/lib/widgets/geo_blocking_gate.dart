@@ -11,10 +11,7 @@ import 'package:openvine/utils/unified_logger.dart';
 class GeoBlockingGate extends ConsumerStatefulWidget {
   final Widget child;
 
-  const GeoBlockingGate({
-    super.key,
-    required this.child,
-  });
+  const GeoBlockingGate({super.key, required this.child});
 
   @override
   ConsumerState<GeoBlockingGate> createState() => _GeoBlockingGateState();

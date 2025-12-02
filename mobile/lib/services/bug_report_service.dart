@@ -19,17 +19,20 @@ import 'package:openvine/services/error_analytics_tracker.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:openvine/services/nip17_message_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
+import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 // Conditional import: dart:html on web, stub on native
-import 'dart:html' if (dart.library.io) 'package:openvine/services/bug_report_service_stub.dart' as html;
+import 'dart:html'
+    if (dart.library.io) 'package:openvine/services/bug_report_service_stub.dart'
+    as html;
 
 /// Service for creating and managing bug reports
 class BugReportService {
   BugReportService({
     NIP17MessageService? nip17MessageService,
     BlossomUploadService? blossomUploadService,
-  })  : _nip17MessageService = nip17MessageService,
-        _blossomUploadService = blossomUploadService;
+  }) : _nip17MessageService = nip17MessageService,
+       _blossomUploadService = blossomUploadService;
 
   static const _uuid = Uuid();
   final NIP17MessageService? _nip17MessageService;
@@ -50,8 +53,7 @@ class BugReportService {
 
       // Get app version from package_info_plus
       final packageInfo = await PackageInfo.fromPlatform();
-      final appVersion =
-          '${packageInfo.version}+${packageInfo.buildNumber}';
+      final appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
 
       // Get device info using device_info_plus
       final deviceInfoPlugin = DeviceInfoPlugin();
@@ -76,7 +78,10 @@ class BugReportService {
           };
         }
       } catch (e) {
-        Log.warning('Failed to get device info: $e', category: LogCategory.system);
+        Log.warning(
+          'Failed to get device info: $e',
+          category: LogCategory.system,
+        );
         deviceInfo = {'error': 'Failed to get device info'};
       }
 
@@ -109,16 +114,20 @@ class BugReportService {
 
       return reportData;
     } catch (e) {
-      Log.error('Failed to collect diagnostics: $e',
-          category: LogCategory.system);
+      Log.error(
+        'Failed to collect diagnostics: $e',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
 
   /// Sanitize sensitive data from bug report
   BugReportData sanitizeSensitiveData(BugReportData data) {
-    Log.debug('Sanitizing sensitive data from bug report',
-        category: LogCategory.system);
+    Log.debug(
+      'Sanitizing sensitive data from bug report',
+      category: LogCategory.system,
+    );
 
     // Sanitize user description
     final sanitizedDescription = _sanitizeString(data.userDescription);
@@ -157,10 +166,17 @@ class BugReportService {
 
   /// Send bug report to Cloudflare Worker backend
   /// This is the primary method for submitting bug reports
+  ///
+  /// Fallback order:
+  /// 1. Cloudflare Worker API
+  /// 2. Zendesk REST API (works on all platforms including macOS)
+  /// 3. Log error (no blocking dialogs)
   Future<BugReportResult> sendBugReport(BugReportData data) async {
     try {
-      Log.info('Sending bug report ${data.reportId} to Worker API',
-          category: LogCategory.system);
+      Log.info(
+        'Sending bug report ${data.reportId} to Worker API',
+        category: LogCategory.system,
+      );
 
       // Sanitize sensitive data before sending
       final sanitizedData = sanitizeSensitiveData(data);
@@ -174,30 +190,76 @@ class BugReportService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final result = jsonDecode(response.body);
-        Log.info('✅ Bug report sent successfully: ${data.reportId}',
-            category: LogCategory.system);
+        Log.info(
+          '✅ Bug report sent successfully: ${data.reportId}',
+          category: LogCategory.system,
+        );
         return BugReportResult.createSuccess(
           reportId: data.reportId,
           messageEventId: result['reportId'] as String,
         );
       } else {
         Log.error(
-            'Bug report API error: ${response.statusCode} ${response.body}',
-            category: LogCategory.system);
+          'Bug report API error: ${response.statusCode} ${response.body}',
+          category: LogCategory.system,
+        );
 
-        // Fall back to email if API fails
-        Log.info('Falling back to email attachment method',
-            category: LogCategory.system);
-        return sendBugReportViaEmail(data);
+        // Fall back to Zendesk REST API
+        return _fallbackToZendeskApi(sanitizedData);
       }
     } catch (e, stackTrace) {
-      Log.error('Exception while sending bug report to Worker: $e',
-          category: LogCategory.system, error: e, stackTrace: stackTrace);
+      Log.error(
+        'Exception while sending bug report to Worker: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
 
-      // Fall back to email on network errors
-      Log.info('Falling back to email attachment method',
+      // Sanitize and fall back to Zendesk REST API
+      final sanitizedData = sanitizeSensitiveData(data);
+      return _fallbackToZendeskApi(sanitizedData);
+    }
+  }
+
+  /// Fallback to Zendesk REST API when Worker API fails
+  Future<BugReportResult> _fallbackToZendeskApi(BugReportData data) async {
+    Log.info('Falling back to Zendesk REST API', category: LogCategory.system);
+
+    // Create a logs summary (last 50 log messages)
+    String? logsSummary;
+    if (data.recentLogs.isNotEmpty) {
+      final recentLines = data.recentLogs.take(50).map((log) =>
+          '[${log.timestamp.toIso8601String()}] ${log.level.name}: ${log.message}');
+      logsSummary = recentLines.join('\n');
+    }
+
+    final success = await ZendeskSupportService.createBugReportTicketViaApi(
+      reportId: data.reportId,
+      userDescription: data.userDescription,
+      appVersion: data.appVersion,
+      deviceInfo: data.deviceInfo,
+      currentScreen: data.currentScreen,
+      userPubkey: data.userPubkey,
+      errorCounts: data.errorCounts,
+      logsSummary: logsSummary,
+    );
+
+    if (success) {
+      Log.info('✅ Bug report sent via Zendesk REST API: ${data.reportId}',
           category: LogCategory.system);
-      return sendBugReportViaEmail(data);
+      return BugReportResult.createSuccess(
+        reportId: data.reportId,
+        messageEventId: 'zendesk-${data.reportId}',
+      );
+    } else {
+      // Don't fall back to file share - just log the error
+      Log.error(
+          'Failed to send bug report via all methods: ${data.reportId}',
+          category: LogCategory.system);
+      return BugReportResult.failure(
+        'Failed to submit bug report. Please try again later.',
+        reportId: data.reportId,
+      );
     }
   }
 
@@ -210,14 +272,18 @@ class BugReportService {
     String recipientPubkey,
   ) async {
     if (_nip17MessageService == null) {
-      Log.error('NIP17MessageService not available, falling back to email',
-          category: LogCategory.system);
+      Log.error(
+        'NIP17MessageService not available, falling back to email',
+        category: LogCategory.system,
+      );
       return sendBugReportViaEmail(data);
     }
 
     try {
-      Log.info('Sending bug report ${data.reportId} to $recipientPubkey',
-          category: LogCategory.system);
+      Log.info(
+        'Sending bug report ${data.reportId} to $recipientPubkey',
+        category: LogCategory.system,
+      );
 
       // Sanitize sensitive data before uploading
       final sanitizedData = sanitizeSensitiveData(data);
@@ -229,36 +295,46 @@ class BugReportService {
 
       // Try Blossom upload first (if available)
       if (_blossomUploadService != null) {
-        Log.info('Uploading bug report to Blossom server',
-            category: LogCategory.system);
+        Log.info(
+          'Uploading bug report to Blossom server',
+          category: LogCategory.system,
+        );
 
         bugReportUrl = await _blossomUploadService.uploadBugReport(
           bugReportFile: bugReportFile,
         );
 
-        if (bugReportUrl != null) {
-          Log.info('✅ Bug report uploaded to Blossom: $bugReportUrl',
-              category: LogCategory.system);
-        } else {
-          Log.warning('Blossom upload failed, will include summary in DM',
-              category: LogCategory.system);
-        }
+        Log.info(
+          '✅ Bug report uploaded to Blossom: $bugReportUrl',
+          category: LogCategory.system,
+        );
       } else {
-        Log.warning('BlossomUploadService not available, will send summary only',
-            category: LogCategory.system);
+        Log.warning(
+          'BlossomUploadService not available, will send summary only',
+          category: LogCategory.system,
+        );
       }
 
       // Prepare NIP-17 message content
-      final messageContent = _formatBugReportMessage(sanitizedData, bugReportUrl);
+      final messageContent = _formatBugReportMessage(
+        sanitizedData,
+        bugReportUrl,
+      );
 
       // Ensure backup relay is connected for bug reports
       try {
-        await _nip17MessageService.nostrService.addRelay('wss://relay.nos.social');
-        Log.info('Added relay.nos.social as backup for bug report',
-            category: LogCategory.system);
+        await _nip17MessageService.nostrService.addRelay(
+          'wss://relay.nos.social',
+        );
+        Log.info(
+          'Added relay.nos.social as backup for bug report',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.warning('Failed to add backup relay, continuing anyway: $e',
-            category: LogCategory.system);
+        Log.warning(
+          'Failed to add backup relay, continuing anyway: $e',
+          category: LogCategory.system,
+        );
       }
 
       // Send via NIP-17 encrypted message
@@ -274,15 +350,19 @@ class BugReportService {
       );
 
       if (result.success && result.messageEventId != null) {
-        Log.info('Bug report sent successfully: ${result.messageEventId}',
-            category: LogCategory.system);
+        Log.info(
+          'Bug report sent successfully: ${result.messageEventId}',
+          category: LogCategory.system,
+        );
         return BugReportResult.createSuccess(
           reportId: data.reportId,
           messageEventId: result.messageEventId!,
         );
       } else {
-        Log.error('Failed to send bug report DM: ${result.error}',
-            category: LogCategory.system);
+        Log.error(
+          'Failed to send bug report DM: ${result.error}',
+          category: LogCategory.system,
+        );
 
         // If DM failed but we have a Blossom URL, that's still useful
         if (bugReportUrl != null) {
@@ -291,22 +371,31 @@ class BugReportService {
             reportId: data.reportId,
             messageEventId: null,
             timestamp: DateTime.now(),
-            error: 'Uploaded to Blossom but DM failed: ${result.error}. URL: $bugReportUrl',
+            error:
+                'Uploaded to Blossom but DM failed: ${result.error}. URL: $bugReportUrl',
           );
         }
 
         // Fall back to email if both Blossom and DM failed
-        Log.info('Falling back to email attachment method',
-            category: LogCategory.system);
+        Log.info(
+          'Falling back to email attachment method',
+          category: LogCategory.system,
+        );
         return sendBugReportViaEmail(data);
       }
     } catch (e, stackTrace) {
-      Log.error('Exception while sending bug report: $e',
-          category: LogCategory.system, error: e, stackTrace: stackTrace);
+      Log.error(
+        'Exception while sending bug report: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
 
       // Fall back to email on any exception
-      Log.info('Falling back to email attachment method',
-          category: LogCategory.system);
+      Log.info(
+        'Falling back to email attachment method',
+        category: LogCategory.system,
+      );
       return sendBugReportViaEmail(data);
     }
   }
@@ -395,7 +484,9 @@ class BugReportService {
     buffer.writeln('═' * 80);
     buffer.writeln('Recent Logs (${data.recentLogs.length} entries):');
     for (final log in data.recentLogs) {
-      buffer.writeln('[${log.timestamp.toIso8601String()}] ${log.level.name.toUpperCase()} - ${log.message}');
+      buffer.writeln(
+        '[${log.timestamp.toIso8601String()}] ${log.level.name.toUpperCase()} - ${log.message}',
+      );
       if (log.error != null) {
         buffer.writeln('  Error: ${log.error}');
       }
@@ -416,8 +507,10 @@ class BugReportService {
     await file.writeAsString(buffer.toString());
 
     final fileSizeMB = (await file.length() / (1024 * 1024)).toStringAsFixed(2);
-    Log.info('Bug report file created: $filePath ($fileSizeMB MB)',
-        category: LogCategory.system);
+    Log.info(
+      'Bug report file created: $filePath ($fileSizeMB MB)',
+      category: LogCategory.system,
+    );
 
     return file;
   }
@@ -425,8 +518,10 @@ class BugReportService {
   /// Send bug report via email by creating a file attachment
   Future<BugReportResult> sendBugReportViaEmail(BugReportData data) async {
     try {
-      Log.info('Creating bug report file for email ${data.reportId}',
-          category: LogCategory.system);
+      Log.info(
+        'Creating bug report file for email ${data.reportId}',
+        category: LogCategory.system,
+      );
 
       // Sanitize sensitive data before sending
       final sanitizedData = sanitizeSensitiveData(data);
@@ -455,12 +550,18 @@ class BugReportService {
       buffer.writeln();
       buffer.writeln('═' * 80);
       buffer.writeln('Device Information:');
-      buffer.writeln(const JsonEncoder.withIndent('  ').convert(sanitizedData.deviceInfo));
+      buffer.writeln(
+        const JsonEncoder.withIndent('  ').convert(sanitizedData.deviceInfo),
+      );
       buffer.writeln();
       buffer.writeln('═' * 80);
-      buffer.writeln('Recent Logs (${sanitizedData.recentLogs.length} entries):');
+      buffer.writeln(
+        'Recent Logs (${sanitizedData.recentLogs.length} entries):',
+      );
       for (final log in sanitizedData.recentLogs) {
-        buffer.writeln('[${log.timestamp.toIso8601String()}] ${log.level.name.toUpperCase()} - ${log.message}');
+        buffer.writeln(
+          '[${log.timestamp.toIso8601String()}] ${log.level.name.toUpperCase()} - ${log.message}',
+        );
         if (log.error != null) {
           buffer.writeln('  Error: ${log.error}');
         }
@@ -479,7 +580,8 @@ class BugReportService {
 
       final content = buffer.toString();
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
-      final fileName = 'openvine_bug_report_${sanitizedData.reportId}_$timestamp.txt';
+      final fileName =
+          'openvine_bug_report_${sanitizedData.reportId}_$timestamp.txt';
 
       // Platform-specific sharing
       if (kIsWeb) {
@@ -490,8 +592,12 @@ class BugReportService {
         return _sendBugReportNative(content, fileName, data.reportId);
       }
     } catch (e, stackTrace) {
-      Log.error('Exception while creating bug report file: $e',
-          category: LogCategory.system, error: e, stackTrace: stackTrace);
+      Log.error(
+        'Exception while creating bug report file: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
       return BugReportResult.failure(
         'Failed to create bug report: $e',
         reportId: data.reportId,
@@ -500,7 +606,11 @@ class BugReportService {
   }
 
   /// Send bug report on web platform by downloading the file
-  BugReportResult _sendBugReportWeb(String content, String fileName, String reportId) {
+  BugReportResult _sendBugReportWeb(
+    String content,
+    String fileName,
+    String reportId,
+  ) {
     try {
       final bytes = utf8.encode(content);
       final blob = html.Blob([bytes], 'text/plain');
@@ -513,8 +623,10 @@ class BugReportService {
       html.Url.revokeObjectUrl(url);
 
       final sizeMB = (bytes.length / (1024 * 1024)).toStringAsFixed(2);
-      Log.info('Bug report downloaded: $fileName ($sizeMB MB)',
-          category: LogCategory.system);
+      Log.info(
+        'Bug report downloaded: $fileName ($sizeMB MB)',
+        category: LogCategory.system,
+      );
 
       // Open mailto: link to make it easier for user
       _openEmailClient(reportId, fileName);
@@ -525,8 +637,12 @@ class BugReportService {
         timestamp: DateTime.now(),
       );
     } catch (e, stackTrace) {
-      Log.error('Failed to download bug report on web: $e',
-          category: LogCategory.system, error: e, stackTrace: stackTrace);
+      Log.error(
+        'Failed to download bug report on web: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
       return BugReportResult.failure(
         'Failed to download bug report: $e',
         reportId: reportId,
@@ -543,7 +659,8 @@ class BugReportService {
         'Report ID: $reportId\n\n'
         'Describe what happened:\n\n',
       );
-      final mailtoUrl = 'mailto:${BugReportConfig.supportEmail}?subject=$subject&body=$body';
+      final mailtoUrl =
+          'mailto:${BugReportConfig.supportEmail}?subject=$subject&body=$body';
       final uri = Uri.parse(mailtoUrl);
 
       if (await canLaunchUrl(uri)) {
@@ -551,12 +668,19 @@ class BugReportService {
         Log.info('Opened email client', category: LogCategory.system);
       }
     } catch (e) {
-      Log.warning('Could not open email client: $e', category: LogCategory.system);
+      Log.warning(
+        'Could not open email client: $e',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Send bug report on native platforms by sharing the file
-  Future<BugReportResult> _sendBugReportNative(String content, String fileName, String reportId) async {
+  Future<BugReportResult> _sendBugReportNative(
+    String content,
+    String fileName,
+    String reportId,
+  ) async {
     try {
       // Get temporary directory
       final tempDir = await getTemporaryDirectory();
@@ -566,43 +690,60 @@ class BugReportService {
       final file = File(filePath);
       await file.writeAsString(content);
 
-      final fileSizeMB = (await file.length() / (1024 * 1024)).toStringAsFixed(2);
-      Log.info('Bug report file created: $filePath ($fileSizeMB MB)',
-          category: LogCategory.system);
+      final fileSizeMB = (await file.length() / (1024 * 1024)).toStringAsFixed(
+        2,
+      );
+      Log.info(
+        'Bug report file created: $filePath ($fileSizeMB MB)',
+        category: LogCategory.system,
+      );
 
       // Share the file with instructions
       final result = await SharePlus.instance.share(
         ShareParams(
           files: [XFile(filePath)],
           subject: 'OpenVine Bug Report',
-          text: 'Please email this bug report to ${BugReportConfig.supportEmail}\n\nReport ID: $reportId',
+          text:
+              'Please email this bug report to ${BugReportConfig.supportEmail}\n\nReport ID: $reportId',
         ),
       );
 
       if (result.status == ShareResultStatus.success) {
-        Log.info('Bug report shared successfully', category: LogCategory.system);
+        Log.info(
+          'Bug report shared successfully',
+          category: LogCategory.system,
+        );
         return BugReportResult(
           success: true,
           reportId: reportId,
           timestamp: DateTime.now(),
         );
       } else if (result.status == ShareResultStatus.dismissed) {
-        Log.info('Bug report sharing was dismissed', category: LogCategory.system);
+        Log.info(
+          'Bug report sharing was dismissed',
+          category: LogCategory.system,
+        );
         return BugReportResult.failure(
           'Sharing was cancelled',
           reportId: reportId,
         );
       } else {
-        Log.warning('Bug report sharing failed: ${result.status}',
-            category: LogCategory.system);
+        Log.warning(
+          'Bug report sharing failed: ${result.status}',
+          category: LogCategory.system,
+        );
         return BugReportResult.failure(
           'Failed to share bug report',
           reportId: reportId,
         );
       }
     } catch (e, stackTrace) {
-      Log.error('Failed to share bug report on native platform: $e',
-          category: LogCategory.system, error: e, stackTrace: stackTrace);
+      Log.error(
+        'Failed to share bug report on native platform: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
       return BugReportResult.failure(
         'Failed to share bug report: $e',
         reportId: reportId,
@@ -617,18 +758,26 @@ class BugReportService {
     String? userPubkey,
   }) async {
     try {
-      Log.info('Exporting comprehensive logs to file', category: LogCategory.system);
+      Log.info(
+        'Exporting comprehensive logs to file',
+        category: LogCategory.system,
+      );
 
       // Get comprehensive statistics about logs
       final stats = await LogCaptureService.instance.getLogStatistics();
-      Log.info('Log stats: ${stats['totalLogLines']} lines, ${stats['totalSizeMB']} MB across ${stats['fileCount']} files',
-          category: LogCategory.system);
+      Log.info(
+        'Log stats: ${stats['totalLogLines']} lines, ${stats['totalSizeMB']} MB across ${stats['fileCount']} files',
+        category: LogCategory.system,
+      );
 
       // Get ALL logs from persistent storage (hundreds of thousands of entries)
       final allLogLines = await LogCaptureService.instance.getAllLogsAsText();
 
       if (allLogLines.isEmpty) {
-        Log.warning('No logs available for export', category: LogCategory.system);
+        Log.warning(
+          'No logs available for export',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -673,8 +822,12 @@ class BugReportService {
         return _exportLogsNative(content, fileName, allLogLines.length);
       }
     } catch (e, stackTrace) {
-      Log.error('Failed to export logs: $e',
-          category: LogCategory.system, error: e, stackTrace: stackTrace);
+      Log.error(
+        'Failed to export logs: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
@@ -693,18 +846,28 @@ class BugReportService {
       html.Url.revokeObjectUrl(url);
 
       final sizeMB = (bytes.length / (1024 * 1024)).toStringAsFixed(2);
-      Log.info('Logs downloaded via browser: $fileName ($sizeMB MB, $lineCount lines)',
-          category: LogCategory.system);
+      Log.info(
+        'Logs downloaded via browser: $fileName ($sizeMB MB, $lineCount lines)',
+        category: LogCategory.system,
+      );
       return true;
     } catch (e, stackTrace) {
-      Log.error('Failed to download logs on web: $e',
-          category: LogCategory.system, error: e, stackTrace: stackTrace);
+      Log.error(
+        'Failed to download logs on web: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
 
   /// Export logs on native platforms using file sharing
-  Future<bool> _exportLogsNative(String content, String fileName, int lineCount) async {
+  Future<bool> _exportLogsNative(
+    String content,
+    String fileName,
+    int lineCount,
+  ) async {
     try {
       // Get temporary directory
       final tempDir = await getTemporaryDirectory();
@@ -714,9 +877,13 @@ class BugReportService {
       final file = File(filePath);
       await file.writeAsString(content);
 
-      final fileSizeMB = (await file.length() / (1024 * 1024)).toStringAsFixed(2);
-      Log.info('Comprehensive logs written to file: $filePath ($fileSizeMB MB, $lineCount lines)',
-          category: LogCategory.system);
+      final fileSizeMB = (await file.length() / (1024 * 1024)).toStringAsFixed(
+        2,
+      );
+      Log.info(
+        'Comprehensive logs written to file: $filePath ($fileSizeMB MB, $lineCount lines)',
+        category: LogCategory.system,
+      );
 
       // Share the file
       // Note: text field is intentionally minimal to ensure the file is the primary content
@@ -733,13 +900,19 @@ class BugReportService {
         Log.info('Logs shared successfully', category: LogCategory.system);
         return true;
       } else {
-        Log.warning('Log sharing was dismissed or failed: ${result.status}',
-            category: LogCategory.system);
+        Log.warning(
+          'Log sharing was dismissed or failed: ${result.status}',
+          category: LogCategory.system,
+        );
         return false;
       }
     } catch (e, stackTrace) {
-      Log.error('Failed to export logs on native platform: $e',
-          category: LogCategory.system, error: e, stackTrace: stackTrace);
+      Log.error(
+        'Failed to export logs on native platform: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }

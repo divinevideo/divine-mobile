@@ -3,11 +3,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
 
 void main() {
   group('Camera screen drafts button', () {
-    testWidgets('should have drafts button with correct key and icon', (tester) async {
+    testWidgets('should have drafts button with correct key and icon', (
+      tester,
+    ) async {
       //  This test validates that the camera screen AppBar includes a drafts button.
       // We're testing the widget structure, not full integration.
 
@@ -33,7 +34,9 @@ void main() {
       expect(find.byKey(const Key('drafts-button')), findsOneWidget);
       expect(find.byIcon(Icons.video_library), findsOneWidget);
 
-      final iconButton = tester.widget<IconButton>(find.byKey(const Key('drafts-button')));
+      final iconButton = tester.widget<IconButton>(
+        find.byKey(const Key('drafts-button')),
+      );
       expect(iconButton.onPressed, isNotNull);
     });
 

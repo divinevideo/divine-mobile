@@ -15,7 +15,11 @@ class MockVideoEventService extends Mock implements VideoEventService {}
 
 class MockHashtagService extends Mock implements HashtagService {
   @override
-  Future<void> subscribeToHashtagVideos(List<String> hashtags, {int limit = 100, int? until}) async {
+  Future<void> subscribeToHashtagVideos(
+    List<String> hashtags, {
+    int limit = 100,
+    int? until,
+  }) async {
     return Future.value();
   }
 }
@@ -35,8 +39,9 @@ void main() {
     testWidgets('shows grid view when embedded', (tester) async {
       final testVideos = TestVideoEventBuilder.createMultiple(count: 6);
 
-      when(() => mockHashtagService.getVideosByHashtags(['funny']))
-          .thenReturn(testVideos);
+      when(
+        () => mockHashtagService.getVideosByHashtags(['funny']),
+      ).thenReturn(testVideos);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -46,10 +51,7 @@ void main() {
           ],
           child: const MaterialApp(
             home: Scaffold(
-              body: HashtagFeedScreen(
-                hashtag: 'funny',
-                embedded: true,
-              ),
+              body: HashtagFeedScreen(hashtag: 'funny', embedded: true),
             ),
           ),
         ),
@@ -67,8 +69,9 @@ void main() {
     testWidgets('shows ListView when not embedded', (tester) async {
       final testVideos = TestVideoEventBuilder.createMultiple(count: 3);
 
-      when(() => mockHashtagService.getVideosByHashtags(['funny']))
-          .thenReturn(testVideos);
+      when(
+        () => mockHashtagService.getVideosByHashtags(['funny']),
+      ).thenReturn(testVideos);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -77,10 +80,7 @@ void main() {
             hashtagServiceProvider.overrideWithValue(mockHashtagService),
           ],
           child: const MaterialApp(
-            home: HashtagFeedScreen(
-              hashtag: 'funny',
-              embedded: false,
-            ),
+            home: HashtagFeedScreen(hashtag: 'funny', embedded: false),
           ),
         ),
       );
@@ -95,8 +95,9 @@ void main() {
     });
 
     testWidgets('shows empty state when no videos', (tester) async {
-      when(() => mockHashtagService.getVideosByHashtags(['empty']))
-          .thenReturn([]);
+      when(
+        () => mockHashtagService.getVideosByHashtags(['empty']),
+      ).thenReturn([]);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -106,10 +107,7 @@ void main() {
           ],
           child: const MaterialApp(
             home: Scaffold(
-              body: HashtagFeedScreen(
-                hashtag: 'empty',
-                embedded: true,
-              ),
+              body: HashtagFeedScreen(hashtag: 'empty', embedded: true),
             ),
           ),
         ),

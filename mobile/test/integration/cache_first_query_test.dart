@@ -15,7 +15,8 @@ import 'package:path/path.dart' as p;
 
 /// Mock NostrService that tracks event delivery order
 class MockNostrServiceWithDelay implements INostrService {
-  final StreamController<Event> _eventController = StreamController<Event>.broadcast();
+  final StreamController<Event> _eventController =
+      StreamController<Event>.broadcast();
   final List<String> _eventDeliveryOrder = []; // Track when events arrive
   bool _isInitialized = true;
   bool _eoseCalled = false;
@@ -70,7 +71,9 @@ class MockNostrServiceWithDelay implements INostrService {
 /// Simply repeats the input string's hex encoding to fill 64 characters
 String toHex64(String input) {
   // Convert string to hex
-  final hex = input.codeUnits.map((c) => c.toRadixString(16).padLeft(2, '0')).join();
+  final hex = input.codeUnits
+      .map((c) => c.toRadixString(16).padLeft(2, '0'))
+      .join();
   // Repeat to fill 64 chars (or truncate if too long)
   final repeated = (hex * ((64 / hex.length).ceil() + 1)).substring(0, 64);
   return repeated;
@@ -91,7 +94,10 @@ Event createTestVideoEvent({
   tags.add(['url', 'https://example.com/test-video-$id.mp4']);
 
   // Add expiration tag for NIP-40 (1 hour from now)
-  tags.add(['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}']);
+  tags.add([
+    'expiration',
+    '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+  ]);
 
   // Add hashtag tags
   if (hashtags != null) {
@@ -122,7 +128,9 @@ void main() {
     late String testDbPath;
 
     setUp(() async {
-      final tempDir = Directory.systemTemp.createTempSync('cache_first_dao_test_');
+      final tempDir = Directory.systemTemp.createTempSync(
+        'cache_first_dao_test_',
+      );
       testDbPath = p.join(tempDir.path, 'test.db');
       db = AppDatabase.test(testDbPath);
       eventRouter = EventRouter(db);
@@ -150,9 +158,18 @@ void main() {
       );
 
       // Insert a profile event (kind 0)
-      final profileEvent = Event(toHex64('user1'), 0, [
-        ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
-      ], '{"name":"Test User"}', createdAt: 50);
+      final profileEvent = Event(
+        toHex64('user1'),
+        0,
+        [
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
+        ],
+        '{"name":"Test User"}',
+        createdAt: 50,
+      );
       profileEvent.id = toHex64('profile1');
       profileEvent.sig = toHex64('sig_profile1');
 
@@ -167,7 +184,10 @@ void main() {
       );
 
       expect(results.length, 2);
-      expect(results.map((e) => e.id), containsAll([toHex64('video1'), toHex64('video2')]));
+      expect(
+        results.map((e) => e.id),
+        containsAll([toHex64('video1'), toHex64('video2')]),
+      );
       expect(results.every((e) => e.kind == 34236), true);
     });
 
@@ -199,8 +219,14 @@ void main() {
       );
 
       expect(results.length, 2);
-      expect(results.map((e) => e.id), containsAll([toHex64('user1_video'), toHex64('user2_video')]));
-      expect(results.map((e) => e.pubkey), containsAll([toHex64('user1_pubkey'), toHex64('user2_pubkey')]));
+      expect(
+        results.map((e) => e.id),
+        containsAll([toHex64('user1_video'), toHex64('user2_video')]),
+      );
+      expect(
+        results.map((e) => e.pubkey),
+        containsAll([toHex64('user1_pubkey'), toHex64('user2_pubkey')]),
+      );
     });
 
     test('filters by hashtags', () async {
@@ -317,25 +343,37 @@ void main() {
     test('respects limit parameter', () async {
       // Insert 10 events
       for (int i = 0; i < 10; i++) {
-        await eventRouter.handleEvent(createTestVideoEvent(
-          id: 'video_$i',
-          pubkey: 'user1',
-          createdAt: i * 100,
-        ));
+        await eventRouter.handleEvent(
+          createTestVideoEvent(
+            id: 'video_$i',
+            pubkey: 'user1',
+            createdAt: i * 100,
+          ),
+        );
       }
 
       // Query with limit of 5
-      final results = await db.nostrEventsDao.getVideoEventsByFilter(
-        limit: 5,
-      );
+      final results = await db.nostrEventsDao.getVideoEventsByFilter(limit: 5);
 
       expect(results.length, 5);
     });
 
     test('returns events in descending order by created_at', () async {
-      final old = createTestVideoEvent(id: 'old', pubkey: 'user1', createdAt: 100);
-      final middle = createTestVideoEvent(id: 'middle', pubkey: 'user1', createdAt: 500);
-      final recent = createTestVideoEvent(id: 'recent', pubkey: 'user1', createdAt: 1000);
+      final old = createTestVideoEvent(
+        id: 'old',
+        pubkey: 'user1',
+        createdAt: 100,
+      );
+      final middle = createTestVideoEvent(
+        id: 'middle',
+        pubkey: 'user1',
+        createdAt: 500,
+      );
+      final recent = createTestVideoEvent(
+        id: 'recent',
+        pubkey: 'user1',
+        createdAt: 1000,
+      );
 
       // Insert in random order
       await eventRouter.handleEvent(middle);
@@ -361,7 +399,9 @@ void main() {
     late String testDbPath;
 
     setUp(() async {
-      final tempDir = Directory.systemTemp.createTempSync('cache_first_integration_test_');
+      final tempDir = Directory.systemTemp.createTempSync(
+        'cache_first_integration_test_',
+      );
       testDbPath = p.join(tempDir.path, 'test.db');
       db = AppDatabase.test(testDbPath);
       eventRouter = EventRouter(db);
@@ -425,8 +465,10 @@ void main() {
 
       // Cached events should already be available
       expect(receivedEvents.length, 2);
-      expect(receivedEvents, containsAll([toHex64('cached1'), toHex64('cached2')]));
-
+      expect(
+        receivedEvents,
+        containsAll([toHex64('cached1'), toHex64('cached2')]),
+      );
 
       // But EOSE should NOT have been called yet (100ms delay)
       expect(mockNostrService.eoseCalled, false);
@@ -472,11 +514,18 @@ void main() {
 
       // Should have both events but NO duplicates
       expect(allEvents.length, 2);
-      expect(allEvents.map((e) => e.id), containsAll([toHex64('cached_event'), toHex64('relay_only')]));
+      expect(
+        allEvents.map((e) => e.id),
+        containsAll([toHex64('cached_event'), toHex64('relay_only')]),
+      );
 
       // Verify no duplicate IDs
       final ids = allEvents.map((e) => e.id).toList();
-      expect(ids.toSet().length, ids.length, reason: 'Should have no duplicate event IDs');
+      expect(
+        ids.toSet().length,
+        ids.length,
+        reason: 'Should have no duplicate event IDs',
+      );
     });
 
     test('cache-first works with author filter', () async {

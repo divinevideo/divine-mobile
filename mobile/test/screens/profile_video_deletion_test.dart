@@ -2,7 +2,6 @@
 // ABOUTME: Verifies NIP-09 deletion workflow and optimistic UI removal from feeds
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
 import '../builders/test_video_event_builder.dart';
 
 void main() {
@@ -18,21 +17,24 @@ void main() {
       // 4. And the video should be marked as locally deleted
       // 5. And subsequent pagination should not resurrect the deleted video
 
-      expect(true, false,
-          reason:
-              'removeVideoFromAuthorList not yet implemented - TDD RED phase');
+      expect(
+        true,
+        false,
+        reason: 'removeVideoFromAuthorList not yet implemented - TDD RED phase',
+      );
     });
 
-    test('should mark video as deleted to prevent pagination resurrection',
-        () {
+    test('should mark video as deleted to prevent pagination resurrection', () {
       // Expected behavior:
       // 1. When a video is removed via removeVideoFromAuthorList
       // 2. Then isVideoLocallyDeleted(videoId) should return true
       // 3. And if the same video arrives from relay pagination, it should be filtered out
 
-      expect(true, false,
-          reason:
-              'Local deletion tracking not yet implemented - TDD RED phase');
+      expect(
+        true,
+        false,
+        reason: 'Local deletion tracking not yet implemented - TDD RED phase',
+      );
     });
 
     test('should handle removing non-existent video gracefully', () {
@@ -44,8 +46,7 @@ void main() {
   });
 
   group('VideoEventService - deleteVideoWithConfirmation integration', () {
-    test('should call ContentDeletionService and remove from feed on success',
-        () {
+    test('should call ContentDeletionService and remove from feed on success', () {
       // Expected behavior:
       // 1. Given a video owned by the current user
       // 2. When deleteVideoWithConfirmation is called
@@ -53,9 +54,12 @@ void main() {
       // 4. And if deletion succeeds, the video should be removed from the feed
       // 5. And success callback should be invoked
 
-      expect(true, false,
-          reason:
-              'deleteVideoWithConfirmation not yet implemented - TDD RED phase');
+      expect(
+        true,
+        false,
+        reason:
+            'deleteVideoWithConfirmation not yet implemented - TDD RED phase',
+      );
     });
 
     test('should not remove video from feed if deletion fails', () {
@@ -75,8 +79,7 @@ void main() {
       // 3. Then deletion should fail immediately without calling ContentDeletionService
       // 4. And error callback should indicate "not your video"
 
-      expect(true, false,
-          reason: 'Ownership validation not yet implemented');
+      expect(true, false, reason: 'Ownership validation not yet implemented');
     });
   });
 
@@ -99,8 +102,11 @@ void main() {
       // 5. And the event should be broadcast to relays
       // 6. And DeleteResult.success should be returned
 
-      expect(true, false,
-          reason: 'ContentDeletionService integration test - setup needed');
+      expect(
+        true,
+        false,
+        reason: 'ContentDeletionService integration test - setup needed',
+      );
     });
   });
 
@@ -120,8 +126,11 @@ void main() {
       // 9. UI: Success message shown to user
       // 10. UI: Dialog dismissed, user returns to grid view
 
-      expect(true, false,
-          reason: 'Workflow integration not yet implemented - TDD RED phase');
+      expect(
+        true,
+        false,
+        reason: 'Workflow integration not yet implemented - TDD RED phase',
+      );
     });
   });
 }

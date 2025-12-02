@@ -20,8 +20,8 @@ class VideoEventBuilder {
     this.originalLoops,
     this.originalLikes,
     Map<String, dynamic>? metadata,
-  })  : createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        metadata = metadata ?? {};
+  }) : createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
+       metadata = metadata ?? {};
   String id;
   String eventId;
   String pubkey;
@@ -39,18 +39,18 @@ class VideoEventBuilder {
 
   /// Build the VideoEvent instance
   VideoEvent build() => VideoEvent(
-        id: id,
-        pubkey: pubkey,
-        createdAt: createdAt,
-        content: title ?? 'Test video content',
-        timestamp: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
-        title: title,
-        videoUrl: videoUrl,
-        thumbnailUrl: thumbnailUrl,
-        duration: duration,
-        originalLoops: originalLoops,
-        originalLikes: originalLikes,
-      );
+    id: id,
+    pubkey: pubkey,
+    createdAt: createdAt,
+    content: title ?? 'Test video content',
+    timestamp: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
+    title: title,
+    videoUrl: videoUrl,
+    thumbnailUrl: thumbnailUrl,
+    duration: duration,
+    originalLoops: originalLoops,
+    originalLikes: originalLikes,
+  );
 
   /// Create a processing video
   VideoEventBuilder processing() {
@@ -75,7 +75,8 @@ class VideoEventBuilder {
 
   /// Create an old video (1 week ago)
   VideoEventBuilder old() {
-    createdAt = DateTime.now()
+    createdAt =
+        DateTime.now()
             .subtract(const Duration(days: 7))
             .millisecondsSinceEpoch ~/
         1000;
@@ -84,7 +85,8 @@ class VideoEventBuilder {
 
   /// Create a recent video (1 minute ago)
   VideoEventBuilder recent() {
-    createdAt = DateTime.now()
+    createdAt =
+        DateTime.now()
             .subtract(const Duration(minutes: 1))
             .millisecondsSinceEpoch ~/
         1000;
@@ -108,13 +110,12 @@ class VideoEventBuilder {
     required int count,
     String Function(int index)? idGenerator,
     String Function(int index)? titleGenerator,
-  }) =>
-      List.generate(
-        count,
-        (index) => VideoEventBuilder(
-          id: idGenerator?.call(index) ?? 'video-$index',
-          eventId: 'event-$index',
-          title: titleGenerator?.call(index) ?? 'Video $index',
-        ).build(),
-      );
+  }) => List.generate(
+    count,
+    (index) => VideoEventBuilder(
+      id: idGenerator?.call(index) ?? 'video-$index',
+      eventId: 'event-$index',
+      title: titleGenerator?.call(index) ?? 'Video $index',
+    ).build(),
+  );
 }

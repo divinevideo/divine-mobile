@@ -72,7 +72,13 @@ void main() {
 
       // Assert
       expect(event, isNotNull);
-      expect(event!.tags.any((tag) => tag.length == 2 && tag[0] == 'relay' && tag[1] == 'ALL_RELAYS'), isTrue);
+      expect(
+        event!.tags.any(
+          (tag) =>
+              tag.length == 2 && tag[0] == 'relay' && tag[1] == 'ALL_RELAYS',
+        ),
+        isTrue,
+      );
     });
 
     test('createNip62Event should include user pubkey', () async {
@@ -97,7 +103,15 @@ void main() {
 
       when(mockNostrService.broadcastEvent(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
-          event: Event(testPublicKey, 62, [['relay', 'ALL_RELAYS']], 'test content', createdAt: 1234567890),
+          event: Event(
+            testPublicKey,
+            62,
+            [
+              ['relay', 'ALL_RELAYS'],
+            ],
+            'test content',
+            createdAt: 1234567890,
+          ),
           successCount: 3,
           totalRelays: 3,
           results: {'relay1': true, 'relay2': true, 'relay3': true},
@@ -112,28 +126,39 @@ void main() {
       verify(mockNostrService.broadcastEvent(any)).called(1);
     });
 
-    test('deleteAccount should return success when broadcast succeeds', () async {
-      // Arrange
-      when(mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
-      when(mockNostrService.hasKeys).thenReturn(true);
+    test(
+      'deleteAccount should return success when broadcast succeeds',
+      () async {
+        // Arrange
+        when(mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
+        when(mockNostrService.hasKeys).thenReturn(true);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
-        (_) async => NostrBroadcastResult(
-          event: Event(testPublicKey, 62, [['relay', 'ALL_RELAYS']], 'test content', createdAt: 1234567890),
-          successCount: 3,
-          totalRelays: 3,
-          results: {'relay1': true, 'relay2': true, 'relay3': true},
-          errors: {},
-        ),
-      );
+        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+          (_) async => NostrBroadcastResult(
+            event: Event(
+              testPublicKey,
+              62,
+              [
+                ['relay', 'ALL_RELAYS'],
+              ],
+              'test content',
+              createdAt: 1234567890,
+            ),
+            successCount: 3,
+            totalRelays: 3,
+            results: {'relay1': true, 'relay2': true, 'relay3': true},
+            errors: {},
+          ),
+        );
 
-      // Act
-      final result = await service.deleteAccount();
+        // Act
+        final result = await service.deleteAccount();
 
-      // Assert
-      expect(result.success, isTrue);
-      expect(result.error, isNull);
-    });
+        // Assert
+        expect(result.success, isTrue);
+        expect(result.error, isNull);
+      },
+    );
 
     test('deleteAccount should return failure when broadcast fails', () async {
       // Arrange
@@ -142,7 +167,15 @@ void main() {
 
       when(mockNostrService.broadcastEvent(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
-          event: Event(testPublicKey, 62, [['relay', 'ALL_RELAYS']], 'test content', createdAt: 1234567890),
+          event: Event(
+            testPublicKey,
+            62,
+            [
+              ['relay', 'ALL_RELAYS'],
+            ],
+            'test content',
+            createdAt: 1234567890,
+          ),
           successCount: 0,
           totalRelays: 3,
           results: {'relay1': false, 'relay2': false, 'relay3': false},

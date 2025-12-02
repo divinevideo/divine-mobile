@@ -36,53 +36,53 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     );
 
     return Scaffold(
-        body: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFF00AB82),
-                Color(0xFF009870),
-              ],
-            ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF00AB82), Color(0xFF009870)],
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: Column(
-                    children: [
-                // No top margin on phones, keep margin on tablets
-                SizedBox(height: MediaQuery.of(context).size.width < 600 ? 0 : 40),
-                // App branding - Divine icon (responsive sizing)
-                Image.asset(
-                  'assets/icon/divine_icon_transparent.png',
-                  height: MediaQuery.of(context).size.width < 600 ? 224 : 320,
-                  fit: BoxFit.contain,
-                ),
-                // Wordmark logo - positioned close to icon above
-                Image.asset(
-                  'assets/icon/divine_wordmark.png',
-                  width: MediaQuery.of(context).size.width < 600 ? 130 : 182,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Create and share short videos\non the decentralized web',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Color(0xFFF5F6EA),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
+                  children: [
+                    // No top margin on phones, keep margin on tablets
+                    SizedBox(
+                      height: MediaQuery.of(context).size.width < 600 ? 0 : 40,
+                    ),
+                    // App branding - Divine icon (responsive sizing)
+                    Image.asset(
+                      'assets/icon/divine_icon_transparent.png',
+                      height: MediaQuery.of(context).size.width < 600
+                          ? 224
+                          : 320,
+                      fit: BoxFit.contain,
+                    ),
+                    // Wordmark logo - positioned close to icon above
+                    Image.asset(
+                      'assets/icon/divine_wordmark.png',
+                      width: MediaQuery.of(context).size.width < 600
+                          ? 130
+                          : 182,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Create and share short videos\non the decentralized web',
+                      style: TextStyle(fontSize: 18, color: Color(0xFFF5F6EA)),
+                      textAlign: TextAlign.center,
+                    ),
 
-                // Spacer pushes content below to the bottom
-                const Spacer(),
+                    // Spacer pushes content below to the bottom
+                    const Spacer(),
 
                 // Age verification and TOS acceptance
                 _TermsCheckboxSection(
@@ -92,24 +92,24 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   onAgreedToTermsChanged: (value) => setState(() => _agreedToTerms = value),
                 ),
 
-                const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                // Import existing keys option
-                Center(
-                  child: GestureDetector(
-                    onTap: () => context.push('/import-key'),
-                    child: const Text(
-                      'Already have keys? Import them here →',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        decoration: TextDecoration.underline,
+                    // Import existing keys option
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => context.push('/import-key'),
+                        child: const Text(
+                          'Already have keys? Import them here →',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
 
-                const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
                 // Main action buttons - show based on auth state
                 _WelcomeActionSection(

@@ -13,50 +13,56 @@ void main() {
       // Mock permission denial
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        (MethodCall methodCall) async {
-          if (methodCall.method == 'hasPermission') {
-            return false;
-          }
-          if (methodCall.method == 'requestPermission') {
-            return false; // User denies permission
-          }
-          return null;
-        },
-      );
+            const MethodChannel('openvine/native_camera'),
+            (MethodCall methodCall) async {
+              if (methodCall.method == 'hasPermission') {
+                return false;
+              }
+              if (methodCall.method == 'requestPermission') {
+                return false; // User denies permission
+              }
+              return null;
+            },
+          );
 
       final controller = VineRecordingController();
 
-      expect(() async => await controller.initialize(),
-          throwsA(predicate((e) =>
-              e.toString().contains('permission') ||
-              e.toString().contains('denied'))));
+      expect(
+        () async => await controller.initialize(),
+        throwsA(
+          predicate(
+            (e) =>
+                e.toString().contains('permission') ||
+                e.toString().contains('denied'),
+          ),
+        ),
+      );
 
       controller.dispose();
 
       // Clean up mock
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        null,
-      );
+            const MethodChannel('openvine/native_camera'),
+            null,
+          );
     });
 
     test('Recovery from camera already in use', () async {
       // Mock camera in use error
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        (MethodCall methodCall) async {
-          if (methodCall.method == 'initialize') {
-            throw PlatformException(
-              code: 'CAMERA_IN_USE',
-              message: 'Camera is being used by another application',
-            );
-          }
-          return null;
-        },
-      );
+            const MethodChannel('openvine/native_camera'),
+            (MethodCall methodCall) async {
+              if (methodCall.method == 'initialize') {
+                throw PlatformException(
+                  code: 'CAMERA_IN_USE',
+                  message: 'Camera is being used by another application',
+                );
+              }
+              return null;
+            },
+          );
 
       final controller = VineRecordingController();
       var retries = 0;
@@ -82,9 +88,9 @@ void main() {
       // Clean up
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        null,
-      );
+            const MethodChannel('openvine/native_camera'),
+            null,
+          );
     });
 
     test('Recording during app backgrounding', () async {
@@ -93,22 +99,22 @@ void main() {
       // Set up normal camera mock
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        (MethodCall methodCall) async {
-          switch (methodCall.method) {
-            case 'initialize':
-              return true;
-            case 'startPreview':
-              return true;
-            case 'startRecording':
-              return true;
-            case 'stopRecording':
-              return '/tmp/recording.mov';
-            default:
-              return null;
-          }
-        },
-      );
+            const MethodChannel('openvine/native_camera'),
+            (MethodCall methodCall) async {
+              switch (methodCall.method) {
+                case 'initialize':
+                  return true;
+                case 'startPreview':
+                  return true;
+                case 'startRecording':
+                  return true;
+                case 'stopRecording':
+                  return '/tmp/recording.mov';
+                default:
+                  return null;
+              }
+            },
+          );
 
       await controller.initialize();
       await controller.startRecording();
@@ -118,19 +124,19 @@ void main() {
 
       // App goes to background - recording should stop
       await controller.stopRecording();
-      expect(controller.state, anyOf([
-        VineRecordingState.paused,
-        VineRecordingState.completed,
-      ]));
+      expect(
+        controller.state,
+        anyOf([VineRecordingState.paused, VineRecordingState.completed]),
+      );
 
       controller.dispose();
 
       // Clean up
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        null,
-      );
+            const MethodChannel('openvine/native_camera'),
+            null,
+          );
     });
 
     test('Handling of corrupted video files', () async {
@@ -139,22 +145,22 @@ void main() {
       // Mock returning invalid file path
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        (MethodCall methodCall) async {
-          switch (methodCall.method) {
-            case 'initialize':
-              return true;
-            case 'startPreview':
-              return true;
-            case 'startRecording':
-              return true;
-            case 'stopRecording':
-              return '/nonexistent/path/video.mov';
-            default:
-              return null;
-          }
-        },
-      );
+            const MethodChannel('openvine/native_camera'),
+            (MethodCall methodCall) async {
+              switch (methodCall.method) {
+                case 'initialize':
+                  return true;
+                case 'startPreview':
+                  return true;
+                case 'startRecording':
+                  return true;
+                case 'stopRecording':
+                  return '/nonexistent/path/video.mov';
+                default:
+                  return null;
+              }
+            },
+          );
 
       await controller.initialize();
       await controller.startRecording();
@@ -175,9 +181,9 @@ void main() {
       // Clean up
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        null,
-      );
+            const MethodChannel('openvine/native_camera'),
+            null,
+          );
     });
 
     test('Maximum recording duration enforcement', () async {
@@ -185,22 +191,22 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        (MethodCall methodCall) async {
-          switch (methodCall.method) {
-            case 'initialize':
-              return true;
-            case 'startPreview':
-              return true;
-            case 'startRecording':
-              return true;
-            case 'stopRecording':
-              return '/tmp/max_duration.mov';
-            default:
-              return null;
-          }
-        },
-      );
+            const MethodChannel('openvine/native_camera'),
+            (MethodCall methodCall) async {
+              switch (methodCall.method) {
+                case 'initialize':
+                  return true;
+                case 'startPreview':
+                  return true;
+                case 'startRecording':
+                  return true;
+                case 'stopRecording':
+                  return '/tmp/max_duration.mov';
+                default:
+                  return null;
+              }
+            },
+          );
 
       await controller.initialize();
 
@@ -211,19 +217,19 @@ void main() {
       await Future.delayed(Duration(seconds: 7));
 
       // Should have auto-stopped
-      expect(controller.state, anyOf([
-        VineRecordingState.completed,
-        VineRecordingState.paused,
-      ]));
+      expect(
+        controller.state,
+        anyOf([VineRecordingState.completed, VineRecordingState.paused]),
+      );
 
       controller.dispose();
 
       // Clean up
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        null,
-      );
+            const MethodChannel('openvine/native_camera'),
+            null,
+          );
     });
 
     test('Rapid start/stop stress test', () async {
@@ -231,22 +237,22 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        (MethodCall methodCall) async {
-          switch (methodCall.method) {
-            case 'initialize':
-              return true;
-            case 'startPreview':
-              return true;
-            case 'startRecording':
-              return true;
-            case 'stopRecording':
-              return '/tmp/stress_test.mov';
-            default:
-              return null;
-          }
-        },
-      );
+            const MethodChannel('openvine/native_camera'),
+            (MethodCall methodCall) async {
+              switch (methodCall.method) {
+                case 'initialize':
+                  return true;
+                case 'startPreview':
+                  return true;
+                case 'startRecording':
+                  return true;
+                case 'stopRecording':
+                  return '/tmp/stress_test.mov';
+                default:
+                  return null;
+              }
+            },
+          );
 
       await controller.initialize();
 
@@ -265,9 +271,9 @@ void main() {
       // Clean up
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        null,
-      );
+            const MethodChannel('openvine/native_camera'),
+            null,
+          );
     });
   });
 }

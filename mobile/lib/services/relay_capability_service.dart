@@ -16,7 +16,8 @@ class RelayCapabilityException implements Exception {
   RelayCapabilityException(this.message, this.relayUrl, [this.cause]);
 
   @override
-  String toString() => 'RelayCapabilityException: $message for $relayUrl${cause != null ? ' (cause: $cause)' : ''}';
+  String toString() =>
+      'RelayCapabilityException: $message for $relayUrl${cause != null ? ' (cause: $cause)' : ''}';
 }
 
 /// Represents capabilities of a Nostr relay based on NIP-11
@@ -52,8 +53,12 @@ class RelayCapabilities {
   });
 
   /// Parse from NIP-11 JSON response
-  factory RelayCapabilities.fromJson(String relayUrl, Map<String, dynamic> json) {
-    final supportedNips = (json['supported_nips'] as List<dynamic>?)
+  factory RelayCapabilities.fromJson(
+    String relayUrl,
+    Map<String, dynamic> json,
+  ) {
+    final supportedNips =
+        (json['supported_nips'] as List<dynamic>?)
             ?.map((e) => e as int)
             .toList() ??
         [];
@@ -70,11 +75,13 @@ class RelayCapabilities {
     int? maxLimit;
 
     if (hasDivineExtensions) {
-      sortFields = (divineExtensions['sort_fields'] as List<dynamic>?)
+      sortFields =
+          (divineExtensions['sort_fields'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           [];
-      intFilterFields = (divineExtensions['int_filters'] as List<dynamic>?)
+      intFilterFields =
+          (divineExtensions['int_filters'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           [];
@@ -131,31 +138,39 @@ class RelayCapabilityService {
   final Duration _cacheTtl;
   final Map<String, _CachedCapability> _cache = {};
 
-  RelayCapabilityService({
-    http.Client? httpClient,
-    Duration? cacheTtl,
-  })  : _httpClient = httpClient ?? http.Client(),
-        _cacheTtl = cacheTtl ?? Duration(hours: 24);
+  RelayCapabilityService({http.Client? httpClient, Duration? cacheTtl})
+    : _httpClient = httpClient ?? http.Client(),
+      _cacheTtl = cacheTtl ?? Duration(hours: 24);
 
   /// Get capabilities for a relay (with caching)
   Future<RelayCapabilities> getRelayCapabilities(String relayWsUrl) async {
     // Check cache first
     final cached = _cache[relayWsUrl];
     if (cached != null && !cached.isExpired) {
-      UnifiedLogger.debug('Using cached capabilities for $relayWsUrl', name: 'RelayCapability');
+      UnifiedLogger.debug(
+        'Using cached capabilities for $relayWsUrl',
+        name: 'RelayCapability',
+      );
       return cached.capabilities;
     }
 
     // Convert wss:// to https:// for NIP-11 HTTP request
-    final httpUrl = relayWsUrl.replaceFirst('wss://', 'https://').replaceFirst('ws://', 'http://');
+    final httpUrl = relayWsUrl
+        .replaceFirst('wss://', 'https://')
+        .replaceFirst('ws://', 'http://');
 
-    UnifiedLogger.info('Fetching NIP-11 capabilities from $httpUrl', name: 'RelayCapability');
+    UnifiedLogger.info(
+      'Fetching NIP-11 capabilities from $httpUrl',
+      name: 'RelayCapability',
+    );
 
     try {
-      final response = await _httpClient.get(
-        Uri.parse(httpUrl),
-        headers: {'Accept': 'application/nostr+json'},
-      ).timeout(Duration(seconds: 10));
+      final response = await _httpClient
+          .get(
+            Uri.parse(httpUrl),
+            headers: {'Accept': 'application/nostr+json'},
+          )
+          .timeout(Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         throw RelayCapabilityException(
@@ -195,14 +210,21 @@ class RelayCapabilityService {
     } on TimeoutException catch (e) {
       throw RelayCapabilityException('Request timeout', relayWsUrl, e);
     } catch (e) {
-      throw RelayCapabilityException('Failed to fetch capabilities', relayWsUrl, e);
+      throw RelayCapabilityException(
+        'Failed to fetch capabilities',
+        relayWsUrl,
+        e,
+      );
     }
   }
 
   /// Clear all cached capabilities
   void clearCache() {
     _cache.clear();
-    UnifiedLogger.debug('Cleared relay capability cache', name: 'RelayCapability');
+    UnifiedLogger.debug(
+      'Cleared relay capability cache',
+      name: 'RelayCapability',
+    );
   }
 
   /// Dispose of resources

@@ -8,7 +8,8 @@ import 'package:openvine/providers/app_providers.dart';
 /// Maps pubkey to follow state (true = following, false = not following, null = no optimistic state)
 final optimisticFollowStateProvider =
     NotifierProvider<OptimisticFollowNotifier, Map<String, bool>>(
-        OptimisticFollowNotifier.new);
+      OptimisticFollowNotifier.new,
+    );
 
 class OptimisticFollowNotifier extends Notifier<Map<String, bool>> {
   @override
@@ -56,7 +57,9 @@ class OptimisticFollowMethods {
 
   Future<void> followUser(String pubkey) async {
     final socialService = _ref.read(socialServiceProvider);
-    final optimisticNotifier = _ref.read(optimisticFollowStateProvider.notifier);
+    final optimisticNotifier = _ref.read(
+      optimisticFollowStateProvider.notifier,
+    );
 
     // Set optimistic state immediately
     optimisticNotifier.setOptimisticState(pubkey, true);
@@ -76,7 +79,9 @@ class OptimisticFollowMethods {
 
   Future<void> unfollowUser(String pubkey) async {
     final socialService = _ref.read(socialServiceProvider);
-    final optimisticNotifier = _ref.read(optimisticFollowStateProvider.notifier);
+    final optimisticNotifier = _ref.read(
+      optimisticFollowStateProvider.notifier,
+    );
 
     // Set optimistic state immediately
     optimisticNotifier.setOptimisticState(pubkey, false);

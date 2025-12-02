@@ -9,55 +9,80 @@ import 'package:video_player/video_player.dart';
 /// when a video controller is already playing
 void main() {
   group('Video Controller Rebuild Prevention Logic', () {
-    test('shouldAvoidRebuild returns true when controller is playing and same', () {
-      // This test will fail initially - we need to implement this logic
+    test(
+      'shouldAvoidRebuild returns true when controller is playing and same',
+      () {
+        // This test will fail initially - we need to implement this logic
 
-      // Mock video controller values
-      final currentController = _MockVideoController(
+        // Mock video controller values
+        final currentController = _MockVideoController(
+          isInitialized: true,
+          isPlaying: true,
+        );
+
+        final newController = currentController; // Same instance
+
+        // The logic we need to implement
+        final shouldAvoidRebuild = _shouldAvoidControllerRebuild(
+          currentController: currentController,
+          newController: newController,
+        );
+
+        // FAILING TEST: This should return true but will fail initially
+        expect(
+          shouldAvoidRebuild,
+          isTrue,
+          reason:
+              'Should avoid rebuild when same playing controller is provided',
+        );
+      },
+    );
+
+    test('shouldAvoidRebuild returns false when controller is null', () {
+      final newController = _MockVideoController(
         isInitialized: true,
         isPlaying: true,
       );
-
-      final newController = currentController; // Same instance
-
-      // The logic we need to implement
-      final shouldAvoidRebuild = _shouldAvoidControllerRebuild(
-        currentController: currentController,
-        newController: newController,
-      );
-
-      // FAILING TEST: This should return true but will fail initially
-      expect(shouldAvoidRebuild, isTrue,
-        reason: 'Should avoid rebuild when same playing controller is provided');
-    });
-
-    test('shouldAvoidRebuild returns false when controller is null', () {
-      final newController = _MockVideoController(isInitialized: true, isPlaying: true);
 
       final shouldAvoidRebuild = _shouldAvoidControllerRebuild(
         currentController: null,
         newController: newController,
       );
 
-      expect(shouldAvoidRebuild, isFalse,
-        reason: 'Should not avoid rebuild when no current controller exists');
-    });
-
-    test('shouldAvoidRebuild returns false when controller is not initialized', () {
-      final currentController = _MockVideoController(isInitialized: false, isPlaying: false);
-      final newController = currentController;
-
-      final shouldAvoidRebuild = _shouldAvoidControllerRebuild(
-        currentController: currentController,
-        newController: newController,
+      expect(
+        shouldAvoidRebuild,
+        isFalse,
+        reason: 'Should not avoid rebuild when no current controller exists',
       );
-
-      expect(shouldAvoidRebuild, isFalse,
-        reason: 'Should not avoid rebuild when controller is not initialized');
     });
+
+    test(
+      'shouldAvoidRebuild returns false when controller is not initialized',
+      () {
+        final currentController = _MockVideoController(
+          isInitialized: false,
+          isPlaying: false,
+        );
+        final newController = currentController;
+
+        final shouldAvoidRebuild = _shouldAvoidControllerRebuild(
+          currentController: currentController,
+          newController: newController,
+        );
+
+        expect(
+          shouldAvoidRebuild,
+          isFalse,
+          reason: 'Should not avoid rebuild when controller is not initialized',
+        );
+      },
+    );
 
     test('shouldAvoidRebuild returns false when controller is not playing', () {
-      final currentController = _MockVideoController(isInitialized: true, isPlaying: false);
+      final currentController = _MockVideoController(
+        isInitialized: true,
+        isPlaying: false,
+      );
       final newController = currentController;
 
       final shouldAvoidRebuild = _shouldAvoidControllerRebuild(
@@ -65,21 +90,34 @@ void main() {
         newController: newController,
       );
 
-      expect(shouldAvoidRebuild, isFalse,
-        reason: 'Should not avoid rebuild when controller is not playing');
+      expect(
+        shouldAvoidRebuild,
+        isFalse,
+        reason: 'Should not avoid rebuild when controller is not playing',
+      );
     });
 
     test('shouldAvoidRebuild returns false when controllers are different', () {
-      final currentController = _MockVideoController(isInitialized: true, isPlaying: true);
-      final newController = _MockVideoController(isInitialized: true, isPlaying: true);
+      final currentController = _MockVideoController(
+        isInitialized: true,
+        isPlaying: true,
+      );
+      final newController = _MockVideoController(
+        isInitialized: true,
+        isPlaying: true,
+      );
 
       final shouldAvoidRebuild = _shouldAvoidControllerRebuild(
         currentController: currentController,
         newController: newController,
       );
 
-      expect(shouldAvoidRebuild, isFalse,
-        reason: 'Should not avoid rebuild when controllers are different instances');
+      expect(
+        shouldAvoidRebuild,
+        isFalse,
+        reason:
+            'Should not avoid rebuild when controllers are different instances',
+      );
     });
   });
 }
@@ -92,22 +130,25 @@ bool _shouldAvoidControllerRebuild({
 }) {
   // TDD implementation: minimal fix to make tests pass
   return currentController != null &&
-         currentController.value.isInitialized &&
-         currentController.value.isPlaying &&
-         newController == currentController;
+      currentController.value.isInitialized &&
+      currentController.value.isPlaying &&
+      newController == currentController;
 }
 
 /// Mock controller for testing
 class _MockVideoController extends VideoPlayerController {
-  _MockVideoController({
-    required bool isInitialized,
-    required bool isPlaying,
-  }) : super.networkUrl(Uri.parse('https://example.com/video.mp4')) {
+  _MockVideoController({required bool isInitialized, required bool isPlaying})
+    : super.networkUrl(Uri.parse('https://example.com/video.mp4')) {
     value = VideoPlayerValue(
       duration: const Duration(seconds: 10),
       size: const Size(1920, 1080),
       position: Duration.zero,
-      caption: const Caption(number: 0, start: Duration.zero, end: Duration.zero, text: ''),
+      caption: const Caption(
+        number: 0,
+        start: Duration.zero,
+        end: Duration.zero,
+        text: '',
+      ),
       isInitialized: isInitialized,
       isPlaying: isPlaying,
       isLooping: false,

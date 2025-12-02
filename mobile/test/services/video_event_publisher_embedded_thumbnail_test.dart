@@ -76,7 +76,8 @@ class EmbeddedThumbnailGenerator {
         quality: 75,
       );
 
-      if (thumbnailResult['success'] == true && thumbnailResult['dataUri'] != null) {
+      if (thumbnailResult['success'] == true &&
+          thumbnailResult['dataUri'] != null) {
         imetaComponents.add('image ${thumbnailResult['dataUri']}');
 
         if (thumbnailResult['blurhash'] != null) {
@@ -89,7 +90,7 @@ class EmbeddedThumbnailGenerator {
     if (upload.thumbnailPath != null &&
         upload.thumbnailPath!.isNotEmpty &&
         (upload.thumbnailPath!.startsWith('http://') ||
-         upload.thumbnailPath!.startsWith('https://'))) {
+            upload.thumbnailPath!.startsWith('https://'))) {
       // Only add if we didn't already embed a thumbnail
       if (!imetaComponents.any((c) => c.startsWith('image '))) {
         imetaComponents.add('image ${upload.thumbnailPath!}');
@@ -125,8 +126,30 @@ void main() {
     test('should generate base64 data URI from thumbnail bytes', () async {
       // Arrange: Create dummy thumbnail bytes (1x1 red pixel JPEG)
       final dummyJpegBytes = [
-        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
-        0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xFF, 0xDB, 0x00, 0x43,
+        0xFF,
+        0xD8,
+        0xFF,
+        0xE0,
+        0x00,
+        0x10,
+        0x4A,
+        0x46,
+        0x49,
+        0x46,
+        0x00,
+        0x01,
+        0x01,
+        0x00,
+        0x00,
+        0x01,
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0xFF,
+        0xDB,
+        0x00,
+        0x43,
       ];
 
       // Act: Encode to base64 data URI
@@ -134,15 +157,26 @@ void main() {
       final dataUri = 'data:image/jpeg;base64,$base64Thumbnail';
 
       // Assert
-      expect(dataUri.startsWith('data:image/jpeg;base64,'), true,
-          reason: 'Should start with correct data URI prefix');
-      expect(dataUri.length, greaterThan(50),
-          reason: 'Should contain encoded image data');
+      expect(
+        dataUri.startsWith('data:image/jpeg;base64,'),
+        true,
+        reason: 'Should start with correct data URI prefix',
+      );
+      expect(
+        dataUri.length,
+        greaterThan(50),
+        reason: 'Should contain encoded image data',
+      );
 
       // Verify we can decode it back
-      final decodedBytes = base64.decode(dataUri.substring('data:image/jpeg;base64,'.length));
-      expect(decodedBytes, equals(dummyJpegBytes),
-          reason: 'Should be able to decode back to original bytes');
+      final decodedBytes = base64.decode(
+        dataUri.substring('data:image/jpeg;base64,'.length),
+      );
+      expect(
+        decodedBytes,
+        equals(dummyJpegBytes),
+        reason: 'Should be able to decode back to original bytes',
+      );
     });
 
     test('should extract thumbnail at 500ms, not first frame', () async {
@@ -152,10 +186,16 @@ void main() {
       const expectedTimeMs = 500;
       const notFirstFrame = 0;
 
-      expect(expectedTimeMs, isNot(equals(notFirstFrame)),
-          reason: 'Should NOT use first frame (0ms)');
-      expect(expectedTimeMs, equals(500),
-          reason: 'Should extract at 500ms to avoid black/blurry first frames');
+      expect(
+        expectedTimeMs,
+        isNot(equals(notFirstFrame)),
+        reason: 'Should NOT use first frame (0ms)',
+      );
+      expect(
+        expectedTimeMs,
+        equals(500),
+        reason: 'Should extract at 500ms to avoid black/blurry first frames',
+      );
     });
 
     test('should use quality 75 for medium-size data URIs', () async {
@@ -164,12 +204,21 @@ void main() {
 
       const expectedQuality = 75;
 
-      expect(expectedQuality, greaterThan(50),
-          reason: 'Quality should be high enough for good visuals');
-      expect(expectedQuality, lessThan(95),
-          reason: 'Quality should be low enough to avoid huge data URIs');
-      expect(expectedQuality, equals(75),
-          reason: 'Should use quality 75 as medium compromise');
+      expect(
+        expectedQuality,
+        greaterThan(50),
+        reason: 'Quality should be high enough for good visuals',
+      );
+      expect(
+        expectedQuality,
+        lessThan(95),
+        reason: 'Quality should be low enough to avoid huge data URIs',
+      );
+      expect(
+        expectedQuality,
+        equals(75),
+        reason: 'Should use quality 75 as medium compromise',
+      );
     });
 
     test('should prefer embedded thumbnail over URL thumbnail', () async {
@@ -178,37 +227,46 @@ void main() {
       final testVideoFile = File('${tempDir.path}/test_video.mp4');
       await testVideoFile.writeAsString('dummy video content');
 
-      final upload = PendingUpload.create(
-        localVideoPath: testVideoFile.path,
-        nostrPubkey: 'test_pubkey',
-        thumbnailPath: 'https://example.com/uploaded_thumbnail.jpg', // URL fallback
-        title: 'Test Video',
-      ).copyWith(
-        cdnUrl: 'https://cdn.divine.video/test_video.mp4',
-        status: UploadStatus.readyToPublish,
-      );
+      final upload =
+          PendingUpload.create(
+            localVideoPath: testVideoFile.path,
+            nostrPubkey: 'test_pubkey',
+            thumbnailPath:
+                'https://example.com/uploaded_thumbnail.jpg', // URL fallback
+            title: 'Test Video',
+          ).copyWith(
+            cdnUrl: 'https://cdn.divine.video/test_video.mp4',
+            status: UploadStatus.readyToPublish,
+          );
 
       // Act: Build imeta components
-      final imetaComponents = await EmbeddedThumbnailGenerator.buildImetaComponentsWithEmbeddedThumbnail(
-        upload: upload,
-      );
+      final imetaComponents =
+          await EmbeddedThumbnailGenerator.buildImetaComponentsWithEmbeddedThumbnail(
+            upload: upload,
+          );
 
       // Assert: Should have image component
-      final imageComponents = imetaComponents.where((c) => c.startsWith('image ')).toList();
+      final imageComponents = imetaComponents
+          .where((c) => c.startsWith('image '))
+          .toList();
 
       // Cleanup
       await tempDir.delete(recursive: true);
 
       // If thumbnail extraction succeeds, it should be embedded data URI
       // If it fails, it should fall back to URL
-      expect(imageComponents.length, lessThanOrEqualTo(1),
-          reason: 'Should have at most one image component');
+      expect(
+        imageComponents.length,
+        lessThanOrEqualTo(1),
+        reason: 'Should have at most one image component',
+      );
 
       if (imageComponents.isNotEmpty) {
         final imageValue = imageComponents.first.substring('image '.length);
         // Either embedded data URI (preferred) or URL fallback
         expect(
-          imageValue.startsWith('data:image/jpeg;base64,') || imageValue.startsWith('https://'),
+          imageValue.startsWith('data:image/jpeg;base64,') ||
+              imageValue.startsWith('https://'),
           true,
           reason: 'Image should be either embedded data URI or URL fallback',
         );
@@ -220,18 +278,28 @@ void main() {
       // Both are generated from the same thumbnailBytes in VideoEventPublisher
 
       // Arrange: Create dummy thumbnail bytes
-      final dummyThumbnailBytes = Uint8List.fromList(List.generate(100, (i) => i % 256));
+      final dummyThumbnailBytes = Uint8List.fromList(
+        List.generate(100, (i) => i % 256),
+      );
 
       // Act: Generate blurhash
-      final blurhash = await BlurhashService.generateBlurhash(dummyThumbnailBytes);
+      final blurhash = await BlurhashService.generateBlurhash(
+        dummyThumbnailBytes,
+      );
 
       // Assert: Blurhash should be generated (or null if service unavailable)
       if (blurhash != null) {
-        expect(blurhash.isNotEmpty, true,
-            reason: 'Blurhash should not be empty string');
+        expect(
+          blurhash.isNotEmpty,
+          true,
+          reason: 'Blurhash should not be empty string',
+        );
         // Blurhash format is typically 6-8 characters minimum
-        expect(blurhash.length, greaterThanOrEqualTo(6),
-            reason: 'Blurhash should have valid length');
+        expect(
+          blurhash.length,
+          greaterThanOrEqualTo(6),
+          reason: 'Blurhash should have valid length',
+        );
       }
     });
 
@@ -245,58 +313,85 @@ void main() {
       );
 
       // Assert: Should fail gracefully
-      expect(result['success'], false,
-          reason: 'Should return failure when file does not exist');
-      expect(result['dataUri'], isNull,
-          reason: 'Should not generate data URI on failure');
+      expect(
+        result['success'],
+        false,
+        reason: 'Should return failure when file does not exist',
+      );
+      expect(
+        result['dataUri'],
+        isNull,
+        reason: 'Should not generate data URI on failure',
+      );
     });
 
-    test('should fall back to URL thumbnail when video file unavailable', () async {
-      // Arrange: Upload with URL thumbnail but no local video file
-      final upload = PendingUpload.create(
-        localVideoPath: '', // No local file
-        nostrPubkey: 'test_pubkey',
-        thumbnailPath: 'https://example.com/uploaded_thumbnail.jpg',
-        title: 'Test Video',
-      ).copyWith(
-        cdnUrl: 'https://cdn.divine.video/test_video.mp4',
-        status: UploadStatus.readyToPublish,
-      );
+    test(
+      'should fall back to URL thumbnail when video file unavailable',
+      () async {
+        // Arrange: Upload with URL thumbnail but no local video file
+        final upload =
+            PendingUpload.create(
+              localVideoPath: '', // No local file
+              nostrPubkey: 'test_pubkey',
+              thumbnailPath: 'https://example.com/uploaded_thumbnail.jpg',
+              title: 'Test Video',
+            ).copyWith(
+              cdnUrl: 'https://cdn.divine.video/test_video.mp4',
+              status: UploadStatus.readyToPublish,
+            );
 
-      // Act: Build imeta components
-      final imetaComponents = await EmbeddedThumbnailGenerator.buildImetaComponentsWithEmbeddedThumbnail(
-        upload: upload,
-      );
+        // Act: Build imeta components
+        final imetaComponents =
+            await EmbeddedThumbnailGenerator.buildImetaComponentsWithEmbeddedThumbnail(
+              upload: upload,
+            );
 
-      // Assert: Should use URL fallback
-      final imageComponents = imetaComponents.where((c) => c.startsWith('image ')).toList();
-      expect(imageComponents.length, equals(1),
-          reason: 'Should have URL thumbnail fallback');
-      expect(imageComponents.first, equals('image https://example.com/uploaded_thumbnail.jpg'),
-          reason: 'Should use uploaded URL when no local file');
-    });
+        // Assert: Should use URL fallback
+        final imageComponents = imetaComponents
+            .where((c) => c.startsWith('image '))
+            .toList();
+        expect(
+          imageComponents.length,
+          equals(1),
+          reason: 'Should have URL thumbnail fallback',
+        );
+        expect(
+          imageComponents.first,
+          equals('image https://example.com/uploaded_thumbnail.jpg'),
+          reason: 'Should use uploaded URL when no local file',
+        );
+      },
+    );
 
     test('should skip non-HTTP thumbnail paths', () async {
       // Arrange: Upload with local file path as thumbnail (not HTTP URL)
-      final upload = PendingUpload.create(
-        localVideoPath: '', // No local video file
-        nostrPubkey: 'test_pubkey',
-        thumbnailPath: '/local/path/to/thumbnail.jpg', // Local path, not URL
-        title: 'Test Video',
-      ).copyWith(
-        cdnUrl: 'https://cdn.divine.video/test_video.mp4',
-        status: UploadStatus.readyToPublish,
-      );
+      final upload =
+          PendingUpload.create(
+            localVideoPath: '', // No local video file
+            nostrPubkey: 'test_pubkey',
+            thumbnailPath:
+                '/local/path/to/thumbnail.jpg', // Local path, not URL
+            title: 'Test Video',
+          ).copyWith(
+            cdnUrl: 'https://cdn.divine.video/test_video.mp4',
+            status: UploadStatus.readyToPublish,
+          );
 
       // Act: Build imeta components
-      final imetaComponents = await EmbeddedThumbnailGenerator.buildImetaComponentsWithEmbeddedThumbnail(
-        upload: upload,
-      );
+      final imetaComponents =
+          await EmbeddedThumbnailGenerator.buildImetaComponentsWithEmbeddedThumbnail(
+            upload: upload,
+          );
 
       // Assert: Should NOT include image component
-      final imageComponents = imetaComponents.where((c) => c.startsWith('image ')).toList();
-      expect(imageComponents.length, equals(0),
-          reason: 'Should skip non-HTTP thumbnail paths');
+      final imageComponents = imetaComponents
+          .where((c) => c.startsWith('image '))
+          .toList();
+      expect(
+        imageComponents.length,
+        equals(0),
+        reason: 'Should skip non-HTTP thumbnail paths',
+      );
     });
   });
 }

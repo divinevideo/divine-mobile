@@ -48,10 +48,7 @@ class NotificationBadge extends StatelessWidget {
                 ),
               ],
             ),
-            constraints: const BoxConstraints(
-              minWidth: 20,
-              minHeight: 20,
-            ),
+            constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
             child: Center(
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 150),
@@ -119,14 +116,8 @@ class _AnimatedNotificationBadgeState extends State<AnimatedNotificationBadge>
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(
-      begin: 1,
-      end: 1.3,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.elasticOut,
-      ),
+    _scaleAnimation = Tween<double>(begin: 1, end: 1.3).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
     );
   }
 
@@ -163,10 +154,8 @@ class _AnimatedNotificationBadgeState extends State<AnimatedNotificationBadge>
           top: -8,
           child: AnimatedBuilder(
             animation: _scaleAnimation,
-            builder: (context, child) => Transform.scale(
-              scale: _scaleAnimation.value,
-              child: child,
-            ),
+            builder: (context, child) =>
+                Transform.scale(scale: _scaleAnimation.value, child: child),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding: EdgeInsets.symmetric(
@@ -184,10 +173,7 @@ class _AnimatedNotificationBadgeState extends State<AnimatedNotificationBadge>
                   ),
                 ],
               ),
-              constraints: const BoxConstraints(
-                minWidth: 20,
-                minHeight: 20,
-              ),
+              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
               child: Center(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 150),

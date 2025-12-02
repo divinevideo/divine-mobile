@@ -115,9 +115,7 @@ class _TestCameraScreenState extends State<TestCameraScreen> {
     if (!_isInitialized || _controller == null) {
       return const Scaffold(
         backgroundColor: Colors.black,
-        body: Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        ),
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
       );
     }
 
@@ -163,10 +161,7 @@ class _TestCameraScreenState extends State<TestCameraScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _isRecording ? Colors.red : Colors.white,
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 4,
-                    ),
+                    border: Border.all(color: Colors.white, width: 4),
                   ),
                   child: _isRecording
                       ? const Center(

@@ -28,8 +28,9 @@ void main() {
       prefs = await SharedPreferences.getInstance();
 
       when(mockAuth.isAuthenticated).thenReturn(true);
-      when(mockAuth.currentPublicKeyHex)
-          .thenReturn('test_pubkey_123456789abcdef');
+      when(
+        mockAuth.currentPublicKeyHex,
+      ).thenReturn('test_pubkey_123456789abcdef');
 
       when(mockNostr.broadcastEvent(any)).thenAnswer((_) async {
         final event = Event.fromJson({
@@ -50,25 +51,31 @@ void main() {
         );
       });
 
-      when(mockNostr.subscribeToEvents(
-        filters: anyNamed('filters'),
-        bypassLimits: anyNamed('bypassLimits'),
-        onEose: anyNamed('onEose'),
-      )).thenAnswer((_) => Stream.empty());
+      when(
+        mockNostr.subscribeToEvents(
+          filters: anyNamed('filters'),
+          bypassLimits: anyNamed('bypassLimits'),
+          onEose: anyNamed('onEose'),
+        ),
+      ).thenAnswer((_) => Stream.empty());
 
-      when(mockAuth.createAndSignEvent(
-        kind: anyNamed('kind'),
-        content: anyNamed('content'),
-        tags: anyNamed('tags'),
-      )).thenAnswer((_) async => Event.fromJson({
-            'id': 'test_event_id',
-            'pubkey': 'test_pubkey_123456789abcdef',
-            'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            'kind': 30005,
-            'tags': [],
-            'content': 'test',
-            'sig': 'test_sig',
-          }));
+      when(
+        mockAuth.createAndSignEvent(
+          kind: anyNamed('kind'),
+          content: anyNamed('content'),
+          tags: anyNamed('tags'),
+        ),
+      ).thenAnswer(
+        (_) async => Event.fromJson({
+          'id': 'test_event_id',
+          'pubkey': 'test_pubkey_123456789abcdef',
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          'kind': 30005,
+          'tags': [],
+          'content': 'test',
+          'sig': 'test_sig',
+        }),
+      );
     });
 
     group('Save to Preferences', () {
@@ -278,8 +285,7 @@ void main() {
         );
 
         expect(service2.lists.length, greaterThanOrEqualTo(1));
-        expect(
-            service2.lists.any((l) => l.name == 'Persistent List'), isTrue);
+        expect(service2.lists.any((l) => l.name == 'Persistent List'), isTrue);
       });
     });
 
@@ -315,7 +321,9 @@ void main() {
           prefs: prefs,
         );
 
-        await service.createList(name: 'List with "quotes" and \'apostrophes\'');
+        await service.createList(
+          name: 'List with "quotes" and \'apostrophes\'',
+        );
         await service.createList(name: 'List with \n newlines \t tabs');
         await service.createList(name: 'Émojis 🎥📹🎬');
 
@@ -328,26 +336,30 @@ void main() {
         expect(service2.lists.length, greaterThanOrEqualTo(3));
       });
 
-      test('handles concurrent save operations', () async {
-        // FIXME: Flaky test - race condition with timestamp-based IDs
-        final service = CuratedListService(
-          nostrService: mockNostr,
-          authService: mockAuth,
-          prefs: prefs,
-        );
+      test(
+        'handles concurrent save operations',
+        () async {
+          // FIXME: Flaky test - race condition with timestamp-based IDs
+          final service = CuratedListService(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            prefs: prefs,
+          );
 
-        // Create multiple lists concurrently
-        await Future.wait([
-          service.createList(name: 'Concurrent 1'),
-          service.createList(name: 'Concurrent 2'),
-          service.createList(name: 'Concurrent 3'),
-        ]);
+          // Create multiple lists concurrently
+          await Future.wait([
+            service.createList(name: 'Concurrent 1'),
+            service.createList(name: 'Concurrent 2'),
+            service.createList(name: 'Concurrent 3'),
+          ]);
 
-        // At least some lists should be saved
-        final savedData = prefs.getString(CuratedListService.listsStorageKey);
-        expect(savedData, isNotNull);
-        // Race condition: lists with same timestamp may overwrite each other
-      }, skip: 'Flaky: timestamp-based ID collision in concurrent creation');
+          // At least some lists should be saved
+          final savedData = prefs.getString(CuratedListService.listsStorageKey);
+          expect(savedData, isNotNull);
+          // Race condition: lists with same timestamp may overwrite each other
+        },
+        skip: 'Flaky: timestamp-based ID collision in concurrent creation',
+      );
 
       test('preserves timestamps across save/load', () async {
         final service1 = CuratedListService(

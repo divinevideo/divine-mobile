@@ -91,12 +91,14 @@ class _ExploreScreenRouterState extends ConsumerState<ExploreScreenRouter>
                 // Guard: only navigate if URL doesn't match
                 if (newIndex != urlIndex) {
                   // Use event-based routing
-                  context.go(buildRoute(
-                    RouteContext(
-                      type: RouteType.explore,
-                      videoIndex: newIndex,
+                  context.go(
+                    buildRoute(
+                      RouteContext(
+                        type: RouteType.explore,
+                        videoIndex: newIndex,
+                      ),
                     ),
-                  ));
+                  );
                 }
 
                 // Prefetch videos around current index

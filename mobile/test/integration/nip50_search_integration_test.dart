@@ -118,24 +118,26 @@ void main() {
 
     group('Provider Integration', () {
       test(
-          'should update searchResultsProvider when searchStateProvider changes',
-          () {
-        // Initial state - empty results
-        final initialResults = container.read(searchResultsProvider);
-        expect(initialResults, isEmpty);
+        'should update searchResultsProvider when searchStateProvider changes',
+        () {
+          // Initial state - empty results
+          final initialResults = container.read(searchResultsProvider);
+          expect(initialResults, isEmpty);
 
-        // Update search state to success with results
-        container.read(searchStateProvider.notifier).state =
-            const SearchState.success([], 'test');
+          // Update search state to success with results
+          container.read(searchStateProvider.notifier).state =
+              const SearchState.success([], 'test');
 
-        // Verify searchResultsProvider reflects the change
-        final updatedResults = container.read(searchResultsProvider);
-        expect(updatedResults, isEmpty); // Still empty but state changed
-      });
+          // Verify searchResultsProvider reflects the change
+          final updatedResults = container.read(searchResultsProvider);
+          expect(updatedResults, isEmpty); // Still empty but state changed
+        },
+      );
 
       test('should handle state transitions correctly', () {
-        final searchStateNotifier =
-            container.read(searchStateProvider.notifier);
+        final searchStateNotifier = container.read(
+          searchStateProvider.notifier,
+        );
 
         // Test initial -> loading
         searchStateNotifier.state = const SearchState.loading('test');

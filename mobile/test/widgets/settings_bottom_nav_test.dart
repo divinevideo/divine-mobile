@@ -15,11 +15,7 @@ void main() {
   group('Settings Screens Scaffold Consistency', () {
     testWidgets('SettingsScreen has bottom navigation bar', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: SettingsScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: SettingsScreen())),
       );
 
       // Should have BottomNavigationBar widget
@@ -31,42 +27,42 @@ void main() {
       expect(bottomNav.backgroundColor, equals(VineTheme.vineGreen));
     });
 
-    testWidgets('RelaySettingsScreen has bottom navigation bar', (tester) async {
+    testWidgets('RelaySettingsScreen has bottom navigation bar', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: RelaySettingsScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: RelaySettingsScreen())),
       );
 
       expect(find.byType(BottomNavigationBar), findsOneWidget);
 
-      final BottomNavigationBar bottomNav = tester.widget(find.byType(BottomNavigationBar));
+      final BottomNavigationBar bottomNav = tester.widget(
+        find.byType(BottomNavigationBar),
+      );
       expect(bottomNav.backgroundColor, equals(VineTheme.vineGreen));
     });
 
-    testWidgets('BlossomSettingsScreen has bottom navigation bar', (tester) async {
+    testWidgets('BlossomSettingsScreen has bottom navigation bar', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: BlossomSettingsScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: BlossomSettingsScreen())),
       );
 
       expect(find.byType(BottomNavigationBar), findsOneWidget);
 
-      final BottomNavigationBar bottomNav = tester.widget(find.byType(BottomNavigationBar));
+      final BottomNavigationBar bottomNav = tester.widget(
+        find.byType(BottomNavigationBar),
+      );
       expect(bottomNav.backgroundColor, equals(VineTheme.vineGreen));
     });
 
-    testWidgets('NotificationSettingsScreen has bottom nav and camera FAB', (tester) async {
+    testWidgets('NotificationSettingsScreen has bottom nav and camera FAB', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const ProviderScope(
-          child: MaterialApp(
-            home: NotificationSettingsScreen(),
-          ),
+          child: MaterialApp(home: NotificationSettingsScreen()),
         ),
       );
 
@@ -76,11 +72,7 @@ void main() {
 
     testWidgets('P2PSyncScreen has bottom nav and camera FAB', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: P2PSyncScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: P2PSyncScreen())),
       );
 
       // Pump frames to allow async providers to complete
@@ -100,9 +92,7 @@ void main() {
 
       for (final screen in screens) {
         await tester.pumpWidget(
-          ProviderScope(
-            child: MaterialApp(home: screen),
-          ),
+          ProviderScope(child: MaterialApp(home: screen)),
         );
 
         expect(

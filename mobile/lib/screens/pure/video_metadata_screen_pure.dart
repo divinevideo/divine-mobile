@@ -9,7 +9,8 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:video_player/video_player.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
-import 'package:openvine/models/pending_upload.dart' show UploadStatus, PendingUpload;
+import 'package:openvine/models/pending_upload.dart'
+    show UploadStatus, PendingUpload;
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/models/aspect_ratio.dart' as vine;
 import 'package:openvine/services/draft_storage_service.dart';
@@ -21,18 +22,17 @@ import 'package:openvine/utils/video_duration_extractor.dart';
 
 /// Pure video metadata screen using revolutionary single-controller Riverpod architecture
 class VideoMetadataScreenPure extends ConsumerStatefulWidget {
-  const VideoMetadataScreenPure({
-    super.key,
-    required this.draftId,
-  });
+  const VideoMetadataScreenPure({super.key, required this.draftId});
 
   final String draftId;
 
   @override
-  ConsumerState<VideoMetadataScreenPure> createState() => _VideoMetadataScreenPureState();
+  ConsumerState<VideoMetadataScreenPure> createState() =>
+      _VideoMetadataScreenPureState();
 }
 
-class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPure> {
+class _VideoMetadataScreenPureState
+    extends ConsumerState<VideoMetadataScreenPure> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _hashtagController = TextEditingController();
@@ -67,7 +67,10 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
       final draft = drafts.firstWhere(
         (d) => d.id == widget.draftId,
         orElse: () {
-          Log.error('📝 Draft not found: ${widget.draftId}', category: LogCategory.video);
+          Log.error(
+            '📝 Draft not found: ${widget.draftId}',
+            category: LogCategory.video,
+          );
           if (mounted) {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
@@ -94,8 +97,10 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
         _hashtags.clear();
         _hashtags.addAll(draft.hashtags);
 
-        Log.info('📝 VideoMetadataScreenPure: Loaded draft ${draft.id}',
-            category: LogCategory.video);
+        Log.info(
+          '📝 VideoMetadataScreenPure: Loaded draft ${draft.id}',
+          category: LogCategory.video,
+        );
 
         // Initialize video preview
         _initializeVideoPreview();
@@ -114,12 +119,16 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
     try {
       // Verify file exists before attempting to play
       if (!await _currentDraft!.videoFile.exists()) {
-        throw Exception('Video file does not exist: ${_currentDraft!.videoFile.path}');
+        throw Exception(
+          'Video file does not exist: ${_currentDraft!.videoFile.path}',
+        );
       }
 
       final fileSize = await _currentDraft!.videoFile.length();
-      Log.info('📝 Initializing video preview for file: ${_currentDraft!.videoFile.path} (${fileSize} bytes)',
-          category: LogCategory.video);
+      Log.info(
+        '📝 Initializing video preview for file: ${_currentDraft!.videoFile.path} (${fileSize} bytes)',
+        category: LogCategory.video,
+      );
 
       _videoController = VideoPlayerController.file(_currentDraft!.videoFile);
 
@@ -127,7 +136,9 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
       await _videoController!.initialize().timeout(
         const Duration(seconds: 2),
         onTimeout: () {
-          throw Exception('Video player initialization timed out after 2 seconds');
+          throw Exception(
+            'Video player initialization timed out after 2 seconds',
+          );
         },
       );
 
@@ -144,16 +155,22 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (_videoController != null && mounted) {
           await _videoController!.play();
-          Log.info('📝 Video started playing (isPlaying: ${_videoController!.value.isPlaying})',
-              category: LogCategory.video);
+          Log.info(
+            '📝 Video started playing (isPlaying: ${_videoController!.value.isPlaying})',
+            category: LogCategory.video,
+          );
         }
       });
 
-      Log.info('📝 Video preview initialized successfully',
-          category: LogCategory.video);
+      Log.info(
+        '📝 Video preview initialized successfully',
+        category: LogCategory.video,
+      );
     } catch (e) {
-      Log.error('📝 Failed to initialize video preview: $e',
-          category: LogCategory.video);
+      Log.error(
+        '📝 Failed to initialize video preview: $e',
+        category: LogCategory.video,
+      );
 
       // Still allow the screen to be usable even if preview fails
       if (mounted) {
@@ -167,8 +184,10 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
   /// Start background upload immediately when screen loads (Task 3)
   Future<void> _startBackgroundUpload() async {
     if (_currentDraft == null) {
-      Log.warning('📝 Cannot start background upload: draft not loaded',
-          category: LogCategory.video);
+      Log.warning(
+        '📝 Cannot start background upload: draft not loaded',
+        category: LogCategory.video,
+      );
       return;
     }
 
@@ -178,13 +197,17 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
       final pubkey = authService.currentPublicKeyHex;
 
       if (pubkey == null) {
-        Log.error('📝 Cannot start background upload: not authenticated',
-            category: LogCategory.video);
+        Log.error(
+          '📝 Cannot start background upload: not authenticated',
+          category: LogCategory.video,
+        );
         return;
       }
 
-      Log.info('📝 Starting background upload for draft: ${_currentDraft!.id}',
-          category: LogCategory.video);
+      Log.info(
+        '📝 Starting background upload for draft: ${_currentDraft!.id}',
+        category: LogCategory.video,
+      );
 
       // Get video duration with fallback
       final videoDuration = await _getVideoDuration();
@@ -203,11 +226,15 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
         });
       }
 
-      Log.info('📝 Background upload started: ${pendingUpload.id}',
-          category: LogCategory.video);
+      Log.info(
+        '📝 Background upload started: ${pendingUpload.id}',
+        category: LogCategory.video,
+      );
     } catch (e) {
-      Log.error('📝 Failed to start background upload: $e',
-          category: LogCategory.video);
+      Log.error(
+        '📝 Failed to start background upload: $e',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -224,8 +251,10 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
       final upload = uploadManager.getUpload(_backgroundUploadId!);
 
       if (upload == null) {
-        Log.info('📝 Upload already removed: $_backgroundUploadId',
-            category: LogCategory.video);
+        Log.info(
+          '📝 Upload already removed: $_backgroundUploadId',
+          category: LogCategory.video,
+        );
         return;
       }
 
@@ -234,21 +263,27 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
           upload.status == UploadStatus.processing ||
           upload.status == UploadStatus.pending ||
           upload.status == UploadStatus.retrying) {
-        Log.info('📝 Cancelling background upload: $_backgroundUploadId (status: ${upload.status})',
-            category: LogCategory.video);
+        Log.info(
+          '📝 Cancelling background upload: $_backgroundUploadId (status: ${upload.status})',
+          category: LogCategory.video,
+        );
         // Fire and forget - can't await in dispose()
         unawaited(uploadManager.cancelUpload(_backgroundUploadId!));
       } else {
-        Log.info('📝 Upload already complete, not cancelling: $_backgroundUploadId (status: ${upload.status})',
-            category: LogCategory.video);
+        Log.info(
+          '📝 Upload already complete, not cancelling: $_backgroundUploadId (status: ${upload.status})',
+          category: LogCategory.video,
+        );
       }
 
       // Cancel progress listener (also fire and forget)
       unawaited(_uploadProgressListener?.cancel());
       _uploadProgressListener = null;
     } catch (e) {
-      Log.error('📝 Failed to cancel background upload: $e',
-          category: LogCategory.video);
+      Log.error(
+        '📝 Failed to cancel background upload: $e',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -262,31 +297,51 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
     if (_videoController != null && _isVideoInitialized) {
       final playerDuration = _videoController!.value.duration;
       if (playerDuration != Duration.zero) {
-        Log.debug('Got duration from video player: ${playerDuration.inMilliseconds}ms',
-            name: 'VideoMetadataScreen', category: LogCategory.video);
+        Log.debug(
+          'Got duration from video player: ${playerDuration.inMilliseconds}ms',
+          name: 'VideoMetadataScreen',
+          category: LogCategory.video,
+        );
         return playerDuration;
       }
-      Log.warning('Video player initialized but duration is zero',
-          name: 'VideoMetadataScreen', category: LogCategory.video);
+      Log.warning(
+        'Video player initialized but duration is zero',
+        name: 'VideoMetadataScreen',
+        category: LogCategory.video,
+      );
     }
 
     // Fallback: extract duration from video file
     if (_currentDraft != null) {
-      Log.info('Extracting duration from video file as fallback',
-          name: 'VideoMetadataScreen', category: LogCategory.video);
-      final extractedDuration = await extractVideoDuration(_currentDraft!.videoFile);
+      Log.info(
+        'Extracting duration from video file as fallback',
+        name: 'VideoMetadataScreen',
+        category: LogCategory.video,
+      );
+      final extractedDuration = await extractVideoDuration(
+        _currentDraft!.videoFile,
+      );
       if (extractedDuration != null && extractedDuration != Duration.zero) {
-        Log.info('Extracted duration from file: ${extractedDuration.inMilliseconds}ms',
-            name: 'VideoMetadataScreen', category: LogCategory.video);
+        Log.info(
+          'Extracted duration from file: ${extractedDuration.inMilliseconds}ms',
+          name: 'VideoMetadataScreen',
+          category: LogCategory.video,
+        );
         return extractedDuration;
       }
-      Log.error('Failed to extract duration from video file',
-          name: 'VideoMetadataScreen', category: LogCategory.video);
+      Log.error(
+        'Failed to extract duration from video file',
+        name: 'VideoMetadataScreen',
+        category: LogCategory.video,
+      );
     }
 
     // Last resort: return zero and warn
-    Log.error('Could not determine video duration - using 0',
-        name: 'VideoMetadataScreen', category: LogCategory.video);
+    Log.error(
+      'Could not determine video duration - using 0',
+      name: 'VideoMetadataScreen',
+      category: LogCategory.video,
+    );
     return Duration.zero;
   }
 
@@ -301,8 +356,10 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
     _videoController?.dispose();
     super.dispose();
 
-    Log.info('📝 VideoMetadataScreenPure: Disposed',
-        category: LogCategory.video);
+    Log.info(
+      '📝 VideoMetadataScreenPure: Disposed',
+      category: LogCategory.video,
+    );
   }
 
   @override
@@ -312,440 +369,509 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
         Scaffold(
           backgroundColor: Colors.black,
           appBar: AppBar(
-        backgroundColor: VineTheme.vineGreen,
-        leading: IconButton(
-          key: const Key('back-button'),
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Add Metadata',
-          style: TextStyle(color: Colors.white),
-        ),
-        actions: [
-          if (_currentDraft?.canRetry ?? false)
-            // Show Retry button for failed drafts
-            TextButton(
-              key: const Key('retry-button'),
-              onPressed: _isPublishing ? null : _publishVideo,
-              child: _isPublishing
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text(
-                      'Retry',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            )
-          else
-            // Show Publish button for draft status
-            TextButton(
-              onPressed: (_isPublishing || (_currentDraft?.isPublishing ?? false)) ? null : _publishVideo,
-              child: (_isPublishing || (_currentDraft?.isPublishing ?? false))
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text(
-                      'Publish',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+            backgroundColor: VineTheme.vineGreen,
+            leading: IconButton(
+              key: const Key('back-button'),
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
             ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              // Error banner for failed publishes
-              if (_currentDraft?.publishStatus == PublishStatus.failed && _currentDraft?.publishError != null)
-                Container(
-                  width: double.infinity,
-                  color: Colors.red[900],
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.white),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _currentDraft!.publishError!,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      ),
-                      Text(
-                        'Attempt ${_currentDraft!.publishAttempts}',
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Video preview
-                      Container(
-                        height: 200,
-                        decoration: BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Center(
-                            child: _isVideoInitialized && _videoController != null
-                                ? Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      AspectRatio(
-                                        aspectRatio: _currentDraft!.aspectRatio == vine.AspectRatio.square
-                                            ? 1.0
-                                            : 9.0 / 16.0,
-                                        child: VideoPlayer(_videoController!),
-                                      ),
-                                    ],
-                                  )
-                                : Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const CircularProgressIndicator(color: VineTheme.vineGreen),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Loading preview...',
-                                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
+            title: const Text(
+              'Add Metadata',
+              style: TextStyle(color: Colors.white),
+            ),
+            actions: [
+              if (_currentDraft?.canRetry ?? false)
+                // Show Retry button for failed drafts
+                TextButton(
+                  key: const Key('retry-button'),
+                  onPressed: _isPublishing ? null : _publishVideo,
+                  child: _isPublishing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Retry',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Title input
-                              const Text(
-                                'Title',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _titleController,
-                                style: const TextStyle(color: Colors.white),
-                                decoration: InputDecoration(
-                                  hintText: 'Enter video title...',
-                                  hintStyle: TextStyle(color: Colors.grey[400]),
-                                  filled: true,
-                                  fillColor: Colors.grey[900],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  errorBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Description input
-                              const Text(
-                                'Description',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextField(
-                                controller: _descriptionController,
-                                style: const TextStyle(color: Colors.white),
-                                maxLines: 4,
-                                decoration: InputDecoration(
-                                  hintText: 'Describe your video...',
-                                  hintStyle: TextStyle(color: Colors.grey[400]),
-                                  filled: true,
-                                  fillColor: Colors.grey[900],
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  errorBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Hashtag input
-                              const Text(
-                                'Add Hashtag',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _hashtagController,
-                                      style: const TextStyle(color: Colors.white),
-                                      decoration: InputDecoration(
-                                        hintText: 'hashtag',
-                                        hintStyle: TextStyle(color: Colors.grey[400]),
-                                        filled: true,
-                                        fillColor: Colors.grey[900],
-                                        prefixText: '#',
-                                        prefixStyle: const TextStyle(color: VineTheme.vineGreen),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                        errorBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                      ),
-                                      onSubmitted: _addHashtag,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    onPressed: () => _addHashtag(_hashtagController.text),
-                                    icon: const Icon(Icons.add, color: VineTheme.vineGreen),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Hashtags display
-                              if (_hashtags.isNotEmpty) ...[
-                                const Text(
-                                  'Hashtags',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: _hashtags.map((hashtag) => Chip(
-                                    label: Text('#$hashtag'),
-                                    labelStyle: const TextStyle(color: Colors.white),
-                                    backgroundColor: VineTheme.vineGreen,
-                                    deleteIcon: const Icon(Icons.close, color: Colors.white, size: 18),
-                                    onDeleted: () => _removeHashtag(hashtag),
-                                  )).toList(),
-                                ),
-                                const SizedBox(height: 16),
-                              ],
-
-                              // Expiring post option
-                              SwitchListTile(
-                                title: const Text(
-                                  'Expiring Post',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                                subtitle: Text(
-                                  _isExpiringPost ? 'Delete after ${_formatExpirationDuration()}' : 'Post will not expire',
-                                  style: TextStyle(color: Colors.grey[400]),
-                                ),
-                                value: _isExpiringPost,
-                                onChanged: (value) async {
-                                  if (value) {
-                                    // Show confirmation dialog before enabling expiration
-                                    final confirmed = await _showExpirationConfirmationDialog();
-                                    if (confirmed) {
-                                      setState(() {
-                                        _isExpiringPost = true;
-                                        _expirationConfirmed = true;
-                                      });
-                                    }
-                                  } else {
-                                    setState(() {
-                                      _isExpiringPost = false;
-                                      _expirationConfirmed = false;
-                                    });
-                                  }
-                                },
-                                activeThumbColor: VineTheme.vineGreen,
-                              ),
-
-                              if (_isExpiringPost) ...[
-                                const SizedBox(height: 16),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Delete after:',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: [
-                                          _buildDurationButton('1 Day', 24),
-                                          _buildDurationButton('1 Week', 168),
-                                          _buildDurationButton('1 Month', 720),
-                                          _buildDurationButton('1 Year', 8760),
-                                          _buildDurationButton('1 Decade', 87600),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                              ],
-
-                              // ProofMode info panel
-                              // TODO: Add proofManifest to VineDraft model if needed
-                              // if (_currentDraft?.proofManifest != null) ...[
-                              //   const SizedBox(height: 16),
-                              //   ProofModeInfoPanel(manifest: _currentDraft!.proofManifest!),
-                              // ],
-                            ],
+                )
+              else
+                // Show Publish button for draft status
+                TextButton(
+                  onPressed:
+                      (_isPublishing || (_currentDraft?.isPublishing ?? false))
+                      ? null
+                      : _publishVideo,
+                  child:
+                      (_isPublishing || (_currentDraft?.isPublishing ?? false))
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Publish',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
                 ),
-              ),
             ],
           ),
-          // Publishing progress overlay
-          if (_isPublishing)
-          Container(
-            color: Colors.black.withValues(alpha: 0.8),
-            child: Center(
-              child: Container(
-                margin: const EdgeInsets.all(32),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Progress indicator - show deterministic if we have upload progress
-                    _currentUploadId != null && _uploadProgress > 0
-                        ? Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              SizedBox(
-                                width: 80,
-                                height: 80,
-                                child: CircularProgressIndicator(
-                                  value: _uploadProgress,
-                                  color: VineTheme.vineGreen,
-                                  strokeWidth: 4,
-                                  backgroundColor: Colors.grey[700],
-                                ),
-                              ),
-                              Text(
-                                '${(_uploadProgress * 100).toInt()}%',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  decoration: TextDecoration.none,
-                                ),
-                              ),
-                            ],
-                          )
-                        : const CircularProgressIndicator(
-                            color: VineTheme.vineGreen,
-                            strokeWidth: 3,
+          body: Stack(
+            children: [
+              Column(
+                children: [
+                  // Error banner for failed publishes
+                  if (_currentDraft?.publishStatus == PublishStatus.failed &&
+                      _currentDraft?.publishError != null)
+                    Container(
+                      width: double.infinity,
+                      color: Colors.red[900],
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _currentDraft!.publishError!,
+                              style: const TextStyle(color: Colors.white),
+                            ),
                           ),
-                    const SizedBox(height: 24),
-                    Text(
-                      _publishingStatus,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        decoration: TextDecoration.none,
+                          Text(
+                            'Attempt ${_currentDraft!.publishAttempts}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                  ],
-                ),
+
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Video preview
+                          Container(
+                            height: 200,
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Center(
+                                child:
+                                    _isVideoInitialized &&
+                                        _videoController != null
+                                    ? Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          AspectRatio(
+                                            aspectRatio:
+                                                _currentDraft!.aspectRatio ==
+                                                    vine.AspectRatio.square
+                                                ? 1.0
+                                                : 9.0 / 16.0,
+                                            child: VideoPlayer(
+                                              _videoController!,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const CircularProgressIndicator(
+                                            color: VineTheme.vineGreen,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Loading preview...',
+                                            style: TextStyle(
+                                              color: Colors.grey[400],
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          Expanded(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Title input
+                                  const Text(
+                                    'Title',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _titleController,
+                                    style: const TextStyle(color: Colors.white),
+                                    decoration: InputDecoration(
+                                      hintText: 'Enter video title...',
+                                      hintStyle: TextStyle(
+                                        color: Colors.grey[400],
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.grey[900],
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      errorBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Description input
+                                  const Text(
+                                    'Description',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _descriptionController,
+                                    style: const TextStyle(color: Colors.white),
+                                    maxLines: 4,
+                                    decoration: InputDecoration(
+                                      hintText: 'Describe your video...',
+                                      hintStyle: TextStyle(
+                                        color: Colors.grey[400],
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.grey[900],
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      errorBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Hashtag input
+                                  const Text(
+                                    'Add Hashtag',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _hashtagController,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                          decoration: InputDecoration(
+                                            hintText: 'hashtag',
+                                            hintStyle: TextStyle(
+                                              color: Colors.grey[400],
+                                            ),
+                                            filled: true,
+                                            fillColor: Colors.grey[900],
+                                            prefixText: '#',
+                                            prefixStyle: const TextStyle(
+                                              color: VineTheme.vineGreen,
+                                            ),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            errorBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                          ),
+                                          onSubmitted: _addHashtag,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        onPressed: () => _addHashtag(
+                                          _hashtagController.text,
+                                        ),
+                                        icon: const Icon(
+                                          Icons.add,
+                                          color: VineTheme.vineGreen,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Hashtags display
+                                  if (_hashtags.isNotEmpty) ...[
+                                    const Text(
+                                      'Hashtags',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: _hashtags
+                                          .map(
+                                            (hashtag) => Chip(
+                                              label: Text('#$hashtag'),
+                                              labelStyle: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                              backgroundColor:
+                                                  VineTheme.vineGreen,
+                                              deleteIcon: const Icon(
+                                                Icons.close,
+                                                color: Colors.white,
+                                                size: 18,
+                                              ),
+                                              onDeleted: () =>
+                                                  _removeHashtag(hashtag),
+                                            ),
+                                          )
+                                          .toList(),
+                                    ),
+                                    const SizedBox(height: 16),
+                                  ],
+
+                                  // Expiring post option
+                                  SwitchListTile(
+                                    title: const Text(
+                                      'Expiring Post',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                    subtitle: Text(
+                                      _isExpiringPost
+                                          ? 'Delete after ${_formatExpirationDuration()}'
+                                          : 'Post will not expire',
+                                      style: TextStyle(color: Colors.grey[400]),
+                                    ),
+                                    value: _isExpiringPost,
+                                    onChanged: (value) async {
+                                      if (value) {
+                                        // Show confirmation dialog before enabling expiration
+                                        final confirmed =
+                                            await _showExpirationConfirmationDialog();
+                                        if (confirmed) {
+                                          setState(() {
+                                            _isExpiringPost = true;
+                                            _expirationConfirmed = true;
+                                          });
+                                        }
+                                      } else {
+                                        setState(() {
+                                          _isExpiringPost = false;
+                                          _expirationConfirmed = false;
+                                        });
+                                      }
+                                    },
+                                    activeThumbColor: VineTheme.vineGreen,
+                                  ),
+
+                                  if (_isExpiringPost) ...[
+                                    const SizedBox(height: 16),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Delete after:',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children: [
+                                              _buildDurationButton('1 Day', 24),
+                                              _buildDurationButton(
+                                                '1 Week',
+                                                168,
+                                              ),
+                                              _buildDurationButton(
+                                                '1 Month',
+                                                720,
+                                              ),
+                                              _buildDurationButton(
+                                                '1 Year',
+                                                8760,
+                                              ),
+                                              _buildDurationButton(
+                                                '1 Decade',
+                                                87600,
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                  ],
+
+                                  // ProofMode info panel
+                                  // TODO: Add proofManifest to VineDraft model if needed
+                                  // if (_currentDraft?.proofManifest != null) ...[
+                                  //   const SizedBox(height: 16),
+                                  //   ProofModeInfoPanel(manifest: _currentDraft!.proofManifest!),
+                                  // ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
+              // Publishing progress overlay
+              if (_isPublishing)
+                Container(
+                  color: Colors.black.withValues(alpha: 0.8),
+                  child: Center(
+                    child: Container(
+                      margin: const EdgeInsets.all(32),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[900],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Progress indicator - show deterministic if we have upload progress
+                          _currentUploadId != null && _uploadProgress > 0
+                              ? Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 80,
+                                      height: 80,
+                                      child: CircularProgressIndicator(
+                                        value: _uploadProgress,
+                                        color: VineTheme.vineGreen,
+                                        strokeWidth: 4,
+                                        backgroundColor: Colors.grey[700],
+                                      ),
+                                    ),
+                                    Text(
+                                      '${(_uploadProgress * 100).toInt()}%',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.none,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : const CircularProgressIndicator(
+                                  color: VineTheme.vineGreen,
+                                  strokeWidth: 3,
+                                ),
+                          const SizedBox(height: 24),
+                          Text(
+                            _publishingStatus,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              decoration: TextDecoration.none,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
-        ],
-      ),
-    ),
-    ],
-  );
-}
+        ),
+      ],
+    );
+  }
 
   void _addHashtag(String hashtag) {
     final trimmed = hashtag.trim().toLowerCase();
@@ -791,17 +917,18 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
               SizedBox(height: 16),
               Text(
                 'This action cannot be undone. Once expired, the video will be gone forever.',
-                style: TextStyle(color: Colors.orange, fontSize: 14, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.grey),
-              ),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
@@ -810,7 +937,10 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
               ),
               child: const Text(
                 'Yes, Make It Expire',
-                style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -821,11 +951,16 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
   }
 
   String _formatExpirationDuration() {
-    if (_expirationHours >= 87600) return '${(_expirationHours / 87600).round()} decade${_expirationHours >= 175200 ? 's' : ''}';
-    if (_expirationHours >= 8760) return '${(_expirationHours / 8760).round()} year${_expirationHours >= 17520 ? 's' : ''}';
-    if (_expirationHours >= 720) return '${(_expirationHours / 720).round()} month${_expirationHours >= 1440 ? 's' : ''}';
-    if (_expirationHours >= 168) return '${(_expirationHours / 168).round()} week${_expirationHours >= 336 ? 's' : ''}';
-    if (_expirationHours >= 24) return '${(_expirationHours / 24).round()} day${_expirationHours >= 48 ? 's' : ''}';
+    if (_expirationHours >= 87600)
+      return '${(_expirationHours / 87600).round()} decade${_expirationHours >= 175200 ? 's' : ''}';
+    if (_expirationHours >= 8760)
+      return '${(_expirationHours / 8760).round()} year${_expirationHours >= 17520 ? 's' : ''}';
+    if (_expirationHours >= 720)
+      return '${(_expirationHours / 720).round()} month${_expirationHours >= 1440 ? 's' : ''}';
+    if (_expirationHours >= 168)
+      return '${(_expirationHours / 168).round()} week${_expirationHours >= 336 ? 's' : ''}';
+    if (_expirationHours >= 24)
+      return '${(_expirationHours / 24).round()} day${_expirationHours >= 48 ? 's' : ''}';
     return '$_expirationHours hour${_expirationHours != 1 ? 's' : ''}';
   }
 
@@ -885,7 +1020,8 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
 
           // After dialog closes, check if upload succeeded
           final completedUpload = uploadManager.getUpload(_backgroundUploadId!);
-          if (completedUpload == null || completedUpload.status == UploadStatus.failed) {
+          if (completedUpload == null ||
+              completedUpload.status == UploadStatus.failed) {
             // Upload failed during progress dialog
             await _showUploadErrorDialog();
             return;
@@ -924,8 +1060,10 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
         _currentDraft = publishing;
       });
 
-      Log.info('📝 VideoMetadataScreenPure: Publishing video: ${_currentDraft!.videoFile.path}',
-          category: LogCategory.video);
+      Log.info(
+        '📝 VideoMetadataScreenPure: Publishing video: ${_currentDraft!.videoFile.path}',
+        category: LogCategory.video,
+      );
 
       // Get current user's pubkey
       final authService = ref.read(authServiceProvider);
@@ -942,10 +1080,13 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
       PendingUpload pendingUpload;
       if (_backgroundUploadId != null) {
         final existingUpload = uploadManager.getUpload(_backgroundUploadId!);
-        if (existingUpload != null && existingUpload.status == UploadStatus.readyToPublish) {
+        if (existingUpload != null &&
+            existingUpload.status == UploadStatus.readyToPublish) {
           pendingUpload = existingUpload;
-          Log.info('📝 Using existing background upload: ${pendingUpload.id}',
-              category: LogCategory.video);
+          Log.info(
+            '📝 Using existing background upload: ${pendingUpload.id}',
+            category: LogCategory.video,
+          );
         } else {
           // Background upload not ready, start new upload
           pendingUpload = await _startNewUpload(uploadManager, pubkey);
@@ -956,8 +1097,7 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
       }
 
       // Publish Nostr event
-      Log.info('📝 Publishing Nostr event...',
-          category: LogCategory.video);
+      Log.info('📝 Publishing Nostr event...', category: LogCategory.video);
 
       setState(() {
         _publishingStatus = 'Publishing to Nostr...';
@@ -982,7 +1122,8 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
         description: currentDescription,
         hashtags: currentHashtags,
         expirationTimestamp: shouldExpire
-            ? DateTime.now().millisecondsSinceEpoch ~/ 1000 + (_expirationHours * 3600)
+            ? DateTime.now().millisecondsSinceEpoch ~/ 1000 +
+                  (_expirationHours * 3600)
             : null,
       );
 
@@ -990,8 +1131,10 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
         throw Exception('Failed to publish Nostr event');
       }
 
-      Log.info('📝 Video publishing complete, deleting draft and returning to main screen',
-          category: LogCategory.video);
+      Log.info(
+        '📝 Video publishing complete, deleting draft and returning to main screen',
+        category: LogCategory.video,
+      );
 
       // Success: delete draft
       await draftService.deleteDraft(_currentDraft!.id);
@@ -1019,12 +1162,17 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
           // Pop back to the root (main navigation screen)
           Navigator.of(context).popUntil((route) => route.isFirst);
 
-          Log.info('📝 Published successfully, returned to main screen', category: LogCategory.video);
+          Log.info(
+            '📝 Published successfully, returned to main screen',
+            category: LogCategory.video,
+          );
         }
       }
     } catch (e, stackTrace) {
-      Log.error('📝 VideoMetadataScreenPure: Failed to publish video: $e',
-          category: LogCategory.video);
+      Log.error(
+        '📝 VideoMetadataScreenPure: Failed to publish video: $e',
+        category: LogCategory.video,
+      );
 
       // Failed: update draft with error
       try {
@@ -1048,7 +1196,10 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
           });
         }
       } catch (saveError) {
-        Log.error('📝 Failed to save error state: $saveError', category: LogCategory.video);
+        Log.error(
+          '📝 Failed to save error state: $saveError',
+          category: LogCategory.video,
+        );
         if (mounted) {
           setState(() {
             _isPublishing = false;
@@ -1060,7 +1211,6 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
       }
 
       if (mounted) {
-
         // Get the current Blossom server for error message
         final blossomService = ref.read(blossomUploadServiceProvider);
         String serverName = 'Unknown server';
@@ -1077,12 +1227,17 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
 
         // Convert technical error to user-friendly message
         String userMessage;
-        if (e.toString().contains('404') || e.toString().contains('not_found')) {
-          userMessage = 'The Blossom media server ($serverName) is not working. You can choose another in your settings.';
+        if (e.toString().contains('404') ||
+            e.toString().contains('not_found')) {
+          userMessage =
+              'The Blossom media server ($serverName) is not working. You can choose another in your settings.';
         } else if (e.toString().contains('500')) {
-          userMessage = 'The Blossom media server ($serverName) encountered an error. You can choose another in your settings.';
-        } else if (e.toString().contains('network') || e.toString().contains('connection')) {
-          userMessage = 'Network error. Please check your connection and try again.';
+          userMessage =
+              'The Blossom media server ($serverName) encountered an error. You can choose another in your settings.';
+        } else if (e.toString().contains('network') ||
+            e.toString().contains('connection')) {
+          userMessage =
+              'Network error. Please check your connection and try again.';
         } else if (e.toString().contains('Not authenticated')) {
           userMessage = 'Please sign in to publish videos.';
         } else {
@@ -1099,7 +1254,8 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
               textColor: Colors.white,
               onPressed: () {
                 // Show technical details in a dialog
-                final errorDetails = '''
+                final errorDetails =
+                    '''
 Error: ${e.toString()}
 
 Stack Trace:
@@ -1161,23 +1317,36 @@ Video: ${_currentDraft?.videoFile.path ?? 'Unknown'}
                     actions: [
                       TextButton.icon(
                         onPressed: () async {
-                          await Clipboard.setData(ClipboardData(text: errorDetails));
+                          await Clipboard.setData(
+                            ClipboardData(text: errorDetails),
+                          );
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Error details copied to clipboard'),
+                                content: Text(
+                                  'Error details copied to clipboard',
+                                ),
                                 backgroundColor: VineTheme.vineGreen,
                                 duration: Duration(seconds: 2),
                               ),
                             );
                           }
                         },
-                        icon: const Icon(Icons.copy, color: VineTheme.vineGreen),
-                        label: const Text('Copy', style: TextStyle(color: VineTheme.vineGreen)),
+                        icon: const Icon(
+                          Icons.copy,
+                          color: VineTheme.vineGreen,
+                        ),
+                        label: const Text(
+                          'Copy',
+                          style: TextStyle(color: VineTheme.vineGreen),
+                        ),
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Close', style: TextStyle(color: Colors.white70)),
+                        child: const Text(
+                          'Close',
+                          style: TextStyle(color: Colors.white70),
+                        ),
                       ),
                     ],
                   ),
@@ -1224,13 +1393,14 @@ Video: ${_currentDraft?.videoFile.path ?? 'Unknown'}
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white70),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(
-              backgroundColor: VineTheme.vineGreen,
-            ),
+            style: TextButton.styleFrom(backgroundColor: VineTheme.vineGreen),
             child: const Text('Retry', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -1285,11 +1455,16 @@ Video: ${_currentDraft?.videoFile.path ?? 'Unknown'}
   }
 
   /// Start a new upload and poll for progress
-  Future<PendingUpload> _startNewUpload(UploadManager uploadManager, String pubkey) async {
+  Future<PendingUpload> _startNewUpload(
+    UploadManager uploadManager,
+    String pubkey,
+  ) async {
     // Ensure upload manager is initialized
     if (!uploadManager.isInitialized) {
-      Log.info('📝 Initializing upload manager...',
-          category: LogCategory.video);
+      Log.info(
+        '📝 Initializing upload manager...',
+        category: LogCategory.video,
+      );
       setState(() {
         _publishingStatus = 'Initializing upload system...';
       });
@@ -1297,21 +1472,29 @@ Video: ${_currentDraft?.videoFile.path ?? 'Unknown'}
     }
 
     // Start upload to Blossom
-    Log.info('📝 Starting upload to Blossom server...',
-        category: LogCategory.video);
+    Log.info(
+      '📝 Starting upload to Blossom server...',
+      category: LogCategory.video,
+    );
 
     // Debug: Check if draft has ProofMode data
     final hasProofMode = _currentDraft!.hasProofMode;
     final nativeProof = _currentDraft!.nativeProof;
-    Log.info('📜 Draft hasProofMode: $hasProofMode, nativeProof: ${nativeProof != null ? "present" : "null"}',
-        category: LogCategory.video);
+    Log.info(
+      '📜 Draft hasProofMode: $hasProofMode, nativeProof: ${nativeProof != null ? "present" : "null"}',
+      category: LogCategory.video,
+    );
     if (hasProofMode && nativeProof == null) {
-      Log.error('📜 WARNING: Draft has proofManifestJson but nativeProof getter returned null - deserialization failed!',
-          category: LogCategory.video);
+      Log.error(
+        '📜 WARNING: Draft has proofManifestJson but nativeProof getter returned null - deserialization failed!',
+        category: LogCategory.video,
+      );
     }
     if (nativeProof != null) {
-      Log.info('📜 NativeProof videoHash: ${nativeProof.videoHash}, deviceAttestation: ${nativeProof.deviceAttestation != null}, pgpSignature: ${nativeProof.pgpSignature != null}',
-          category: LogCategory.video);
+      Log.info(
+        '📜 NativeProof videoHash: ${nativeProof.videoHash}, deviceAttestation: ${nativeProof.deviceAttestation != null}, pgpSignature: ${nativeProof.pgpSignature != null}',
+        category: LogCategory.video,
+      );
     }
 
     setState(() {
@@ -1338,8 +1521,10 @@ Video: ${_currentDraft?.videoFile.path ?? 'Unknown'}
       videoDuration: videoDuration,
     );
 
-    Log.info('📝 Upload started with duration ${videoDuration.inSeconds}s, ID: ${pendingUpload.id}',
-        category: LogCategory.video);
+    Log.info(
+      '📝 Upload started with duration ${videoDuration.inSeconds}s, ID: ${pendingUpload.id}',
+      category: LogCategory.video,
+    );
 
     // Track upload progress
     setState(() {
@@ -1356,7 +1541,8 @@ Video: ${_currentDraft?.videoFile.path ?? 'Unknown'}
         setState(() {
           _uploadProgress = progress;
           if (progress < 1.0) {
-            _publishingStatus = 'Uploading video... ${(progress * 100).toInt()}%';
+            _publishingStatus =
+                'Uploading video... ${(progress * 100).toInt()}%';
           }
         });
       }

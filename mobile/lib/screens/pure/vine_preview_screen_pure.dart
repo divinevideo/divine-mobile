@@ -11,15 +11,13 @@ import 'package:video_player/video_player.dart';
 
 /// Pure vine preview screen using revolutionary single-controller Riverpod architecture
 class VinePreviewScreenPure extends ConsumerStatefulWidget {
-  const VinePreviewScreenPure({
-    super.key,
-    required this.draftId,
-  });
+  const VinePreviewScreenPure({super.key, required this.draftId});
 
   final String draftId;
 
   @override
-  ConsumerState<VinePreviewScreenPure> createState() => _VinePreviewScreenPureState();
+  ConsumerState<VinePreviewScreenPure> createState() =>
+      _VinePreviewScreenPureState();
 }
 
 class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
@@ -48,7 +46,10 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
       final draft = drafts.firstWhere(
         (d) => d.id == widget.draftId,
         orElse: () {
-          Log.error('🎬 Draft not found: ${widget.draftId}', category: LogCategory.video);
+          Log.error(
+            '🎬 Draft not found: ${widget.draftId}',
+            category: LogCategory.video,
+          );
           if (mounted) {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
@@ -72,8 +73,10 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
         _descriptionController.text = draft.description;
         _hashtagsController.text = draft.hashtags.join(' ');
 
-        Log.info('🎬 VinePreviewScreenPure: Loaded draft ${draft.id}',
-            category: LogCategory.video);
+        Log.info(
+          '🎬 VinePreviewScreenPure: Loaded draft ${draft.id}',
+          category: LogCategory.video,
+        );
 
         // Initialize video preview
         _initializeVideoPreview();
@@ -89,19 +92,25 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
     try {
       // Verify file exists before attempting to play
       if (!await _currentDraft!.videoFile.exists()) {
-        throw Exception('Video file does not exist: ${_currentDraft!.videoFile.path}');
+        throw Exception(
+          'Video file does not exist: ${_currentDraft!.videoFile.path}',
+        );
       }
 
       final fileSize = await _currentDraft!.videoFile.length();
-      Log.info('🎬 Initializing video preview for file: ${_currentDraft!.videoFile.path} (${fileSize} bytes)',
-          category: LogCategory.video);
+      Log.info(
+        '🎬 Initializing video preview for file: ${_currentDraft!.videoFile.path} (${fileSize} bytes)',
+        category: LogCategory.video,
+      );
 
       _videoController = VideoPlayerController.file(_currentDraft!.videoFile);
 
       await _videoController!.initialize().timeout(
         const Duration(seconds: 2),
         onTimeout: () {
-          throw Exception('Video player initialization timed out after 2 seconds');
+          throw Exception(
+            'Video player initialization timed out after 2 seconds',
+          );
         },
       );
 
@@ -118,16 +127,22 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (_videoController != null && mounted) {
           await _videoController!.play();
-          Log.info('🎬 Video started playing (isPlaying: ${_videoController!.value.isPlaying})',
-              category: LogCategory.video);
+          Log.info(
+            '🎬 Video started playing (isPlaying: ${_videoController!.value.isPlaying})',
+            category: LogCategory.video,
+          );
         }
       });
 
-      Log.info('🎬 Video preview initialized successfully',
-          category: LogCategory.video);
+      Log.info(
+        '🎬 Video preview initialized successfully',
+        category: LogCategory.video,
+      );
     } catch (e) {
-      Log.error('🎬 Failed to initialize video preview: $e',
-          category: LogCategory.video);
+      Log.error(
+        '🎬 Failed to initialize video preview: $e',
+        category: LogCategory.video,
+      );
 
       // Still allow the screen to be usable even if preview fails
       if (mounted) {
@@ -146,8 +161,7 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
     _videoController?.dispose();
     super.dispose();
 
-    Log.info('🎬 VinePreviewScreenPure: Disposed',
-        category: LogCategory.video);
+    Log.info('🎬 VinePreviewScreenPure: Disposed', category: LogCategory.video);
   }
 
   @override
@@ -170,9 +184,7 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
             onPressed: _saveDraft,
             child: const Text(
               'Save Draft',
-              style: TextStyle(
-                color: Colors.white,
-              ),
+              style: TextStyle(color: Colors.white),
             ),
           ),
           if (_currentDraft?.canRetry ?? false)
@@ -200,7 +212,10 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
           else
             // Show Publish button for draft status
             TextButton(
-              onPressed: (_isUploading || (_currentDraft?.isPublishing ?? false)) ? null : _publishVideo,
+              onPressed:
+                  (_isUploading || (_currentDraft?.isPublishing ?? false))
+                  ? null
+                  : _publishVideo,
               child: (_isUploading || (_currentDraft?.isPublishing ?? false))
                   ? const SizedBox(
                       width: 20,
@@ -223,7 +238,8 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
       body: Column(
         children: [
           // Error banner for failed publishes
-          if (_currentDraft?.publishStatus == PublishStatus.failed && _currentDraft?.publishError != null)
+          if (_currentDraft?.publishStatus == PublishStatus.failed &&
+              _currentDraft?.publishError != null)
             Container(
               width: double.infinity,
               color: Colors.red[900],
@@ -254,44 +270,47 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
               color: Colors.black,
               child: Center(
                 child: _isVideoInitialized && _videoController != null
-                  ? AspectRatio(
-                      aspectRatio: _videoController!.value.aspectRatio,
-                      child: VideoPlayer(_videoController!),
-                    )
-                  : AspectRatio(
-                      aspectRatio: 9 / 16, // Vertical video aspect ratio
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey[900],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (!_isVideoInitialized && _videoController != null)
-                                const CircularProgressIndicator(
-                                  color: Colors.white54,
-                                )
-                              else
-                                const Icon(
-                                  Icons.play_circle_filled,
-                                  size: 64,
-                                  color: Colors.white54,
+                    ? AspectRatio(
+                        aspectRatio: _videoController!.value.aspectRatio,
+                        child: VideoPlayer(_videoController!),
+                      )
+                    : AspectRatio(
+                        aspectRatio: 9 / 16, // Vertical video aspect ratio
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[900],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (!_isVideoInitialized &&
+                                    _videoController != null)
+                                  const CircularProgressIndicator(
+                                    color: Colors.white54,
+                                  )
+                                else
+                                  const Icon(
+                                    Icons.play_circle_filled,
+                                    size: 64,
+                                    color: Colors.white54,
+                                  ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _videoController != null
+                                      ? 'Loading...'
+                                      : 'Video Preview',
+                                  style: const TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 16,
+                                  ),
                                 ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _videoController != null ? 'Loading...' : 'Video Preview',
-                                style: const TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
               ),
             ),
           ),
@@ -418,8 +437,10 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
         _currentDraft = updated;
       });
 
-      Log.info('🎬 VinePreviewScreenPure: Updated draft ${updated.id}',
-          category: LogCategory.video);
+      Log.info(
+        '🎬 VinePreviewScreenPure: Updated draft ${updated.id}',
+        category: LogCategory.video,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -430,8 +451,10 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
         );
       }
     } catch (e) {
-      Log.error('🎬 VinePreviewScreenPure: Failed to save draft: $e',
-          category: LogCategory.video);
+      Log.error(
+        '🎬 VinePreviewScreenPure: Failed to save draft: $e',
+        category: LogCategory.video,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -464,8 +487,10 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
         _currentDraft = publishing;
       });
 
-      Log.info('🎬 VinePreviewScreenPure: Publishing video: ${_currentDraft!.videoFile.path}',
-          category: LogCategory.video);
+      Log.info(
+        '🎬 VinePreviewScreenPure: Publishing video: ${_currentDraft!.videoFile.path}',
+        category: LogCategory.video,
+      );
 
       // TODO: Implement actual video upload service
       // For now, simulate success
@@ -479,8 +504,10 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
-      Log.error('🎬 VinePreviewScreenPure: Failed to publish video: $e',
-          category: LogCategory.video);
+      Log.error(
+        '🎬 VinePreviewScreenPure: Failed to publish video: $e',
+        category: LogCategory.video,
+      );
 
       // Failed: update draft with error
       try {
@@ -501,8 +528,10 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
           });
         }
       } catch (saveError) {
-        Log.error('🎬 VinePreviewScreenPure: Failed to save error state: $saveError',
-            category: LogCategory.video);
+        Log.error(
+          '🎬 VinePreviewScreenPure: Failed to save error state: $saveError',
+          category: LogCategory.video,
+        );
         if (mounted) {
           setState(() {
             _isUploading = false;

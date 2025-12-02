@@ -43,8 +43,10 @@ void main() {
       // Verify original content is preserved
       expect(repostVideoEvent.videoUrl, equals(originalVideoEvent.videoUrl));
       expect(repostVideoEvent.title, equals(originalVideoEvent.title));
-      expect(repostVideoEvent.pubkey,
-          equals(originalVideoPubkey)); // Original author
+      expect(
+        repostVideoEvent.pubkey,
+        equals(originalVideoPubkey),
+      ); // Original author
     });
 
     test('should filter user reposts correctly for profile display', () {
@@ -90,7 +92,7 @@ void main() {
         originalVideo1,
         originalVideo2,
         userRepost1,
-        otherUserRepost
+        otherUserRepost,
       ];
 
       // Filter logic from ProfileScreen._buildRepostsGrid()
@@ -105,7 +107,9 @@ void main() {
       expect(userReposts.first.reposterId, equals('repost1'));
       expect(userReposts.first.reposterPubkey, equals(testUserPubkey));
       expect(
-          userReposts.first.videoUrl, equals('https://example.com/video1.mp4'));
+        userReposts.first.videoUrl,
+        equals('https://example.com/video1.mp4'),
+      );
     });
 
     test('should identify why revines might not appear in profile', () {
@@ -150,7 +154,7 @@ void main() {
       final problematicVideos = [
         missingRepostFlag,
         wrongReposter,
-        missingReposter
+        missingReposter,
       ];
 
       // Apply profile filter logic
@@ -172,7 +176,8 @@ void main() {
         Log.info('  reposterPubkey: ${video.reposterPubkey}');
         Log.info('  expectedPubkey: $testUserPubkey');
         Log.info(
-            '  wouldShow: ${video.isRepost && video.reposterPubkey == testUserPubkey}');
+          '  wouldShow: ${video.isRepost && video.reposterPubkey == testUserPubkey}',
+        );
         Log.info('');
       }
     });

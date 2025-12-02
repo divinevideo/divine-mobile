@@ -27,11 +27,7 @@ class TestSocialNotifier extends social.SocialNotifier {
   SocialState build() => _state;
 }
 
-@GenerateMocks([
-  VideoEventService,
-  INostrService,
-  SubscriptionManager,
-])
+@GenerateMocks([VideoEventService, INostrService, SubscriptionManager])
 void main() {
   group('HomeFeedProvider', () {
     late ProviderContainer container;
@@ -48,8 +44,9 @@ void main() {
 
       // Setup default mock behaviors
       // Note: Individual tests will override homeFeedVideos with their own values
-      when(mockVideoEventService.getEventCount(SubscriptionType.homeFeed))
-          .thenReturn(0);
+      when(
+        mockVideoEventService.getEventCount(SubscriptionType.homeFeed),
+      ).thenReturn(0);
 
       // Setup nostrService isInitialized stub (needed for profile fetching)
       when(mockNostrService.isInitialized).thenReturn(true);
@@ -67,10 +64,12 @@ void main() {
       });
 
       // subscribeToHomeFeed just completes - videos should already be set up by individual tests
-      when(mockVideoEventService.subscribeToHomeFeed(
-        any,
-        limit: anyNamed('limit'),
-      )).thenAnswer((_) async {
+      when(
+        mockVideoEventService.subscribeToHomeFeed(
+          any,
+          limit: anyNamed('limit'),
+        ),
+      ).thenAnswer((_) async {
         // Videos are already set up via when(homeFeedVideos).thenReturn() in individual tests
         // The provider will check homeFeedVideos.length after this completes
         return Future.value();
@@ -80,8 +79,9 @@ void main() {
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
         ],
       );
     });
@@ -93,20 +93,19 @@ void main() {
       reset(mockSubscriptionManager);
     });
 
-    test('should return empty state when user is not following anyone',
-        () async {
+    test('should return empty state when user is not following anyone', () async {
       // Setup: User is not following anyone - create new container with overrides
       final testContainer = ProviderContainer(
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
           social.socialProvider.overrideWith(() {
-            return TestSocialNotifier(const SocialState(
-              followingPubkeys: [],
-              isInitialized: true,
-            ));
+            return TestSocialNotifier(
+              const SocialState(followingPubkeys: [], isInitialized: true),
+            );
           }),
         ],
       );
@@ -121,95 +120,120 @@ void main() {
       expect(result.error, isNull);
 
       // Verify that we didn't try to subscribe since there are no following
-      verifyNever(mockVideoEventService.subscribeToHomeFeed(
-        any,
-        limit: anyNamed('limit'),
-      ));
+      verifyNever(
+        mockVideoEventService.subscribeToHomeFeed(
+          any,
+          limit: anyNamed('limit'),
+        ),
+      );
 
       testContainer.dispose();
     });
 
-    test('should preserve video list when socialProvider updates with same following list', () async {
-      // Setup: Create mock videos
-      final now = DateTime.now();
-      final timestamp = now.millisecondsSinceEpoch ~/ 1000;
-      final mockVideos = [
-        VideoEvent(
-          id: 'video1',
-          pubkey: 'author1',
-          content: 'Test video 1',
-          createdAt: timestamp,
-          timestamp: now,
-        ),
-        VideoEvent(
-          id: 'video2',
-          pubkey: 'author2',
-          content: 'Test video 2',
-          createdAt: timestamp,
-          timestamp: now,
-        ),
-      ];
+    test(
+      'should preserve video list when socialProvider updates with same following list',
+      () async {
+        // Setup: Create mock videos
+        final now = DateTime.now();
+        final timestamp = now.millisecondsSinceEpoch ~/ 1000;
+        final mockVideos = [
+          VideoEvent(
+            id: 'video1',
+            pubkey: 'author1',
+            content: 'Test video 1',
+            createdAt: timestamp,
+            timestamp: now,
+          ),
+          VideoEvent(
+            id: 'video2',
+            pubkey: 'author2',
+            content: 'Test video 2',
+            createdAt: timestamp,
+            timestamp: now,
+          ),
+        ];
 
-      when(mockVideoEventService.homeFeedVideos).thenReturn(mockVideos);
+        when(mockVideoEventService.homeFeedVideos).thenReturn(mockVideos);
 
-      // Create container with initial social state
-      final testContainer = ProviderContainer(
-        overrides: [
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider.overrideWithValue(mockSubscriptionManager),
-          social.socialProvider.overrideWith(() {
-            return TestSocialNotifier(const SocialState(
-              followingPubkeys: ['author1', 'author2'],
-              isInitialized: true,
-            ));
-          }),
-        ],
-      );
+        // Create container with initial social state
+        final testContainer = ProviderContainer(
+          overrides: [
+            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+            nostrServiceProvider.overrideWithValue(mockNostrService),
+            subscriptionManagerProvider.overrideWithValue(
+              mockSubscriptionManager,
+            ),
+            social.socialProvider.overrideWith(() {
+              return TestSocialNotifier(
+                const SocialState(
+                  followingPubkeys: ['author1', 'author2'],
+                  isInitialized: true,
+                ),
+              );
+            }),
+          ],
+        );
 
-      // Act: Get initial feed
-      final initialFeed = await testContainer.read(homeFeedProvider.future);
+        // Act: Get initial feed
+        final initialFeed = await testContainer.read(homeFeedProvider.future);
 
-      // Verify initial feed has videos
-      expect(initialFeed.videos.length, 2);
-      expect(initialFeed.videos[0].id, 'video1');
-      expect(initialFeed.videos[1].id, 'video2');
+        // Verify initial feed has videos
+        expect(initialFeed.videos.length, 2);
+        expect(initialFeed.videos[0].id, 'video1');
+        expect(initialFeed.videos[1].id, 'video2');
 
-      // Act: Update social provider with different state but SAME following list
-      // This simulates what happens when socialProvider finishes initializing
-      // (e.g., likes/reposts loaded but following list unchanged)
-      final updatedContainer = ProviderContainer(
-        overrides: [
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
-          nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider.overrideWithValue(mockSubscriptionManager),
-          social.socialProvider.overrideWith(() {
-            return TestSocialNotifier(SocialState(
-              followingPubkeys: const ['author1', 'author2'], // Same list!
-              isInitialized: true,
-              likedEventIds: const {'like1'}, // Different likes
-              repostedEventIds: const {'repost1'}, // Different reposts
-            ));
-          }),
-        ],
-      );
+        // Act: Update social provider with different state but SAME following list
+        // This simulates what happens when socialProvider finishes initializing
+        // (e.g., likes/reposts loaded but following list unchanged)
+        final updatedContainer = ProviderContainer(
+          overrides: [
+            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+            nostrServiceProvider.overrideWithValue(mockNostrService),
+            subscriptionManagerProvider.overrideWithValue(
+              mockSubscriptionManager,
+            ),
+            social.socialProvider.overrideWith(() {
+              return TestSocialNotifier(
+                SocialState(
+                  followingPubkeys: const ['author1', 'author2'], // Same list!
+                  isInitialized: true,
+                  likedEventIds: const {'like1'}, // Different likes
+                  repostedEventIds: const {'repost1'}, // Different reposts
+                ),
+              );
+            }),
+          ],
+        );
 
-      final updatedFeed = await updatedContainer.read(homeFeedProvider.future);
+        final updatedFeed = await updatedContainer.read(
+          homeFeedProvider.future,
+        );
 
-      // Assert: Video list order should be PRESERVED
-      expect(updatedFeed.videos.length, 2);
-      expect(updatedFeed.videos[0].id, 'video1', reason: 'First video should remain first');
-      expect(updatedFeed.videos[1].id, 'video2', reason: 'Second video should remain second');
+        // Assert: Video list order should be PRESERVED
+        expect(updatedFeed.videos.length, 2);
+        expect(
+          updatedFeed.videos[0].id,
+          'video1',
+          reason: 'First video should remain first',
+        );
+        expect(
+          updatedFeed.videos[1].id,
+          'video2',
+          reason: 'Second video should remain second',
+        );
 
-      // Verify we didn't re-subscribe unnecessarily
-      verify(mockVideoEventService.subscribeToHomeFeed(
-        any,
-        limit: anyNamed('limit'),
-      ));
+        // Verify we didn't re-subscribe unnecessarily
+        verify(
+          mockVideoEventService.subscribeToHomeFeed(
+            any,
+            limit: anyNamed('limit'),
+          ),
+        );
 
-      updatedContainer.dispose();
-      testContainer.dispose();
-    });
+        updatedContainer.dispose();
+        testContainer.dispose();
+      },
+    );
 
     test('should subscribe to videos from followed authors', () async {
       // Setup: User is following 3 people
@@ -246,13 +270,16 @@ void main() {
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
           social.socialProvider.overrideWith(() {
-            return TestSocialNotifier(SocialState(
-              followingPubkeys: followingPubkeys,
-              isInitialized: true,
-            ));
+            return TestSocialNotifier(
+              SocialState(
+                followingPubkeys: followingPubkeys,
+                isInitialized: true,
+              ),
+            );
           }),
         ],
       );
@@ -266,10 +293,9 @@ void main() {
       expect(result.videos[1].pubkey, equals('pubkey2_following'));
 
       // Verify subscription was created with correct authors
-      verify(mockVideoEventService.subscribeToHomeFeed(
-        followingPubkeys,
-        limit: 100,
-      )).called(1);
+      verify(
+        mockVideoEventService.subscribeToHomeFeed(followingPubkeys, limit: 100),
+      ).called(1);
 
       testContainer.dispose();
     });
@@ -306,13 +332,16 @@ void main() {
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
           social.socialProvider.overrideWith(() {
-            return TestSocialNotifier(SocialState(
-              followingPubkeys: followingPubkeys,
-              isInitialized: true,
-            ));
+            return TestSocialNotifier(
+              SocialState(
+                followingPubkeys: followingPubkeys,
+                isInitialized: true,
+              ),
+            );
           }),
         ],
       );
@@ -323,7 +352,9 @@ void main() {
       // Assert: Videos should be sorted newest first
       expect(result.videos.length, equals(2));
       expect(
-          result.videos[0].createdAt, greaterThan(result.videos[1].createdAt));
+        result.videos[0].createdAt,
+        greaterThan(result.videos[1].createdAt),
+      );
       expect(result.videos[0].content, equals('Newer video'));
       expect(result.videos[1].content, equals('Older video'));
 
@@ -348,21 +379,25 @@ void main() {
       );
 
       when(mockVideoEventService.homeFeedVideos).thenReturn(mockVideos);
-      when(mockVideoEventService.getEventCount(SubscriptionType.homeFeed))
-          .thenReturn(10);
+      when(
+        mockVideoEventService.getEventCount(SubscriptionType.homeFeed),
+      ).thenReturn(10);
 
       // Create a new container with social state override
       final testContainer = ProviderContainer(
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
           social.socialProvider.overrideWith(() {
-            return TestSocialNotifier(SocialState(
-              followingPubkeys: followingPubkeys,
-              isInitialized: true,
-            ));
+            return TestSocialNotifier(
+              SocialState(
+                followingPubkeys: followingPubkeys,
+                isInitialized: true,
+              ),
+            );
           }),
         ],
       );
@@ -376,10 +411,9 @@ void main() {
       expect(result.isLoadingMore, isFalse);
 
       // Verify subscription was created
-      verify(mockVideoEventService.subscribeToHomeFeed(
-        followingPubkeys,
-        limit: 100,
-      )).called(1);
+      verify(
+        mockVideoEventService.subscribeToHomeFeed(followingPubkeys, limit: 100),
+      ).called(1);
 
       testContainer.dispose();
     });
@@ -395,13 +429,16 @@ void main() {
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
           social.socialProvider.overrideWith(() {
-            return TestSocialNotifier(SocialState(
-              followingPubkeys: followingPubkeys,
-              isInitialized: true,
-            ));
+            return TestSocialNotifier(
+              SocialState(
+                followingPubkeys: followingPubkeys,
+                isInitialized: true,
+              ),
+            );
           }),
         ],
       );
@@ -409,13 +446,14 @@ void main() {
       // Act
       await testContainer.read(homeFeedProvider.future);
       await testContainer.read(homeFeedProvider.notifier).refresh();
-      await testContainer.read(homeFeedProvider.future); // Wait for rebuild to complete
+      await testContainer.read(
+        homeFeedProvider.future,
+      ); // Wait for rebuild to complete
 
       // Assert: Should re-subscribe after refresh
-      verify(mockVideoEventService.subscribeToHomeFeed(
-        followingPubkeys,
-        limit: 100,
-      )).called(2); // Once on initial load, once on refresh
+      verify(
+        mockVideoEventService.subscribeToHomeFeed(followingPubkeys, limit: 100),
+      ).called(2); // Once on initial load, once on refresh
 
       testContainer.dispose();
     });
@@ -431,13 +469,16 @@ void main() {
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
           social.socialProvider.overrideWith(() {
-            return TestSocialNotifier(SocialState(
-              followingPubkeys: followingPubkeys,
-              isInitialized: true,
-            ));
+            return TestSocialNotifier(
+              SocialState(
+                followingPubkeys: followingPubkeys,
+                isInitialized: true,
+              ),
+            );
           }),
         ],
       );
@@ -451,10 +492,9 @@ void main() {
       expect(result.error, isNull);
 
       // Verify subscription was still attempted
-      verify(mockVideoEventService.subscribeToHomeFeed(
-        followingPubkeys,
-        limit: 100,
-      )).called(1);
+      verify(
+        mockVideoEventService.subscribeToHomeFeed(followingPubkeys, limit: 100),
+      ).called(1);
 
       testContainer.dispose();
     });
@@ -472,12 +512,15 @@ void main() {
 
       // Setup default mock behaviors
       when(mockVideoEventService.homeFeedVideos).thenReturn([]);
-      when(mockVideoEventService.getEventCount(SubscriptionType.homeFeed))
-          .thenReturn(0);
-      when(mockVideoEventService.subscribeToHomeFeed(
-        any,
-        limit: anyNamed('limit'),
-      )).thenAnswer((_) async {});
+      when(
+        mockVideoEventService.getEventCount(SubscriptionType.homeFeed),
+      ).thenReturn(0);
+      when(
+        mockVideoEventService.subscribeToHomeFeed(
+          any,
+          limit: anyNamed('limit'),
+        ),
+      ).thenAnswer((_) async {});
     });
 
     tearDown(() {
@@ -491,13 +534,13 @@ void main() {
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
           social.socialProvider.overrideWith(() {
-            return TestSocialNotifier(const SocialState(
-              followingPubkeys: [],
-              isInitialized: true,
-            ));
+            return TestSocialNotifier(
+              const SocialState(followingPubkeys: [], isInitialized: true),
+            );
           }),
         ],
       );
@@ -514,13 +557,13 @@ void main() {
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
           social.socialProvider.overrideWith(() {
-            return TestSocialNotifier(const SocialState(
-              followingPubkeys: [],
-              isInitialized: true,
-            ));
+            return TestSocialNotifier(
+              const SocialState(followingPubkeys: [], isInitialized: true),
+            );
           }),
         ],
       );
@@ -538,13 +581,13 @@ void main() {
         overrides: [
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
           social.socialProvider.overrideWith(() {
-            return TestSocialNotifier(const SocialState(
-              followingPubkeys: [],
-              isInitialized: true,
-            ));
+            return TestSocialNotifier(
+              const SocialState(followingPubkeys: [], isInitialized: true),
+            );
           }),
         ],
       );

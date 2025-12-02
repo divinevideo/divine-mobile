@@ -161,20 +161,16 @@ class NotificationListItem extends StatelessWidget {
   }
 
   Widget _buildDefaultAvatar(bool isDarkMode) => Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: DivineTheme.primaryPurple.withValues(alpha: 0.2),
-          shape: BoxShape.circle,
-        ),
-        child: const Center(
-          child: Icon(
-            Icons.person,
-            color: DivineTheme.primaryPurple,
-            size: 24,
-          ),
-        ),
-      );
+    width: 48,
+    height: 48,
+    decoration: BoxDecoration(
+      color: DivineTheme.primaryPurple.withValues(alpha: 0.2),
+      shape: BoxShape.circle,
+    ),
+    child: const Center(
+      child: Icon(Icons.person, color: DivineTheme.primaryPurple, size: 24),
+    ),
+  );
 
   Widget _buildMessage(BuildContext context, bool isDarkMode) {
     final textStyle = TextStyle(
@@ -202,10 +198,7 @@ class NotificationListItem extends StatelessWidget {
       );
     }
 
-    return Text(
-      notification.message,
-      style: textStyle,
-    );
+    return Text(notification.message, style: textStyle);
   }
 
   bool _hasAdditionalContent() {
@@ -247,52 +240,50 @@ class NotificationListItem extends StatelessWidget {
   }
 
   Widget _buildVideoThumbnail(bool isDarkMode) => Padding(
-        padding: const EdgeInsets.only(left: 8),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: CachedNetworkImage(
-            imageUrl: notification.targetVideoThumbnail!,
+    padding: const EdgeInsets.only(left: 8),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: CachedNetworkImage(
+        imageUrl: notification.targetVideoThumbnail!,
+        width: 64,
+        height: 64,
+        fit: BoxFit.cover,
+        cacheManager: openVineImageCache,
+        placeholder: (context, url) => Container(
+          width: 64,
+          height: 64,
+          color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+        errorWidget: (context, url, error) {
+          // Log the failed URL for debugging
+          if (error.toString().contains('Invalid image data') ||
+              error.toString().contains('Image codec failed')) {
+            Log.warning(
+              'Invalid image data for video thumbnail URL: $url - Error: $error',
+              name: 'NotificationListItem',
+              category: LogCategory.ui,
+            );
+          } else {
+            Log.debug(
+              'Video thumbnail load failed, URL: $url - Error: $error',
+              name: 'NotificationListItem',
+              category: LogCategory.ui,
+            );
+          }
+          return Container(
             width: 64,
             height: 64,
-            fit: BoxFit.cover,
-            cacheManager: openVineImageCache,
-            placeholder: (context, url) => Container(
-              width: 64,
-              height: 64,
-              color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-              child: const Center(
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+            color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
+            child: Icon(
+              Icons.video_library,
+              color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
             ),
-            errorWidget: (context, url, error) {
-              // Log the failed URL for debugging
-              if (error.toString().contains('Invalid image data') ||
-                  error.toString().contains('Image codec failed')) {
-                Log.warning(
-                  'Invalid image data for video thumbnail URL: $url - Error: $error',
-                  name: 'NotificationListItem',
-                  category: LogCategory.ui,
-                );
-              } else {
-                Log.debug(
-                  'Video thumbnail load failed, URL: $url - Error: $error',
-                  name: 'NotificationListItem',
-                  category: LogCategory.ui,
-                );
-              }
-              return Container(
-                width: 64,
-                height: 64,
-                color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
-                child: Icon(
-                  Icons.video_library,
-                  color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
-                ),
-              );
-            },
-          ),
-        ),
-      );
+          );
+        },
+      ),
+    ),
+  );
 
   Color _getIconBackgroundColor() {
     switch (notification.type) {

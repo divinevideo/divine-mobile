@@ -135,8 +135,11 @@ class ThumbnailApiService {
       );
 
       // Backend automatically generates thumbnails on-demand via GET endpoint
-      final thumbnailUrl =
-          getThumbnailUrl(videoId, timeSeconds: timeSeconds, size: size);
+      final thumbnailUrl = getThumbnailUrl(
+        videoId,
+        timeSeconds: timeSeconds,
+        size: size,
+      );
       Log.info(
         '✅ Returning thumbnail URL for ${videoId}: $thumbnailUrl',
         name: 'ThumbnailApiService',
@@ -178,8 +181,10 @@ class ThumbnailApiService {
       final batch = videoIds.skip(i).take(batchSize).toList();
 
       final futures = batch.map((videoId) async {
-        final url =
-            await getThumbnailWithFallback(videoId, timeSeconds: timeSeconds);
+        final url = await getThumbnailWithFallback(
+          videoId,
+          timeSeconds: timeSeconds,
+        );
         if (url != null) {
           results[videoId] = url;
         }

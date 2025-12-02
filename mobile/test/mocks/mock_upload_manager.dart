@@ -4,7 +4,8 @@
 import 'dart:io';
 
 import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/services/proofmode_session_service.dart' show ProofManifest;
+import 'package:openvine/services/proofmode_session_service.dart'
+    show ProofManifest;
 import 'package:openvine/services/upload_manager.dart';
 
 class MockUploadManager implements UploadManager {

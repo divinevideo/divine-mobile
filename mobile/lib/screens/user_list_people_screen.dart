@@ -15,10 +15,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
 
 class UserListPeopleScreen extends ConsumerStatefulWidget {
-  const UserListPeopleScreen({
-    required this.userList,
-    super.key,
-  });
+  const UserListPeopleScreen({required this.userList, super.key});
 
   final UserList userList;
 
@@ -93,14 +90,15 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
               ),
             )
           : _activeVideoIndex != null
-              ? _buildVideoPlayer()
-              : _buildListContent(),
+          ? _buildVideoPlayer()
+          : _buildListContent(),
     );
   }
 
   Widget _buildListContent() {
-    final videosAsync =
-        ref.watch(userListMemberVideosProvider(widget.userList.pubkeys));
+    final videosAsync = ref.watch(
+      userListMemberVideosProvider(widget.userList.pubkeys),
+    );
 
     return Column(
       children: [
@@ -123,8 +121,11 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.video_library,
-                          size: 64, color: VineTheme.secondaryText),
+                      Icon(
+                        Icons.video_library,
+                        size: 64,
+                        color: VineTheme.secondaryText,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         'No videos yet',
@@ -150,8 +151,10 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
               return ComposableVideoGrid(
                 videos: videos,
                 onVideoTap: (videos, index) {
-                  Log.info('Tapped video in user list: ${videos[index].id}',
-                      category: LogCategory.ui);
+                  Log.info(
+                    'Tapped video in user list: ${videos[index].id}',
+                    category: LogCategory.ui,
+                  );
                   setState(() {
                     _activeVideoIndex = index;
                   });
@@ -159,7 +162,8 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
                 onRefresh: () async {
                   // Invalidate the provider to refresh
                   ref.invalidate(
-                      userListMemberVideosProvider(widget.userList.pubkeys));
+                    userListMemberVideosProvider(widget.userList.pubkeys),
+                  );
                 },
                 emptyBuilder: () => Center(
                   child: Text(
@@ -180,10 +184,7 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'Failed to load videos',
-                    style: TextStyle(
-                      color: VineTheme.likeRed,
-                      fontSize: 18,
-                    ),
+                    style: TextStyle(color: VineTheme.likeRed, fontSize: 18),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -258,8 +259,9 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
   }
 
   Widget _buildVideoPlayer() {
-    final videosAsync =
-        ref.watch(userListMemberVideosProvider(widget.userList.pubkeys));
+    final videosAsync = ref.watch(
+      userListMemberVideosProvider(widget.userList.pubkeys),
+    );
 
     return videosAsync.when(
       data: (videos) {
@@ -279,7 +281,8 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
               videoList: videos,
               contextTitle: widget.userList.name,
               startingIndex: _activeVideoIndex!,
-              useLocalActiveState: true, // Use local state since not using URL routing
+              useLocalActiveState:
+                  true, // Use local state since not using URL routing
             ),
             // Header bar showing list name and back button
             Positioned(
@@ -288,7 +291,10 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
               right: 0,
               child: SafeArea(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -356,7 +362,10 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
                       ),
                       // Video count indicator
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(16),
@@ -378,9 +387,8 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
           ],
         );
       },
-      loading: () => Center(
-        child: CircularProgressIndicator(color: VineTheme.vineGreen),
-      ),
+      loading: () =>
+          Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
       error: (error, stack) => Center(
         child: Text(
           'Error loading videos',

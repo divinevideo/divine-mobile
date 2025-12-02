@@ -154,11 +154,15 @@ class VideoVisibilityManager {
   /// Pause all videos (e.g., when app goes to background)
   void pauseAllVideos() {
     _playableVideos.clear();
-    _visibilityMap.clear(); // Clear visibility map to prevent stale videos from resuming
+    _visibilityMap
+        .clear(); // Clear visibility map to prevent stale videos from resuming
     _autoPlayEnabled = false; // Disable auto-play when backgrounding
     _lastPlayingVideo = null; // Clear last playing video
-    Log.info('⏸️ Paused all videos and cleared visibility state',
-        name: 'VideoVisibilityManager', category: LogCategory.video);
+    Log.info(
+      '⏸️ Paused all videos and cleared visibility state',
+      name: 'VideoVisibilityManager',
+      category: LogCategory.video,
+    );
   }
 
   /// Resume visibility-based playback
@@ -214,8 +218,11 @@ class VideoVisibilityManager {
   void disableAutoPlay() {
     _autoPlayEnabled = false;
     _lastPlayingVideo = null;
-    Log.info('⏹️ Auto-play disabled',
-        name: 'VideoVisibilityManager', category: LogCategory.video);
+    Log.info(
+      '⏹️ Auto-play disabled',
+      name: 'VideoVisibilityManager',
+      category: LogCategory.video,
+    );
   }
 
   /// Check if a specific video should auto-play when visible
@@ -249,22 +256,21 @@ class VideoVisibilityManager {
 
   /// Debug info about current visibility state
   Map<String, dynamic> get debugInfo => {
-        'totalTracked': _visibilityMap.length,
-        'visibleCount': visibleVideos.length,
-        'playableCount': _playableVideos.length,
-        'threshold': '${(minVisibilityThreshold * 100).toStringAsFixed(0)}%',
-        'autoPlayEnabled': _autoPlayEnabled,
-        'activelyPlaying': _lastPlayingVideo,
-        'videos': _visibilityMap.map(
-          (id, info) => MapEntry(id, {
-            'visibility':
-                '${(info.visibilityFraction * 100).toStringAsFixed(1)}%',
-            'playable': _playableVideos.contains(id),
-            'shouldAutoPlay': shouldAutoPlay(id),
-            'lastUpdate': info.lastUpdate.toIso8601String(),
-          }),
-        ),
-      };
+    'totalTracked': _visibilityMap.length,
+    'visibleCount': visibleVideos.length,
+    'playableCount': _playableVideos.length,
+    'threshold': '${(minVisibilityThreshold * 100).toStringAsFixed(0)}%',
+    'autoPlayEnabled': _autoPlayEnabled,
+    'activelyPlaying': _lastPlayingVideo,
+    'videos': _visibilityMap.map(
+      (id, info) => MapEntry(id, {
+        'visibility': '${(info.visibilityFraction * 100).toStringAsFixed(1)}%',
+        'playable': _playableVideos.contains(id),
+        'shouldAutoPlay': shouldAutoPlay(id),
+        'lastUpdate': info.lastUpdate.toIso8601String(),
+      }),
+    ),
+  };
 
   void dispose() {
     _visibilityStreamController.close();

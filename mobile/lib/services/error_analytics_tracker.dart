@@ -8,7 +8,8 @@ import 'package:openvine/utils/unified_logger.dart';
 
 /// Service for tracking errors and exceptions across the app
 class ErrorAnalyticsTracker {
-  static final ErrorAnalyticsTracker _instance = ErrorAnalyticsTracker._internal();
+  static final ErrorAnalyticsTracker _instance =
+      ErrorAnalyticsTracker._internal();
   factory ErrorAnalyticsTracker() => _instance;
   ErrorAnalyticsTracker._internal();
 
@@ -70,7 +71,8 @@ class ErrorAnalyticsTracker {
   /// Track feed loading errors (CRITICAL for Popular/Trending/Hashtag issues)
   void trackFeedLoadError({
     required String feedType, // 'popular', 'trending', 'hashtag', 'home'
-    required String errorType, // 'no_events', 'timeout', 'network_error', 'parse_error'
+    required String
+    errorType, // 'no_events', 'timeout', 'network_error', 'parse_error'
     required String errorMessage,
     int? expectedCount,
     int? actualCount,
@@ -87,7 +89,10 @@ class ErrorAnalyticsTracker {
       parameters: {
         'feed_type': feedType,
         'error_type': errorType,
-        'error_message': errorMessage.substring(0, errorMessage.length > 150 ? 150 : errorMessage.length),
+        'error_message': errorMessage.substring(
+          0,
+          errorMessage.length > 150 ? 150 : errorMessage.length,
+        ),
         if (expectedCount != null) 'expected_count': expectedCount,
         if (actualCount != null) 'actual_count': actualCount,
         if (loadTimeMs != null) 'load_time_ms': loadTimeMs,
@@ -122,7 +127,8 @@ class ErrorAnalyticsTracker {
   /// Track network errors
   void trackNetworkError({
     required String operation,
-    required String errorType, // 'connection_failed', 'dns_error', 'ssl_error', 'timeout'
+    required String
+    errorType, // 'connection_failed', 'dns_error', 'ssl_error', 'timeout'
     required String errorMessage,
     String? url,
     int? statusCode,
@@ -138,7 +144,10 @@ class ErrorAnalyticsTracker {
       parameters: {
         'operation': operation,
         'error_type': errorType,
-        'error_message': errorMessage.substring(0, errorMessage.length > 150 ? 150 : errorMessage.length),
+        'error_message': errorMessage.substring(
+          0,
+          errorMessage.length > 150 ? 150 : errorMessage.length,
+        ),
         if (url != null) 'url_domain': Uri.tryParse(url)?.host ?? 'unknown',
         if (statusCode != null) 'status_code': statusCode,
         if (retryAttempt != null) 'retry_attempt': retryAttempt,
@@ -149,7 +158,8 @@ class ErrorAnalyticsTracker {
   /// Track Nostr relay errors
   void trackRelayError({
     required String relayUrl,
-    required String errorType, // 'connection_failed', 'subscription_failed', 'timeout', 'auth_failed'
+    required String
+    errorType, // 'connection_failed', 'subscription_failed', 'timeout', 'auth_failed'
     required String errorMessage,
     String? subscriptionType,
   }) {
@@ -163,17 +173,20 @@ class ErrorAnalyticsTracker {
       parameters: {
         'relay_url': Uri.tryParse(relayUrl)?.host ?? 'unknown',
         'error_type': errorType,
-        'error_message': errorMessage.substring(0, errorMessage.length > 150 ? 150 : errorMessage.length),
+        'error_message': errorMessage.substring(
+          0,
+          errorMessage.length > 150 ? 150 : errorMessage.length,
+        ),
         if (subscriptionType != null) 'subscription_type': subscriptionType,
       },
     );
   }
 
-
   /// Track video playback errors
   void trackVideoPlaybackError({
     required String videoId,
-    required String errorType, // 'load_failed', 'playback_error', 'format_unsupported'
+    required String
+    errorType, // 'load_failed', 'playback_error', 'format_unsupported'
     required String errorMessage,
     String? videoUrl,
     int? attemptTimeMs,
@@ -183,8 +196,12 @@ class ErrorAnalyticsTracker {
       parameters: {
         'video_id': videoId,
         'error_type': errorType,
-        'error_message': errorMessage.substring(0, errorMessage.length > 150 ? 150 : errorMessage.length),
-        if (videoUrl != null) 'video_url_domain': Uri.tryParse(videoUrl)?.host ?? 'unknown',
+        'error_message': errorMessage.substring(
+          0,
+          errorMessage.length > 150 ? 150 : errorMessage.length,
+        ),
+        if (videoUrl != null)
+          'video_url_domain': Uri.tryParse(videoUrl)?.host ?? 'unknown',
         if (attemptTimeMs != null) 'attempt_time_ms': attemptTimeMs,
       },
     );
@@ -227,7 +244,10 @@ class ErrorAnalyticsTracker {
       name: 'user_facing_error',
       parameters: {
         'error_type': errorType,
-        'user_message': userMessage.substring(0, userMessage.length > 100 ? 100 : userMessage.length),
+        'user_message': userMessage.substring(
+          0,
+          userMessage.length > 100 ? 100 : userMessage.length,
+        ),
         'location': location,
         if (actionTaken != null) 'action_taken': actionTaken,
       },

@@ -13,15 +13,21 @@ import 'package:openvine/utils/unified_logger.dart';
 /// Returns null if duration cannot be extracted.
 Future<Duration?> extractVideoDuration(File videoFile) async {
   if (!videoFile.existsSync()) {
-    Log.error('Video file does not exist: ${videoFile.path}',
-        name: 'VideoDurationExtractor', category: LogCategory.video);
+    Log.error(
+      'Video file does not exist: ${videoFile.path}',
+      name: 'VideoDurationExtractor',
+      category: LogCategory.video,
+    );
     return null;
   }
 
   VideoPlayerController? tempController;
   try {
-    Log.debug('Extracting duration from video file: ${videoFile.path}',
-        name: 'VideoDurationExtractor', category: LogCategory.video);
+    Log.debug(
+      'Extracting duration from video file: ${videoFile.path}',
+      name: 'VideoDurationExtractor',
+      category: LogCategory.video,
+    );
 
     // Create temporary controller to read video metadata
     tempController = VideoPlayerController.file(videoFile);
@@ -31,24 +37,34 @@ Future<Duration?> extractVideoDuration(File videoFile) async {
       const Duration(seconds: 5),
       onTimeout: () {
         throw TimeoutException(
-            'Video duration extraction timed out after 5 seconds');
+          'Video duration extraction timed out after 5 seconds',
+        );
       },
     );
 
     final duration = tempController.value.duration;
 
     if (duration == Duration.zero) {
-      Log.warning('Video player returned zero duration',
-          name: 'VideoDurationExtractor', category: LogCategory.video);
+      Log.warning(
+        'Video player returned zero duration',
+        name: 'VideoDurationExtractor',
+        category: LogCategory.video,
+      );
       return null;
     }
 
-    Log.info('Extracted video duration: ${duration.inMilliseconds}ms',
-        name: 'VideoDurationExtractor', category: LogCategory.video);
+    Log.info(
+      'Extracted video duration: ${duration.inMilliseconds}ms',
+      name: 'VideoDurationExtractor',
+      category: LogCategory.video,
+    );
     return duration;
   } catch (e) {
-    Log.error('Failed to extract video duration: $e',
-        name: 'VideoDurationExtractor', category: LogCategory.video);
+    Log.error(
+      'Failed to extract video duration: $e',
+      name: 'VideoDurationExtractor',
+      category: LogCategory.video,
+    );
     return null;
   } finally {
     // Always dispose the temporary controller

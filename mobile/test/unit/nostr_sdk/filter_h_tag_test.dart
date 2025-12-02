@@ -8,21 +8,14 @@ import 'package:nostr_sdk/filter.dart';
 void main() {
   group('Filter h tag support', () {
     test('Filter constructor should accept h parameter', () {
-      final filter = Filter(
-        kinds: [22],
-        h: ['vine'],
-      );
+      final filter = Filter(kinds: [22], h: ['vine']);
 
       expect(filter.h, equals(['vine']));
       expect(filter.kinds, equals([22]));
     });
 
     test('Filter toJson should include h tag', () {
-      final filter = Filter(
-        kinds: [22],
-        h: ['vine'],
-        limit: 50,
-      );
+      final filter = Filter(kinds: [22], h: ['vine'], limit: 50);
 
       final json = filter.toJson();
 
@@ -46,10 +39,7 @@ void main() {
     });
 
     test('Filter checkEvent should validate h tag', () {
-      final filter = Filter(
-        kinds: [22],
-        h: ['vine'],
-      );
+      final filter = Filter(kinds: [22], h: ['vine']);
 
       // Event with vine tag should pass
       final eventWithVineTag = Event(
@@ -58,7 +48,10 @@ void main() {
         [
           ['h', 'vine'],
           ['url', 'https://example.com/video.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -72,7 +65,10 @@ void main() {
         22,
         [
           ['url', 'https://example.com/video.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -87,7 +83,10 @@ void main() {
         [
           ['h', 'other'],
           ['url', 'https://example.com/video.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test video content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -97,10 +96,7 @@ void main() {
     });
 
     test('Filter checkEvent should work with multiple h values', () {
-      final filter = Filter(
-        kinds: [22],
-        h: ['vine', 'test'],
-      );
+      final filter = Filter(kinds: [22], h: ['vine', 'test']);
 
       // Event with vine tag should pass
       final eventWithVineTag = Event(
@@ -108,7 +104,10 @@ void main() {
         22,
         [
           ['h', 'vine'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -122,7 +121,10 @@ void main() {
         22,
         [
           ['h', 'test'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -136,7 +138,10 @@ void main() {
         22,
         [
           ['h', 'other'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -146,9 +151,7 @@ void main() {
     });
 
     test('Filter checkEvent should pass when h filter is not specified', () {
-      final filter = Filter(
-        kinds: [22],
-      );
+      final filter = Filter(kinds: [22]);
 
       // Event without h tag should pass when filter doesn't specify h
       final eventWithoutHTag = Event(
@@ -156,7 +159,10 @@ void main() {
         22,
         [
           ['url', 'https://example.com/video.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -171,7 +177,10 @@ void main() {
         [
           ['h', 'vine'],
           ['url', 'https://example.com/video.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -184,7 +193,7 @@ void main() {
       final filter = Filter(
         kinds: [22],
         authors: [
-          '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
+          '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
         ],
         h: ['vine'],
       );
@@ -195,7 +204,10 @@ void main() {
         22,
         [
           ['h', 'vine'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -209,7 +221,10 @@ void main() {
         22,
         [
           ['h', 'vine'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -223,7 +238,10 @@ void main() {
         22,
         [
           ['url', 'https://example.com/video.mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test content',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,

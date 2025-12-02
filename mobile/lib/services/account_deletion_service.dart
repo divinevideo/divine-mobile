@@ -19,15 +19,10 @@ class DeleteAccountResult {
   final String? deleteEventId;
 
   static DeleteAccountResult createSuccess(String deleteEventId) =>
-      DeleteAccountResult(
-        success: true,
-        deleteEventId: deleteEventId,
-      );
+      DeleteAccountResult(success: true, deleteEventId: deleteEventId);
 
-  static DeleteAccountResult failure(String error) => DeleteAccountResult(
-        success: false,
-        error: error,
-      );
+  static DeleteAccountResult failure(String error) =>
+      DeleteAccountResult(success: false, error: error);
 }
 
 /// Service for deleting user's entire Nostr account via NIP-62
@@ -35,8 +30,8 @@ class AccountDeletionService {
   AccountDeletionService({
     required INostrService nostrService,
     required AuthService authService,
-  })  : _nostrService = nostrService,
-        _authService = authService;
+  }) : _nostrService = nostrService,
+       _authService = authService;
 
   final INostrService _nostrService;
   final AuthService _authService;
@@ -50,7 +45,8 @@ class AccountDeletionService {
 
       // Create NIP-62 event
       final event = await createNip62Event(
-        reason: customReason ?? 'User requested account deletion via diVine app',
+        reason:
+            customReason ?? 'User requested account deletion via diVine app',
       );
 
       if (event == null) {

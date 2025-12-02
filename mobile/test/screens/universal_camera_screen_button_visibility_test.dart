@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
-import 'package:openvine/services/vine_recording_controller.dart' show VineRecordingState;
+import 'package:openvine/services/vine_recording_controller.dart'
+    show VineRecordingState;
 
 void main() {
   group('VineRecordingUIState', () {

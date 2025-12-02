@@ -18,8 +18,10 @@ void main() {
     });
 
     test('should handle errors gracefully', () {
-      expect(() => service.doSomethingThatFails(), 
-          throwsA(isA<CustomException>()));
+      expect(
+        () => service.doSomethingThatFails(),
+        throwsA(isA<CustomException>()),
+      );
     });
   });
 }

@@ -22,87 +22,93 @@ void main() {
       mockUploadManager = MockUploadManager();
     });
 
-    testWidgets('should show processing indicator when upload is in processing state', (tester) async {
-      // Create upload with processing state
-      final processingUpload = PendingUpload(
-        id: 'test_upload_123',
-        localVideoPath: '/test/video.mp4',
-        title: 'Test Video',
-        hashtags: ['test'],
-        status: UploadStatus.processing, // Key: processing state
-        uploadProgress: 0.9,
-        createdAt: DateTime.now(),
-        nostrPubkey: 'test_pubkey',
-      );
+    testWidgets(
+      'should show processing indicator when upload is in processing state',
+      (tester) async {
+        // Create upload with processing state
+        final processingUpload = PendingUpload(
+          id: 'test_upload_123',
+          localVideoPath: '/test/video.mp4',
+          title: 'Test Video',
+          hashtags: ['test'],
+          status: UploadStatus.processing, // Key: processing state
+          uploadProgress: 0.9,
+          createdAt: DateTime.now(),
+          nostrPubkey: 'test_pubkey',
+        );
 
-      when(mockUploadManager.getUpload('test_upload_123'))
-          .thenReturn(processingUpload);
+        when(
+          mockUploadManager.getUpload('test_upload_123'),
+        ).thenReturn(processingUpload);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            uploadManagerProvider.overrideWith((ref) => mockUploadManager),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: VideoProcessingStatusWidget(
-                uploadId: 'test_upload_123',
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              uploadManagerProvider.overrideWith((ref) => mockUploadManager),
+            ],
+            child: MaterialApp(
+              home: Scaffold(
+                body: VideoProcessingStatusWidget(uploadId: 'test_upload_123'),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Should show processing indicator
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Processing video'), findsOneWidget);
-      expect(find.byIcon(Icons.hourglass_empty), findsOneWidget);
+        // Should show processing indicator
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.text('Processing video'), findsOneWidget);
+        expect(find.byIcon(Icons.hourglass_empty), findsOneWidget);
 
-      // Should NOT show error indicators
-      expect(find.byIcon(Icons.error), findsNothing);
-      expect(find.text('Upload failed'), findsNothing);
-    });
+        // Should NOT show error indicators
+        expect(find.byIcon(Icons.error), findsNothing);
+        expect(find.text('Upload failed'), findsNothing);
+      },
+    );
 
-    testWidgets('should show progress bar with correct percentage during processing', (tester) async {
-      final processingUpload = PendingUpload(
-        id: 'test_upload_456',
-        localVideoPath: '/test/video.mp4',
-        title: 'Test Video',
-        hashtags: ['test'],
-        status: UploadStatus.processing,
-        uploadProgress: 0.75, // 75% complete
-        createdAt: DateTime.now(),
-        nostrPubkey: 'test_pubkey',
-      );
+    testWidgets(
+      'should show progress bar with correct percentage during processing',
+      (tester) async {
+        final processingUpload = PendingUpload(
+          id: 'test_upload_456',
+          localVideoPath: '/test/video.mp4',
+          title: 'Test Video',
+          hashtags: ['test'],
+          status: UploadStatus.processing,
+          uploadProgress: 0.75, // 75% complete
+          createdAt: DateTime.now(),
+          nostrPubkey: 'test_pubkey',
+        );
 
-      when(mockUploadManager.getUpload('test_upload_456'))
-          .thenReturn(processingUpload);
+        when(
+          mockUploadManager.getUpload('test_upload_456'),
+        ).thenReturn(processingUpload);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            uploadManagerProvider.overrideWith((ref) => mockUploadManager),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: VideoProcessingStatusWidget(
-                uploadId: 'test_upload_456',
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              uploadManagerProvider.overrideWith((ref) => mockUploadManager),
+            ],
+            child: MaterialApp(
+              home: Scaffold(
+                body: VideoProcessingStatusWidget(uploadId: 'test_upload_456'),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Find LinearProgressIndicator
-      final progressIndicator = tester.widget<LinearProgressIndicator>(
-        find.byType(LinearProgressIndicator),
-      );
+        // Find LinearProgressIndicator
+        final progressIndicator = tester.widget<LinearProgressIndicator>(
+          find.byType(LinearProgressIndicator),
+        );
 
-      expect(progressIndicator.value, equals(0.75));
-      expect(find.text('75% complete'), findsOneWidget);
-    });
+        expect(progressIndicator.value, equals(0.75));
+        expect(find.text('75% complete'), findsOneWidget);
+      },
+    );
 
-    testWidgets('should show success state when processing completes', (tester) async {
+    testWidgets('should show success state when processing completes', (
+      tester,
+    ) async {
       final completedUpload = PendingUpload(
         id: 'test_upload_789',
         localVideoPath: '/test/video.mp4',
@@ -116,8 +122,9 @@ void main() {
         nostrPubkey: 'test_pubkey',
       );
 
-      when(mockUploadManager.getUpload('test_upload_789'))
-          .thenReturn(completedUpload);
+      when(
+        mockUploadManager.getUpload('test_upload_789'),
+      ).thenReturn(completedUpload);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -126,9 +133,7 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: VideoProcessingStatusWidget(
-                uploadId: 'test_upload_789',
-              ),
+              body: VideoProcessingStatusWidget(uploadId: 'test_upload_789'),
             ),
           ),
         ),
@@ -143,7 +148,9 @@ void main() {
       expect(find.byIcon(Icons.hourglass_empty), findsNothing);
     });
 
-    testWidgets('should show error state when processing fails', (tester) async {
+    testWidgets('should show error state when processing fails', (
+      tester,
+    ) async {
       final failedUpload = PendingUpload(
         id: 'test_upload_error',
         localVideoPath: '/test/video.mp4',
@@ -156,8 +163,9 @@ void main() {
         nostrPubkey: 'test_pubkey',
       );
 
-      when(mockUploadManager.getUpload('test_upload_error'))
-          .thenReturn(failedUpload);
+      when(
+        mockUploadManager.getUpload('test_upload_error'),
+      ).thenReturn(failedUpload);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -166,9 +174,7 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: VideoProcessingStatusWidget(
-                uploadId: 'test_upload_error',
-              ),
+              body: VideoProcessingStatusWidget(uploadId: 'test_upload_error'),
             ),
           ),
         ),
@@ -183,7 +189,9 @@ void main() {
       expect(find.byType(ElevatedButton), findsOneWidget);
     });
 
-    testWidgets('should handle upload state changes dynamically', (tester) async {
+    testWidgets('should handle upload state changes dynamically', (
+      tester,
+    ) async {
       // Initial state: uploading
       final uploadingUpload = PendingUpload(
         id: 'dynamic_upload',
@@ -196,8 +204,9 @@ void main() {
         nostrPubkey: 'test_pubkey',
       );
 
-      when(mockUploadManager.getUpload('dynamic_upload'))
-          .thenReturn(uploadingUpload);
+      when(
+        mockUploadManager.getUpload('dynamic_upload'),
+      ).thenReturn(uploadingUpload);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -206,9 +215,7 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: VideoProcessingStatusWidget(
-                uploadId: 'dynamic_upload',
-              ),
+              body: VideoProcessingStatusWidget(uploadId: 'dynamic_upload'),
             ),
           ),
         ),
@@ -231,8 +238,9 @@ void main() {
       );
 
       // Update mock to return processing upload
-      when(mockUploadManager.getUpload('dynamic_upload'))
-          .thenReturn(processingUpload);
+      when(
+        mockUploadManager.getUpload('dynamic_upload'),
+      ).thenReturn(processingUpload);
 
       // Create new widget with same upload ID to force refresh
       await tester.pumpWidget(
@@ -242,9 +250,7 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: VideoProcessingStatusWidget(
-                uploadId: 'dynamic_upload',
-              ),
+              body: VideoProcessingStatusWidget(uploadId: 'dynamic_upload'),
             ),
           ),
         ),
@@ -258,4 +264,3 @@ void main() {
     });
   });
 }
-

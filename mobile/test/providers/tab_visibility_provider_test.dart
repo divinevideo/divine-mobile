@@ -26,18 +26,19 @@ void main() {
     });
 
     test(
-        'TabVisibility provider should update active tab when setActiveTab is called',
-        () {
-      // Arrange
-      final notifier = container.read(tabVisibilityProvider.notifier);
+      'TabVisibility provider should update active tab when setActiveTab is called',
+      () {
+        // Arrange
+        final notifier = container.read(tabVisibilityProvider.notifier);
 
-      // Act
-      notifier.setActiveTab(2);
-      final activeTab = container.read(tabVisibilityProvider);
+        // Act
+        notifier.setActiveTab(2);
+        final activeTab = container.read(tabVisibilityProvider);
 
-      // Assert
-      expect(activeTab, equals(2));
-    });
+        // Assert
+        expect(activeTab, equals(2));
+      },
+    );
 
     test('TabVisibility provider should notify listeners when tab changes', () {
       // Arrange
@@ -119,31 +120,33 @@ void main() {
       expect(isProfileActive, isFalse);
     });
 
-    test('tab visibility providers should update reactively when tab changes',
-        () {
-      // Arrange
-      final tabNotifier = container.read(tabVisibilityProvider.notifier);
+    test(
+      'tab visibility providers should update reactively when tab changes',
+      () {
+        // Arrange
+        final tabNotifier = container.read(tabVisibilityProvider.notifier);
 
-      // Initial state - feed should be active
-      expect(container.read(isFeedTabActiveProvider), isTrue);
-      expect(container.read(isExploreTabActiveProvider), isFalse);
-      expect(container.read(isProfileTabActiveProvider), isFalse);
+        // Initial state - feed should be active
+        expect(container.read(isFeedTabActiveProvider), isTrue);
+        expect(container.read(isExploreTabActiveProvider), isFalse);
+        expect(container.read(isProfileTabActiveProvider), isFalse);
 
-      // Act - switch to explore tab
-      tabNotifier.setActiveTab(2);
+        // Act - switch to explore tab
+        tabNotifier.setActiveTab(2);
 
-      // Assert
-      expect(container.read(isFeedTabActiveProvider), isFalse);
-      expect(container.read(isExploreTabActiveProvider), isTrue);
-      expect(container.read(isProfileTabActiveProvider), isFalse);
+        // Assert
+        expect(container.read(isFeedTabActiveProvider), isFalse);
+        expect(container.read(isExploreTabActiveProvider), isTrue);
+        expect(container.read(isProfileTabActiveProvider), isFalse);
 
-      // Act - switch to profile tab
-      tabNotifier.setActiveTab(3);
+        // Act - switch to profile tab
+        tabNotifier.setActiveTab(3);
 
-      // Assert
-      expect(container.read(isFeedTabActiveProvider), isFalse);
-      expect(container.read(isExploreTabActiveProvider), isFalse);
-      expect(container.read(isProfileTabActiveProvider), isTrue);
-    });
+        // Assert
+        expect(container.read(isFeedTabActiveProvider), isFalse);
+        expect(container.read(isExploreTabActiveProvider), isFalse);
+        expect(container.read(isProfileTabActiveProvider), isTrue);
+      },
+    );
   });
 }

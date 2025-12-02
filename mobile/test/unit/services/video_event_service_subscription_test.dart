@@ -70,11 +70,13 @@ void main() {
 
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
-      when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters'),
-              onEose: any(named: 'onEose'),
-              bypassLimits: any(named: 'bypassLimits')))
-          .thenAnswer((_) => eventStreamController.stream);
+      when(
+        () => mockNostrService.subscribeToEvents(
+          filters: any(named: 'filters'),
+          onEose: any(named: 'onEose'),
+          bypassLimits: any(named: 'bypassLimits'),
+        ),
+      ).thenAnswer((_) => eventStreamController.stream);
 
       testSubscriptionManager = TestSubscriptionManager(eventStreamController);
 
@@ -89,61 +91,73 @@ void main() {
       reset(mockNostrService);
     });
 
-    test('should allow different subscriptions with different parameters',
-        () async {
-      // Track NostrService.subscribeToEvents calls since VideoEventService bypasses SubscriptionManager
-      final subscriptionCalls = <List<Filter>>[];
-      when(() => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'),
-          onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'))).thenAnswer((invocation) {
-        final filters =
-            invocation.namedArguments[const Symbol('filters')] as List<Filter>;
-        subscriptionCalls.add(filters);
-        return eventStreamController.stream;
-      });
+    test(
+      'should allow different subscriptions with different parameters',
+      () async {
+        // Track NostrService.subscribeToEvents calls since VideoEventService bypasses SubscriptionManager
+        final subscriptionCalls = <List<Filter>>[];
+        when(
+          () => mockNostrService.subscribeToEvents(
+            filters: any(named: 'filters'),
+            onEose: any(named: 'onEose'),
+            bypassLimits: any(named: 'bypassLimits'),
+          ),
+        ).thenAnswer((invocation) {
+          final filters =
+              invocation.namedArguments[const Symbol('filters')]
+                  as List<Filter>;
+          subscriptionCalls.add(filters);
+          return eventStreamController.stream;
+        });
 
-      // First subscription: Classic vines from specific author
-      await videoEventService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.discovery,
-        authors: [
-          '25315276cbaeb8f2ed998ed55d15ef8c9cf2027baea191d1253d9a5c69a2b856'
-        ],
-        limit: 100,
-        replace: true,
-      );
+        // First subscription: Classic vines from specific author
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+          authors: [
+            '25315276cbaeb8f2ed998ed55d15ef8c9cf2027baea191d1253d9a5c69a2b856',
+          ],
+          limit: 100,
+          replace: true,
+        );
 
-      // Should have created one subscription
-      expect(subscriptionCalls.length, equals(1));
-      expect(videoEventService.isSubscribed(SubscriptionType.discovery), isTrue);
+        // Should have created one subscription
+        expect(subscriptionCalls.length, equals(1));
+        expect(
+          videoEventService.isSubscribed(SubscriptionType.discovery),
+          isTrue,
+        );
 
-      // Second subscription: Open feed (all videos, no author filter)
-      await videoEventService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.discovery,
-        limit: 300,
-        replace: false,
-      );
+        // Second subscription: Open feed (all videos, no author filter)
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+          limit: 300,
+          replace: false,
+        );
 
-      // Should have created a second subscription with different parameters
-      expect(
-        subscriptionCalls.length,
-        equals(2),
-        reason:
-            'Should allow subscription with different parameters (no authors vs specific authors)',
-      );
+        // Should have created a second subscription with different parameters
+        expect(
+          subscriptionCalls.length,
+          equals(2),
+          reason:
+              'Should allow subscription with different parameters (no authors vs specific authors)',
+        );
 
-      // Verify the subscriptions have different filters
-      expect(subscriptionCalls[0][0].authors, isNotNull);
-      expect(subscriptionCalls[0][0].authors!.length, equals(1));
-      expect(subscriptionCalls[1][0].authors, isNull);
-    });
+        // Verify the subscriptions have different filters
+        expect(subscriptionCalls[0][0].authors, isNotNull);
+        expect(subscriptionCalls[0][0].authors!.length, equals(1));
+        expect(subscriptionCalls[1][0].authors, isNull);
+      },
+    );
 
     test('should reject truly duplicate subscriptions', () async {
       final subscriptionCalls = <List<Filter>>[];
-      when(() => mockNostrService.subscribeToEvents(
+      when(
+        () => mockNostrService.subscribeToEvents(
           filters: any(named: 'filters'),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'))).thenAnswer((invocation) {
+          bypassLimits: any(named: 'bypassLimits'),
+        ),
+      ).thenAnswer((invocation) {
         final filters =
             invocation.namedArguments[const Symbol('filters')] as List<Filter>;
         subscriptionCalls.add(filters);
@@ -176,10 +190,13 @@ void main() {
 
     test('should allow multiple author-specific subscriptions', () async {
       final subscriptionCalls = <List<Filter>>[];
-      when(() => mockNostrService.subscribeToEvents(
+      when(
+        () => mockNostrService.subscribeToEvents(
           filters: any(named: 'filters'),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'))).thenAnswer((invocation) {
+          bypassLimits: any(named: 'bypassLimits'),
+        ),
+      ).thenAnswer((invocation) {
         final filters =
             invocation.namedArguments[const Symbol('filters')] as List<Filter>;
         subscriptionCalls.add(filters);
@@ -190,7 +207,7 @@ void main() {
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
         authors: [
-          '25315276cbaeb8f2ed998ed55d15ef8c9cf2027baea191d1253d9a5c69a2b856'
+          '25315276cbaeb8f2ed998ed55d15ef8c9cf2027baea191d1253d9a5c69a2b856',
         ],
         limit: 100,
         replace: true,
@@ -202,7 +219,7 @@ void main() {
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
         authors: [
-          '70ed6c56d6fb355f102a1e985741b5ee65f6ae9f772e028894b321bc74854082'
+          '70ed6c56d6fb355f102a1e985741b5ee65f6ae9f772e028894b321bc74854082',
         ],
         limit: 50,
         replace: false,
@@ -218,10 +235,13 @@ void main() {
 
     test('should correctly handle replace parameter', () async {
       final subscriptionCalls = <List<Filter>>[];
-      when(() => mockNostrService.subscribeToEvents(
+      when(
+        () => mockNostrService.subscribeToEvents(
           filters: any(named: 'filters'),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'))).thenAnswer((invocation) {
+          bypassLimits: any(named: 'bypassLimits'),
+        ),
+      ).thenAnswer((invocation) {
         final filters =
             invocation.namedArguments[const Symbol('filters')] as List<Filter>;
         subscriptionCalls.add(filters);
@@ -235,7 +255,10 @@ void main() {
         [
           ['url', 'https://example.com/video1.mp4'],
           ['m', 'video/mp4'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Video 1',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -244,7 +267,9 @@ void main() {
 
       // First subscription
       await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery, limit: 50);
+        subscriptionType: SubscriptionType.discovery,
+        limit: 50,
+      );
       await Future.delayed(const Duration(milliseconds: 10));
 
       eventStreamController.add(event1);
@@ -270,10 +295,13 @@ void main() {
     test('should track active subscription parameters', () async {
       // This test exposes the current bug where subscription parameters aren't tracked
       final subscriptionCalls = <List<Filter>>[];
-      when(() => mockNostrService.subscribeToEvents(
+      when(
+        () => mockNostrService.subscribeToEvents(
           filters: any(named: 'filters'),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'))).thenAnswer((invocation) {
+          bypassLimits: any(named: 'bypassLimits'),
+        ),
+      ).thenAnswer((invocation) {
         final filters =
             invocation.namedArguments[const Symbol('filters')] as List<Filter>;
         subscriptionCalls.add(filters);
@@ -306,14 +334,16 @@ void main() {
       );
     });
 
-    test('should handle the classic vines -> open feed sequence correctly',
-        () async {
+    test('should handle the classic vines -> open feed sequence correctly', () async {
       // This is the exact sequence that's failing in production
       final subscriptionCalls = <List<Filter>>[];
-      when(() => mockNostrService.subscribeToEvents(
+      when(
+        () => mockNostrService.subscribeToEvents(
           filters: any(named: 'filters'),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'))).thenAnswer((invocation) {
+          bypassLimits: any(named: 'bypassLimits'),
+        ),
+      ).thenAnswer((invocation) {
         final filters =
             invocation.namedArguments[const Symbol('filters')] as List<Filter>;
         subscriptionCalls.add(filters);
@@ -324,7 +354,7 @@ void main() {
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
         authors: [
-          '25315276cbaeb8f2ed998ed55d15ef8c9cf2027baea191d1253d9a5c69a2b856'
+          '25315276cbaeb8f2ed998ed55d15ef8c9cf2027baea191d1253d9a5c69a2b856',
         ],
         limit: 100,
         replace: true,
@@ -357,7 +387,7 @@ void main() {
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
         authors: [
-          '70ed6c56d6fb355f102a1e985741b5ee65f6ae9f772e028894b321bc74854082'
+          '70ed6c56d6fb355f102a1e985741b5ee65f6ae9f772e028894b321bc74854082',
         ],
         limit: 50,
         replace: false,

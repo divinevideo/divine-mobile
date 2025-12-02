@@ -14,12 +14,7 @@ import 'package:openvine/services/video_sharing_service.dart';
 
 import 'video_sharing_service_test.mocks.dart';
 
-@GenerateMocks([
-  INostrService,
-  AuthService,
-  UserProfileService,
-  SocialService,
-])
+@GenerateMocks([INostrService, AuthService, UserProfileService, SocialService])
 void main() {
   late VideoSharingService service;
   late MockINostrService mockNostrService;
@@ -41,17 +36,20 @@ void main() {
   });
 
   group('getShareableUsers', () {
-    test('returns recently shared users when no following list exists', () async {
-      // Arrange
-      when(mockSocialService.followingPubkeys).thenReturn([]);
+    test(
+      'returns recently shared users when no following list exists',
+      () async {
+        // Arrange
+        when(mockSocialService.followingPubkeys).thenReturn([]);
 
-      // Act
-      final result = await service.getShareableUsers(limit: 20);
+        // Act
+        final result = await service.getShareableUsers(limit: 20);
 
-      // Assert
-      expect(result, isEmpty);
-      verify(mockSocialService.followingPubkeys).called(1);
-    });
+        // Assert
+        expect(result, isEmpty);
+        verify(mockSocialService.followingPubkeys).called(1);
+      },
+    );
 
     test('returns following list with profile data', () async {
       // Arrange
@@ -82,12 +80,15 @@ void main() {
 
       when(mockSocialService.followingPubkeys).thenReturn(followingPubkeys);
       when(mockSocialService.isFollowing(any)).thenReturn(true);
-      when(mockUserProfileService.getCachedProfile(followingPubkeys[0]))
-          .thenReturn(profile1);
-      when(mockUserProfileService.getCachedProfile(followingPubkeys[1]))
-          .thenReturn(profile2);
-      when(mockUserProfileService.getCachedProfile(followingPubkeys[2]))
-          .thenReturn(null);
+      when(
+        mockUserProfileService.getCachedProfile(followingPubkeys[0]),
+      ).thenReturn(profile1);
+      when(
+        mockUserProfileService.getCachedProfile(followingPubkeys[1]),
+      ).thenReturn(profile2);
+      when(
+        mockUserProfileService.getCachedProfile(followingPubkeys[2]),
+      ).thenReturn(null);
 
       // Act
       final result = await service.getShareableUsers(limit: 20);
@@ -110,10 +111,7 @@ void main() {
 
     test('prioritizes recently shared users over following list', () async {
       // Arrange
-      final followingPubkeys = [
-        'pubkey1' * 8,
-        'pubkey2' * 8,
-      ];
+      final followingPubkeys = ['pubkey1' * 8, 'pubkey2' * 8];
 
       when(mockSocialService.followingPubkeys).thenReturn(followingPubkeys);
       when(mockSocialService.isFollowing(any)).thenReturn(true);
@@ -130,11 +128,13 @@ void main() {
       );
 
       when(mockAuthService.isAuthenticated).thenReturn(true);
-      when(mockAuthService.createAndSignEvent(
-        kind: anyNamed('kind'),
-        content: anyNamed('content'),
-        tags: anyNamed('tags'),
-      )).thenAnswer((_) async => null);
+      when(
+        mockAuthService.createAndSignEvent(
+          kind: anyNamed('kind'),
+          content: anyNamed('content'),
+          tags: anyNamed('tags'),
+        ),
+      ).thenAnswer((_) async => null);
 
       await service.shareVideoWithUser(
         video: testVideo,
@@ -145,7 +145,11 @@ void main() {
       final result = await service.getShareableUsers(limit: 20);
 
       // Assert
-      expect(result, isNotEmpty, reason: 'Should return at least one shareable user from following list');
+      expect(
+        result,
+        isNotEmpty,
+        reason: 'Should return at least one shareable user from following list',
+      );
       // Recently shared should appear first
       expect(result.first.pubkey, followingPubkeys[0]);
     });
@@ -177,11 +181,7 @@ void main() {
 
     test('searches by display name in following list', () async {
       // Arrange
-      final followingPubkeys = [
-        'pubkey1' * 8,
-        'pubkey2' * 8,
-        'pubkey3' * 8,
-      ];
+      final followingPubkeys = ['pubkey1' * 8, 'pubkey2' * 8, 'pubkey3' * 8];
 
       final profile1 = profile_model.UserProfile(
         pubkey: followingPubkeys[0],
@@ -208,12 +208,15 @@ void main() {
       );
 
       when(mockSocialService.followingPubkeys).thenReturn(followingPubkeys);
-      when(mockUserProfileService.getCachedProfile(followingPubkeys[0]))
-          .thenReturn(profile1);
-      when(mockUserProfileService.getCachedProfile(followingPubkeys[1]))
-          .thenReturn(profile2);
-      when(mockUserProfileService.getCachedProfile(followingPubkeys[2]))
-          .thenReturn(profile3);
+      when(
+        mockUserProfileService.getCachedProfile(followingPubkeys[0]),
+      ).thenReturn(profile1);
+      when(
+        mockUserProfileService.getCachedProfile(followingPubkeys[1]),
+      ).thenReturn(profile2);
+      when(
+        mockUserProfileService.getCachedProfile(followingPubkeys[2]),
+      ).thenReturn(profile3);
 
       // Act
       final result = await service.searchUsersToShareWith('alice');
@@ -238,8 +241,9 @@ void main() {
       );
 
       when(mockSocialService.followingPubkeys).thenReturn(followingPubkeys);
-      when(mockUserProfileService.getCachedProfile(followingPubkeys[0]))
-          .thenReturn(profile);
+      when(
+        mockUserProfileService.getCachedProfile(followingPubkeys[0]),
+      ).thenReturn(profile);
 
       // Act
       final result = await service.searchUsersToShareWith('alice');
@@ -262,8 +266,9 @@ void main() {
       );
 
       when(mockSocialService.followingPubkeys).thenReturn([]);
-      when(mockUserProfileService.fetchProfile(hexPubkey))
-          .thenAnswer((_) async => profile);
+      when(
+        mockUserProfileService.fetchProfile(hexPubkey),
+      ).thenAnswer((_) async => profile);
 
       // Act
       final result = await service.searchUsersToShareWith(hexPubkey);
@@ -288,8 +293,9 @@ void main() {
       );
 
       when(mockSocialService.followingPubkeys).thenReturn(followingPubkeys);
-      when(mockUserProfileService.getCachedProfile(followingPubkeys[0]))
-          .thenReturn(profile);
+      when(
+        mockUserProfileService.getCachedProfile(followingPubkeys[0]),
+      ).thenReturn(profile);
 
       // Act
       final result = await service.searchUsersToShareWith('ALICE');
@@ -304,8 +310,9 @@ void main() {
       final hexPubkey = 'a' * 64;
 
       when(mockSocialService.followingPubkeys).thenReturn([]);
-      when(mockUserProfileService.fetchProfile(hexPubkey))
-          .thenAnswer((_) async => null);
+      when(
+        mockUserProfileService.fetchProfile(hexPubkey),
+      ).thenAnswer((_) async => null);
 
       // Act
       final result = await service.searchUsersToShareWith(hexPubkey);

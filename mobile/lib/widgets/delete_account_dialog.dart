@@ -29,11 +29,7 @@ Future<void> showRemoveKeysWarningDialog({
         '• Your content will REMAIN on Nostr relays\n\n'
         'Make sure you have your nsec backed up elsewhere or you will lose access to your account!\n\n'
         'Continue?',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          height: 1.5,
-        ),
+        style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5),
       ),
       actions: [
         TextButton(
@@ -89,11 +85,7 @@ Future<void> showDeleteAllContentWarningDialog({
         '• Sign you out immediately\n\n'
         'Some relays may not honor deletion requests, and content may still exist in archives.\n\n'
         'This is IRREVERSIBLE. Are you ABSOLUTELY CERTAIN?',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          height: 1.5,
-        ),
+        style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5),
       ),
       actions: [
         TextButton(
@@ -154,11 +146,7 @@ Future<void> _showDeleteAllContentFinalConfirmation({
           children: [
             const Text(
               'To confirm permanent deletion of ALL your content from Nostr relays, type:',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                height: 1.5,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5),
             ),
             const SizedBox(height: 12),
             Text(
@@ -253,11 +241,7 @@ Future<void> showDeleteAccountCompletionDialog({
       content: const Text(
         'Your deletion request has been sent to Nostr relays.\n\n'
         'You\'ve been signed out and your keys have been removed from this device.',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          height: 1.5,
-        ),
+        style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5),
       ),
       actions: [
         TextButton(

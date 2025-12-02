@@ -58,10 +58,12 @@ void main() {
       );
     }
 
-    testWidgets('displays 401 error UI for unauthorized errors', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        errorDescription: 'HttpException: Invalid statusCode: 401',
-      ));
+    testWidgets('displays 401 error UI for unauthorized errors', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWidget(errorDescription: 'HttpException: Invalid statusCode: 401'),
+      );
 
       // Should show lock icon for 401
       expect(find.byIcon(Icons.lock_outline), findsOneWidget);
@@ -73,9 +75,9 @@ void main() {
     });
 
     testWidgets('displays generic error UI for non-401 errors', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        errorDescription: 'HttpException: Invalid statusCode: 404',
-      ));
+      await tester.pumpWidget(
+        buildWidget(errorDescription: 'HttpException: Invalid statusCode: 404'),
+      );
 
       // Should show error icon for non-401
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
@@ -86,73 +88,88 @@ void main() {
       expect(find.byIcon(Icons.lock_outline), findsNothing);
     });
 
-    testWidgets('translates 404 error to user-friendly message', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        errorDescription: 'HttpException: Invalid statusCode: 404',
-      ));
+    testWidgets('translates 404 error to user-friendly message', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWidget(errorDescription: 'HttpException: Invalid statusCode: 404'),
+      );
 
       expect(find.text('Video not found'), findsOneWidget);
     });
 
-    testWidgets('translates network error to user-friendly message', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        errorDescription: 'Network error: Connection failed',
-      ));
+    testWidgets('translates network error to user-friendly message', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWidget(errorDescription: 'Network error: Connection failed'),
+      );
 
       expect(find.text('Network error'), findsOneWidget);
     });
 
-    testWidgets('translates timeout error to user-friendly message', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        errorDescription: 'Request timeout',
-      ));
+    testWidgets('translates timeout error to user-friendly message', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildWidget(errorDescription: 'Request timeout'));
 
       expect(find.text('Loading timeout'), findsOneWidget);
     });
 
-    testWidgets('translates format error to user-friendly message', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        errorDescription: 'Unsupported codec',
-      ));
+    testWidgets('translates format error to user-friendly message', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWidget(errorDescription: 'Unsupported codec'),
+      );
 
       expect(find.text('Unsupported video format'), findsOneWidget);
     });
 
-    testWidgets('shows generic error message for unknown errors', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        errorDescription: 'Some unknown error',
-      ));
+    testWidgets('shows generic error message for unknown errors', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWidget(errorDescription: 'Some unknown error'),
+      );
 
       expect(find.text('Video playback error'), findsOneWidget);
     });
 
     testWidgets('hides error overlay when video is inactive', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        errorDescription: 'HttpException: Invalid statusCode: 401',
-        isActive: false,
-      ));
+      await tester.pumpWidget(
+        buildWidget(
+          errorDescription: 'HttpException: Invalid statusCode: 401',
+          isActive: false,
+        ),
+      );
 
       // Should show thumbnail but no error overlay
       expect(find.byType(ElevatedButton), findsNothing);
     });
 
     testWidgets('shows error overlay when video is active', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        errorDescription: 'HttpException: Invalid statusCode: 401',
-        isActive: true,
-      ));
+      await tester.pumpWidget(
+        buildWidget(
+          errorDescription: 'HttpException: Invalid statusCode: 401',
+          isActive: true,
+        ),
+      );
 
       // Should show error overlay with button
       expect(find.byType(ElevatedButton), findsOneWidget);
     });
 
-    testWidgets('tapping Verify Age button shows age verification dialog', (tester) async {
-      when(mockAgeVerification.verifyAdultContentAccess(any))
-          .thenAnswer((_) async => true);
+    testWidgets('tapping Verify Age button shows age verification dialog', (
+      tester,
+    ) async {
+      when(
+        mockAgeVerification.verifyAdultContentAccess(any),
+      ).thenAnswer((_) async => true);
 
-      await tester.pumpWidget(buildWidget(
-        errorDescription: 'HttpException: Invalid statusCode: 401',
-      ));
+      await tester.pumpWidget(
+        buildWidget(errorDescription: 'HttpException: Invalid statusCode: 401'),
+      );
 
       // Tap the "Verify Age" button
       await tester.tap(find.text('Verify Age'));
@@ -162,14 +179,17 @@ void main() {
       verify(mockAgeVerification.verifyAdultContentAccess(any)).called(1);
     });
 
-    testWidgets('401 error with "unauthorized" in lowercase triggers age verification UI', (tester) async {
-      await tester.pumpWidget(buildWidget(
-        errorDescription: 'unauthorized access',
-      ));
+    testWidgets(
+      '401 error with "unauthorized" in lowercase triggers age verification UI',
+      (tester) async {
+        await tester.pumpWidget(
+          buildWidget(errorDescription: 'unauthorized access'),
+        );
 
-      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
-      expect(find.text('Age-restricted content'), findsOneWidget);
-      expect(find.text('Verify Age'), findsOneWidget);
-    });
+        expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+        expect(find.text('Age-restricted content'), findsOneWidget);
+        expect(find.text('Verify Age'), findsOneWidget);
+      },
+    );
   });
 }

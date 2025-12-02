@@ -34,7 +34,9 @@ class Curation extends _$Curation {
     // Auto-refresh when video events change
     ref.listen(videoEventsProvider, (previous, next) {
       // Only refresh if we have new video events
-      final prevLength = previous?.hasValue == true ? (previous!.value?.length ?? 0) : 0;
+      final prevLength = previous?.hasValue == true
+          ? (previous!.value?.length ?? 0)
+          : 0;
       final nextLength = (next.hasValue) ? (next.value?.length ?? 0) : 0;
       if (next.hasValue && prevLength != nextLength) {
         _refreshCurationSets();
@@ -44,10 +46,7 @@ class Curation extends _$Curation {
     // Initialize with empty state
     _initializeCuration();
 
-    return CurationState(
-      editorsPicks: [],
-      isLoading: true,
-    );
+    return CurationState(editorsPicks: [], isLoading: true);
   }
 
   Future<void> _initializeCuration() async {
@@ -150,10 +149,7 @@ class Curation extends _$Curation {
         category: LogCategory.system,
       );
 
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 }
