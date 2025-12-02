@@ -365,41 +365,11 @@ class AuthService {
       // Notify listeners and stream
       _profileController.add(_currentProfile);
 
-      Log.info(
-        '✅ AuthService profile updated',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
+      Log.info('✅ AuthService profile updated',
+          name: 'AuthService', category: LogCategory.auth);
     } else {
-      Log.warning(
-        '⚠️ No cached profile found in UserProfileService',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-    }
-  }
-
-  /// Accept Terms of Service - transitions to authenticated state
-  Future<void> acceptTermsOfService() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('terms_accepted_at', DateTime.now().toIso8601String());
-      await prefs.setBool('age_verified_16_plus', true);
-
-      // If unauthenticated (e.g., after logout), re-initialize to load existing keys
-      if (_authState == AuthState.unauthenticated) {
-        await initialize();
-        return;
-      }
-
-      _setAuthState(AuthState.authenticated);
-
-      Log.info('Terms of Service accepted, user is now fully authenticated',
+      Log.warning('⚠️ No cached profile found in UserProfileService',
           name: 'AuthService', category: LogCategory.auth);
-    } catch (e) {
-      Log.error('Failed to save TOS acceptance: $e',
-          name: 'AuthService', category: LogCategory.auth);
-      _lastError = 'Failed to accept terms: $e';
     }
   }
 
@@ -806,9 +776,18 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
           'current_user_pubkey_hex', keyContainer.publicKeyHex);
+
+      final hasAcceptedTos = prefs.getBool('age_verified_16_plus') ?? false;
+      if (hasAcceptedTos) {
+        _setAuthState(AuthState.authenticated);
+      } else {
+        _setAuthState(AuthState.awaitingTosAcceptance);
+      }
     } catch (e) {
-      Log.warning('Failed to save current user pubkey to prefs: $e',
+      Log.warning('Failed to check TOS status: $e',
           name: 'AuthService', category: LogCategory.auth);
+      // Default to awaiting TOS if we can't check
+      _setAuthState(AuthState.awaitingTosAcceptance);
     }
 
     _profileController.add(_currentProfile);
