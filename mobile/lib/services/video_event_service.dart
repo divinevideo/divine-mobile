@@ -39,6 +39,9 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/log_batcher.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/services/event_router.dart';
+import 'package:openvine/services/age_verification_service.dart';
+import 'package:openvine/services/relay_gateway_service.dart';
+import 'package:openvine/services/relay_gateway_settings.dart';
 
 /// Pagination state for tracking cursor position and loading status per subscription
 class PaginationState {
@@ -81,9 +84,10 @@ class PaginationState {
     if (eventsReceivedInCurrentQuery < requestedLimit) {
       hasMore = false;
       Log.info(
-          'PaginationState: No more content available - received $eventsReceivedInCurrentQuery < $requestedLimit requested',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        'PaginationState: No more content available - received $eventsReceivedInCurrentQuery < $requestedLimit requested',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -117,16 +121,22 @@ class VideoEventService extends ChangeNotifier {
     UserProfileService? userProfileService,
     EventRouter? eventRouter,
     VideoFilterBuilder? videoFilterBuilder,
-  })  : _subscriptionManager = subscriptionManager,
-        _userProfileService = userProfileService,
-        _eventRouter = eventRouter,
-        _videoFilterBuilder = videoFilterBuilder {
+    RelayGatewayService? gatewayService,
+    RelayGatewaySettings? gatewaySettings,
+  }) : _subscriptionManager = subscriptionManager,
+       _userProfileService = userProfileService,
+       _eventRouter = eventRouter,
+       _videoFilterBuilder = videoFilterBuilder,
+       _gatewayService = gatewayService,
+       _gatewaySettings = gatewaySettings {
     _initializePaginationStates();
   }
   final INostrService _nostrService;
   final UserProfileService? _userProfileService;
   final EventRouter? _eventRouter;
   final VideoFilterBuilder? _videoFilterBuilder;
+  final RelayGatewayService? _gatewayService;
+  final RelayGatewaySettings? _gatewaySettings;
   final ConnectionStatusService _connectionService = ConnectionStatusService();
 
   // REFACTORED: Separate event lists per subscription type
@@ -193,6 +203,7 @@ class VideoEventService extends ChangeNotifier {
 
   // Optional services for enhanced functionality
   ContentBlocklistService? _blocklistService;
+  AgeVerificationService? _ageVerificationService;
   final SubscriptionManager _subscriptionManager;
 
   // AUTH retry mechanism
@@ -201,8 +212,130 @@ class VideoEventService extends ChangeNotifier {
   /// Set the blocklist service for content filtering
   void setBlocklistService(ContentBlocklistService blocklistService) {
     _blocklistService = blocklistService;
-    Log.debug('Blocklist service attached to VideoEventService',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.debug(
+      'Blocklist service attached to VideoEventService',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
+  }
+
+  /// Set the age verification service for adult content filtering
+  void setAgeVerificationService(
+    AgeVerificationService ageVerificationService,
+  ) {
+    _ageVerificationService = ageVerificationService;
+    Log.debug(
+      'Age verification service attached to VideoEventService',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
+  }
+
+  /// Returns true if adult content should be filtered from feeds
+  bool get shouldFilterAdultContent =>
+      _ageVerificationService?.shouldHideAdultContent ?? false;
+
+  /// Check if an event should be filtered based on adult content settings
+  /// Returns true if the event should be filtered OUT (not shown)
+  bool shouldFilterEvent(Event event) {
+    // If not hiding adult content, don't filter anything
+    if (!shouldFilterAdultContent) {
+      return false;
+    }
+
+    // Check for content-warning tag (indicates adult/sensitive content)
+    for (final tag in event.tags) {
+      if (tag.isNotEmpty && tag[0] == 'content-warning') {
+        Log.debug(
+          'Filtering event with content-warning tag',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+        return true;
+      }
+    }
+
+    // Check for NSFW or adult hashtags
+    for (final tag in event.tags) {
+      if (tag.length >= 2 && tag[0] == 't') {
+        final hashtag = tag[1].toLowerCase();
+        if (hashtag == 'nsfw' || hashtag == 'adult') {
+          Log.debug(
+            'Filtering event with NSFW/adult hashtag',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Check if a VideoEvent contains adult content based on hashtags and tags
+  bool _isAdultContent(VideoEvent video) {
+    // Check for NSFW or adult hashtags
+    for (final hashtag in video.hashtags) {
+      final lowerHashtag = hashtag.toLowerCase();
+      if (lowerHashtag == 'nsfw' || lowerHashtag == 'adult') {
+        return true;
+      }
+    }
+
+    // Check for content-warning in rawTags
+    if (video.rawTags.containsKey('content-warning')) {
+      return true;
+    }
+
+    // Check isFlaggedContent flag
+    if (video.isFlaggedContent) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Filter adult content from all existing video lists
+  /// Call this when user changes preference to "Never show"
+  /// Returns the count of removed videos
+  int filterAdultContentFromExistingVideos() {
+    // If not hiding adult content, don't filter anything
+    if (!shouldFilterAdultContent) {
+      return 0;
+    }
+
+    int totalRemoved = 0;
+
+    // Iterate through all subscription types and filter each list
+    for (final subscriptionType in SubscriptionType.values) {
+      final eventList = _eventLists[subscriptionType];
+      if (eventList == null || eventList.isEmpty) continue;
+
+      final beforeCount = eventList.length;
+      eventList.removeWhere(_isAdultContent);
+      final removedFromList = beforeCount - eventList.length;
+
+      if (removedFromList > 0) {
+        Log.info(
+          'Filtered $removedFromList adult content videos from ${subscriptionType.name}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+        totalRemoved += removedFromList;
+      }
+    }
+
+    if (totalRemoved > 0) {
+      Log.info(
+        'Total adult content videos filtered: $totalRemoved',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      notifyListeners();
+    }
+
+    return totalRemoved;
   }
 
   /// Initialize pagination states for all subscription types
@@ -225,6 +358,59 @@ class VideoEventService extends ChangeNotifier {
       _hasScheduledFrameUpdate = false;
       notifyListeners();
     });
+  }
+
+  /// Check if gateway should be used for a subscription type
+  /// Returns false if gateway dependencies are null, type is homeFeed, or settings don't allow
+  bool _shouldUseGateway(SubscriptionType type) {
+    // Gateway dependencies must be available
+    final gatewaySettings = _gatewaySettings;
+    if (_gatewayService == null || gatewaySettings == null) return false;
+
+    // Never use gateway for home feed (personalized, not cacheable)
+    if (type == SubscriptionType.homeFeed) return false;
+
+    // Check settings and relay configuration
+    return gatewaySettings.shouldUseGateway(
+      configuredRelays: _nostrService.relays,
+    );
+  }
+
+  /// Fetch events via REST gateway and import to embedded relay SQLite
+  /// Falls back to WebSocket on any failure (does not throw)
+  Future<void> _fetchViaGateway(SubscriptionType type, Filter filter) async {
+    // _shouldUseGateway already checks for null, so we can safely assert non-null here
+    final gatewayService = _gatewayService;
+    if (gatewayService == null || !_shouldUseGateway(type)) return;
+
+    try {
+      Log.info(
+        'Gateway: Fetching ${type.name} via REST',
+        name: 'VideoEventService',
+        category: LogCategory.relay,
+      );
+
+      final response = await gatewayService.query(filter);
+
+      if (response.hasEvents) {
+        Log.info(
+          'Gateway: Received ${response.eventCount} events '
+          '(cached: ${response.cached}, age: ${response.cacheAgeSeconds}s)',
+          name: 'VideoEventService',
+          category: LogCategory.relay,
+        );
+
+        // Events will arrive via WebSocket subscription after import
+        // The embedded relay will notify subscribers when events are imported
+      }
+    } on GatewayException catch (e) {
+      Log.warning(
+        'Gateway fetch failed, WebSocket will handle: $e',
+        name: 'VideoEventService',
+        category: LogCategory.relay,
+      );
+      // Fall through to WebSocket - no rethrow
+    }
   }
 
   // REFACTORED: Getters now work with subscription types
@@ -257,7 +443,8 @@ class VideoEventService extends ChangeNotifier {
   List<VideoEvent> get allHashtagVideos => getVideos(SubscriptionType.hashtag);
 
   /// Get videos for a specific hashtag (keyed for route-aware feeds)
-  List<VideoEvent> hashtagVideos(String tag) => _hashtagBuckets[tag] ?? const [];
+  List<VideoEvent> hashtagVideos(String tag) =>
+      _hashtagBuckets[tag] ?? const [];
 
   /// DEBUG: Dump all events with cdn.divine.video thumbnails
   void debugDumpCdnDivineVideoThumbnails() {
@@ -278,16 +465,22 @@ class VideoEventService extends ChangeNotifier {
       }
     }
 
-    Log.warning('🔍 DEBUG: Found $count events with cdn.divine.video thumbnails',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.warning(
+      '🔍 DEBUG: Found $count events with cdn.divine.video thumbnails',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
   }
 
   /// Get videos for a specific author (keyed for route-aware feeds)
   /// Always returns videos sorted in reverse chronological order (newest first)
   List<VideoEvent> authorVideos(String pubkeyHex) {
     final cached = _authorBuckets[pubkeyHex] ?? const [];
-    Log.info('SVC authorVideos: hex=$pubkeyHex cached=${cached.length}',
-        name: 'Service', category: LogCategory.video);
+    Log.info(
+      'SVC authorVideos: hex=$pubkeyHex cached=${cached.length}',
+      name: 'Service',
+      category: LogCategory.video,
+    );
     if (cached.isEmpty) {
       return cached;
     }
@@ -297,8 +490,11 @@ class VideoEventService extends ChangeNotifier {
     final sorted = List<VideoEvent>.from(cached);
     sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-    Log.info('SVC authorVideos: return sorted=${sorted.length} (newest first)',
-        name: 'Service', category: LogCategory.video);
+    Log.info(
+      'SVC authorVideos: return sorted=${sorted.length} (newest first)',
+      name: 'Service',
+      category: LogCategory.video,
+    );
     return sorted;
   }
 
@@ -307,7 +503,8 @@ class VideoEventService extends ChangeNotifier {
 
   /// DEPRECATED: Use specific getters instead
   @Deprecated(
-      'Use getVideos(SubscriptionType.discovery) or discoveryVideos instead')
+    'Use getVideos(SubscriptionType.discovery) or discoveryVideos instead',
+  )
   List<VideoEvent> get videoEvents => discoveryVideos;
 
   bool get isLoading => _isLoading;
@@ -349,31 +546,36 @@ class VideoEventService extends ChangeNotifier {
   List<VideoEvent> getVideosByAuthor(String pubkey) {
     final result = <VideoEvent>[];
     Log.debug(
-        '🔍 Searching for videos by author ${pubkey} across ${_eventLists.length} subscription types',
-        name: 'VideoEventService',
-        category: LogCategory.video);
+      '🔍 Searching for videos by author ${pubkey} across ${_eventLists.length} subscription types',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
     for (final entry in _eventLists.entries) {
       final subscriptionType = entry.key;
       final eventList = entry.value;
-      final matchingVideos =
-          eventList.where((video) => video.pubkey == pubkey).toList();
+      final matchingVideos = eventList
+          .where((video) => video.pubkey == pubkey)
+          .toList();
       if (matchingVideos.isNotEmpty) {
         Log.debug(
-            '  📱 Found ${matchingVideos.length} videos in ${subscriptionType.name} list (total: ${eventList.length})',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '  📱 Found ${matchingVideos.length} videos in ${subscriptionType.name} list (total: ${eventList.length})',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       } else {
         Log.debug(
-            '  ⏭️  No videos in ${subscriptionType.name} list (total: ${eventList.length})',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '  ⏭️  No videos in ${subscriptionType.name} list (total: ${eventList.length})',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       }
       result.addAll(matchingVideos);
     }
     Log.debug(
-        '✅ Total videos found for ${pubkey}: ${result.length}',
-        name: 'VideoEventService',
-        category: LogCategory.video);
+      '✅ Total videos found for ${pubkey}: ${result.length}',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
     return result;
   }
 
@@ -388,15 +590,21 @@ class VideoEventService extends ChangeNotifier {
       final removedCount = initialCount - authorBucket.length;
 
       if (removedCount > 0) {
-        Log.info('Removed video $videoId from author $authorPubkey bucket (${authorBucket.length} remaining)',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.info(
+          'Removed video $videoId from author $authorPubkey bucket (${authorBucket.length} remaining)',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       }
     }
 
     // Mark as locally deleted to prevent pagination resurrection
     _locallyDeletedVideoIds.add(videoId);
-    Log.info('Marked video $videoId as locally deleted',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.info(
+      'Marked video $videoId as locally deleted',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     // Notify listeners to update UI immediately (optimistic update)
     notifyListeners();
@@ -418,9 +626,10 @@ class VideoEventService extends ChangeNotifier {
 
     try {
       Log.debug(
-          'Querying for reposters of video $videoId',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        'Querying for reposters of video $videoId',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       // Create filter for Kind 16 generic repost events that reference this video
       final filter = Filter(
@@ -452,14 +661,18 @@ class VideoEventService extends ChangeNotifier {
             // Add the pubkey of the reposter
             reposters.add(event.pubkey);
             Log.debug(
-                'Found reposter ${event.pubkey} for video $videoId',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              'Found reposter ${event.pubkey} for video $videoId',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           }
         },
         onError: (error) {
-          Log.error('Error querying reposters for video $videoId: $error',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.error(
+            'Error querying reposters for video $videoId: $error',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           if (!completer.isCompleted) {
             timeoutTimer?.cancel();
             streamSubscription.cancel();
@@ -468,9 +681,10 @@ class VideoEventService extends ChangeNotifier {
         },
         onDone: () {
           Log.info(
-              'Reposters query complete for video $videoId - found ${reposters.length} reposters',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            'Reposters query complete for video $videoId - found ${reposters.length} reposters',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           if (!completer.isCompleted) {
             timeoutTimer?.cancel();
             completer.complete(reposters.toList());
@@ -478,8 +692,11 @@ class VideoEventService extends ChangeNotifier {
         },
       );
     } catch (error) {
-      Log.error('Exception querying reposters for video $videoId: $error',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Exception querying reposters for video $videoId: $error',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       timeoutTimer?.cancel();
       if (!completer.isCompleted) {
         completer.complete([]);
@@ -512,15 +729,16 @@ class VideoEventService extends ChangeNotifier {
     }
 
     try {
-      final cachedEvents = await _eventRouter!.db.nostrEventsDao.getVideoEventsByFilter(
-        kinds: kinds,
-        authors: authors,
-        hashtags: hashtags,
-        since: since,
-        until: until,
-        limit: limit,
-        sortBy: sortBy?.fieldName,
-      );
+      final cachedEvents = await _eventRouter.db.nostrEventsDao
+          .getVideoEventsByFilter(
+            kinds: kinds,
+            authors: authors,
+            hashtags: hashtags,
+            since: since,
+            until: until,
+            limit: limit,
+            sortBy: sortBy?.fieldName,
+          );
 
       if (cachedEvents.isNotEmpty) {
         Log.debug(
@@ -555,7 +773,8 @@ class VideoEventService extends ChangeNotifier {
     bool includeReposts =
         false, // Whether to include kind 6 reposts (disabled by default)
     VideoSortField? sortBy, // Server-side sorting if relay supports it
-    NIP50SortMode? nip50Sort, // NIP-50 search sorting (e.g., sort:hot, sort:top)
+    NIP50SortMode?
+    nip50Sort, // NIP-50 search sorting (e.g., sort:hot, sort:top)
     bool force = false, // Force refresh even if parameters match
   }) async {
     // NostrService now handles subscription deduplication automatically via filter hashing
@@ -568,8 +787,11 @@ class VideoEventService extends ChangeNotifier {
     if (!_nostrService.isInitialized) {
       _isLoading = false;
 
-      Log.warning('Cannot subscribe - Nostr service not initialized (will retry when ready)',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.warning(
+        'Cannot subscribe - Nostr service not initialized (will retry when ready)',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       // Defensive: Don't throw, just return early
       // The provider will retry when the service becomes initialized
       return;
@@ -579,17 +801,21 @@ class VideoEventService extends ChangeNotifier {
     if (!_connectionService.isOnline) {
       _isLoading = false;
 
-      Log.warning('Device is offline, will retry when connection is restored',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.warning(
+        'Device is offline, will retry when connection is restored',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       _scheduleRetryWhenOnline();
       throw const VideoEventServiceException('Device is offline');
     }
 
     if (_nostrService.connectedRelayCount == 0) {
       Log.warning(
-          'WARNING: No relays connected - subscription will likely fail',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        'WARNING: No relays connected - subscription will likely fail',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     }
 
     // Avoid churn: if params match existing subscription, skip re-subscribe
@@ -606,56 +832,83 @@ class VideoEventService extends ChangeNotifier {
           includeReposts: includeReposts,
         )) {
       Log.info(
-          '🔁 Skipping re-subscribe for $subscriptionType (parameters unchanged)',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        '🔁 Skipping re-subscribe for $subscriptionType (parameters unchanged)',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       _isLoading = false;
       return;
     }
 
     if (force) {
       Log.info(
-          '💪 Force refresh: creating new subscription for $subscriptionType even if params match',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        '💪 Force refresh: creating new subscription for $subscriptionType even if params match',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     }
 
     // Only close existing subscription for this type if replace=true and params changed
     if (replace && isSubscribed(subscriptionType)) {
-      Log.info('🔄 Replacing existing $subscriptionType subscription',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.info(
+        '🔄 Replacing existing $subscriptionType subscription',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       await _cancelSubscription(subscriptionType);
     }
 
     try {
       Log.info(
-          '🎬 Creating $subscriptionType filter for NIP-71 video events...',
-          name: 'VideoEventService',
-          category: LogCategory.video);
-      Log.info('  - Subscription Type: $subscriptionType',
-          name: 'VideoEventService', category: LogCategory.video);
+        '🎬 Creating $subscriptionType filter for NIP-71 video events...',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       Log.info(
-          '  - Authors: ${authors?.length ?? 'all'} ${authors?.isNotEmpty == true ? "(first: ${authors!.first}...)" : ""}',
-          name: 'VideoEventService',
-          category: LogCategory.video);
-      Log.info('  - Hashtags: ${hashtags?.join(', ') ?? 'none'}',
-          name: 'VideoEventService', category: LogCategory.video);
-      Log.info('  - Group: ${group ?? 'none'}',
-          name: 'VideoEventService', category: LogCategory.video);
+        '  - Subscription Type: $subscriptionType',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       Log.info(
-          '  - Since: ${since != null ? DateTime.fromMillisecondsSinceEpoch(since * 1000) : 'none'}',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        '  - Authors: ${authors?.length ?? 'all'} ${authors?.isNotEmpty == true ? "(first: ${authors!.first}...)" : ""}',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       Log.info(
-          '  - Until: ${until != null ? DateTime.fromMillisecondsSinceEpoch(until * 1000) : 'none'}',
-          name: 'VideoEventService',
-          category: LogCategory.video);
-      Log.info('  - Limit: $limit',
-          name: 'VideoEventService', category: LogCategory.video);
-      Log.info('  - Replace existing: $replace',
-          name: 'VideoEventService', category: LogCategory.video);
-      Log.info('  - Include reposts: $includeReposts',
-          name: 'VideoEventService', category: LogCategory.video);
+        '  - Hashtags: ${hashtags?.join(', ') ?? 'none'}',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  - Group: ${group ?? 'none'}',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  - Since: ${since != null ? DateTime.fromMillisecondsSinceEpoch(since * 1000) : 'none'}',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  - Until: ${until != null ? DateTime.fromMillisecondsSinceEpoch(until * 1000) : 'none'}',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  - Limit: $limit',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  - Replace existing: $replace',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  - Include reposts: $includeReposts',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       // Store includeReposts setting for this subscription type
       _includeReposts[subscriptionType] = includeReposts;
@@ -669,16 +922,18 @@ class VideoEventService extends ChangeNotifier {
           until == null &&
           _eventLists[subscriptionType]?.isEmpty == true) {
         Log.debug(
-            '📱 Initial load: requesting best video content (no date constraints)',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '📱 Initial load: requesting best video content (no date constraints)',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         // Let relays decide what content to return - they know their data best
       }
 
       // Create optimized filter for NIP-71 video events
       // IMPORTANT: Convert hashtags to lowercase per NIP-24 requirement
-      final lowercaseHashtags =
-          hashtags?.map((tag) => tag.toLowerCase()).toList();
+      final lowercaseHashtags = hashtags
+          ?.map((tag) => tag.toLowerCase())
+          .toList();
 
       // Create base filter for NIP-71 video events
       final baseVideoFilter = Filter(
@@ -695,45 +950,51 @@ class VideoEventService extends ChangeNotifier {
 
       // NIP-50 search takes priority over divine extensions
       if (nip50Sort != null && _videoFilterBuilder != null) {
-        videoFilter = _videoFilterBuilder!.buildNIP50Filter(
+        videoFilter = _videoFilterBuilder.buildNIP50Filter(
           baseFilter: baseVideoFilter,
           sortMode: nip50Sort,
         );
         Log.info(
-            '🔍 NIP-50: Using search query "${nip50Sort.toSearchQuery()}" for trending/popular discovery',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '🔍 NIP-50: Using search query "${nip50Sort.toSearchQuery()}" for trending/popular discovery',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       } else if (sortBy != null && _videoFilterBuilder != null) {
         try {
-          videoFilter = await _videoFilterBuilder!.buildFilter(
+          videoFilter = await _videoFilterBuilder.buildFilter(
             baseFilter: baseVideoFilter,
             relayUrl: AppConstants.defaultRelayUrl,
             sortBy: sortBy,
           );
           Log.info(
-              '🎯 SORT DEBUG: Requested server-side sorting by ${sortBy.fieldName}',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            '🎯 SORT DEBUG: Requested server-side sorting by ${sortBy.fieldName}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           Log.info(
-              '🎯 SORT DEBUG: Filter type is ${videoFilter.runtimeType}',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            '🎯 SORT DEBUG: Filter type is ${videoFilter.runtimeType}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           final filterJson = videoFilter.toJson();
           Log.info(
-              '🎯 SORT DEBUG: Filter JSON contains "sort" key: ${filterJson.containsKey("sort")}',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            '🎯 SORT DEBUG: Filter JSON contains "sort" key: ${filterJson.containsKey("sort")}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           if (filterJson.containsKey("sort")) {
             Log.info(
-                '🎯 SORT DEBUG: Sort config: ${filterJson["sort"]}',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              '🎯 SORT DEBUG: Sort config: ${filterJson["sort"]}',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           }
         } catch (e) {
           Log.warning(
-              'Failed to build sorted filter: $e. Using standard filter.',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            'Failed to build sorted filter: $e. Using standard filter.',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           // Fall back to base filter on error
         }
       }
@@ -742,16 +1003,18 @@ class VideoEventService extends ChangeNotifier {
       if (authors != null &&
           authors.contains(AppConstants.classicVinesPubkey)) {
         Log.debug(
-            '🌟 Subscribing to Classic Vines account (${AppConstants.classicVinesPubkey})',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '🌟 Subscribing to Classic Vines account (${AppConstants.classicVinesPubkey})',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       }
 
       if (lowercaseHashtags != null && lowercaseHashtags.isNotEmpty) {
         Log.debug(
-            'Adding hashtag filter to relay query: $lowercaseHashtags (converted to lowercase per NIP-24)',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          'Adding hashtag filter to relay query: $lowercaseHashtags (converted to lowercase per NIP-24)',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       }
 
       // Store group for client-side filtering
@@ -769,34 +1032,59 @@ class VideoEventService extends ChangeNotifier {
           limit: (limit * 0.2).round(), // Only 20% for reposts when enabled
         );
         filters.add(repostFilter);
-        Log.debug('Using primary video filter + optional repost filter:',
-            name: 'VideoEventService', category: LogCategory.video);
-        Log.debug('  - Video filter ($limit limit): ${videoFilter.toJson()}',
-            name: 'VideoEventService', category: LogCategory.video);
         Log.debug(
-            '  - Repost filter (${(limit * 0.2).round()} limit): ${repostFilter.toJson()}',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          'Using primary video filter + optional repost filter:',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+        Log.debug(
+          '  - Video filter ($limit limit): ${videoFilter.toJson()}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+        Log.debug(
+          '  - Repost filter (${(limit * 0.2).round()} limit): ${repostFilter.toJson()}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       } else {
-        Log.debug('Using video-only filter (reposts disabled):',
-            name: 'VideoEventService', category: LogCategory.video);
-        Log.debug('  - Video filter ($limit limit): ${videoFilter.toJson()}',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.debug(
+          'Using video-only filter (reposts disabled):',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+        Log.debug(
+          '  - Video filter ($limit limit): ${videoFilter.toJson()}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       }
 
       // Store hashtag filter for event processing
       _activeHashtagFilters[subscriptionType] = hashtags;
 
+      // Try gateway BEFORE WebSocket subscription for eligible feed types
+      // Gateway pre-populates SQLite, WebSocket provides real-time updates
+      if (_shouldUseGateway(subscriptionType)) {
+        await _fetchViaGateway(subscriptionType, videoFilter);
+      }
+
       // Verify NostrService is ready
       if (!_nostrService.isInitialized) {
-        Log.error('❌ NostrService not initialized - cannot create subscription',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.error(
+          '❌ NostrService not initialized - cannot create subscription',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         throw Exception('NostrService not initialized');
       }
 
       if (_nostrService.connectedRelayCount == 0) {
-        Log.error('❌ No connected relays - cannot create subscription',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.error(
+          '❌ No connected relays - cannot create subscription',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         throw Exception('No connected relays');
       }
 
@@ -804,51 +1092,79 @@ class VideoEventService extends ChangeNotifier {
       try {
         // Use the filters we already created above which include authors
         Log.info(
-            '🚀 Creating subscription with filters: ${filters.map((f) => f.toJson()).toList()}',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '🚀 Creating subscription with filters: ${filters.map((f) => f.toJson()).toList()}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
 
         // Extra debug for home feed
         if (subscriptionType == SubscriptionType.homeFeed) {
-          Log.info('🏠🏠🏠 HOME FEED SUBSCRIPTION DEBUG:',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.info('  Authors requested: ${authors?.length ?? 0}',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.info(
+            '🏠🏠🏠 HOME FEED SUBSCRIPTION DEBUG:',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.info(
+            '  Authors requested: ${authors?.length ?? 0}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           if (authors != null && authors.isNotEmpty) {
-            Log.info('  First 3 authors: ${authors.take(3).join(", ")}',
-                name: 'VideoEventService', category: LogCategory.video);
+            Log.info(
+              '  First 3 authors: ${authors.take(3).join(", ")}',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           }
-          Log.info('  Filters being sent to NostrService:',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.info(
+            '  Filters being sent to NostrService:',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           for (var i = 0; i < filters.length; i++) {
             final f = filters[i];
             Log.info(
-                '    Filter $i: kinds=${f.kinds}, authors=${f.authors?.length}, limit=${f.limit}',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              '    Filter $i: kinds=${f.kinds}, authors=${f.authors?.length}, limit=${f.limit}',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           }
         }
 
         // Extra debug for hashtag feed
         if (subscriptionType == SubscriptionType.hashtag) {
-          Log.info('🏷️🏷️🏷️ HASHTAG SUBSCRIPTION DEBUG:',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.info('  Hashtags requested: ${hashtags?.join(", ") ?? "none"}',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.info('  Lowercase hashtags: ${lowercaseHashtags?.join(", ") ?? "none"}',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.info('  Filters being sent to NostrService:',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.info(
+            '🏷️🏷️🏷️ HASHTAG SUBSCRIPTION DEBUG:',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.info(
+            '  Hashtags requested: ${hashtags?.join(", ") ?? "none"}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.info(
+            '  Lowercase hashtags: ${lowercaseHashtags?.join(", ") ?? "none"}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.info(
+            '  Filters being sent to NostrService:',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           for (var i = 0; i < filters.length; i++) {
             final f = filters[i];
             Log.info(
-                '    Filter $i: kinds=${f.kinds}, t=${f.t}, limit=${f.limit}',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              '    Filter $i: kinds=${f.kinds}, t=${f.t}, limit=${f.limit}',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
             Log.info(
-                '    Full filter JSON: ${f.toJson()}',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              '    Full filter JSON: ${f.toJson()}',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           }
         }
 
@@ -884,9 +1200,10 @@ class VideoEventService extends ChangeNotifier {
         // Check if we already have this exact subscription
         if (_subscriptions.containsKey(subscriptionId)) {
           Log.info(
-              '🔄 Reusing existing subscription $subscriptionId with identical parameters',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            '🔄 Reusing existing subscription $subscriptionId with identical parameters',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           // Update active subscription mapping
           _activeSubscriptions[subscriptionType] = subscriptionId;
           return; // Reuse existing subscription
@@ -903,8 +1220,11 @@ class VideoEventService extends ChangeNotifier {
         final traceName = 'feed_load_${subscriptionType.name}';
         await PerformanceMonitoringService.instance.startTrace(traceName);
 
-        Log.info('📡 Creating subscription for $subscriptionType at ${subscriptionStartTime.toIso8601String()}',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.info(
+          '📡 Creating subscription for $subscriptionType at ${subscriptionStartTime.toIso8601String()}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
 
         // Set up timeout to detect feed loading failures (30 seconds)
         Timer? feedLoadingTimeout;
@@ -942,7 +1262,8 @@ class VideoEventService extends ChangeNotifier {
         );
 
         // 🎯 CACHE DEBUG: Log cached event details
-        if (cachedEvents.isNotEmpty && subscriptionType == SubscriptionType.discovery) {
+        if (cachedEvents.isNotEmpty &&
+            subscriptionType == SubscriptionType.discovery) {
           final loopCounts = <int>[];
           for (final event in cachedEvents) {
             try {
@@ -973,7 +1294,7 @@ class VideoEventService extends ChangeNotifier {
           final uniquePubkeys = cachedEvents
               .map((e) => e.pubkey)
               .toSet()
-              .where((pubkey) => !_userProfileService!.hasProfile(pubkey))
+              .where((pubkey) => !_userProfileService.hasProfile(pubkey))
               .toList();
 
           if (uniquePubkeys.isNotEmpty) {
@@ -983,7 +1304,9 @@ class VideoEventService extends ChangeNotifier {
               category: LogCategory.video,
             );
             // Use immediate prefetch for fast cache loading
-            await _userProfileService!.prefetchProfilesImmediately(uniquePubkeys);
+            await _userProfileService.prefetchProfilesImmediately(
+              uniquePubkeys,
+            );
           }
         }
 
@@ -1009,13 +1332,20 @@ class VideoEventService extends ChangeNotifier {
           filters: filters,
           onEose: () {
             eoseReceived = true;
-            feedLoadingTimeout?.cancel(); // Cancel timeout - EOSE received successfully
-            final eoseDuration = DateTime.now().difference(subscriptionStartTime);
-            Log.info('✅ EOSE received for $subscriptionType after ${eoseDuration.inMilliseconds}ms with $eventCount events',
-                name: 'VideoEventService', category: LogCategory.video);
+            feedLoadingTimeout
+                ?.cancel(); // Cancel timeout - EOSE received successfully
+            final eoseDuration = DateTime.now().difference(
+              subscriptionStartTime,
+            );
+            Log.info(
+              '✅ EOSE received for $subscriptionType after ${eoseDuration.inMilliseconds}ms with $eventCount events',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
 
             // 🎯 RELAY DEBUG: Summarize relay loop counts at EOSE
-            if (subscriptionType == SubscriptionType.discovery && relayLoopCounts.isNotEmpty) {
+            if (subscriptionType == SubscriptionType.discovery &&
+                relayLoopCounts.isNotEmpty) {
               relayLoopCounts.sort((a, b) => b.compareTo(a)); // Sort descending
               final maxLoops = relayLoopCounts.first;
               final minLoops = relayLoopCounts.last;
@@ -1036,24 +1366,29 @@ class VideoEventService extends ChangeNotifier {
             // Extra logging for hashtag subscriptions
             if (subscriptionType == SubscriptionType.hashtag) {
               Log.info(
-                  '🏷️✅ HASHTAG EOSE: $eventCount events received, hashtag buckets count: ${_hashtagBuckets.length}',
-                  name: 'VideoEventService',
-                  category: LogCategory.video);
+                '🏷️✅ HASHTAG EOSE: $eventCount events received, hashtag buckets count: ${_hashtagBuckets.length}',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
               if (lowercaseHashtags != null) {
                 for (final tag in lowercaseHashtags) {
                   final count = _hashtagBuckets[tag]?.length ?? 0;
                   Log.info(
-                      '🏷️📊 Bucket "$tag" has $count videos',
-                      name: 'VideoEventService',
-                      category: LogCategory.video);
+                    '🏷️📊 Bucket "$tag" has $count videos',
+                    name: 'VideoEventService',
+                    category: LogCategory.video,
+                  );
                 }
               }
             }
 
             // Warn if no events received - trigger automatic diagnostics
             if (eventCount == 0) {
-              Log.warning('⚠️ EOSE received but NO EVENTS for $subscriptionType - feed will be empty!',
-                  name: 'VideoEventService', category: LogCategory.video);
+              Log.warning(
+                '⚠️ EOSE received but NO EVENTS for $subscriptionType - feed will be empty!',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
 
               // Run automatic diagnostics for debugging empty feeds
               _runAutoDiagnostics(subscriptionType, filters);
@@ -1080,10 +1415,16 @@ class VideoEventService extends ChangeNotifier {
             // Track first event arrival time
             if (firstEventTime == null) {
               firstEventTime = DateTime.now();
-              feedLoadingTimeout?.cancel(); // Cancel timeout - events are arriving successfully
-              final firstEventLatency = firstEventTime!.difference(subscriptionStartTime);
-              Log.info('🎯 First event for $subscriptionType arrived after ${firstEventLatency.inMilliseconds}ms',
-                  name: 'VideoEventService', category: LogCategory.video);
+              feedLoadingTimeout
+                  ?.cancel(); // Cancel timeout - events are arriving successfully
+              final firstEventLatency = firstEventTime!.difference(
+                subscriptionStartTime,
+              );
+              Log.info(
+                '🎯 First event for $subscriptionType arrived after ${firstEventLatency.inMilliseconds}ms',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
 
               // Stop performance trace on first event arrival
               final traceName = 'feed_load_${subscriptionType.name}';
@@ -1097,16 +1438,18 @@ class VideoEventService extends ChangeNotifier {
 
             if (subscriptionType == SubscriptionType.homeFeed) {
               Log.info(
-                  '🏠📥 HOME FEED EVENT #$eventCount RECEIVED: kind=${event.kind}, author=${event.pubkey}',
-                  name: 'VideoEventService',
-                  category: LogCategory.video);
+                '🏠📥 HOME FEED EVENT #$eventCount RECEIVED: kind=${event.kind}, author=${event.pubkey}',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
             }
 
             if (subscriptionType == SubscriptionType.hashtag) {
               Log.info(
-                  '🏷️📥 HASHTAG EVENT #$eventCount RECEIVED: kind=${event.kind}, id=${event.id}',
-                  name: 'VideoEventService',
-                  category: LogCategory.video);
+                '🏷️📥 HASHTAG EVENT #$eventCount RECEIVED: kind=${event.kind}, id=${event.id}',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
             }
 
             // 🎯 RELAY DEBUG: Track loop counts for discovery subscriptions
@@ -1120,14 +1463,22 @@ class VideoEventService extends ChangeNotifier {
             _handleNewVideoEvent(event, subscriptionType);
           },
           onError: (error) {
-            Log.error('❌ Subscription error for $subscriptionType after $eventCount events: $error',
-                name: 'VideoEventService', category: LogCategory.video);
+            Log.error(
+              '❌ Subscription error for $subscriptionType after $eventCount events: $error',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
             _handleSubscriptionError(error, subscriptionType);
           },
           onDone: () {
-            final totalDuration = DateTime.now().difference(subscriptionStartTime);
-            Log.info('🏁 Subscription complete for $subscriptionType: $eventCount events in ${totalDuration.inMilliseconds}ms (EOSE: $eoseReceived)',
-                name: 'VideoEventService', category: LogCategory.video);
+            final totalDuration = DateTime.now().difference(
+              subscriptionStartTime,
+            );
+            Log.info(
+              '🏁 Subscription complete for $subscriptionType: $eventCount events in ${totalDuration.inMilliseconds}ms (EOSE: $eoseReceived)',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
 
             // PERSISTENT SUBSCRIPTION: onDone means relay closed connection
             // For main feeds, this should trigger reconnection attempt
@@ -1137,8 +1488,11 @@ class VideoEventService extends ChangeNotifier {
             } else {
               // NON-PERSISTENT SUBSCRIPTION: Clean up state so future subscriptions aren't skipped as duplicates
               // This fixes the bug where re-subscribing after stream completion gets skipped even though stream is dead
-              Log.info('🧹 Cleaning up non-persistent subscription state for $subscriptionType',
-                  name: 'VideoEventService', category: LogCategory.video);
+              Log.info(
+                '🧹 Cleaning up non-persistent subscription state for $subscriptionType',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
               _activeSubscriptions.remove(subscriptionType);
               _subscriptionParams.remove(subscriptionType);
               _subscriptions.remove(subscriptionId);
@@ -1152,15 +1506,24 @@ class VideoEventService extends ChangeNotifier {
 
         // Subscription is tracked per type in _activeSubscriptions
       } catch (e, stackTrace) {
-        Log.error('❌ Failed to create direct subscription: $e',
-            name: 'VideoEventService', category: LogCategory.video);
-        Log.error('❌ Stack trace: $stackTrace',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.error(
+          '❌ Failed to create direct subscription: $e',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+        Log.error(
+          '❌ Stack trace: $stackTrace',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         rethrow;
       }
 
-      Log.info('Video event subscription established successfully!',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.info(
+        'Video event subscription established successfully!',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       // Add default video if feed is empty to ensure new users have content
       _ensureDefaultContent();
@@ -1168,18 +1531,25 @@ class VideoEventService extends ChangeNotifier {
       // Progressive loading removed - let UI trigger loadMore as needed
       final totalSubs = _subscriptions.length + _activeSubscriptionIds.length;
       Log.debug(
-          'Subscription status: active=$totalSubs subscriptions (${_activeSubscriptionIds.length} managed, ${_subscriptions.length} direct)',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        'Subscription status: active=$totalSubs subscriptions (${_activeSubscriptionIds.length} managed, ${_subscriptions.length} direct)',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     } catch (e) {
       _error = e.toString();
-      Log.error('Failed to subscribe to video events: $e',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Failed to subscribe to video events: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       // Check if it's a connection-related error
       if (_isConnectionError(e)) {
-        Log.error('📱 Connection error detected, will retry when online',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.error(
+          '📱 Connection error detected, will retry when online',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         _scheduleRetryWhenOnline();
       }
     } finally {
@@ -1197,14 +1567,16 @@ class VideoEventService extends ChangeNotifier {
     Event originalEvent,
   ) {
     // Check if this is a replaceable event (kinds 34235, 34236 are parameterized replaceable)
-    final isReplaceable = originalEvent.kind == 34235 || originalEvent.kind == 34236;
+    final isReplaceable =
+        originalEvent.kind == 34235 || originalEvent.kind == 34236;
 
     if (!isReplaceable) {
       return true; // Not replaceable, allow normal processing
     }
 
     // For parameterized replaceable events, construct key: subscriptionType:kind:pubkey:d-tag
-    String replaceKey = '$subscriptionType:${originalEvent.kind}:${originalEvent.pubkey}';
+    String replaceKey =
+        '$subscriptionType:${originalEvent.kind}:${originalEvent.pubkey}';
 
     // Extract d-tag (required for kinds 30000-39999)
     final dTag = originalEvent.tags.firstWhere(
@@ -1225,7 +1597,8 @@ class VideoEventService extends ChangeNotifier {
 
     // Check if we've seen this replaceable event before
     if (_replaceableVideoEvents.containsKey(replaceKey)) {
-      final (oldVideoEvent, oldTimestamp) = _replaceableVideoEvents[replaceKey]!;
+      final (oldVideoEvent, oldTimestamp) =
+          _replaceableVideoEvents[replaceKey]!;
 
       if (originalEvent.createdAt > oldTimestamp) {
         // New event is newer - replace the old one
@@ -1242,7 +1615,10 @@ class VideoEventService extends ChangeNotifier {
         }
 
         // Update tracking with new event
-        _replaceableVideoEvents[replaceKey] = (videoEvent, originalEvent.createdAt);
+        _replaceableVideoEvents[replaceKey] = (
+          videoEvent,
+          originalEvent.createdAt,
+        );
         return true; // Allow new event to be added
       } else {
         // Incoming event is older - drop it
@@ -1255,19 +1631,27 @@ class VideoEventService extends ChangeNotifier {
       }
     } else {
       // First time seeing this replaceable event
-      _replaceableVideoEvents[replaceKey] = (videoEvent, originalEvent.createdAt);
+      _replaceableVideoEvents[replaceKey] = (
+        videoEvent,
+        originalEvent.createdAt,
+      );
       return true; // Allow normal processing
     }
   }
 
   /// Handle new video event from subscription
   void _handleNewVideoEvent(
-      dynamic eventData, SubscriptionType subscriptionType) {
+    dynamic eventData,
+    SubscriptionType subscriptionType,
+  ) {
     try {
       // The event should already be an Event object from NostrService
       if (eventData is! Event) {
-        Log.warning('Expected Event object but got ${eventData.runtimeType}',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.warning(
+          'Expected Event object but got ${eventData.runtimeType}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         return;
       }
 
@@ -1277,8 +1661,11 @@ class VideoEventService extends ChangeNotifier {
       // Fire-and-forget: database writes shouldn't block event processing
       if (_eventRouter != null) {
         _eventRouter.handleEvent(event).catchError((e) {
-          Log.warning('EventRouter failed (non-critical): $e',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.warning(
+            'EventRouter failed (non-critical): $e',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         });
       }
 
@@ -1294,7 +1681,11 @@ class VideoEventService extends ChangeNotifier {
 
       // Checkpoint log for profile subscriptions
       if (subscriptionType == SubscriptionType.profile) {
-        Log.info('SVC event: id=${event.id}', name: 'Service', category: LogCategory.video);
+        Log.info(
+          'SVC event: id=${event.id}',
+          name: 'Service',
+          category: LogCategory.video,
+        );
       }
 
       // Use batched logging for repetitive event logs
@@ -1312,20 +1703,35 @@ class VideoEventService extends ChangeNotifier {
           try {
             final profile = UserProfile.fromNostrEvent(event);
             // Fire-and-forget: cache the profile asynchronously
-            _userProfileService.updateCachedProfile(profile).then((_) {
-              Log.verbose('✅ Cached profile event for ${event.pubkey} from video subscription',
-                  name: 'VideoEventService', category: LogCategory.video);
-            }).catchError((e) {
-              Log.error('Failed to cache profile event: $e',
-                  name: 'VideoEventService', category: LogCategory.video);
-            });
+            _userProfileService
+                .updateCachedProfile(profile)
+                .then((_) {
+                  Log.verbose(
+                    '✅ Cached profile event for ${event.pubkey} from video subscription',
+                    name: 'VideoEventService',
+                    category: LogCategory.video,
+                  );
+                })
+                .catchError((e) {
+                  Log.error(
+                    'Failed to cache profile event: $e',
+                    name: 'VideoEventService',
+                    category: LogCategory.video,
+                  );
+                });
           } catch (e) {
-            Log.error('Failed to parse profile event: $e',
-                name: 'VideoEventService', category: LogCategory.video);
+            Log.error(
+              'Failed to parse profile event: $e',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           }
         } else {
-          Log.verbose('⏩ Skipping non-video/repost event (kind ${event.kind})',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.verbose(
+            '⏩ Skipping non-video/repost event (kind ${event.kind})',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
         return;
       }
@@ -1333,9 +1739,10 @@ class VideoEventService extends ChangeNotifier {
       // Skip repost events if reposts are disabled
       if (event.kind == 16 && !(_includeReposts[subscriptionType] ?? false)) {
         Log.warning(
-            '⏩ Skipping repost event ${event.id}... (reposts disabled)',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '⏩ Skipping repost event ${event.id}... (reposts disabled)',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         return;
       }
 
@@ -1350,9 +1757,20 @@ class VideoEventService extends ChangeNotifier {
       // Check if content is blocked
       if (_blocklistService?.shouldFilterFromFeeds(event.pubkey) == true) {
         Log.verbose(
-            'Filtering blocked content from ${event.pubkey}...',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          'Filtering blocked content from ${event.pubkey}...',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+        return;
+      }
+
+      // Check if adult content should be filtered (user preference: never show)
+      if (shouldFilterEvent(event)) {
+        Log.verbose(
+          'Filtering adult content from event ${event.id}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         return;
       }
 
@@ -1366,57 +1784,82 @@ class VideoEventService extends ChangeNotifier {
         // ); // Commented out - too verbose
 
         // Debug: Check for d tag
-        final hasDTag =
-            event.tags.any((tag) => tag.isNotEmpty && tag[0] == 'd');
+        final hasDTag = event.tags.any(
+          (tag) => tag.isNotEmpty && tag[0] == 'd',
+        );
         if (!hasDTag) {
           Log.warning(
-              '⚠️ Event missing "d" tag - will use event ID as fallback',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            '⚠️ Event missing "d" tag - will use event ID as fallback',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
 
-        Log.verbose('Direct event tags: ${event.tags}',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.verbose(
+          'Direct event tags: ${event.tags}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         try {
           final videoEvent = VideoEvent.fromNostrEvent(event);
 
           // 🎯 SORT DEBUG: Log loop count for discovery subscriptions
           if (subscriptionType == SubscriptionType.discovery) {
             Log.info(
-                '🎯 SORT DEBUG: Received discovery video with ${videoEvent.originalLoops ?? 0} loops (id: ${event.id})',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              '🎯 SORT DEBUG: Received discovery video with ${videoEvent.originalLoops ?? 0} loops (id: ${event.id})',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           }
 
           Log.verbose(
-              'Parsed direct video: hasVideo=${videoEvent.hasVideo}, videoUrl=${videoEvent.videoUrl}',
-              name: 'VideoEventService',
-              category: LogCategory.video);
-          Log.verbose('Thumbnail URL: ${videoEvent.thumbnailUrl}',
-              name: 'VideoEventService', category: LogCategory.video);
+            'Parsed direct video: hasVideo=${videoEvent.hasVideo}, videoUrl=${videoEvent.videoUrl}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           Log.verbose(
-              'Has thumbnail: ${videoEvent.thumbnailUrl != null && videoEvent.thumbnailUrl!.isNotEmpty}',
-              name: 'VideoEventService',
-              category: LogCategory.video);
-          Log.verbose('Video author pubkey: ${videoEvent.pubkey}',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.verbose('Video title: ${videoEvent.title}',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.verbose('Video hashtags: ${videoEvent.hashtags}',
-              name: 'VideoEventService', category: LogCategory.video);
+            'Thumbnail URL: ${videoEvent.thumbnailUrl}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.verbose(
+            'Has thumbnail: ${videoEvent.thumbnailUrl != null && videoEvent.thumbnailUrl!.isNotEmpty}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.verbose(
+            'Video author pubkey: ${videoEvent.pubkey}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.verbose(
+            'Video title: ${videoEvent.title}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.verbose(
+            'Video hashtags: ${videoEvent.hashtags}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
 
           // Debug: Special logging for Classic Vines content
           if (videoEvent.pubkey == AppConstants.classicVinesPubkey) {
             Log.info(
-                '🌟 Received Classic Vines video: ${videoEvent.title ?? videoEvent.id}',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              '🌟 Received Classic Vines video: ${videoEvent.title ?? videoEvent.id}',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           }
 
           // Handle replaceable events (NIP-33)
           // Returns true if we should add this event (newer or first version)
           // Returns false if we should skip this event (older than cached version)
-          if (!_handleReplaceableVideoEvent(videoEvent, subscriptionType, event)) {
+          if (!_handleReplaceableVideoEvent(
+            videoEvent,
+            subscriptionType,
+            event,
+          )) {
             return; // Skip - incoming event is older than what we already have
           }
           // If we reach here: either not replaceable, first time seeing it, or newer version
@@ -1426,22 +1869,24 @@ class VideoEventService extends ChangeNotifier {
           if (_activeHashtagFilters[subscriptionType] != null &&
               _activeHashtagFilters[subscriptionType]!.isNotEmpty) {
             // Check if video has any of the required hashtags (case-insensitive)
-            final requiredHashtagsLower = _activeHashtagFilters[subscriptionType]!
-                .map((tag) => tag.toLowerCase())
-                .toList();
+            final requiredHashtagsLower =
+                _activeHashtagFilters[subscriptionType]!
+                    .map((tag) => tag.toLowerCase())
+                    .toList();
             final videoHashtagsLower = videoEvent.hashtags
                 .map((tag) => tag.toLowerCase())
                 .toList();
-            
+
             final hasRequiredHashtag = requiredHashtagsLower.any(
               videoHashtagsLower.contains,
             );
 
             if (!hasRequiredHashtag) {
               Log.warning(
-                  '⏩ Skipping video without required hashtags: ${_activeHashtagFilters[subscriptionType]}',
-                  name: 'VideoEventService',
-                  category: LogCategory.video);
+                '⏩ Skipping video without required hashtags: ${_activeHashtagFilters[subscriptionType]}',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
               return;
             }
           }
@@ -1450,16 +1895,20 @@ class VideoEventService extends ChangeNotifier {
           if (_activeGroupFilters[subscriptionType] != null &&
               videoEvent.group != _activeGroupFilters[subscriptionType]) {
             Log.warning(
-                '⏩ Skipping video from different group: ${videoEvent.group} (want: ${_activeGroupFilters[subscriptionType]})',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              '⏩ Skipping video from different group: ${videoEvent.group} (want: ${_activeGroupFilters[subscriptionType]})',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
             return;
           }
 
           // Only add events with video URLs
           if (videoEvent.hasVideo) {
-            _addVideoToSubscription(videoEvent, subscriptionType,
-                isHistorical: false);
+            _addVideoToSubscription(
+              videoEvent,
+              subscriptionType,
+              isHistorical: false,
+            );
 
             // Keep only the most recent events to prevent memory issues
             final list = _eventLists[subscriptionType] ?? [];
@@ -1477,29 +1926,59 @@ class VideoEventService extends ChangeNotifier {
             //     category: LogCategory.video);
           }
         } catch (e, stackTrace) {
-          Log.error('Failed to parse video event: $e',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.verbose('📱 Stack trace: $stackTrace',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.verbose('Event details:',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.verbose('  - ID: ${event.id}',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.verbose('  - Kind: ${event.kind}',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.verbose('  - Pubkey: ${event.pubkey}',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.verbose('  - Content: ${event.content}',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.verbose('  - Created at: ${event.createdAt}',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.verbose('  - Tags: ${event.tags}',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.error(
+            'Failed to parse video event: $e',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.verbose(
+            '📱 Stack trace: $stackTrace',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.verbose(
+            'Event details:',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.verbose(
+            '  - ID: ${event.id}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.verbose(
+            '  - Kind: ${event.kind}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.verbose(
+            '  - Pubkey: ${event.pubkey}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.verbose(
+            '  - Content: ${event.content}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.verbose(
+            '  - Created at: ${event.createdAt}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.verbose(
+            '  - Tags: ${event.tags}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
       } else if (event.kind == 16) {
         // Generic repost event (NIP-18) - only process if it likely references video content
-        Log.verbose('Processing generic repost event ${event.id}...',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.verbose(
+          'Processing generic repost event ${event.id}...',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
 
         String? originalEventId;
         for (final tag in event.tags) {
@@ -1512,24 +1991,27 @@ class VideoEventService extends ChangeNotifier {
         // Smart filtering: Only process reposts that are likely video-related
         if (!_isLikelyVideoRepost(event)) {
           Log.warning(
-              '⏩ Skipping non-video repost ${event.id}... (no video indicators)',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            '⏩ Skipping non-video repost ${event.id}... (no video indicators)',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           return;
         }
 
         if (originalEventId != null) {
           Log.verbose(
-              'Repost references event: ${originalEventId}...',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            'Repost references event: ${originalEventId}...',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
 
           // Check if we already have the original video in our cache
           VideoEvent? existingOriginal;
           for (final events in _eventLists.values) {
             try {
-              existingOriginal =
-                  events.firstWhere((v) => v.id == originalEventId);
+              existingOriginal = events.firstWhere(
+                (v) => v.id == originalEventId,
+              );
               break;
             } catch (e) {
               // Continue searching in other lists
@@ -1546,14 +2028,18 @@ class VideoEventService extends ChangeNotifier {
 
           if (existingOriginal.id.isNotEmpty) {
             // Create repost version of existing video
-            Log.info('Found cached original video, creating repost',
-                name: 'VideoEventService', category: LogCategory.video);
+            Log.info(
+              'Found cached original video, creating repost',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
             final repostEvent = VideoEvent.createRepostEvent(
               originalEvent: existingOriginal,
               repostEventId: event.id,
               reposterPubkey: event.pubkey,
-              repostedAt:
-                  DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
+              repostedAt: DateTime.fromMillisecondsSinceEpoch(
+                event.createdAt * 1000,
+              ),
             );
 
             // Check hashtag filter for reposts too
@@ -1561,47 +2047,63 @@ class VideoEventService extends ChangeNotifier {
                 _activeHashtagFilters[subscriptionType]!.isNotEmpty) {
               final hasRequiredHashtag =
                   _activeHashtagFilters[subscriptionType]!.any(
-                repostEvent.hashtags.contains,
-              );
+                    repostEvent.hashtags.contains,
+                  );
 
               if (!hasRequiredHashtag) {
                 Log.warning(
-                    '⏩ Skipping repost without required hashtags: ${_activeHashtagFilters[subscriptionType]}',
-                    name: 'VideoEventService',
-                    category: LogCategory.video);
+                  '⏩ Skipping repost without required hashtags: ${_activeHashtagFilters[subscriptionType]}',
+                  name: 'VideoEventService',
+                  category: LogCategory.video,
+                );
                 return;
               }
             }
 
-            _addVideoToSubscription(repostEvent, subscriptionType,
-                isHistorical: false);
+            _addVideoToSubscription(
+              repostEvent,
+              subscriptionType,
+              isHistorical: false,
+            );
             final totalEvents = getEventCount(subscriptionType);
             Log.verbose(
-                'Added $subscriptionType repost event! Total: $totalEvents events',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              'Added $subscriptionType repost event! Total: $totalEvents events',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           } else {
             // Fetch original event from relays
-            Log.verbose('Fetching original video event from relays...',
-                name: 'VideoEventService', category: LogCategory.video);
+            Log.verbose(
+              'Fetching original video event from relays...',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
             _fetchOriginalEventForRepost(originalEventId, event);
           }
         }
       }
     } catch (e) {
-      Log.error('Error processing video event: $e',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Error processing video event: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     }
   }
 
   /// Handle historical video events from pagination queries (adds to bottom of feed)
   void _handleHistoricalVideoEvent(
-      dynamic eventData, SubscriptionType subscriptionType) {
+    dynamic eventData,
+    SubscriptionType subscriptionType,
+  ) {
     try {
       // The event should already be an Event object from NostrService
       if (eventData is! Event) {
-        Log.warning('Expected Event object but got ${eventData.runtimeType}',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.warning(
+          'Expected Event object but got ${eventData.runtimeType}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         return;
       }
 
@@ -1616,24 +2118,27 @@ class VideoEventService extends ChangeNotifier {
       }
 
       Log.debug(
-          '📥 Received historical $subscriptionType event: kind=${event.kind}, author=${event.pubkey}..., id=${event.id}...',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        '📥 Received historical $subscriptionType event: kind=${event.kind}, author=${event.pubkey}..., id=${event.id}...',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       if (!NIP71VideoKinds.isVideoKind(event.kind) && event.kind != 6) {
         Log.warning(
-            '⏩ Skipping non-video/repost historical event (kind ${event.kind})',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '⏩ Skipping non-video/repost historical event (kind ${event.kind})',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         return;
       }
 
       // Skip repost events if reposts are disabled
       if (event.kind == 16 && !(_includeReposts[subscriptionType] ?? false)) {
         Log.warning(
-            '⏩ Skipping historical repost event ${event.id}... (reposts disabled)',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '⏩ Skipping historical repost event ${event.id}... (reposts disabled)',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         return;
       }
 
@@ -1648,9 +2153,20 @@ class VideoEventService extends ChangeNotifier {
       // Check if content is blocked
       if (_blocklistService?.shouldFilterFromFeeds(event.pubkey) == true) {
         Log.verbose(
-            'Filtering blocked historical content from ${event.pubkey}...',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          'Filtering blocked historical content from ${event.pubkey}...',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+        return;
+      }
+
+      // Check if adult content should be filtered (user preference: never show)
+      if (shouldFilterEvent(event)) {
+        Log.verbose(
+          'Filtering adult historical content from event ${event.id}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         return;
       }
 
@@ -1658,16 +2174,21 @@ class VideoEventService extends ChangeNotifier {
       if (NIP71VideoKinds.isVideoKind(event.kind)) {
         // Direct video event
         Log.verbose(
-            'Processing historical video event ${event.id}...',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          'Processing historical video event ${event.id}...',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         try {
           final videoEvent = VideoEvent.fromNostrEvent(event);
 
           // Handle replaceable events (NIP-33)
           // Returns true if we should add this event (newer or first version)
           // Returns false if we should skip this event (older than cached version)
-          if (!_handleReplaceableVideoEvent(videoEvent, subscriptionType, event)) {
+          if (!_handleReplaceableVideoEvent(
+            videoEvent,
+            subscriptionType,
+            event,
+          )) {
             return; // Skip - incoming event is older than what we already have
           }
           // If we reach here: either not replaceable, first time seeing it, or newer version
@@ -1676,16 +2197,15 @@ class VideoEventService extends ChangeNotifier {
           // Check hashtag filter if active
           if (_activeHashtagFilters[subscriptionType] != null &&
               _activeHashtagFilters[subscriptionType]!.isNotEmpty) {
-            final hasRequiredHashtag =
-                _activeHashtagFilters[subscriptionType]!.any(
-              videoEvent.hashtags.contains,
-            );
+            final hasRequiredHashtag = _activeHashtagFilters[subscriptionType]!
+                .any(videoEvent.hashtags.contains);
 
             if (!hasRequiredHashtag) {
               Log.warning(
-                  '⏩ Skipping historical video without required hashtags: ${_activeHashtagFilters[subscriptionType]}',
-                  name: 'VideoEventService',
-                  category: LogCategory.video);
+                '⏩ Skipping historical video without required hashtags: ${_activeHashtagFilters[subscriptionType]}',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
               return;
             }
           }
@@ -1694,16 +2214,20 @@ class VideoEventService extends ChangeNotifier {
           if (_activeGroupFilters[subscriptionType] != null &&
               videoEvent.group != _activeGroupFilters[subscriptionType]) {
             Log.warning(
-                '⏩ Skipping historical video from different group: ${videoEvent.group} (want: ${_activeGroupFilters[subscriptionType]})',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              '⏩ Skipping historical video from different group: ${videoEvent.group} (want: ${_activeGroupFilters[subscriptionType]})',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
             return;
           }
 
           // Only add events with video URLs
           if (videoEvent.hasVideo) {
-            _addVideoToSubscription(videoEvent, subscriptionType,
-                isHistorical: true);
+            _addVideoToSubscription(
+              videoEvent,
+              subscriptionType,
+              isHistorical: true,
+            );
 
             // Keep only the most recent events to prevent memory issues
             final list = _eventLists[subscriptionType] ?? [];
@@ -1712,20 +2236,25 @@ class VideoEventService extends ChangeNotifier {
             }
           } else {
             Log.warning(
-                '🎬 FILTER: ⏩ Skipping historical video event without video URL (hasVideo=false)',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              '🎬 FILTER: ⏩ Skipping historical video event without video URL (hasVideo=false)',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           }
         } catch (e) {
-          Log.error('Failed to parse historical video event: $e',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.error(
+            'Failed to parse historical video event: $e',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
       } else if (event.kind == 16) {
         // Generic repost event (NIP-18) - same logic as real-time but marked as historical
         Log.verbose(
-            'Processing historical generic repost event ${event.id}...',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          'Processing historical generic repost event ${event.id}...',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
 
         final originalEventId = event.tags
             .where((tag) => tag.length >= 2 && tag[0] == 'e')
@@ -1736,8 +2265,9 @@ class VideoEventService extends ChangeNotifier {
           VideoEvent? existingOriginal;
           for (final eventList in _eventLists.values) {
             try {
-              existingOriginal =
-                  eventList.firstWhere((e) => e.id == originalEventId);
+              existingOriginal = eventList.firstWhere(
+                (e) => e.id == originalEventId,
+              );
               break;
             } catch (e) {
               // Continue searching in other lists
@@ -1749,67 +2279,93 @@ class VideoEventService extends ChangeNotifier {
               originalEvent: existingOriginal,
               repostEventId: event.id,
               reposterPubkey: event.pubkey,
-              repostedAt:
-                  DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
+              repostedAt: DateTime.fromMillisecondsSinceEpoch(
+                event.createdAt * 1000,
+              ),
             );
-            _addVideoToSubscription(repostEvent, subscriptionType,
-                isHistorical: true);
+            _addVideoToSubscription(
+              repostEvent,
+              subscriptionType,
+              isHistorical: true,
+            );
             final totalEvents = getEventCount(subscriptionType);
             Log.verbose(
-                'Added historical $subscriptionType repost event! Total: $totalEvents events',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              'Added historical $subscriptionType repost event! Total: $totalEvents events',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           } else {
             // For historical reposts, we could fetch the original but for now skip
             Log.warning(
-                '⏩ Skipping historical repost - original event not found locally',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              '⏩ Skipping historical repost - original event not found locally',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           }
         }
       }
     } catch (e) {
-      Log.error('Error processing historical video event: $e',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Error processing historical video event: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     }
   }
 
   /// Handle subscription error
   void _handleSubscriptionError(
-      dynamic error, SubscriptionType subscriptionType) {
+    dynamic error,
+    SubscriptionType subscriptionType,
+  ) {
     _error = error.toString();
-    Log.error('$subscriptionType subscription error: $error',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.error(
+      '$subscriptionType subscription error: $error',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
     final totalSubs = _subscriptions.length + _activeSubscriptionIds.length;
     final eventCount = getEventCount(subscriptionType);
     Log.verbose(
-        'Current state: $subscriptionType events=$eventCount, subscriptions=$totalSubs',
-        name: 'VideoEventService',
-        category: LogCategory.video);
+      'Current state: $subscriptionType events=$eventCount, subscriptions=$totalSubs',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     // Check if it's a connection error and schedule retry
     if (_isConnectionError(error)) {
-      Log.error('📱 Subscription connection error, scheduling retry...',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        '📱 Subscription connection error, scheduling retry...',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       _scheduleRetryWhenOnline();
     }
   }
 
   /// Handle subscription completion
   void _handleSubscriptionComplete(SubscriptionType subscriptionType) {
-    Log.info('📱 $subscriptionType subscription completed',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.info(
+      '📱 $subscriptionType subscription completed',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
     final totalSubs = _subscriptions.length + _activeSubscriptionIds.length;
     final eventCount = getEventCount(subscriptionType);
     Log.verbose(
-        'Final state: $subscriptionType events=$eventCount, subscriptions=$totalSubs',
-        name: 'VideoEventService',
-        category: LogCategory.video);
+      'Final state: $subscriptionType events=$eventCount, subscriptions=$totalSubs',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
   }
 
   /// Subscribe to specific user's video events
   Future<void> subscribeToUserVideos(String pubkey, {int limit = 50}) async {
-    Log.info('SVC subscribeToUser: hex=$pubkey', name: 'Service', category: LogCategory.video);
+    Log.info(
+      'SVC subscribeToUser: hex=$pubkey',
+      name: 'Service',
+      category: LogCategory.video,
+    );
 
     // Backfill _authorBuckets with videos by this author that already exist in other subscription types
     // This handles the case where the user's videos were already loaded in discovery/home feeds
@@ -1824,24 +2380,35 @@ class VideoEventService extends ChangeNotifier {
     // Sort backfilled videos by newest first
     if (bucket.isNotEmpty) {
       bucket.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      Log.info('SVC subscribeToUser: backfilled ${bucket.length} existing videos for $pubkey',
-          name: 'Service', category: LogCategory.video);
+      Log.info(
+        'SVC subscribeToUser: backfilled ${bucket.length} existing videos for $pubkey',
+        name: 'Service',
+        category: LogCategory.video,
+      );
     }
 
     return subscribeToVideoFeed(
       subscriptionType: SubscriptionType.profile,
       authors: [pubkey],
       limit: limit,
-      includeReposts: true, // Include reposts to show what the user has reposted
+      includeReposts:
+          true, // Include reposts to show what the user has reposted
     );
   }
 
   /// Query historical videos for a specific user (for pagination)
   /// This is used by profile feed provider to load older videos beyond the initial subscription
-  Future<void> queryHistoricalUserVideos(String pubkey, {int? until, int limit = 50}) async {
+  Future<void> queryHistoricalUserVideos(
+    String pubkey, {
+    int? until,
+    int limit = 50,
+  }) async {
     if (!_nostrService.isInitialized) {
-      Log.warning('Cannot query historical user videos - Nostr service not initialized',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.warning(
+        'Cannot query historical user videos - Nostr service not initialized',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       return;
     }
 
@@ -1937,15 +2504,14 @@ class VideoEventService extends ChangeNotifier {
     List<String> hashtags, {
     int limit = 100,
     bool force = false,
-  }) async =>
-      subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.hashtag,
-        hashtags: hashtags,
-        limit: limit,
-        force: force,
-        // REMOVED sortBy - client-side sorting is sufficient for hashtags
-        // Server-side sorting may not work reliably with hashtag filters
-      );
+  }) async => subscribeToVideoFeed(
+    subscriptionType: SubscriptionType.hashtag,
+    hashtags: hashtags,
+    limit: limit,
+    force: force,
+    // REMOVED sortBy - client-side sorting is sufficient for hashtags
+    // Server-side sorting may not work reliably with hashtag filters
+  );
 
   /// Subscribe to home feed videos (from people you follow)
   Future<void> subscribeToHomeFeed(
@@ -1953,15 +2519,14 @@ class VideoEventService extends ChangeNotifier {
     int limit = 100,
     VideoSortField? sortBy,
     bool force = false,
-  }) async =>
-      subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.homeFeed,
-        authors: followingPubkeys,
-        limit: limit,
-        includeReposts: true,
-        sortBy: sortBy,
-        force: force,
-      );
+  }) async => subscribeToVideoFeed(
+    subscriptionType: SubscriptionType.homeFeed,
+    authors: followingPubkeys,
+    limit: limit,
+    includeReposts: true,
+    sortBy: sortBy,
+    force: force,
+  );
 
   /// Subscribe to discovery videos (all videos for exploration)
   Future<void> subscribeToDiscovery({
@@ -1969,16 +2534,15 @@ class VideoEventService extends ChangeNotifier {
     VideoSortField? sortBy,
     NIP50SortMode? nip50Sort,
     bool force = false,
-  }) async =>
-      subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.discovery,
-        authors: null, // No author filter
-        limit: limit,
-        includeReposts: true,
-        sortBy: sortBy,
-        nip50Sort: nip50Sort,
-        force: force,
-      );
+  }) async => subscribeToVideoFeed(
+    subscriptionType: SubscriptionType.discovery,
+    authors: null, // No author filter
+    limit: limit,
+    includeReposts: true,
+    sortBy: sortBy,
+    nip50Sort: nip50Sort,
+    force: force,
+  );
 
   /// Subscribe to videos from a specific group (using 'h' tag)
   Future<void> subscribeToGroupVideos(
@@ -1989,18 +2553,27 @@ class VideoEventService extends ChangeNotifier {
     int limit = 200,
   }) async {
     if (!_nostrService.isInitialized) {
-      Log.warning('Cannot subscribe to group - Nostr service not initialized (will retry when ready)',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.warning(
+        'Cannot subscribe to group - Nostr service not initialized (will retry when ready)',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       return; // Defensive: Don't throw, just return early
     }
 
-    Log.verbose('Subscribing to videos from group: $group',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.verbose(
+      'Subscribing to videos from group: $group',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     // Note: Nostr SDK Filter doesn't support custom tags directly,
     // so we'll rely on client-side filtering for group 'h' tags
-    Log.verbose('Subscribing to group: $group (will filter client-side)',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.verbose(
+      'Subscribing to group: $group (will filter client-side)',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     // Use existing subscription infrastructure with group parameter
     return subscribeToVideoFeed(
@@ -2025,15 +2598,19 @@ class VideoEventService extends ChangeNotifier {
   /// Refresh video feed by fetching recent events with expanded timeframe
   Future<void> refreshVideoFeed() async {
     Log.verbose(
-        'Refresh requested - restarting subscription with expanded timeframe',
-        name: 'VideoEventService',
-        category: LogCategory.video);
+      'Refresh requested - restarting subscription with expanded timeframe',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     // Close existing subscriptions and create new ones with expanded timeframe
     await unsubscribeFromVideoFeed();
 
-    Log.verbose('Creating new subscription with expanded timeframe...',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.verbose(
+      'Creating new subscription with expanded timeframe...',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
     // Preserve the current reposts setting when refreshing
     return subscribeToVideoFeed(
       subscriptionType: SubscriptionType.discovery,
@@ -2044,8 +2621,11 @@ class VideoEventService extends ChangeNotifier {
 
   /// Progressive loading: load more videos after initial fast load
   Future<void> loadMoreVideos({int limit = 100}) async {
-    Log.verbose('📱 Loading more videos progressively...',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.verbose(
+      '📱 Loading more videos progressively...',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     // Use larger limit for progressive loading
     return subscribeToVideoFeed(
@@ -2056,17 +2636,23 @@ class VideoEventService extends ChangeNotifier {
   }
 
   /// Load more historical events using one-shot query (not persistent subscription)
-  Future<void> loadMoreEvents(SubscriptionType subscriptionType,
-      {int limit = 500}) async {
+  Future<void> loadMoreEvents(
+    SubscriptionType subscriptionType, {
+    int limit = 500,
+  }) async {
     final paginationState = _paginationStates[subscriptionType];
     if (paginationState == null) {
       throw VideoEventServiceException(
-          'No pagination state found for $subscriptionType');
+        'No pagination state found for $subscriptionType',
+      );
     }
 
     if (paginationState.isLoading) {
-      Log.debug('📱 Skipping load more for $subscriptionType: already loading',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.debug(
+        '📱 Skipping load more for $subscriptionType: already loading',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       return;
     }
 
@@ -2075,17 +2661,21 @@ class VideoEventService extends ChangeNotifier {
     if (!paginationState.hasMore) {
       final currentEventCount = _eventLists[subscriptionType]?.length ?? 0;
       Log.info(
-          '📱 Resetting pagination for $subscriptionType - have $currentEventCount videos, forcing retry to fetch more',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        '📱 Resetting pagination for $subscriptionType - have $currentEventCount videos, forcing retry to fetch more',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       paginationState.reset();
     }
 
     paginationState.startQuery();
 
     try {
-      Log.debug('📱 Loading more historical events for $subscriptionType...',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.debug(
+        '📱 Loading more historical events for $subscriptionType...',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       int? until;
       final existingEvents = _eventLists[subscriptionType] ?? [];
@@ -2104,9 +2694,10 @@ class VideoEventService extends ChangeNotifier {
         if (oldestFromEvents != null) {
           paginationState.updateOldestTimestamp(oldestFromEvents);
           Log.debug(
-              '📱 Recalculated oldest timestamp from existing events: ${DateTime.fromMillisecondsSinceEpoch(oldestFromEvents * 1000)}',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            '📱 Recalculated oldest timestamp from existing events: ${DateTime.fromMillisecondsSinceEpoch(oldestFromEvents * 1000)}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
       }
 
@@ -2115,69 +2706,86 @@ class VideoEventService extends ChangeNotifier {
         // Use existing oldest timestamp WITHOUT creating a gap
         until = paginationState.oldestTimestamp;
         Log.debug(
-            '📱 Requesting events older than or equal to ${DateTime.fromMillisecondsSinceEpoch(until! * 1000)} for $subscriptionType',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '📱 Requesting events older than or equal to ${DateTime.fromMillisecondsSinceEpoch(until! * 1000)} for $subscriptionType',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       } else {
         // If no events yet, load without date constraints
         Log.debug(
-            '📱 No existing events for $subscriptionType, loading fresh content without date constraints',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '📱 No existing events for $subscriptionType, loading fresh content without date constraints',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       }
 
       // Use subscription-aware historical query (non-blocking streaming)
       _queryHistoricalEvents(
-              subscriptionType: subscriptionType, until: until, limit: limit)
+            subscriptionType: subscriptionType,
+            until: until,
+            limit: limit,
+          )
           .then((_) {
-        // Stream completed - finalize pagination state
-        Log.info(
-            'Historical events streaming completed for $subscriptionType. Total events: ${_eventLists[subscriptionType]?.length ?? 0}',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+            // Stream completed - finalize pagination state
+            Log.info(
+              'Historical events streaming completed for $subscriptionType. Total events: ${_eventLists[subscriptionType]?.length ?? 0}',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
 
-        // Complete the pagination query with the requested limit for proper hasMore tracking
-        paginationState.completeQuery(limit);
+            // Complete the pagination query with the requested limit for proper hasMore tracking
+            paginationState.completeQuery(limit);
 
-        // Final notification - will only fire if no frame update was scheduled
-        // This ensures UI updates even if no events were received
-        notifyListeners();
-      }).catchError((error) {
-        Log.error(
-            'Historical query stream failed for $subscriptionType: $error',
-            name: 'VideoEventService',
-            category: LogCategory.video);
-        paginationState.isLoading = false;
-      });
+            // Final notification - will only fire if no frame update was scheduled
+            // This ensures UI updates even if no events were received
+            notifyListeners();
+          })
+          .catchError((error) {
+            Log.error(
+              'Historical query stream failed for $subscriptionType: $error',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
+            paginationState.isLoading = false;
+          });
 
       // Don't await the query - return immediately and let events stream in
       Log.debug(
-          'Historical query started for $subscriptionType, events will stream in',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        'Historical query started for $subscriptionType, events will stream in',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     } catch (e) {
       _error = e.toString();
-      Log.error('Failed to load more events for $subscriptionType: $e',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Failed to load more events for $subscriptionType: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       if (_isConnectionError(e)) {
         Log.error(
-            '📱 Load more failed due to connection error for $subscriptionType',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '📱 Load more failed due to connection error for $subscriptionType',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       }
       paginationState.isLoading = false;
     }
   }
 
   /// Streaming query for historical events (processes events as they arrive)
-  Future<void> _queryHistoricalEvents(
-      {required SubscriptionType subscriptionType,
-      int? until,
-      int limit = 500}) async {
+  Future<void> _queryHistoricalEvents({
+    required SubscriptionType subscriptionType,
+    int? until,
+    int limit = 500,
+  }) async {
     if (!_nostrService.isInitialized) {
-      Log.warning('Cannot query historical events - Nostr service not initialized',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.warning(
+        'Cannot query historical events - Nostr service not initialized',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       return; // Defensive: Don't throw, just return early
     }
 
@@ -2189,7 +2797,8 @@ class VideoEventService extends ChangeNotifier {
 
     // Create filter without restrictive date constraints
     final filter = Filter(
-      kinds: NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video events + legacy support
+      kinds:
+          NIP71VideoKinds.getAllVideoKinds(), // NIP-71 video events + legacy support
       authors: authors, // Use same authors as main subscription if available
       until: until, // Only use 'until' if we have existing events
       limit: limit,
@@ -2200,9 +2809,13 @@ class VideoEventService extends ChangeNotifier {
     );
 
     debugPrint(
-        '🔍 Streaming historical query for $subscriptionType: until=${until != null ? DateTime.fromMillisecondsSinceEpoch(until * 1000) : 'none'}, limit=$limit');
-    Log.debug('Filter: ${filter.toJson()}',
-        name: 'VideoEventService', category: LogCategory.video);
+      '🔍 Streaming historical query for $subscriptionType: until=${until != null ? DateTime.fromMillisecondsSinceEpoch(until * 1000) : 'none'}, limit=$limit',
+    );
+    Log.debug(
+      'Filter: ${filter.toJson()}',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     final completer = Completer<void>();
     int receivedCount = 0;
@@ -2215,9 +2828,10 @@ class VideoEventService extends ChangeNotifier {
       // Set a reasonable timeout for receiving events
       Timer? timeoutTimer = Timer(const Duration(seconds: 5), () {
         Log.info(
-            '📡 Historical query timeout reached for $subscriptionType - received $receivedCount events',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '📡 Historical query timeout reached for $subscriptionType - received $receivedCount events',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         if (!completer.isCompleted) {
           streamSubscription.cancel();
           completer.complete();
@@ -2236,9 +2850,10 @@ class VideoEventService extends ChangeNotifier {
             timeoutTimer?.cancel();
             timeoutTimer = Timer(const Duration(seconds: 2), () {
               Log.info(
-                  '📡 No more events for 2 seconds - completing query for $subscriptionType',
-                  name: 'VideoEventService',
-                  category: LogCategory.video);
+                '📡 No more events for 2 seconds - completing query for $subscriptionType',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
               if (!completer.isCompleted) {
                 streamSubscription.cancel();
                 completer.complete();
@@ -2289,20 +2904,27 @@ class VideoEventService extends ChangeNotifier {
   void resetPaginationState(SubscriptionType subscriptionType) {
     final paginationState = _paginationStates[subscriptionType];
     if (paginationState != null) {
-      Log.info('📱 Resetting pagination state for $subscriptionType',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.info(
+        '📱 Resetting pagination state for $subscriptionType',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       paginationState.reset();
     }
   }
 
   /// Load more content without date restrictions - for when users reach end of feed
-  Future<void> loadMoreContentUnlimited(
-      {SubscriptionType subscriptionType = SubscriptionType.discovery,
-      int limit = 300}) async {
+  Future<void> loadMoreContentUnlimited({
+    SubscriptionType subscriptionType = SubscriptionType.discovery,
+    int limit = 300,
+  }) async {
     // Prevent overlapping unlimited queries and runaway streaming
     if ((_eventLists[subscriptionType]?.length ?? 0) >= 120) {
-      Log.debug('Skipping unlimited content: already have >=120 videos',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.debug(
+        'Skipping unlimited content: already have >=120 videos',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       return;
     }
 
@@ -2310,8 +2932,11 @@ class VideoEventService extends ChangeNotifier {
     _isLoading = true;
 
     try {
-      Log.debug('📱 Loading unlimited content for end-of-feed...',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.debug(
+        '📱 Loading unlimited content for end-of-feed...',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       // Create a broader query without date restrictions
       final filter = Filter(
@@ -2320,10 +2945,16 @@ class VideoEventService extends ChangeNotifier {
         // No date filters - let relays return their best content
       );
 
-      Log.debug('Unlimited content query: limit=$limit',
-          name: 'VideoEventService', category: LogCategory.video);
-      Log.debug('Filter: ${filter.toJson()}',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.debug(
+        'Unlimited content query: limit=$limit',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      Log.debug(
+        'Filter: ${filter.toJson()}',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
       late StreamSubscription subscription;
@@ -2334,36 +2965,54 @@ class VideoEventService extends ChangeNotifier {
           _handleNewVideoEvent(event, subscriptionType);
         },
         onError: (error) {
-          Log.error('Unlimited content query error: $error',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.error(
+            'Unlimited content query error: $error',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           subscription.cancel();
         },
         onDone: () {
           // Stream closed - don't wait for this to complete business logic
-          Log.debug('Unlimited content query stream closed',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.debug(
+            'Unlimited content query stream closed',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           subscription.cancel();
         },
       );
 
       // Close subscription after timeout - events are processed immediately
       Timer(const Duration(seconds: 45), () {
-        Log.debug('⏰ Closing unlimited content query after 45s timeout',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.debug(
+          '⏰ Closing unlimited content query after 45s timeout',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         subscription.cancel();
       });
 
       // Return immediately - events will be processed as they arrive
-      Log.debug('Unlimited content query started, events will stream in',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.debug(
+        'Unlimited content query started, events will stream in',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     } catch (e) {
       _error = e.toString();
-      Log.error('Failed to load unlimited content: $e',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Failed to load unlimited content: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       if (_isConnectionError(e)) {
-        Log.error('📱 Unlimited content load failed due to connection error',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.error(
+          '📱 Unlimited content load failed due to connection error',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       }
     } finally {
       _isLoading = false;
@@ -2397,13 +3046,19 @@ class VideoEventService extends ChangeNotifier {
   /// Query video events by vine ID from relays
   Future<VideoEvent?> queryVideoByVineId(String vineId) async {
     if (!_nostrService.isInitialized) {
-      Log.warning('Cannot query video by ID - Nostr service not initialized',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.warning(
+        'Cannot query video by ID - Nostr service not initialized',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       return null; // Defensive: Don't throw, just return null
     }
 
-    Log.debug('Querying for video with vine ID: $vineId',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.debug(
+      'Querying for video with vine ID: $vineId',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     final completer = Completer<VideoEvent?>();
     VideoEvent? foundEvent;
@@ -2415,8 +3070,11 @@ class VideoEventService extends ChangeNotifier {
       limit: 10, // Should only need one, but fetch a few in case
     );
 
-    Log.debug('Querying for videos, will filter for vine ID: $vineId',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.debug(
+      'Querying for videos, will filter for vine ID: $vineId',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
     late StreamSubscription subscription;
@@ -2427,22 +3085,29 @@ class VideoEventService extends ChangeNotifier {
           final videoEvent = VideoEvent.fromNostrEvent(event);
           // Since we're filtering by d tag at the relay level, this should be our video
           Log.info(
-              'Found video event for vine ID $vineId: ${event.id}...',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            'Found video event for vine ID $vineId: ${event.id}...',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           foundEvent = videoEvent;
           if (!completer.isCompleted) {
             completer.complete(foundEvent);
           }
           subscription.cancel();
         } catch (e) {
-          Log.error('Error parsing video event: $e',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.error(
+            'Error parsing video event: $e',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
       },
       onError: (error) {
-        Log.error('Error querying video by vine ID: $error',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.error(
+          'Error querying video by vine ID: $error',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         if (!completer.isCompleted) {
           completer.completeError(error);
         }
@@ -2450,8 +3115,11 @@ class VideoEventService extends ChangeNotifier {
       },
       onDone: () {
         // Stream closed naturally - complete with result if not already completed
-        Log.debug('Vine ID query stream closed',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.debug(
+          'Vine ID query stream closed',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         if (!completer.isCompleted) {
           completer.complete(foundEvent);
         }
@@ -2462,8 +3130,11 @@ class VideoEventService extends ChangeNotifier {
     // Set timeout for the query - don't wait indefinitely
     Timer(const Duration(seconds: 10), () {
       if (!completer.isCompleted) {
-        Log.debug('⏰ Vine ID query timed out after 10 seconds',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.debug(
+          '⏰ Vine ID query timed out after 10 seconds',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         subscription.cancel();
         completer.complete(null);
       }
@@ -2490,16 +3161,18 @@ class VideoEventService extends ChangeNotifier {
     final hashtagsLower = hashtags.map((tag) => tag.toLowerCase()).toList();
 
     Log.debug(
-        '🔍 Searching for videos with hashtags: $hashtagsLower',
-        name: 'VideoEventService',
-        category: LogCategory.video);
+      '🔍 Searching for videos with hashtags: $hashtagsLower',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     // Log event list sizes for debugging
     for (final entry in _eventLists.entries) {
       Log.debug(
-          '  - ${entry.key}: ${entry.value.length} videos',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        '  - ${entry.key}: ${entry.value.length} videos',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     }
 
     // Detailed debug: show what hashtags are actually in the events
@@ -2512,8 +3185,9 @@ class VideoEventService extends ChangeNotifier {
         totalEventsChecked++;
 
         // Convert event hashtags to lowercase for comparison
-        final eventHashtagsLower =
-            event.hashtags.map((tag) => tag.toLowerCase()).toList();
+        final eventHashtagsLower = event.hashtags
+            .map((tag) => tag.toLowerCase())
+            .toList();
 
         if (eventHashtagsLower.isNotEmpty) {
           eventsWithHashtags++;
@@ -2526,26 +3200,30 @@ class VideoEventService extends ChangeNotifier {
             seenIds.add(event.id);
             result.add(event);
             Log.debug(
-                '  ✅ Match found: video ${event.id} has hashtags: $eventHashtagsLower',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              '  ✅ Match found: video ${event.id} has hashtags: $eventHashtagsLower',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           }
         }
       }
     }
 
     Log.debug(
-        '📊 Hashtag search stats: checked $totalEventsChecked videos, $eventsWithHashtags had hashtags',
-        name: 'VideoEventService',
-        category: LogCategory.video);
+      '📊 Hashtag search stats: checked $totalEventsChecked videos, $eventsWithHashtags had hashtags',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
     Log.debug(
-        '📊 All unique hashtags seen: ${allHashtagsSeen.take(20).join(", ")}${allHashtagsSeen.length > 20 ? "... (${allHashtagsSeen.length} total)" : ""}',
-        name: 'VideoEventService',
-        category: LogCategory.video);
+      '📊 All unique hashtags seen: ${allHashtagsSeen.take(20).join(", ")}${allHashtagsSeen.length > 20 ? "... (${allHashtagsSeen.length} total)" : ""}',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
     Log.debug(
-        '✅ Found ${result.length} videos with hashtags: $hashtagsLower',
-        name: 'VideoEventService',
-        category: LogCategory.video);
+      '✅ Found ${result.length} videos with hashtags: $hashtagsLower',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     // Apply loops-first sort for any assembled set
     result.sort(VideoEvent.compareByLoopsThenTime);
@@ -2564,9 +3242,10 @@ class VideoEventService extends ChangeNotifier {
     // Cancel managed subscriptions
     if (_activeSubscriptionIds.isNotEmpty) {
       Log.debug(
-          'Cancelling ${_activeSubscriptionIds.length} managed subscriptions...',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        'Cancelling ${_activeSubscriptionIds.length} managed subscriptions...',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       for (final subscriptionId in _activeSubscriptionIds) {
         await _subscriptionManager.cancelSubscription(subscriptionId);
       }
@@ -2575,8 +3254,11 @@ class VideoEventService extends ChangeNotifier {
 
     // Cancel direct subscriptions
     if (_subscriptions.isNotEmpty) {
-      Log.debug('Cancelling ${_subscriptions.length} direct subscriptions...',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.debug(
+        'Cancelling ${_subscriptions.length} direct subscriptions...',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       for (final entry in _subscriptions.entries) {
         await entry.value.cancel();
       }
@@ -2592,11 +3274,17 @@ class VideoEventService extends ChangeNotifier {
       _subscriptionParams.clear();
       _activeSubscriptions.clear();
 
-      Log.info('Successfully unsubscribed from all video events',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.info(
+        'Successfully unsubscribed from all video events',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     } catch (e) {
-      Log.error('Error unsubscribing from video events: $e',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Error unsubscribing from video events: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -2655,19 +3343,20 @@ class VideoEventService extends ChangeNotifier {
 
   /// Fetch original event for a repost from relays
   Future<void> _fetchOriginalEventForRepost(
-      String originalEventId, Event repostEvent) async {
+    String originalEventId,
+    Event repostEvent,
+  ) async {
     try {
       Log.debug(
-          'Fetching original event $originalEventId for repost ${repostEvent.id}...',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        'Fetching original event $originalEventId for repost ${repostEvent.id}...',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       // Create a one-shot subscription to fetch the specific event
       final eventStream = _nostrService.subscribeToEvents(
         filters: [
-          Filter(
-            ids: [originalEventId],
-          ),
+          Filter(ids: [originalEventId]),
         ],
       );
 
@@ -2676,21 +3365,27 @@ class VideoEventService extends ChangeNotifier {
       subscription = eventStream.listen(
         (originalEvent) {
           Log.debug(
-              'Retrieved original event ${originalEvent.id}...',
-              name: 'VideoEventService',
-              category: LogCategory.video);
-          Log.debug('Event tags: ${originalEvent.tags}',
-              name: 'VideoEventService', category: LogCategory.video);
+            'Retrieved original event ${originalEvent.id}...',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.debug(
+            'Event tags: ${originalEvent.tags}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
 
           // Check if it's a valid video event
           if (NIP71VideoKinds.isVideoKind(originalEvent.kind)) {
             try {
-              final originalVideoEvent =
-                  VideoEvent.fromNostrEvent(originalEvent);
+              final originalVideoEvent = VideoEvent.fromNostrEvent(
+                originalEvent,
+              );
               Log.debug(
-                  'Parsed video event: hasVideo=${originalVideoEvent.hasVideo}, videoUrl=${originalVideoEvent.videoUrl}',
-                  name: 'VideoEventService',
-                  category: LogCategory.video);
+                'Parsed video event: hasVideo=${originalVideoEvent.hasVideo}, videoUrl=${originalVideoEvent.videoUrl}',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
 
               // Only process if it has video content
               if (originalVideoEvent.hasVideo) {
@@ -2700,7 +3395,8 @@ class VideoEventService extends ChangeNotifier {
                   repostEventId: repostEvent.id,
                   reposterPubkey: repostEvent.pubkey,
                   repostedAt: DateTime.fromMillisecondsSinceEpoch(
-                      repostEvent.createdAt * 1000),
+                    repostEvent.createdAt * 1000,
+                  ),
                 );
 
                 // Check hashtag filter for fetched reposts too
@@ -2714,17 +3410,20 @@ class VideoEventService extends ChangeNotifier {
 
                   if (!hasRequiredHashtag) {
                     Log.warning(
-                        '⏩ Skipping fetched repost without required hashtags: $activeHashtagFilter',
-                        name: 'VideoEventService',
-                        category: LogCategory.video);
+                      '⏩ Skipping fetched repost without required hashtags: $activeHashtagFilter',
+                      name: 'VideoEventService',
+                      category: LogCategory.video,
+                    );
                     return;
                   }
                 }
 
                 // Add to video events (use discovery subscription type for fetched reposts)
                 _addVideoToSubscription(
-                    repostVideoEvent, SubscriptionType.discovery,
-                    isHistorical: false);
+                  repostVideoEvent,
+                  SubscriptionType.discovery,
+                  isHistorical: false,
+                );
 
                 // Keep list size manageable
                 final discoveryEvents =
@@ -2734,16 +3433,23 @@ class VideoEventService extends ChangeNotifier {
                 }
 
                 Log.debug(
-                    'Added fetched repost event! Total: ${discoveryEvents.length} events',
-                    name: 'VideoEventService',
-                    category: LogCategory.video);
+                  'Added fetched repost event! Total: ${discoveryEvents.length} events',
+                  name: 'VideoEventService',
+                  category: LogCategory.video,
+                );
               } else {
-                Log.warning('⏩ Skipping repost of video without URL',
-                    name: 'VideoEventService', category: LogCategory.video);
+                Log.warning(
+                  '⏩ Skipping repost of video without URL',
+                  name: 'VideoEventService',
+                  category: LogCategory.video,
+                );
               }
             } catch (e) {
-              Log.error('Failed to parse original video event for repost: $e',
-                  name: 'VideoEventService', category: LogCategory.video);
+              Log.error(
+                'Failed to parse original video event for repost: $e',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
             }
           }
 
@@ -2751,13 +3457,19 @@ class VideoEventService extends ChangeNotifier {
           subscription.cancel();
         },
         onError: (error) {
-          Log.error('Error fetching original event for repost: $error',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.error(
+            'Error fetching original event for repost: $error',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           subscription.cancel();
         },
         onDone: () {
-          Log.debug('📱 Finished fetching original event for repost',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.debug(
+            '📱 Finished fetching original event for repost',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           subscription.cancel();
         },
       );
@@ -2766,8 +3478,11 @@ class VideoEventService extends ChangeNotifier {
       // Original events may take time to arrive from relays
       // Let subscription complete naturally on onDone or when event is found
     } catch (e) {
-      Log.error('Error in _fetchOriginalEventForRepost: $e',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Error in _fetchOriginalEventForRepost: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -2790,32 +3505,44 @@ class VideoEventService extends ChangeNotifier {
       if (_connectionService.isOnline && _retryAttempts < _maxRetryAttempts) {
         _retryAttempts++;
         Log.warning(
-            'Attempting to resubscribe to video feed (attempt $_retryAttempts/$_maxRetryAttempts)',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          'Attempting to resubscribe to video feed (attempt $_retryAttempts/$_maxRetryAttempts)',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
 
         subscribeToVideoFeed(subscriptionType: SubscriptionType.discovery)
             .then((_) {
-          // Success - cancel retry timer
-          timer.cancel();
-          _retryAttempts = 0;
-          Log.info('Successfully resubscribed to video feed',
-              name: 'VideoEventService', category: LogCategory.video);
-        }).catchError((e) {
-          Log.error('Retry attempt $_retryAttempts failed: $e',
-              name: 'VideoEventService', category: LogCategory.video);
-
-          if (_retryAttempts >= _maxRetryAttempts) {
-            timer.cancel();
-            Log.warning(
-                'Max retry attempts reached for video feed subscription',
+              // Success - cancel retry timer
+              timer.cancel();
+              _retryAttempts = 0;
+              Log.info(
+                'Successfully resubscribed to video feed',
                 name: 'VideoEventService',
-                category: LogCategory.video);
-          }
-        });
+                category: LogCategory.video,
+              );
+            })
+            .catchError((e) {
+              Log.error(
+                'Retry attempt $_retryAttempts failed: $e',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
+
+              if (_retryAttempts >= _maxRetryAttempts) {
+                timer.cancel();
+                Log.warning(
+                  'Max retry attempts reached for video feed subscription',
+                  name: 'VideoEventService',
+                  category: LogCategory.video,
+                );
+              }
+            });
       } else if (!_connectionService.isOnline) {
-        Log.debug('⏳ Still offline, waiting for connection...',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.debug(
+          '⏳ Still offline, waiting for connection...',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       } else {
         // Max retries reached
         timer.cancel();
@@ -2825,29 +3552,39 @@ class VideoEventService extends ChangeNotifier {
 
   /// Get connection status for debugging
   Map<String, dynamic> getConnectionStatus() => {
-        'activeSubscriptions':
-            _activeSubscriptions.keys.map((e) => e.name).toList(),
-        'subscriptionCounts': Map.fromEntries(SubscriptionType.values
-            .map((type) => MapEntry(type.name, getEventCount(type)))),
-        'isLoading': _isLoading,
-        'retryAttempts': _retryAttempts,
-        'hasError': _error != null,
-        'lastError': _error,
-        'connectionInfo': _connectionService.getConnectionInfo(),
-      };
+    'activeSubscriptions': _activeSubscriptions.keys
+        .map((e) => e.name)
+        .toList(),
+    'subscriptionCounts': Map.fromEntries(
+      SubscriptionType.values.map(
+        (type) => MapEntry(type.name, getEventCount(type)),
+      ),
+    ),
+    'isLoading': _isLoading,
+    'retryAttempts': _retryAttempts,
+    'hasError': _error != null,
+    'lastError': _error,
+    'connectionInfo': _connectionService.getConnectionInfo(),
+  };
 
   /// Force retry subscription
   Future<void> retrySubscription() async {
-    Log.warning('Forcing retry of video feed subscription...',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.warning(
+      'Forcing retry of video feed subscription...',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
     _retryAttempts = 0;
     _error = null;
 
     try {
       await subscribeToVideoFeed(subscriptionType: SubscriptionType.discovery);
     } catch (e) {
-      Log.error('Manual retry failed: $e',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Manual retry failed: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       rethrow;
     }
   }
@@ -2864,7 +3601,7 @@ class VideoEventService extends ChangeNotifier {
       'mov',
       'vine',
       'clip',
-      'watch'
+      'watch',
     ];
 
     // Check for video file extensions or video-related terms
@@ -2887,7 +3624,8 @@ class VideoEventService extends ChangeNotifier {
       if (tag.isNotEmpty && tag[0] == 'k' && tag.length > 1) {
         // If the repost explicitly indicates it's reposting a video event
         final referencedKind = int.tryParse(tag[1]);
-        if (referencedKind != null && NIP71VideoKinds.isVideoKind(referencedKind)) {
+        if (referencedKind != null &&
+            NIP71VideoKinds.isVideoKind(referencedKind)) {
           return true;
         }
       }
@@ -2903,54 +3641,64 @@ class VideoEventService extends ChangeNotifier {
     // DISABLED: Default video system disabled due to loading issues
     // The default video was not loading properly and causing user experience issues
     Log.warning(
-        'Default video system is disabled - users will see real content only',
-        name: 'VideoEventService',
-        category: LogCategory.video);
+      'Default video system is disabled - users will see real content only',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
     return;
   }
 
   /// Add video to specific subscription list
   void _addVideoToSubscription(
-      VideoEvent videoEvent, SubscriptionType subscriptionType,
-      {bool isHistorical = false}) {
+    VideoEvent videoEvent,
+    SubscriptionType subscriptionType, {
+    bool isHistorical = false,
+  }) {
     // CRITICAL: Filter out locally deleted videos to prevent pagination resurrection
     if (isVideoLocallyDeleted(videoEvent.id)) {
       Log.debug(
-          'Filtering out locally deleted video ${videoEvent.id} from $subscriptionType feed',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        'Filtering out locally deleted video ${videoEvent.id} from $subscriptionType feed',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       return; // Don't resurrect deleted videos
     }
 
     // NIP-40: Filter out expired events
     if (videoEvent.isExpired) {
       Log.debug(
-          'Filtering out expired video ${videoEvent.id} from $subscriptionType feed (expired: ${videoEvent.expirationTimestamp})',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        'Filtering out expired video ${videoEvent.id} from $subscriptionType feed (expired: ${videoEvent.expirationTimestamp})',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       return; // Don't add expired events per NIP-40
     }
 
     // CRITICAL: Validate that video has an accessible URL before adding to feed
     if (!_hasValidVideoUrl(videoEvent)) {
       Log.warning(
-          'Rejecting $subscriptionType video ${videoEvent.id} - no valid video URL (url: ${videoEvent.videoUrl})',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        'Rejecting $subscriptionType video ${videoEvent.id} - no valid video URL (url: ${videoEvent.videoUrl})',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       return; // Don't add videos without valid URLs
     }
 
     final eventList = _eventLists[subscriptionType];
     if (eventList == null) {
-      Log.error('Invalid subscription type: $subscriptionType',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Invalid subscription type: $subscriptionType',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       return;
     }
 
     // REPOST CONSOLIDATION: Check if this is a repost of an existing video
     if (videoEvent.isRepost) {
-      final existingVideoIndex =
-          eventList.indexWhere((existing) => existing.id == videoEvent.id);
+      final existingVideoIndex = eventList.indexWhere(
+        (existing) => existing.id == videoEvent.id,
+      );
 
       if (existingVideoIndex != -1) {
         // Found existing video (either original or another repost of same video)
@@ -2960,8 +3708,11 @@ class VideoEventService extends ChangeNotifier {
         final newReposter = videoEvent.reposterPubkey;
         if (newReposter != null) {
           // Get existing reposters list (or create from reposterPubkey if null)
-          final existingReposters = existingVideo.reposterPubkeys ??
-              (existingVideo.reposterPubkey != null ? [existingVideo.reposterPubkey!] : <String>[]);
+          final existingReposters =
+              existingVideo.reposterPubkeys ??
+              (existingVideo.reposterPubkey != null
+                  ? [existingVideo.reposterPubkey!]
+                  : <String>[]);
 
           // Check if this reposter already exists (avoid duplicates)
           if (!existingReposters.contains(newReposter)) {
@@ -3000,8 +3751,9 @@ class VideoEventService extends ChangeNotifier {
     }
 
     // Check for duplicates within this subscription type
-    final existingIndex =
-        eventList.indexWhere((existing) => existing.id == videoEvent.id);
+    final existingIndex = eventList.indexWhere(
+      (existing) => existing.id == videoEvent.id,
+    );
     if (existingIndex != -1) {
       _duplicateVideoEventCount++;
       _logDuplicateVideoEventsAggregated();
@@ -3010,7 +3762,8 @@ class VideoEventService extends ChangeNotifier {
 
     // Fetch profile for video author if not already cached
     // This uses existing WebSocket connection with REQ command
-    if (_userProfileService != null && !_userProfileService.hasProfile(videoEvent.pubkey)) {
+    if (_userProfileService != null &&
+        !_userProfileService.hasProfile(videoEvent.pubkey)) {
       _userProfileService.fetchProfile(videoEvent.pubkey).catchError((error) {
         Log.warning(
           'Failed to fetch profile for ${videoEvent.pubkey}: $error',
@@ -3076,9 +3829,10 @@ class VideoEventService extends ChangeNotifier {
     if (subscriptionType == SubscriptionType.hashtag) {
       // Add video to each of its hashtag buckets
       Log.info(
-          '🏷️📦 Adding hashtag event to buckets: id=${videoEvent.id}, hashtags=${videoEvent.hashtags.join(", ")}',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        '🏷️📦 Adding hashtag event to buckets: id=${videoEvent.id}, hashtags=${videoEvent.hashtags.join(", ")}',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       for (final tag in videoEvent.hashtags) {
         final bucket = _hashtagBuckets.putIfAbsent(tag, () => []);
@@ -3090,14 +3844,16 @@ class VideoEventService extends ChangeNotifier {
             bucket.insert(0, videoEvent);
           }
           Log.info(
-              '🏷️✅ Added to bucket "$tag" (now has ${bucket.length} videos)',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            '🏷️✅ Added to bucket "$tag" (now has ${bucket.length} videos)',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         } else {
           Log.info(
-              '🏷️⏭️ Skipped duplicate for bucket "$tag"',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            '🏷️⏭️ Skipped duplicate for bucket "$tag"',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
       }
     } else if (subscriptionType == SubscriptionType.profile) {
@@ -3152,9 +3908,10 @@ class VideoEventService extends ChangeNotifier {
         _duplicateVideoEventCount % 25 == 0) {
       if (_duplicateVideoEventCount > 0) {
         Log.verbose(
-            '⏩ Skipped $_duplicateVideoEventCount duplicate video events in last ${_lastDuplicateVideoLogTime != null ? now.difference(_lastDuplicateVideoLogTime!).inSeconds : 0}s',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '⏩ Skipped $_duplicateVideoEventCount duplicate video events in last ${_lastDuplicateVideoLogTime != null ? now.difference(_lastDuplicateVideoLogTime!).inSeconds : 0}s',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       }
 
       _lastDuplicateVideoLogTime = now;
@@ -3164,14 +3921,15 @@ class VideoEventService extends ChangeNotifier {
 
   /// Check if the given subscription parameters match the current active subscription for this type
   bool _isDuplicateSubscription(
-      SubscriptionType subscriptionType,
-      List<String>? authors,
-      List<String>? hashtags,
-      String? group,
-      int limit,
-      int? since,
-      int? until,
-      {bool includeReposts = false}) {
+    SubscriptionType subscriptionType,
+    List<String>? authors,
+    List<String>? hashtags,
+    String? group,
+    int limit,
+    int? since,
+    int? until, {
+    bool includeReposts = false,
+  }) {
     // If no active subscription for this type, it's not a duplicate
     if (!isSubscribed(subscriptionType)) {
       return false;
@@ -3203,8 +3961,11 @@ class VideoEventService extends ChangeNotifier {
   Future<void> _cancelSubscription(SubscriptionType subscriptionType) async {
     final subscriptionId = _activeSubscriptions[subscriptionType];
     if (subscriptionId != null) {
-      Log.info('🛑 Cancelling $subscriptionType subscription: $subscriptionId',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.info(
+        '🛑 Cancelling $subscriptionType subscription: $subscriptionId',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       final subscription = _subscriptions[subscriptionId];
       if (subscription != null) {
@@ -3212,17 +3973,24 @@ class VideoEventService extends ChangeNotifier {
           // Cancel the stream subscription - this should trigger onCancel in NostrService
           await subscription.cancel();
           Log.info(
-              '✅ Successfully cancelled stream subscription for $subscriptionType',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            '✅ Successfully cancelled stream subscription for $subscriptionType',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         } catch (e) {
-          Log.error('❌ Error cancelling stream subscription: $e',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.error(
+            '❌ Error cancelling stream subscription: $e',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
         _subscriptions.remove(subscriptionId);
       } else {
-        Log.warning('⚠️ No stream subscription found for $subscriptionId',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.warning(
+          '⚠️ No stream subscription found for $subscriptionId',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       }
 
       _activeSubscriptions.remove(subscriptionType);
@@ -3239,11 +4007,17 @@ class VideoEventService extends ChangeNotifier {
       _activeGroupFilters.remove(subscriptionType);
 
       // Proceed immediately; rely on relay/stream guarantees instead of sleeps
-      Log.info('✅ Finished cancelling $subscriptionType subscription',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.info(
+        '✅ Finished cancelling $subscriptionType subscription',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     } else {
-      Log.debug('No active subscription to cancel for $subscriptionType',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.debug(
+        'No active subscription to cancel for $subscriptionType',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -3282,15 +4056,21 @@ class VideoEventService extends ChangeNotifier {
     final params = _subscriptionParams[subscriptionType];
     if (params == null) return;
 
-    Log.info('🔄 Scheduling reconnection for $subscriptionType subscription',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.info(
+      '🔄 Scheduling reconnection for $subscriptionType subscription',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     // Wait 5 seconds before attempting reconnection
     Timer(const Duration(seconds: 5), () {
       if (!isSubscribed(subscriptionType) &&
           _subscriptionParams.containsKey(subscriptionType)) {
-        Log.info('🔄 Attempting to reconnect $subscriptionType subscription',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.info(
+          '🔄 Attempting to reconnect $subscriptionType subscription',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
 
         subscribeToVideoFeed(
           subscriptionType: subscriptionType,
@@ -3302,8 +4082,11 @@ class VideoEventService extends ChangeNotifier {
           limit: params['limit'] as int? ?? 50,
           replace: true,
         ).catchError((e) {
-          Log.error('Failed to reconnect $subscriptionType subscription: $e',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.error(
+            'Failed to reconnect $subscriptionType subscription: $e',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         });
       }
     });
@@ -3311,7 +4094,9 @@ class VideoEventService extends ChangeNotifier {
 
   /// Sort video list using enhanced engagement metrics
   void _sortByEngagement(
-      List<VideoEvent> eventList, SubscriptionType subscriptionType) {
+    List<VideoEvent> eventList,
+    SubscriptionType subscriptionType,
+  ) {
     // Don't sort editorial/trending feeds - maintain server order
     if (subscriptionType == SubscriptionType.editorial ||
         subscriptionType == SubscriptionType.popularNow ||
@@ -3346,7 +4131,9 @@ class VideoEventService extends ChangeNotifier {
       context.writeln('EOSE Duration: ${eoseDuration.inMilliseconds}ms');
       context.writeln('Relay Connected: $relayConnected');
       context.writeln('Network Online: $isOnline');
-      context.writeln('Connected Relay Count: ${_nostrService.connectedRelayCount}');
+      context.writeln(
+        'Connected Relay Count: ${_nostrService.connectedRelayCount}',
+      );
       context.writeln('');
       context.writeln('Filters:');
       for (var i = 0; i < filters.length; i++) {
@@ -3364,8 +4151,12 @@ class VideoEventService extends ChangeNotifier {
       }
       context.writeln('');
       context.writeln('Current State:');
-      context.writeln('  Total videos in feed: ${getVideos(subscriptionType).length}');
-      context.writeln('  Is loading: ${isLoadingForSubscription(subscriptionType)}');
+      context.writeln(
+        '  Total videos in feed: ${getVideos(subscriptionType).length}',
+      );
+      context.writeln(
+        '  Is loading: ${isLoadingForSubscription(subscriptionType)}',
+      );
       context.writeln('  Has subscription: ${isSubscribed(subscriptionType)}');
 
       // Log locally
@@ -3400,8 +4191,11 @@ class VideoEventService extends ChangeNotifier {
         eoseDuration.inMilliseconds.toString(),
       );
     } catch (e) {
-      Log.error('Failed to report empty feed to Crashlytics: $e',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Failed to report empty feed to Crashlytics: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -3421,7 +4215,9 @@ class VideoEventService extends ChangeNotifier {
       context.writeln('Timeout Duration: ${duration.inMilliseconds}ms');
       context.writeln('Relay Connected: $relayConnected');
       context.writeln('Network Online: $isOnline');
-      context.writeln('Connected Relay Count: ${_nostrService.connectedRelayCount}');
+      context.writeln(
+        'Connected Relay Count: ${_nostrService.connectedRelayCount}',
+      );
       context.writeln('');
       context.writeln('Filters:');
       for (var i = 0; i < filters.length; i++) {
@@ -3439,8 +4235,12 @@ class VideoEventService extends ChangeNotifier {
       }
       context.writeln('');
       context.writeln('Current State:');
-      context.writeln('  Total videos in feed: ${getVideos(subscriptionType).length}');
-      context.writeln('  Is loading: ${isLoadingForSubscription(subscriptionType)}');
+      context.writeln(
+        '  Total videos in feed: ${getVideos(subscriptionType).length}',
+      );
+      context.writeln(
+        '  Is loading: ${isLoadingForSubscription(subscriptionType)}',
+      );
       context.writeln('  Has subscription: ${isSubscribed(subscriptionType)}');
       context.writeln('');
       context.writeln('Likely Causes:');
@@ -3448,10 +4248,14 @@ class VideoEventService extends ChangeNotifier {
         context.writeln('  ❌ RELAY CONNECTION FAILURE - No relays connected!');
       }
       if (!isOnline) {
-        context.writeln('  ❌ NETWORK OFFLINE - Device has no internet connection');
+        context.writeln(
+          '  ❌ NETWORK OFFLINE - Device has no internet connection',
+        );
       }
       if (relayConnected && isOnline) {
-        context.writeln('  ⚠️ Relay may be slow to respond or filter may match no events');
+        context.writeln(
+          '  ⚠️ Relay may be slow to respond or filter may match no events',
+        );
       }
 
       // Log locally
@@ -3486,8 +4290,11 @@ class VideoEventService extends ChangeNotifier {
         duration.inMilliseconds.toString(),
       );
     } catch (e) {
-      Log.error('Failed to report timeout to Crashlytics: $e',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Failed to report timeout to Crashlytics: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -3515,9 +4322,7 @@ class VideoEventService extends ChangeNotifier {
     bool includeReposts = false,
   }) {
     // Create a unique string representation of the subscription parameters
-    final parts = <String>[
-      'type:${subscriptionType.name}',
-    ];
+    final parts = <String>['type:${subscriptionType.name}'];
 
     // Add sorted authors to ensure consistent ordering
     if (authors != null && authors.isNotEmpty) {
@@ -3556,8 +4361,11 @@ class VideoEventService extends ChangeNotifier {
     final discoveryEvents = _eventLists[SubscriptionType.discovery] ?? [];
     if (!(_isFollowingFeed[SubscriptionType.discovery] ?? false) &&
         discoveryEvents.isNotEmpty) {
-      Log.debug('📱 Shuffling videos for discovery mode...',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.debug(
+        '📱 Shuffling videos for discovery mode...',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       // Find where classic vines end (they should stay at top)
       var classicVineCount = 0;
@@ -3582,16 +4390,22 @@ class VideoEventService extends ChangeNotifier {
         // Add shuffled videos back
         discoveryEvents.addAll(regularVideos);
 
-        Log.info('Shuffled ${regularVideos.length} videos for discovery',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.info(
+          'Shuffled ${regularVideos.length} videos for discovery',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       }
     }
   }
 
   /// Add a video event to the cache (for external services like CurationService)
   void addVideoEvent(VideoEvent videoEvent) {
-    _addVideoToSubscription(videoEvent, SubscriptionType.discovery,
-        isHistorical: false);
+    _addVideoToSubscription(
+      videoEvent,
+      SubscriptionType.discovery,
+      isHistorical: false,
+    );
   }
 
   // NIP-50 Search Methods
@@ -3613,8 +4427,11 @@ class VideoEventService extends ChangeNotifier {
     _eventLists[SubscriptionType.search]?.clear();
 
     try {
-      Log.info('🔍 Starting video search for: "$query"',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.info(
+        '🔍 Starting video search for: "$query"',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       // Create completer to track search completion
       final searchCompleter = Completer<void>();
@@ -3638,14 +4455,18 @@ class VideoEventService extends ChangeNotifier {
             _scheduleFrameUpdate(); // Progressive loading for search results
           } else {
             Log.debug(
-                '❌ Rejected search result (invalid URL): ${videoEvent.id} url=${videoEvent.videoUrl}',
-                name: 'VideoEventService',
-                category: LogCategory.video);
+              '❌ Rejected search result (invalid URL): ${videoEvent.id} url=${videoEvent.videoUrl}',
+              name: 'VideoEventService',
+              category: LogCategory.video,
+            );
           }
         },
         onError: (error) {
-          Log.error('Search error: $error',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.error(
+            'Search error: $error',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           // Search subscriptions can fail without affecting main feeds
           if (!searchCompleter.isCompleted) {
             searchCompleter.completeError(error);
@@ -3654,9 +4475,10 @@ class VideoEventService extends ChangeNotifier {
         onDone: () {
           // Search completed naturally - this is expected behavior
           Log.info(
-              'Search completed. Found ${_eventLists[SubscriptionType.search]?.length ?? 0} results',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            'Search completed. Found ${_eventLists[SubscriptionType.search]?.length ?? 0} results',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           // Search subscription clean up - remove from tracking
           _subscriptions.remove('search');
           if (!searchCompleter.isCompleted) {
@@ -3672,23 +4494,30 @@ class VideoEventService extends ChangeNotifier {
       await searchCompleter.future.timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          Log.warning('Search timed out after 10 seconds',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.warning(
+            'Search timed out after 10 seconds',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
           // Don't throw - return partial results
         },
       );
     } catch (e) {
       // _isSearching = false;
-      Log.error('Failed to start search: $e',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        'Failed to start search: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       rethrow;
     }
   }
 
   /// Search for videos by hashtag
   Future<void> searchVideosByHashtag(String hashtag) async {
-    final cleanHashtag =
-        hashtag.startsWith('#') ? hashtag.substring(1) : hashtag;
+    final cleanHashtag = hashtag.startsWith('#')
+        ? hashtag.substring(1)
+        : hashtag;
     return searchVideos('#$cleanHashtag');
   }
 
@@ -3719,8 +4548,11 @@ class VideoEventService extends ChangeNotifier {
     _subscriptions['search']?.cancel();
     _subscriptions.remove('search');
 
-    Log.debug('Search results cleared',
-        name: 'VideoEventService', category: LogCategory.video);
+    Log.debug(
+      'Search results cleared',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
   }
 
   /// Process search results from events
@@ -3751,9 +4583,10 @@ class VideoEventService extends ChangeNotifier {
     }
 
     Log.debug(
-        'Deduplicated ${results.length} results to ${deduplicated.length}',
-        name: 'VideoEventService',
-        category: LogCategory.video);
+      'Deduplicated ${results.length} results to ${deduplicated.length}',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     return deduplicated;
   }
@@ -3803,15 +4636,21 @@ class VideoEventService extends ChangeNotifier {
 
       // Reject known broken domains
       if (videoUrl.contains('apt.openvine.co')) {
-        Log.debug('Rejecting broken apt.openvine.co URL: $videoUrl',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.debug(
+          'Rejecting broken apt.openvine.co URL: $videoUrl',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         return false;
       }
 
       return true;
     } catch (e) {
-      Log.debug('Invalid video URL format: $videoUrl - $e',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.debug(
+        'Invalid video URL format: $videoUrl - $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       return false;
     }
   }
@@ -3824,15 +4663,22 @@ class VideoEventService extends ChangeNotifier {
   }
 
   /// Add video event with historical flag for testing purposes only
-  void addVideoEventForTesting(VideoEvent event, SubscriptionType type,
-      {required bool isHistorical}) {
+  void addVideoEventForTesting(
+    VideoEvent event,
+    SubscriptionType type, {
+    required bool isHistorical,
+  }) {
     _addVideoToSubscription(event, type, isHistorical: isHistorical);
   }
 
   /// Inject multiple test videos into discovery feed for testing
   void injectTestVideos(List<VideoEvent> videos) {
     for (final video in videos) {
-      addVideoEventForTesting(video, SubscriptionType.discovery, isHistorical: true);
+      addVideoEventForTesting(
+        video,
+        SubscriptionType.discovery,
+        isHistorical: true,
+      );
     }
     notifyListeners(); // Notify providers that videos have changed
   }
@@ -3846,11 +4692,14 @@ class VideoEventService extends ChangeNotifier {
   /// Run automatic diagnostics when feed fails to load events
   /// This logs relay status, connection info, and tests direct queries to help debug
   Future<void> _runAutoDiagnostics(
-      SubscriptionType subscriptionType, List<Filter> filters) async {
+    SubscriptionType subscriptionType,
+    List<Filter> filters,
+  ) async {
     Log.warning(
-        '🔍 Running automatic diagnostics for empty $subscriptionType feed...',
-        name: 'VideoEventService',
-        category: LogCategory.video);
+      '🔍 Running automatic diagnostics for empty $subscriptionType feed...',
+      name: 'VideoEventService',
+      category: LogCategory.video,
+    );
 
     try {
       // 1. Check relay connection status
@@ -3858,125 +4707,192 @@ class VideoEventService extends ChangeNotifier {
       final connectedRelays = _nostrService.connectedRelays;
       final connectedCount = _nostrService.connectedRelayCount;
 
-      Log.warning('📊 Relay Status:',
-          name: 'VideoEventService', category: LogCategory.video);
-      Log.warning('   - Configured relays: ${relays.join(", ")}',
-          name: 'VideoEventService', category: LogCategory.video);
       Log.warning(
-          '   - Connected relays: ${connectedRelays.join(", ")} ($connectedCount/${relays.length})',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        '📊 Relay Status:',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      Log.warning(
+        '   - Configured relays: ${relays.join(", ")}',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      Log.warning(
+        '   - Connected relays: ${connectedRelays.join(", ")} ($connectedCount/${relays.length})',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       if (connectedCount == 0) {
         Log.error(
-            '❌ DIAGNOSTIC: No relays connected! This is why feed is empty.',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '❌ DIAGNOSTIC: No relays connected! This is why feed is empty.',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         return;
       }
 
       // 2. Log the subscription filters being used
-      Log.warning('📋 Subscription Filters:',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.warning(
+        '📋 Subscription Filters:',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
       for (var i = 0; i < filters.length; i++) {
         final filter = filters[i];
-        Log.warning('   Filter $i:',
-            name: 'VideoEventService', category: LogCategory.video);
-        Log.warning('      - kinds: ${filter.kinds}',
-            name: 'VideoEventService', category: LogCategory.video);
-        Log.warning('      - authors: ${filter.authors?.length ?? 0} authors',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.warning(
+          '   Filter $i:',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+        Log.warning(
+          '      - kinds: ${filter.kinds}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+        Log.warning(
+          '      - authors: ${filter.authors?.length ?? 0} authors',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
 
         if (filter.authors != null && filter.authors!.isEmpty) {
           Log.error(
-              '❌ DIAGNOSTIC: Authors list is EMPTY! This will return 0 events for homeFeed.',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            '❌ DIAGNOSTIC: Authors list is EMPTY! This will return 0 events for homeFeed.',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
 
         if (filter.limit != null) {
-          Log.warning('      - limit: ${filter.limit}',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.warning(
+            '      - limit: ${filter.limit}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
         if (filter.since != null) {
-          Log.warning('      - since: ${filter.since}',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.warning(
+            '      - since: ${filter.since}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
         if (filter.until != null) {
-          Log.warning('      - until: ${filter.until}',
-              name: 'VideoEventService', category: LogCategory.video);
+          Log.warning(
+            '      - until: ${filter.until}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
       }
 
       // 3. Test direct query to see if events exist in database
-      Log.warning('🔍 Testing direct database query (bypassing subscription)...',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.warning(
+        '🔍 Testing direct database query (bypassing subscription)...',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       final directQueryEvents = await _nostrService.getEvents(
-        filters: [Filter(kinds: [34236], limit: 100)],
+        filters: [
+          Filter(kinds: [34236], limit: 100),
+        ],
         limit: 100,
       );
 
       Log.warning(
-          '✅ Direct query returned ${directQueryEvents.length} video events',
-          name: 'VideoEventService',
-          category: LogCategory.video);
+        '✅ Direct query returned ${directQueryEvents.length} video events',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
 
       if (directQueryEvents.isEmpty) {
         Log.error(
-            '❌ DIAGNOSTIC: Embedded relay database has NO video events!',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '❌ DIAGNOSTIC: Embedded relay database has NO video events!',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         Log.error(
-            '   This means external relay → embedded relay sync is not working.',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '   This means external relay → embedded relay sync is not working.',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       } else {
         Log.warning(
-            '✅ DIAGNOSTIC: Database HAS ${directQueryEvents.length} events, but subscription returned 0.',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '✅ DIAGNOSTIC: Database HAS ${directQueryEvents.length} events, but subscription returned 0.',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         Log.error(
-            '❌ This means subscription filtering is too restrictive OR subscription stream is broken.',
-            name: 'VideoEventService',
-            category: LogCategory.video);
+          '❌ This means subscription filtering is too restrictive OR subscription stream is broken.',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
 
         // Log sample events to help compare with subscription filters
-        Log.warning('📄 Sample events in database:',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.warning(
+          '📄 Sample events in database:',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
         for (var i = 0; i < directQueryEvents.length && i < 3; i++) {
           final event = directQueryEvents[i];
-          Log.warning('   Event $i:',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.warning('      - id: ${event.id}',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.warning('      - kind: ${event.kind}',
-              name: 'VideoEventService', category: LogCategory.video);
-          Log.warning('      - pubkey: ${event.pubkey}',
-              name: 'VideoEventService', category: LogCategory.video);
           Log.warning(
-              '      - createdAt: ${DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000)}',
-              name: 'VideoEventService',
-              category: LogCategory.video);
+            '   Event $i:',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.warning(
+            '      - id: ${event.id}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.warning(
+            '      - kind: ${event.kind}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.warning(
+            '      - pubkey: ${event.pubkey}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
+          Log.warning(
+            '      - createdAt: ${DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000)}',
+            name: 'VideoEventService',
+            category: LogCategory.video,
+          );
         }
       }
 
       // 4. Get relay stats for additional diagnostics
       final relayStats = await _nostrService.getRelayStats();
       if (relayStats != null) {
-        Log.warning('📊 Relay Database Stats:',
-            name: 'VideoEventService', category: LogCategory.video);
-        Log.warning('   ${relayStats.toString()}',
-            name: 'VideoEventService', category: LogCategory.video);
+        Log.warning(
+          '📊 Relay Database Stats:',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+        Log.warning(
+          '   ${relayStats.toString()}',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
       }
     } catch (e, stackTrace) {
-      Log.error('❌ Auto-diagnostics failed: $e',
-          name: 'VideoEventService', category: LogCategory.video);
-      Log.verbose('Stack trace: $stackTrace',
-          name: 'VideoEventService', category: LogCategory.video);
+      Log.error(
+        '❌ Auto-diagnostics failed: $e',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
+      Log.verbose(
+        'Stack trace: $stackTrace',
+        name: 'VideoEventService',
+        category: LogCategory.video,
+      );
     }
   }
-
 }
 
 /// Exception thrown by video event service operations

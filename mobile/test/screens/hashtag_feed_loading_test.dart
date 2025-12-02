@@ -25,61 +25,88 @@ void main() {
 
       // Setup default mock behavior
       when(mockVideoEventService.isLoading).thenReturn(false);
-      when(mockVideoEventService.isLoadingForSubscription(any)).thenReturn(false);
+      when(
+        mockVideoEventService.isLoadingForSubscription(any),
+      ).thenReturn(false);
       when(mockHashtagService.getVideosByHashtags(any)).thenReturn([]);
-      when(mockHashtagService.subscribeToHashtagVideos(any))
-          .thenAnswer((_) async {});
+      when(
+        mockHashtagService.subscribeToHashtagVideos(any),
+      ).thenAnswer((_) async {});
     });
 
     Widget buildTestWidget(String hashtag) {
       return ProviderScope(
         overrides: [
-          videoEventServiceProvider.overrideWith((ref) => mockVideoEventService),
+          videoEventServiceProvider.overrideWith(
+            (ref) => mockVideoEventService,
+          ),
           hashtagServiceProvider.overrideWith((ref) => mockHashtagService),
         ],
-        child: MaterialApp(
-          home: HashtagFeedScreen(hashtag: hashtag),
-        ),
+        child: MaterialApp(home: HashtagFeedScreen(hashtag: hashtag)),
       );
     }
 
-    testWidgets('shows loading indicator when per-subscription state is loading and cache is empty', (tester) async {
-      const testHashtag = 'nostr';
+    testWidgets(
+      'shows loading indicator when per-subscription state is loading and cache is empty',
+      (tester) async {
+        const testHashtag = 'nostr';
 
-      // Mock per-subscription loading state (to be implemented)
-      when(mockVideoEventService.isLoadingForSubscription(SubscriptionType.hashtag))
-          .thenReturn(true);
-      when(mockVideoEventService.isLoading).thenReturn(false); // Global state not loading
-      when(mockHashtagService.getVideosByHashtags(['nostr'])).thenReturn([]);
+        // Mock per-subscription loading state (to be implemented)
+        when(
+          mockVideoEventService.isLoadingForSubscription(
+            SubscriptionType.hashtag,
+          ),
+        ).thenReturn(true);
+        when(
+          mockVideoEventService.isLoading,
+        ).thenReturn(false); // Global state not loading
+        when(mockHashtagService.getVideosByHashtags(['nostr'])).thenReturn([]);
 
-      await tester.pumpWidget(buildTestWidget(testHashtag));
-      await tester.pump(); // Let initState run
+        await tester.pumpWidget(buildTestWidget(testHashtag));
+        await tester.pump(); // Let initState run
 
-      // Should show loading indicator based on per-subscription state
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Loading videos about #$testHashtag...'), findsOneWidget);
-    });
+        // Should show loading indicator based on per-subscription state
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(
+          find.text('Loading videos about #$testHashtag...'),
+          findsOneWidget,
+        );
+      },
+    );
 
-    testWidgets('does NOT show loading when global isLoading=true but per-subscription is false', (tester) async {
-      const testHashtag = 'bitcoin';
+    testWidgets(
+      'does NOT show loading when global isLoading=true but per-subscription is false',
+      (tester) async {
+        const testHashtag = 'bitcoin';
 
-      // Global loading is true (other subscriptions loading)
-      when(mockVideoEventService.isLoading).thenReturn(true);
-      // But per-subscription loading is false (hashtag subscription complete)
-      when(mockVideoEventService.isLoadingForSubscription(SubscriptionType.hashtag))
-          .thenReturn(false);
-      when(mockHashtagService.getVideosByHashtags(['bitcoin'])).thenReturn([]);
+        // Global loading is true (other subscriptions loading)
+        when(mockVideoEventService.isLoading).thenReturn(true);
+        // But per-subscription loading is false (hashtag subscription complete)
+        when(
+          mockVideoEventService.isLoadingForSubscription(
+            SubscriptionType.hashtag,
+          ),
+        ).thenReturn(false);
+        when(
+          mockHashtagService.getVideosByHashtags(['bitcoin']),
+        ).thenReturn([]);
 
-      await tester.pumpWidget(buildTestWidget(testHashtag));
-      await tester.pump();
+        await tester.pumpWidget(buildTestWidget(testHashtag));
+        await tester.pump();
 
-      // Should NOT show loading indicator (proves using per-subscription state)
-      expect(find.text('Loading videos about #$testHashtag...'), findsNothing);
-      // Should show empty state instead
-      expect(find.text('No videos found for #$testHashtag'), findsOneWidget);
-    });
+        // Should NOT show loading indicator (proves using per-subscription state)
+        expect(
+          find.text('Loading videos about #$testHashtag...'),
+          findsNothing,
+        );
+        // Should show empty state instead
+        expect(find.text('No videos found for #$testHashtag'), findsOneWidget);
+      },
+    );
 
-    testWidgets('subscribes to hashtag videos on screen initialization', (tester) async {
+    testWidgets('subscribes to hashtag videos on screen initialization', (
+      tester,
+    ) async {
       const testHashtag = 'test';
 
       await tester.pumpWidget(buildTestWidget(testHashtag));

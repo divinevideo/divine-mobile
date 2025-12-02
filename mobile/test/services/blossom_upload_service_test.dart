@@ -16,15 +16,20 @@ import 'package:openvine/services/nostr_key_manager.dart';
 
 // Mock classes
 class MockAuthService extends Mock implements AuthService {}
+
 class MockNostrService extends Mock implements INostrService {}
+
 class MockNostrKeyManager extends Mock implements NostrKeyManager {}
+
 class MockDio extends Mock implements Dio {}
+
 class MockFile extends Mock implements File {}
+
 class MockResponse extends Mock implements Response<dynamic> {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  
+
   setUpAll(() {
     registerFallbackValue(Uri.parse('https://example.com'));
     registerFallbackValue(Options());
@@ -35,11 +40,11 @@ void main() {
     late BlossomUploadService service;
     late MockAuthService mockAuthService;
     late MockNostrService mockNostrService;
-    
+
     setUp(() async {
       // Initialize SharedPreferences with test values
       SharedPreferences.setMockInitialValues({});
-      
+
       mockAuthService = MockAuthService();
       mockNostrService = MockNostrService();
       service = BlossomUploadService(
@@ -52,11 +57,11 @@ void main() {
       test('should save and retrieve Blossom server URL', () async {
         // Arrange
         const testServerUrl = 'https://blossom.example.com';
-        
+
         // Act
         await service.setBlossomServer(testServerUrl);
         final retrievedUrl = await service.getBlossomServer();
-        
+
         // Assert
         expect(retrievedUrl, equals(testServerUrl));
       });
@@ -92,17 +97,17 @@ void main() {
         // Arrange
         await service.setBlossomEnabled(false);
         await service.setBlossomServer('https://blossom.example.com');
-        
+
         final mockFile = MockFile();
         when(() => mockFile.path).thenReturn('/test/video.mp4');
-        
+
         // Act
         final result = await service.uploadVideo(
           videoFile: mockFile,
           nostrPubkey: 'testpubkey',
           title: 'Test Video',
         );
-        
+
         // Assert
         expect(result.success, isFalse);
         expect(result.errorMessage, contains('not enabled'));
@@ -111,7 +116,9 @@ void main() {
       test('should fail upload if no server is configured', () async {
         // Arrange
         await service.setBlossomEnabled(true);
-        await service.setBlossomServer(''); // Set empty string to trigger "no server" error
+        await service.setBlossomServer(
+          '',
+        ); // Set empty string to trigger "no server" error
 
         final mockFile = MockFile();
         when(() => mockFile.path).thenReturn('/test/video.mp4');
@@ -132,20 +139,20 @@ void main() {
         // Arrange
         await service.setBlossomEnabled(true);
         await service.setBlossomServer('not-a-valid-url');
-        
+
         // Mock isAuthenticated
         when(() => mockAuthService.isAuthenticated).thenReturn(false);
-        
+
         final mockFile = MockFile();
         when(() => mockFile.path).thenReturn('/test/video.mp4');
-        
+
         // Act
         final result = await service.uploadVideo(
           videoFile: mockFile,
           nostrPubkey: 'testpubkey',
           title: 'Test Video',
         );
-        
+
         // Assert
         expect(result.success, isFalse);
         expect(result.errorMessage != null, isTrue);
@@ -157,7 +164,7 @@ void main() {
 
     group('Real Blossom Upload Implementation', () {
       late MockDio mockDio;
-      
+
       setUp(() {
         mockDio = MockDio();
         // Inject the mock Dio into the service
@@ -167,7 +174,7 @@ void main() {
           dio: mockDio, // We need to add this parameter
         );
       });
-      
+
       test('should successfully upload to Blossom server', () async {
         // Arrange
         await service.setBlossomEnabled(true);
@@ -175,32 +182,39 @@ void main() {
 
         // Use valid hex keys for testing
         // ignore: unused_local_variable
-        const testPrivateKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-        const testPublicKey = '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        const testPrivateKey =
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        const testPublicKey =
+            '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
-        when(() => mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
+        when(
+          () => mockAuthService.currentPublicKeyHex,
+        ).thenReturn(testPublicKey);
 
         // Mock the createAndSignEvent method that BlossomUploadService calls
-        when(() => mockAuthService.createAndSignEvent(
-          kind: any(named: 'kind'),
-          content: any(named: 'content'),
-          tags: any(named: 'tags'),
-        )).thenAnswer((_) async {
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async {
           // Return a mock signed event (using proper nostr_sdk Event constructor)
-          return Event(
-            testPublicKey,
-            24242,
-            [['t', 'upload']],
-            'Upload video to Blossom server',
-          );
+          return Event(testPublicKey, 24242, [
+            ['t', 'upload'],
+          ], 'Upload video to Blossom server');
         });
 
         final mockFile = MockFile();
         when(() => mockFile.path).thenReturn('/test/video.mp4');
         when(() => mockFile.existsSync()).thenReturn(true);
-        when(() => mockFile.readAsBytes()).thenAnswer((_) async => Uint8List.fromList([1, 2, 3, 4, 5]));
-        when(() => mockFile.readAsBytesSync()).thenReturn(Uint8List.fromList([1, 2, 3, 4, 5]));
+        when(
+          () => mockFile.readAsBytes(),
+        ).thenAnswer((_) async => Uint8List.fromList([1, 2, 3, 4, 5]));
+        when(
+          () => mockFile.readAsBytesSync(),
+        ).thenReturn(Uint8List.fromList([1, 2, 3, 4, 5]));
         when(() => mockFile.lengthSync()).thenReturn(5);
 
         // Mock Dio response
@@ -213,12 +227,14 @@ void main() {
           'size': 5,
         });
 
-        when(() => mockDio.post(
-          any(),
-          data: any(named: 'data'),
-          options: any(named: 'options'),
-          onSendProgress: any(named: 'onSendProgress'),
-        )).thenAnswer((_) async => mockResponse);
+        when(
+          () => mockDio.post(
+            any(),
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+            onSendProgress: any(named: 'onSendProgress'),
+          ),
+        ).thenAnswer((_) async => mockResponse);
 
         // Act
         final result = await service.uploadVideo(
@@ -235,92 +251,117 @@ void main() {
         expect(result.success, isTrue);
         expect(result.cdnUrl, equals('https://cdn.satellite.earth/abc123.mp4'));
         // videoId is now the calculated SHA-256 hash of the file bytes [1,2,3,4,5]
-        expect(result.videoId, equals('74f81fe167d99b4cb41d6d0ccda82278caee9f3e2f25d5e5a3936ff3dcec60d0'));
-      });
-
-      test('should send POST request with raw bytes and NIP-98 auth header', () async {
-        // Arrange
-        await service.setBlossomEnabled(true);
-        await service.setBlossomServer('https://cdn.satellite.earth');
-
-        const testPublicKey = '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-
-        when(() => mockAuthService.isAuthenticated).thenReturn(true);
-        when(() => mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
-
-        // Mock the createAndSignEvent method
-        when(() => mockAuthService.createAndSignEvent(
-          kind: any(named: 'kind'),
-          content: any(named: 'content'),
-          tags: any(named: 'tags'),
-        )).thenAnswer((_) async {
-          return Event(
-            testPublicKey,
-            24242,
-            [['t', 'upload']],
-            'Upload video to Blossom server',
-          );
-        });
-
-        final mockFile = MockFile();
-        when(() => mockFile.path).thenReturn('/test/video.mp4');
-        when(() => mockFile.existsSync()).thenReturn(true);
-        when(() => mockFile.readAsBytes()).thenAnswer((_) async => Uint8List.fromList([1, 2, 3, 4, 5]));
-        when(() => mockFile.readAsBytesSync()).thenReturn(Uint8List.fromList([1, 2, 3, 4, 5]));
-        when(() => mockFile.lengthSync()).thenReturn(5);
-
-        // Mock successful response
-        final mockResponse = MockResponse();
-        when(() => mockResponse.statusCode).thenReturn(200);
-        when(() => mockResponse.headers).thenReturn(Headers());
-        when(() => mockResponse.data).thenReturn({
-          'url': 'https://cdn.satellite.earth/abc123.mp4',
-          'sha256': 'abc123',
-          'size': 5,
-        });
-
-        // Capture the actual request to verify it uses POST with multipart/form-data
-        when(() => mockDio.post(
-          any(),
-          data: any(named: 'data'),
-          options: any(named: 'options'),
-          onSendProgress: any(named: 'onSendProgress'),
-        )).thenAnswer((_) async => mockResponse);
-
-        // Act
-        final result = await service.uploadVideo(
-          videoFile: mockFile,
-          nostrPubkey: testPublicKey,
-          title: 'Test Video',
+        expect(
+          result.videoId,
+          equals(
+            '74f81fe167d99b4cb41d6d0ccda82278caee9f3e2f25d5e5a3936ff3dcec60d0',
+          ),
         );
-
-        // Assert
-        expect(result.success, isTrue);
-
-        // Verify POST was called with raw bytes
-        verify(() => mockDio.post(
-          'https://cdn.satellite.earth/upload',
-          data: any(named: 'data', that: isA<List<int>>()),
-          options: any(named: 'options', that: isA<Options>().having(
-            (opts) => opts.headers?['Authorization'],
-            'Authorization header',
-            startsWith('Nostr '),
-          ).having(
-            (opts) => opts.headers?['Content-Type'],
-            'Content-Type header',
-            equals('video/mp4'),
-          )),
-          onSendProgress: any(named: 'onSendProgress'),
-        )).called(1);
-
-        // Verify PUT was NOT called
-        verifyNever(() => mockDio.put(
-          any(),
-          data: any(named: 'data'),
-          options: any(named: 'options'),
-          onSendProgress: any(named: 'onSendProgress'),
-        ));
       });
+
+      test(
+        'should send POST request with raw bytes and NIP-98 auth header',
+        () async {
+          // Arrange
+          await service.setBlossomEnabled(true);
+          await service.setBlossomServer('https://cdn.satellite.earth');
+
+          const testPublicKey =
+              '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+          when(() => mockAuthService.isAuthenticated).thenReturn(true);
+          when(
+            () => mockAuthService.currentPublicKeyHex,
+          ).thenReturn(testPublicKey);
+
+          // Mock the createAndSignEvent method
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          ).thenAnswer((_) async {
+            return Event(testPublicKey, 24242, [
+              ['t', 'upload'],
+            ], 'Upload video to Blossom server');
+          });
+
+          final mockFile = MockFile();
+          when(() => mockFile.path).thenReturn('/test/video.mp4');
+          when(() => mockFile.existsSync()).thenReturn(true);
+          when(
+            () => mockFile.readAsBytes(),
+          ).thenAnswer((_) async => Uint8List.fromList([1, 2, 3, 4, 5]));
+          when(
+            () => mockFile.readAsBytesSync(),
+          ).thenReturn(Uint8List.fromList([1, 2, 3, 4, 5]));
+          when(() => mockFile.lengthSync()).thenReturn(5);
+
+          // Mock successful response
+          final mockResponse = MockResponse();
+          when(() => mockResponse.statusCode).thenReturn(200);
+          when(() => mockResponse.headers).thenReturn(Headers());
+          when(() => mockResponse.data).thenReturn({
+            'url': 'https://cdn.satellite.earth/abc123.mp4',
+            'sha256': 'abc123',
+            'size': 5,
+          });
+
+          // Capture the actual request to verify it uses POST with multipart/form-data
+          when(
+            () => mockDio.post(
+              any(),
+              data: any(named: 'data'),
+              options: any(named: 'options'),
+              onSendProgress: any(named: 'onSendProgress'),
+            ),
+          ).thenAnswer((_) async => mockResponse);
+
+          // Act
+          final result = await service.uploadVideo(
+            videoFile: mockFile,
+            nostrPubkey: testPublicKey,
+            title: 'Test Video',
+          );
+
+          // Assert
+          expect(result.success, isTrue);
+
+          // Verify POST was called with raw bytes
+          verify(
+            () => mockDio.post(
+              'https://cdn.satellite.earth/upload',
+              data: any(named: 'data', that: isA<List<int>>()),
+              options: any(
+                named: 'options',
+                that: isA<Options>()
+                    .having(
+                      (opts) => opts.headers?['Authorization'],
+                      'Authorization header',
+                      startsWith('Nostr '),
+                    )
+                    .having(
+                      (opts) => opts.headers?['Content-Type'],
+                      'Content-Type header',
+                      equals('video/mp4'),
+                    ),
+              ),
+              onSendProgress: any(named: 'onSendProgress'),
+            ),
+          ).called(1);
+
+          // Verify PUT was NOT called
+          verifyNever(
+            () => mockDio.put(
+              any(),
+              data: any(named: 'data'),
+              options: any(named: 'options'),
+              onSendProgress: any(named: 'onSendProgress'),
+            ),
+          );
+        },
+      );
     });
 
     group('Upload Response Handling', () {
@@ -401,11 +442,11 @@ void main() {
         // Test that the service can be configured with known servers
         final popularServers = [
           'https://blossom.primal.net',
-          'https://media.nostr.band', 
+          'https://media.nostr.band',
           'https://nostr.build',
           'https://void.cat',
         ];
-        
+
         for (final server in popularServers) {
           await service.setBlossomServer(server);
           final retrieved = await service.getBlossomServer();
@@ -432,7 +473,8 @@ void main() {
     group('Bug Report Upload', () {
       test('should successfully upload bug report text file', () async {
         // Arrange
-        const testPublicKey = '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        const testPublicKey =
+            '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
         await service.setBlossomServer('https://blossom.divine.video');
         await service.setBlossomEnabled(true);
@@ -448,34 +490,39 @@ void main() {
         // Create test bug report file
         final tempDir = await getTemporaryDirectory();
         final testFile = File('${tempDir.path}/test_bug_report.txt');
-        await testFile.writeAsString('Test bug report content\nWith multiple lines\nAnd diagnostic data');
+        await testFile.writeAsString(
+          'Test bug report content\nWith multiple lines\nAnd diagnostic data',
+        );
 
         // Mock authentication
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
-        when(() => mockAuthService.createAndSignEvent(
-          kind: any(named: 'kind'),
-          content: any(named: 'content'),
-          tags: any(named: 'tags'),
-        )).thenAnswer((_) async {
-          return Event(
-            testPublicKey,
-            24242,
-            [['t', 'upload']],
-            'Upload bug report to Blossom server',
-          );
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async {
+          return Event(testPublicKey, 24242, [
+            ['t', 'upload'],
+          ], 'Upload bug report to Blossom server');
         });
 
         // Mock successful Blossom response
-        when(() => mockDio.post(
-          any(),
-          data: any(named: 'data'),
-          options: any(named: 'options'),
-          onSendProgress: any(named: 'onSendProgress'),
-        )).thenAnswer((_) async => Response(
-              data: {'url': 'https://blossom.divine.video/abc123.txt'},
-              statusCode: 200,
-              requestOptions: RequestOptions(path: ''),
-            ));
+        when(
+          () => mockDio.post(
+            any(),
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+            onSendProgress: any(named: 'onSendProgress'),
+          ),
+        ).thenAnswer(
+          (_) async => Response(
+            data: {'url': 'https://blossom.divine.video/abc123.txt'},
+            statusCode: 200,
+            requestOptions: RequestOptions(path: ''),
+          ),
+        );
 
         // Act
         final result = await testService.uploadBugReport(
@@ -488,12 +535,16 @@ void main() {
         expect(result, contains('.txt'));
 
         // Verify correct MIME type was used
-        final capturedHeaders = verify(() => mockDio.post(
-          any(),
-          data: any(named: 'data'),
-          options: captureAny(named: 'options'),
-          onSendProgress: any(named: 'onSendProgress'),
-        )).captured.last as Options;
+        final capturedHeaders =
+            verify(
+                  () => mockDio.post(
+                    any(),
+                    data: any(named: 'data'),
+                    options: captureAny(named: 'options'),
+                    onSendProgress: any(named: 'onSendProgress'),
+                  ),
+                ).captured.last
+                as Options;
 
         expect(capturedHeaders.headers!['Content-Type'], equals('text/plain'));
       });
@@ -507,9 +558,7 @@ void main() {
         await testFile.writeAsString('Test content');
 
         // Act
-        final result = await service.uploadBugReport(
-          bugReportFile: testFile,
-        );
+        final result = await service.uploadBugReport(bugReportFile: testFile);
 
         // Assert
         expect(result, isNull);
@@ -534,29 +583,35 @@ void main() {
         await service.setBlossomEnabled(true);
         await service.setBlossomServer('https://blossom.divine.video');
 
-        const testPublicKey = '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        const testPublicKey =
+            '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
-        when(() => mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
+        when(
+          () => mockAuthService.currentPublicKeyHex,
+        ).thenReturn(testPublicKey);
 
-        when(() => mockAuthService.createAndSignEvent(
-          kind: any(named: 'kind'),
-          content: any(named: 'content'),
-          tags: any(named: 'tags'),
-        )).thenAnswer((_) async {
-          return Event(
-            testPublicKey,
-            27235,
-            [['t', 'upload']],
-            'Upload image to Blossom server',
-          );
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async {
+          return Event(testPublicKey, 27235, [
+            ['t', 'upload'],
+          ], 'Upload image to Blossom server');
         });
 
         final mockFile = MockFile();
         when(() => mockFile.path).thenReturn('/test/avatar.jpg');
         when(() => mockFile.existsSync()).thenReturn(true);
-        when(() => mockFile.readAsBytes()).thenAnswer((_) async => Uint8List.fromList([0xFF, 0xD8, 0xFF]));
-        when(() => mockFile.readAsBytesSync()).thenReturn(Uint8List.fromList([0xFF, 0xD8, 0xFF]));
+        when(
+          () => mockFile.readAsBytes(),
+        ).thenAnswer((_) async => Uint8List.fromList([0xFF, 0xD8, 0xFF]));
+        when(
+          () => mockFile.readAsBytesSync(),
+        ).thenReturn(Uint8List.fromList([0xFF, 0xD8, 0xFF]));
         when(() => mockFile.lengthSync()).thenReturn(3);
 
         final mockResponse = MockResponse();
@@ -564,18 +619,22 @@ void main() {
         when(() => mockResponse.headers).thenReturn(Headers());
         // SIMULATE SERVER BUG: Server returns .mp4 even though we sent image/jpeg
         when(() => mockResponse.data).thenReturn({
-          'url': 'https://cdn.divine.video/113c3165d9a88173b46324853c1ee2e24ca009b2c7768a7b021794299ed81c6e.mp4',
-          'sha256': '113c3165d9a88173b46324853c1ee2e24ca009b2c7768a7b021794299ed81c6e',
+          'url':
+              'https://cdn.divine.video/113c3165d9a88173b46324853c1ee2e24ca009b2c7768a7b021794299ed81c6e.mp4',
+          'sha256':
+              '113c3165d9a88173b46324853c1ee2e24ca009b2c7768a7b021794299ed81c6e',
           'size': 3,
           'type': 'image/jpeg',
         });
 
-        when(() => mockDio.post(
-          any(),
-          data: any(named: 'data'),
-          options: any(named: 'options'),
-          onSendProgress: any(named: 'onSendProgress'),
-        )).thenAnswer((_) async => mockResponse);
+        when(
+          () => mockDio.post(
+            any(),
+            data: any(named: 'data'),
+            options: any(named: 'options'),
+            onSendProgress: any(named: 'onSendProgress'),
+          ),
+        ).thenAnswer((_) async => mockResponse);
 
         // Act
         final result = await service.uploadImage(
@@ -588,127 +647,154 @@ void main() {
         expect(result.success, isTrue);
         expect(result.cdnUrl, endsWith('.jpg'));
         expect(result.cdnUrl, isNot(endsWith('.mp4')));
-        expect(result.cdnUrl, equals('https://cdn.divine.video/113c3165d9a88173b46324853c1ee2e24ca009b2c7768a7b021794299ed81c6e.jpg'));
-      });
-
-      test('should correct .mp4 extension to .png for image/png uploads', () async {
-        // Arrange
-        await service.setBlossomEnabled(true);
-        await service.setBlossomServer('https://blossom.divine.video');
-
-        const testPublicKey = '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-
-        when(() => mockAuthService.isAuthenticated).thenReturn(true);
-        when(() => mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
-
-        when(() => mockAuthService.createAndSignEvent(
-          kind: any(named: 'kind'),
-          content: any(named: 'content'),
-          tags: any(named: 'tags'),
-        )).thenAnswer((_) async {
-          return Event(
-            testPublicKey,
-            27235,
-            [['t', 'upload']],
-            'Upload image to Blossom server',
-          );
-        });
-
-        final mockFile = MockFile();
-        when(() => mockFile.path).thenReturn('/test/screenshot.png');
-        when(() => mockFile.existsSync()).thenReturn(true);
-        when(() => mockFile.readAsBytes()).thenAnswer((_) async => Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]));
-        when(() => mockFile.readAsBytesSync()).thenReturn(Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]));
-        when(() => mockFile.lengthSync()).thenReturn(4);
-
-        final mockResponse = MockResponse();
-        when(() => mockResponse.statusCode).thenReturn(200);
-        when(() => mockResponse.headers).thenReturn(Headers());
-        when(() => mockResponse.data).thenReturn({
-          'url': 'https://cdn.divine.video/abc456.mp4', // Server bug
-          'sha256': 'abc456',
-          'size': 4,
-          'type': 'image/png',
-        });
-
-        when(() => mockDio.post(
-          any(),
-          data: any(named: 'data'),
-          options: any(named: 'options'),
-          onSendProgress: any(named: 'onSendProgress'),
-        )).thenAnswer((_) async => mockResponse);
-
-        // Act
-        final result = await service.uploadImage(
-          imageFile: mockFile,
-          nostrPubkey: testPublicKey,
-          mimeType: 'image/png',
+        expect(
+          result.cdnUrl,
+          equals(
+            'https://cdn.divine.video/113c3165d9a88173b46324853c1ee2e24ca009b2c7768a7b021794299ed81c6e.jpg',
+          ),
         );
-
-        // Assert
-        expect(result.success, isTrue);
-        expect(result.cdnUrl, endsWith('.png'));
-        expect(result.cdnUrl, equals('https://cdn.divine.video/abc456.png'));
       });
 
-      test('should not modify extension if server returns correct image extension', () async {
-        // Arrange - Server working correctly
-        await service.setBlossomEnabled(true);
-        await service.setBlossomServer('https://blossom.example.com');
+      test(
+        'should correct .mp4 extension to .png for image/png uploads',
+        () async {
+          // Arrange
+          await service.setBlossomEnabled(true);
+          await service.setBlossomServer('https://blossom.divine.video');
 
-        const testPublicKey = '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+          const testPublicKey =
+              '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
-        when(() => mockAuthService.isAuthenticated).thenReturn(true);
-        when(() => mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
+          when(() => mockAuthService.isAuthenticated).thenReturn(true);
+          when(
+            () => mockAuthService.currentPublicKeyHex,
+          ).thenReturn(testPublicKey);
 
-        when(() => mockAuthService.createAndSignEvent(
-          kind: any(named: 'kind'),
-          content: any(named: 'content'),
-          tags: any(named: 'tags'),
-        )).thenAnswer((_) async {
-          return Event(
-            testPublicKey,
-            27235,
-            [['t', 'upload']],
-            'Upload image to Blossom server',
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          ).thenAnswer((_) async {
+            return Event(testPublicKey, 27235, [
+              ['t', 'upload'],
+            ], 'Upload image to Blossom server');
+          });
+
+          final mockFile = MockFile();
+          when(() => mockFile.path).thenReturn('/test/screenshot.png');
+          when(() => mockFile.existsSync()).thenReturn(true);
+          when(() => mockFile.readAsBytes()).thenAnswer(
+            (_) async => Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]),
           );
-        });
+          when(
+            () => mockFile.readAsBytesSync(),
+          ).thenReturn(Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]));
+          when(() => mockFile.lengthSync()).thenReturn(4);
 
-        final mockFile = MockFile();
-        when(() => mockFile.path).thenReturn('/test/photo.jpg');
-        when(() => mockFile.existsSync()).thenReturn(true);
-        when(() => mockFile.readAsBytes()).thenAnswer((_) async => Uint8List.fromList([0xFF, 0xD8, 0xFF]));
-        when(() => mockFile.readAsBytesSync()).thenReturn(Uint8List.fromList([0xFF, 0xD8, 0xFF]));
-        when(() => mockFile.lengthSync()).thenReturn(3);
+          final mockResponse = MockResponse();
+          when(() => mockResponse.statusCode).thenReturn(200);
+          when(() => mockResponse.headers).thenReturn(Headers());
+          when(() => mockResponse.data).thenReturn({
+            'url': 'https://cdn.divine.video/abc456.mp4', // Server bug
+            'sha256': 'abc456',
+            'size': 4,
+            'type': 'image/png',
+          });
 
-        final mockResponse = MockResponse();
-        when(() => mockResponse.statusCode).thenReturn(200);
-        when(() => mockResponse.headers).thenReturn(Headers());
-        // Server correctly returns .jpg
-        when(() => mockResponse.data).thenReturn({
-          'url': 'https://cdn.example.com/def789.jpg',
-          'sha256': 'def789',
-          'size': 3,
-        });
+          when(
+            () => mockDio.post(
+              any(),
+              data: any(named: 'data'),
+              options: any(named: 'options'),
+              onSendProgress: any(named: 'onSendProgress'),
+            ),
+          ).thenAnswer((_) async => mockResponse);
 
-        when(() => mockDio.post(
-          any(),
-          data: any(named: 'data'),
-          options: any(named: 'options'),
-          onSendProgress: any(named: 'onSendProgress'),
-        )).thenAnswer((_) async => mockResponse);
+          // Act
+          final result = await service.uploadImage(
+            imageFile: mockFile,
+            nostrPubkey: testPublicKey,
+            mimeType: 'image/png',
+          );
 
-        // Act
-        final result = await service.uploadImage(
-          imageFile: mockFile,
-          nostrPubkey: testPublicKey,
-          mimeType: 'image/jpeg',
-        );
+          // Assert
+          expect(result.success, isTrue);
+          expect(result.cdnUrl, endsWith('.png'));
+          expect(result.cdnUrl, equals('https://cdn.divine.video/abc456.png'));
+        },
+      );
 
-        // Assert - Should keep server's .jpg extension as-is
-        expect(result.success, isTrue);
-        expect(result.cdnUrl, equals('https://cdn.example.com/def789.jpg'));
-      });
+      test(
+        'should not modify extension if server returns correct image extension',
+        () async {
+          // Arrange - Server working correctly
+          await service.setBlossomEnabled(true);
+          await service.setBlossomServer('https://blossom.example.com');
+
+          const testPublicKey =
+              '0223456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+          when(() => mockAuthService.isAuthenticated).thenReturn(true);
+          when(
+            () => mockAuthService.currentPublicKeyHex,
+          ).thenReturn(testPublicKey);
+
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          ).thenAnswer((_) async {
+            return Event(testPublicKey, 27235, [
+              ['t', 'upload'],
+            ], 'Upload image to Blossom server');
+          });
+
+          final mockFile = MockFile();
+          when(() => mockFile.path).thenReturn('/test/photo.jpg');
+          when(() => mockFile.existsSync()).thenReturn(true);
+          when(
+            () => mockFile.readAsBytes(),
+          ).thenAnswer((_) async => Uint8List.fromList([0xFF, 0xD8, 0xFF]));
+          when(
+            () => mockFile.readAsBytesSync(),
+          ).thenReturn(Uint8List.fromList([0xFF, 0xD8, 0xFF]));
+          when(() => mockFile.lengthSync()).thenReturn(3);
+
+          final mockResponse = MockResponse();
+          when(() => mockResponse.statusCode).thenReturn(200);
+          when(() => mockResponse.headers).thenReturn(Headers());
+          // Server correctly returns .jpg
+          when(() => mockResponse.data).thenReturn({
+            'url': 'https://cdn.example.com/def789.jpg',
+            'sha256': 'def789',
+            'size': 3,
+          });
+
+          when(
+            () => mockDio.post(
+              any(),
+              data: any(named: 'data'),
+              options: any(named: 'options'),
+              onSendProgress: any(named: 'onSendProgress'),
+            ),
+          ).thenAnswer((_) async => mockResponse);
+
+          // Act
+          final result = await service.uploadImage(
+            imageFile: mockFile,
+            nostrPubkey: testPublicKey,
+            mimeType: 'image/jpeg',
+          );
+
+          // Assert - Should keep server's .jpg extension as-is
+          expect(result.success, isTrue);
+          expect(result.cdnUrl, equals('https://cdn.example.com/def789.jpg'));
+        },
+      );
     });
   });
 }

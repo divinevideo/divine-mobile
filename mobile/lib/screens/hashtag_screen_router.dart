@@ -18,7 +18,8 @@ class HashtagScreenRouter extends ConsumerStatefulWidget {
   const HashtagScreenRouter({super.key});
 
   @override
-  ConsumerState<HashtagScreenRouter> createState() => _HashtagScreenRouterState();
+  ConsumerState<HashtagScreenRouter> createState() =>
+      _HashtagScreenRouterState();
 }
 
 class _HashtagScreenRouterState extends ConsumerState<HashtagScreenRouter>
@@ -28,11 +29,12 @@ class _HashtagScreenRouterState extends ConsumerState<HashtagScreenRouter>
     final routeCtx = ref.watch(pageContextProvider).asData?.value;
 
     if (routeCtx == null || routeCtx.type != RouteType.hashtag) {
-      Log.warning('HashtagScreenRouter: Invalid route context',
-          name: 'HashtagRouter', category: LogCategory.ui);
-      return const Scaffold(
-        body: Center(child: Text('Invalid hashtag route')),
+      Log.warning(
+        'HashtagScreenRouter: Invalid route context',
+        name: 'HashtagRouter',
+        category: LogCategory.ui,
       );
+      return const Scaffold(body: Center(child: Text('Invalid hashtag route')));
     }
 
     final hashtag = routeCtx.hashtag ?? 'trending';
@@ -40,8 +42,11 @@ class _HashtagScreenRouterState extends ConsumerState<HashtagScreenRouter>
 
     // Grid mode: no video index
     if (videoIndex == null) {
-      Log.info('HashtagScreenRouter: Showing grid for #$hashtag',
-          name: 'HashtagRouter', category: LogCategory.ui);
+      Log.info(
+        'HashtagScreenRouter: Showing grid for #$hashtag',
+        name: 'HashtagRouter',
+        category: LogCategory.ui,
+      );
       return HashtagFeedScreen(hashtag: hashtag, embedded: true);
     }
 

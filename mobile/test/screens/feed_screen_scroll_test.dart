@@ -17,8 +17,9 @@ void main() {
       scrollController.dispose();
     });
 
-    testWidgets('should refresh after scroll animation completes',
-        (tester) async {
+    testWidgets('should refresh after scroll animation completes', (
+      tester,
+    ) async {
       var refreshCalled = false;
 
       // Build a scrollable widget
@@ -29,9 +30,8 @@ void main() {
               builder: (context) => ListView.builder(
                 controller: scrollController,
                 itemCount: 100,
-                itemBuilder: (context, index) => ListTile(
-                  title: Text('Item $index'),
-                ),
+                itemBuilder: (context, index) =>
+                    ListTile(title: Text('Item $index')),
               ),
             ),
           ),
@@ -130,33 +130,35 @@ void main() {
       animationController.dispose();
     });
 
-    test('should use PageController notification for page transitions',
-        () async {
-      final pageController = PageController();
-      var transitionCompleted = false;
+    test(
+      'should use PageController notification for page transitions',
+      () async {
+        final pageController = PageController();
+        var transitionCompleted = false;
 
-      // Listen for page change completion using NotificationListener
-      void handlePageChange() {
-        // This is called when page animation completes
-        transitionCompleted = true;
-      }
+        // Listen for page change completion using NotificationListener
+        void handlePageChange() {
+          // This is called when page animation completes
+          transitionCompleted = true;
+        }
 
-      // Simulate page change
-      final pageFuture = pageController.animateToPage(
-        2,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.ease,
-      );
+        // Simulate page change
+        final pageFuture = pageController.animateToPage(
+          2,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.ease,
+        );
 
-      // Chain action to page animation completion
-      pageFuture.then((_) => handlePageChange());
+        // Chain action to page animation completion
+        pageFuture.then((_) => handlePageChange());
 
-      await pageFuture;
+        await pageFuture;
 
-      expect(transitionCompleted, true);
+        expect(transitionCompleted, true);
 
-      pageController.dispose();
-    });
+        pageController.dispose();
+      },
+    );
   });
 }
 

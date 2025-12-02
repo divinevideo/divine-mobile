@@ -19,11 +19,7 @@ class Nip07AuthResult {
       Nip07AuthResult(success: true, publicKey: publicKey);
 
   factory Nip07AuthResult.failure(String message, {String? code}) =>
-      Nip07AuthResult(
-        success: false,
-        errorMessage: message,
-        errorCode: code,
-      );
+      Nip07AuthResult(success: false, errorMessage: message, errorCode: code);
   final bool success;
   final String? publicKey;
   final String? errorMessage;
@@ -43,11 +39,7 @@ class Nip07SignResult {
       Nip07SignResult(success: true, signedEvent: event);
 
   factory Nip07SignResult.failure(String message, {String? code}) =>
-      Nip07SignResult(
-        success: false,
-        errorMessage: message,
-        errorCode: code,
-      );
+      Nip07SignResult(success: false, errorMessage: message, errorCode: code);
   final bool success;
   final Map<String, dynamic>? signedEvent;
   final String? errorMessage;
@@ -109,16 +101,16 @@ class Nip07Service {
     }
 
     try {
-      Log.debug('📱 Attempting NIP-07 authentication...',
-          name: 'Nip07Service', category: LogCategory.system);
+      Log.debug(
+        '📱 Attempting NIP-07 authentication...',
+        name: 'Nip07Service',
+        category: LogCategory.system,
+      );
 
       // Request public key from extension
-      final pubkey = await nip07.safeNip07Call(
-        () async {
-          return await nip07.nostr!.getPublicKey();
-        },
-        'get public key',
-      );
+      final pubkey = await nip07.safeNip07Call(() async {
+        return await nip07.nostr!.getPublicKey();
+      }, 'get public key');
 
       // Validate the public key format
       if (pubkey.isEmpty || pubkey.length != 64) {
@@ -139,27 +131,45 @@ class Nip07Service {
         //   final jsRelays = await nip07.nostr!.getRelays!().toDart;
         //   _userRelays = jsRelays.dartify() as Map<String, dynamic>?;
         // }
-        Log.debug('Retrieved ${_userRelays?.length ?? 0} relays from extension (disabled)',
-            name: 'Nip07Service', category: LogCategory.system);
+        Log.debug(
+          'Retrieved ${_userRelays?.length ?? 0} relays from extension (disabled)',
+          name: 'Nip07Service',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.warning('Extension does not support getRelays: $e',
-            name: 'Nip07Service', category: LogCategory.system);
+        Log.warning(
+          'Extension does not support getRelays: $e',
+          name: 'Nip07Service',
+          category: LogCategory.system,
+        );
         // Not a critical error, continue without relays
       }
 
-      Log.info('NIP-07 authentication successful',
-          name: 'Nip07Service', category: LogCategory.system);
-      Log.verbose('Public key: $pubkey',
-          name: 'Nip07Service', category: LogCategory.system);
+      Log.info(
+        'NIP-07 authentication successful',
+        name: 'Nip07Service',
+        category: LogCategory.system,
+      );
+      Log.verbose(
+        'Public key: $pubkey',
+        name: 'Nip07Service',
+        category: LogCategory.system,
+      );
 
       return Nip07AuthResult.success(pubkey);
     } on nip07.Nip07Exception catch (e) {
-      Log.error('NIP-07 authentication failed: ${e.message}',
-          name: 'Nip07Service', category: LogCategory.system);
+      Log.error(
+        'NIP-07 authentication failed: ${e.message}',
+        name: 'Nip07Service',
+        category: LogCategory.system,
+      );
       return Nip07AuthResult.failure(e.message, code: e.code);
     } catch (e) {
-      Log.error('Unexpected NIP-07 error: $e',
-          name: 'Nip07Service', category: LogCategory.system);
+      Log.error(
+        'Unexpected NIP-07 error: $e',
+        name: 'Nip07Service',
+        category: LogCategory.system,
+      );
       return Nip07AuthResult.failure(
         'Unexpected error during authentication: $e',
         code: 'UNEXPECTED_ERROR',
@@ -177,8 +187,11 @@ class Nip07Service {
     }
 
     try {
-      Log.verbose('Signing event with NIP-07 extension...',
-          name: 'Nip07Service', category: LogCategory.system);
+      Log.verbose(
+        'Signing event with NIP-07 extension...',
+        name: 'Nip07Service',
+        category: LogCategory.system,
+      );
 
       // Convert Dart event to JavaScript format
       final jsEvent = nip07.dartEventToJs(unsignedEvent);
@@ -200,18 +213,27 @@ class Nip07Service {
         );
       }
 
-      Log.info('Event signed successfully',
-          name: 'Nip07Service', category: LogCategory.system);
+      Log.info(
+        'Event signed successfully',
+        name: 'Nip07Service',
+        category: LogCategory.system,
+      );
       debugPrint('📋 Event ID: ${signedEvent['id']}');
 
       return Nip07SignResult.success(signedEvent);
     } on nip07.Nip07Exception catch (e) {
-      Log.error('Event signing failed: ${e.message}',
-          name: 'Nip07Service', category: LogCategory.system);
+      Log.error(
+        'Event signing failed: ${e.message}',
+        name: 'Nip07Service',
+        category: LogCategory.system,
+      );
       return Nip07SignResult.failure(e.message, code: e.code);
     } catch (e) {
-      Log.error('Unexpected signing error: $e',
-          name: 'Nip07Service', category: LogCategory.system);
+      Log.error(
+        'Unexpected signing error: $e',
+        name: 'Nip07Service',
+        category: LogCategory.system,
+      );
       return Nip07SignResult.failure(
         'Unexpected error during event signing: $e',
         code: 'UNEXPECTED_ERROR',
@@ -226,28 +248,42 @@ class Nip07Service {
     }
 
     try {
-      final encrypted = await nip07.nostr!.nip04!.encrypt(recipientPubkey, message);
+      final encrypted = await nip07.nostr!.nip04!.encrypt(
+        recipientPubkey,
+        message,
+      );
       return encrypted;
     } catch (e) {
-      Log.error('NIP-04 encryption failed: $e',
-          name: 'Nip07Service', category: LogCategory.system);
+      Log.error(
+        'NIP-04 encryption failed: $e',
+        name: 'Nip07Service',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
 
   /// Decrypt a message using NIP-04 (if extension supports it)
   Future<String?> decryptMessage(
-      String senderPubkey, String encryptedMessage) async {
+    String senderPubkey,
+    String encryptedMessage,
+  ) async {
     if (!isConnected || nip07.nostr?.nip04 == null) {
       return null;
     }
 
     try {
-      final decrypted = await nip07.nostr!.nip04!.decrypt(senderPubkey, encryptedMessage);
+      final decrypted = await nip07.nostr!.nip04!.decrypt(
+        senderPubkey,
+        encryptedMessage,
+      );
       return decrypted;
     } catch (e) {
-      Log.error('NIP-04 decryption failed: $e',
-          name: 'Nip07Service', category: LogCategory.system);
+      Log.error(
+        'NIP-04 decryption failed: $e',
+        name: 'Nip07Service',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -258,18 +294,21 @@ class Nip07Service {
     _isConnected = false;
     _userRelays = null;
 
-    Log.info('📱 Disconnected from NIP-07 extension',
-        name: 'Nip07Service', category: LogCategory.system);
+    Log.info(
+      '📱 Disconnected from NIP-07 extension',
+      name: 'Nip07Service',
+      category: LogCategory.system,
+    );
   }
 
   /// Get connection status for debugging
   Map<String, dynamic> getDebugInfo() => {
-        'isAvailable': isAvailable,
-        'isConnected': isConnected,
-        'publicKey': _currentPublicKey,
-        'extensionName': extensionName,
-        'hasRelays': _userRelays != null,
-        'relayCount': _userRelays?.length ?? 0,
-        'hasNip04': nip07.nostr?.nip04 != null,
-      };
+    'isAvailable': isAvailable,
+    'isConnected': isConnected,
+    'publicKey': _currentPublicKey,
+    'extensionName': extensionName,
+    'hasRelays': _userRelays != null,
+    'relayCount': _userRelays?.length ?? 0,
+    'hasNip04': nip07.nostr?.nip04 != null,
+  };
 }

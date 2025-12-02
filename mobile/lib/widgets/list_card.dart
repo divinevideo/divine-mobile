@@ -8,11 +8,7 @@ import 'package:openvine/theme/vine_theme.dart';
 
 /// Card for displaying a user list (kind 30000 - people list)
 class UserListCard extends StatelessWidget {
-  const UserListCard({
-    required this.userList,
-    required this.onTap,
-    super.key,
-  });
+  const UserListCard({required this.userList, required this.onTap, super.key});
 
   final UserList userList;
   final VoidCallback onTap;
@@ -32,11 +28,7 @@ class UserListCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.group,
-                    color: VineTheme.vineGreen,
-                    size: 24,
-                  ),
+                  Icon(Icons.group, color: VineTheme.vineGreen, size: 24),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -65,19 +57,13 @@ class UserListCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.chevron_right,
-                    color: VineTheme.secondaryText,
-                  ),
+                  Icon(Icons.chevron_right, color: VineTheme.secondaryText),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
                 '${userList.pubkeys.length} ${userList.pubkeys.length == 1 ? 'person' : 'people'}',
-                style: TextStyle(
-                  color: VineTheme.secondaryText,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
               ),
             ],
           ),
@@ -146,10 +132,7 @@ class CuratedListCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.chevron_right,
-                    color: VineTheme.secondaryText,
-                  ),
+                  Icon(Icons.chevron_right, color: VineTheme.secondaryText),
                 ],
               ),
               const SizedBox(height: 8),

@@ -48,41 +48,49 @@ void main() {
       UploadInitializationHelper.reset();
     });
 
-    test('initializes box successfully on web platform', () async {
-      // On web, this should use IndexedDB without filesystem paths
-      final box = await UploadInitializationHelper.initializeUploadsBox();
+    test(
+      'initializes box successfully on web platform',
+      () async {
+        // On web, this should use IndexedDB without filesystem paths
+        final box = await UploadInitializationHelper.initializeUploadsBox();
 
-      expect(box.isOpen, isTrue);
-      expect(box.name, equals('pending_uploads'));
-    }, skip: !kIsWeb ? 'Web-only test' : null);
+        expect(box.isOpen, isTrue);
+        expect(box.name, equals('pending_uploads'));
+      },
+      skip: !kIsWeb ? 'Web-only test' : null,
+    );
 
-    test('box is functional for CRUD operations on web', () async {
-      final box = await UploadInitializationHelper.initializeUploadsBox();
+    test(
+      'box is functional for CRUD operations on web',
+      () async {
+        final box = await UploadInitializationHelper.initializeUploadsBox();
 
-      // Create
-      final upload = PendingUpload.create(
-        localVideoPath: '/test/video.mp4',
-        nostrPubkey: 'test_pubkey_123',
-        title: 'Test Video',
-      );
-      await box.put('test_upload_1', upload);
+        // Create
+        final upload = PendingUpload.create(
+          localVideoPath: '/test/video.mp4',
+          nostrPubkey: 'test_pubkey_123',
+          title: 'Test Video',
+        );
+        await box.put('test_upload_1', upload);
 
-      // Read
-      final retrieved = box.get('test_upload_1');
-      expect(retrieved, isNotNull);
-      expect(retrieved!.localVideoPath, equals('/test/video.mp4'));
-      expect(retrieved.title, equals('Test Video'));
+        // Read
+        final retrieved = box.get('test_upload_1');
+        expect(retrieved, isNotNull);
+        expect(retrieved!.localVideoPath, equals('/test/video.mp4'));
+        expect(retrieved.title, equals('Test Video'));
 
-      // Update
-      final updated = retrieved.copyWith(title: 'Updated Title');
-      await box.put('test_upload_1', updated);
-      final retrievedUpdated = box.get('test_upload_1');
-      expect(retrievedUpdated!.title, equals('Updated Title'));
+        // Update
+        final updated = retrieved.copyWith(title: 'Updated Title');
+        await box.put('test_upload_1', updated);
+        final retrievedUpdated = box.get('test_upload_1');
+        expect(retrievedUpdated!.title, equals('Updated Title'));
 
-      // Delete
-      await box.delete('test_upload_1');
-      expect(box.get('test_upload_1'), isNull);
-    }, skip: !kIsWeb ? 'Web-only test' : null);
+        // Delete
+        await box.delete('test_upload_1');
+        expect(box.get('test_upload_1'), isNull);
+      },
+      skip: !kIsWeb ? 'Web-only test' : null,
+    );
 
     test('handles multiple uploads on web', () async {
       final box = await UploadInitializationHelper.initializeUploadsBox();
@@ -107,14 +115,18 @@ void main() {
       }
     }, skip: !kIsWeb ? 'Web-only test' : null);
 
-    test('returns cached box on subsequent calls on web', () async {
-      final box1 = await UploadInitializationHelper.initializeUploadsBox();
-      final box2 = await UploadInitializationHelper.initializeUploadsBox();
+    test(
+      'returns cached box on subsequent calls on web',
+      () async {
+        final box1 = await UploadInitializationHelper.initializeUploadsBox();
+        final box2 = await UploadInitializationHelper.initializeUploadsBox();
 
-      // Should return same instance
-      expect(identical(box1, box2), isTrue);
-      expect(box2.isOpen, isTrue);
-    }, skip: !kIsWeb ? 'Web-only test' : null);
+        // Should return same instance
+        expect(identical(box1, box2), isTrue);
+        expect(box2.isOpen, isTrue);
+      },
+      skip: !kIsWeb ? 'Web-only test' : null,
+    );
 
     test('force reinit works on web', () async {
       final box1 = await UploadInitializationHelper.initializeUploadsBox();
@@ -162,13 +174,20 @@ void main() {
       }, returnsNormally);
     }, skip: !kIsWeb ? 'Web-only test' : null);
 
-    test('permanent permission error check returns false on web', () {
-      // Web doesn't have FileSystemException, so this should always return false
-      final error = Exception('Some error');
+    test(
+      'permanent permission error check returns false on web',
+      () {
+        // Web doesn't have FileSystemException, so this should always return false
+        final error = Exception('Some error');
 
-      // Can't directly test private method, but we can verify behavior
-      // by checking that errors don't get classified as permanent permission errors
-      expect(error.runtimeType.toString(), isNot(equals('FileSystemException')));
-    }, skip: !kIsWeb ? 'Web-only test' : null);
+        // Can't directly test private method, but we can verify behavior
+        // by checking that errors don't get classified as permanent permission errors
+        expect(
+          error.runtimeType.toString(),
+          isNot(equals('FileSystemException')),
+        );
+      },
+      skip: !kIsWeb ? 'Web-only test' : null,
+    );
   });
 }

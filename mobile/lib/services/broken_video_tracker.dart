@@ -9,7 +9,9 @@ import 'package:openvine/utils/unified_logger.dart';
 class BrokenVideoTracker {
   static const String _storageKey = 'broken_video_urls';
   static const String _timestampKey = 'broken_video_timestamps';
-  static const Duration _cleanupDuration = Duration(days: 7); // Clean up old entries after 7 days
+  static const Duration _cleanupDuration = Duration(
+    days: 7,
+  ); // Clean up old entries after 7 days
 
   late SharedPreferences _prefs;
   Set<String> _brokenVideoIds = {};
@@ -20,8 +22,11 @@ class BrokenVideoTracker {
     await _loadBrokenVideos();
     await _cleanupOldEntries();
 
-    Log.info('🚫 BrokenVideoTracker initialized with ${_brokenVideoIds.length} broken videos',
-        name: 'BrokenVideoTracker', category: LogCategory.system);
+    Log.info(
+      '🚫 BrokenVideoTracker initialized with ${_brokenVideoIds.length} broken videos',
+      name: 'BrokenVideoTracker',
+      category: LogCategory.system,
+    );
   }
 
   Future<void> _loadBrokenVideos() async {
@@ -35,13 +40,20 @@ class BrokenVideoTracker {
       }
 
       if (timestampsJson != null) {
-        final timestampMap = Map<String, dynamic>.from(jsonDecode(timestampsJson));
-        _brokenTimestamps = timestampMap.map((key, value) =>
-            MapEntry(key, DateTime.fromMillisecondsSinceEpoch(value)));
+        final timestampMap = Map<String, dynamic>.from(
+          jsonDecode(timestampsJson),
+        );
+        _brokenTimestamps = timestampMap.map(
+          (key, value) =>
+              MapEntry(key, DateTime.fromMillisecondsSinceEpoch(value)),
+        );
       }
     } catch (e) {
-      Log.error('Failed to load broken videos from storage: $e',
-          name: 'BrokenVideoTracker', category: LogCategory.system);
+      Log.error(
+        'Failed to load broken videos from storage: $e',
+        name: 'BrokenVideoTracker',
+        category: LogCategory.system,
+      );
       _brokenVideoIds = {};
       _brokenTimestamps = {};
     }
@@ -50,14 +62,18 @@ class BrokenVideoTracker {
   Future<void> _saveBrokenVideos() async {
     try {
       final brokenList = _brokenVideoIds.toList();
-      final timestampMap = _brokenTimestamps.map((key, value) =>
-          MapEntry(key, value.millisecondsSinceEpoch));
+      final timestampMap = _brokenTimestamps.map(
+        (key, value) => MapEntry(key, value.millisecondsSinceEpoch),
+      );
 
       await _prefs.setString(_storageKey, jsonEncode(brokenList));
       await _prefs.setString(_timestampKey, jsonEncode(timestampMap));
     } catch (e) {
-      Log.error('Failed to save broken videos to storage: $e',
-          name: 'BrokenVideoTracker', category: LogCategory.system);
+      Log.error(
+        'Failed to save broken videos to storage: $e',
+        name: 'BrokenVideoTracker',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -79,8 +95,11 @@ class BrokenVideoTracker {
 
     if (toRemove.isNotEmpty) {
       await _saveBrokenVideos();
-      Log.info('🧹 Cleaned up ${toRemove.length} old broken video entries',
-          name: 'BrokenVideoTracker', category: LogCategory.system);
+      Log.info(
+        '🧹 Cleaned up ${toRemove.length} old broken video entries',
+        name: 'BrokenVideoTracker',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -92,8 +111,11 @@ class BrokenVideoTracker {
 
       await _saveBrokenVideos();
 
-      Log.warning('🚫 Marked video as broken: ${videoId}... (reason: $reason)',
-          name: 'BrokenVideoTracker', category: LogCategory.system);
+      Log.warning(
+        '🚫 Marked video as broken: ${videoId}... (reason: $reason)',
+        name: 'BrokenVideoTracker',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -108,8 +130,11 @@ class BrokenVideoTracker {
       _brokenTimestamps.remove(videoId);
       await _saveBrokenVideos();
 
-      Log.info('✅ Unmarked video as broken: ${videoId}...',
-          name: 'BrokenVideoTracker', category: LogCategory.system);
+      Log.info(
+        '✅ Unmarked video as broken: ${videoId}...',
+        name: 'BrokenVideoTracker',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -125,8 +150,11 @@ class BrokenVideoTracker {
     _brokenTimestamps.clear();
     await _saveBrokenVideos();
 
-    Log.info('🧹 Cleared all broken video records',
-        name: 'BrokenVideoTracker', category: LogCategory.system);
+    Log.info(
+      '🧹 Cleared all broken video records',
+      name: 'BrokenVideoTracker',
+      category: LogCategory.system,
+    );
   }
 }
 

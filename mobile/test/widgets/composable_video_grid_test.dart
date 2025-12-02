@@ -20,7 +20,8 @@ void main() {
       testVideos = [
         VideoEvent(
           id: 'video1',
-          pubkey: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2', // 64-char hex pubkey
+          pubkey:
+              'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2', // 64-char hex pubkey
           content: 'Test video 1',
           title: 'Video 1',
           videoUrl: 'https://example.com/video1.mp4',
@@ -33,7 +34,8 @@ void main() {
         ),
         VideoEvent(
           id: 'video2',
-          pubkey: 'b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3', // 64-char hex pubkey
+          pubkey:
+              'b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3', // 64-char hex pubkey
           content: 'Test video 2',
           title: 'Video 2',
           videoUrl: 'https://example.com/video2.mp4',
@@ -46,7 +48,8 @@ void main() {
         ),
         VideoEvent(
           id: 'broken_video',
-          pubkey: 'c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4', // 64-char hex pubkey
+          pubkey:
+              'c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4', // 64-char hex pubkey
           content: 'Broken video',
           title: 'Broken Video',
           videoUrl: 'https://example.com/broken.mp4',
@@ -64,9 +67,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            brokenVideoTrackerProvider.overrideWith(
-              (ref) async => mockTracker,
-            ),
+            brokenVideoTrackerProvider.overrideWith((ref) async => mockTracker),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -86,16 +87,16 @@ void main() {
       expect(find.byType(GestureDetector), findsNWidgets(2));
     });
 
-    testWidgets('filters out broken videos using BrokenVideoTracker', (tester) async {
+    testWidgets('filters out broken videos using BrokenVideoTracker', (
+      tester,
+    ) async {
       // Mark video as broken
       mockTracker.markVideoBroken('broken_video', 'Test broken');
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            brokenVideoTrackerProvider.overrideWith(
-              (ref) async => mockTracker,
-            ),
+            brokenVideoTrackerProvider.overrideWith((ref) async => mockTracker),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -114,13 +115,13 @@ void main() {
       expect(find.byType(GestureDetector), findsNWidgets(2));
     });
 
-    testWidgets('shows empty state when no videos after filtering', (tester) async {
+    testWidgets('shows empty state when no videos after filtering', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            brokenVideoTrackerProvider.overrideWith(
-              (ref) async => mockTracker,
-            ),
+            brokenVideoTrackerProvider.overrideWith((ref) async => mockTracker),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -139,16 +140,16 @@ void main() {
       expect(find.text('No videos available'), findsOneWidget);
     });
 
-    testWidgets('calls onVideoTap with correct params when tile tapped', (tester) async {
+    testWidgets('calls onVideoTap with correct params when tile tapped', (
+      tester,
+    ) async {
       List<VideoEvent>? tappedVideos;
       int? tappedIndex;
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            brokenVideoTrackerProvider.overrideWith(
-              (ref) async => mockTracker,
-            ),
+            brokenVideoTrackerProvider.overrideWith((ref) async => mockTracker),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -179,9 +180,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            brokenVideoTrackerProvider.overrideWith(
-              (ref) async => mockTracker,
-            ),
+            brokenVideoTrackerProvider.overrideWith((ref) async => mockTracker),
           ],
           child: MaterialApp(
             home: Scaffold(
@@ -200,7 +199,8 @@ void main() {
 
       // Find GridView and verify delegate
       final gridView = tester.widget<GridView>(find.byType(GridView));
-      final delegate = gridView.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+      final delegate =
+          gridView.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
 
       expect(delegate.crossAxisCount, equals(3));
       expect(delegate.childAspectRatio, equals(1.0));
@@ -210,9 +210,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            brokenVideoTrackerProvider.overrideWith(
-              (ref) async => mockTracker,
-            ),
+            brokenVideoTrackerProvider.overrideWith((ref) async => mockTracker),
           ],
           child: MaterialApp(
             home: Scaffold(

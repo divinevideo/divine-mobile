@@ -58,7 +58,7 @@ void main() async {
       {
         'kinds': [32222],
         'limit': 1,
-      }
+      },
     ]);
 
     Log.debug('   Sending: $req');

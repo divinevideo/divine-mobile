@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_lifecycle_provider.dart';
-import 'package:openvine/providers/active_video_provider.dart';
 import 'package:openvine/ui/overlay_policy.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -18,94 +17,111 @@ import 'package:openvine/services/video_prewarmer.dart';
 import 'package:openvine/services/visibility_tracker.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/utils/nostr_encoding.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart' as ff;
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart'
+    as ff;
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('Profile /me/ Redirect Integration', () {
-    testWidgets('should redirect /profile/me/0 to actual user npub and render profile', (tester) async {
-      // ARRANGE: Create authenticated user with known public key
-      const testUserHex = '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
-      final testUserNpub = NostrEncoding.encodePublicKey(testUserHex);
+    testWidgets(
+      'should redirect /profile/me/0 to actual user npub and render profile',
+      (tester) async {
+        // ARRANGE: Create authenticated user with known public key
+        const testUserHex =
+            '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
+        final testUserNpub = NostrEncoding.encodePublicKey(testUserHex);
 
-      final testVideo = VideoEvent(
-        id: 'test-video-1',
-        pubkey: testUserHex,
-        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        content: 'Test Video',
-        title: 'Test Video',
-        videoUrl: 'https://example.com/test.mp4',
-        timestamp: DateTime.now(),
-      );
+        final testVideo = VideoEvent(
+          id: 'test-video-1',
+          pubkey: testUserHex,
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          content: 'Test Video',
+          title: 'Test Video',
+          videoUrl: 'https://example.com/test.mp4',
+          timestamp: DateTime.now(),
+        );
 
-      // Create mock services
-      final mockAuthService = _MockAuthService(testUserHex);
-      final fakeVideoService = _FakeVideoEventService(
-        authorVideos: {testUserHex: [testVideo]},
-      );
+        // Create mock services
+        final mockAuthService = _MockAuthService(testUserHex);
+        final fakeVideoService = _FakeVideoEventService(
+          authorVideos: {
+            testUserHex: [testVideo],
+          },
+        );
 
-      // Setup fake SharedPreferences
-      SharedPreferences.setMockInitialValues({});
-      final prefs = await SharedPreferences.getInstance();
+        // Setup fake SharedPreferences
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
 
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(mockAuthService),
-          videoEventServiceProvider.overrideWithValue(fakeVideoService),
-          appForegroundProvider.overrideWithValue(const AsyncValue.data(true)),
-          overlayPolicyProvider.overrideWithValue(OverlayPolicy.alwaysOn),
-          videoPrewarmerProvider.overrideWithValue(NoopPrewarmer()),
-          visibilityTrackerProvider.overrideWithValue(NoopVisibilityTracker()),
-          analyticsServiceProvider.overrideWithValue(NoopAnalyticsService()),
-          ff.sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
-      );
+        final container = ProviderContainer(
+          overrides: [
+            authServiceProvider.overrideWithValue(mockAuthService),
+            videoEventServiceProvider.overrideWithValue(fakeVideoService),
+            appForegroundProvider.overrideWithValue(
+              const AsyncValue.data(true),
+            ),
+            overlayPolicyProvider.overrideWithValue(OverlayPolicy.alwaysOn),
+            videoPrewarmerProvider.overrideWithValue(NoopPrewarmer()),
+            visibilityTrackerProvider.overrideWithValue(
+              NoopVisibilityTracker(),
+            ),
+            analyticsServiceProvider.overrideWithValue(NoopAnalyticsService()),
+            ff.sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+        );
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            routerConfig: container.read(goRouterProvider),
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(
+              routerConfig: container.read(goRouterProvider),
+            ),
           ),
-        ),
-      );
+        );
 
-      // Wait for initial route to settle
-      await tester.pumpAndSettle();
+        // Wait for initial route to settle
+        await tester.pumpAndSettle();
 
-      // ACT: Navigate to /profile/me/0 (mimics post-publish navigation)
-      final router = container.read(goRouterProvider);
-      router.go('/profile/me/0');
-      await tester.pump(); // Trigger redirect
-      await tester.pump(); // Build new route
-      await tester.pump(const Duration(milliseconds: 1)); // Post-frames
+        // ACT: Navigate to /profile/me/0 (mimics post-publish navigation)
+        final router = container.read(goRouterProvider);
+        router.go('/profile/me/0');
+        await tester.pump(); // Trigger redirect
+        await tester.pump(); // Build new route
+        await tester.pump(const Duration(milliseconds: 1)); // Post-frames
 
-      // ASSERT: Route should have been redirected to actual npub
-      final location = router.routeInformationProvider.value.uri.toString();
-      expect(
-        location,
-        '/profile/$testUserNpub/0',
-        reason: 'Should redirect /profile/me/0 to actual user npub: $testUserNpub',
-      );
+        // ASSERT: Route should have been redirected to actual npub
+        final location = router.routeInformationProvider.value.uri.toString();
+        expect(
+          location,
+          '/profile/$testUserNpub/0',
+          reason:
+              'Should redirect /profile/me/0 to actual user npub: $testUserNpub',
+        );
 
-      // ASSERT: Profile screen should render
-      await tester.pumpAndSettle();
+        // ASSERT: Profile screen should render
+        await tester.pumpAndSettle();
 
-      // Verify VideoPageView is used (not legacy placeholder)
-      expect(
-        find.byWidgetPredicate((w) => w.runtimeType.toString() == 'VideoPageView'),
-        findsOneWidget,
-        reason: 'ProfileScreenRouter should use VideoPageView after redirect',
-      );
+        // Verify VideoPageView is used (not legacy placeholder)
+        expect(
+          find.byWidgetPredicate(
+            (w) => w.runtimeType.toString() == 'VideoPageView',
+          ),
+          findsOneWidget,
+          reason: 'ProfileScreenRouter should use VideoPageView after redirect',
+        );
 
-      // Clean up
-      fakeVideoService.dispose();
-      container.dispose();
-    });
+        // Clean up
+        fakeVideoService.dispose();
+        container.dispose();
+      },
+    );
 
-    testWidgets('should redirect /profile/me/1 to grid view with actual npub', (tester) async {
+    testWidgets('should redirect /profile/me/1 to grid view with actual npub', (
+      tester,
+    ) async {
       // ARRANGE
-      const testUserHex = '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
+      const testUserHex =
+          '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
       final testUserNpub = NostrEncoding.encodePublicKey(testUserHex);
 
       final mockAuthService = _MockAuthService(testUserHex);
@@ -156,7 +172,9 @@ void main() {
       container.dispose();
     });
 
-    testWidgets('should redirect to /home/0 when not authenticated', (tester) async {
+    testWidgets('should redirect to /home/0 when not authenticated', (
+      tester,
+    ) async {
       // ARRANGE: Not authenticated
       final mockAuthService = _MockAuthService(null);
       final fakeVideoService = _FakeVideoEventService(authorVideos: {});
@@ -221,9 +239,8 @@ class _MockAuthService implements AuthService {
   bool get isAuthenticated => _currentUserHex != null;
 
   @override
-  AuthState get authState => isAuthenticated
-      ? AuthState.authenticated
-      : AuthState.unauthenticated;
+  AuthState get authState =>
+      isAuthenticated ? AuthState.authenticated : AuthState.unauthenticated;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -231,13 +248,12 @@ class _MockAuthService implements AuthService {
 
 /// Fake VideoEventService for testing
 class _FakeVideoEventService extends VideoEventService {
-  _FakeVideoEventService({
-    required Map<String, List<VideoEvent>> authorVideos,
-  }) : _authorVideos = authorVideos,
-       super(
-         _FakeNostrService(),
-         subscriptionManager: _FakeSubscriptionManager(),
-       );
+  _FakeVideoEventService({required Map<String, List<VideoEvent>> authorVideos})
+    : _authorVideos = authorVideos,
+      super(
+        _FakeNostrService(),
+        subscriptionManager: _FakeSubscriptionManager(),
+      );
 
   final Map<String, List<VideoEvent>> _authorVideos;
 
@@ -276,7 +292,11 @@ class NoopAnalyticsService extends AnalyticsService {
   }
 
   @override
-  Future<void> trackVideoViewWithUser(video, {required userId, String source = 'mobile'}) async {
+  Future<void> trackVideoViewWithUser(
+    video, {
+    required userId,
+    String source = 'mobile',
+  }) async {
     // No-op - prevent network calls in tests
   }
 

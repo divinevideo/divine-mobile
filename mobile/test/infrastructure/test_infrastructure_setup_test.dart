@@ -20,11 +20,7 @@ void main() {
 
       // Check for required analyzer rules
       final analyzerRules = yaml['analyzer'] as Map?;
-      expect(
-        analyzerRules,
-        isNotNull,
-        reason: 'analyzer section should exist',
-      );
+      expect(analyzerRules, isNotNull, reason: 'analyzer section should exist');
 
       // Check for strict errors
       final errors = analyzerRules?['errors'] as Map?;

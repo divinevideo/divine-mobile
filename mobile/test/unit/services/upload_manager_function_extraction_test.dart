@@ -24,32 +24,43 @@ class UploadSuccessResult {
 // Interface for extracted upload success handling
 abstract class IUploadSuccessHandler {
   PendingUpload createSuccessfulUpload(
-      PendingUpload upload, UploadSuccessResult result);
+    PendingUpload upload,
+    UploadSuccessResult result,
+  );
   UploadMetrics createSuccessMetrics(
-      UploadMetrics? currentMetrics, DateTime endTime, int retryCount);
+    UploadMetrics? currentMetrics,
+    DateTime endTime,
+    int retryCount,
+  );
   double calculateThroughput(double fileSizeMB, Duration duration);
   Map<String, String> formatUploadLogs(
-      UploadSuccessResult result, UploadMetrics metrics);
+    UploadSuccessResult result,
+    UploadMetrics metrics,
+  );
 }
 
 // TDD: Implementation to make tests pass
 class UploadSuccessHandler implements IUploadSuccessHandler {
   @override
   PendingUpload createSuccessfulUpload(
-          PendingUpload upload, UploadSuccessResult result) =>
-      upload.copyWith(
-        status: UploadStatus.readyToPublish,
-        cloudinaryPublicId: result.videoId,
-        videoId: result.videoId,
-        cdnUrl: result.cdnUrl,
-        thumbnailPath: result.thumbnailUrl,
-        uploadProgress: 1,
-        completedAt: DateTime.now(),
-      );
+    PendingUpload upload,
+    UploadSuccessResult result,
+  ) => upload.copyWith(
+    status: UploadStatus.readyToPublish,
+    cloudinaryPublicId: result.videoId,
+    videoId: result.videoId,
+    cdnUrl: result.cdnUrl,
+    thumbnailPath: result.thumbnailUrl,
+    uploadProgress: 1,
+    completedAt: DateTime.now(),
+  );
 
   @override
   UploadMetrics createSuccessMetrics(
-      UploadMetrics? currentMetrics, DateTime endTime, int retryCount) {
+    UploadMetrics? currentMetrics,
+    DateTime endTime,
+    int retryCount,
+  ) {
     if (currentMetrics == null) {
       throw ArgumentError('Current metrics cannot be null');
     }
@@ -80,7 +91,9 @@ class UploadSuccessHandler implements IUploadSuccessHandler {
 
   @override
   Map<String, String> formatUploadLogs(
-      UploadSuccessResult result, UploadMetrics metrics) {
+    UploadSuccessResult result,
+    UploadMetrics metrics,
+  ) {
     final logs = <String, String>{};
 
     logs['status'] = 'Upload successful';
@@ -130,22 +143,28 @@ void main() {
 
     group('createSuccessfulUpload', () {
       test('should create upload with success status and metadata', () {
-        final result =
-            handler.createSuccessfulUpload(testUpload, successResult);
+        final result = handler.createSuccessfulUpload(
+          testUpload,
+          successResult,
+        );
 
         expect(result.status, equals(UploadStatus.readyToPublish));
         expect(result.cloudinaryPublicId, equals('video-123'));
         expect(result.videoId, equals('video-123'));
         expect(result.cdnUrl, equals('https://cdn.example.com/video-123.mp4'));
-        expect(result.thumbnailPath,
-            equals('https://cdn.example.com/video-123-thumb.jpg'));
+        expect(
+          result.thumbnailPath,
+          equals('https://cdn.example.com/video-123-thumb.jpg'),
+        );
         expect(result.uploadProgress, equals(1.0));
         expect(result.completedAt, isNotNull);
       });
 
       test('should preserve original upload properties', () {
-        final result =
-            handler.createSuccessfulUpload(testUpload, successResult);
+        final result = handler.createSuccessfulUpload(
+          testUpload,
+          successResult,
+        );
 
         expect(result.id, equals(testUpload.id));
         expect(result.localVideoPath, equals(testUpload.localVideoPath));
@@ -191,8 +210,10 @@ void main() {
 
     group('calculateThroughput', () {
       test('should calculate throughput correctly', () {
-        final throughput =
-            handler.calculateThroughput(10, const Duration(seconds: 5));
+        final throughput = handler.calculateThroughput(
+          10,
+          const Duration(seconds: 5),
+        );
         expect(throughput, equals(2.0)); // 10MB / 5s = 2 MB/s
       });
 
@@ -203,8 +224,10 @@ void main() {
       });
 
       test('should handle very small files', () {
-        final throughput =
-            handler.calculateThroughput(0.001, const Duration(seconds: 1));
+        final throughput = handler.calculateThroughput(
+          0.001,
+          const Duration(seconds: 1),
+        );
         expect(throughput, equals(0.001));
       });
     });

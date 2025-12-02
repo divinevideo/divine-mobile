@@ -290,8 +290,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
   }
 
   void _navigateToVideo(BuildContext context, String videoEventId) {
-    Log.info('Navigating to video: $videoEventId',
-        name: 'NotificationsScreen', category: LogCategory.ui);
+    Log.info(
+      'Navigating to video: $videoEventId',
+      name: 'NotificationsScreen',
+      category: LogCategory.ui,
+    );
 
     // Get video from video event service (search all feed types)
     final videoEventService = ref.read(videoEventServiceProvider);
@@ -304,9 +307,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     ];
 
     final video = allVideos.cast().firstWhere(
-          (v) => v != null && v.id == videoEventId,
-          orElse: () => null,
-        );
+      (v) => v != null && v.id == videoEventId,
+      orElse: () => null,
+    );
 
     if (video == null) {
       // Video not found, show error
@@ -327,15 +330,19 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
           videoList: [video],
           contextTitle: 'From Notification',
           startingIndex: 0,
-          useLocalActiveState: true, // Use local state since not using URL routing
+          useLocalActiveState:
+              true, // Use local state since not using URL routing
         ),
       ),
     );
   }
 
   void _navigateToProfile(BuildContext context, String userPubkey) {
-    Log.info('Navigating to profile: $userPubkey',
-        name: 'NotificationsScreen', category: LogCategory.ui);
+    Log.info(
+      'Navigating to profile: $userPubkey',
+      name: 'NotificationsScreen',
+      category: LogCategory.ui,
+    );
 
     // Navigate to profile screen
     context.goProfile(userPubkey, 0);

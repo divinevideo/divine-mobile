@@ -10,6 +10,7 @@ enum RouteType {
   hashtag, // Still supported as push route within explore
   search,
   camera,
+  importKey,
   settings,
   editProfile, // Profile editing screen
   drafts, // Video drafts screen
@@ -142,6 +143,9 @@ RouteContext parseRoute(String path) {
       // Drafts screen - standalone route outside ShellRoute
       return const RouteContext(type: RouteType.drafts);
 
+    case 'import-key':
+      return const RouteContext(type: RouteType.importKey);
+
     default:
       return const RouteContext(type: RouteType.home, videoIndex: 0);
   }
@@ -221,6 +225,9 @@ String buildRoute(RouteContext context) {
 
     case RouteType.editProfile:
       return '/edit-profile';
+
+    case RouteType.importKey:
+      return '/import-key';
 
     case RouteType.drafts:
       return '/drafts';

@@ -17,17 +17,17 @@ import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/services/video_prewarmer.dart';
 import 'package:openvine/services/visibility_tracker.dart';
 import 'package:openvine/services/analytics_service.dart';
-import 'package:openvine/services/connection_status_service.dart';
-import 'package:openvine/providers/analytics_providers.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart' as ff;
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart'
+    as ff;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Helper to wait for a condition to become true
 Future<void> waitFor<T>(
   WidgetTester tester,
-  T Function() read,
-  {required T want, Duration timeout = const Duration(seconds: 2)}
-) async {
+  T Function() read, {
+  required T want,
+  Duration timeout = const Duration(seconds: 2),
+}) async {
   final start = DateTime.now();
   while (read() != want) {
     if (DateTime.now().difference(start) > timeout) {
@@ -40,7 +40,8 @@ Future<void> waitFor<T>(
 void main() {
   testWidgets('profile route renders videos & overlays', (tester) async {
     // Test fixture
-    final testNpub = 'npub1l5sga6xg72phsz5422ykujprejwud075ggrr3z2hwyrfgr7eylqstegx9z';
+    final testNpub =
+        'npub1l5sga6xg72phsz5422ykujprejwud075ggrr3z2hwyrfgr7eylqstegx9z';
     final testHex = npubToHexOrNull(testNpub)!;
 
     final testVideo = VideoEvent(
@@ -55,7 +56,9 @@ void main() {
 
     // Create fake service that returns test videos
     final fakeService = _FakeVideoEventService(
-      authorVideos: {testHex: [testVideo]},
+      authorVideos: {
+        testHex: [testVideo],
+      },
     );
 
     // Setup fake SharedPreferences
@@ -65,12 +68,24 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         videoEventServiceProvider.overrideWithValue(fakeService),
-        appForegroundProvider.overrideWithValue(const AsyncValue.data(true)), // Ensure app is in foreground
-        overlayPolicyProvider.overrideWithValue(OverlayPolicy.alwaysOn), // Force overlays visible in tests
-        videoPrewarmerProvider.overrideWithValue(NoopPrewarmer()), // Prevent timer leaks from video prewarming
-        visibilityTrackerProvider.overrideWithValue(NoopVisibilityTracker()), // Prevent timer leaks from visibility tracking
-        analyticsServiceProvider.overrideWithValue(NoopAnalyticsService()), // Prevent timer leaks from analytics retry delays
-        ff.sharedPreferencesProvider.overrideWithValue(prefs), // Override feature flag shared prefs provider
+        appForegroundProvider.overrideWithValue(
+          const AsyncValue.data(true),
+        ), // Ensure app is in foreground
+        overlayPolicyProvider.overrideWithValue(
+          OverlayPolicy.alwaysOn,
+        ), // Force overlays visible in tests
+        videoPrewarmerProvider.overrideWithValue(
+          NoopPrewarmer(),
+        ), // Prevent timer leaks from video prewarming
+        visibilityTrackerProvider.overrideWithValue(
+          NoopVisibilityTracker(),
+        ), // Prevent timer leaks from visibility tracking
+        analyticsServiceProvider.overrideWithValue(
+          NoopAnalyticsService(),
+        ), // Prevent timer leaks from analytics retry delays
+        ff.sharedPreferencesProvider.overrideWithValue(
+          prefs,
+        ), // Override feature flag shared prefs provider
       ],
     );
     // NOTE: container.dispose() is called explicitly before test ends, not in tearDown
@@ -98,18 +113,38 @@ void main() {
     );
 
     // Assertions: video card visible + overlay text visible
-    expect(find.text('Test Title'), findsOneWidget, reason: 'Video title should be visible in overlay');
+    expect(
+      find.text('Test Title'),
+      findsOneWidget,
+      reason: 'Video title should be visible in overlay',
+    );
 
     // Verify ProfileScreenRouter uses VideoPageView (not legacy placeholder)
-    expect(find.byWidgetPredicate((w) => w.runtimeType.toString() == 'VideoPageView'), findsOneWidget,
-        reason: 'ProfileScreenRouter should use VideoPageView');
-    expect(find.byWidgetPredicate((w) => w.runtimeType.toString() == 'VideoFeedItem'), findsOneWidget,
-        reason: 'VideoPageView should render VideoFeedItem');
-    expect(find.byWidgetPredicate((w) => w.runtimeType.toString() == 'VideoOverlayActions'), findsOneWidget,
-        reason: 'VideoFeedItem should render VideoOverlayActions');
+    expect(
+      find.byWidgetPredicate(
+        (w) => w.runtimeType.toString() == 'VideoPageView',
+      ),
+      findsOneWidget,
+      reason: 'ProfileScreenRouter should use VideoPageView',
+    );
+    expect(
+      find.byWidgetPredicate(
+        (w) => w.runtimeType.toString() == 'VideoFeedItem',
+      ),
+      findsOneWidget,
+      reason: 'VideoPageView should render VideoFeedItem',
+    );
+    expect(
+      find.byWidgetPredicate(
+        (w) => w.runtimeType.toString() == 'VideoOverlayActions',
+      ),
+      findsOneWidget,
+      reason: 'VideoFeedItem should render VideoOverlayActions',
+    );
 
     // CRITICAL: Dispose services BEFORE test ends to cancel pending timers
-    fakeService.dispose(); // Dispose fake service to cancel ConnectionStatusService timer
+    fakeService
+        .dispose(); // Dispose fake service to cancel ConnectionStatusService timer
     container.dispose(); // Dispose provider container
 
     // NOTE: Timer leaks previously fixed:
@@ -122,13 +157,12 @@ void main() {
 
 /// Fake VideoEventService for testing
 class _FakeVideoEventService extends VideoEventService {
-  _FakeVideoEventService({
-    required Map<String, List<VideoEvent>> authorVideos,
-  }) : _authorVideos = authorVideos,
-       super(
-         _FakeNostrService(),
-         subscriptionManager: _FakeSubscriptionManager(),
-       );
+  _FakeVideoEventService({required Map<String, List<VideoEvent>> authorVideos})
+    : _authorVideos = authorVideos,
+      super(
+        _FakeNostrService(),
+        subscriptionManager: _FakeSubscriptionManager(),
+      );
 
   final Map<String, List<VideoEvent>> _authorVideos;
 
@@ -167,7 +201,11 @@ class NoopAnalyticsService extends AnalyticsService {
   }
 
   @override
-  Future<void> trackVideoViewWithUser(video, {required userId, String source = 'mobile'}) async {
+  Future<void> trackVideoViewWithUser(
+    video, {
+    required userId,
+    String source = 'mobile',
+  }) async {
     // No-op - prevent network calls in tests
   }
 

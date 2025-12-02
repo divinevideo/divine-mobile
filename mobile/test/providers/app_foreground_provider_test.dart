@@ -16,37 +16,43 @@ void main() {
       container.dispose();
     });
 
-    test('should transition to background when setForeground(false) is called', () {
-      final container = ProviderContainer();
+    test(
+      'should transition to background when setForeground(false) is called',
+      () {
+        final container = ProviderContainer();
 
-      // Initially foreground
-      expect(container.read(appForegroundProvider), isTrue);
+        // Initially foreground
+        expect(container.read(appForegroundProvider), isTrue);
 
-      // Background the app
-      container.read(appForegroundProvider.notifier).setForeground(false);
+        // Background the app
+        container.read(appForegroundProvider.notifier).setForeground(false);
 
-      // Should now be background
-      expect(container.read(appForegroundProvider), isFalse);
+        // Should now be background
+        expect(container.read(appForegroundProvider), isFalse);
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
 
-    test('should transition back to foreground when setForeground(true) is called', () {
-      final container = ProviderContainer();
+    test(
+      'should transition back to foreground when setForeground(true) is called',
+      () {
+        final container = ProviderContainer();
 
-      // Start foreground
-      expect(container.read(appForegroundProvider), isTrue);
+        // Start foreground
+        expect(container.read(appForegroundProvider), isTrue);
 
-      // Background the app
-      container.read(appForegroundProvider.notifier).setForeground(false);
-      expect(container.read(appForegroundProvider), isFalse);
+        // Background the app
+        container.read(appForegroundProvider.notifier).setForeground(false);
+        expect(container.read(appForegroundProvider), isFalse);
 
-      // Resume to foreground
-      container.read(appForegroundProvider.notifier).setForeground(true);
-      expect(container.read(appForegroundProvider), isTrue);
+        // Resume to foreground
+        container.read(appForegroundProvider.notifier).setForeground(true);
+        expect(container.read(appForegroundProvider), isTrue);
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
 
     test('should notify listeners when foreground state changes', () {
       final container = ProviderContainer();
@@ -54,20 +60,20 @@ void main() {
       final states = <bool>[];
 
       // Listen to state changes
-      container.listen(
-        appForegroundProvider,
-        (previous, next) {
-          states.add(next);
-        },
-      );
+      container.listen(appForegroundProvider, (previous, next) {
+        states.add(next);
+      });
 
       // Trigger state changes
       container.read(appForegroundProvider.notifier).setForeground(false);
       container.read(appForegroundProvider.notifier).setForeground(true);
       container.read(appForegroundProvider.notifier).setForeground(false);
 
-      expect(states, equals([false, true, false]),
-          reason: 'Should emit state change for each setForeground call');
+      expect(
+        states,
+        equals([false, true, false]),
+        reason: 'Should emit state change for each setForeground call',
+      );
 
       container.dispose();
     });
@@ -77,7 +83,9 @@ void main() {
 
       // Rapid transitions
       for (int i = 0; i < 10; i++) {
-        container.read(appForegroundProvider.notifier).setForeground(i % 2 == 0);
+        container
+            .read(appForegroundProvider.notifier)
+            .setForeground(i % 2 == 0);
       }
 
       // Final state should be false (last iteration i=9, 9%2=1, so false)
@@ -86,24 +94,27 @@ void main() {
       container.dispose();
     });
 
-    test('isAppInForegroundProvider should mirror appForegroundProvider state', () {
-      final container = ProviderContainer();
+    test(
+      'isAppInForegroundProvider should mirror appForegroundProvider state',
+      () {
+        final container = ProviderContainer();
 
-      // Initially both should be true
-      expect(container.read(appForegroundProvider), isTrue);
-      expect(container.read(isAppInForegroundProvider), isTrue);
+        // Initially both should be true
+        expect(container.read(appForegroundProvider), isTrue);
+        expect(container.read(isAppInForegroundProvider), isTrue);
 
-      // Background
-      container.read(appForegroundProvider.notifier).setForeground(false);
-      expect(container.read(appForegroundProvider), isFalse);
-      expect(container.read(isAppInForegroundProvider), isFalse);
+        // Background
+        container.read(appForegroundProvider.notifier).setForeground(false);
+        expect(container.read(appForegroundProvider), isFalse);
+        expect(container.read(isAppInForegroundProvider), isFalse);
 
-      // Foreground
-      container.read(appForegroundProvider.notifier).setForeground(true);
-      expect(container.read(appForegroundProvider), isTrue);
-      expect(container.read(isAppInForegroundProvider), isTrue);
+        // Foreground
+        container.read(appForegroundProvider.notifier).setForeground(true);
+        expect(container.read(appForegroundProvider), isTrue);
+        expect(container.read(isAppInForegroundProvider), isTrue);
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
   });
 }

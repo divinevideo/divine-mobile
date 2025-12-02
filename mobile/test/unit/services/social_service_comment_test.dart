@@ -11,11 +11,7 @@ import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
 // Generate mocks
-@GenerateMocks([
-  INostrService,
-  AuthService,
-  SubscriptionManager,
-])
+@GenerateMocks([INostrService, AuthService, SubscriptionManager])
 import 'social_service_comment_test.mocks.dart';
 
 void main() {
@@ -43,19 +39,22 @@ void main() {
       when(mockAuthService.isAuthenticated).thenReturn(false);
 
       // Mock subscribeToEvents to prevent initialization calls
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => const Stream<Event>.empty());
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => const Stream<Event>.empty());
 
       // Mock createSubscription for fetchCommentsForEvent
-      when(mockSubscriptionManager.createSubscription(
-        name: anyNamed('name'),
-        filters: anyNamed('filters'),
-        onEvent: anyNamed('onEvent'),
-        onError: anyNamed('onError'),
-        onComplete: anyNamed('onComplete'),
-        timeout: anyNamed('timeout'),
-        priority: anyNamed('priority'),
-      )).thenAnswer((_) async => 'test_subscription_id');
+      when(
+        mockSubscriptionManager.createSubscription(
+          name: anyNamed('name'),
+          filters: anyNamed('filters'),
+          onEvent: anyNamed('onEvent'),
+          onError: anyNamed('onError'),
+          onComplete: anyNamed('onComplete'),
+          timeout: anyNamed('timeout'),
+          priority: anyNamed('priority'),
+        ),
+      ).thenAnswer((_) async => 'test_subscription_id');
 
       socialService = SocialService(
         mockNostrService,
@@ -115,63 +114,68 @@ void main() {
         );
       });
 
-      test('should create event with correct tags for top-level comment',
-          () async {
-        // Arrange
-        when(mockAuthService.isAuthenticated).thenReturn(true);
+      test(
+        'should create event with correct tags for top-level comment',
+        () async {
+          // Arrange
+          when(mockAuthService.isAuthenticated).thenReturn(true);
 
-        final testEvent = Event(
-          testCurrentUserPubkey,
-          1,
-          [
-            ['e', testVideoEventId, '', 'root'],
-            ['p', testVideoAuthorPubkey],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
-          ],
-          testCommentContent,
-          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        );
-
-        when(
-          mockAuthService.createAndSignEvent(
-            kind: 1,
-            tags: [
+          final testEvent = Event(
+            testCurrentUserPubkey,
+            1,
+            [
               ['e', testVideoEventId, '', 'root'],
               ['p', testVideoAuthorPubkey],
+              [
+                'expiration',
+                '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+              ],
             ],
+            testCommentContent,
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          );
+
+          when(
+            mockAuthService.createAndSignEvent(
+              kind: 1,
+              tags: [
+                ['e', testVideoEventId, '', 'root'],
+                ['p', testVideoAuthorPubkey],
+              ],
+              content: testCommentContent,
+            ),
+          ).thenAnswer((_) async => testEvent);
+
+          when(mockNostrService.broadcastEvent(testEvent)).thenAnswer(
+            (_) async => NostrBroadcastResult(
+              event: testEvent,
+              successCount: 1,
+              totalRelays: 1,
+              results: const {'relay1': true},
+              errors: const {},
+            ),
+          );
+
+          // Act
+          await socialService.postComment(
             content: testCommentContent,
-          ),
-        ).thenAnswer((_) async => testEvent);
+            rootEventId: testVideoEventId,
+            rootEventAuthorPubkey: testVideoAuthorPubkey,
+          );
 
-        when(mockNostrService.broadcastEvent(testEvent)).thenAnswer(
-          (_) async => NostrBroadcastResult(
-            event: testEvent,
-            successCount: 1,
-            totalRelays: 1,
-            results: const {'relay1': true},
-            errors: const {},
-          ),
-        );
-
-        // Act
-        await socialService.postComment(
-          content: testCommentContent,
-          rootEventId: testVideoEventId,
-          rootEventAuthorPubkey: testVideoAuthorPubkey,
-        );
-
-        // Assert
-        verify(
-          mockAuthService.createAndSignEvent(
-            kind: 1,
-            tags: [
-              ['e', testVideoEventId, '', 'root'],
-              ['p', testVideoAuthorPubkey],
-            ],
-            content: testCommentContent,
-          ),
-        ).called(1);
-      });
+          // Assert
+          verify(
+            mockAuthService.createAndSignEvent(
+              kind: 1,
+              tags: [
+                ['e', testVideoEventId, '', 'root'],
+                ['p', testVideoAuthorPubkey],
+              ],
+              content: testCommentContent,
+            ),
+          ).called(1);
+        },
+      );
 
       test('should create event with correct tags for reply comment', () async {
         // Arrange
@@ -190,7 +194,10 @@ void main() {
             ['p', testVideoAuthorPubkey],
             ['e', replyToEventId, '', 'reply'],
             ['p', replyToAuthorPubkey],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -253,7 +260,10 @@ void main() {
           [
             ['e', testVideoEventId, '', 'root'],
             ['p', testVideoAuthorPubkey],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -326,7 +336,10 @@ void main() {
           [
             ['e', testVideoEventId, '', 'root'],
             ['p', testVideoAuthorPubkey],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -380,7 +393,10 @@ void main() {
           [
             ['e', testVideoEventId, '', 'root'],
             ['p', testVideoAuthorPubkey],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           trimmedContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -431,24 +447,30 @@ void main() {
           [
             ['e', testVideoEventId, '', 'root'],
             ['p', testVideoAuthorPubkey],
-            ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
           ],
           testCommentContent,
           createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
         );
 
         // Mock createSubscription to call onEvent callback with test event
-        when(mockSubscriptionManager.createSubscription(
-          name: anyNamed('name'),
-          filters: anyNamed('filters'),
-          onEvent: anyNamed('onEvent'),
-          onError: anyNamed('onError'),
-          onComplete: anyNamed('onComplete'),
-          timeout: anyNamed('timeout'),
-          priority: anyNamed('priority'),
-        )).thenAnswer((invocation) async {
+        when(
+          mockSubscriptionManager.createSubscription(
+            name: anyNamed('name'),
+            filters: anyNamed('filters'),
+            onEvent: anyNamed('onEvent'),
+            onError: anyNamed('onError'),
+            onComplete: anyNamed('onComplete'),
+            timeout: anyNamed('timeout'),
+            priority: anyNamed('priority'),
+          ),
+        ).thenAnswer((invocation) async {
           // Get the onEvent callback and call it with our test event
-          final onEvent = invocation.namedArguments[Symbol('onEvent')] as Function(Event);
+          final onEvent =
+              invocation.namedArguments[Symbol('onEvent')] as Function(Event);
           onEvent(testCommentEvent);
           return 'test_subscription_id';
         });

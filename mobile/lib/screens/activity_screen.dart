@@ -57,8 +57,10 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
             indicatorWeight: 2,
             labelColor: VineTheme.whiteText,
             unselectedLabelColor: VineTheme.whiteText.withValues(alpha: 0.7),
-            labelStyle:
-                const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            labelStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
             tabs: const [
               Tab(text: 'ALL'),
               Tab(text: 'FOLLOWING'),
@@ -81,35 +83,28 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
   }
 
   Widget _buildUnauthenticatedState() => const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.lock_outlined,
-              size: 64,
-              color: VineTheme.secondaryText,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Sign in to see activity',
-              style: TextStyle(
-                color: VineTheme.primaryText,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Connect your Nostr keys to see\nlikes, follows, and comments.',
-              style: TextStyle(
-                color: VineTheme.secondaryText,
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.lock_outlined, size: 64, color: VineTheme.secondaryText),
+        SizedBox(height: 16),
+        Text(
+          'Sign in to see activity',
+          style: TextStyle(
+            color: VineTheme.primaryText,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-      );
+        SizedBox(height: 8),
+        Text(
+          'Connect your Nostr keys to see\nlikes, follows, and comments.',
+          style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ),
+  );
 
   Widget _buildAllActivity() {
     final notificationService = ref.watch(notificationServiceEnhancedProvider);
@@ -137,10 +132,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
             SizedBox(height: 8),
             Text(
               'When people interact with your content\nor you follow others, it will show up here.',
-              style: TextStyle(
-                color: VineTheme.secondaryText,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
               textAlign: TextAlign.center,
             ),
           ],
@@ -184,10 +176,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
             SizedBox(height: 8),
             Text(
               'Follow some creators to see\ntheir activity here.',
-              style: TextStyle(
-                color: VineTheme.secondaryText,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
               textAlign: TextAlign.center,
             ),
           ],
@@ -243,10 +232,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
             SizedBox(height: 8),
             Text(
               'Create your first vine to start\nreceiving activity notifications.',
-              style: TextStyle(
-                color: VineTheme.secondaryText,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
               textAlign: TextAlign.center,
             ),
           ],
@@ -271,8 +257,9 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
     if (notification.targetEventId != null) {
       // Find the video and navigate to it
       final videoEventService = ref.read(videoEventServiceProvider);
-      final video =
-          videoEventService.getVideoEventById(notification.targetEventId!);
+      final video = videoEventService.getVideoEventById(
+        notification.targetEventId!,
+      );
       if (video != null) {
         // For comment notifications, open comments screen
         // For other notifications (like, repost), open video feed
@@ -294,8 +281,11 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
   }
 
   void _openComments(VideoEvent video) {
-    Log.debug('Opening comments from Activity: ${video.id}...',
-        name: 'ActivityScreen', category: LogCategory.ui);
+    Log.debug(
+      'Opening comments from Activity: ${video.id}...',
+      name: 'ActivityScreen',
+      category: LogCategory.ui,
+    );
 
     // Navigate to comments screen with the video
     Navigator.of(context).push(
@@ -306,19 +296,34 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
   }
 
   void _openVideo(VideoEvent video, VideoEventService videoEventService) {
-    Log.debug('Opening video from Activity: ${video.id}...',
-        name: 'ActivityScreen', category: LogCategory.ui);
-    Log.debug('📱 Video URL: ${video.videoUrl}',
-        name: 'ActivityScreen', category: LogCategory.ui);
-    Log.verbose('Thumbnail URL: ${video.thumbnailUrl}',
-        name: 'ActivityScreen', category: LogCategory.ui);
-    Log.verbose('Title: ${video.title}',
-        name: 'ActivityScreen', category: LogCategory.ui);
+    Log.debug(
+      'Opening video from Activity: ${video.id}...',
+      name: 'ActivityScreen',
+      category: LogCategory.ui,
+    );
+    Log.debug(
+      '📱 Video URL: ${video.videoUrl}',
+      name: 'ActivityScreen',
+      category: LogCategory.ui,
+    );
+    Log.verbose(
+      'Thumbnail URL: ${video.thumbnailUrl}',
+      name: 'ActivityScreen',
+      category: LogCategory.ui,
+    );
+    Log.verbose(
+      'Title: ${video.title}',
+      name: 'ActivityScreen',
+      category: LogCategory.ui,
+    );
 
     // Check if video has a valid URL
     if (video.videoUrl?.isEmpty != false) {
-      Log.error('Cannot open video - empty or null video URL',
-          name: 'ActivityScreen', category: LogCategory.ui);
+      Log.error(
+        'Cannot open video - empty or null video URL',
+        name: 'ActivityScreen',
+        category: LogCategory.ui,
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Video URL is not available'),
@@ -336,7 +341,8 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
           startingVideo: video,
           videoList: allVideos,
           contextTitle: 'Activity Video',
-          useLocalActiveState: true, // Use local state since not using URL routing
+          useLocalActiveState:
+              true, // Use local state since not using URL routing
         ),
       ),
     );
@@ -344,18 +350,16 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
 }
 
 class _NotificationItem extends ConsumerWidget {
-  const _NotificationItem({
-    required this.notification,
-    required this.onTap,
-  });
+  const _NotificationItem({required this.notification, required this.onTap});
   final NotificationModel notification;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userProfileService = ref.watch(userProfileServiceProvider);
-    final profile =
-        userProfileService.getCachedProfile(notification.actorPubkey);
+    final profile = userProfileService.getCachedProfile(
+      notification.actorPubkey,
+    );
     final userName = profile?.bestDisplayName ?? 'Unknown User';
 
     return Container(
@@ -366,11 +370,7 @@ class _NotificationItem extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              UserAvatar(
-                imageUrl: profile?.picture,
-                name: userName,
-                size: 40,
-              ),
+              UserAvatar(imageUrl: profile?.picture, name: userName, size: 40),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -474,139 +474,135 @@ class _FollowingItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        color: Colors.grey[900],
-        child: ListTile(
-          onTap: onTap,
-          leading: UserAvatar(
-            imageUrl: profile?.picture,
-            name: profile?.bestDisplayName,
-            size: 40,
-          ),
-          title: Row(
-            children: [
-              Flexible(
-                child: Text(
-                  profile?.bestDisplayName ?? 'Unknown User',
-                  style: const TextStyle(
-                    color: VineTheme.whiteText,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+    color: Colors.grey[900],
+    child: ListTile(
+      onTap: onTap,
+      leading: UserAvatar(
+        imageUrl: profile?.picture,
+        name: profile?.bestDisplayName,
+        size: 40,
+      ),
+      title: Row(
+        children: [
+          Flexible(
+            child: Text(
+              profile?.bestDisplayName ?? 'Unknown User',
+              style: const TextStyle(
+                color: VineTheme.whiteText,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
-              if (profile?.nip05 != null && profile!.nip05!.isNotEmpty) ...[
-                const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    color: Colors.blue,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 10,
-                  ),
-                ),
-              ],
-            ],
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-          subtitle: profile?.about != null && profile!.about!.isNotEmpty
-              ? Text(
-                  profile!.about!,
-                  style: const TextStyle(
-                    color: VineTheme.secondaryText,
-                    fontSize: 14,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                )
-              : null,
-          trailing: const Icon(
-            Icons.arrow_forward_ios,
-            color: VineTheme.secondaryText,
-            size: 16,
-          ),
-        ),
-      );
+          if (profile?.nip05 != null && profile!.nip05!.isNotEmpty) ...[
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Colors.blue,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check, color: Colors.white, size: 10),
+            ),
+          ],
+        ],
+      ),
+      subtitle: profile?.about != null && profile!.about!.isNotEmpty
+          ? Text(
+              profile!.about!,
+              style: const TextStyle(
+                color: VineTheme.secondaryText,
+                fontSize: 14,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )
+          : null,
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        color: VineTheme.secondaryText,
+        size: 16,
+      ),
+    ),
+  );
 }
 
 class _PersonalVideoItem extends StatelessWidget {
-  const _PersonalVideoItem({
-    required this.video,
-    required this.onTap,
-  });
+  const _PersonalVideoItem({required this.video, required this.onTap});
   final VideoEvent video;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => Card(
-        color: Colors.grey[900],
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                // Video thumbnail placeholder
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: VineTheme.vineGreen,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow,
-                    color: Colors.white,
-                    size: 30,
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Video details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        (video.title?.isNotEmpty == true)
-                            ? video.title!
-                            : 'Untitled Video',
-                        style: const TextStyle(
-                          color: VineTheme.whiteText,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _formatTimestamp(DateTime.fromMillisecondsSinceEpoch(
-                            video.createdAt * 1000)),
-                        style: const TextStyle(
-                          color: VineTheme.secondaryText,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Arrow indicator
-                const Icon(
-                  Icons.arrow_forward_ios,
-                  color: VineTheme.secondaryText,
-                  size: 16,
-                ),
-              ],
+    color: Colors.grey[900],
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            // Video thumbnail placeholder
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: VineTheme.vineGreen,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.play_arrow,
+                color: Colors.white,
+                size: 30,
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+
+            // Video details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (video.title?.isNotEmpty == true)
+                        ? video.title!
+                        : 'Untitled Video',
+                    style: const TextStyle(
+                      color: VineTheme.whiteText,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatTimestamp(
+                      DateTime.fromMillisecondsSinceEpoch(
+                        video.createdAt * 1000,
+                      ),
+                    ),
+                    style: const TextStyle(
+                      color: VineTheme.secondaryText,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Arrow indicator
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: VineTheme.secondaryText,
+              size: 16,
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();

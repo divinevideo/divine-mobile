@@ -19,10 +19,7 @@ import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
-  const ProfileSetupScreen({
-    required this.isNewUser,
-    super.key,
-  });
+  const ProfileSetupScreen({required this.isNewUser, super.key});
   final bool isNewUser;
 
   @override
@@ -70,8 +67,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         final authService = ref.read(authServiceProvider);
 
         if (authService.currentPublicKeyHex != null) {
-          final profile = await userProfileService
-              .fetchProfile(authService.currentPublicKeyHex!);
+          final profile = await userProfileService.fetchProfile(
+            authService.currentPublicKeyHex!,
+          );
           if (profile != null && mounted) {
             setState(() {
               // Use bestDisplayName which handles name/displayName fallback properly
@@ -88,29 +86,59 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               }
             });
 
-            Log.info('✅ Pre-filled profile setup form with existing data:',
-                name: 'ProfileSetupScreen', category: LogCategory.ui);
-            Log.info('  - name: ${profile.name}',
-                name: 'ProfileSetupScreen', category: LogCategory.ui);
-            Log.info('  - displayName: ${profile.displayName}',
-                name: 'ProfileSetupScreen', category: LogCategory.ui);
-            Log.info('  - about: ${profile.about}',
-                name: 'ProfileSetupScreen', category: LogCategory.ui);
-            Log.info('  - picture: ${profile.picture}',
-                name: 'ProfileSetupScreen', category: LogCategory.ui);
-            Log.info('  - banner: ${profile.banner}',
-                name: 'ProfileSetupScreen', category: LogCategory.ui);
-            Log.info('  - website: ${profile.website}',
-                name: 'ProfileSetupScreen', category: LogCategory.ui);
-            Log.info('  - nip05: ${profile.nip05}',
-                name: 'ProfileSetupScreen', category: LogCategory.ui);
-            Log.info('  - lud16: ${profile.lud16}',
-                name: 'ProfileSetupScreen', category: LogCategory.ui);
+            Log.info(
+              '✅ Pre-filled profile setup form with existing data:',
+              name: 'ProfileSetupScreen',
+              category: LogCategory.ui,
+            );
+            Log.info(
+              '  - name: ${profile.name}',
+              name: 'ProfileSetupScreen',
+              category: LogCategory.ui,
+            );
+            Log.info(
+              '  - displayName: ${profile.displayName}',
+              name: 'ProfileSetupScreen',
+              category: LogCategory.ui,
+            );
+            Log.info(
+              '  - about: ${profile.about}',
+              name: 'ProfileSetupScreen',
+              category: LogCategory.ui,
+            );
+            Log.info(
+              '  - picture: ${profile.picture}',
+              name: 'ProfileSetupScreen',
+              category: LogCategory.ui,
+            );
+            Log.info(
+              '  - banner: ${profile.banner}',
+              name: 'ProfileSetupScreen',
+              category: LogCategory.ui,
+            );
+            Log.info(
+              '  - website: ${profile.website}',
+              name: 'ProfileSetupScreen',
+              category: LogCategory.ui,
+            );
+            Log.info(
+              '  - nip05: ${profile.nip05}',
+              name: 'ProfileSetupScreen',
+              category: LogCategory.ui,
+            );
+            Log.info(
+              '  - lud16: ${profile.lud16}',
+              name: 'ProfileSetupScreen',
+              category: LogCategory.ui,
+            );
           }
         }
       } catch (e) {
-        Log.error('Failed to load existing profile: $e',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
+        Log.error(
+          'Failed to load existing profile: $e',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
       }
     }
   }
@@ -132,532 +160,589 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     print('🟪 PROFILE_SETUP DEBUG: ModalRoute.isFirst = ${route?.isFirst}');
     print('🟪 PROFILE_SETUP DEBUG: ModalRoute.isCurrent = ${route?.isCurrent}');
     print('🟪 PROFILE_SETUP DEBUG: ModalRoute.isActive = ${route?.isActive}');
-    print('🟪 PROFILE_SETUP DEBUG: ModalRoute.settings.name = ${route?.settings.name}');
+    print(
+      '🟪 PROFILE_SETUP DEBUG: ModalRoute.settings.name = ${route?.settings.name}',
+    );
 
     return Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          title: const Text('Edit Profile'),
-          backgroundColor: VineTheme.vineGreen,
-          foregroundColor: VineTheme.whiteText,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              print('🟪 PROFILE_SETUP DEBUG: Back button pressed');
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Edit Profile'),
+        backgroundColor: VineTheme.vineGreen,
+        foregroundColor: VineTheme.whiteText,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            print('🟪 PROFILE_SETUP DEBUG: Back button pressed');
 
-              // Try to pop using context.pop() which GoRouter intercepts
-              // This should work even if canPop() returns false
-              try {
-                print('🟪 PROFILE_SETUP DEBUG: Attempting context.pop()');
-                context.pop();
-                print('🟪 PROFILE_SETUP DEBUG: context.pop() succeeded');
-              } catch (e) {
-                // If pop fails, navigate to profile or home as fallback
-                print('🟪 PROFILE_SETUP DEBUG: context.pop() failed: $e');
-                final authService = ref.read(authServiceProvider);
-                final currentPubkey = authService.currentPublicKeyHex;
-                if (currentPubkey != null) {
-                  final npub = authService.currentNpub;
-                  print('🟪 PROFILE_SETUP DEBUG: Navigating back to profile: $npub');
-                  context.go('/profile/$npub');
-                } else {
-                  print('🟪 PROFILE_SETUP DEBUG: No user, navigating to home');
-                  context.go('/home/0');
-                }
+            // Try to pop using context.pop() which GoRouter intercepts
+            // This should work even if canPop() returns false
+            try {
+              print('🟪 PROFILE_SETUP DEBUG: Attempting context.pop()');
+              context.pop();
+              print('🟪 PROFILE_SETUP DEBUG: context.pop() succeeded');
+            } catch (e) {
+              // If pop fails, navigate to profile or home as fallback
+              print('🟪 PROFILE_SETUP DEBUG: context.pop() failed: $e');
+              final authService = ref.read(authServiceProvider);
+              final currentPubkey = authService.currentPublicKeyHex;
+              if (currentPubkey != null) {
+                final npub = authService.currentNpub;
+                print(
+                  '🟪 PROFILE_SETUP DEBUG: Navigating back to profile: $npub',
+                );
+                context.go('/profile/$npub');
+              } else {
+                print('🟪 PROFILE_SETUP DEBUG: No user, navigating to home');
+                context.go('/home/0');
               }
-            },
-            tooltip: 'Back',
-          ),
-        ), // appBar
-        body: GestureDetector(
-          onTap: () {
-            // Dismiss keyboard when tapping outside text fields
-            FocusScope.of(context).unfocus();
+            }
           },
-          child: SafeArea(
-            bottom: false, // Don't add bottom padding - let content extend to bottom
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Text(
-                        widget.isNewUser
-                            ? 'Welcome to divine!'
-                            : 'Update Your Profile',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+          tooltip: 'Back',
+        ),
+      ), // appBar
+      body: GestureDetector(
+        onTap: () {
+          // Dismiss keyboard when tapping outside text fields
+          FocusScope.of(context).unfocus();
+        },
+        child: SafeArea(
+          bottom:
+              false, // Don't add bottom padding - let content extend to bottom
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.isNewUser
+                              ? 'Welcome to divine!'
+                              : 'Update Your Profile',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.isNewUser
-                            ? "Let's set up your profile to get started"
-                            : 'Your profile information will be published to Nostr',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[300],
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.isNewUser
+                              ? "Let's set up your profile to get started"
+                              : 'Your profile information will be published to Nostr',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[300],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 32),
+                        const SizedBox(height: 32),
 
-                      // Display Name
-                      TextFormField(
-                        controller: _nameController,
-                        autofocus: true, // Automatically focus on first field
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: 'Display Name',
-                          labelStyle: const TextStyle(color: Colors.grey),
-                          hintText: 'How should people know you?',
-                          hintStyle: TextStyle(color: Colors.grey[600]),
-                          filled: true,
-                          fillColor: Colors.grey[900],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                BorderSide(color: Colors.grey[700]!, width: 1),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                                color: VineTheme.vineGreen, width: 2),
-                          ),
-                          prefixIcon:
-                              const Icon(Icons.person, color: Colors.grey),
-                        ),
-                        textInputAction: TextInputAction.next,
-                        onFieldSubmitted: (_) =>
-                            FocusScope.of(context).nextFocus(),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter a display name';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Bio
-                      TextFormField(
-                        controller: _bioController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: 'Bio (Optional)',
-                          labelStyle: const TextStyle(color: Colors.grey),
-                          hintText: 'Tell people about yourself...',
-                          hintStyle: TextStyle(color: Colors.grey[600]),
-                          filled: true,
-                          fillColor: Colors.grey[900],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                BorderSide(color: Colors.grey[700]!, width: 1),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                                color: VineTheme.vineGreen, width: 2),
-                          ),
-                          prefixIcon: const Icon(Icons.info_outline,
-                              color: Colors.grey),
-                        ),
-                        maxLines: 3,
-                        minLines: 1,
-                        maxLength: 160,
-                        textInputAction: TextInputAction.next,
-                        onFieldSubmitted: (_) =>
-                            FocusScope.of(context).nextFocus(),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // NIP-05 Username (optional) - HIDDEN until @divine.video is ready
-                      // TODO: Re-enable when @divine.video NIP-05 service is available
-                      // TextFormField(
-                      //   controller: _nip05Controller,
-                      //   style: const TextStyle(color: Colors.white),
-                      //   decoration: InputDecoration(
-                      //     labelText: 'Username (Optional)',
-                      //     labelStyle: const TextStyle(color: Colors.grey),
-                      //     hintText: 'username',
-                      //     hintStyle: TextStyle(color: Colors.grey[600]),
-                      //     filled: true,
-                      //     fillColor: Colors.grey[900],
-                      //     border: OutlineInputBorder(
-                      //       borderRadius: BorderRadius.circular(12),
-                      //       borderSide: BorderSide.none,
-                      //     ),
-                      //     enabledBorder: OutlineInputBorder(
-                      //       borderRadius: BorderRadius.circular(12),
-                      //       borderSide:
-                      //           BorderSide(color: Colors.grey[700]!, width: 1),
-                      //     ),
-                      //     focusedBorder: OutlineInputBorder(
-                      //       borderRadius: BorderRadius.circular(12),
-                      //       borderSide: const BorderSide(
-                      //           color: VineTheme.vineGreen, width: 2),
-                      //     ),
-                      //     prefixIcon: const Icon(Icons.verified_user,
-                      //         color: Colors.grey),
-                      //     suffixText: '@divine.video',
-                      //     suffixStyle: TextStyle(color: Colors.grey[500]),
-                      //     errorMaxLines: 2,
-                      //   ),
-                      //   textInputAction: TextInputAction.next,
-                      //   onFieldSubmitted: (_) =>
-                      //       FocusScope.of(context).nextFocus(),
-                      //   onChanged: _onUsernameChanged,
-                      //   validator: (value) {
-                      //     if (value == null || value.isEmpty) {
-                      //       return null; // Optional field
-                      //     }
-                      //
-                      //     final regex =
-                      //         RegExp(r'^[a-z0-9\-_.]+$', caseSensitive: false);
-                      //     if (!regex.hasMatch(value)) {
-                      //       return 'Username can only contain letters, numbers, dash, underscore, and dot';
-                      //     }
-                      //     if (value.length < 3) {
-                      //       return 'Username must be at least 3 characters';
-                      //     }
-                      //     if (value.length > 20) {
-                      //       return 'Username must be 20 characters or less';
-                      //     }
-                      //     if (_usernameError != null) {
-                      //       return _usernameError;
-                      //     }
-                      //     return null;
-                      //   },
-                      // ),
-                      // if (_isCheckingUsername)
-                      //   Padding(
-                      //     padding: const EdgeInsets.only(top: 8),
-                      //     child: Row(
-                      //       children: [
-                      //         const SizedBox(
-                      //           width: 16,
-                      //           height: 16,
-                      //           child:
-                      //               CircularProgressIndicator(strokeWidth: 2),
-                      //         ),
-                      //         const SizedBox(width: 8),
-                      //         Text(
-                      //           'Checking availability...',
-                      //           style: TextStyle(
-                      //               color: Colors.grey[400], fontSize: 12),
-                      //         ),
-                      //       ],
-                      //     ),
-                      //   ),
-                      // if (_usernameAvailable == true &&
-                      //     !_isCheckingUsername &&
-                      //     _nip05Controller.text.isNotEmpty)
-                      //   Padding(
-                      //     padding: const EdgeInsets.only(top: 8),
-                      //     child: Row(
-                      //       children: [
-                      //         const Icon(Icons.check_circle,
-                      //             color: VineTheme.vineGreen, size: 16),
-                      //         const SizedBox(width: 8),
-                      //         Text(
-                      //           'Username available!',
-                      //           style: TextStyle(
-                      //               color: VineTheme.vineGreen, fontSize: 12),
-                      //         ),
-                      //       ],
-                      //     ),
-                      //   ),
-                      // const SizedBox(height: 16),
-
-                      // Profile Picture Section
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Profile Picture (Optional)',
-                            style: TextStyle(
-                              color: Colors.grey[300],
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                        // Display Name
+                        TextFormField(
+                          controller: _nameController,
+                          autofocus: true, // Automatically focus on first field
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            labelText: 'Display Name',
+                            labelStyle: const TextStyle(color: Colors.grey),
+                            hintText: 'How should people know you?',
+                            hintStyle: TextStyle(color: Colors.grey[600]),
+                            filled: true,
+                            fillColor: Colors.grey[900],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey[700]!,
+                                width: 1,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: VineTheme.vineGreen,
+                                width: 2,
+                              ),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.person,
+                              color: Colors.grey,
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          Center(
-                            child: Stack(
-                              children: [
-                                // Profile picture preview
-                                Container(
-                                  width: 120,
-                                  height: 120,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.grey[800],
-                                    border: Border.all(
-                                      color: VineTheme.vineGreen,
-                                      width: 2,
+                          textInputAction: TextInputAction.next,
+                          onFieldSubmitted: (_) =>
+                              FocusScope.of(context).nextFocus(),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter a display name';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Bio
+                        TextFormField(
+                          controller: _bioController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            labelText: 'Bio (Optional)',
+                            labelStyle: const TextStyle(color: Colors.grey),
+                            hintText: 'Tell people about yourself...',
+                            hintStyle: TextStyle(color: Colors.grey[600]),
+                            filled: true,
+                            fillColor: Colors.grey[900],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey[700]!,
+                                width: 1,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: VineTheme.vineGreen,
+                                width: 2,
+                              ),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.info_outline,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          maxLines: 3,
+                          minLines: 1,
+                          maxLength: 160,
+                          textInputAction: TextInputAction.next,
+                          onFieldSubmitted: (_) =>
+                              FocusScope.of(context).nextFocus(),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // NIP-05 Username (optional) - HIDDEN until @divine.video is ready
+                        // TODO: Re-enable when @divine.video NIP-05 service is available
+                        // TextFormField(
+                        //   controller: _nip05Controller,
+                        //   style: const TextStyle(color: Colors.white),
+                        //   decoration: InputDecoration(
+                        //     labelText: 'Username (Optional)',
+                        //     labelStyle: const TextStyle(color: Colors.grey),
+                        //     hintText: 'username',
+                        //     hintStyle: TextStyle(color: Colors.grey[600]),
+                        //     filled: true,
+                        //     fillColor: Colors.grey[900],
+                        //     border: OutlineInputBorder(
+                        //       borderRadius: BorderRadius.circular(12),
+                        //       borderSide: BorderSide.none,
+                        //     ),
+                        //     enabledBorder: OutlineInputBorder(
+                        //       borderRadius: BorderRadius.circular(12),
+                        //       borderSide:
+                        //           BorderSide(color: Colors.grey[700]!, width: 1),
+                        //     ),
+                        //     focusedBorder: OutlineInputBorder(
+                        //       borderRadius: BorderRadius.circular(12),
+                        //       borderSide: const BorderSide(
+                        //           color: VineTheme.vineGreen, width: 2),
+                        //     ),
+                        //     prefixIcon: const Icon(Icons.verified_user,
+                        //         color: Colors.grey),
+                        //     suffixText: '@divine.video',
+                        //     suffixStyle: TextStyle(color: Colors.grey[500]),
+                        //     errorMaxLines: 2,
+                        //   ),
+                        //   textInputAction: TextInputAction.next,
+                        //   onFieldSubmitted: (_) =>
+                        //       FocusScope.of(context).nextFocus(),
+                        //   onChanged: _onUsernameChanged,
+                        //   validator: (value) {
+                        //     if (value == null || value.isEmpty) {
+                        //       return null; // Optional field
+                        //     }
+                        //
+                        //     final regex =
+                        //         RegExp(r'^[a-z0-9\-_.]+$', caseSensitive: false);
+                        //     if (!regex.hasMatch(value)) {
+                        //       return 'Username can only contain letters, numbers, dash, underscore, and dot';
+                        //     }
+                        //     if (value.length < 3) {
+                        //       return 'Username must be at least 3 characters';
+                        //     }
+                        //     if (value.length > 20) {
+                        //       return 'Username must be 20 characters or less';
+                        //     }
+                        //     if (_usernameError != null) {
+                        //       return _usernameError;
+                        //     }
+                        //     return null;
+                        //   },
+                        // ),
+                        // if (_isCheckingUsername)
+                        //   Padding(
+                        //     padding: const EdgeInsets.only(top: 8),
+                        //     child: Row(
+                        //       children: [
+                        //         const SizedBox(
+                        //           width: 16,
+                        //           height: 16,
+                        //           child:
+                        //               CircularProgressIndicator(strokeWidth: 2),
+                        //         ),
+                        //         const SizedBox(width: 8),
+                        //         Text(
+                        //           'Checking availability...',
+                        //           style: TextStyle(
+                        //               color: Colors.grey[400], fontSize: 12),
+                        //         ),
+                        //       ],
+                        //     ),
+                        //   ),
+                        // if (_usernameAvailable == true &&
+                        //     !_isCheckingUsername &&
+                        //     _nip05Controller.text.isNotEmpty)
+                        //   Padding(
+                        //     padding: const EdgeInsets.only(top: 8),
+                        //     child: Row(
+                        //       children: [
+                        //         const Icon(Icons.check_circle,
+                        //             color: VineTheme.vineGreen, size: 16),
+                        //         const SizedBox(width: 8),
+                        //         Text(
+                        //           'Username available!',
+                        //           style: TextStyle(
+                        //               color: VineTheme.vineGreen, fontSize: 12),
+                        //         ),
+                        //       ],
+                        //     ),
+                        //   ),
+                        // const SizedBox(height: 16),
+
+                        // Profile Picture Section
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Profile Picture (Optional)',
+                              style: TextStyle(
+                                color: Colors.grey[300],
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Center(
+                              child: Stack(
+                                children: [
+                                  // Profile picture preview
+                                  Container(
+                                    width: 120,
+                                    height: 120,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.grey[800],
+                                      border: Border.all(
+                                        color: VineTheme.vineGreen,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: ClipOval(
+                                      child: _buildProfilePicturePreview(),
                                     ),
                                   ),
-                                  child: ClipOval(
-                                    child: _buildProfilePicturePreview(),
-                                  ),
-                                ),
-                                // Upload progress indicator
-                                if (_isUploadingImage)
-                                  Positioned.fill(
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color:
-                                            Colors.black.withValues(alpha: 0.7),
-                                      ),
-                                      child: const Center(
-                                        child: CircularProgressIndicator(
-                                          color: VineTheme.vineGreen,
-                                          strokeWidth: 3,
+                                  // Upload progress indicator
+                                  if (_isUploadingImage)
+                                    Positioned.fill(
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.black.withValues(
+                                            alpha: 0.7,
+                                          ),
+                                        ),
+                                        child: const Center(
+                                          child: CircularProgressIndicator(
+                                            color: VineTheme.vineGreen,
+                                            strokeWidth: 3,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 16),
-                          // Image source buttons
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Show camera button on mobile only (macOS camera support is unreliable)
-                              if (!_isDesktopPlatform()) ...[
+                            const SizedBox(height: 16),
+                            // Image source buttons
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Show camera button on mobile only (macOS camera support is unreliable)
+                                if (!_isDesktopPlatform()) ...[
+                                  OutlinedButton.icon(
+                                    onPressed: _isUploadingImage
+                                        ? null
+                                        : () => _pickImage(ImageSource.camera),
+                                    icon: const Icon(
+                                      Icons.camera_alt,
+                                      size: 20,
+                                    ),
+                                    label: const Text('Camera'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      side: BorderSide(
+                                        color: Colors.grey[700]!,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                ],
                                 OutlinedButton.icon(
                                   onPressed: _isUploadingImage
                                       ? null
-                                      : () => _pickImage(ImageSource.camera),
-                                  icon: const Icon(Icons.camera_alt, size: 20),
-                                  label: const Text('Camera'),
+                                      : () => _pickImage(ImageSource.gallery),
+                                  icon: const Icon(
+                                    Icons.photo_library,
+                                    size: 20,
+                                  ),
+                                  label: Text(
+                                    _isDesktopPlatform()
+                                        ? 'Browse Files'
+                                        : 'Gallery',
+                                  ),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: Colors.white,
                                     side: BorderSide(color: Colors.grey[700]!),
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
                               ],
-                              OutlinedButton.icon(
-                                onPressed: _isUploadingImage
+                            ),
+                            const SizedBox(height: 12),
+                            // URL input option
+                            ExpansionTile(
+                              title: Text(
+                                defaultTargetPlatform == TargetPlatform.macOS
+                                    ? 'Paste image URL (recommended)'
+                                    : 'Or paste image URL',
+                                style: TextStyle(
+                                  color:
+                                      defaultTargetPlatform ==
+                                          TargetPlatform.macOS
+                                      ? Colors.white
+                                      : Colors.grey[400],
+                                  fontSize:
+                                      defaultTargetPlatform ==
+                                          TargetPlatform.macOS
+                                      ? 16
+                                      : 14,
+                                  fontWeight:
+                                      defaultTargetPlatform ==
+                                          TargetPlatform.macOS
+                                      ? FontWeight.w500
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                              tilePadding: EdgeInsets.zero,
+                              initiallyExpanded:
+                                  defaultTargetPlatform == TargetPlatform.macOS,
+                              children: [
+                                TextFormField(
+                                  controller: _pictureController,
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        'https://example.com/your-avatar.jpg',
+                                    hintStyle: TextStyle(
+                                      color: Colors.grey[600],
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.grey[900],
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey[700]!,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                        color: VineTheme.vineGreen,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    prefixIcon: const Icon(
+                                      Icons.link,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  textInputAction: TextInputAction.done,
+                                  onChanged: (_) =>
+                                      setState(() {}), // Update preview
+                                  onFieldSubmitted: (_) => _publishProfile(),
+                                  keyboardType: TextInputType.url,
+                                  validator: (value) {
+                                    if (value != null &&
+                                        value.trim().isNotEmpty) {
+                                      // Basic URL validation
+                                      final uri = Uri.tryParse(value.trim());
+                                      if (uri == null || !uri.hasAbsolutePath) {
+                                        return 'Please enter a valid URL';
+                                      }
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                if (defaultTargetPlatform ==
+                                    TargetPlatform.macOS) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Tip: Upload your image to imgur.com, cloudinary.com, or any image hosting service to get a URL.',
+                                    style: TextStyle(
+                                      color: Colors.grey[500],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Action buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _isPublishing
                                     ? null
-                                    : () => _pickImage(ImageSource.gallery),
-                                icon: const Icon(Icons.photo_library, size: 20),
-                                label: Text(_isDesktopPlatform()
-                                    ? 'Browse Files'
-                                    : 'Gallery'),
+                                    : () {
+                                        // Wait for any ongoing transitions before popping
+                                        // This prevents navigation timing race condition
+                                        WidgetsBinding.instance
+                                            .addPostFrameCallback((_) {
+                                              if (mounted) {
+                                                Navigator.of(context).pop();
+                                              }
+                                            });
+                                      },
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.white,
-                                  side: BorderSide(color: Colors.grey[700]!),
+                                  side: const BorderSide(color: Colors.white),
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
+                                    vertical: 16,
+                                  ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          // URL input option
-                          ExpansionTile(
-                            title: Text(
-                              defaultTargetPlatform == TargetPlatform.macOS
-                                  ? 'Paste image URL (recommended)'
-                                  : 'Or paste image URL',
-                              style: TextStyle(
-                                color: defaultTargetPlatform ==
-                                        TargetPlatform.macOS
-                                    ? Colors.white
-                                    : Colors.grey[400],
-                                fontSize: defaultTargetPlatform ==
-                                        TargetPlatform.macOS
-                                    ? 16
-                                    : 14,
-                                fontWeight: defaultTargetPlatform ==
-                                        TargetPlatform.macOS
-                                    ? FontWeight.w500
-                                    : FontWeight.normal,
+                                child: const Text('Cancel'),
                               ),
                             ),
-                            tilePadding: EdgeInsets.zero,
-                            initiallyExpanded:
-                                defaultTargetPlatform == TargetPlatform.macOS,
-                            children: [
-                              TextFormField(
-                                controller: _pictureController,
-                                style: const TextStyle(color: Colors.white),
-                                decoration: InputDecoration(
-                                  hintText:
-                                      'https://example.com/your-avatar.jpg',
-                                  hintStyle: TextStyle(color: Colors.grey[600]),
-                                  filled: true,
-                                  fillColor: Colors.grey[900],
-                                  border: OutlineInputBorder(
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _isPublishing
+                                    ? null
+                                    : _publishProfile,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: VineTheme.vineGreen,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                        color: Colors.grey[700]!, width: 1),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(
-                                        color: VineTheme.vineGreen, width: 2),
-                                  ),
-                                  prefixIcon: const Icon(Icons.link,
-                                      color: Colors.grey),
-                                ),
-                                textInputAction: TextInputAction.done,
-                                onChanged: (_) =>
-                                    setState(() {}), // Update preview
-                                onFieldSubmitted: (_) => _publishProfile(),
-                                keyboardType: TextInputType.url,
-                                validator: (value) {
-                                  if (value != null &&
-                                      value.trim().isNotEmpty) {
-                                    // Basic URL validation
-                                    final uri = Uri.tryParse(value.trim());
-                                    if (uri == null || !uri.hasAbsolutePath) {
-                                      return 'Please enter a valid URL';
-                                    }
-                                  }
-                                  return null;
-                                },
-                              ),
-                              if (defaultTargetPlatform ==
-                                  TargetPlatform.macOS) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Tip: Upload your image to imgur.com, cloudinary.com, or any image hosting service to get a URL.',
-                                  style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 12,
                                   ),
                                 ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-
-                      // Action buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: _isPublishing
-                                  ? null
-                                  : () {
-                                      // Wait for any ongoing transitions before popping
-                                      // This prevents navigation timing race condition
-                                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                                        if (mounted) {
-                                          Navigator.of(context).pop();
-                                        }
-                                      });
-                                    },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                side: const BorderSide(color: Colors.white),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: const Text('Cancel'),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: _isPublishing ? null : _publishProfile,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: VineTheme.vineGreen,
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: _isPublishing
-                                  ? Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
+                                child: _isPublishing
+                                    ? Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Text(_isWaitingForRelay
-                                            ? 'Confirming with relay...'
-                                            : 'Saving...'),
-                                      ],
-                                    )
-                                  : const Text(
-                                      'Save',
-                                      style: TextStyle(
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            _isWaitingForRelay
+                                                ? 'Confirming with relay...'
+                                                : 'Saving...',
+                                          ),
+                                        ],
+                                      )
+                                    : const Text(
+                                        'Save',
+                                        style: TextStyle(
                                           fontSize: 16,
-                                          fontWeight: FontWeight.w600),
-                                    ),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ), // closes Padding
-        ), // closes SingleChildScrollView
+            ), // closes Padding
+          ), // closes SingleChildScrollView
         ), // closes SafeArea
-        ), // closes GestureDetector - this is the 'body:' parameter value
-      ); // closes Scaffold
+      ), // closes GestureDetector - this is the 'body:' parameter value
+    ); // closes Scaffold
   }
 
   Future<void> _publishProfile() async {
-    Log.info('🚀 Starting profile publish...',
-        name: 'ProfileSetupScreen', category: LogCategory.ui);
+    Log.info(
+      '🚀 Starting profile publish...',
+      name: 'ProfileSetupScreen',
+      category: LogCategory.ui,
+    );
 
     if (!_formKey.currentState!.validate()) {
-      Log.warning('Form validation failed',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
+      Log.warning(
+        'Form validation failed',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
       return;
     }
 
@@ -683,26 +768,46 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
       // Log existing profile before update
       final currentPubkey = authService.currentPublicKeyHex!;
-      final existingProfile =
-          userProfileService.getCachedProfile(currentPubkey);
+      final existingProfile = userProfileService.getCachedProfile(
+        currentPubkey,
+      );
       if (existingProfile != null) {
-        Log.info('📋 Existing profile before update:',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
-        Log.info('  - name: ${existingProfile.name}',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
-        Log.info('  - displayName: ${existingProfile.displayName}',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
-        Log.info('  - about: ${existingProfile.about}',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
-        Log.info('  - picture: ${existingProfile.picture}',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
-        Log.info('  - eventId: ${existingProfile.eventId}',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
+        Log.info(
+          '📋 Existing profile before update:',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
+        Log.info(
+          '  - name: ${existingProfile.name}',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
+        Log.info(
+          '  - displayName: ${existingProfile.displayName}',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
+        Log.info(
+          '  - about: ${existingProfile.about}',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
+        Log.info(
+          '  - picture: ${existingProfile.picture}',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
+        Log.info(
+          '  - eventId: ${existingProfile.eventId}',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
       } else {
         Log.info(
-            '📋 No existing profile found for ${currentPubkey}...',
-            name: 'ProfileSetupScreen',
-            category: LogCategory.ui);
+          '📋 No existing profile found for ${currentPubkey}...',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
       }
 
       // Create profile metadata - start with existing profile data to preserve all fields
@@ -742,10 +847,16 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           profileData['lud06'] = existingProfile.lud06;
         }
 
-        Log.info('📋 Preserved existing profile fields:',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
-        Log.info('  - Preserved fields: ${profileData.keys.toList()}',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
+        Log.info(
+          '📋 Preserved existing profile fields:',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
+        Log.info(
+          '  - Preserved fields: ${profileData.keys.toList()}',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
       }
 
       // Override with form data (only the fields we can edit)
@@ -765,14 +876,26 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         profileData.remove('picture');
       }
 
-      Log.info('📝 Profile data to publish:',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.info('  - name: ${profileData['name']}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.info('  - about: ${profileData['about'] ?? 'not set'}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.info('  - picture: ${profileData['picture'] ?? 'not set'}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
+      Log.info(
+        '📝 Profile data to publish:',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.info(
+        '  - name: ${profileData['name']}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.info(
+        '  - about: ${profileData['about'] ?? 'not set'}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.info(
+        '  - picture: ${profileData['picture'] ?? 'not set'}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
 
       // Handle NIP-05 registration if username provided - DISABLED until @divine.video is ready
       // TODO: Re-enable when @divine.video NIP-05 service is available
@@ -803,8 +926,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       // }
 
       // Create NIP-01 kind 0 profile event
-      Log.info('🔨 Creating kind 0 event...',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
+      Log.info(
+        '🔨 Creating kind 0 event...',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
 
       final event = await authService.createAndSignEvent(
         kind: 0,
@@ -813,38 +939,69 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
       if (event == null) {
         Log.error(
-            '❌ Failed to create profile event - createAndSignEvent returned null',
-            name: 'ProfileSetupScreen',
-            category: LogCategory.ui);
+          '❌ Failed to create profile event - createAndSignEvent returned null',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
         throw Exception('Failed to create profile event');
       }
 
       // Log the created event
-      Log.info('✅ Created kind 0 event:',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.info('  - Event ID: ${event.id}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.info('  - Pubkey: ${event.pubkey}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.info('  - Kind: ${event.kind}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.info('  - Content: ${event.content}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.info('  - Created at: ${event.createdAt}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.info('  - Signature: ${event.sig}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.info('  - Tags: ${event.tags}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
+      Log.info(
+        '✅ Created kind 0 event:',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.info(
+        '  - Event ID: ${event.id}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.info(
+        '  - Pubkey: ${event.pubkey}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.info(
+        '  - Kind: ${event.kind}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.info(
+        '  - Content: ${event.content}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.info(
+        '  - Created at: ${event.createdAt}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.info(
+        '  - Signature: ${event.sig}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.info(
+        '  - Tags: ${event.tags}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
 
       // Check if event is valid
       final isValid = event.isSigned;
-      Log.info('🔍 Event signature valid: $isValid',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
+      Log.info(
+        '🔍 Event signature valid: $isValid',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
 
       // Publish to Nostr relays
-      Log.info('📡 Publishing profile event to Nostr relays...',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
+      Log.info(
+        '📡 Publishing profile event to Nostr relays...',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
 
       final result = await nostrService.broadcastEvent(event);
       final success = result.isSuccessful;
@@ -855,10 +1012,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         category: LogCategory.ui,
       );
       if (result.errors.isNotEmpty) {
-        Log.error('Broadcast errors: ${result.errors}',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
+        Log.error(
+          'Broadcast errors: ${result.errors}',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
       }
-
 
       if (success) {
         // CRITICAL: Wait for relay to confirm it has the updated profile before navigating
@@ -902,7 +1061,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
               // Validate we got the updated profile (match by event ID or timestamp)
               final eventIdMatches = fetchedProfile?.eventId == event.id;
-              final timestampMatches = fetchedProfile?.createdAt != null &&
+              final timestampMatches =
+                  fetchedProfile?.createdAt != null &&
                   fetchedProfile!.createdAt.millisecondsSinceEpoch >=
                       (event.createdAt * 1000 - 1000); // Allow 1s tolerance
 
@@ -917,7 +1077,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
               // Profile not yet updated on relay - retry
               throw Exception(
-                  'Relay returned stale profile - retrying... (eventId=${fetchedProfile?.eventId} vs ${event.id})');
+                'Relay returned stale profile - retrying... (eventId=${fetchedProfile?.eventId} vs ${event.id})',
+              );
             },
             maxRetries: 5, // Allow up to 5 retries
             baseDelay: const Duration(milliseconds: 500), // Start with 500ms
@@ -931,18 +1092,27 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
           // Update cache with confirmed profile
           await userProfileService.updateCachedProfile(confirmedProfile);
-          Log.info('✅ Updated local cache with relay-confirmed profile',
-              name: 'ProfileSetupScreen', category: LogCategory.ui);
+          Log.info(
+            '✅ Updated local cache with relay-confirmed profile',
+            name: 'ProfileSetupScreen',
+            category: LogCategory.ui,
+          );
 
           // Update AuthService profile cache
           await authService.refreshCurrentProfile(userProfileService);
-          Log.info('✅ Updated AuthService profile cache',
-              name: 'ProfileSetupScreen', category: LogCategory.ui);
+          Log.info(
+            '✅ Updated AuthService profile cache',
+            name: 'ProfileSetupScreen',
+            category: LogCategory.ui,
+          );
 
           // Invalidate Riverpod provider to trigger UI refresh
           ref.invalidate(fetchUserProfileProvider(currentPubkey));
-          Log.info('✅ Invalidated fetchUserProfileProvider for UI refresh',
-              name: 'ProfileSetupScreen', category: LogCategory.ui);
+          Log.info(
+            '✅ Invalidated fetchUserProfileProvider for UI refresh',
+            name: 'ProfileSetupScreen',
+            category: LogCategory.ui,
+          );
 
           // Clear waiting state
           if (mounted) {
@@ -994,7 +1164,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             // This prevents navigation timing race condition that causes black screens
             await Future.delayed(const Duration(milliseconds: 300));
             if (mounted) {
-              Navigator.of(context).pop(true); // Return true to indicate success
+              Navigator.of(
+                context,
+              ).pop(true); // Return true to indicate success
             }
           }
         } catch (e, stackTrace) {
@@ -1035,7 +1207,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               }
             } else {
               if (mounted) {
-                Navigator.of(context).pop(false); // Return false to indicate partial success
+                Navigator.of(
+                  context,
+                ).pop(false); // Return false to indicate partial success
               }
             }
           }
@@ -1093,8 +1267,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         fit: BoxFit.cover,
         width: 120,
         height: 120,
-        errorBuilder: (context, error, stackTrace) =>
-            Image.asset('assets/icon/user-avatar.png', width: 120, height: 120, fit: BoxFit.cover),
+        errorBuilder: (context, error, stackTrace) => Image.asset(
+          'assets/icon/user-avatar.png',
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+        ),
       );
     } else if (_pictureController.text.isNotEmpty) {
       return Image.network(
@@ -1102,11 +1280,20 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         fit: BoxFit.cover,
         width: 120,
         height: 120,
-        errorBuilder: (context, error, stackTrace) =>
-            Image.asset('assets/icon/user-avatar.png', width: 120, height: 120, fit: BoxFit.cover),
+        errorBuilder: (context, error, stackTrace) => Image.asset(
+          'assets/icon/user-avatar.png',
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+        ),
       );
     } else {
-      return Image.asset('assets/icon/user-avatar.png', width: 120, height: 120, fit: BoxFit.cover);
+      return Image.asset(
+        'assets/icon/user-avatar.png',
+        width: 120,
+        height: 120,
+        fit: BoxFit.cover,
+      );
     }
   }
 
@@ -1131,8 +1318,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       }
 
       if (selectedFile != null) {
-        Log.info('✅ Image picked successfully: ${selectedFile.path}',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
+        Log.info(
+          '✅ Image picked successfully: ${selectedFile.path}',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
         setState(() {
           _selectedImage = selectedFile;
           _uploadedImageUrl = null; // Clear previous upload
@@ -1142,12 +1332,18 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         // Upload the image
         await _uploadImage();
       } else {
-        Log.info('❌ No image selected',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
+        Log.info(
+          '❌ No image selected',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
       }
     } catch (e) {
-      Log.error('Error picking image: $e',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
+      Log.error(
+        'Error picking image: $e',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
 
       // Show user-friendly error message
       if (mounted) {
@@ -1180,41 +1376,66 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   /// Use file_selector for desktop platforms
   Future<File?> _pickImageFromDesktop() async {
     try {
-      Log.info('🖥️ Starting desktop file picker...',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
+      Log.info(
+        '🖥️ Starting desktop file picker...',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
 
       const typeGroup = XTypeGroup(
         label: 'images',
         extensions: <String>['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'],
       );
 
-      Log.info('🖥️ Opening file dialog with type group: ${typeGroup.label}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-
-      final file = await openFile(
-        acceptedTypeGroups: <XTypeGroup>[typeGroup],
+      Log.info(
+        '🖥️ Opening file dialog with type group: ${typeGroup.label}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
       );
 
+      final file = await openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
+
       if (file != null) {
-        Log.info('✅ Desktop file selected: ${file.path}',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
-        Log.info('📁 File name: ${file.name}',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
-        Log.info('📁 File size: ${await file.length()} bytes',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
+        Log.info(
+          '✅ Desktop file selected: ${file.path}',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
+        Log.info(
+          '📁 File name: ${file.name}',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
+        Log.info(
+          '📁 File size: ${await file.length()} bytes',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
         return File(file.path);
       } else {
-        Log.info('❌ Desktop file picker: User cancelled or no file selected',
-            name: 'ProfileSetupScreen', category: LogCategory.ui);
+        Log.info(
+          '❌ Desktop file picker: User cancelled or no file selected',
+          name: 'ProfileSetupScreen',
+          category: LogCategory.ui,
+        );
       }
       return null;
     } catch (e) {
-      Log.error('Desktop file picker error: $e',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.error('Error type: ${e.runtimeType}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.error('Stack trace: ${StackTrace.current}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
+      Log.error(
+        'Desktop file picker error: $e',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.error(
+        'Error type: ${e.runtimeType}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.error(
+        'Stack trace: ${StackTrace.current}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
       rethrow;
     }
   }
@@ -1234,8 +1455,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       }
       return null;
     } catch (e) {
-      Log.error('Mobile image picker error: $e',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
+      Log.error(
+        'Mobile image picker error: $e',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
       rethrow;
     }
   }
@@ -1262,8 +1486,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         onProgress: (progress) {
           // Only log at major milestones to reduce noise
           if (progress == 1.0 || progress == 0.0) {
-            Log.debug('Upload ${progress == 1.0 ? "completed" : "started"}',
-                name: 'ProfileSetupScreen', category: LogCategory.ui);
+            Log.debug(
+              'Upload ${progress == 1.0 ? "completed" : "started"}',
+              name: 'ProfileSetupScreen',
+              category: LogCategory.ui,
+            );
           }
         },
       );
@@ -1291,10 +1518,16 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         throw Exception(result.errorMessage ?? 'Upload failed');
       }
     } catch (e) {
-      Log.error('Error uploading image: $e',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
-      Log.error('Upload error type: ${e.runtimeType}',
-          name: 'ProfileSetupScreen', category: LogCategory.ui);
+      Log.error(
+        'Error uploading image: $e',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
+      Log.error(
+        'Upload error type: ${e.runtimeType}',
+        name: 'ProfileSetupScreen',
+        category: LogCategory.ui,
+      );
 
       // Check if it's a network connectivity issue
       final errorMessage = e.toString().toLowerCase();

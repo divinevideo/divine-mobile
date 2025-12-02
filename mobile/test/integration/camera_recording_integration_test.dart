@@ -19,8 +19,9 @@ void main() {
     setUpAll(() async {
       // Create a dedicated test directory
       final appDir = await getApplicationDocumentsDirectory();
-      testDirectory =
-          Directory(path.join(appDir.path, 'camera_integration_test'));
+      testDirectory = Directory(
+        path.join(appDir.path, 'camera_integration_test'),
+      );
       if (!testDirectory.existsSync()) {
         testDirectory.createSync(recursive: true);
       }
@@ -33,8 +34,9 @@ void main() {
       }
     });
 
-    testWidgets('Complete vine recording workflow',
-        (WidgetTester tester) async {
+    testWidgets('Complete vine recording workflow', (
+      WidgetTester tester,
+    ) async {
       final controller = VineRecordingController();
 
       try {
@@ -62,10 +64,14 @@ void main() {
         expect(controller.segments.length, equals(2));
 
         // Verify total duration
-        expect(controller.totalRecordedDuration.inMilliseconds,
-            greaterThanOrEqualTo(2900)); // ~3 seconds
-        expect(controller.totalRecordedDuration.inMilliseconds,
-            lessThanOrEqualTo(3500)); // Allow some variance
+        expect(
+          controller.totalRecordedDuration.inMilliseconds,
+          greaterThanOrEqualTo(2900),
+        ); // ~3 seconds
+        expect(
+          controller.totalRecordedDuration.inMilliseconds,
+          lessThanOrEqualTo(3500),
+        ); // Allow some variance
 
         // Finish recording
         final (videoFile, _) = await controller.finishRecording();
@@ -86,8 +92,9 @@ void main() {
       }
     });
 
-    testWidgets('Camera switching during recording',
-        (WidgetTester tester) async {
+    testWidgets('Camera switching during recording', (
+      WidgetTester tester,
+    ) async {
       final controller = VineRecordingController();
 
       try {
@@ -129,8 +136,9 @@ void main() {
       }
     });
 
-    testWidgets('Enhanced camera features on mobile',
-        (WidgetTester tester) async {
+    testWidgets('Enhanced camera features on mobile', (
+      WidgetTester tester,
+    ) async {
       if (kIsWeb || (!Platform.isIOS && !Platform.isAndroid)) {
         return;
       }

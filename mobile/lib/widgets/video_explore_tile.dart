@@ -66,10 +66,7 @@ class VideoExploreTile extends ConsumerWidget {
             Positioned(
               top: 8,
               left: 8,
-              child: ProofModeBadgeRow(
-                video: video,
-                size: BadgeSize.small,
-              ),
+              child: ProofModeBadgeRow(video: video, size: BadgeSize.small),
             ),
 
             // Video info overlay - conditionally shown
@@ -142,51 +139,46 @@ class VideoExploreTile extends ConsumerWidget {
     return Builder(
       builder: (context) => GestureDetector(
         onTap: () {
-          Log.verbose('Navigating to profile from explore tile: ${video.pubkey}',
-              name: 'VideoExploreTile', category: LogCategory.ui);
+          Log.verbose(
+            'Navigating to profile from explore tile: ${video.pubkey}',
+            name: 'VideoExploreTile',
+            category: LogCategory.ui,
+          );
           // Navigate to profile tab using GoRouter
           context.goProfile(video.pubkey, 0);
         },
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.person,
-            color: Colors.white70,
-            size: 14,
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              displayName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.underline,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          // Add NIP-05 verification badge if verified
-          if (profile?.nip05 != null && profile!.nip05!.isNotEmpty) ...[
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.person, color: Colors.white70, size: 14),
             const SizedBox(width: 4),
-            Container(
-              padding: const EdgeInsets.all(1),
-              decoration: const BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check,
-                color: Colors.white,
-                size: 8,
+            Flexible(
+              child: Text(
+                displayName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            // Add NIP-05 verification badge if verified
+            if (profile?.nip05 != null && profile!.nip05!.isNotEmpty) ...[
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.all(1),
+                decoration: const BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 8),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
-    ),
     );
   }
 }

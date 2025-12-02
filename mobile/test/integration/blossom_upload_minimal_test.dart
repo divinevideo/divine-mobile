@@ -20,7 +20,8 @@ void main() {
     late Keychain keyPair;
     late Dio dio;
 
-    const stagingServer = 'https://cf-stream-service-staging.protestnet.workers.dev';
+    const stagingServer =
+        'https://cf-stream-service-staging.protestnet.workers.dev';
     const prodServer = 'https://cf-stream-service-prod.protestnet.workers.dev';
 
     setUpAll(() async {
@@ -100,9 +101,7 @@ void main() {
           '$serverUrl/upload',
           data: formData,
           options: Options(
-            headers: {
-              'Authorization': authHeader,
-            },
+            headers: {'Authorization': authHeader},
             validateStatus: (status) => status != null && status < 500,
           ),
           onSendProgress: (sent, total) {
@@ -131,19 +130,27 @@ void main() {
           print('🎯 Media URL: $mediaUrl');
 
           // Basic URL validation
-          expect(mediaUrl, contains('http'), reason: 'Should be valid HTTP URL');
+          expect(
+            mediaUrl,
+            contains('http'),
+            reason: 'Should be valid HTTP URL',
+          );
         } else if (response.statusCode == 403) {
           final responseData = response.data;
-          if (responseData is Map && responseData['reason'] == 'invalid_nip98') {
-            print('ℹ️  403 with invalid_nip98 - server not yet deployed with Blossom support');
+          if (responseData is Map &&
+              responseData['reason'] == 'invalid_nip98') {
+            print(
+              'ℹ️  403 with invalid_nip98 - server not yet deployed with Blossom support',
+            );
             // Don't fail the test - this is expected until server deployment
           } else {
             fail('Unexpected 403 response: ${response.data}');
           }
         } else {
-          fail('Unexpected response: ${response.statusCode} - ${response.data}');
+          fail(
+            'Unexpected response: ${response.statusCode} - ${response.data}',
+          );
         }
-
       } on DioException catch (e) {
         print('❌ Upload failed with DioException: ${e.message}');
         print('❌ Response: ${e.response?.data}');
@@ -151,7 +158,9 @@ void main() {
 
         // If it's an auth error, that's expected for test keys
         if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
-          print('ℹ️  Auth error - expected for test keys or server not yet updated');
+          print(
+            'ℹ️  Auth error - expected for test keys or server not yet updated',
+          );
           // Don't fail the test for auth issues with test keys or server not updated
         } else {
           fail('Unexpected upload error: ${e.message}');
@@ -164,10 +173,13 @@ void main() {
       await _testUploadToServer(stagingServer);
     });
 
-    test('should upload to production server with manual Blossom auth', () async {
-      print('🔄 Testing upload to production server: $prodServer');
-      await _testUploadToServer(prodServer);
-    });
+    test(
+      'should upload to production server with manual Blossom auth',
+      () async {
+        print('🔄 Testing upload to production server: $prodServer');
+        await _testUploadToServer(prodServer);
+      },
+    );
 
     test('should create proper Blossom auth event structure', () async {
       // Test the auth event creation without actual upload
@@ -194,11 +206,27 @@ void main() {
       event.sign(keyPair.private);
 
       // Validate event structure
-      expect(event.kind, equals(24242), reason: 'Should use Blossom auth kind 24242');
+      expect(
+        event.kind,
+        equals(24242),
+        reason: 'Should use Blossom auth kind 24242',
+      );
       expect(event.tags, hasLength(3), reason: 'Should have 3 tags');
-      expect(event.tags[0], equals(['t', 'upload']), reason: 'Should have upload type tag');
-      expect(event.tags[1][0], equals('expiration'), reason: 'Should have expiration tag');
-      expect(event.tags[2], equals(['x', fileHash]), reason: 'Should have file hash tag');
+      expect(
+        event.tags[0],
+        equals(['t', 'upload']),
+        reason: 'Should have upload type tag',
+      );
+      expect(
+        event.tags[1][0],
+        equals('expiration'),
+        reason: 'Should have expiration tag',
+      );
+      expect(
+        event.tags[2],
+        equals(['x', fileHash]),
+        reason: 'Should have file hash tag',
+      );
       expect(event.content, isNotEmpty, reason: 'Should have content');
       expect(event.sig, isNotNull, reason: 'Should be signed');
 

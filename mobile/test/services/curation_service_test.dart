@@ -43,8 +43,9 @@ void main() {
       // Mock discoveryVideos to avoid MissingStubError during CurationService initialization
       when(mockVideoEventService.discoveryVideos).thenReturn([]);
       // Mock subscribeToEvents to avoid MissingStubError when fetching Editor's Picks list
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => Stream<Event>.empty());
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => Stream<Event>.empty());
 
       curationService = CurationService(
         nostrService: mockNostrService,
@@ -60,8 +61,10 @@ void main() {
 
     test('should not automatically fetch trending data on initialization', () {
       // The constructor should complete without making any HTTP requests
-      expect(curationService.getVideosForSetType(CurationSetType.trending),
-          isNotEmpty);
+      expect(
+        curationService.getVideosForSetType(CurationSetType.trending),
+        isNotEmpty,
+      );
       // Should use local algorithm, not analytics API
     });
 
@@ -73,8 +76,9 @@ void main() {
     test('should fall back to local algorithm when analytics unavailable', () {
       // Given: No analytics API available
       // When: Getting trending videos
-      final trendingVideos =
-          curationService.getVideosForSetType(CurationSetType.trending);
+      final trendingVideos = curationService.getVideosForSetType(
+        CurationSetType.trending,
+      );
 
       // Then: Should return local algorithm results
       expect(trendingVideos, isNotNull);
@@ -82,10 +86,12 @@ void main() {
     });
 
     test('should get videos for different curation set types', () {
-      final editorsPicks =
-          curationService.getVideosForSetType(CurationSetType.editorsPicks);
-      final trending =
-          curationService.getVideosForSetType(CurationSetType.trending);
+      final editorsPicks = curationService.getVideosForSetType(
+        CurationSetType.editorsPicks,
+      );
+      final trending = curationService.getVideosForSetType(
+        CurationSetType.trending,
+      );
       expect(editorsPicks, isA<List<VideoEvent>>());
       expect(trending, isA<List<VideoEvent>>());
     });

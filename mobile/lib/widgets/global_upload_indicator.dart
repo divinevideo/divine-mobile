@@ -130,8 +130,11 @@ class GlobalUploadIndicator extends ConsumerWidget {
     return baseText;
   }
 
-  void _showUploadDetails(BuildContext context, List<PendingUpload> uploads,
-      UploadManager uploadManagerNotifier) {
+  void _showUploadDetails(
+    BuildContext context,
+    List<PendingUpload> uploads,
+    UploadManager uploadManagerNotifier,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: VineTheme.backgroundColor,
@@ -158,8 +161,10 @@ class GlobalUploadIndicator extends ConsumerWidget {
                     ),
                   ),
                   IconButton(
-                    icon:
-                        const Icon(Icons.close, color: VineTheme.secondaryText),
+                    icon: const Icon(
+                      Icons.close,
+                      color: VineTheme.secondaryText,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],

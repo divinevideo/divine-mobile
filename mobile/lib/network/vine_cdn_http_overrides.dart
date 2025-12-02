@@ -5,10 +5,8 @@
 import 'dart:io';
 
 class VineCdnHttpOverrides extends HttpOverrides {
-  VineCdnHttpOverrides({
-    required this.overrideAddress,
-    Set<String>? hosts,
-  }) : hosts = hosts ?? const {'v.cdn.vine.co', 'cdn.vine.co'};
+  VineCdnHttpOverrides({required this.overrideAddress, Set<String>? hosts})
+    : hosts = hosts ?? const {'v.cdn.vine.co', 'cdn.vine.co'};
 
   final InternetAddress overrideAddress;
   final Set<String> hosts;
@@ -26,4 +24,3 @@ class VineCdnHttpOverrides extends HttpOverrides {
     return InternetAddress.lookup(host, type: type);
   }
 }
-

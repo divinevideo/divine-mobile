@@ -17,9 +17,10 @@ import 'package:openvine/utils/unified_logger.dart';
 /// Service for managing user profiles from Nostr kind 0 events
 /// Reactive service that notifies listeners when profiles are updated
 class UserProfileService extends ChangeNotifier {
-  UserProfileService(this._nostrService,
-      {required SubscriptionManager subscriptionManager})
-      : _subscriptionManager = subscriptionManager;
+  UserProfileService(
+    this._nostrService, {
+    required SubscriptionManager subscriptionManager,
+  }) : _subscriptionManager = subscriptionManager;
   final INostrService _nostrService;
   final ConnectionStatusService _connectionService = ConnectionStatusService();
 
@@ -56,8 +57,11 @@ class UserProfileService extends ChangeNotifier {
   /// Set persistent cache service for profile storage
   void setPersistentCache(ProfileCacheService cacheService) {
     _persistentCache = cacheService;
-    Log.debug('📱 ProfileCacheService attached to UserProfileService',
-        name: 'UserProfileService', category: LogCategory.system);
+    Log.debug(
+      '📱 ProfileCacheService attached to UserProfileService',
+      name: 'UserProfileService',
+      category: LogCategory.system,
+    );
   }
 
   /// Get cached profile for a user
@@ -84,7 +88,8 @@ class UserProfileService extends ChangeNotifier {
   }
 
   /// Check if profile is cached
-  bool hasProfile(String pubkey) {
+  bool hasProfile(String? pubkey) {
+    if (pubkey == null || pubkey.isEmpty) return false;
     if (_profileCache.containsKey(pubkey)) return true;
 
     // Also check persistent cache
@@ -96,7 +101,8 @@ class UserProfileService extends ChangeNotifier {
   }
 
   /// Check if we should skip fetching this profile to avoid relay spam
-  bool shouldSkipProfileFetch(String pubkey) {
+  bool shouldSkipProfileFetch(String? pubkey) {
+    if (pubkey == null || pubkey.isEmpty) return false;
     // Don't fetch if we know it's missing and retry time hasn't passed
     if (_knownMissingProfiles.contains(pubkey)) {
       final retryAfter = _missingProfileRetryAfter[pubkey];
@@ -111,11 +117,13 @@ class UserProfileService extends ChangeNotifier {
   }
 
   /// Mark a pubkey as having no profile to avoid future requests
-  void markProfileAsMissing(String pubkey) {
+  void markProfileAsMissing(String? pubkey) {
+    if (pubkey == null || pubkey.isEmpty) return;
     _knownMissingProfiles.add(pubkey);
     // Retry after 10 minutes for missing profiles (reduced from 1 hour)
-    _missingProfileRetryAfter[pubkey] =
-        DateTime.now().add(const Duration(minutes: 10));
+    _missingProfileRetryAfter[pubkey] = DateTime.now().add(
+      const Duration(minutes: 10),
+    );
     Log.debug(
       'Marked profile as missing: ${pubkey}... (retry after 10 minutes)',
       name: 'UserProfileService',
@@ -140,9 +148,10 @@ class UserProfileService extends ChangeNotifier {
     notifyListeners();
 
     Log.debug(
-        'Updated cached profile for ${profile.pubkey}: ${profile.bestDisplayName}',
-        name: 'UserProfileService',
-        category: LogCategory.system);
+      'Updated cached profile for ${profile.pubkey}: ${profile.bestDisplayName}',
+      name: 'UserProfileService',
+      category: LogCategory.system,
+    );
   }
 
   /// Initialize the profile service
@@ -150,28 +159,42 @@ class UserProfileService extends ChangeNotifier {
     if (_isInitialized) return;
 
     try {
-      Log.verbose('Initializing user profile service...',
-          name: 'UserProfileService', category: LogCategory.system);
+      Log.verbose(
+        'Initializing user profile service...',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
 
       if (!_nostrService.isInitialized) {
-        Log.warning('Nostr service not initialized, profile service will wait',
-            name: 'UserProfileService', category: LogCategory.system);
+        Log.warning(
+          'Nostr service not initialized, profile service will wait',
+          name: 'UserProfileService',
+          category: LogCategory.system,
+        );
         return;
       }
 
       _isInitialized = true;
-      Log.info('User profile service initialized',
-          name: 'UserProfileService', category: LogCategory.system);
+      Log.info(
+        'User profile service initialized',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to initialize user profile service: $e',
-          name: 'UserProfileService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize user profile service: $e',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
 
   /// Fetch profile for a specific user
-  Future<UserProfile?> fetchProfile(String pubkey,
-      {bool forceRefresh = false}) async {
+  Future<UserProfile?> fetchProfile(
+    String pubkey, {
+    bool forceRefresh = false,
+  }) async {
     if (!_isInitialized) {
       await initialize();
     }
@@ -179,9 +202,10 @@ class UserProfileService extends ChangeNotifier {
     // If forcing refresh, clean up existing state first
     if (forceRefresh) {
       Log.debug(
-          '🔄 Force refresh requested for ${pubkey}... - clearing cache and subscriptions',
-          name: 'UserProfileService',
-          category: LogCategory.system);
+        '🔄 Force refresh requested for ${pubkey}... - clearing cache and subscriptions',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
 
       // Clear cached profile
       _profileCache.remove(pubkey);
@@ -210,15 +234,19 @@ class UserProfileService extends ChangeNotifier {
       if (cachedProfile != null &&
           _persistentCache?.shouldRefreshProfile(pubkey) == true) {
         Log.debug(
-            'Profile cached but stale for ${pubkey}... - will refresh in background',
-            name: 'UserProfileService',
-            category: LogCategory.system);
+          'Profile cached but stale for ${pubkey}... - will refresh in background',
+          name: 'UserProfileService',
+          category: LogCategory.system,
+        );
         // Do a background refresh without blocking the UI
         Future.microtask(() => _backgroundRefreshProfile(pubkey));
       }
 
-      Log.verbose('Returning cached profile for ${pubkey}...',
-          name: 'UserProfileService', category: LogCategory.system);
+      Log.verbose(
+        'Returning cached profile for ${pubkey}...',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
       return cachedProfile;
     }
 
@@ -228,9 +256,10 @@ class UserProfileService extends ChangeNotifier {
       // Return existing completer's future if available
       if (_profileFetchCompleters.containsKey(pubkey)) {
         Log.debug(
-            'Reusing existing fetch request for ${pubkey}...',
-            name: 'UserProfileService',
-            category: LogCategory.system);
+          'Reusing existing fetch request for ${pubkey}...',
+          name: 'UserProfileService',
+          category: LogCategory.system,
+        );
         return _profileFetchCompleters[pubkey]!.future;
       }
       return null;
@@ -240,18 +269,20 @@ class UserProfileService extends ChangeNotifier {
     // (Note: forceRefresh already cleaned up existing subscriptions above)
     if (_activeSubscriptionIds.containsKey(pubkey)) {
       Log.warning(
-          'Active subscription already exists for ${pubkey}... (skipping duplicate)',
-          name: 'UserProfileService',
-          category: LogCategory.system);
+        'Active subscription already exists for ${pubkey}... (skipping duplicate)',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
       return null;
     }
 
     // Check connection
     if (!_connectionService.isOnline) {
       Log.debug(
-          'Offline - cannot fetch profile for ${pubkey}...',
-          name: 'UserProfileService',
-          category: LogCategory.system);
+        'Offline - cannot fetch profile for ${pubkey}...',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
       return null;
     }
 
@@ -274,8 +305,11 @@ class UserProfileService extends ChangeNotifier {
       // Return the completer's future - it will complete when batch fetch finishes
       return completer.future;
     } catch (e) {
-      Log.error('Failed to fetch profile for ${pubkey}: $e',
-          name: 'UserProfileService', category: LogCategory.system);
+      Log.error(
+        'Failed to fetch profile for ${pubkey}: $e',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
       _pendingRequests.remove(pubkey);
       _pendingBatchPubkeys.remove(pubkey);
 
@@ -304,11 +338,16 @@ class UserProfileService extends ChangeNotifier {
         // 1. It has a different event ID (definitely a new event)
         // 2. OR it has a newer or equal timestamp (allow same-second updates)
         final isDifferentEvent = existingProfile.eventId != profile.eventId;
-        final isNewerOrSame = !existingProfile.createdAt.isAfter(profile.createdAt);
+        final isNewerOrSame = !existingProfile.createdAt.isAfter(
+          profile.createdAt,
+        );
 
         if (!isDifferentEvent && !isNewerOrSame) {
-          Log.debug('⚠️ Received older profile event, ignoring',
-              name: 'UserProfileService', category: LogCategory.system);
+          Log.debug(
+            '⚠️ Received older profile event, ignoring',
+            name: 'UserProfileService',
+            category: LogCategory.system,
+          );
           _cleanupProfileRequest(event.pubkey);
           return;
         }
@@ -330,15 +369,19 @@ class UserProfileService extends ChangeNotifier {
       if (completer != null && !completer.isCompleted) {
         completer.complete(profile);
         Log.debug(
-            '✅ Completed fetch request for ${event.pubkey}',
-            name: 'UserProfileService',
-            category: LogCategory.system);
+          '✅ Completed fetch request for ${event.pubkey}',
+          name: 'UserProfileService',
+          category: LogCategory.system,
+        );
       }
 
       _cleanupProfileRequest(event.pubkey);
     } catch (e) {
-      Log.error('Error parsing profile event: $e',
-          name: 'UserProfileService', category: LogCategory.system);
+      Log.error(
+        'Error parsing profile event: $e',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -377,21 +420,29 @@ class UserProfileService extends ChangeNotifier {
 
     // Filter out already cached profiles and pending requests
     final pubkeysToFetch = pubkeys
-        .where((pubkey) =>
-            !_profileCache.containsKey(pubkey) &&
-            !_pendingRequests.contains(pubkey) &&
-            !shouldSkipProfileFetch(pubkey))
+        .where(
+          (pubkey) =>
+              !_profileCache.containsKey(pubkey) &&
+              !_pendingRequests.contains(pubkey) &&
+              !shouldSkipProfileFetch(pubkey),
+        )
         .toList();
 
     if (pubkeysToFetch.isEmpty) return;
 
-    Log.debug('⚡ Immediate pre-fetch for ${pubkeysToFetch.length} profiles',
-        name: 'UserProfileService', category: LogCategory.system);
+    Log.debug(
+      '⚡ Immediate pre-fetch for ${pubkeysToFetch.length} profiles',
+      name: 'UserProfileService',
+      category: LogCategory.system,
+    );
 
     // Prevent flooding: if a prefetch is currently active, skip co-incident calls
     if (_prefetchActive) {
-      Log.debug('Prefetch suppressed: another prefetch is active',
-          name: 'UserProfileService', category: LogCategory.system);
+      Log.debug(
+        'Prefetch suppressed: another prefetch is active',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -399,8 +450,11 @@ class UserProfileService extends ChangeNotifier {
     if (_lastPrefetchAt != null &&
         DateTime.now().difference(_lastPrefetchAt!) <
             const Duration(seconds: 1)) {
-      Log.debug('Prefetch suppressed: rate limit within 1s',
-          name: 'UserProfileService', category: LogCategory.system);
+      Log.debug(
+        'Prefetch suppressed: rate limit within 1s',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -413,7 +467,9 @@ class UserProfileService extends ChangeNotifier {
         kinds: [0],
         authors: pubkeysToFetch,
         limit: math.min(
-            pubkeysToFetch.length, 100), // Smaller batches for immediate fetch
+          pubkeysToFetch.length,
+          100,
+        ), // Smaller batches for immediate fetch
       );
 
       // Track which profiles we're fetching in this batch
@@ -425,19 +481,26 @@ class UserProfileService extends ChangeNotifier {
         name: 'profile_prefetch_${DateTime.now().millisecondsSinceEpoch}',
         filters: [filter],
         onEvent: _handleProfileEvent,
-        onError: (error) => Log.error('Prefetch profile error: $error',
-            name: 'UserProfileService', category: LogCategory.system),
+        onError: (error) => Log.error(
+          'Prefetch profile error: $error',
+          name: 'UserProfileService',
+          category: LogCategory.system,
+        ),
         onComplete: () => _completePrefetch(thisBatchPubkeys),
         priority: 0, // Highest priority for immediate prefetch
       );
 
       Log.debug(
-          '⚡ Sent immediate prefetch request for ${pubkeysToFetch.length} profiles',
-          name: 'UserProfileService',
-          category: LogCategory.system);
+        '⚡ Sent immediate prefetch request for ${pubkeysToFetch.length} profiles',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to prefetch profiles: $e',
-          name: 'UserProfileService', category: LogCategory.system);
+      Log.error(
+        'Failed to prefetch profiles: $e',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
       _pendingRequests.removeAll(pubkeysToFetch);
       _prefetchActive = false;
       _lastPrefetchAt = DateTime.now();
@@ -465,9 +528,10 @@ class UserProfileService extends ChangeNotifier {
       }
     } else {
       Log.debug(
-          '⚡ Prefetch completed - all ${batchPubkeys.length} profiles fetched',
-          name: 'UserProfileService',
-          category: LogCategory.system);
+        '⚡ Prefetch completed - all ${batchPubkeys.length} profiles fetched',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
     }
 
     // Clean up pending requests for this batch
@@ -479,24 +543,26 @@ class UserProfileService extends ChangeNotifier {
   }
 
   /// Batch fetch profiles for multiple users
-  Future<void> fetchMultipleProfiles(List<String> pubkeys,
-      {bool forceRefresh = false}) async {
+  Future<void> fetchMultipleProfiles(
+    List<String> pubkeys, {
+    bool forceRefresh = false,
+  }) async {
     if (pubkeys.isEmpty) return;
 
     // Filter out already cached profiles unless forcing refresh
     final filteredPubkeys = forceRefresh
         ? pubkeys
         : pubkeys
-            .where((pubkey) =>
-                !_profileCache.containsKey(pubkey) &&
-                !_pendingRequests.contains(pubkey))
-            .toList();
+              .where(
+                (pubkey) =>
+                    !_profileCache.containsKey(pubkey) &&
+                    !_pendingRequests.contains(pubkey),
+              )
+              .toList();
 
     // Further filter out known missing profiles to avoid relay spam
     final pubkeysToFetch = filteredPubkeys
-        .where(
-          (pubkey) => forceRefresh || !shouldSkipProfileFetch(pubkey),
-        )
+        .where((pubkey) => forceRefresh || !shouldSkipProfileFetch(pubkey))
         .toList();
 
     final skippedCount = filteredPubkeys.length - pubkeysToFetch.length;
@@ -522,15 +588,18 @@ class UserProfileService extends ChangeNotifier {
     // If we already have an active subscription, let it complete
     if (_batchSubscriptionId != null) {
       Log.debug(
-          '📦 Added ${pubkeysToFetch.length} profiles to pending batch (total pending: ${_pendingBatchPubkeys.length})',
-          name: 'UserProfileService',
-          category: LogCategory.system);
+        '📦 Added ${pubkeysToFetch.length} profiles to pending batch (total pending: ${_pendingBatchPubkeys.length})',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
       return;
     }
 
     // Debounce: reduced delay for faster profile loading
-    _batchDebounceTimer =
-        Timer(const Duration(milliseconds: 50), _executeBatchFetch);
+    _batchDebounceTimer = Timer(
+      const Duration(milliseconds: 50),
+      _executeBatchFetch,
+    );
   }
 
   /// Execute the actual batch fetch
@@ -541,12 +610,16 @@ class UserProfileService extends ChangeNotifier {
     final batchPubkeys = _pendingBatchPubkeys.toList();
     _pendingBatchPubkeys.clear();
 
-    Log.debug('🔄 Executing batch fetch for ${batchPubkeys.length} profiles...',
-        name: 'UserProfileService', category: LogCategory.system);
     Log.debug(
-        '📋 Sample pubkeys: ${batchPubkeys.take(3).map((p) => p).join(", ")}...',
-        name: 'UserProfileService',
-        category: LogCategory.system);
+      '🔄 Executing batch fetch for ${batchPubkeys.length} profiles...',
+      name: 'UserProfileService',
+      category: LogCategory.system,
+    );
+    Log.debug(
+      '📋 Sample pubkeys: ${batchPubkeys.take(3).map((p) => p).join(", ")}...',
+      name: 'UserProfileService',
+      category: LogCategory.system,
+    );
 
     try {
       // Create filter for kind 0 events from these users
@@ -554,7 +627,9 @@ class UserProfileService extends ChangeNotifier {
         kinds: [0],
         authors: batchPubkeys,
         limit: math.min(
-            batchPubkeys.length, 500), // Nostr protocol recommended limit
+          batchPubkeys.length,
+          500,
+        ), // Nostr protocol recommended limit
       );
 
       // Track which profiles we're fetching in this batch
@@ -565,8 +640,11 @@ class UserProfileService extends ChangeNotifier {
         name: 'profile_batch_${DateTime.now().millisecondsSinceEpoch}',
         filters: [filter],
         onEvent: _handleProfileEvent,
-        onError: (error) => Log.error('Batch profile fetch error: $error',
-            name: 'UserProfileService', category: LogCategory.system),
+        onError: (error) => Log.error(
+          'Batch profile fetch error: $error',
+          name: 'UserProfileService',
+          category: LogCategory.system,
+        ),
         onComplete: () => _completeBatchFetch(thisBatchPubkeys),
         priority: 1, // High priority for profile fetches
       );
@@ -574,8 +652,11 @@ class UserProfileService extends ChangeNotifier {
       // Store subscription ID for cleanup
       _batchSubscriptionId = subscriptionId;
     } catch (e) {
-      Log.error('Failed to batch fetch profiles: $e',
-          name: 'UserProfileService', category: LogCategory.system);
+      Log.error(
+        'Failed to batch fetch profiles: $e',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
       _completeBatchFetch(batchPubkeys.toSet());
     }
   }
@@ -613,16 +694,18 @@ class UserProfileService extends ChangeNotifier {
         if (completer != null && !completer.isCompleted) {
           completer.complete(null);
           Log.debug(
-              '❌ Completed fetch request for missing profile ${pubkey}',
-              name: 'UserProfileService',
-              category: LogCategory.system);
+            '❌ Completed fetch request for missing profile ${pubkey}',
+            name: 'UserProfileService',
+            category: LogCategory.system,
+          );
         }
       }
     } else {
       Log.info(
-          '✅ Batch profile fetch completed - fetched all ${batchPubkeys.length} profiles',
-          name: 'UserProfileService',
-          category: LogCategory.system);
+        '✅ Batch profile fetch completed - fetched all ${batchPubkeys.length} profiles',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
     }
 
     // Clean up pending requests for this batch
@@ -631,9 +714,10 @@ class UserProfileService extends ChangeNotifier {
     // If we have more pending profiles, start a new batch
     if (_pendingBatchPubkeys.isNotEmpty) {
       Log.debug(
-          '📦 Starting next batch for ${_pendingBatchPubkeys.length} pending profiles...',
-          name: 'UserProfileService',
-          category: LogCategory.system);
+        '📦 Starting next batch for ${_pendingBatchPubkeys.length} pending profiles...',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
       Timer(const Duration(milliseconds: 50), _executeBatchFetch);
     }
   }
@@ -666,8 +750,11 @@ class UserProfileService extends ChangeNotifier {
     // Notify listeners that all profiles are gone
     notifyListeners();
 
-    Log.debug('🧹 Profile cache cleared',
-        name: 'UserProfileService', category: LogCategory.system);
+    Log.debug(
+      '🧹 Profile cache cleared',
+      name: 'UserProfileService',
+      category: LogCategory.system,
+    );
   }
 
   /// Remove specific profile from cache
@@ -676,8 +763,11 @@ class UserProfileService extends ChangeNotifier {
       // Notify listeners that profile was removed
       notifyListeners();
 
-      Log.debug('📱️ Removed profile from cache: ${pubkey}...',
-          name: 'UserProfileService', category: LogCategory.system);
+      Log.debug(
+        '📱️ Removed profile from cache: ${pubkey}...',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -694,36 +784,41 @@ class UserProfileService extends ChangeNotifier {
     if (_lastBackgroundRefresh != null &&
         now.difference(_lastBackgroundRefresh!).inSeconds < 30) {
       Log.debug(
-          'Rate limiting background refresh for ${pubkey}...',
-          name: 'UserProfileService',
-          category: LogCategory.system);
+        'Rate limiting background refresh for ${pubkey}...',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
       return;
     }
 
     try {
       Log.debug(
-          'Background refresh for stale profile ${pubkey}...',
-          name: 'UserProfileService',
-          category: LogCategory.system);
+        'Background refresh for stale profile ${pubkey}...',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
 
       _lastBackgroundRefresh = now;
 
       // Use a longer timeout for background refreshes to reduce urgency
       await fetchProfile(pubkey, forceRefresh: true);
     } catch (e) {
-      Log.error('Background refresh failed for ${pubkey}: $e',
-          name: 'UserProfileService', category: LogCategory.system);
+      Log.error(
+        'Background refresh failed for ${pubkey}: $e',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Get cache statistics
   Map<String, dynamic> getCacheStats() => {
-        'cachedProfiles': _profileCache.length,
-        'pendingRequests': _pendingRequests.length,
-        'activeSubscriptions': _activeSubscriptionIds.length,
-        'managedSubscriptions': _activeSubscriptionIds.length,
-        'isInitialized': _isInitialized,
-      };
+    'cachedProfiles': _profileCache.length,
+    'pendingRequests': _pendingRequests.length,
+    'activeSubscriptions': _activeSubscriptionIds.length,
+    'managedSubscriptions': _activeSubscriptionIds.length,
+    'isInitialized': _isInitialized,
+  };
 
   /// Test helper method to process profile events directly
   /// Only for testing purposes
@@ -767,8 +862,11 @@ class UserProfileService extends ChangeNotifier {
     _knownMissingProfiles.clear();
     _missingProfileRetryAfter.clear();
 
-    Log.debug('🗑️ UserProfileService disposed',
-        name: 'UserProfileService', category: LogCategory.system);
+    Log.debug(
+      '🗑️ UserProfileService disposed',
+      name: 'UserProfileService',
+      category: LogCategory.system,
+    );
 
     // Call super.dispose() to properly clean up ChangeNotifier
     super.dispose();

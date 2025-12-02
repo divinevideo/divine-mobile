@@ -66,10 +66,7 @@ class NostrTimestamp {
 
   /// Convert Nostr timestamp to DateTime (always returns UTC)
   static DateTime toDateTime(int timestamp) =>
-      DateTime.fromMillisecondsSinceEpoch(
-        timestamp * 1000,
-        isUtc: true,
-      );
+      DateTime.fromMillisecondsSinceEpoch(timestamp * 1000, isUtc: true);
 
   /// Validate if a timestamp is reasonable (not too far in future/past)
   static bool isValid(int timestamp) {

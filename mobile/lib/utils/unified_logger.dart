@@ -121,8 +121,11 @@ class UnifiedLogger {
   static void setLogLevel(LogLevel level) {
     _currentLevel = level;
     if (kDebugMode) {
-      Log.debug('Log level set to: ${level.name}',
-          name: 'UnifiedLogger', category: LogCategory.system);
+      Log.debug(
+        'Log level set to: ${level.name}',
+        name: 'UnifiedLogger',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -131,7 +134,8 @@ class UnifiedLogger {
     _enabledCategories = categories;
     if (kDebugMode) {
       debugPrint(
-          'Enabled categories: ${categories.map((c) => c.name).join(', ')}');
+        'Enabled categories: ${categories.map((c) => c.name).join(', ')}',
+      );
     }
   }
 
@@ -139,8 +143,11 @@ class UnifiedLogger {
   static void enableCategory(LogCategory category) {
     _enabledCategories.add(category);
     if (kDebugMode) {
-      Log.debug('Enabled category: ${category.name}',
-          name: 'UnifiedLogger', category: LogCategory.system);
+      Log.debug(
+        'Enabled category: ${category.name}',
+        name: 'UnifiedLogger',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -148,8 +155,11 @@ class UnifiedLogger {
   static void disableCategory(LogCategory category) {
     _enabledCategories.remove(category);
     if (kDebugMode) {
-      Log.debug('Disabled category: ${category.name}',
-          name: 'UnifiedLogger', category: LogCategory.system);
+      Log.debug(
+        'Disabled category: ${category.name}',
+        name: 'UnifiedLogger',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -178,7 +188,8 @@ class UnifiedLogger {
   }) {
     // Check if this message should be printed to console
     // Category/level filtering applies ONLY to console output (noise reduction)
-    final shouldPrintToConsole = isLevelEnabled(level) &&
+    final shouldPrintToConsole =
+        isLevelEnabled(level) &&
         (category == null || isCategoryEnabled(category));
 
     // Create timestamp
@@ -253,17 +264,21 @@ class UnifiedLogger {
   }
 
   /// Error logging - actual errors with optional error object
-  static void error(String message,
-      {String? name,
-      LogCategory? category,
-      Object? error,
-      StackTrace? stackTrace}) {
-    _log(message,
-        name: name,
-        category: category,
-        level: LogLevel.error,
-        error: error,
-        stackTrace: stackTrace);
+  static void error(
+    String message, {
+    String? name,
+    LogCategory? category,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    _log(
+      message,
+      name: name,
+      category: category,
+      level: LogLevel.error,
+      error: error,
+      stackTrace: stackTrace,
+    );
   }
 
   /// Convenience method that matches developer.log signature
@@ -275,22 +290,26 @@ class UnifiedLogger {
     Object? error,
     StackTrace? stackTrace,
   }) {
-    _log(message,
-        name: name,
-        category: category,
-        level: level,
-        error: error,
-        stackTrace: stackTrace);
+    _log(
+      message,
+      name: name,
+      category: category,
+      level: level,
+      error: error,
+      stackTrace: stackTrace,
+    );
   }
 
   /// Migration helper - replaces debugPrint calls
   /// In debug mode: logs at debug level
   /// In release mode: logs at info level
   static void print(String message, {String? name, LogCategory? category}) {
-    _log(message,
-        name: name,
-        category: category,
-        level: kDebugMode ? LogLevel.debug : LogLevel.info);
+    _log(
+      message,
+      name: name,
+      category: category,
+      level: kDebugMode ? LogLevel.debug : LogLevel.info,
+    );
   }
 }
 

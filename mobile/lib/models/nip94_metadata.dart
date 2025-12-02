@@ -48,49 +48,48 @@ class NIP94Metadata {
     String? thumbnailUrl,
     String? originalHash,
     Map<String, String> additionalTags = const {},
-  }) =>
-      NIP94Metadata(
-        url: url,
-        mimeType: 'image/gif',
-        sha256Hash: sha256Hash,
-        sizeBytes: sizeBytes,
-        dimensions: '${width}x$height',
-        blurhash: blurhash,
-        altText: altText,
-        summary: summary,
-        durationMs: durationMs,
-        fps: fps,
-        createdAt: DateTime.now(),
-        thumbnailUrl: thumbnailUrl,
-        originalHash: originalHash,
-        additionalTags: additionalTags,
-      );
-
-
+  }) => NIP94Metadata(
+    url: url,
+    mimeType: 'image/gif',
+    sha256Hash: sha256Hash,
+    sizeBytes: sizeBytes,
+    dimensions: '${width}x$height',
+    blurhash: blurhash,
+    altText: altText,
+    summary: summary,
+    durationMs: durationMs,
+    fps: fps,
+    createdAt: DateTime.now(),
+    thumbnailUrl: thumbnailUrl,
+    originalHash: originalHash,
+    additionalTags: additionalTags,
+  );
 
   /// Create NIP-94 metadata from JSON (backend response)
   factory NIP94Metadata.fromJson(Map<String, dynamic> json) => NIP94Metadata(
-        url: json['url'] as String,
-        mimeType: json['mime_type'] as String,
-        sha256Hash: json['sha256'] as String,
-        sizeBytes: json['size'] as int,
-        dimensions: json['dimensions'] as String,
-        blurhash: json['blurhash'] as String?,
-        altText: json['alt_text'] as String?,
-        summary: json['summary'] as String?,
-        durationMs: json['duration_ms'] as int?,
-        fps: json['fps'] as double?,
-        createdAt: json['created_at'] != null
-            ? DateTime.parse(json['created_at'] as String)
-            : null,
-        thumbnailUrl: json['thumbnail_url'] as String?,
-        magnetLink: json['magnet_link'] as String?,
-        torrentHash: json['torrent_hash'] as String?,
-        originalHash: json['original_hash'] as String?,
-        additionalTags: (json['additional_tags'] as Map<String, dynamic>?)
-                ?.map((key, value) => MapEntry(key, value.toString())) ??
-            {},
-      );
+    url: json['url'] as String,
+    mimeType: json['mime_type'] as String,
+    sha256Hash: json['sha256'] as String,
+    sizeBytes: json['size'] as int,
+    dimensions: json['dimensions'] as String,
+    blurhash: json['blurhash'] as String?,
+    altText: json['alt_text'] as String?,
+    summary: json['summary'] as String?,
+    durationMs: json['duration_ms'] as int?,
+    fps: json['fps'] as double?,
+    createdAt: json['created_at'] != null
+        ? DateTime.parse(json['created_at'] as String)
+        : null,
+    thumbnailUrl: json['thumbnail_url'] as String?,
+    magnetLink: json['magnet_link'] as String?,
+    torrentHash: json['torrent_hash'] as String?,
+    originalHash: json['original_hash'] as String?,
+    additionalTags:
+        (json['additional_tags'] as Map<String, dynamic>?)?.map(
+          (key, value) => MapEntry(key, value.toString()),
+        ) ??
+        {},
+  );
   final String url; // File URL (Cloudflare Stream or IPFS)
   final String mimeType; // MIME type (image/gif, video/mp4, etc.)
   final String sha256Hash; // SHA256 hash of file content
@@ -110,23 +109,23 @@ class NIP94Metadata {
 
   /// Convert to JSON for backend upload
   Map<String, dynamic> toJson() => {
-        'url': url,
-        'mime_type': mimeType,
-        'sha256': sha256Hash,
-        'size': sizeBytes,
-        'dimensions': dimensions,
-        if (blurhash != null) 'blurhash': blurhash,
-        if (altText != null) 'alt_text': altText,
-        if (summary != null) 'summary': summary,
-        if (durationMs != null) 'duration_ms': durationMs,
-        if (fps != null) 'fps': fps,
-        if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
-        if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
-        if (magnetLink != null) 'magnet_link': magnetLink,
-        if (torrentHash != null) 'torrent_hash': torrentHash,
-        if (originalHash != null) 'original_hash': originalHash,
-        if (additionalTags.isNotEmpty) 'additional_tags': additionalTags,
-      };
+    'url': url,
+    'mime_type': mimeType,
+    'sha256': sha256Hash,
+    'size': sizeBytes,
+    'dimensions': dimensions,
+    if (blurhash != null) 'blurhash': blurhash,
+    if (altText != null) 'alt_text': altText,
+    if (summary != null) 'summary': summary,
+    if (durationMs != null) 'duration_ms': durationMs,
+    if (fps != null) 'fps': fps,
+    if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
+    if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
+    if (magnetLink != null) 'magnet_link': magnetLink,
+    if (torrentHash != null) 'torrent_hash': torrentHash,
+    if (originalHash != null) 'original_hash': originalHash,
+    if (additionalTags.isNotEmpty) 'additional_tags': additionalTags,
+  };
 
   /// Convert to Nostr event (NIP-94 kind 1063)
   Event toNostrEvent({
@@ -244,25 +243,24 @@ class NIP94Metadata {
     String? torrentHash,
     String? originalHash,
     Map<String, String>? additionalTags,
-  }) =>
-      NIP94Metadata(
-        url: url ?? this.url,
-        mimeType: mimeType ?? this.mimeType,
-        sha256Hash: sha256Hash ?? this.sha256Hash,
-        sizeBytes: sizeBytes ?? this.sizeBytes,
-        dimensions: dimensions ?? this.dimensions,
-        blurhash: blurhash ?? this.blurhash,
-        altText: altText ?? this.altText,
-        summary: summary ?? this.summary,
-        durationMs: durationMs ?? this.durationMs,
-        fps: fps ?? this.fps,
-        createdAt: createdAt ?? this.createdAt,
-        thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
-        magnetLink: magnetLink ?? this.magnetLink,
-        torrentHash: torrentHash ?? this.torrentHash,
-        originalHash: originalHash ?? this.originalHash,
-        additionalTags: additionalTags ?? this.additionalTags,
-      );
+  }) => NIP94Metadata(
+    url: url ?? this.url,
+    mimeType: mimeType ?? this.mimeType,
+    sha256Hash: sha256Hash ?? this.sha256Hash,
+    sizeBytes: sizeBytes ?? this.sizeBytes,
+    dimensions: dimensions ?? this.dimensions,
+    blurhash: blurhash ?? this.blurhash,
+    altText: altText ?? this.altText,
+    summary: summary ?? this.summary,
+    durationMs: durationMs ?? this.durationMs,
+    fps: fps ?? this.fps,
+    createdAt: createdAt ?? this.createdAt,
+    thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+    magnetLink: magnetLink ?? this.magnetLink,
+    torrentHash: torrentHash ?? this.torrentHash,
+    originalHash: originalHash ?? this.originalHash,
+    additionalTags: additionalTags ?? this.additionalTags,
+  );
 
   @override
   bool operator ==(Object other) {
@@ -280,7 +278,8 @@ class NIP94Metadata {
       Object.hash(url, mimeType, sha256Hash, sizeBytes, dimensions);
 
   @override
-  String toString() => 'NIP94Metadata('
+  String toString() =>
+      'NIP94Metadata('
       'url: $url, '
       'type: $mimeType, '
       'size: ${fileSizeMB.toStringAsFixed(2)}MB, '

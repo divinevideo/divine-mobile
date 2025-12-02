@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:camera_macos/camera_macos.dart' as macos;
+// camera_macos removed - using NativeMacOSCamera for both preview and recording
 import 'package:path_provider/path_provider.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
@@ -15,8 +15,10 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:openvine/models/aspect_ratio.dart' as model;
 import 'package:openvine/services/camera/native_macos_camera.dart';
 import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
+import 'package:openvine/services/camera/camerawesome_mobile_camera_interface.dart';
 import 'package:openvine/services/web_camera_service_stub.dart'
-    if (dart.library.html) 'web_camera_service.dart' as camera_service;
+    if (dart.library.html) 'web_camera_service.dart'
+    as camera_service;
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/utils/async_utils.dart';
@@ -103,18 +105,27 @@ class MobileCameraInterface extends CameraPlatformInterface {
     _controller?.dispose();
 
     final camera = _availableCameras[_currentCameraIndex];
-    _controller =
-        CameraController(camera, ResolutionPreset.high, enableAudio: true);
+    _controller = CameraController(
+      camera,
+      ResolutionPreset.high,
+      enableAudio: true,
+    );
     await _controller!.initialize();
 
     // Prepare for video recording - critical for iOS
     try {
       await _controller!.prepareForVideoRecording();
-      Log.info('Video recording preparation successful',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Video recording preparation successful',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.warning('prepareForVideoRecording failed (may not be supported): $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'prepareForVideoRecording failed (may not be supported): $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       // Continue anyway - some platforms don't need this
     }
 
@@ -123,11 +134,17 @@ class MobileCameraInterface extends CameraPlatformInterface {
       _minZoomLevel = await _controller!.getMinZoomLevel();
       _maxZoomLevel = await _controller!.getMaxZoomLevel();
       _currentZoomLevel = _minZoomLevel;
-      Log.info('Zoom range initialized: $_minZoomLevel - $_maxZoomLevel',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Zoom range initialized: $_minZoomLevel - $_maxZoomLevel',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.warning('Failed to get zoom levels: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Failed to get zoom levels: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       _minZoomLevel = 1.0;
       _maxZoomLevel = 1.0;
       _currentZoomLevel = 1.0;
@@ -137,18 +154,27 @@ class MobileCameraInterface extends CameraPlatformInterface {
   Future<void> _initializeNewCamera() async {
     // Initialize new camera without disposing (disposal handled separately)
     final camera = _availableCameras[_currentCameraIndex];
-    _controller =
-        CameraController(camera, ResolutionPreset.high, enableAudio: true);
+    _controller = CameraController(
+      camera,
+      ResolutionPreset.high,
+      enableAudio: true,
+    );
     await _controller!.initialize();
 
     // Prepare for video recording - critical for iOS
     try {
       await _controller!.prepareForVideoRecording();
-      Log.info('Video recording preparation successful after camera switch',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Video recording preparation successful after camera switch',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.warning('prepareForVideoRecording failed during camera switch: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'prepareForVideoRecording failed during camera switch: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       // Continue anyway - some platforms don't need this
     }
 
@@ -157,11 +183,17 @@ class MobileCameraInterface extends CameraPlatformInterface {
       _minZoomLevel = await _controller!.getMinZoomLevel();
       _maxZoomLevel = await _controller!.getMaxZoomLevel();
       _currentZoomLevel = _minZoomLevel;
-      Log.info('Zoom range initialized: $_minZoomLevel - $_maxZoomLevel',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Zoom range initialized: $_minZoomLevel - $_maxZoomLevel',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.warning('Failed to get zoom levels: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Failed to get zoom levels: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       _minZoomLevel = 1.0;
       _maxZoomLevel = 1.0;
       _currentZoomLevel = 1.0;
@@ -180,26 +212,38 @@ class MobileCameraInterface extends CameraPlatformInterface {
     const maxWaitMs = 5000; // 5 second timeout
     while (_operationInProgress) {
       if (waitCount >= maxWaitMs / 10) {
-        Log.error('Camera operation timeout after ${maxWaitMs}ms - forcing unlock',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.error(
+          'Camera operation timeout after ${maxWaitMs}ms - forcing unlock',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         _operationInProgress = false;
         throw Exception('Camera operation timeout after ${maxWaitMs}ms');
       }
-      Log.debug('Waiting for previous camera operation to complete',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.debug(
+        'Waiting for previous camera operation to complete',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       await Future.delayed(const Duration(milliseconds: 10));
       waitCount++;
     }
 
     if (waitCount > 0) {
-      Log.info('Waited ${waitCount * 10}ms for camera operation to complete',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Waited ${waitCount * 10}ms for camera operation to complete',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     }
 
     // Already recording - ignore duplicate start request
     if (isRecording) {
-      Log.warning('Already recording, ignoring start request',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Already recording, ignoring start request',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -207,12 +251,18 @@ class MobileCameraInterface extends CameraPlatformInterface {
     try {
       await _controller!.startVideoRecording();
       isRecording = true;
-      Log.info('Started mobile camera recording',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Started mobile camera recording',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } catch (e) {
       isRecording = false;
-      Log.error('Failed to start mobile camera recording: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Failed to start mobile camera recording: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       rethrow;
     } finally {
       _operationInProgress = false;
@@ -230,26 +280,38 @@ class MobileCameraInterface extends CameraPlatformInterface {
     const maxWaitMs = 5000; // 5 second timeout
     while (_operationInProgress) {
       if (waitCount >= maxWaitMs / 10) {
-        Log.error('Camera operation timeout after ${maxWaitMs}ms - forcing unlock',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.error(
+          'Camera operation timeout after ${maxWaitMs}ms - forcing unlock',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         _operationInProgress = false;
         throw Exception('Camera operation timeout after ${maxWaitMs}ms');
       }
-      Log.debug('Waiting for previous camera operation to complete',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.debug(
+        'Waiting for previous camera operation to complete',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       await Future.delayed(const Duration(milliseconds: 10));
       waitCount++;
     }
 
     if (waitCount > 0) {
-      Log.info('Waited ${waitCount * 10}ms for camera operation to complete',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Waited ${waitCount * 10}ms for camera operation to complete',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     }
 
     // Not recording - nothing to stop
     if (!isRecording) {
-      Log.warning('Not currently recording, skipping stopVideoRecording',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Not currently recording, skipping stopVideoRecording',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return null;
     }
 
@@ -257,13 +319,19 @@ class MobileCameraInterface extends CameraPlatformInterface {
     try {
       final xFile = await _controller!.stopVideoRecording();
       isRecording = false;
-      Log.info('Stopped mobile camera recording: ${xFile.path}',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Stopped mobile camera recording: ${xFile.path}',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return xFile.path;
     } catch (e) {
       isRecording = false; // Reset state even on error
-      Log.error('Failed to stop mobile camera recording: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Failed to stop mobile camera recording: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       // Don't rethrow - return null to indicate no file was saved
       return null;
     } finally {
@@ -273,12 +341,18 @@ class MobileCameraInterface extends CameraPlatformInterface {
 
   @override
   Future<void> switchCamera() async {
-    Log.info('🔄 switchCamera called, current cameras: ${_availableCameras.length}',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.info(
+      '🔄 switchCamera called, current cameras: ${_availableCameras.length}',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
 
     if (_availableCameras.length <= 1) {
-      Log.warning('Cannot switch camera - only ${_availableCameras.length} camera(s) available',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Cannot switch camera - only ${_availableCameras.length} camera(s) available',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -287,43 +361,67 @@ class MobileCameraInterface extends CameraPlatformInterface {
     const maxWaitMs = 5000; // 5 second timeout
     while (_operationInProgress) {
       if (waitCount >= maxWaitMs / 10) {
-        Log.error('Camera operation timeout after ${maxWaitMs}ms - forcing unlock',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.error(
+          'Camera operation timeout after ${maxWaitMs}ms - forcing unlock',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         _operationInProgress = false;
         throw Exception('Camera operation timeout after ${maxWaitMs}ms');
       }
-      Log.debug('Waiting for camera operation to complete before switch',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.debug(
+        'Waiting for camera operation to complete before switch',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       await Future.delayed(const Duration(milliseconds: 10));
       waitCount++;
     }
 
     if (waitCount > 0) {
-      Log.info('Waited ${waitCount * 10}ms for camera operation before switch',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Waited ${waitCount * 10}ms for camera operation before switch',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     }
 
     // Don't switch if controller is not properly initialized
     if (_controller == null || !_controller!.value.isInitialized) {
-      Log.warning('Cannot switch camera - controller not initialized',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Cannot switch camera - controller not initialized',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return;
     }
 
-    Log.info('🔄 Current camera index: $_currentCameraIndex, direction: ${_availableCameras[_currentCameraIndex].lensDirection}',
-        name: 'VineRecordingController', category: LogCategory.system);
-    Log.info('🔄 OLD controller state: isInitialized=${_controller!.value.isInitialized}, isRecording=${_controller!.value.isRecordingVideo}, isStreaming=${_controller!.value.isStreamingImages}',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.info(
+      '🔄 Current camera index: $_currentCameraIndex, direction: ${_availableCameras[_currentCameraIndex].lensDirection}',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
+    Log.info(
+      '🔄 OLD controller state: isInitialized=${_controller!.value.isInitialized}, isRecording=${_controller!.value.isRecordingVideo}, isStreaming=${_controller!.value.isStreamingImages}',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
 
     // Stop any active recording before switching
     if (isRecording) {
-      Log.info('🔄 Stopping active recording before camera switch',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '🔄 Stopping active recording before camera switch',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       try {
         await _controller?.stopVideoRecording();
       } catch (e) {
-        Log.error('Error stopping recording during camera switch: $e',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.error(
+          'Error stopping recording during camera switch: $e',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       }
       isRecording = false;
     }
@@ -331,52 +429,85 @@ class MobileCameraInterface extends CameraPlatformInterface {
     // Store old controller reference for safe disposal
     final oldController = _controller;
     _controller = null; // Clear reference to prevent access during switch
-    Log.info('🔄 OLD controller cleared from _controller reference',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.info(
+      '🔄 OLD controller cleared from _controller reference',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
 
     try {
       // CRITICAL FIX: Dispose old controller BEFORE initializing new one
       // AVFoundation requires the capture session to be fully stopped before switching
       // See: https://stackoverflow.com/questions/5704464/video-freezes-on-camera-switch-with-avfoundation
-      Log.info('🔄 Disposing OLD controller to stop AVFoundation session...',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '🔄 Disposing OLD controller to stop AVFoundation session...',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       await oldController?.dispose();
-      Log.info('🔄 OLD controller disposed, AVFoundation session stopped',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '🔄 OLD controller disposed, AVFoundation session stopped',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       // Switch to the next camera
       final oldIndex = _currentCameraIndex;
-      _currentCameraIndex = (_currentCameraIndex + 1) % _availableCameras.length;
+      _currentCameraIndex =
+          (_currentCameraIndex + 1) % _availableCameras.length;
 
-      Log.info('🔄 Switching from camera $oldIndex to $_currentCameraIndex',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '🔄 Switching from camera $oldIndex to $_currentCameraIndex',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
-      Log.info('🔄 About to call _initializeNewCamera() for camera $_currentCameraIndex',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '🔄 About to call _initializeNewCamera() for camera $_currentCameraIndex',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       await _initializeNewCamera();
-      Log.info('🔄 _initializeNewCamera() completed',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '🔄 _initializeNewCamera() completed',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       if (_controller != null && _controller!.value.isInitialized) {
-        Log.info('🔄 NEW camera initialized: ${_availableCameras[_currentCameraIndex].lensDirection}',
-            name: 'VineRecordingController', category: LogCategory.system);
-        Log.info('🔄 NEW controller state: isInitialized=${_controller!.value.isInitialized}, isRecording=${_controller!.value.isRecordingVideo}, isStreaming=${_controller!.value.isStreamingImages}',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          '🔄 NEW camera initialized: ${_availableCameras[_currentCameraIndex].lensDirection}',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
+        Log.info(
+          '🔄 NEW controller state: isInitialized=${_controller!.value.isInitialized}, isRecording=${_controller!.value.isRecordingVideo}, isStreaming=${_controller!.value.isStreamingImages}',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       } else {
-        Log.error('🔄 NEW controller is NULL or not initialized!',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.error(
+          '🔄 NEW controller is NULL or not initialized!',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       }
 
-      Log.info('✅ Successfully switched to camera $_currentCameraIndex (${_availableCameras[_currentCameraIndex].lensDirection})',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '✅ Successfully switched to camera $_currentCameraIndex (${_availableCameras[_currentCameraIndex].lensDirection})',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       // CRITICAL: Notify listeners that camera changed to force UI rebuild
       // The preview widget needs to be re-rendered with new controller
-
     } catch (e) {
       // If switching fails, restore old controller
-      Log.error('❌ Camera switch failed, restoring previous camera: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        '❌ Camera switch failed, restoring previous camera: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       _controller = oldController;
       rethrow;
     }
@@ -385,12 +516,18 @@ class MobileCameraInterface extends CameraPlatformInterface {
   @override
   Widget get previewWidget {
     final controller = _controller;
-    Log.info('📸 previewWidget getter called: controller=${controller != null ? "exists" : "null"}, isInitialized=${controller?.value.isInitialized ?? false}, cameraIndex=$_currentCameraIndex',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.info(
+      '📸 previewWidget getter called: controller=${controller != null ? "exists" : "null"}, isInitialized=${controller?.value.isInitialized ?? false}, cameraIndex=$_currentCameraIndex',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
 
     if (controller != null && controller.value.isInitialized) {
-      Log.info('📸 Returning CameraPreview widget with initialized controller for camera $_currentCameraIndex',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '📸 Returning CameraPreview widget with initialized controller for camera $_currentCameraIndex',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       // CRITICAL: Use RepaintBoundary to force complete repaint when key changes
       // This helps ensure the platform view texture updates properly on iOS
       return RepaintBoundary(
@@ -402,8 +539,11 @@ class MobileCameraInterface extends CameraPlatformInterface {
       );
     }
 
-    Log.info('📸 Returning loading placeholder (controller not ready)',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.info(
+      '📸 Returning loading placeholder (controller not ready)',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
     return const ColoredBox(
       color: Colors.black,
       child: Center(
@@ -411,7 +551,9 @@ class MobileCameraInterface extends CameraPlatformInterface {
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00B488)), // Vine green
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(0xFF00B488),
+              ), // Vine green
               strokeWidth: 3.0,
             ),
             SizedBox(height: 16),
@@ -442,8 +584,11 @@ class MobileCameraInterface extends CameraPlatformInterface {
   /// Set zoom level (clamped to camera's supported range)
   Future<void> setZoom(double zoomLevel) async {
     if (_controller == null || !_controller!.value.isInitialized) {
-      Log.warning('Cannot set zoom - controller not initialized',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Cannot set zoom - controller not initialized',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -452,11 +597,17 @@ class MobileCameraInterface extends CameraPlatformInterface {
       await _controller!.setZoomLevel(clampedZoom);
       _currentZoomLevel = clampedZoom;
 
-      Log.debug('Set zoom level to ${clampedZoom.toStringAsFixed(1)}x',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.debug(
+        'Set zoom level to ${clampedZoom.toStringAsFixed(1)}x',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to set zoom: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Failed to set zoom: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -482,8 +633,11 @@ class MobileCameraInterface extends CameraPlatformInterface {
       try {
         _controller?.stopVideoRecording();
       } catch (e) {
-        Log.error('Error stopping recording during disposal: $e',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.error(
+          'Error stopping recording during disposal: $e',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       }
       isRecording = false;
     }
@@ -491,9 +645,8 @@ class MobileCameraInterface extends CameraPlatformInterface {
   }
 }
 
-/// macOS camera implementation using hybrid approach:
-/// - camera_macos for visual preview
-/// - native platform channels for recording (more reliable)
+/// macOS camera implementation using native platform channels
+/// Uses single AVCaptureSession for both preview and recording via NativeMacOSCamera
 class MacOSCameraInterface extends CameraPlatformInterface
     with AsyncInitialization {
   final GlobalKey _cameraKey = GlobalKey(debugLabel: 'vineCamera');
@@ -509,6 +662,7 @@ class MacOSCameraInterface extends CameraPlatformInterface
 
   // Recording completion tracking
   DateTime? _recordingStartTime;
+  DateTime? _currentSegmentStartTime;
   Timer? _maxDurationTimer;
 
   @override
@@ -518,8 +672,11 @@ class MacOSCameraInterface extends CameraPlatformInterface
     // Get available cameras
     final cameras = await NativeMacOSCamera.getAvailableCameras();
     _availableCameraCount = cameras.length;
-    Log.info('Found $_availableCameraCount cameras on macOS',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.info(
+      'Found $_availableCameraCount cameras on macOS',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
 
     // Initialize the native macOS camera for recording
     final nativeResult = await NativeMacOSCamera.initialize();
@@ -533,47 +690,49 @@ class MacOSCameraInterface extends CameraPlatformInterface
     // Complete initialization now that native camera is ready for recording
     completeInitialization();
 
-    // Create the camera widget for visual preview (asynchronous, doesn't block recording)
+    // Create the camera widget using native frame stream (single AVCaptureSession)
     _previewWidget = SizedBox.expand(
-      child: macos.CameraMacOSView(
-        key: _cameraKey,
-        fit: BoxFit.cover,
-        cameraMode: macos.CameraMacOSMode.video,
-        onCameraInizialized: (controller) {
-          Log.info('📱 macOS camera visual preview initialized',
-              name: 'VineRecordingController', category: LogCategory.system);
-        },
-      ),
+      child: _NativeFramePreview(key: _cameraKey),
     );
 
-    Log.info('📱 Native macOS camera initialized successfully',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.info(
+      '📱 Native macOS camera initialized successfully',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
   }
 
   @override
   Future<void> startRecordingSegment(String filePath) async {
     Log.info(
-        '📱 Starting recording segment, initialized: $isInitialized, recording: $isRecording, singleMode: $isSingleRecordingMode',
-        name: 'VineRecordingController',
-        category: LogCategory.system);
+      '📱 Starting recording segment, initialized: $isInitialized, recording: $isRecording, singleMode: $isSingleRecordingMode',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
 
     // Wait for visual preview to be initialized
     try {
       await waitForInitialization(timeout: const Duration(seconds: 5));
     } catch (e) {
-      Log.error('macOS camera failed to initialize: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'macOS camera failed to initialize: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       throw Exception(
-          'macOS camera not initialized after waiting 5 seconds: $e');
+        'macOS camera not initialized after waiting 5 seconds: $e',
+      );
     }
 
-    // For macOS, use single recording mode
+    // For macOS, use single recording mode - one continuous native recording
+    // with virtual segments tracked in software
     if (!isSingleRecordingMode && !isRecording) {
-      // First time - start the single recording
+      // First segment - start the native recording
       // Don't set currentRecordingPath yet - native will provide the actual path
       isRecording = true;
       isSingleRecordingMode = true;
       _recordingStartTime = DateTime.now();
+      _currentSegmentStartTime = _recordingStartTime;
 
       // Start native recording
       final started = await NativeMacOSCamera.startRecording();
@@ -581,43 +740,66 @@ class MacOSCameraInterface extends CameraPlatformInterface
         isRecording = false;
         isSingleRecordingMode = false;
         _recordingStartTime = null;
+        _currentSegmentStartTime = null;
         throw Exception('Failed to start native macOS recording');
       }
 
-      // Note: Auto-stop timer is handled by VineRecordingController._startMaxDurationTimer()
-      // No need for a separate timer here to avoid race conditions
-
-      Log.info('Started native macOS single recording mode',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Started native macOS single recording mode (segment 1)',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } else if (isSingleRecordingMode && isRecording) {
-      // Already recording in single mode - just track the virtual segment start
-      Log.verbose(
-          'Native macOS single recording mode - tracking new virtual segment',
-          name: 'VineRecordingController',
-          category: LogCategory.system);
+      // Subsequent segments - native recording continues, just track segment start
+      _currentSegmentStartTime = DateTime.now();
+      Log.info(
+        'Native macOS recording continues - starting segment ${_virtualSegments.length + 2}',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     }
+    // Note: The case (isSingleRecordingMode && !isRecording) should not happen
+    // since we keep isRecording=true between segments
   }
 
   @override
   Future<String?> stopRecordingSegment() async {
     Log.debug(
-        '📱 Stopping recording segment, recording: $isRecording, singleMode: $isSingleRecordingMode',
-        name: 'VineRecordingController',
-        category: LogCategory.system);
+      '📱 Pausing segment, recording: $isRecording, singleMode: $isSingleRecordingMode',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
 
-    if (!isSingleRecordingMode) {
+    if (!isSingleRecordingMode || !isRecording) {
       return null;
     }
 
-    // In single recording mode, complete the recording and get the actual file
-    if (isSingleRecordingMode && isRecording) {
-      Log.verbose('Native macOS single recording mode - completing recording',
-          name: 'VineRecordingController', category: LogCategory.system);
-      // Complete the recording and get the actual file path
-      final completedPath = await completeRecording();
-      return completedPath;
+    // In single recording mode, track the segment end but KEEP native recording going
+    // This allows multiple segments to be recorded continuously
+    if (_currentSegmentStartTime != null) {
+      final endTime = DateTime.now();
+      final duration = endTime.difference(_currentSegmentStartTime!);
+
+      final segment = RecordingSegment(
+        startTime: _currentSegmentStartTime!,
+        endTime: endTime,
+        duration: duration,
+        filePath:
+            '', // Placeholder - actual path comes from completeRecording()
+      );
+
+      _virtualSegments.add(segment);
+      Log.info(
+        'Tracked virtual segment ${_virtualSegments.length}: ${duration.inMilliseconds}ms (native recording continues)',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     }
 
+    // Clear segment start time (will be set again on next segment start)
+    _currentSegmentStartTime = null;
+
+    // Return null - file path only comes from completeRecording() at the end
     return null;
   }
 
@@ -628,6 +810,27 @@ class MacOSCameraInterface extends CameraPlatformInterface
     }
 
     _maxDurationTimer?.cancel();
+
+    // If there's an active segment in progress, track it before stopping
+    if (_currentSegmentStartTime != null) {
+      final endTime = DateTime.now();
+      final duration = endTime.difference(_currentSegmentStartTime!);
+
+      final segment = RecordingSegment(
+        startTime: _currentSegmentStartTime!,
+        endTime: endTime,
+        duration: duration,
+        filePath: '', // Will be updated below
+      );
+
+      _virtualSegments.add(segment);
+      Log.info(
+        'Tracked final segment ${_virtualSegments.length}: ${duration.inMilliseconds}ms',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
+    }
+
     isRecording = false;
 
     // Stop native recording and get the file path
@@ -637,45 +840,45 @@ class MacOSCameraInterface extends CameraPlatformInterface
       // The native implementation returns the actual file path
       currentRecordingPath = recordedPath;
 
-      // Create a virtual segment for the entire recording
-      if (_recordingStartTime != null) {
-        final endTime = DateTime.now();
-        final duration = endTime.difference(_recordingStartTime!);
+      // Calculate total duration from all segments
+      final totalDuration = _virtualSegments.fold<Duration>(
+        Duration.zero,
+        (sum, segment) => sum + segment.duration,
+      );
 
-        final segment = RecordingSegment(
-          startTime: _recordingStartTime!,
-          endTime: endTime,
-          duration: duration,
-          filePath: recordedPath,
-        );
-
-        _virtualSegments.add(segment);
-        Log.info('Added virtual segment: ${duration.inMilliseconds}ms',
-            name: 'VineRecordingController', category: LogCategory.system);
-      }
-
-      Log.info('Native macOS recording completed: $recordedPath',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Native macOS recording completed: $recordedPath (${_virtualSegments.length} segments, total: ${totalDuration.inMilliseconds}ms)',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       // Don't clear isSingleRecordingMode here - it's needed by finishRecording()
       // It will be cleared in dispose() or when starting a new recording
       _recordingStartTime = null;
+      _currentSegmentStartTime = null;
 
       return recordedPath;
     } else {
-      Log.error('Native macOS recording failed - no file path returned',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Native macOS recording failed - no file path returned',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       // Clear flags on error
       isSingleRecordingMode = false;
       _recordingStartTime = null;
+      _currentSegmentStartTime = null;
       return null;
     }
   }
 
   /// Stop the single recording mode and return the final file
   Future<String?> stopSingleRecording() async {
-    Log.debug('📱 Stopping native macOS single recording mode',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.debug(
+      '📱 Stopping native macOS single recording mode',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
 
     if (!isSingleRecordingMode || !isRecording) {
       return null;
@@ -699,13 +902,19 @@ class MacOSCameraInterface extends CameraPlatformInterface
   /// Get virtual segments for macOS single recording mode
   List<RecordingSegment> getVirtualSegments() => _virtualSegments;
 
+  /// Get the timestamp when native recording started (for calculating video offsets)
+  DateTime? get recordingStartTime => _recordingStartTime;
+
   @override
   Widget get previewWidget {
-    // Return the visual preview from camera_macos, or placeholder if not ready
+    // Return the native frame preview widget, or placeholder if not ready
     if (_previewWidget == null) {
       if (isInitialized) {
-        Log.info('📱 macOS camera initialized but preview widget not created yet',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          '📱 macOS camera initialized but preview widget not created yet',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       }
       // Return placeholder until preview widget is ready
       return const CameraPreviewPlaceholder();
@@ -720,30 +929,45 @@ class MacOSCameraInterface extends CameraPlatformInterface
   Future<void> switchCamera() async {
     try {
       if (_availableCameraCount <= 1) {
-        Log.info('Only one camera available on macOS, cannot switch',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          'Only one camera available on macOS, cannot switch',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         return;
       }
 
       // Cycle to next camera
       final nextCameraIndex = (_currentCameraIndex + 1) % _availableCameraCount;
 
-      Log.info('Switching macOS camera from $_currentCameraIndex to $nextCameraIndex',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Switching macOS camera from $_currentCameraIndex to $nextCameraIndex',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       final success = await NativeMacOSCamera.switchCamera(nextCameraIndex);
 
       if (success) {
         _currentCameraIndex = nextCameraIndex;
-        Log.info('📱 macOS camera switched successfully to camera $_currentCameraIndex',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          '📱 macOS camera switched successfully to camera $_currentCameraIndex',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       } else {
-        Log.error('Failed to switch macOS camera to index $nextCameraIndex',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.error(
+          'Failed to switch macOS camera to index $nextCameraIndex',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       }
     } catch (e) {
-      Log.error('macOS camera switching failed: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'macOS camera switching failed: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -767,8 +991,60 @@ class MacOSCameraInterface extends CameraPlatformInterface
     currentRecordingPath = null;
     _virtualSegments.clear();
     _recordingStartTime = null;
-    Log.debug('📱 Native macOS camera interface reset',
-        name: 'VineRecordingController', category: LogCategory.system);
+    _currentSegmentStartTime = null;
+    Log.debug(
+      '📱 Native macOS camera interface reset',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
+  }
+}
+
+/// Native frame preview widget for macOS using NativeMacOSCamera.frameStream
+/// Uses a single AVCaptureSession for both preview and recording
+class _NativeFramePreview extends StatefulWidget {
+  const _NativeFramePreview({super.key});
+
+  @override
+  State<_NativeFramePreview> createState() => _NativeFramePreviewState();
+}
+
+class _NativeFramePreviewState extends State<_NativeFramePreview> {
+  Uint8List? _lastFrame;
+  StreamSubscription<Uint8List>? _frameSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _frameSubscription = NativeMacOSCamera.frameStream.listen((frameData) {
+      if (mounted) {
+        setState(() {
+          _lastFrame = frameData;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _frameSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_lastFrame == null) {
+      return const ColoredBox(
+        color: Colors.black,
+        child: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        ),
+      );
+    }
+
+    return Image.memory(_lastFrame!, fit: BoxFit.cover, gaplessPlayback: true);
   }
 }
 
@@ -787,28 +1063,38 @@ class WebCameraInterface extends CameraPlatformInterface {
       await _webCameraService!.initialize();
 
       // Create preview widget with the initialized camera service
-      _previewWidget =
-          camera_service.WebCameraPreview(cameraService: _webCameraService!);
+      _previewWidget = camera_service.WebCameraPreview(
+        cameraService: _webCameraService!,
+      );
 
-      Log.info('📱 Web camera interface initialized successfully',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '📱 Web camera interface initialized successfully',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Web camera interface initialization failed: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Web camera interface initialization failed: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       // Provide more specific error messages
       if (e.toString().contains('NotFoundError')) {
         throw Exception(
-            'No camera found. Please ensure a camera is connected and accessible.');
+          'No camera found. Please ensure a camera is connected and accessible.',
+        );
       } else if (e.toString().contains('NotAllowedError') ||
           e.toString().contains('PermissionDeniedError')) {
         throw Exception(
-            'Camera access denied. Please allow camera permissions and try again.');
+          'Camera access denied. Please allow camera permissions and try again.',
+        );
       } else if (e.toString().contains('NotReadableError')) {
         throw Exception('Camera is already in use by another application.');
       } else if (e.toString().contains('MediaDevices API not available')) {
         throw Exception(
-            'Camera API not available. Please ensure you are using HTTPS.');
+          'Camera API not available. Please ensure you are using HTTPS.',
+        );
       }
 
       rethrow;
@@ -832,12 +1118,18 @@ class WebCameraInterface extends CameraPlatformInterface {
 
     try {
       final blobUrl = await _webCameraService!.stopRecording();
-      Log.info('📱 Web recording completed: $blobUrl',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '📱 Web recording completed: $blobUrl',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return blobUrl;
     } catch (e) {
-      Log.error('Failed to stop web recording: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Failed to stop web recording: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -845,18 +1137,27 @@ class WebCameraInterface extends CameraPlatformInterface {
   @override
   Future<void> switchCamera() async {
     if (_webCameraService == null) {
-      Log.warning('Web camera service not initialized',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Web camera service not initialized',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return;
     }
 
     try {
       await _webCameraService!.switchCamera();
-      Log.info('📱 Web camera switched successfully',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '📱 Web camera switched successfully',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Camera switching failed on web: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Camera switching failed on web: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -886,8 +1187,11 @@ class WebCameraInterface extends CameraPlatformInterface {
         // Call the static method through the service
         camera_service.WebCameraService.revokeBlobUrl(blobUrl);
       } catch (e) {
-        Log.error('Error revoking blob URL: $e',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.error(
+          'Error revoking blob URL: $e',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -903,9 +1207,12 @@ class WebCameraInterface extends CameraPlatformInterface {
 /// Universal Vine recording controller that works across all platforms
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class VineRecordingController {
-  static const Duration maxRecordingDuration =
-      Duration(milliseconds: 6300); // 6.3 seconds like original Vine
-  static const Duration minSegmentDuration = Duration(milliseconds: 33); // 1 frame at 30fps for stop-motion
+  static const Duration maxRecordingDuration = Duration(
+    milliseconds: 6300,
+  ); // 6.3 seconds like original Vine
+  static const Duration minSegmentDuration = Duration(
+    milliseconds: 33,
+  ); // 1 frame at 30fps for stop-motion
 
   CameraPlatformInterface? _cameraInterface;
   VineRecordingState _state = VineRecordingState.idle;
@@ -920,18 +1227,15 @@ class VineRecordingController {
   // Getter for camera preview widget
   Widget get previewWidget =>
       _cameraInterface?.previewWidget ??
-      const SizedBox(
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      const SizedBox(child: Center(child: CircularProgressIndicator()));
 
   // Callback for notifying UI of state changes during recording
   VoidCallback? _onStateChanged;
 
   // Recording session data
   final List<RecordingSegment> _segments = [];
-  model.AspectRatio _aspectRatio = model.AspectRatio.vertical; // Default to 9:16 vertical
+  model.AspectRatio _aspectRatio =
+      model.AspectRatio.vertical; // Default to 9:16 vertical
   DateTime? _currentSegmentStartTime;
   Timer? _progressTimer;
   Timer? _maxDurationTimer;
@@ -957,7 +1261,18 @@ class VineRecordingController {
   bool get canRecord =>
       remainingDuration > minSegmentDuration &&
       _state != VineRecordingState.processing;
-  bool get hasSegments => _segments.isNotEmpty;
+  bool get hasSegments {
+    if (_segments.isNotEmpty) return true;
+    // For macOS, also check virtual segments since we use single-recording mode
+    if (!kIsWeb &&
+        Platform.isMacOS &&
+        _cameraInterface is MacOSCameraInterface) {
+      final macOSInterface = _cameraInterface as MacOSCameraInterface;
+      return macOSInterface.getVirtualSegments().isNotEmpty;
+    }
+    return false;
+  }
+
   Widget get cameraPreview =>
       _cameraInterface?.previewWidget ??
       const ColoredBox(
@@ -967,7 +1282,9 @@ class VineRecordingController {
             mainAxisSize: MainAxisSize.min,
             children: [
               CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00B488)), // Vine green
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Color(0xFF00B488),
+                ), // Vine green
                 strokeWidth: 3.0,
               ),
               SizedBox(height: 16),
@@ -1008,54 +1325,83 @@ class VineRecordingController {
   /// Set aspect ratio (only allowed when not recording)
   void setAspectRatio(model.AspectRatio ratio) {
     if (state == VineRecordingState.recording) {
-      Log.warning('Cannot change aspect ratio while recording',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Cannot change aspect ratio while recording',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return;
     }
 
     _aspectRatio = ratio;
-    Log.info('Aspect ratio changed to: $ratio',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.info(
+      'Aspect ratio changed to: $ratio',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
     _onStateChanged?.call();
   }
 
   /// Switch between front and rear cameras
   Future<void> switchCamera() async {
-    Log.info('🔄 VineRecordingController.switchCamera() called, current state: $_state',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.info(
+      '🔄 VineRecordingController.switchCamera() called, current state: $_state',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
 
     if (_state == VineRecordingState.recording) {
-      Log.warning('Cannot switch camera while recording',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Cannot switch camera while recording',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return;
     }
 
     // If we're in paused state with a segment in progress, ensure it's properly stopped
     if (_currentSegmentStartTime != null) {
-      Log.warning('Cleaning up incomplete segment before camera switch',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Cleaning up incomplete segment before camera switch',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       _currentSegmentStartTime = null;
       _stopProgressTimer();
       _stopMaxDurationTimer();
     }
 
     try {
-      Log.info('🔄 Calling _cameraInterface?.switchCamera()...',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '🔄 Calling _cameraInterface?.switchCamera()...',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       await _cameraInterface?.switchCamera();
-      Log.info('📱 Camera switched successfully at interface level',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '📱 Camera switched successfully at interface level',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       // CRITICAL: Force state notification to trigger UI rebuild
-      Log.info('🔄 Calling _onStateChanged callback to trigger UI rebuild, callback=${_onStateChanged != null ? "exists" : "null"}',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '🔄 Calling _onStateChanged callback to trigger UI rebuild, callback=${_onStateChanged != null ? "exists" : "null"}',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       _onStateChanged?.call();
-      Log.info('🔄 _onStateChanged callback completed',
-          name: 'VineRecordingController', category: LogCategory.system);
-
+      Log.info(
+        '🔄 _onStateChanged callback completed',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to switch camera: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Failed to switch camera: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -1073,28 +1419,39 @@ class VineRecordingController {
       } else if (Platform.isMacOS) {
         _cameraInterface = MacOSCameraInterface();
       } else if (Platform.isIOS || Platform.isAndroid) {
-        // Use basic camera for iOS due to performance issues with enhanced camera
-        // Enhanced camera causes dark/slow preview on iOS devices
+        // Use CamerAwesome for iOS with physical sensor switching support
         if (Platform.isIOS) {
-          _cameraInterface = MobileCameraInterface();
+          _cameraInterface = CamerAwesomeMobileCameraInterface();
           await _cameraInterface!.initialize();
-          Log.info('Using basic mobile camera for iOS (performance optimization)',
-              name: 'VineRecordingController', category: LogCategory.system);
+          Log.info(
+            'Using CamerAwesome camera with physical sensor switching',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
         } else {
-          // Try enhanced mobile camera interface first for Android, fallback to basic if it fails
+          // Android: Try CamerAwesome, fallback to enhanced camera if needed
           try {
+            _cameraInterface = CamerAwesomeMobileCameraInterface();
+            await _cameraInterface!.initialize();
+            Log.info(
+              'Using CamerAwesome camera for Android',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
+            );
+          } catch (cameraAwesomeError) {
+            Log.warning(
+              'CamerAwesome failed, falling back to enhanced camera: $cameraAwesomeError',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
+            );
+            _cameraInterface?.dispose();
             _cameraInterface = EnhancedMobileCameraInterface();
             await _cameraInterface!.initialize();
-            Log.info('Using enhanced mobile camera with zoom and focus features',
-                name: 'VineRecordingController', category: LogCategory.system);
-          } catch (enhancedError) {
-            Log.warning('Enhanced camera failed, falling back to basic camera: $enhancedError',
-                name: 'VineRecordingController', category: LogCategory.system);
-            _cameraInterface?.dispose();
-            _cameraInterface = MobileCameraInterface();
-            await _cameraInterface!.initialize();
-            Log.info('Using basic mobile camera interface as fallback',
-                name: 'VineRecordingController', category: LogCategory.system);
+            Log.info(
+              'Using enhanced mobile camera interface as fallback',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
+            );
           }
         }
       } else {
@@ -1115,13 +1472,19 @@ class VineRecordingController {
       // Mark camera as initialized - UI can now show preview
       _cameraInitialized = true;
 
-      Log.info('VineRecordingController initialized for ${_getPlatformName()}',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'VineRecordingController initialized for ${_getPlatformName()}',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } catch (e) {
       _setState(VineRecordingState.error);
       _cameraInitialized = false;
-      Log.error('VineRecordingController initialization failed: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'VineRecordingController initialization failed: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -1132,16 +1495,22 @@ class VineRecordingController {
 
     // Prevent starting if already recording
     if (_state == VineRecordingState.recording) {
-      Log.warning('Already recording, ignoring start request',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Already recording, ignoring start request',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return;
     }
 
     // On web, prevent multiple segments - MediaRecorder doesn't support pause/resume like mobile
     // Web needs continuous recording or a different concatenation approach
     if (kIsWeb && _segments.isNotEmpty) {
-      Log.warning('Multiple segments not supported on web - use single continuous recording',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Multiple segments not supported on web - use single continuous recording',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -1161,142 +1530,227 @@ class VineRecordingController {
       // Set max duration timer if this is the first segment or we're close to limit
       _startMaxDurationTimer();
 
-      Log.info('Started recording segment ${_segments.length + 1}',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        'Started recording segment ${_segments.length + 1}',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } catch (e) {
       // Reset state and clean up on error
       _currentSegmentStartTime = null;
       _stopProgressTimer();
       _stopMaxDurationTimer();
       _setState(VineRecordingState.error);
-      Log.error('Failed to start recording: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Failed to start recording: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       // Don't rethrow - handle gracefully in UI
     }
   }
 
   /// Stop recording current segment (release)
   Future<void> stopRecording() async {
-    if (_state != VineRecordingState.recording ||
-        _currentSegmentStartTime == null) {
-      Log.warning('Not recording or no start time, ignoring stop request',
-          name: 'VineRecordingController', category: LogCategory.system);
+    // Capture start time locally to prevent race conditions
+    final segmentStartTime = _currentSegmentStartTime;
+
+    if (_state != VineRecordingState.recording || segmentStartTime == null) {
+      Log.warning(
+        'Not recording or no start time, ignoring stop request',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return;
     }
 
+    // Clear the segment start time immediately to prevent double-stop
+    _currentSegmentStartTime = null;
+
     try {
       var segmentEndTime = DateTime.now();
-      var segmentDuration =
-          segmentEndTime.difference(_currentSegmentStartTime!);
+      var segmentDuration = segmentEndTime.difference(segmentStartTime);
 
       // For stop-motion: if user taps very quickly, wait for minimum duration
       // to ensure at least one frame is captured
       if (segmentDuration < minSegmentDuration) {
         final waitTime = minSegmentDuration - segmentDuration;
         Log.info(
-            '🎬 Stop-motion mode: waiting ${waitTime.inMilliseconds}ms to capture frame',
-            name: 'VineRecordingController',
-            category: LogCategory.system);
+          '🎬 Stop-motion mode: waiting ${waitTime.inMilliseconds}ms to capture frame',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         await Future.delayed(waitTime);
 
         // Recalculate after waiting
         segmentEndTime = DateTime.now();
-        segmentDuration = segmentEndTime.difference(_currentSegmentStartTime!);
+        segmentDuration = segmentEndTime.difference(segmentStartTime);
       }
 
       // Now we're guaranteed to have at least minSegmentDuration
       if (segmentDuration >= minSegmentDuration) {
-        // For macOS in single recording mode, stop the native recording to get the actual path
+        // For macOS in single recording mode, track segment but KEEP native recording going
+        // The native recording only stops when finishRecording() is called
         if (!kIsWeb &&
             Platform.isMacOS &&
             _cameraInterface is MacOSCameraInterface) {
           final macOSInterface = _cameraInterface as MacOSCameraInterface;
 
-          // Cancel auto-stop timer since user is manually stopping
-          macOSInterface._maxDurationTimer?.cancel();
+          // Track the segment end time but DON'T stop native recording
+          // This allows subsequent segments to continue from the same recording
+          await macOSInterface.stopRecordingSegment();
 
-          // Stop the native recording and get the actual file path
-          final recordedPath = await macOSInterface.completeRecording();
+          // Update total recorded duration for progress bar
+          _totalRecordedDuration += segmentDuration;
 
-          if (recordedPath != null) {
-            Log.info('📱 Native recording stopped, path: $recordedPath',
-                name: 'VineRecordingController', category: LogCategory.system);
-
-            final segment = RecordingSegment(
-              startTime: _currentSegmentStartTime!,
-              endTime: segmentEndTime,
-              duration: segmentDuration,
-              filePath: recordedPath,
-            );
-
-            _segments.add(segment);
-            _totalRecordedDuration += segmentDuration;
-
-            Log.info('📱 Segment added - segments count now: ${_segments.length}',
-                name: 'VineRecordingController', category: LogCategory.system);
-
-            Log.info(
-                'Completed segment ${_segments.length}: ${segmentDuration.inMilliseconds}ms',
-                name: 'VineRecordingController',
-                category: LogCategory.system);
-          } else {
-            Log.warning('Failed to stop native recording - no path returned',
-                name: 'VineRecordingController', category: LogCategory.system);
-          }
+          final virtualSegments = macOSInterface.getVirtualSegments();
+          Log.info(
+            '📱 macOS segment ${virtualSegments.length} tracked (${segmentDuration.inMilliseconds}ms) - native recording continues',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
         } else {
           // Normal segment recording for other platforms
           final filePath = await _cameraInterface!.stopRecordingSegment();
 
           if (filePath != null) {
-            final segment = RecordingSegment(
-              startTime: _currentSegmentStartTime!,
-              endTime: segmentEndTime,
-              duration: segmentDuration,
-              filePath: filePath,
+            // CRITICAL: Copy segment to safe location immediately
+            // CamerAwesome may delete previous recordings when starting new ones
+            // This ensures all segments are preserved for concatenation
+            Log.info(
+              '📹 Segment ${_segments.length + 1} recorded to: $filePath',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
             );
 
-            _segments.add(segment);
-            _totalRecordedDuration += segmentDuration;
+            // Wait for file to be written - CamerAwesome's stopRecording may return
+            // before the file is fully flushed to disk, especially for short recordings
+            final sourceFile = File(filePath);
+            bool exists = await sourceFile.exists();
+
+            // Retry up to 500ms waiting for file to appear (for stop-motion short taps)
+            if (!exists) {
+              Log.info(
+                '📹 File not yet written, waiting for CamerAwesome to flush...',
+                name: 'VineRecordingController',
+                category: LogCategory.system,
+              );
+              for (int i = 0; i < 10 && !exists; i++) {
+                await Future.delayed(const Duration(milliseconds: 50));
+                exists = await sourceFile.exists();
+              }
+            }
 
             Log.info(
+              '📹 Source file exists: $exists',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
+            );
+
+            if (!exists) {
+              // Even after waiting, file doesn't exist - recording truly failed
+              Log.warning(
+                '📹 Segment file does not exist after waiting, skipping segment',
+                name: 'VineRecordingController',
+                category: LogCategory.system,
+              );
+              // Don't add to _segments - this segment is invalid
+            } else {
+              String safeFilePath = filePath;
+              try {
+                final safeDir = await _getTempDirectory();
+                final safePath =
+                    '${safeDir.path}/safe_segment_${_segments.length + 1}_${DateTime.now().millisecondsSinceEpoch}.mov';
+                Log.info(
+                  '📹 Copying to safe path: $safePath',
+                  name: 'VineRecordingController',
+                  category: LogCategory.system,
+                );
+                final copiedFile = await sourceFile.copy(safePath);
+                safeFilePath = copiedFile.path;
+                Log.info(
+                  '📹 Copied segment to safe location: $safeFilePath',
+                  name: 'VineRecordingController',
+                  category: LogCategory.system,
+                );
+              } catch (e) {
+                Log.error(
+                  '📹 Failed to copy segment to safe location: $e, using original path: $filePath',
+                  name: 'VineRecordingController',
+                  category: LogCategory.system,
+                );
+              }
+
+              final segment = RecordingSegment(
+                startTime: segmentStartTime,
+                endTime: segmentEndTime,
+                duration: segmentDuration,
+                filePath: safeFilePath,
+              );
+
+              _segments.add(segment);
+              _totalRecordedDuration += segmentDuration;
+
+              Log.info(
                 'Completed segment ${_segments.length}: ${segmentDuration.inMilliseconds}ms',
                 name: 'VineRecordingController',
-                category: LogCategory.system);
+                category: LogCategory.system,
+              );
+            }
           } else {
-            Log.warning('No file path returned from camera interface',
-                name: 'VineRecordingController', category: LogCategory.system);
+            Log.warning(
+              'No file path returned from camera interface',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
+            );
           }
         }
       }
 
-      _currentSegmentStartTime = null;
+      // _currentSegmentStartTime already cleared at start of method
       _stopProgressTimer();
       _stopMaxDurationTimer();
 
       // Reset total duration to actual segments total (removing any in-progress time)
-      _totalRecordedDuration = _segments.fold<Duration>(
-        Duration.zero,
-        (total, segment) => total + segment.duration,
-      );
+      // For macOS with virtual segments, use the virtual segments for duration calculation
+      if (!kIsWeb &&
+          Platform.isMacOS &&
+          _cameraInterface is MacOSCameraInterface) {
+        final macOSInterface = _cameraInterface as MacOSCameraInterface;
+        final virtualSegments = macOSInterface.getVirtualSegments();
+        _totalRecordedDuration = virtualSegments.fold<Duration>(
+          Duration.zero,
+          (total, segment) => total + segment.duration,
+        );
+      } else {
+        _totalRecordedDuration = _segments.fold<Duration>(
+          Duration.zero,
+          (total, segment) => total + segment.duration,
+        );
+      }
 
       // Check if we've reached the maximum duration or if on web (single segment only)
       if (_totalRecordedDuration >= maxRecordingDuration || kIsWeb) {
         _setState(VineRecordingState.completed);
         Log.info(
-            '📱 Recording completed - ${kIsWeb ? "web single segment" : "reached maximum duration"}',
-            name: 'VineRecordingController',
-            category: LogCategory.system);
+          '📱 Recording completed - ${kIsWeb ? "web single segment" : "reached maximum duration"}',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       } else {
         _setState(VineRecordingState.paused);
       }
     } catch (e) {
       // Reset state and clean up on error
-      _currentSegmentStartTime = null;
+      // Note: _currentSegmentStartTime already cleared at start of method
       _stopProgressTimer();
       _stopMaxDurationTimer();
       _setState(VineRecordingState.error);
-      Log.error('Failed to stop recording: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Failed to stop recording: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       // Don't rethrow - handle gracefully in UI
     }
   }
@@ -1329,10 +1783,37 @@ class VineRecordingController {
       throw Exception('No segments to concatenate');
     }
 
+    // CRITICAL: Verify all segment files exist before proceeding
+    // CamerAwesome may delete old segments when new recordings start
+    Log.info(
+      '📹 Verifying ${segments.length} segment files exist before concatenation',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
+
+    for (var i = 0; i < segments.length; i++) {
+      final segment = segments[i];
+      if (segment.filePath == null) {
+        throw Exception('Segment $i has null file path');
+      }
+      final file = File(segment.filePath!);
+      if (!await file.exists()) {
+        throw Exception('Segment $i file does not exist: ${segment.filePath}');
+      }
+      Log.info(
+        '📹 Segment $i verified: ${segment.filePath}',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
+    }
+
     // Single segment - apply aspect ratio cropping via FFmpeg
     if (segments.length == 1 && segments.first.filePath != null) {
-      Log.info('📹 Applying square cropping to single segment',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '📹 Applying square cropping to single segment',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       final inputPath = segments.first.filePath!;
       final tempDir = await getTemporaryDirectory();
@@ -1340,17 +1821,24 @@ class VineRecordingController {
           '${tempDir.path}/vine_final_${DateTime.now().millisecondsSinceEpoch}.mp4';
 
       final cropFilter = _buildCropFilter(_aspectRatio);
-      final command = '-i "$inputPath" -vf "$cropFilter" -c:a copy "$outputPath"';
+      final command =
+          '-y -i "$inputPath" -vf "$cropFilter" -c:a copy "$outputPath"';
 
-      Log.info('📹 Executing FFmpeg square crop command: $command',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '📹 Executing FFmpeg square crop command: $command',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       final session = await FFmpegKit.execute(command);
       final returnCode = await session.getReturnCode();
 
       if (ReturnCode.isSuccess(returnCode)) {
-        Log.info('📹 FFmpeg square cropping successful: $outputPath',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          '📹 FFmpeg square cropping successful: $outputPath',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
 
         final outputFile = File(outputPath);
         if (await outputFile.exists()) {
@@ -1360,17 +1848,26 @@ class VineRecordingController {
         }
       } else {
         final output = await session.getOutput();
-        Log.error('📹 FFmpeg square cropping failed with code $returnCode',
-            name: 'VineRecordingController', category: LogCategory.system);
-        Log.error('📹 FFmpeg output: $output',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.error(
+          '📹 FFmpeg square cropping failed with code $returnCode',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
+        Log.error(
+          '📹 FFmpeg output: $output',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         throw Exception('FFmpeg square cropping failed with code $returnCode');
       }
     }
 
     try {
-      Log.info('📹 Concatenating ${segments.length} video segments with FFmpeg',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '📹 Concatenating ${segments.length} video segments with FFmpeg',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       // Create output file path
       final tempDir = await getTemporaryDirectory();
@@ -1380,8 +1877,11 @@ class VineRecordingController {
       // CRITICAL FIX: When switching cameras mid-recording, second segment gets 180° rotation
       // We need to normalize all segments to have the same rotation before concatenating
       // Strategy: Re-encode all segments with rotation metadata applied to pixels, then strip metadata
-      Log.info('📹 Normalizing rotation for all segments to prevent camera-switch flip',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '📹 Normalizing rotation for all segments to prevent camera-switch flip',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       final normalizedPaths = <String>[];
       for (var i = 0; i < segments.length; i++) {
@@ -1393,24 +1893,36 @@ class VineRecordingController {
         // Use -noautorotate to prevent FFmpeg from auto-rotating during input
         // Then manually apply rotation metadata to pixels and strip metadata
         // This ensures all segments have physically upright pixels with no rotation tag
-        final normalizeCommand = '-i "${segment.filePath}" -c:v libx264 -preset ultrafast -c:a copy -metadata:s:v rotate=0 "$normalizedPath"';
+        // Re-encode audio too to ensure proper A/V sync across segments
+        // Force 30fps output and use -vsync cfr for consistent timing
+        final normalizeCommand =
+            '-y -i "${segment.filePath}" -c:v libx264 -preset ultrafast -r 30 -vsync cfr -c:a aac -b:a 128k -async 1 -metadata:s:v rotate=0 "$normalizedPath"';
 
-        Log.info('📹 Normalizing segment $i with command: $normalizeCommand',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          '📹 Normalizing segment $i with command: $normalizeCommand',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
 
         final session = await FFmpegKit.execute(normalizeCommand);
         final returnCode = await session.getReturnCode();
 
         if (!ReturnCode.isSuccess(returnCode)) {
           final output = await session.getOutput();
-          Log.error('📹 Failed to normalize segment $i: $output',
-              name: 'VineRecordingController', category: LogCategory.system);
+          Log.error(
+            '📹 Failed to normalize segment $i: $output',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
           throw Exception('Failed to normalize rotation for segment $i');
         }
 
         normalizedPaths.add(normalizedPath);
-        Log.info('📹 Successfully normalized segment $i',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          '📹 Successfully normalized segment $i',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       }
 
       // Create concat file list with normalized segments
@@ -1424,22 +1936,34 @@ class VineRecordingController {
 
       await concatFile.writeAsString(buffer.toString());
 
-      Log.info('📹 FFmpeg concat list:\n${buffer.toString()}',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '📹 FFmpeg concat list:\n${buffer.toString()}',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       // Execute FFmpeg concatenation with aspect ratio cropping
+      // Re-encode both video and audio to ensure proper A/V sync
+      // Use -vsync cfr for constant frame rate and -async 1 to sync audio to video
       final cropFilter = _buildCropFilter(_aspectRatio);
-      final command = '-f concat -safe 0 -i "$concatFilePath" -vf "$cropFilter" -c:a copy "$outputPath"';
+      final command =
+          '-y -f concat -safe 0 -i "$concatFilePath" -vf "$cropFilter" -c:v libx264 -preset fast -vsync cfr -r 30 -c:a aac -b:a 128k -async 1 "$outputPath"';
 
-      Log.info('📹 Executing FFmpeg command: $command',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '📹 Executing FFmpeg command: $command',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       final session = await FFmpegKit.execute(command);
       final returnCode = await session.getReturnCode();
 
       if (ReturnCode.isSuccess(returnCode)) {
-        Log.info('📹 FFmpeg concatenation successful: $outputPath',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          '📹 FFmpeg concatenation successful: $outputPath',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
 
         // Clean up concat list file and normalized segments
         try {
@@ -1448,13 +1972,19 @@ class VineRecordingController {
             try {
               await File(normalizedPath).delete();
             } catch (e) {
-              Log.warning('Failed to delete normalized segment $normalizedPath: $e',
-                  name: 'VineRecordingController', category: LogCategory.system);
+              Log.warning(
+                'Failed to delete normalized segment $normalizedPath: $e',
+                name: 'VineRecordingController',
+                category: LogCategory.system,
+              );
             }
           }
         } catch (e) {
-          Log.warning('Failed to delete concat list file: $e',
-              name: 'VineRecordingController', category: LogCategory.system);
+          Log.warning(
+            'Failed to delete concat list file: $e',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
         }
 
         final outputFile = File(outputPath);
@@ -1465,15 +1995,24 @@ class VineRecordingController {
         }
       } else {
         final output = await session.getOutput();
-        Log.error('📹 FFmpeg concatenation failed with code $returnCode',
-            name: 'VineRecordingController', category: LogCategory.system);
-        Log.error('📹 FFmpeg output: $output',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.error(
+          '📹 FFmpeg concatenation failed with code $returnCode',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
+        Log.error(
+          '📹 FFmpeg output: $output',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         throw Exception('FFmpeg concatenation failed with code $returnCode');
       }
     } catch (e) {
-      Log.error('📹 Video concatenation error: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        '📹 Video concatenation error: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -1495,27 +2034,38 @@ class VineRecordingController {
   ///
   /// Returns null if no valid recording is found.
   /// Throws exception if path discovery fails unexpectedly.
-  Future<String?> _getMacOSRecordingPath(MacOSCameraInterface macOSInterface) async {
+  Future<String?> _getMacOSRecordingPath(
+    MacOSCameraInterface macOSInterface,
+  ) async {
     // Try 1: If recording is still active, complete it first
     if (macOSInterface.isRecording) {
       try {
         final completedPath = await macOSInterface.completeRecording();
         if (completedPath != null && await File(completedPath).exists()) {
-          Log.info('📱 Got recording from active recording completion',
-              name: 'VineRecordingController', category: LogCategory.system);
+          Log.info(
+            '📱 Got recording from active recording completion',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
           return completedPath;
         }
       } catch (e) {
-        Log.error('Failed to complete macOS recording: $e',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.error(
+          'Failed to complete macOS recording: $e',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       }
     }
 
     // Try 2: Check if we already have a recorded file
     if (macOSInterface.currentRecordingPath != null) {
       if (await File(macOSInterface.currentRecordingPath!).exists()) {
-        Log.info('📱 Got recording from currentRecordingPath',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          '📱 Got recording from currentRecordingPath',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         return macOSInterface.currentRecordingPath;
       }
     }
@@ -1524,8 +2074,11 @@ class VineRecordingController {
     final virtualSegments = macOSInterface.getVirtualSegments();
     if (virtualSegments.isNotEmpty && virtualSegments.first.filePath != null) {
       if (await File(virtualSegments.first.filePath!).exists()) {
-        Log.info('📱 Got recording from virtual segments',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          '📱 Got recording from virtual segments',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         return virtualSegments.first.filePath;
       }
     }
@@ -1543,8 +2096,11 @@ class VineRecordingController {
   /// Returns a new cropped File in the temporary directory.
   /// Throws Exception if FFmpeg processing fails or output file doesn't exist.
   Future<File> _applyAspectRatioCrop(String inputPath) async {
-    Log.info('📹 Applying aspect ratio crop to video',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.info(
+      '📹 Applying aspect ratio crop to video',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
 
     final tempDir = await getTemporaryDirectory();
     final outputPath =
@@ -1553,18 +2109,27 @@ class VineRecordingController {
     final cropFilter = _buildCropFilter(_aspectRatio);
     final command = '-i "$inputPath" -vf "$cropFilter" -c:a copy "$outputPath"';
 
-    Log.info('📹 Executing FFmpeg crop command: $command',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.info(
+      '📹 Executing FFmpeg crop command: $command',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
 
     final session = await FFmpegKit.execute(command);
     final returnCode = await session.getReturnCode();
 
     if (!ReturnCode.isSuccess(returnCode)) {
       final output = await session.getOutput();
-      Log.error('📹 FFmpeg crop failed with code $returnCode',
-          name: 'VineRecordingController', category: LogCategory.system);
-      Log.error('📹 FFmpeg output: $output',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        '📹 FFmpeg crop failed with code $returnCode',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
+      Log.error(
+        '📹 FFmpeg output: $output',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       throw Exception('FFmpeg crop failed with code $returnCode');
     }
 
@@ -1573,10 +2138,188 @@ class VineRecordingController {
       throw Exception('Cropped file does not exist after FFmpeg processing');
     }
 
-    Log.info('📹 FFmpeg crop successful: $outputPath',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.info(
+      '📹 FFmpeg crop successful: $outputPath',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
 
     return croppedFile;
+  }
+
+  /// Extract only the recorded segments from a macOS continuous recording
+  /// Uses FFmpeg to cut out the paused portions based on virtual segment timestamps
+  Future<File> _extractMacOSSegments(
+    String inputPath,
+    List<RecordingSegment> virtualSegments,
+    DateTime recordingStartTime,
+  ) async {
+    if (virtualSegments.isEmpty) {
+      throw Exception('No virtual segments to extract');
+    }
+
+    final tempDir = await getTemporaryDirectory();
+
+    // If only one segment, just trim it directly with aspect ratio crop
+    if (virtualSegments.length == 1) {
+      final segment = virtualSegments.first;
+      final startOffset = segment.startTime.difference(recordingStartTime);
+      final startSec = startOffset.inMilliseconds / 1000.0;
+      final durationSec = segment.duration.inMilliseconds / 1000.0;
+
+      final outputPath =
+          '${tempDir.path}/vine_extracted_${DateTime.now().millisecondsSinceEpoch}.mp4';
+      final cropFilter = _buildCropFilter(_aspectRatio);
+
+      // Use -ss before -i for fast seeking, then -t for duration
+      final command =
+          '-y -ss $startSec -i "$inputPath" -t $durationSec -vf "$cropFilter" -c:v libx264 -preset fast -c:a aac "$outputPath"';
+
+      Log.info(
+        '📹 Extracting single macOS segment: start=${startSec}s, duration=${durationSec}s',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
+      Log.info(
+        '📹 FFmpeg command: $command',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
+
+      final session = await FFmpegKit.execute(command);
+      final returnCode = await session.getReturnCode();
+
+      if (!ReturnCode.isSuccess(returnCode)) {
+        final output = await session.getOutput();
+        Log.error(
+          '📹 FFmpeg segment extraction failed: $output',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
+        throw Exception('FFmpeg segment extraction failed');
+      }
+
+      final outputFile = File(outputPath);
+      if (!await outputFile.exists()) {
+        throw Exception('Extracted segment file does not exist');
+      }
+
+      Log.info(
+        '📹 Single segment extracted successfully: $outputPath',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
+      return outputFile;
+    }
+
+    // Multiple segments: extract each, then concatenate
+    Log.info(
+      '📹 Extracting ${virtualSegments.length} segments from macOS continuous recording',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
+
+    final extractedPaths = <String>[];
+
+    for (var i = 0; i < virtualSegments.length; i++) {
+      final segment = virtualSegments[i];
+      final startOffset = segment.startTime.difference(recordingStartTime);
+      final startSec = startOffset.inMilliseconds / 1000.0;
+      final durationSec = segment.duration.inMilliseconds / 1000.0;
+
+      final extractedPath = '${tempDir.path}/segment_$i.mp4';
+
+      // Extract segment without cropping first (will crop during concat)
+      final extractCommand =
+          '-y -ss $startSec -i "$inputPath" -t $durationSec -c:v libx264 -preset ultrafast -c:a aac "$extractedPath"';
+
+      Log.info(
+        '📹 Extracting segment $i: start=${startSec}s, duration=${durationSec}s',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
+
+      final session = await FFmpegKit.execute(extractCommand);
+      final returnCode = await session.getReturnCode();
+
+      if (!ReturnCode.isSuccess(returnCode)) {
+        final output = await session.getOutput();
+        Log.error(
+          '📹 Failed to extract segment $i: $output',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
+        throw Exception('Failed to extract segment $i');
+      }
+
+      extractedPaths.add(extractedPath);
+      Log.info(
+        '📹 Segment $i extracted successfully',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
+    }
+
+    // Create concat file list
+    final concatFilePath = '${tempDir.path}/concat_list.txt';
+    final concatFile = File(concatFilePath);
+    final buffer = StringBuffer();
+    for (final path in extractedPaths) {
+      buffer.writeln("file '$path'");
+    }
+    await concatFile.writeAsString(buffer.toString());
+
+    // Concatenate with aspect ratio crop
+    final outputPath =
+        '${tempDir.path}/vine_final_${DateTime.now().millisecondsSinceEpoch}.mp4';
+    final cropFilter = _buildCropFilter(_aspectRatio);
+    final concatCommand =
+        '-y -f concat -safe 0 -i "$concatFilePath" -vf "$cropFilter" -c:v libx264 -preset fast -c:a aac "$outputPath"';
+
+    Log.info(
+      '📹 Concatenating extracted segments with crop filter',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
+
+    final concatSession = await FFmpegKit.execute(concatCommand);
+    final concatReturnCode = await concatSession.getReturnCode();
+
+    if (!ReturnCode.isSuccess(concatReturnCode)) {
+      final output = await concatSession.getOutput();
+      Log.error(
+        '📹 FFmpeg concat failed: $output',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
+      throw Exception('FFmpeg concatenation of extracted segments failed');
+    }
+
+    // Cleanup temp files
+    try {
+      await concatFile.delete();
+      for (final path in extractedPaths) {
+        await File(path).delete();
+      }
+    } catch (e) {
+      Log.warning(
+        '📹 Failed to cleanup temp files: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
+    }
+
+    final outputFile = File(outputPath);
+    if (!await outputFile.exists()) {
+      throw Exception('Final concatenated file does not exist');
+    }
+
+    Log.info(
+      '📹 All segments extracted and concatenated: $outputPath',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
+    return outputFile;
   }
 
   /// Generate native ProofMode proof for a video file
@@ -1585,45 +2328,73 @@ class VineRecordingController {
       // Check if native ProofMode is available on this platform
       final isAvailable = await NativeProofModeService.isAvailable();
       if (!isAvailable) {
-        Log.info('🔐 Native ProofMode not available on this platform',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          '🔐 Native ProofMode not available on this platform',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         return null;
       }
 
-      Log.info('🔐 Generating native ProofMode proof for: ${videoFile.path}',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '🔐 Generating native ProofMode proof for: ${videoFile.path}',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       // Generate proof using native library
-      final proofHash = await NativeProofModeService.generateProof(videoFile.path);
+      final proofHash = await NativeProofModeService.generateProof(
+        videoFile.path,
+      );
       if (proofHash == null) {
-        Log.warning('🔐 Native proof generation returned null',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.warning(
+          '🔐 Native proof generation returned null',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         return null;
       }
 
-      Log.info('🔐 Native proof hash: $proofHash',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '🔐 Native proof hash: $proofHash',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       // Read proof metadata from native library
-      final metadata = await NativeProofModeService.readProofMetadata(proofHash);
+      final metadata = await NativeProofModeService.readProofMetadata(
+        proofHash,
+      );
       if (metadata == null) {
-        Log.warning('🔐 Could not read native proof metadata',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.warning(
+          '🔐 Could not read native proof metadata',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
         return null;
       }
 
-      Log.info('🔐 Native proof metadata fields: ${metadata.keys.join(", ")}',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '🔐 Native proof metadata fields: ${metadata.keys.join(", ")}',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       // Create NativeProofData from metadata
       final proofData = NativeProofData.fromMetadata(metadata);
-      Log.info('🔐 Native proof data created: ${proofData.verificationLevel}',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '🔐 Native proof data created: ${proofData.verificationLevel}',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       return proofData;
     } catch (e) {
-      Log.error('🔐 Native proof generation failed: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        '🔐 Native proof generation failed: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -1639,29 +2410,59 @@ class VineRecordingController {
           _cameraInterface is MacOSCameraInterface) {
         final macOSInterface = _cameraInterface as MacOSCameraInterface;
 
-        // For single recording mode, get the recorded file directly
+        // For single recording mode, extract only the virtual segment portions
         if (macOSInterface.isSingleRecordingMode) {
+          final virtualSegments = macOSInterface.getVirtualSegments();
+          final recordingStartTime = macOSInterface.recordingStartTime;
+
           Log.info(
-              '📱 finishRecording: macOS single mode, isRecording=${macOSInterface.isRecording}',
-              name: 'VineRecordingController',
-              category: LogCategory.system);
+            '📱 finishRecording: macOS single mode, isRecording=${macOSInterface.isRecording}, '
+            'virtualSegments=${virtualSegments.length}, recordingStartTime=$recordingStartTime',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
 
           // Get the recording path from any available source
           final recordingPath = await _getMacOSRecordingPath(macOSInterface);
           if (recordingPath == null) {
-            throw Exception('No valid recording found for macOS single recording mode');
+            throw Exception(
+              'No valid recording found for macOS single recording mode',
+            );
           }
 
-          // Apply aspect ratio crop to the video
-          final croppedFile = await _applyAspectRatioCrop(recordingPath);
+          File finalFile;
+
+          // If we have virtual segments and a valid start time, extract only those portions
+          if (virtualSegments.isNotEmpty && recordingStartTime != null) {
+            Log.info(
+              '📱 Extracting ${virtualSegments.length} virtual segments from continuous recording',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
+            );
+
+            finalFile = await _extractMacOSSegments(
+              recordingPath,
+              virtualSegments,
+              recordingStartTime,
+            );
+          } else {
+            // Fallback: just apply aspect ratio crop (shouldn't normally happen)
+            Log.warning(
+              '📱 No virtual segments found, falling back to full video crop',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
+            );
+            finalFile = await _applyAspectRatioCrop(recordingPath);
+          }
 
           _setState(VineRecordingState.completed);
-          macOSInterface.isSingleRecordingMode = false; // Clear flag after successful completion
+          macOSInterface.isSingleRecordingMode =
+              false; // Clear flag after successful completion
 
           // Generate native ProofMode proof
-          final nativeProof = await _generateNativeProof(croppedFile);
+          final nativeProof = await _generateNativeProof(finalFile);
 
-          return (croppedFile, nativeProof);
+          return (finalFile, nativeProof);
         }
       }
 
@@ -1681,20 +2482,27 @@ class VineRecordingController {
         if (_segments.isEmpty && virtualSegments.isNotEmpty) {
           _segments.addAll(virtualSegments);
           Log.info(
-              'Using ${virtualSegments.length} virtual segments from macOS recording',
-              name: 'VineRecordingController',
-              category: LogCategory.system);
+            'Using ${virtualSegments.length} virtual segments from macOS recording',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
         }
       }
 
-      Log.info('📱 finishRecording: hasSegments=$hasSegments, segments count=${_segments.length}',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.info(
+        '📱 finishRecording: hasSegments=$hasSegments, segments count=${_segments.length}',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
 
       // Debug: Log all segment details
       for (int i = 0; i < _segments.length; i++) {
         final segment = _segments[i];
-        Log.info('📱 Segment $i: duration=${segment.duration.inMilliseconds}ms, filePath=${segment.filePath}',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          '📱 Segment $i: duration=${segment.duration.inMilliseconds}ms, filePath=${segment.filePath}',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       }
 
       if (!hasSegments) {
@@ -1714,7 +2522,8 @@ class VineRecordingController {
               // Create a temporary file with the blob data
               final tempDir = await getTemporaryDirectory();
               final tempFile = File(
-                  '${tempDir.path}/web_recording_${DateTime.now().millisecondsSinceEpoch}.mp4');
+                '${tempDir.path}/web_recording_${DateTime.now().millisecondsSinceEpoch}.mp4',
+              );
               await tempFile.writeAsBytes(bytes);
 
               _setState(VineRecordingState.completed);
@@ -1725,8 +2534,11 @@ class VineRecordingController {
               return (tempFile, nativeProof);
             }
           } catch (e) {
-            Log.error('Failed to convert blob to file: $e',
-                name: 'VineRecordingController', category: LogCategory.system);
+            Log.error(
+              'Failed to convert blob to file: $e',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
+            );
           }
         }
       }
@@ -1751,8 +2563,11 @@ class VineRecordingController {
 
       // Concatenate multiple segments using FFmpeg
       if (_segments.isNotEmpty) {
-        Log.info('📹 Concatenating ${_segments.length} segments using FFmpeg',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.info(
+          '📹 Concatenating ${_segments.length} segments using FFmpeg',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
 
         final concatenatedFile = await _concatenateSegments(_segments);
         if (concatenatedFile != null) {
@@ -1768,8 +2583,11 @@ class VineRecordingController {
       throw Exception('No valid video segments found for compilation');
     } catch (e) {
       _setState(VineRecordingState.error);
-      Log.error('Failed to finish recording: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Failed to finish recording: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -1804,27 +2622,41 @@ class VineRecordingController {
 
     // If was in error state and on web, reinitialize the camera
     if (wasInError && kIsWeb) {
-      Log.error('Reinitializing web camera after error...',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Reinitializing web camera after error...',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
       if (_cameraInterface is WebCameraInterface) {
         final webInterface = _cameraInterface as WebCameraInterface;
         webInterface.dispose();
       }
       // Create new camera interface and initialize
       _cameraInterface = WebCameraInterface();
-      initialize().then((_) {
-        Log.info('Web camera reinitialized successfully',
-            name: 'VineRecordingController', category: LogCategory.system);
-        _setState(VineRecordingState.idle);
-      }).catchError((e) {
-        Log.error('Failed to reinitialize web camera: $e',
-            name: 'VineRecordingController', category: LogCategory.system);
-        _setState(VineRecordingState.error);
-      });
+      initialize()
+          .then((_) {
+            Log.info(
+              'Web camera reinitialized successfully',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
+            );
+            _setState(VineRecordingState.idle);
+          })
+          .catchError((e) {
+            Log.error(
+              'Failed to reinitialize web camera: $e',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
+            );
+            _setState(VineRecordingState.error);
+          });
     }
 
-    Log.debug('Recording session reset',
-        name: 'VineRecordingController', category: LogCategory.system);
+    Log.debug(
+      'Recording session reset',
+      name: 'VineRecordingController',
+      category: LogCategory.system,
+    );
   }
 
   /// Clean up recording files and resources
@@ -1841,11 +2673,17 @@ class VineRecordingController {
         _cleanupMobileRecordings();
       }
 
-      Log.debug('🧹 Cleaned up recording resources',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.debug(
+        '🧹 Cleaned up recording resources',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error cleaning up recordings: $e',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Error cleaning up recordings: $e',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -1861,8 +2699,11 @@ class VineRecordingController {
           try {
             webInterface._cleanupBlobUrl(segment.filePath!);
           } catch (e) {
-            Log.error('Error cleaning up blob URL: $e',
-                name: 'VineRecordingController', category: LogCategory.system);
+            Log.error(
+              'Error cleaning up blob URL: $e',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
+            );
           }
         }
       }
@@ -1884,13 +2725,17 @@ class VineRecordingController {
         if (file.existsSync()) {
           file.deleteSync();
           Log.debug(
-              '🧹 Deleted macOS recording file: ${macOSInterface.currentRecordingPath}',
-              name: 'VineRecordingController',
-              category: LogCategory.system);
+            '🧹 Deleted macOS recording file: ${macOSInterface.currentRecordingPath}',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
         }
       } catch (e) {
-        Log.error('Error deleting macOS recording file: $e',
-            name: 'VineRecordingController', category: LogCategory.system);
+        Log.error(
+          'Error deleting macOS recording file: $e',
+          name: 'VineRecordingController',
+          category: LogCategory.system,
+        );
       }
     }
 
@@ -1906,12 +2751,18 @@ class VineRecordingController {
           final file = File(segment.filePath!);
           if (file.existsSync()) {
             file.deleteSync();
-            Log.debug('🧹 Deleted mobile recording file: ${segment.filePath}',
-                name: 'VineRecordingController', category: LogCategory.system);
+            Log.debug(
+              '🧹 Deleted mobile recording file: ${segment.filePath}',
+              name: 'VineRecordingController',
+              category: LogCategory.system,
+            );
           }
         } catch (e) {
-          Log.error('Error deleting mobile recording file: $e',
-              name: 'VineRecordingController', category: LogCategory.system);
+          Log.error(
+            'Error deleting mobile recording file: $e',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
         }
       }
     }
@@ -1942,14 +2793,30 @@ class VineRecordingController {
     _stopProgressTimer();
     _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (!_disposed && _state == VineRecordingState.recording) {
-        // For macOS, update the total duration based on current segment time
+        // Update the total duration based on current segment time
         if (_currentSegmentStartTime != null) {
-          final currentSegmentDuration =
-              DateTime.now().difference(_currentSegmentStartTime!);
-          final previousDuration = _segments.fold<Duration>(
-            Duration.zero,
-            (total, segment) => total + segment.duration,
+          final currentSegmentDuration = DateTime.now().difference(
+            _currentSegmentStartTime!,
           );
+
+          Duration previousDuration;
+          // On macOS, use virtual segments for accumulated duration since _segments is empty
+          if (!kIsWeb &&
+              Platform.isMacOS &&
+              _cameraInterface is MacOSCameraInterface) {
+            final macOSInterface = _cameraInterface as MacOSCameraInterface;
+            final virtualSegments = macOSInterface.getVirtualSegments();
+            previousDuration = virtualSegments.fold<Duration>(
+              Duration.zero,
+              (total, segment) => total + segment.duration,
+            );
+          } else {
+            previousDuration = _segments.fold<Duration>(
+              Duration.zero,
+              (total, segment) => total + segment.duration,
+            );
+          }
+
           _totalRecordedDuration = previousDuration + currentSegmentDuration;
         }
 
@@ -1970,8 +2837,11 @@ class VineRecordingController {
     if (remainingTime > Duration.zero) {
       _maxDurationTimer = Timer(remainingTime, () {
         if (_state == VineRecordingState.recording) {
-          Log.info('📱 Recording completed - reached maximum duration',
-              name: 'VineRecordingController', category: LogCategory.system);
+          Log.info(
+            '📱 Recording completed - reached maximum duration',
+            name: 'VineRecordingController',
+            category: LogCategory.system,
+          );
 
           // For macOS, handle auto-completion differently
           if (!kIsWeb &&
@@ -1996,8 +2866,9 @@ class VineRecordingController {
     // Create a segment with the actual file path
     if (_currentSegmentStartTime != null && recordedPath != null) {
       final segmentEndTime = DateTime.now();
-      final segmentDuration =
-          segmentEndTime.difference(_currentSegmentStartTime!);
+      final segmentDuration = segmentEndTime.difference(
+        _currentSegmentStartTime!,
+      );
 
       final segment = RecordingSegment(
         startTime: _currentSegmentStartTime!,
@@ -2010,15 +2881,22 @@ class VineRecordingController {
       _totalRecordedDuration += segmentDuration;
 
       Log.info(
-          'Completed segment ${_segments.length} after auto-stop: ${segmentDuration.inMilliseconds}ms, path: $recordedPath',
-          name: 'VineRecordingController',
-          category: LogCategory.system);
+        'Completed segment ${_segments.length} after auto-stop: ${segmentDuration.inMilliseconds}ms, path: $recordedPath',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } else if (_currentSegmentStartTime == null) {
-      Log.warning('Cannot create segment - no start time recorded',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.warning(
+        'Cannot create segment - no start time recorded',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     } else if (recordedPath == null) {
-      Log.error('Cannot create segment - completeRecording returned null path',
-          name: 'VineRecordingController', category: LogCategory.system);
+      Log.error(
+        'Cannot create segment - completeRecording returned null path',
+        name: 'VineRecordingController',
+        category: LogCategory.system,
+      );
     }
 
     _currentSegmentStartTime = null;

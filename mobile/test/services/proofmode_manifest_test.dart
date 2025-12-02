@@ -77,7 +77,10 @@ void main() {
       expect(manifest, isNotNull);
       expect(manifest!.deviceAttestation, isNotNull);
       expect(manifest.deviceAttestation!.token, isNotEmpty);
-      expect(manifest.deviceAttestation!.challenge, equals(manifest.challengeNonce));
+      expect(
+        manifest.deviceAttestation!.challenge,
+        equals(manifest.challengeNonce),
+      );
     });
 
     test('manifest is signed with PGP key', () async {
@@ -88,7 +91,9 @@ void main() {
 
       await sessionService.stopRecordingSegment();
 
-      final manifest = await sessionService.finalizeSession('video_hash_signed');
+      final manifest = await sessionService.finalizeSession(
+        'video_hash_signed',
+      );
 
       expect(manifest, isNotNull);
       expect(manifest!.pgpSignature, isNotNull);
@@ -104,7 +109,9 @@ void main() {
 
       await sessionService.stopRecordingSegment();
 
-      final manifest = await sessionService.finalizeSession('video_hash_verify');
+      final manifest = await sessionService.finalizeSession(
+        'video_hash_verify',
+      );
 
       expect(manifest, isNotNull);
       expect(manifest!.pgpSignature, isNotNull);
@@ -150,7 +157,9 @@ void main() {
 
       await sessionService.stopRecordingSegment();
 
-      final manifest = await sessionService.finalizeSession('video_multi_segment');
+      final manifest = await sessionService.finalizeSession(
+        'video_multi_segment',
+      );
 
       expect(manifest, isNotNull);
       expect(manifest!.segments.length, equals(2));
@@ -163,13 +172,25 @@ void main() {
       await sessionService.startRecordingSegment();
 
       // Record some interactions
-      await sessionService.recordInteraction('start', 100.0, 200.0, pressure: 0.5);
+      await sessionService.recordInteraction(
+        'start',
+        100.0,
+        200.0,
+        pressure: 0.5,
+      );
       await sessionService.captureFrame(Uint8List.fromList([1]));
-      await sessionService.recordInteraction('stop', 150.0, 250.0, pressure: 0.7);
+      await sessionService.recordInteraction(
+        'stop',
+        150.0,
+        250.0,
+        pressure: 0.7,
+      );
 
       await sessionService.stopRecordingSegment();
 
-      final manifest = await sessionService.finalizeSession('video_with_interactions');
+      final manifest = await sessionService.finalizeSession(
+        'video_with_interactions',
+      );
 
       expect(manifest, isNotNull);
       expect(manifest!.interactions.length, equals(2));
@@ -189,14 +210,19 @@ void main() {
 
       await sessionService.stopRecordingSegment();
 
-      final manifest = await sessionService.finalizeSession('video_with_timestamps');
+      final manifest = await sessionService.finalizeSession(
+        'video_with_timestamps',
+      );
 
       expect(manifest, isNotNull);
       expect(manifest!.segments[0].frameTimestamps, isNotNull);
       expect(manifest.segments[0].frameTimestamps!.length, equals(1));
 
       final timestamp = manifest.segments[0].frameTimestamps!.first;
-      expect(timestamp.isAfter(beforeFirst.subtract(Duration(seconds: 1))), isTrue);
+      expect(
+        timestamp.isAfter(beforeFirst.subtract(Duration(seconds: 1))),
+        isTrue,
+      );
       expect(timestamp.isBefore(afterFirst.add(Duration(seconds: 1))), isTrue);
     });
 
@@ -209,7 +235,9 @@ void main() {
 
       await sessionService.stopRecordingSegment();
 
-      final manifest = await sessionService.finalizeSession('video_serialization');
+      final manifest = await sessionService.finalizeSession(
+        'video_serialization',
+      );
 
       expect(manifest, isNotNull);
 
@@ -247,9 +275,18 @@ void main() {
       expect(deserialized.challengeNonce, equals(manifest.challengeNonce));
       expect(deserialized.finalVideoHash, equals(manifest.finalVideoHash));
       expect(deserialized.segments.length, equals(manifest.segments.length));
-      expect(deserialized.interactions.length, equals(manifest.interactions.length));
-      expect(deserialized.deviceAttestation?.token, equals(manifest.deviceAttestation?.token));
-      expect(deserialized.pgpSignature?.signature, equals(manifest.pgpSignature?.signature));
+      expect(
+        deserialized.interactions.length,
+        equals(manifest.interactions.length),
+      );
+      expect(
+        deserialized.deviceAttestation?.token,
+        equals(manifest.deviceAttestation?.token),
+      );
+      expect(
+        deserialized.pgpSignature?.signature,
+        equals(manifest.pgpSignature?.signature),
+      );
     });
 
     test('tampered manifest fails signature verification', () async {
@@ -260,7 +297,9 @@ void main() {
 
       await sessionService.stopRecordingSegment();
 
-      final manifest = await sessionService.finalizeSession('video_tamper_test');
+      final manifest = await sessionService.finalizeSession(
+        'video_tamper_test',
+      );
 
       expect(manifest, isNotNull);
 
@@ -304,8 +343,10 @@ void main() {
       expect(manifest, isNotNull);
       expect(manifest!.totalDuration.inMilliseconds, greaterThan(0));
       expect(manifest.recordingDuration.inMilliseconds, greaterThan(0));
-      expect(manifest.recordingDuration.inMilliseconds, lessThanOrEqualTo(manifest.totalDuration.inMilliseconds));
+      expect(
+        manifest.recordingDuration.inMilliseconds,
+        lessThanOrEqualTo(manifest.totalDuration.inMilliseconds),
+      );
     });
   });
 }
-

@@ -50,8 +50,9 @@ void main() {
       // Setup: Use a call counter to return different results
       var callCount = 0;
       when(mockUserProfileService.removeProfile(testPubkey)).thenReturn(null);
-      when(mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true))
-          .thenAnswer((_) async {
+      when(
+        mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true),
+      ).thenAnswer((_) async {
         callCount++;
         if (callCount <= 2) {
           return staleProfile; // First two attempts return stale
@@ -64,12 +65,15 @@ void main() {
       final result = await AsyncUtils.retryWithBackoff(
         operation: () async {
           mockUserProfileService.removeProfile(testPubkey);
-          final profile = await mockUserProfileService.fetchProfile(testPubkey,
-              forceRefresh: true);
+          final profile = await mockUserProfileService.fetchProfile(
+            testPubkey,
+            forceRefresh: true,
+          );
 
           // Same validation logic as in the actual code
           final eventIdMatches = profile?.eventId == testEventId;
-          final timestampMatches = profile?.createdAt != null &&
+          final timestampMatches =
+              profile?.createdAt != null &&
               profile!.createdAt.millisecondsSinceEpoch >=
                   (testTimestamp * 1000 - 1000);
 
@@ -90,66 +94,76 @@ void main() {
 
       // Verify retry calls
       verify(mockUserProfileService.removeProfile(testPubkey)).called(3);
-      verify(mockUserProfileService.fetchProfile(testPubkey,
-              forceRefresh: true))
-          .called(3);
+      verify(
+        mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true),
+      ).called(3);
     });
 
-    test('should succeed immediately if first fetch returns updated profile',
-        () async {
-      // Setup: First attempt returns updated profile
-      when(mockUserProfileService.removeProfile(testPubkey)).thenReturn(null);
-      when(mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true))
-          .thenAnswer((_) async => updatedProfile);
+    test(
+      'should succeed immediately if first fetch returns updated profile',
+      () async {
+        // Setup: First attempt returns updated profile
+        when(mockUserProfileService.removeProfile(testPubkey)).thenReturn(null);
+        when(
+          mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true),
+        ).thenAnswer((_) async => updatedProfile);
 
-      // Execute
-      final result = await AsyncUtils.retryWithBackoff(
-        operation: () async {
-          mockUserProfileService.removeProfile(testPubkey);
-          final profile = await mockUserProfileService.fetchProfile(testPubkey,
-              forceRefresh: true);
+        // Execute
+        final result = await AsyncUtils.retryWithBackoff(
+          operation: () async {
+            mockUserProfileService.removeProfile(testPubkey);
+            final profile = await mockUserProfileService.fetchProfile(
+              testPubkey,
+              forceRefresh: true,
+            );
 
-          final eventIdMatches = profile?.eventId == testEventId;
-          final timestampMatches = profile?.createdAt != null &&
-              profile!.createdAt.millisecondsSinceEpoch >=
-                  (testTimestamp * 1000 - 1000);
+            final eventIdMatches = profile?.eventId == testEventId;
+            final timestampMatches =
+                profile?.createdAt != null &&
+                profile!.createdAt.millisecondsSinceEpoch >=
+                    (testTimestamp * 1000 - 1000);
 
-          if (eventIdMatches || timestampMatches) {
-            return profile;
-          }
-          throw Exception('Profile not yet updated on relay - retrying...');
-        },
-        maxRetries: 3,
-        baseDelay: const Duration(milliseconds: 100),
-        debugName: 'test-profile-refresh',
-      );
+            if (eventIdMatches || timestampMatches) {
+              return profile;
+            }
+            throw Exception('Profile not yet updated on relay - retrying...');
+          },
+          maxRetries: 3,
+          baseDelay: const Duration(milliseconds: 100),
+          debugName: 'test-profile-refresh',
+        );
 
-      // Verify
-      expect(result, equals(updatedProfile));
+        // Verify
+        expect(result, equals(updatedProfile));
 
-      // Should only call once
-      verify(mockUserProfileService.removeProfile(testPubkey)).called(1);
-      verify(mockUserProfileService.fetchProfile(testPubkey,
-              forceRefresh: true))
-          .called(1);
-    });
+        // Should only call once
+        verify(mockUserProfileService.removeProfile(testPubkey)).called(1);
+        verify(
+          mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true),
+        ).called(1);
+      },
+    );
 
     test('should fail after max retries if profile never updates', () async {
       // Setup: Always return stale profile
       when(mockUserProfileService.removeProfile(testPubkey)).thenReturn(null);
-      when(mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true))
-          .thenAnswer((_) async => staleProfile);
+      when(
+        mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true),
+      ).thenAnswer((_) async => staleProfile);
 
       // Execute and expect failure
       expect(
         AsyncUtils.retryWithBackoff(
           operation: () async {
             mockUserProfileService.removeProfile(testPubkey);
-            final profile = await mockUserProfileService
-                .fetchProfile(testPubkey, forceRefresh: true);
+            final profile = await mockUserProfileService.fetchProfile(
+              testPubkey,
+              forceRefresh: true,
+            );
 
             final eventIdMatches = profile?.eventId == testEventId;
-            final timestampMatches = profile?.createdAt != null &&
+            final timestampMatches =
+                profile?.createdAt != null &&
                 profile!.createdAt.millisecondsSinceEpoch >=
                     (testTimestamp * 1000 - 1000);
 
@@ -169,19 +183,23 @@ void main() {
     test('should handle null profile response', () async {
       // Setup: Return null profile
       when(mockUserProfileService.removeProfile(testPubkey)).thenReturn(null);
-      when(mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true))
-          .thenAnswer((_) async => null);
+      when(
+        mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true),
+      ).thenAnswer((_) async => null);
 
       // Execute and expect failure
       expect(
         AsyncUtils.retryWithBackoff(
           operation: () async {
             mockUserProfileService.removeProfile(testPubkey);
-            final profile = await mockUserProfileService
-                .fetchProfile(testPubkey, forceRefresh: true);
+            final profile = await mockUserProfileService.fetchProfile(
+              testPubkey,
+              forceRefresh: true,
+            );
 
             final eventIdMatches = profile?.eventId == testEventId;
-            final timestampMatches = profile?.createdAt != null &&
+            final timestampMatches =
+                profile?.createdAt != null &&
                 profile!.createdAt.millisecondsSinceEpoch >=
                     (testTimestamp * 1000 - 1000);
 
@@ -209,17 +227,21 @@ void main() {
       });
 
       when(mockUserProfileService.removeProfile(testPubkey)).thenReturn(null);
-      when(mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true))
-          .thenAnswer((_) async => profileWithMatchingId);
+      when(
+        mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true),
+      ).thenAnswer((_) async => profileWithMatchingId);
 
       final result = await AsyncUtils.retryWithBackoff(
         operation: () async {
           mockUserProfileService.removeProfile(testPubkey);
-          final profile = await mockUserProfileService.fetchProfile(testPubkey,
-              forceRefresh: true);
+          final profile = await mockUserProfileService.fetchProfile(
+            testPubkey,
+            forceRefresh: true,
+          );
 
           final eventIdMatches = profile?.eventId == testEventId;
-          final timestampMatches = profile?.createdAt != null &&
+          final timestampMatches =
+              profile?.createdAt != null &&
               profile!.createdAt.millisecondsSinceEpoch >=
                   (testTimestamp * 1000 - 1000);
 
@@ -249,17 +271,21 @@ void main() {
       });
 
       when(mockUserProfileService.removeProfile(testPubkey)).thenReturn(null);
-      when(mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true))
-          .thenAnswer((_) async => profileWithNewerTimestamp);
+      when(
+        mockUserProfileService.fetchProfile(testPubkey, forceRefresh: true),
+      ).thenAnswer((_) async => profileWithNewerTimestamp);
 
       final result = await AsyncUtils.retryWithBackoff(
         operation: () async {
           mockUserProfileService.removeProfile(testPubkey);
-          final profile = await mockUserProfileService.fetchProfile(testPubkey,
-              forceRefresh: true);
+          final profile = await mockUserProfileService.fetchProfile(
+            testPubkey,
+            forceRefresh: true,
+          );
 
           final eventIdMatches = profile?.eventId == testEventId;
-          final timestampMatches = profile?.createdAt != null &&
+          final timestampMatches =
+              profile?.createdAt != null &&
               profile!.createdAt.millisecondsSinceEpoch >=
                   (testTimestamp * 1000 - 1000);
 
@@ -275,8 +301,10 @@ void main() {
 
       // Should succeed due to valid timestamp
       expect(result, equals(profileWithNewerTimestamp));
-      expect(result?.createdAt.millisecondsSinceEpoch,
-          greaterThan(testTimestamp * 1000 - 1000));
+      expect(
+        result?.createdAt.millisecondsSinceEpoch,
+        greaterThan(testTimestamp * 1000 - 1000),
+      );
     });
   });
 }

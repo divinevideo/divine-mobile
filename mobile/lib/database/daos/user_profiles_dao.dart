@@ -18,9 +18,9 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Returns null if profile doesn't exist in cache.
   Future<UserProfile?> getProfile(String pubkey) async {
-    final row = await (select(userProfiles)
-          ..where((p) => p.pubkey.equals(pubkey)))
-        .getSingleOrNull();
+    final row = await (select(
+      userProfiles,
+    )..where((p) => p.pubkey.equals(pubkey))).getSingleOrNull();
 
     return row != null ? UserProfile.fromDrift(row) : null;
   }
@@ -52,9 +52,9 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
         nip05: Value(profile.nip05),
         lud16: Value(profile.lud16),
         lud06: Value(profile.lud06),
-        rawData: Value(profile.rawData.isNotEmpty
-            ? jsonEncode(profile.rawData)
-            : null),
+        rawData: Value(
+          profile.rawData.isNotEmpty ? jsonEncode(profile.rawData) : null,
+        ),
         createdAt: profile.createdAt,
         eventId: profile.eventId,
         lastFetched: DateTime.now(),
@@ -81,8 +81,8 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Stream emits whenever any profile changes. Use sparingly - prefer filtered queries.
   Stream<List<UserProfile>> watchAllProfiles() {
-    return select(userProfiles)
-        .watch()
-        .map((rows) => rows.map((row) => UserProfile.fromDrift(row)).toList());
+    return select(userProfiles).watch().map(
+      (rows) => rows.map((row) => UserProfile.fromDrift(row)).toList(),
+    );
   }
 }

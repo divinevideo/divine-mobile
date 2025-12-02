@@ -21,16 +21,15 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(mockPrefs.setBool('ff_${flag.name}', any))
-            .thenAnswer((_) async => true);
+        when(
+          mockPrefs.setBool('ff_${flag.name}', any),
+        ).thenAnswer((_) async => true);
         when(mockPrefs.remove('ff_${flag.name}')).thenAnswer((_) async => true);
         when(mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
 
       final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(mockPrefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
       );
 
       final service = container.read(featureFlagServiceProvider);
@@ -45,16 +44,15 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(mockPrefs.setBool('ff_${flag.name}', any))
-            .thenAnswer((_) async => true);
+        when(
+          mockPrefs.setBool('ff_${flag.name}', any),
+        ).thenAnswer((_) async => true);
         when(mockPrefs.remove('ff_${flag.name}')).thenAnswer((_) async => true);
         when(mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
 
       final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(mockPrefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
       );
 
       final state = container.read(featureFlagStateProvider);
@@ -72,8 +70,9 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(mockPrefs.setBool('ff_${flag.name}', any))
-            .thenAnswer((_) async => true);
+        when(
+          mockPrefs.setBool('ff_${flag.name}', any),
+        ).thenAnswer((_) async => true);
         when(mockPrefs.remove('ff_${flag.name}')).thenAnswer((_) async => true);
         when(mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
@@ -83,16 +82,15 @@ void main() {
       when(mockPrefs.containsKey('ff_newCameraUI')).thenReturn(true);
 
       final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(mockPrefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
       );
 
       final service = container.read(featureFlagServiceProvider);
       await service.initialize();
 
-      final isEnabled =
-          container.read(isFeatureEnabledProvider(FeatureFlag.newCameraUI));
+      final isEnabled = container.read(
+        isFeatureEnabledProvider(FeatureFlag.newCameraUI),
+      );
       expect(isEnabled, isTrue);
 
       container.dispose();
@@ -104,31 +102,32 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(mockPrefs.setBool('ff_${flag.name}', any))
-            .thenAnswer((_) async => true);
+        when(
+          mockPrefs.setBool('ff_${flag.name}', any),
+        ).thenAnswer((_) async => true);
         when(mockPrefs.remove('ff_${flag.name}')).thenAnswer((_) async => true);
         when(mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
 
       final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(mockPrefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
       );
 
       final service = container.read(featureFlagServiceProvider);
 
       // Initial state
-      final initialEnabled =
-          container.read(isFeatureEnabledProvider(FeatureFlag.newCameraUI));
+      final initialEnabled = container.read(
+        isFeatureEnabledProvider(FeatureFlag.newCameraUI),
+      );
       expect(initialEnabled, isFalse);
 
       // Change flag
       await service.setFlag(FeatureFlag.newCameraUI, true);
 
       // State should update
-      final newEnabled =
-          container.read(isFeatureEnabledProvider(FeatureFlag.newCameraUI));
+      final newEnabled = container.read(
+        isFeatureEnabledProvider(FeatureFlag.newCameraUI),
+      );
       expect(newEnabled, isTrue);
 
       container.dispose();

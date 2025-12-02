@@ -39,7 +39,9 @@ void main() {
       mockSubscriptionManager = MockSubscriptionManager();
 
       // Set default auth state to prevent null errors
-      when(() => mockAuthService.authState).thenReturn(AuthState.unauthenticated);
+      when(
+        () => mockAuthService.authState,
+      ).thenReturn(AuthState.unauthenticated);
       when(() => mockAuthService.isAuthenticated).thenReturn(false);
       when(() => mockAuthService.currentPublicKeyHex).thenReturn(null);
 
@@ -47,8 +49,9 @@ void main() {
         overrides: [
           nostrServiceProvider.overrideWithValue(mockNostrService),
           authServiceProvider.overrideWithValue(mockAuthService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
         ],
       );
     });
@@ -77,9 +80,10 @@ void main() {
       when(() => mockAuthService.currentPublicKeyHex).thenReturn('test-pubkey');
 
       // Mock event streams
-      when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters')))
-          .thenAnswer((_) => const Stream<Event>.empty());
+      when(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).thenAnswer((_) => const Stream<Event>.empty());
 
       // Initialize
       await container.read(socialProvider.notifier).initialize();
@@ -88,8 +92,10 @@ void main() {
       expect(state.isInitialized, isTrue);
 
       // Verify it tried to load user data
-      verify(() => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'))).called(greaterThan(0));
+      verify(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).called(greaterThan(0));
     });
 
     test('should toggle like on/off for an event', () async {
@@ -118,8 +124,9 @@ void main() {
         results: {'relay1': true},
         errors: {},
       );
-      when(() => mockNostrService.broadcastEvent(any()))
-          .thenAnswer((_) async => mockBroadcastResult);
+      when(
+        () => mockNostrService.broadcastEvent(any()),
+      ).thenAnswer((_) async => mockBroadcastResult);
 
       // Toggle like (should add)
       await container
@@ -174,21 +181,18 @@ void main() {
         results: {'relay1': true},
         errors: {},
       );
-      when(() => mockNostrService.broadcastEvent(any()))
-          .thenAnswer((_) async => mockBroadcastResult);
+      when(
+        () => mockNostrService.broadcastEvent(any()),
+      ).thenAnswer((_) async => mockBroadcastResult);
 
       // Follow user
-      await container
-          .read(socialProvider.notifier)
-          .followUser(userToFollow);
+      await container.read(socialProvider.notifier).followUser(userToFollow);
 
       var state = container.read(socialProvider);
       expect(state.followingPubkeys.contains(userToFollow), isTrue);
 
       // Unfollow user
-      await container
-          .read(socialProvider.notifier)
-          .unfollowUser(userToFollow);
+      await container.read(socialProvider.notifier).unfollowUser(userToFollow);
 
       state = container.read(socialProvider);
       expect(state.followingPubkeys.contains(userToFollow), isFalse);
@@ -224,13 +228,12 @@ void main() {
         results: {'relay1': true},
         errors: {},
       );
-      when(() => mockNostrService.broadcastEvent(any()))
-          .thenAnswer((_) async => mockBroadcastResult);
+      when(
+        () => mockNostrService.broadcastEvent(any()),
+      ).thenAnswer((_) async => mockBroadcastResult);
 
       // Repost event
-      await container
-          .read(socialProvider.notifier)
-          .repostEvent(eventToRepost);
+      await container.read(socialProvider.notifier).repostEvent(eventToRepost);
 
       final state = container.read(socialProvider);
       expect(state.repostedEventIds.contains('event-to-repost'), isTrue);
@@ -280,9 +283,11 @@ void main() {
 
     test('should check if user is following another user', () {
       // Add some following pubkeys
-      container
-          .read(socialProvider.notifier)
-          .updateFollowingList(['pubkey1', 'pubkey2', 'pubkey3']);
+      container.read(socialProvider.notifier).updateFollowingList([
+        'pubkey1',
+        'pubkey2',
+        'pubkey3',
+      ]);
 
       final state = container.read(socialProvider);
       expect(state.isFollowing('pubkey2'), isTrue);
@@ -315,8 +320,9 @@ void main() {
         results: {'relay1': true},
         errors: {},
       );
-      when(() => mockNostrService.broadcastEvent(any()))
-          .thenAnswer((_) async => mockBroadcastResult);
+      when(
+        () => mockNostrService.broadcastEvent(any()),
+      ).thenAnswer((_) async => mockBroadcastResult);
 
       // Initial state: no likes tracked
       var state = container.read(socialProvider);
@@ -366,21 +372,24 @@ void main() {
       mockAuthService = MockAuthService();
       when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
-      when(() => mockAuthService.currentPublicKeyHex)
-          .thenReturn('test-pubkey-123');
+      when(
+        () => mockAuthService.currentPublicKeyHex,
+      ).thenReturn('test-pubkey-123');
 
       // Mock event streams
-      when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters')))
-          .thenAnswer((_) => const Stream<Event>.empty());
+      when(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).thenAnswer((_) => const Stream<Event>.empty());
 
       // Create new container with authenticated state
       container = ProviderContainer(
         overrides: [
           nostrServiceProvider.overrideWithValue(mockNostrService),
           authServiceProvider.overrideWithValue(mockAuthService),
-          subscriptionManagerProvider
-              .overrideWithValue(mockSubscriptionManager),
+          subscriptionManagerProvider.overrideWithValue(
+            mockSubscriptionManager,
+          ),
         ],
       );
 
@@ -388,8 +397,10 @@ void main() {
       await container.read(socialProvider.notifier).initialize();
 
       // Should have attempted to fetch contacts (verify subscription called)
-      verify(() => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'))).called(greaterThan(0));
+      verify(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).called(greaterThan(0));
 
       state = container.read(socialProvider);
       expect(state.isInitialized, isTrue);
@@ -402,9 +413,10 @@ void main() {
       when(() => mockAuthService.currentPublicKeyHex).thenReturn('test-pubkey');
 
       // Mock event streams
-      when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters')))
-          .thenAnswer((_) => const Stream<Event>.empty());
+      when(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      ).thenAnswer((_) => const Stream<Event>.empty());
 
       // Call initialize multiple times rapidly (simulating race condition)
       final futures = [
@@ -418,8 +430,10 @@ void main() {
 
       // Verify subscribeToEvents was NOT called 3x (should be called once due to idempotency)
       // The first call should succeed, subsequent calls should see isInitialized=true and return early
-      final verificationResult = verify(() => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters')));
+      final verificationResult = verify(
+        () =>
+            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+      );
 
       // Should be called 2 times (once for followList, once for reactions in the first initialize)
       // NOT 6 times (which would be 3 initializes * 2 subscriptions each)

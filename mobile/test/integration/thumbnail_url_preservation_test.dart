@@ -47,17 +47,18 @@ void main() {
       container.read(uploadManagerProvider);
 
       // ARRANGE: Create upload with all fields populated (simulating successful upload)
-      final upload = PendingUpload.create(
-        localVideoPath: '/test/video.mp4',
-        nostrPubkey: 'test_pubkey_123',
-        title: 'Test Video',
-        description: 'Testing thumbnail preservation',
-      ).copyWith(
-        videoId: 'video_abc123',
-        cdnUrl: 'https://cdn.divine.video/video_abc123.mp4',
-        thumbnailPath: 'https://cdn.divine.video/thumb_xyz789.jpg',
-        status: UploadStatus.readyToPublish,
-      );
+      final upload =
+          PendingUpload.create(
+            localVideoPath: '/test/video.mp4',
+            nostrPubkey: 'test_pubkey_123',
+            title: 'Test Video',
+            description: 'Testing thumbnail preservation',
+          ).copyWith(
+            videoId: 'video_abc123',
+            cdnUrl: 'https://cdn.divine.video/video_abc123.mp4',
+            thumbnailPath: 'https://cdn.divine.video/thumb_xyz789.jpg',
+            status: UploadStatus.readyToPublish,
+          );
 
       // ASSERT: Upload has all required fields
       expect(upload.videoId, isNotNull);
@@ -68,39 +69,50 @@ void main() {
       print('✅ Thumbnail URL preserved in upload: ${upload.thumbnailPath}');
     });
 
-    test('publishDirectUpload should include thumbnail URL in Nostr event', () async {
-      // This test documents what video_event_publisher.dart:195-204 expects
+    test(
+      'publishDirectUpload should include thumbnail URL in Nostr event',
+      () async {
+        // This test documents what video_event_publisher.dart:195-204 expects
 
-      // ARRANGE: Create upload with thumbnail URL already set
-      final upload = PendingUpload.create(
-        localVideoPath: '/test/video.mp4',
-        nostrPubkey: 'test_pubkey_123',
-        title: 'Test Video with Thumbnail',
-        description: 'Testing thumbnail in Nostr event',
-      ).copyWith(
-        videoId: 'video_test_123',
-        cdnUrl: 'https://cdn.divine.video/video_test_123.mp4',
-        thumbnailPath: 'https://cdn.divine.video/thumb_test_123.jpg',
-        status: UploadStatus.readyToPublish,
-      );
+        // ARRANGE: Create upload with thumbnail URL already set
+        final upload =
+            PendingUpload.create(
+              localVideoPath: '/test/video.mp4',
+              nostrPubkey: 'test_pubkey_123',
+              title: 'Test Video with Thumbnail',
+              description: 'Testing thumbnail in Nostr event',
+            ).copyWith(
+              videoId: 'video_test_123',
+              cdnUrl: 'https://cdn.divine.video/video_test_123.mp4',
+              thumbnailPath: 'https://cdn.divine.video/thumb_test_123.jpg',
+              status: UploadStatus.readyToPublish,
+            );
 
-      // ASSERT: Upload has all required fields for publishing with thumbnail
-      expect(upload.videoId, isNotNull);
-      expect(upload.cdnUrl, isNotNull);
-      expect(upload.thumbnailPath, isNotNull);
-      expect(upload.thumbnailPath, startsWith('https://'));
+        // ASSERT: Upload has all required fields for publishing with thumbnail
+        expect(upload.videoId, isNotNull);
+        expect(upload.cdnUrl, isNotNull);
+        expect(upload.thumbnailPath, isNotNull);
+        expect(upload.thumbnailPath, startsWith('https://'));
 
-      // This is what video_event_publisher.dart checks at line 197
-      final isValidThumbnailUrl = upload.thumbnailPath != null &&
-          upload.thumbnailPath!.isNotEmpty &&
-          (upload.thumbnailPath!.startsWith('http://') ||
-           upload.thumbnailPath!.startsWith('https://'));
+        // This is what video_event_publisher.dart checks at line 197
+        final isValidThumbnailUrl =
+            upload.thumbnailPath != null &&
+            upload.thumbnailPath!.isNotEmpty &&
+            (upload.thumbnailPath!.startsWith('http://') ||
+                upload.thumbnailPath!.startsWith('https://'));
 
-      expect(isValidThumbnailUrl, isTrue,
-          reason: 'Thumbnail URL must be HTTP/HTTPS CDN URL to be included in imeta tag');
+        expect(
+          isValidThumbnailUrl,
+          isTrue,
+          reason:
+              'Thumbnail URL must be HTTP/HTTPS CDN URL to be included in imeta tag',
+        );
 
-      print('✅ Upload ready to publish with thumbnail: ${upload.thumbnailPath}');
-    });
+        print(
+          '✅ Upload ready to publish with thumbnail: ${upload.thumbnailPath}',
+        );
+      },
+    );
 
     test('thumbnail URL should survive copyWith operations', () {
       // This test verifies the immutable update pattern works correctly
@@ -117,7 +129,10 @@ void main() {
         thumbnailPath: 'https://cdn.divine.video/thumb.jpg',
       );
 
-      expect(withThumbnail.thumbnailPath, equals('https://cdn.divine.video/thumb.jpg'));
+      expect(
+        withThumbnail.thumbnailPath,
+        equals('https://cdn.divine.video/thumb.jpg'),
+      );
 
       // Add other fields (simulating success handling)
       final withSuccess = withThumbnail.copyWith(
@@ -127,8 +142,12 @@ void main() {
       );
 
       // Thumbnail URL should still be present
-      expect(withSuccess.thumbnailPath, equals('https://cdn.divine.video/thumb.jpg'),
-          reason: 'copyWith should preserve thumbnail URL when updating other fields');
+      expect(
+        withSuccess.thumbnailPath,
+        equals('https://cdn.divine.video/thumb.jpg'),
+        reason:
+            'copyWith should preserve thumbnail URL when updating other fields',
+      );
       expect(withSuccess.videoId, equals('video_123'));
       expect(withSuccess.cdnUrl, equals('https://cdn.divine.video/video.mp4'));
       expect(withSuccess.status, equals(UploadStatus.readyToPublish));

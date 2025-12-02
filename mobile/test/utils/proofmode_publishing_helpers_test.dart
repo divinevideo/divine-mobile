@@ -214,7 +214,9 @@ void main() {
       test('verified_mobile manifest produces all 4 tags', () {
         final verificationLevel = getVerificationLevel(verifiedMobileManifest);
         final manifestTag = createProofManifestTag(verifiedMobileManifest);
-        final attestationTag = createDeviceAttestationTag(verifiedMobileManifest);
+        final attestationTag = createDeviceAttestationTag(
+          verifiedMobileManifest,
+        );
         final fingerprintTag = createPgpFingerprintTag(verifiedMobileManifest);
 
         expect(verificationLevel, equals('verified_mobile'));
@@ -235,17 +237,20 @@ void main() {
         expect(fingerprintTag, isNotNull);
       });
 
-      test('basic_proof manifest produces 2 tags (no attestation or fingerprint)', () {
-        final verificationLevel = getVerificationLevel(basicProofManifest);
-        final manifestTag = createProofManifestTag(basicProofManifest);
-        final attestationTag = createDeviceAttestationTag(basicProofManifest);
-        final fingerprintTag = createPgpFingerprintTag(basicProofManifest);
+      test(
+        'basic_proof manifest produces 2 tags (no attestation or fingerprint)',
+        () {
+          final verificationLevel = getVerificationLevel(basicProofManifest);
+          final manifestTag = createProofManifestTag(basicProofManifest);
+          final attestationTag = createDeviceAttestationTag(basicProofManifest);
+          final fingerprintTag = createPgpFingerprintTag(basicProofManifest);
 
-        expect(verificationLevel, equals('basic_proof'));
-        expect(manifestTag, isNotEmpty);
-        expect(attestationTag, isNull);
-        expect(fingerprintTag, isNull);
-      });
+          expect(verificationLevel, equals('basic_proof'));
+          expect(manifestTag, isNotEmpty);
+          expect(attestationTag, isNull);
+          expect(fingerprintTag, isNull);
+        },
+      );
 
       test('unverified manifest only produces verification level tag', () {
         final verificationLevel = getVerificationLevel(unverifiedManifest);
@@ -254,7 +259,10 @@ void main() {
         final fingerprintTag = createPgpFingerprintTag(unverifiedManifest);
 
         expect(verificationLevel, equals('unverified'));
-        expect(manifestTag, isNotEmpty); // Still produces JSON, but with empty segments
+        expect(
+          manifestTag,
+          isNotEmpty,
+        ); // Still produces JSON, but with empty segments
         expect(attestationTag, isNull);
         expect(fingerprintTag, isNull);
       });

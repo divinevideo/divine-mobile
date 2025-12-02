@@ -61,8 +61,11 @@ class NotificationServiceEnhanced {
     required UserProfileService profileService,
     required VideoEventService videoService,
   }) async {
-    Log.debug('🔧 Initializing Enhanced NotificationService',
-        name: 'NotificationServiceEnhanced', category: LogCategory.system);
+    Log.debug(
+      '🔧 Initializing Enhanced NotificationService',
+      name: 'NotificationServiceEnhanced',
+      category: LogCategory.system,
+    );
 
     _nostrService = nostrService;
     _profileService = profileService;
@@ -70,8 +73,9 @@ class NotificationServiceEnhanced {
 
     try {
       // Initialize Hive for notification storage
-      _notificationBox =
-          await Hive.openBox<Map<String, dynamic>>('notifications');
+      _notificationBox = await Hive.openBox<Map<String, dynamic>>(
+        'notifications',
+      );
 
       // Load cached notifications
       await _loadCachedNotifications();
@@ -82,19 +86,28 @@ class NotificationServiceEnhanced {
       // Subscribe to Nostr events for notifications
       await _subscribeToNostrEvents();
 
-      Log.info('Enhanced NotificationService initialized',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.info(
+        'Enhanced NotificationService initialized',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to initialize enhanced notifications: $e',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize enhanced notifications: $e',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Subscribe to Nostr events for real-time notifications
   Future<void> _subscribeToNostrEvents() async {
     if (_nostrService == null || !_nostrService!.hasKeys) {
-      Log.warning('Cannot subscribe to events without Nostr keys',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.warning(
+        'Cannot subscribe to events without Nostr keys',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -123,11 +136,11 @@ class NotificationServiceEnhanced {
       // NO h filter - we query all relays
     );
 
-    final subscription = _nostrService!.subscribeToEvents(
-      filters: [filter],
-    ).listen((event) async {
-      await _handleReactionEvent(event);
-    });
+    final subscription = _nostrService!
+        .subscribeToEvents(filters: [filter])
+        .listen((event) async {
+          await _handleReactionEvent(event);
+        });
 
     _subscriptions['reactions'] = subscription;
   }
@@ -139,11 +152,11 @@ class NotificationServiceEnhanced {
       // NO h filter - we query all relays
     );
 
-    final subscription = _nostrService!.subscribeToEvents(
-      filters: [filter],
-    ).listen((event) async {
-      await _handleCommentEvent(event);
-    });
+    final subscription = _nostrService!
+        .subscribeToEvents(filters: [filter])
+        .listen((event) async {
+          await _handleCommentEvent(event);
+        });
 
     _subscriptions['comments'] = subscription;
   }
@@ -155,11 +168,11 @@ class NotificationServiceEnhanced {
       // NO h filter - we query all relays
     );
 
-    final subscription = _nostrService!.subscribeToEvents(
-      filters: [filter],
-    ).listen((event) async {
-      await _handleFollowEvent(event);
-    });
+    final subscription = _nostrService!
+        .subscribeToEvents(filters: [filter])
+        .listen((event) async {
+          await _handleFollowEvent(event);
+        });
 
     _subscriptions['follows'] = subscription;
   }
@@ -171,11 +184,11 @@ class NotificationServiceEnhanced {
       // NO h filter - we query all relays
     );
 
-    final subscription = _nostrService!.subscribeToEvents(
-      filters: [filter],
-    ).listen((event) async {
-      await _handleMentionEvent(event);
-    });
+    final subscription = _nostrService!
+        .subscribeToEvents(filters: [filter])
+        .listen((event) async {
+          await _handleMentionEvent(event);
+        });
 
     _subscriptions['mentions'] = subscription;
   }
@@ -187,11 +200,11 @@ class NotificationServiceEnhanced {
       // NO h filter - we query all relays
     );
 
-    final subscription = _nostrService!.subscribeToEvents(
-      filters: [filter],
-    ).listen((event) async {
-      await _handleRepostEvent(event);
-    });
+    final subscription = _nostrService!
+        .subscribeToEvents(filters: [filter])
+        .listen((event) async {
+          await _handleRepostEvent(event);
+        });
 
     _subscriptions['reposts'] = subscription;
   }
@@ -221,7 +234,8 @@ class NotificationServiceEnhanced {
 
     // Get actor info - try multiple profile fields
     final actorProfile = await _profileService?.fetchProfile(event.pubkey);
-    final actorName = actorProfile?.name ??
+    final actorName =
+        actorProfile?.name ??
         actorProfile?.displayName ??
         actorProfile?.nip05?.split('@').first ??
         'Unknown user';
@@ -264,7 +278,8 @@ class NotificationServiceEnhanced {
 
     // Get actor info - try multiple profile fields
     final actorProfile = await _profileService?.fetchProfile(event.pubkey);
-    final actorName = actorProfile?.name ??
+    final actorName =
+        actorProfile?.name ??
         actorProfile?.displayName ??
         actorProfile?.nip05?.split('@').first ??
         'Unknown user';
@@ -280,9 +295,7 @@ class NotificationServiceEnhanced {
       targetEventId: videoEventId,
       targetVideoUrl: videoEvent.videoUrl,
       targetVideoThumbnail: videoEvent.thumbnailUrl,
-      metadata: {
-        'comment': event.content,
-      },
+      metadata: {'comment': event.content},
     );
 
     await _addNotification(notification);
@@ -310,7 +323,8 @@ class NotificationServiceEnhanced {
 
     // Get actor info - try multiple profile fields
     final actorProfile = await _profileService?.fetchProfile(event.pubkey);
-    final actorName = actorProfile?.name ??
+    final actorName =
+        actorProfile?.name ??
         actorProfile?.displayName ??
         actorProfile?.nip05?.split('@').first ??
         'Unknown user';
@@ -350,7 +364,8 @@ class NotificationServiceEnhanced {
 
     // Get actor info - try multiple profile fields
     final actorProfile = await _profileService?.fetchProfile(event.pubkey);
-    final actorName = actorProfile?.name ??
+    final actorName =
+        actorProfile?.name ??
         actorProfile?.displayName ??
         actorProfile?.nip05?.split('@').first ??
         'Unknown user';
@@ -363,9 +378,7 @@ class NotificationServiceEnhanced {
       actorPictureUrl: actorProfile?.picture,
       message: '$actorName mentioned you',
       timestamp: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
-      metadata: {
-        'text': event.content,
-      },
+      metadata: {'text': event.content},
     );
 
     await _addNotification(notification);
@@ -393,7 +406,8 @@ class NotificationServiceEnhanced {
 
     // Get actor info - try multiple profile fields
     final actorProfile = await _profileService?.fetchProfile(event.pubkey);
-    final actorName = actorProfile?.name ??
+    final actorName =
+        actorProfile?.name ??
         actorProfile?.displayName ??
         actorProfile?.nip05?.split('@').first ??
         'Unknown user';
@@ -524,8 +538,11 @@ class NotificationServiceEnhanced {
           loadedCount++;
         } catch (e) {
           // Log corrupted notification and continue with others
-          Log.warning('Skipping corrupted notification: $e',
-              name: 'NotificationServiceEnhanced', category: LogCategory.system);
+          Log.warning(
+            'Skipping corrupted notification: $e',
+            name: 'NotificationServiceEnhanced',
+            category: LogCategory.system,
+          );
           corruptedCount++;
         }
       }
@@ -536,18 +553,27 @@ class NotificationServiceEnhanced {
       // Update unread count
       _updateUnreadCount();
 
-      Log.debug('📱 Loaded $loadedCount cached notifications${corruptedCount > 0 ? " ($corruptedCount corrupted entries skipped)" : ""}',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.debug(
+        '📱 Loaded $loadedCount cached notifications${corruptedCount > 0 ? " ($corruptedCount corrupted entries skipped)" : ""}',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
 
       // If many notifications are corrupted, clear the cache
       if (corruptedCount > loadedCount && corruptedCount > 10) {
-        Log.warning('Too many corrupted notifications ($corruptedCount), clearing cache',
-            name: 'NotificationServiceEnhanced', category: LogCategory.system);
+        Log.warning(
+          'Too many corrupted notifications ($corruptedCount), clearing cache',
+          name: 'NotificationServiceEnhanced',
+          category: LogCategory.system,
+        );
         await _clearCorruptedCache();
       }
     } catch (e) {
-      Log.error('Failed to load cached notifications: $e',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.error(
+        'Failed to load cached notifications: $e',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
       // Try to clear corrupted cache and continue
       await _clearCorruptedCache();
     }
@@ -559,11 +585,17 @@ class NotificationServiceEnhanced {
       await _notificationBox?.clear();
       _notifications.clear();
       _updateUnreadCount();
-      Log.info('Cleared corrupted notification cache',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.info(
+        'Cleared corrupted notification cache',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to clear corrupted cache: $e',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.error(
+        'Failed to clear corrupted cache: $e',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -574,8 +606,11 @@ class NotificationServiceEnhanced {
     try {
       await _notificationBox!.put(notification.id, notification.toJson());
     } catch (e) {
-      Log.error('Failed to cache notification: $e',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.error(
+        'Failed to cache notification: $e',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -591,12 +626,18 @@ class NotificationServiceEnhanced {
       // - Android: AndroidManifest.xml permissions + NotificationManager
       // - macOS: Entitlements + UNUserNotificationCenter
       _permissionsGranted = true;
-      Log.info('Notification permissions granted (simulated)',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.info(
+        'Notification permissions granted (simulated)',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
     } catch (e) {
       _permissionsGranted = false;
-      Log.error('Failed to get notification permissions: $e',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.error(
+        'Failed to get notification permissions: $e',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -607,15 +648,19 @@ class NotificationServiceEnhanced {
       // Currently using debug logging instead of real notifications
       // Real implementation needs flutter_local_notifications integration
       Log.debug(
-          '📱 Platform notification: ${notification.typeIcon} ${notification.message}',
-          name: 'NotificationServiceEnhanced',
-          category: LogCategory.system);
+        '📱 Platform notification: ${notification.typeIcon} ${notification.message}',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
 
       // Simulate haptic feedback
       HapticFeedback.mediumImpact();
     } catch (e) {
-      Log.error('Failed to show platform notification: $e',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.error(
+        'Failed to show platform notification: $e',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -627,8 +672,11 @@ class NotificationServiceEnhanced {
     // Clear cache
     await _notificationBox?.clear();
 
-    Log.debug('📱️ Cleared all notifications',
-        name: 'NotificationServiceEnhanced', category: LogCategory.system);
+    Log.debug(
+      '📱️ Cleared all notifications',
+      name: 'NotificationServiceEnhanced',
+      category: LogCategory.system,
+    );
   }
 
   /// Clear notifications older than specified duration
@@ -657,21 +705,30 @@ class NotificationServiceEnhanced {
     if (removedCount > 0) {
       _updateUnreadCount();
 
-      Log.debug('📱️ Cleared $removedCount old notifications',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.debug(
+        '📱️ Cleared $removedCount old notifications',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Refresh notifications by re-subscribing to Nostr events
   Future<void> refreshNotifications() async {
     if (_nostrService == null || !_nostrService!.hasKeys) {
-      Log.warning('Cannot refresh notifications without Nostr keys',
-          name: 'NotificationServiceEnhanced', category: LogCategory.system);
+      Log.warning(
+        'Cannot refresh notifications without Nostr keys',
+        name: 'NotificationServiceEnhanced',
+        category: LogCategory.system,
+      );
       return;
     }
 
-    Log.debug('🔄 Refreshing notifications',
-        name: 'NotificationServiceEnhanced', category: LogCategory.system);
+    Log.debug(
+      '🔄 Refreshing notifications',
+      name: 'NotificationServiceEnhanced',
+      category: LogCategory.system,
+    );
 
     // Cancel existing subscriptions
     for (final subscription in _subscriptions.values) {
@@ -682,8 +739,11 @@ class NotificationServiceEnhanced {
     // Re-subscribe to Nostr events for fresh notifications
     await _subscribeToNostrEvents();
 
-    Log.info('📱 Notifications refreshed',
-        name: 'NotificationServiceEnhanced', category: LogCategory.system);
+    Log.info(
+      '📱 Notifications refreshed',
+      name: 'NotificationServiceEnhanced',
+      category: LogCategory.system,
+    );
   }
 
   void dispose() {

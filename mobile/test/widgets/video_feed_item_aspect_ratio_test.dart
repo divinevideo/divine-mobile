@@ -10,20 +10,23 @@ import 'package:openvine/services/visibility_tracker.dart';
 
 void main() {
   group('VideoFeedItem aspect ratio handling', () {
-    testWidgets('Portrait video should use BoxFit.contain to show full video',
-        (tester) async {
+    testWidgets('Portrait video should use BoxFit.contain to show full video', (
+      tester,
+    ) async {
       final now = DateTime.now();
       // Create a portrait video (720x1280 - height > width)
       final portraitVideo = VideoEvent(
         id: 'e7498938f466a6a2dd5736f90885d1055301ea9f578264be706c6a006c69de28',
-        pubkey: '0c04c27df20bdba0d236af34807cee7a23e80c990059dca33caf040592b348e5',
+        pubkey:
+            '0c04c27df20bdba0d236af34807cee7a23e80c990059dca33caf040592b348e5',
         content: 'Alexander Calder (1937) at Fundació Joan Miró, Barcelona.',
-        videoUrl: 'https://stream.divine.video/7880efda-c650-4aa1-9198-f122095bcb44/playlist.m3u8',
+        videoUrl:
+            'https://stream.divine.video/7880efda-c650-4aa1-9198-f122095bcb44/playlist.m3u8',
         createdAt: 1762865061,
         timestamp: now,
         title: 'Mercury Fitness',
         hashtags: ['miró'],
-        dimensions: '720x1280',  // Portrait: width < height
+        dimensions: '720x1280', // Portrait: width < height
       );
 
       final container = ProviderContainer(
@@ -37,12 +40,7 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
-            home: Scaffold(
-              body: VideoFeedItem(
-                video: portraitVideo,
-                index: 0,
-              ),
-            ),
+            home: Scaffold(body: VideoFeedItem(video: portraitVideo, index: 0)),
           ),
         ),
       );
@@ -58,8 +56,9 @@ void main() {
       // display fully without weird zooming/cropping
     });
 
-    testWidgets('Landscape video should use BoxFit.contain to show full video',
-        (tester) async {
+    testWidgets('Landscape video should use BoxFit.contain to show full video', (
+      tester,
+    ) async {
       final now = DateTime.now();
       // Create a landscape video (1920x1080 - width > height)
       final landscapeVideo = VideoEvent(
@@ -71,7 +70,7 @@ void main() {
         timestamp: now,
         title: 'Test Landscape',
         hashtags: [],
-        dimensions: '1920x1080',  // Landscape: width > height
+        dimensions: '1920x1080', // Landscape: width > height
       );
 
       final container = ProviderContainer(
@@ -86,10 +85,7 @@ void main() {
           container: container,
           child: MaterialApp(
             home: Scaffold(
-              body: VideoFeedItem(
-                video: landscapeVideo,
-                index: 0,
-              ),
+              body: VideoFeedItem(video: landscapeVideo, index: 0),
             ),
           ),
         ),

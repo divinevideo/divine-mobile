@@ -47,11 +47,11 @@ void main() {
           ProviderScope(
             overrides: [
               // Provide draft storage service (override async provider with sync value)
-              draftStorageServiceProvider.overrideWith((ref) => Future.value(draftStorage)),
+              draftStorageServiceProvider.overrideWith(
+                (ref) => Future.value(draftStorage),
+              ),
             ],
-            child: MaterialApp(
-              home: UniversalCameraScreenPure(),
-            ),
+            child: MaterialApp(home: UniversalCameraScreenPure()),
           ),
         );
 
@@ -62,11 +62,17 @@ void main() {
         final container = ProviderScope.containerOf(
           tester.element(find.byType(UniversalCameraScreenPure)),
         );
-        final recordingNotifier = container.read(vineRecordingProvider.notifier);
+        final recordingNotifier = container.read(
+          vineRecordingProvider.notifier,
+        );
 
         // Verify no drafts initially
         final initialDrafts = await draftStorage.getAllDrafts();
-        expect(initialDrafts, isEmpty, reason: 'Should have no drafts initially');
+        expect(
+          initialDrafts,
+          isEmpty,
+          reason: 'Should have no drafts initially',
+        );
 
         // Start recording
         await recordingNotifier.startRecording();
@@ -101,7 +107,8 @@ void main() {
         expect(
           draftsAfterNav,
           isNotEmpty,
-          reason: 'Recording should be auto-saved as draft when navigating back',
+          reason:
+              'Recording should be auto-saved as draft when navigating back',
         );
 
         // Verify draft has correct properties
@@ -126,118 +133,116 @@ void main() {
       },
     );
 
-    testWidgets(
-      'FAILING: Cleanup does not delete files saved as drafts',
-      (WidgetTester tester) async {
-        if (!Platform.isMacOS && !Platform.isIOS && !Platform.isAndroid) {
-          return;
-        }
+    testWidgets('FAILING: Cleanup does not delete files saved as drafts', (
+      WidgetTester tester,
+    ) async {
+      if (!Platform.isMacOS && !Platform.isIOS && !Platform.isAndroid) {
+        return;
+      }
 
-        // Build camera screen
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              draftStorageServiceProvider.overrideWith((ref) => Future.value(draftStorage)),
-            ],
-            child: MaterialApp(
-              home: UniversalCameraScreenPure(),
+      // Build camera screen
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            draftStorageServiceProvider.overrideWith(
+              (ref) => Future.value(draftStorage),
             ),
-          ),
-        );
+          ],
+          child: MaterialApp(home: UniversalCameraScreenPure()),
+        ),
+      );
 
-        await tester.pumpAndSettle(const Duration(seconds: 2));
+      await tester.pumpAndSettle(const Duration(seconds: 2));
 
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(UniversalCameraScreenPure)),
-        );
-        final recordingNotifier = container.read(vineRecordingProvider.notifier);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(UniversalCameraScreenPure)),
+      );
+      final recordingNotifier = container.read(vineRecordingProvider.notifier);
 
-        // Record and auto-complete
-        await recordingNotifier.startRecording();
+      // Record and auto-complete
+      await recordingNotifier.startRecording();
+      await tester.pump(const Duration(milliseconds: 6400));
+      await tester.pumpAndSettle();
+
+      // Navigate back to trigger auto-save
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      // Get the saved draft
+      final drafts = await draftStorage.getAllDrafts();
+      expect(drafts, isNotEmpty);
+
+      final draftVideoPath = drafts.first.videoFile.path;
+      final draftVideoFile = File(draftVideoPath);
+
+      expect(
+        draftVideoFile.existsSync(),
+        isTrue,
+        reason: 'Draft video should exist before re-entering camera',
+      );
+
+      // Navigate to camera again
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            draftStorageServiceProvider.overrideWith(
+              (ref) => Future.value(draftStorage),
+            ),
+          ],
+          child: MaterialApp(home: UniversalCameraScreenPure()),
+        ),
+      );
+
+      await tester.pumpAndSettle(const Duration(seconds: 2));
+
+      // THIS IS THE FAILING ASSERTION - draft file should NOT be deleted
+      expect(
+        draftVideoFile.existsSync(),
+        isTrue,
+        reason: 'Draft video file should not be deleted by camera cleanup',
+      );
+    });
+
+    testWidgets('FAILING: No race condition with dual auto-stop timers', (
+      WidgetTester tester,
+    ) async {
+      if (!Platform.isMacOS) {
+        return; // This specifically tests macOS dual timer issue
+      }
+
+      final controller = VineRecordingController();
+
+      try {
+        await controller.initialize();
+
+        // Start recording (should trigger only ONE timer after the fix)
+        await controller.startRecording();
+
+        // Wait for auto-stop
         await tester.pump(const Duration(milliseconds: 6400));
         await tester.pumpAndSettle();
 
-        // Navigate back to trigger auto-save
-        await tester.pageBack();
-        await tester.pumpAndSettle();
-
-        // Get the saved draft
-        final drafts = await draftStorage.getAllDrafts();
-        expect(drafts, isNotEmpty);
-
-        final draftVideoPath = drafts.first.videoFile.path;
-        final draftVideoFile = File(draftVideoPath);
-
+        // Verify state is completed
         expect(
-          draftVideoFile.existsSync(),
-          isTrue,
-          reason: 'Draft video should exist before re-entering camera',
+          controller.state,
+          equals(VineRecordingState.completed),
+          reason: 'Should be in completed state after auto-stop',
         );
 
-        // Navigate to camera again
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              draftStorageServiceProvider.overrideWith((ref) => Future.value(draftStorage)),
-            ],
-            child: MaterialApp(
-              home: UniversalCameraScreenPure(),
-            ),
-          ),
-        );
-
-        await tester.pumpAndSettle(const Duration(seconds: 2));
-
-        // THIS IS THE FAILING ASSERTION - draft file should NOT be deleted
+        // THIS IS THE FAILING ASSERTION - should only have ONE segment from ONE timer
         expect(
-          draftVideoFile.existsSync(),
-          isTrue,
-          reason: 'Draft video file should not be deleted by camera cleanup',
+          controller.segments.length,
+          equals(1),
+          reason: 'Should have exactly one segment (no race condition)',
         );
-      },
-    );
 
-    testWidgets(
-      'FAILING: No race condition with dual auto-stop timers',
-      (WidgetTester tester) async {
-        if (!Platform.isMacOS) {
-          return; // This specifically tests macOS dual timer issue
-        }
-
-        final controller = VineRecordingController();
-
-        try {
-          await controller.initialize();
-
-          // Start recording (should trigger only ONE timer after the fix)
-          await controller.startRecording();
-
-          // Wait for auto-stop
-          await tester.pump(const Duration(milliseconds: 6400));
-          await tester.pumpAndSettle();
-
-          // Verify state is completed
-          expect(
-            controller.state,
-            equals(VineRecordingState.completed),
-            reason: 'Should be in completed state after auto-stop',
-          );
-
-          // THIS IS THE FAILING ASSERTION - should only have ONE segment from ONE timer
-          expect(
-            controller.segments.length,
-            equals(1),
-            reason: 'Should have exactly one segment (no race condition)',
-          );
-
-          // Verify finishRecording works correctly
-          final (videoFile, _) = await controller.finishRecording();
-          expect(videoFile, isNotNull);
-          expect(videoFile!.existsSync(), isTrue);
-        } finally {
-          controller.dispose();
-        }
-      },
-    );
+        // Verify finishRecording works correctly
+        final (videoFile, _) = await controller.finishRecording();
+        expect(videoFile, isNotNull);
+        expect(videoFile!.existsSync(), isTrue);
+      } finally {
+        controller.dispose();
+      }
+    });
   });
 }

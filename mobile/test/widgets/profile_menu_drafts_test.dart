@@ -8,7 +8,9 @@ import 'package:openvine/theme/vine_theme.dart';
 
 void main() {
   group('Profile menu drafts widget', () {
-    testWidgets('should render Drafts menu item with correct icon and text', (tester) async {
+    testWidgets('should render Drafts menu item with correct icon and text', (
+      tester,
+    ) async {
       // Create a simple test widget with the menu structure
       await tester.pumpWidget(
         MaterialApp(
@@ -25,7 +27,10 @@ void main() {
                         children: [
                           ListTile(
                             key: const Key('drafts-menu-item'),
-                            leading: const Icon(Icons.drafts, color: VineTheme.vineGreen),
+                            leading: const Icon(
+                              Icons.drafts,
+                              color: VineTheme.vineGreen,
+                            ),
                             title: const Text(
                               'Drafts',
                               style: TextStyle(color: Colors.white),
@@ -35,7 +40,8 @@ void main() {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const VineDraftsScreen(),
+                                  builder: (context) =>
+                                      const VineDraftsScreen(),
                                 ),
                               );
                             },
@@ -62,7 +68,9 @@ void main() {
       expect(find.byIcon(Icons.drafts), findsOneWidget);
     });
 
-    testWidgets('should navigate to VineDraftsScreen when tapped', (tester) async {
+    testWidgets('should navigate to VineDraftsScreen when tapped', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -78,7 +86,10 @@ void main() {
                         children: [
                           ListTile(
                             key: const Key('drafts-menu-item'),
-                            leading: const Icon(Icons.drafts, color: VineTheme.vineGreen),
+                            leading: const Icon(
+                              Icons.drafts,
+                              color: VineTheme.vineGreen,
+                            ),
                             title: const Text(
                               'Drafts',
                               style: TextStyle(color: Colors.white),
@@ -88,7 +99,8 @@ void main() {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const VineDraftsScreen(),
+                                  builder: (context) =>
+                                      const VineDraftsScreen(),
                                 ),
                               );
                             },
@@ -134,7 +146,10 @@ void main() {
                         children: [
                           ListTile(
                             key: const Key('settings-menu-item'),
-                            leading: const Icon(Icons.settings, color: VineTheme.vineGreen),
+                            leading: const Icon(
+                              Icons.settings,
+                              color: VineTheme.vineGreen,
+                            ),
                             title: const Text(
                               'Settings',
                               style: TextStyle(color: Colors.white),
@@ -143,7 +158,10 @@ void main() {
                           ),
                           ListTile(
                             key: const Key('drafts-menu-item'),
-                            leading: const Icon(Icons.drafts, color: VineTheme.vineGreen),
+                            leading: const Icon(
+                              Icons.drafts,
+                              color: VineTheme.vineGreen,
+                            ),
                             title: const Text(
                               'Drafts',
                               style: TextStyle(color: Colors.white),
@@ -153,7 +171,8 @@ void main() {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const VineDraftsScreen(),
+                                  builder: (context) =>
+                                      const VineDraftsScreen(),
                                 ),
                               );
                             },

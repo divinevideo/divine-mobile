@@ -397,6 +397,14 @@ class MockEmbeddedNostrRelay extends _i1.Mock
           as _i6.Future<bool>);
 
   @override
+  _i6.Future<Map<String, bool>> verifyEventOnExternalRelays(String? eventId) =>
+      (super.noSuchMethod(
+            Invocation.method(#verifyEventOnExternalRelays, [eventId]),
+            returnValue: _i6.Future<Map<String, bool>>.value(<String, bool>{}),
+          )
+          as _i6.Future<Map<String, bool>>);
+
+  @override
   _i6.Future<List<_i11.NostrEvent>> queryEvents(List<_i14.Filter>? filters) =>
       (super.noSuchMethod(
             Invocation.method(#queryEvents, [filters]),
@@ -422,6 +430,14 @@ class MockEmbeddedNostrRelay extends _i1.Mock
             returnValueForMissingStub: _i6.Future<void>.value(),
           )
           as _i6.Future<void>);
+
+  @override
+  _i6.Future<int> importEvents(List<_i11.NostrEvent>? events) =>
+      (super.noSuchMethod(
+            Invocation.method(#importEvents, [events]),
+            returnValue: _i6.Future<int>.value(0),
+          )
+          as _i6.Future<int>);
 
   @override
   _i4.RelayInfo getRelayInfo() =>

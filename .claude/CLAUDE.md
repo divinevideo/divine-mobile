@@ -129,6 +129,7 @@ Before making any assumptions or changes, YOU MUST verify:
 - When starting work without a clear branch for the current task, YOU MUST create a WIP branch
 - YOU MUST TRACK all non-trivial changes in git
 - YOU MUST commit frequently throughout the development process, even if your high-level tasks are not yet done
+- **CRITICAL**: `git push` is PROHIBITED without explicit confirmation from Rabble. YOU MUST ask permission before pushing to remote
 
 ## Issue Tracking
 

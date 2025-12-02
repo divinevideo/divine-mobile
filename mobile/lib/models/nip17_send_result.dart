@@ -21,13 +21,12 @@ class NIP17SendResult {
   static NIP17SendResult createSuccess({
     required String messageEventId,
     required String recipientPubkey,
-  }) =>
-      NIP17SendResult(
-        success: true,
-        messageEventId: messageEventId,
-        recipientPubkey: recipientPubkey,
-        timestamp: DateTime.now(),
-      );
+  }) => NIP17SendResult(
+    success: true,
+    messageEventId: messageEventId,
+    recipientPubkey: recipientPubkey,
+    timestamp: DateTime.now(),
+  );
 
   /// Create failure result
   static NIP17SendResult failure(String error) =>

@@ -44,212 +44,215 @@ class SettingsScreen extends ConsumerWidget {
           constraints: const BoxConstraints(maxWidth: 600),
           child: ListView(
             children: [
-          // Profile Section
-          if (isAuthenticated) ...[
-            _buildSectionHeader('Profile'),
-            _buildSettingsTile(
-              context,
-              icon: Icons.person,
-              title: 'Edit Profile',
-              subtitle: 'Update your display name, bio, and avatar',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      const ProfileSetupScreen(isNewUser: false),
-                ),
-              ),
-            ),
-            _buildSettingsTile(
-              context,
-              icon: Icons.key,
-              title: 'Key Management',
-              subtitle: 'Export, backup, and restore your Nostr keys',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const KeyManagementScreen(),
-                ),
-              ),
-            ),
-          ],
-
-          // Account Section (only show when authenticated)
-          if (isAuthenticated) ...[
-            _buildSectionHeader('Account'),
-            _buildSettingsTile(
-              context,
-              icon: Icons.logout,
-              title: 'Log Out',
-              subtitle: 'Sign out of your account (keeps your keys)',
-              onTap: () => _handleLogout(context, ref),
-            ),
-            _buildSettingsTile(
-              context,
-              icon: Icons.key_off,
-              title: 'Remove Keys from Device',
-              subtitle: 'Delete your nsec from this device (content stays on relays)',
-              onTap: () => _handleRemoveKeys(context, ref),
-              iconColor: Colors.orange,
-              titleColor: Colors.orange,
-            ),
-            _buildSettingsTile(
-              context,
-              icon: Icons.delete_forever,
-              title: 'Delete Account and Data',
-              subtitle: 'PERMANENTLY delete your account and all content from Nostr relays',
-              onTap: () => _handleDeleteAllContent(context, ref),
-              iconColor: Colors.red,
-              titleColor: Colors.red,
-            ),
-          ],
-
-          // Network Configuration
-          _buildSectionHeader('Network'),
-          _buildSettingsTile(
-            context,
-            icon: Icons.hub,
-            title: 'Relays',
-            subtitle: 'Manage Nostr relay connections',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const RelaySettingsScreen(),
-              ),
-            ),
-          ),
-          _buildSettingsTile(
-            context,
-            icon: Icons.troubleshoot,
-            title: 'Relay Diagnostics',
-            subtitle: 'Debug relay connectivity and network issues',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const RelayDiagnosticScreen(),
-              ),
-            ),
-          ),
-          _buildSettingsTile(
-            context,
-            icon: Icons.cloud_upload,
-            title: 'Media Servers',
-            subtitle: 'Configure Blossom upload servers',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const BlossomSettingsScreen(),
-              ),
-            ),
-          ),
-          // P2P Sync hidden for release - not ready for production
-          // _buildSettingsTile(
-          //   context,
-          //   icon: Icons.sync,
-          //   title: 'P2P Sync',
-          //   subtitle: 'Peer-to-peer synchronization settings',
-          //   onTap: () => Navigator.push(
-          //     context,
-          //     MaterialPageRoute(
-          //       builder: (context) => const P2PSyncScreen(),
-          //     ),
-          //   ),
-          // ),
-
-          // Preferences
-          _buildSectionHeader('Preferences'),
-          _buildSettingsTile(
-            context,
-            icon: Icons.notifications,
-            title: 'Notifications',
-            subtitle: 'Manage notification preferences',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const NotificationSettingsScreen(),
-              ),
-            ),
-          ),
-          _buildSettingsTile(
-            context,
-            icon: Icons.shield,
-            title: 'Safety & Privacy',
-            subtitle: 'Blocked users, muted content, and report history',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SafetySettingsScreen(),
-              ),
-            ),
-          ),
-
-          // Support
-          _buildSectionHeader('Support'),
-          _buildSettingsTile(
-            context,
-            icon: Icons.verified_user,
-            title: 'ProofMode Info',
-            subtitle: 'Learn about ProofMode verification and authenticity',
-            onTap: () => _openProofModeInfo(context),
-          ),
-          _buildSettingsTile(
-            context,
-            icon: Icons.support_agent,
-            title: 'Contact Support',
-            subtitle: 'Get help or report an issue',
-            onTap: () async {
-              // Try Zendesk first, fallback to email if not available
-              if (ZendeskSupportService.isAvailable) {
-                final success = await ZendeskSupportService.showNewTicketScreen(
-                  subject: 'Support Request',
-                  tags: ['mobile', 'support'],
-                );
-
-                if (!success && context.mounted) {
-                  // Zendesk failed, show fallback options
-                  _showSupportFallback(context, ref, authService);
-                }
-              } else {
-                // Zendesk not available, show fallback options
-                if (context.mounted) {
-                  _showSupportFallback(context, ref, authService);
-                }
-              }
-            },
-          ),
-          _buildSettingsTile(
-            context,
-            icon: Icons.save,
-            title: 'Save Logs',
-            subtitle: 'Export logs to file for manual sending',
-            onTap: () async {
-              final bugReportService = ref.read(bugReportServiceProvider);
-              final userPubkey = authService.currentPublicKeyHex;
-
-              // Show loading indicator
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Exporting logs...'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-
-              final success = await bugReportService.exportLogsToFile(
-                currentScreen: 'SettingsScreen',
-                userPubkey: userPubkey,
-              );
-
-              if (!success && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Failed to export logs'),
-                    backgroundColor: Colors.red,
+              // Profile Section
+              if (isAuthenticated) ...[
+                _buildSectionHeader('Profile'),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.person,
+                  title: 'Edit Profile',
+                  subtitle: 'Update your display name, bio, and avatar',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const ProfileSetupScreen(isNewUser: false),
+                    ),
                   ),
-                );
-              }
-            },
-          ),
-        ],
+                ),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.key,
+                  title: 'Key Management',
+                  subtitle: 'Export, backup, and restore your Nostr keys',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const KeyManagementScreen(),
+                    ),
+                  ),
+                ),
+              ],
+
+              // Account Section (only show when authenticated)
+              if (isAuthenticated) ...[
+                _buildSectionHeader('Account'),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.logout,
+                  title: 'Log Out',
+                  subtitle: 'Sign out of your account (keeps your keys)',
+                  onTap: () => _handleLogout(context, ref),
+                ),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.key_off,
+                  title: 'Remove Keys from Device',
+                  subtitle:
+                      'Delete your nsec from this device (content stays on relays)',
+                  onTap: () => _handleRemoveKeys(context, ref),
+                  iconColor: Colors.orange,
+                  titleColor: Colors.orange,
+                ),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.delete_forever,
+                  title: 'Delete Account and Data',
+                  subtitle:
+                      'PERMANENTLY delete your account and all content from Nostr relays',
+                  onTap: () => _handleDeleteAllContent(context, ref),
+                  iconColor: Colors.red,
+                  titleColor: Colors.red,
+                ),
+              ],
+
+              // Network Configuration
+              _buildSectionHeader('Network'),
+              _buildSettingsTile(
+                context,
+                icon: Icons.hub,
+                title: 'Relays',
+                subtitle: 'Manage Nostr relay connections',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RelaySettingsScreen(),
+                  ),
+                ),
+              ),
+              _buildSettingsTile(
+                context,
+                icon: Icons.troubleshoot,
+                title: 'Relay Diagnostics',
+                subtitle: 'Debug relay connectivity and network issues',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RelayDiagnosticScreen(),
+                  ),
+                ),
+              ),
+              _buildSettingsTile(
+                context,
+                icon: Icons.cloud_upload,
+                title: 'Media Servers',
+                subtitle: 'Configure Blossom upload servers',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BlossomSettingsScreen(),
+                  ),
+                ),
+              ),
+              // P2P Sync hidden for release - not ready for production
+              // _buildSettingsTile(
+              //   context,
+              //   icon: Icons.sync,
+              //   title: 'P2P Sync',
+              //   subtitle: 'Peer-to-peer synchronization settings',
+              //   onTap: () => Navigator.push(
+              //     context,
+              //     MaterialPageRoute(
+              //       builder: (context) => const P2PSyncScreen(),
+              //     ),
+              //   ),
+              // ),
+
+              // Preferences
+              _buildSectionHeader('Preferences'),
+              _buildSettingsTile(
+                context,
+                icon: Icons.notifications,
+                title: 'Notifications',
+                subtitle: 'Manage notification preferences',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationSettingsScreen(),
+                  ),
+                ),
+              ),
+              _buildSettingsTile(
+                context,
+                icon: Icons.shield,
+                title: 'Safety & Privacy',
+                subtitle: 'Blocked users, muted content, and report history',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SafetySettingsScreen(),
+                  ),
+                ),
+              ),
+
+              // Support
+              _buildSectionHeader('Support'),
+              _buildSettingsTile(
+                context,
+                icon: Icons.verified_user,
+                title: 'ProofMode Info',
+                subtitle: 'Learn about ProofMode verification and authenticity',
+                onTap: () => _openProofModeInfo(context),
+              ),
+              _buildSettingsTile(
+                context,
+                icon: Icons.support_agent,
+                title: 'Contact Support',
+                subtitle: 'Get help or report an issue',
+                onTap: () async {
+                  // Try Zendesk first, fallback to email if not available
+                  if (ZendeskSupportService.isAvailable) {
+                    final success =
+                        await ZendeskSupportService.showNewTicketScreen(
+                          subject: 'Support Request',
+                          tags: ['mobile', 'support'],
+                        );
+
+                    if (!success && context.mounted) {
+                      // Zendesk failed, show fallback options
+                      _showSupportFallback(context, ref, authService);
+                    }
+                  } else {
+                    // Zendesk not available, show fallback options
+                    if (context.mounted) {
+                      _showSupportFallback(context, ref, authService);
+                    }
+                  }
+                },
+              ),
+              _buildSettingsTile(
+                context,
+                icon: Icons.save,
+                title: 'Save Logs',
+                subtitle: 'Export logs to file for manual sending',
+                onTap: () async {
+                  final bugReportService = ref.read(bugReportServiceProvider);
+                  final userPubkey = authService.currentPublicKeyHex;
+
+                  // Show loading indicator
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Exporting logs...'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+
+                  final success = await bugReportService.exportLogsToFile(
+                    currentScreen: 'SettingsScreen',
+                    userPubkey: userPubkey,
+                  );
+
+                  if (!success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Failed to export logs'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
           ),
         ),
       ),
@@ -257,17 +260,17 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget _buildSectionHeader(String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-        child: Text(
-          title.toUpperCase(),
-          style: const TextStyle(
-            color: VineTheme.vineGreen,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+    child: Text(
+      title.toUpperCase(),
+      style: const TextStyle(
+        color: VineTheme.vineGreen,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.2,
+      ),
+    ),
+  );
 
   Widget _buildSettingsTile(
     BuildContext context, {
@@ -277,27 +280,23 @@ class SettingsScreen extends ConsumerWidget {
     required VoidCallback onTap,
     Color? iconColor,
     Color? titleColor,
-  }) =>
-      ListTile(
-        leading: Icon(icon, color: iconColor ?? VineTheme.vineGreen),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: titleColor ?? Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(
-            color: Colors.grey,
-            fontSize: 14,
-          ),
-        ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-        onTap: onTap,
-      );
+  }) => ListTile(
+    leading: Icon(icon, color: iconColor ?? VineTheme.vineGreen),
+    title: Text(
+      title,
+      style: TextStyle(
+        color: titleColor ?? Colors.white,
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+      ),
+    ),
+    subtitle: Text(
+      subtitle,
+      style: const TextStyle(color: Colors.grey, fontSize: 14),
+    ),
+    trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+    onTap: onTap,
+  );
 
   Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
     final authService = ref.read(authServiceProvider);
@@ -318,10 +317,7 @@ class SettingsScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey),
-            ),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
@@ -418,7 +414,10 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   /// Handle deleting ALL content from Nostr relays (nuclear option)
-  Future<void> _handleDeleteAllContent(BuildContext context, WidgetRef ref) async {
+  Future<void> _handleDeleteAllContent(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final deletionService = ref.read(accountDeletionServiceProvider);
     final authService = ref.read(authServiceProvider);
 
@@ -454,7 +453,8 @@ class SettingsScreen extends ConsumerWidget {
             onCreateNewAccount: () {
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
-                  builder: (context) => const ProfileSetupScreen(isNewUser: true),
+                  builder: (context) =>
+                      const ProfileSetupScreen(isNewUser: true),
                 ),
                 (route) => false,
               );
@@ -510,7 +510,7 @@ class SettingsScreen extends ConsumerWidget {
   void _showSupportFallback(
     BuildContext context,
     WidgetRef ref,
-    dynamic authService,  // Type inferred from authServiceProvider
+    dynamic authService, // Type inferred from authServiceProvider
   ) {
     final bugReportService = ref.read(bugReportServiceProvider);
     final userPubkey = authService.currentPublicKeyHex;

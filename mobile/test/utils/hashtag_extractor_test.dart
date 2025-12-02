@@ -31,8 +31,10 @@ void main() {
         'valid_tag',
       ]);
 
-      expect(normalized,
-          equals(['funny', 'coding', 'bitcoin', 'mytag', 'valid_tag']));
+      expect(
+        normalized,
+        equals(['funny', 'coding', 'bitcoin', 'mytag', 'valid_tag']),
+      );
     });
 
     test('combines caption and additional hashtags', () {
@@ -41,7 +43,7 @@ void main() {
         additionalHashtags: [
           'nostrvine',
           'comedy',
-          'funny'
+          'funny',
         ], // 'funny' should be deduplicated
       );
 

@@ -13,18 +13,17 @@ import 'package:openvine/models/aspect_ratio.dart' as vine;
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/models/native_proof_data.dart';
-import 'package:openvine/screens/vine_drafts_screen.dart';
 import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
 import 'package:openvine/screens/pure/video_metadata_screen_pure.dart';
 import 'package:openvine/services/camera/native_macos_camera.dart';
-import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/macos_camera_preview.dart'
     show CameraPreviewPlaceholder;
-import 'package:openvine/widgets/camera_controls_overlay.dart';
+import 'package:openvine/widgets/dynamic_zoom_selector.dart';
+import 'package:openvine/services/camera/camerawesome_mobile_camera_interface.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -413,51 +412,6 @@ class _UniversalCameraScreenPureState
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: VineTheme.vineGreen,
-        elevation: 0,
-        leading: IconButton(
-          key: const Key('back-button'),
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Record Video',
-          style: TextStyle(color: Colors.white),
-        ),
-        actions: [
-          // Drafts button - moved to right end of app bar with proper vertical alignment
-          Consumer(
-            builder: (context, ref, child) {
-              final recordingState = ref.watch(vineRecordingProvider);
-              if (recordingState.isRecording) {
-                return const SizedBox.shrink();
-              }
-              return Center(
-                child: TextButton(
-                  key: const Key('drafts-button'),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const VineDraftsScreen(),
-                      ),
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    minimumSize: const Size(0, 48), // Match IconButton height
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text(
-                    'Drafts',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
       body: Consumer(
         builder: (context, ref, child) {
           final recordingState = ref.watch(vineRecordingProvider);
@@ -506,6 +460,23 @@ class _UniversalCameraScreenPureState
             return _buildErrorScreen(recordingState.errorMessage);
           }
 
+          // Show processing overlay if processing (even if camera not initialized)
+          if (_isProcessing) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: VineTheme.vineGreen),
+                  SizedBox(height: 16),
+                  Text(
+                    'Processing video...',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              ),
+            );
+          }
+
           if (!recordingState.isInitialized) {
             return const Center(
               child: Column(
@@ -523,13 +494,19 @@ class _UniversalCameraScreenPureState
           }
 
           return Stack(
+            fit: StackFit.expand,
             children: [
-              // Camera preview at natural aspect ratio (cropping applied during encoding)
-              // Wrapped in GestureDetector for tap-anywhere-to-record (Vine-style UX)
+              // Camera preview - EXACTLY matching experimental app structure
+              if (recordingState.isInitialized)
+                ref.read(vineRecordingProvider.notifier).previewWidget
+              else
+                CameraPreviewPlaceholder(
+                  isRecording: recordingState.isRecording,
+                ),
+
+              // Tap-anywhere-to-record gesture detector (MUST be before top bar so bar receives taps)
               Positioned.fill(
                 child: GestureDetector(
-                  // Only enable tap-anywhere recording on mobile (not web)
-                  // Web uses single tap to toggle recording
                   onTapDown: !kIsWeb && recordingState.canRecord
                       ? (_) => _startRecording()
                       : null,
@@ -539,73 +516,57 @@ class _UniversalCameraScreenPureState
                   onTapCancel: !kIsWeb && recordingState.isRecording
                       ? () => _stopRecording()
                       : null,
-                  // Allow gestures to pass through to children (camera controls, zoom, etc.)
                   behavior: HitTestBehavior.translucent,
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ClipRect(
-                      child: Stack(
-                        children: [
-                            // Camera preview at natural aspect ratio
-                            if (recordingState.isInitialized)
-                              // CRITICAL: Use a key that changes when camera switches
-                              // Without this, the preview widget won't rebuild and freezes on the old camera frame
-                              Container(
-                                key: ValueKey('preview_${recordingState.cameraSwitchCount}'),
-                                child: ref
-                                    .read(vineRecordingProvider.notifier)
-                                    .previewWidget,
-                              )
-                            else
-                              CameraPreviewPlaceholder(
-                                isRecording: recordingState.isRecording,
-                              ),
-
-                            // Zoom and gesture controls overlay
-                            if (recordingState.isInitialized)
-                              Consumer(
-                                builder: (context, ref, child) {
-                                  final cameraInterface = ref
-                                      .read(vineRecordingProvider.notifier)
-                                      .cameraInterface;
-                                  if (cameraInterface != null) {
-                                    return CameraControlsOverlay(
-                                      cameraInterface: cameraInterface,
-                                      recordingState:
-                                          recordingState.recordingState,
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                },
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  child: const SizedBox.expand(),
                 ),
+              ),
+
+              // Top progress bar - Vine-style full width at top (AFTER gesture detector so buttons work)
+              Positioned(
+                top: MediaQuery.of(context).padding.top,
+                left: 0,
+                right: 0,
+                child: _buildTopProgressBar(recordingState),
+              ),
 
               // Square crop mask overlay (only shown in square mode)
               // Positioned OUTSIDE ClipRect so it's not clipped away
-              if (recordingState.aspectRatio == vine.AspectRatio.square && recordingState.isInitialized)
+              if (recordingState.aspectRatio == vine.AspectRatio.square &&
+                  recordingState.isInitialized)
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    Log.info('🎭 Building square crop mask overlay',
-                        name: 'UniversalCameraScreenPure', category: LogCategory.video);
+                    Log.info(
+                      '🎭 Building square crop mask overlay',
+                      name: 'UniversalCameraScreenPure',
+                      category: LogCategory.video,
+                    );
 
                     // Use screen dimensions, not camera preview dimensions
                     final screenWidth = constraints.maxWidth;
                     final screenHeight = constraints.maxHeight;
-                    final squareSize = screenWidth; // Square uses full screen width
+                    final squareSize =
+                        screenWidth; // Square uses full screen width
 
-                    Log.info('🎭 Mask dimensions: screenWidth=$screenWidth, screenHeight=$screenHeight, squareSize=$squareSize',
-                        name: 'UniversalCameraScreenPure', category: LogCategory.video);
+                    Log.info(
+                      '🎭 Mask dimensions: screenWidth=$screenWidth, screenHeight=$screenHeight, squareSize=$squareSize',
+                      name: 'UniversalCameraScreenPure',
+                      category: LogCategory.video,
+                    );
 
                     return _buildSquareCropMaskForPreview(
                       screenWidth,
                       screenHeight,
                     );
                   },
+                ),
+
+              // Dynamic zoom selector (above recording controls)
+              if (recordingState.isInitialized && !recordingState.isRecording)
+                Positioned(
+                  bottom: 180,
+                  left: 0,
+                  right: 0,
+                  child: _buildZoomSelector(),
                 ),
 
               // Recording controls overlay (bottom)
@@ -629,12 +590,13 @@ class _UniversalCameraScreenPureState
                 ),
               ),
 
-              // Camera controls (top right)
+              // Camera controls (right side, vertically centered)
               if (recordingState.isInitialized && !recordingState.isRecording)
                 Positioned(
-                  top: 16,
+                  top: 0,
+                  bottom: 180, // Above the bottom recording controls
                   right: 16,
-                  child: _buildCameraControls(recordingState),
+                  child: Center(child: _buildCameraControls(recordingState)),
                 ),
 
               // Countdown overlay
@@ -808,6 +770,101 @@ class _UniversalCameraScreenPureState
     );
   }
 
+  /// Vine-style top bar with X (close), progress bar, and > (publish) buttons
+  Widget _buildTopProgressBar(VineRecordingUIState recordingState) {
+    final progress = recordingState.progress;
+    final hasSegments = recordingState.hasSegments;
+
+    return Container(
+      height: 44, // Taller to accommodate buttons
+      color: VineTheme.vineGreen,
+      child: Row(
+        children: [
+          // X button (close/cancel) on the left - pops back to previous screen
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              Log.info(
+                '📹 X CANCEL - popping back',
+                category: LogCategory.video,
+              );
+              // Camera is pushed via pushCamera(), so pop() returns to previous screen
+              GoRouter.of(context).pop();
+            },
+            child: Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              child: const Icon(Icons.close, color: Colors.white, size: 28),
+            ),
+          ),
+          // Progress bar in the middle (takes remaining space)
+          Expanded(
+            child: Container(
+              height: 24,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 50),
+                    width: double.infinity,
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: progress.clamp(0.0, 1.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.5),
+                              blurRadius: 4,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // > button (publish/proceed) on the right
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: hasSegments
+                ? () {
+                    Log.info(
+                      '📹 > PUBLISH BUTTON PRESSED',
+                      category: LogCategory.video,
+                    );
+                    _finishRecording();
+                  }
+                : null,
+            child: Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.chevron_right,
+                color: hasSegments
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.3),
+                size: 32,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRecordingControls(dynamic recordingState) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -820,8 +877,8 @@ class _UniversalCameraScreenPureState
           child: Text(
             (!recordingState.isRecording && !recordingState.hasSegments)
                 ? (kIsWeb
-                    ? 'Tap to record' // Web: single-shot
-                    : 'Tap and hold anywhere to record') // Mobile: press-and-hold segments anywhere on screen
+                      ? 'Tap to record' // Web: single-shot
+                      : 'Tap and hold anywhere to record') // Mobile: press-and-hold segments anywhere on screen
                 : '', // Empty but reserves space
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
@@ -847,32 +904,8 @@ class _UniversalCameraScreenPureState
           ),
 
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Cancel/Back button (when idle) OR Publish button (when has segments)
-            IconButton(
-              onPressed: recordingState.hasSegments
-                  ? () {
-                      // Finish and publish
-                      Log.info(
-                        '📹 Publish button pressed',
-                        category: LogCategory.video,
-                      );
-                      _finishRecording();
-                    }
-                  : () {
-                      Navigator.of(context).pop();
-                    },
-              icon: Icon(
-                recordingState.hasSegments ? Icons.check_circle : Icons.close,
-                color: recordingState.hasSegments
-                    ? VineTheme.vineGreen
-                    : Colors.white,
-                size: recordingState.hasSegments ? 40 : 32,
-              ),
-              tooltip: recordingState.hasSegments ? 'Publish video' : 'Cancel',
-            ),
-
             // Record button - Platform-specific interaction
             // Web: Tap to start/stop (single continuous recording)
             // Mobile: Press-and-hold to record, release to pause (segmented)
@@ -919,47 +952,64 @@ class _UniversalCameraScreenPureState
               ),
             ),
 
-            // Switch camera button - only show if multiple cameras available
-            if (recordingState.canSwitchCamera)
-              IconButton(
-                onPressed: recordingState.isRecording ? null : _switchCamera,
-                icon: Icon(
-                  Icons.flip_camera_ios,
-                  color: recordingState.isRecording
-                      ? Colors.grey
-                      : Colors.white,
-                  size: 32,
-                ),
-              ),
+            // Camera switch button moved to right side controls
+            // Placeholder to balance the row layout
+            const SizedBox(width: 48),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildCameraControls(dynamic recordingState) {
-    final cameraInterface = ref.read(vineRecordingProvider.notifier).cameraInterface;
-    final isFrontCamera = cameraInterface is EnhancedMobileCameraInterface && cameraInterface.isFrontCamera;
+  Widget _buildCameraControls(VineRecordingUIState recordingState) {
+    final cameraInterface = ref
+        .read(vineRecordingProvider.notifier)
+        .cameraInterface;
+    // Check if front camera is active for either camera interface type
+    final isFrontCamera =
+        (cameraInterface is EnhancedMobileCameraInterface &&
+            cameraInterface.isFrontCamera) ||
+        (cameraInterface is CamerAwesomeMobileCameraInterface &&
+            cameraInterface.isFrontCamera);
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
+        // Camera switch button (front/back)
+        if (recordingState.canSwitchCamera) ...[
+          _buildControlButton(
+            icon: Icons.flip_camera_ios,
+            onTap: _switchCamera,
+          ),
+          const SizedBox(height: 12),
+        ],
         // Flash toggle (only show for rear camera - front cameras don't have flash)
         if (!isFrontCamera) ...[
-          IconButton(
-            onPressed: _toggleFlash,
-            icon: Icon(_getFlashIcon(), color: Colors.white, size: 28),
-          ),
-          const SizedBox(height: 8),
+          _buildControlButton(icon: _getFlashIcon(), onTap: _toggleFlash),
+          const SizedBox(height: 12),
         ],
         // Timer toggle
-        IconButton(
-          onPressed: _toggleTimer,
-          icon: Icon(_getTimerIcon(), color: Colors.white, size: 28),
-        ),
-        const SizedBox(height: 8),
+        _buildControlButton(icon: _getTimerIcon(), onTap: _toggleTimer),
+        const SizedBox(height: 12),
         // Aspect ratio toggle
         _buildAspectRatioToggle(recordingState),
       ],
+    );
+  }
+
+  Widget _buildControlButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.5),
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        onPressed: onTap,
+        icon: Icon(icon, color: Colors.white, size: 26),
+      ),
     );
   }
 
@@ -986,8 +1036,11 @@ class _UniversalCameraScreenPureState
                     recordingState.aspectRatio == vine.AspectRatio.square
                     ? vine.AspectRatio.vertical
                     : vine.AspectRatio.square;
-                Log.info('🎭 Aspect ratio button pressed: $currentRatio -> $newRatio',
-                    name: 'UniversalCameraScreenPure', category: LogCategory.video);
+                Log.info(
+                  '🎭 Aspect ratio button pressed: $currentRatio -> $newRatio',
+                  name: 'UniversalCameraScreenPure',
+                  category: LogCategory.video,
+                );
                 ref
                     .read(vineRecordingProvider.notifier)
                     .setAspectRatio(newRatio);
@@ -996,9 +1049,27 @@ class _UniversalCameraScreenPureState
     );
   }
 
+  /// Build dynamic zoom selector if using CamerAwesome
+  Widget _buildZoomSelector() {
+    final cameraInterface = ref
+        .read(vineRecordingProvider.notifier)
+        .getCameraInterface();
+
+    // Only show zoom selector for CamerAwesome interface (iOS)
+    if (cameraInterface is CamerAwesomeMobileCameraInterface) {
+      return DynamicZoomSelector(cameraInterface: cameraInterface);
+    }
+
+    // No zoom selector for other camera interfaces
+    return const SizedBox.shrink();
+  }
+
   /// Build square crop mask overlay centered on screen
   /// Shows semi-transparent overlay outside the 1:1 square
-  Widget _buildSquareCropMaskForPreview(double screenWidth, double screenHeight) {
+  Widget _buildSquareCropMaskForPreview(
+    double screenWidth,
+    double screenHeight,
+  ) {
     // Square uses full screen width
     final squareSize = screenWidth;
 
@@ -1014,9 +1085,7 @@ class _UniversalCameraScreenPureState
             left: 0,
             right: 0,
             height: topBottomHeight,
-            child: Container(
-              color: Colors.black.withValues(alpha: 0.6),
-            ),
+            child: Container(color: Colors.black.withValues(alpha: 0.6)),
           ),
 
         // Bottom darkened area
@@ -1026,9 +1095,7 @@ class _UniversalCameraScreenPureState
             left: 0,
             right: 0,
             height: topBottomHeight,
-            child: Container(
-              color: Colors.black.withValues(alpha: 0.6),
-            ),
+            child: Container(color: Colors.black.withValues(alpha: 0.6)),
           ),
 
         // Square frame outline (visual guide)
@@ -1039,10 +1106,7 @@ class _UniversalCameraScreenPureState
           height: squareSize,
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(
-                color: VineTheme.vineGreen,
-                width: 3,
-              ),
+              border: Border.all(color: VineTheme.vineGreen, width: 3),
             ),
           ),
         ),
@@ -1127,14 +1191,30 @@ class _UniversalCameraScreenPureState
   }
 
   void _stopRecording() async {
+    // Just stop the current segment - don't finish the recording
+    // This allows the user to record multiple segments before finalizing
     try {
       final notifier = ref.read(vineRecordingProvider.notifier);
-      Log.info('📹 Stopping recording segment', category: LogCategory.video);
-      await notifier.stopRecording();
-      // Don't process here - wait for user to press publish button
+      Log.info(
+        '📹 Stopping recording segment (not finishing)',
+        category: LogCategory.video,
+      );
+      await notifier.stopSegment();
+
+      Log.info(
+        '📹 Segment stopped, user can record more or tap Publish to finish',
+        category: LogCategory.video,
+      );
+
+      // Reset processing state - we're NOT processing yet, just paused between segments
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     } catch (e) {
       Log.error(
-        '📹 UniversalCameraScreenPure: Stop recording failed: $e',
+        '📹 UniversalCameraScreenPure: Stop segment failed: $e',
         category: LogCategory.video,
       );
 
@@ -1143,6 +1223,20 @@ class _UniversalCameraScreenPureState
   }
 
   void _finishRecording() async {
+    // Set processing state immediately so UI shows "Processing video..."
+    // during the entire FFmpeg processing time
+    if (_isProcessing) {
+      Log.warning(
+        '📹 Already processing a recording, ignoring duplicate finish call',
+        category: LogCategory.video,
+      );
+      return;
+    }
+
+    setState(() {
+      _isProcessing = true;
+    });
+
     try {
       final notifier = ref.read(vineRecordingProvider.notifier);
       Log.info(
@@ -1163,6 +1257,12 @@ class _UniversalCameraScreenPureState
           '📹 No file returned from finishRecording',
           category: LogCategory.video,
         );
+        // Reset processing state since nothing to process
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+          });
+        }
       }
     } catch (e) {
       Log.error(
@@ -1170,27 +1270,49 @@ class _UniversalCameraScreenPureState
         category: LogCategory.video,
       );
 
+      // Reset processing state on error
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+
       _showErrorSnackBar('Finish recording failed: $e');
     }
   }
 
   void _switchCamera() async {
-    Log.info('🔄 _switchCamera() UI button pressed',
-        name: 'UniversalCameraScreenPure', category: LogCategory.system);
+    Log.info(
+      '🔄 _switchCamera() UI button pressed',
+      name: 'UniversalCameraScreenPure',
+      category: LogCategory.system,
+    );
 
     try {
-      Log.info('🔄 Calling vineRecordingProvider.notifier.switchCamera()...',
-          name: 'UniversalCameraScreenPure', category: LogCategory.system);
+      Log.info(
+        '🔄 Calling vineRecordingProvider.notifier.switchCamera()...',
+        name: 'UniversalCameraScreenPure',
+        category: LogCategory.system,
+      );
       await ref.read(vineRecordingProvider.notifier).switchCamera();
-      Log.info('🔄 vineRecordingProvider.notifier.switchCamera() completed',
-          name: 'UniversalCameraScreenPure', category: LogCategory.system);
+      Log.info(
+        '🔄 vineRecordingProvider.notifier.switchCamera() completed',
+        name: 'UniversalCameraScreenPure',
+        category: LogCategory.system,
+      );
 
       // Force rebuild by calling setState
-      Log.info('🔄 Calling setState() to force UI rebuild',
-          name: 'UniversalCameraScreenPure', category: LogCategory.system);
+      Log.info(
+        '🔄 Calling setState() to force UI rebuild',
+        name: 'UniversalCameraScreenPure',
+        category: LogCategory.system,
+      );
       setState(() {});
-      Log.info('🔄 setState() completed',
-          name: 'UniversalCameraScreenPure', category: LogCategory.system);
+      Log.info(
+        '🔄 setState() completed',
+        name: 'UniversalCameraScreenPure',
+        category: LogCategory.system,
+      );
     } catch (e) {
       Log.error(
         '📹 UniversalCameraScreenPure: Camera switch failed: $e',
@@ -1202,30 +1324,40 @@ class _UniversalCameraScreenPureState
   void _toggleFlash() {
     Log.info('🔦 Flash button tapped', category: LogCategory.video);
 
-    final cameraInterface = ref.read(vineRecordingProvider.notifier).cameraInterface;
+    final cameraInterface = ref
+        .read(vineRecordingProvider.notifier)
+        .cameraInterface;
 
+    // Update local state to cycle through: off → torch (for video recording)
+    // For video, we use torch mode (continuous light) instead of flash
+    setState(() {
+      switch (_flashMode) {
+        case FlashMode.off:
+          _flashMode = FlashMode.torch;
+          break;
+        case FlashMode.torch:
+        case FlashMode.auto:
+        case FlashMode.always:
+          _flashMode = FlashMode.off;
+          break;
+      }
+    });
+
+    Log.info(
+      '🔦 Flash mode toggled to: $_flashMode',
+      category: LogCategory.video,
+    );
+
+    // Apply the new flash mode to camera - support both camera interfaces
     if (cameraInterface is EnhancedMobileCameraInterface) {
-      // Update local state to cycle through: off → torch (for video recording)
-      // For video, we use torch mode (continuous light) instead of flash
-      setState(() {
-        switch (_flashMode) {
-          case FlashMode.off:
-            _flashMode = FlashMode.torch;
-            break;
-          case FlashMode.torch:
-          case FlashMode.auto:
-          case FlashMode.always:
-            _flashMode = FlashMode.off;
-            break;
-        }
-      });
-
-      Log.info('🔦 Flash mode toggled to: $_flashMode', category: LogCategory.video);
-
-      // Apply the new flash mode to camera
+      cameraInterface.setFlashMode(_flashMode);
+    } else if (cameraInterface is CamerAwesomeMobileCameraInterface) {
       cameraInterface.setFlashMode(_flashMode);
     } else {
-      Log.warning('🔦 Camera interface is not EnhancedMobileCameraInterface', category: LogCategory.video);
+      Log.warning(
+        '🔦 Camera interface does not support flash control',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -1238,7 +1370,9 @@ class _UniversalCameraScreenPureState
         category: LogCategory.video,
       );
 
-      _showSuccessSnackBar('Maximum recording time reached. Press ✓ to publish.');
+      _showSuccessSnackBar(
+        'Maximum recording time reached. Press ✓ to publish.',
+      );
     } catch (e) {
       Log.error(
         '📹 Failed to handle auto-stop: $e',
@@ -1277,18 +1411,8 @@ class _UniversalCameraScreenPureState
     File recordedFile,
     NativeProofData? nativeProof,
   ) async {
-    // Guard against double-processing
-    if (_isProcessing) {
-      Log.warning(
-        '📹 Already processing a recording, ignoring duplicate call',
-        category: LogCategory.video,
-      );
-      return;
-    }
-
-    setState(() {
-      _isProcessing = true;
-    });
+    // Note: _isProcessing is set by _finishRecording() before this is called
+    // to ensure the "Processing video..." UI shows during FFmpeg processing
 
     try {
       Log.info(

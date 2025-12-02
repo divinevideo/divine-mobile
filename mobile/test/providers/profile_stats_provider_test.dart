@@ -39,9 +39,7 @@ void main() {
     setUp(() {
       mockSocialService = MockSocialService();
       container = ProviderContainer(
-        overrides: [
-          socialServiceProvider.overrideWithValue(mockSocialService),
-        ],
+        overrides: [socialServiceProvider.overrideWithValue(mockSocialService)],
       );
     });
 
@@ -58,24 +56,28 @@ void main() {
       }
     });
 
-
     group('FetchProfileStatsProvider (AsyncProvider)', () {
       const testPubkey = 'test_pubkey_async';
 
       test('should auto-fetch stats when watched', () async {
         // Mock social service responses
-        when(mockSocialService.getFollowerStats(testPubkey)).thenAnswer(
-          (_) async => {'followers': 100, 'following': 50},
-        );
-        when(mockSocialService.getUserVideoCount(testPubkey)).thenAnswer(
-          (_) async => 25,
-        );
+        when(
+          mockSocialService.getFollowerStats(testPubkey),
+        ).thenAnswer((_) async => {'followers': 100, 'following': 50});
+        when(
+          mockSocialService.getUserVideoCount(testPubkey),
+        ).thenAnswer((_) async => 25);
 
         // Keep the provider alive by listening to it
-        final sub = container.listen(fetchProfileStatsProvider(testPubkey), (previous, next) {});
+        final sub = container.listen(
+          fetchProfileStatsProvider(testPubkey),
+          (previous, next) {},
+        );
 
         // Wait for the future to complete
-        final asyncValue = await container.read(fetchProfileStatsProvider(testPubkey).future);
+        final asyncValue = await container.read(
+          fetchProfileStatsProvider(testPubkey).future,
+        );
 
         // Verify stats were fetched automatically
         expect(asyncValue.videoCount, 25);
@@ -94,14 +96,16 @@ void main() {
 
       test('should use cache on subsequent watches', () async {
         // First watch - should fetch
-        when(mockSocialService.getFollowerStats(testPubkey)).thenAnswer(
-          (_) async => {'followers': 100, 'following': 50},
-        );
-        when(mockSocialService.getUserVideoCount(testPubkey)).thenAnswer(
-          (_) async => 25,
-        );
+        when(
+          mockSocialService.getFollowerStats(testPubkey),
+        ).thenAnswer((_) async => {'followers': 100, 'following': 50});
+        when(
+          mockSocialService.getUserVideoCount(testPubkey),
+        ).thenAnswer((_) async => 25);
 
-        final stats1 = await container.read(fetchProfileStatsProvider(testPubkey).future);
+        final stats1 = await container.read(
+          fetchProfileStatsProvider(testPubkey).future,
+        );
         expect(stats1.videoCount, 25);
         expect(stats1.followers, 100);
 
@@ -109,7 +113,9 @@ void main() {
         clearInteractions(mockSocialService);
 
         // Second watch - should use cache
-        final stats2 = await container.read(fetchProfileStatsProvider(testPubkey).future);
+        final stats2 = await container.read(
+          fetchProfileStatsProvider(testPubkey).future,
+        );
         expect(stats2.videoCount, 25);
         expect(stats2.followers, 100);
 
@@ -160,10 +166,7 @@ void main() {
           lastUpdated: DateTime.now(),
         );
 
-        final updated = original.copyWith(
-          videoCount: 30,
-          totalLikes: 600,
-        );
+        final updated = original.copyWith(videoCount: 30, totalLikes: 600);
 
         expect(updated.videoCount, 30);
         expect(updated.totalLikes, 600);

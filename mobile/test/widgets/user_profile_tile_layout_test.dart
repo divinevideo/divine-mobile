@@ -37,7 +37,12 @@ void main() {
       // Create test profiles with various content lengths
       testProfile = UserProfile(
         pubkey: testPubkey,
-        rawData: const {"name":"Test User","display_name":"Test Display Name","about":"Short bio","picture":"https://example.com/avatar.jpg"},
+        rawData: const {
+          "name": "Test User",
+          "display_name": "Test Display Name",
+          "about": "Short bio",
+          "picture": "https://example.com/avatar.jpg",
+        },
         eventId: 'test_event_id',
         name: 'Test User',
         displayName: 'Test Display Name',
@@ -48,11 +53,18 @@ void main() {
 
       longContentProfile = UserProfile(
         pubkey: 'npub1long123456789',
-        rawData: const {"name":"Very Long Username","display_name":"Extremely Long Display Name","about":"Very long bio"},
+        rawData: const {
+          "name": "Very Long Username",
+          "display_name": "Extremely Long Display Name",
+          "about": "Very long bio",
+        },
         eventId: 'long_event_id',
         name: 'Very Long Username That Should Not Break Layout',
-        displayName: 'Extremely Long Display Name That Tests Text Overflow Handling In The Widget',
-        about: 'This is an extremely long bio that should test text truncation and ellipsis handling. ' * 5,
+        displayName:
+            'Extremely Long Display Name That Tests Text Overflow Handling In The Widget',
+        about:
+            'This is an extremely long bio that should test text truncation and ellipsis handling. ' *
+            5,
         picture: 'https://example.com/avatar.jpg',
         createdAt: DateTime.now(),
       );
@@ -63,12 +75,16 @@ void main() {
     });
 
     group('🎯 LAYOUT STRUCTURE TESTS', () {
-      testWidgets('LAYOUT: maintains proper container structure and spacing', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: testPubkey),
-        ));
+      testWidgets('LAYOUT: maintains proper container structure and spacing', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: testPubkey),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -89,12 +105,16 @@ void main() {
         expect(decoration.borderRadius, equals(BorderRadius.circular(12)));
       });
 
-      testWidgets('LAYOUT: row structure with proper flex distribution', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: testPubkey),
-        ));
+      testWidgets('LAYOUT: row structure with proper flex distribution', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: testPubkey),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -104,7 +124,10 @@ void main() {
 
         // Verify Row children structure
         final Row row = tester.widget<Row>(rowFinder);
-        expect(row.children.length, equals(3)); // Avatar, Expanded content, Follow button
+        expect(
+          row.children.length,
+          equals(3),
+        ); // Avatar, Expanded content, Follow button
 
         // Check that middle section is Expanded
         expect(row.children[1], isA<SizedBox>()); // SizedBox(width: 12)
@@ -112,11 +135,13 @@ void main() {
       });
 
       testWidgets('LAYOUT: avatar positioning and sizing', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: testPubkey),
-        ));
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: testPubkey),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -137,12 +162,16 @@ void main() {
         expect(avatarGestureDetector, findsOneWidget);
       });
 
-      testWidgets('LAYOUT: follow button placement and sizing when visible', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: testPubkey, showFollowButton: true),
-        ));
+      testWidgets('LAYOUT: follow button placement and sizing when visible', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: testPubkey, showFollowButton: true),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -150,7 +179,9 @@ void main() {
         final buttonFinder = find.byType(ElevatedButton);
         expect(buttonFinder, findsOneWidget);
 
-        final ElevatedButton button = tester.widget<ElevatedButton>(buttonFinder);
+        final ElevatedButton button = tester.widget<ElevatedButton>(
+          buttonFinder,
+        );
         expect(button.child, isA<Text>());
 
         // Check button is wrapped in SizedBox with correct height
@@ -167,11 +198,13 @@ void main() {
 
     group('🎯 CONTENT DISPLAY TESTS', () {
       testWidgets('CONTENT: displays profile name correctly', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: testPubkey),
-        ));
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: testPubkey),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -187,11 +220,13 @@ void main() {
       });
 
       testWidgets('CONTENT: displays bio when available', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: testPubkey),
-        ));
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: testPubkey),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -210,7 +245,10 @@ void main() {
       testWidgets('CONTENT: hides bio when not available', (tester) async {
         final profileNoBio = UserProfile(
           pubkey: 'npub1nobio123',
-          rawData: const {"name":"No Bio User","display_name":"No Bio Display"},
+          rawData: const {
+            "name": "No Bio User",
+            "display_name": "No Bio Display",
+          },
           eventId: 'nobio_event_id',
           name: 'No Bio User',
           displayName: 'No Bio Display',
@@ -218,11 +256,13 @@ void main() {
         );
         testUserProfileService.addProfile(profileNoBio);
 
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: 'npub1nobio123'),
-        ));
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: 'npub1nobio123'),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -234,7 +274,9 @@ void main() {
         expect(find.textContaining('about'), findsNothing);
       });
 
-      testWidgets('CONTENT: shows abbreviated pubkey when no display name', (tester) async {
+      testWidgets('CONTENT: shows abbreviated pubkey when no display name', (
+        tester,
+      ) async {
         final profileNoName = UserProfile(
           pubkey: testPubkey,
           rawData: const <String, dynamic>{},
@@ -244,11 +286,13 @@ void main() {
         testUserProfileService.clearProfiles();
         testUserProfileService.addProfile(profileNoName);
 
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: testPubkey),
-        ));
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: testPubkey),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -258,34 +302,48 @@ void main() {
     });
 
     group('🎯 LONG CONTENT HANDLING TESTS', () {
-      testWidgets('LONG CONTENT: handles very long display name without overflow', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: 'npub1long123456789'),
-        ));
+      testWidgets(
+        'LONG CONTENT: handles very long display name without overflow',
+        (tester) async {
+          await tester.pumpWidget(
+            _buildTestWidget(
+              testUserProfileService,
+              testAuthService,
+              const UserProfileTile(pubkey: 'npub1long123456789'),
+            ),
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        // Should render without RenderFlex overflow errors
-        expect(find.byType(UserProfileTile), findsOneWidget);
-        expect(find.textContaining('Extremely Long Display Name'), findsOneWidget);
+          // Should render without RenderFlex overflow errors
+          expect(find.byType(UserProfileTile), findsOneWidget);
+          expect(
+            find.textContaining('Extremely Long Display Name'),
+            findsOneWidget,
+          );
 
-        // Verify text doesn't cause layout issues
-        expect(tester.takeException(), isNull);
-      });
+          // Verify text doesn't cause layout issues
+          expect(tester.takeException(), isNull);
+        },
+      );
 
-      testWidgets('LONG CONTENT: properly truncates long bio text', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: 'npub1long123456789'),
-        ));
+      testWidgets('LONG CONTENT: properly truncates long bio text', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: 'npub1long123456789'),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
         // Find bio text
-        final bioTextFinder = find.textContaining('This is an extremely long bio');
+        final bioTextFinder = find.textContaining(
+          'This is an extremely long bio',
+        );
         expect(bioTextFinder, findsOneWidget);
 
         final Text bioText = tester.widget<Text>(bioTextFinder);
@@ -296,39 +354,57 @@ void main() {
         expect(tester.takeException(), isNull);
       });
 
-      testWidgets('LONG CONTENT: maintains layout integrity with all long content', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: 'npub1long123456789'),
-        ));
+      testWidgets(
+        'LONG CONTENT: maintains layout integrity with all long content',
+        (tester) async {
+          await tester.pumpWidget(
+            _buildTestWidget(
+              testUserProfileService,
+              testAuthService,
+              const UserProfileTile(pubkey: 'npub1long123456789'),
+            ),
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        // All components should still be present
-        expect(find.byType(UserAvatar), findsOneWidget);
-        expect(find.textContaining('Extremely Long Display Name'), findsOneWidget);
-        expect(find.textContaining('This is an extremely long bio'), findsOneWidget);
-        expect(find.byType(ElevatedButton), findsOneWidget); // Follow button
+          // All components should still be present
+          expect(find.byType(UserAvatar), findsOneWidget);
+          expect(
+            find.textContaining('Extremely Long Display Name'),
+            findsOneWidget,
+          );
+          expect(
+            find.textContaining('This is an extremely long bio'),
+            findsOneWidget,
+          );
+          expect(find.byType(ElevatedButton), findsOneWidget); // Follow button
 
-        // No layout exceptions
-        expect(tester.takeException(), isNull);
+          // No layout exceptions
+          expect(tester.takeException(), isNull);
 
-        // Verify the widget maintains its height constraints
-        final tileFinder = find.byType(UserProfileTile);
-        final RenderBox tileRenderBox = tester.renderObject(tileFinder);
-        expect(tileRenderBox.size.height, greaterThan(0));
-        expect(tileRenderBox.size.height, lessThan(200)); // Reasonable max height
-      });
+          // Verify the widget maintains its height constraints
+          final tileFinder = find.byType(UserProfileTile);
+          final RenderBox tileRenderBox = tester.renderObject(tileFinder);
+          expect(tileRenderBox.size.height, greaterThan(0));
+          expect(
+            tileRenderBox.size.height,
+            lessThan(200),
+          ); // Reasonable max height
+        },
+      );
     });
 
     group('🎯 FOLLOW BUTTON VISIBILITY TESTS', () {
-      testWidgets('BUTTON VISIBILITY: shows follow button for other users', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: testPubkey, showFollowButton: true),
-        ));
+      testWidgets('BUTTON VISIBILITY: shows follow button for other users', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: testPubkey, showFollowButton: true),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -337,12 +413,19 @@ void main() {
         expect(find.byType(ElevatedButton), findsOneWidget);
       });
 
-      testWidgets('BUTTON VISIBILITY: hides follow button for current user', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: currentUserPubkey, showFollowButton: true),
-        ));
+      testWidgets('BUTTON VISIBILITY: hides follow button for current user', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(
+              pubkey: currentUserPubkey,
+              showFollowButton: true,
+            ),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -352,12 +435,16 @@ void main() {
         expect(find.byType(ElevatedButton), findsNothing);
       });
 
-      testWidgets('BUTTON VISIBILITY: respects showFollowButton parameter', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: testPubkey, showFollowButton: false),
-        ));
+      testWidgets('BUTTON VISIBILITY: respects showFollowButton parameter', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: testPubkey, showFollowButton: false),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -369,12 +456,16 @@ void main() {
     });
 
     group('🎯 RESPONSIVE LAYOUT TESTS', () {
-      testWidgets('RESPONSIVE: adapts to narrow width constraints', (tester) async {
+      testWidgets('RESPONSIVE: adapts to narrow width constraints', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: ProviderScope(
               overrides: [
-                userProfileServiceProvider.overrideWithValue(testUserProfileService),
+                userProfileServiceProvider.overrideWithValue(
+                  testUserProfileService,
+                ),
                 authServiceProvider.overrideWithValue(testAuthService),
               ],
               child: Scaffold(
@@ -398,12 +489,16 @@ void main() {
         expect(tester.takeException(), isNull);
       });
 
-      testWidgets('RESPONSIVE: handles very wide layouts properly', (tester) async {
+      testWidgets('RESPONSIVE: handles very wide layouts properly', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: ProviderScope(
               overrides: [
-                userProfileServiceProvider.overrideWithValue(testUserProfileService),
+                userProfileServiceProvider.overrideWithValue(
+                  testUserProfileService,
+                ),
                 authServiceProvider.overrideWithValue(testAuthService),
               ],
               child: Scaffold(
@@ -427,47 +522,61 @@ void main() {
         expect(tester.takeException(), isNull);
       });
 
-      testWidgets('RESPONSIVE: maintains consistent appearance across different content', (tester) async {
-        // Test with short content
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: testPubkey),
-        ));
+      testWidgets(
+        'RESPONSIVE: maintains consistent appearance across different content',
+        (tester) async {
+          // Test with short content
+          await tester.pumpWidget(
+            _buildTestWidget(
+              testUserProfileService,
+              testAuthService,
+              const UserProfileTile(pubkey: testPubkey),
+            ),
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        final shortContentHeight = tester.getSize(find.byType(UserProfileTile)).height;
+          final shortContentHeight = tester
+              .getSize(find.byType(UserProfileTile))
+              .height;
 
-        // Test with long content
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: 'npub1long123456789'),
-        ));
+          // Test with long content
+          await tester.pumpWidget(
+            _buildTestWidget(
+              testUserProfileService,
+              testAuthService,
+              const UserProfileTile(pubkey: 'npub1long123456789'),
+            ),
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        final longContentHeight = tester.getSize(find.byType(UserProfileTile)).height;
+          final longContentHeight = tester
+              .getSize(find.byType(UserProfileTile))
+              .height;
 
-        // Heights should be reasonably similar (bio is limited to 2 lines)
-        final heightDifference = (longContentHeight - shortContentHeight).abs();
-        expect(heightDifference, lessThan(50)); // Allow some variance for text wrapping
-      });
+          // Heights should be reasonably similar (bio is limited to 2 lines)
+          final heightDifference = (longContentHeight - shortContentHeight)
+              .abs();
+          expect(
+            heightDifference,
+            lessThan(50),
+          ); // Allow some variance for text wrapping
+        },
+      );
     });
 
     group('🎯 INTERACTION TESTS', () {
       testWidgets('INTERACTION: tap callbacks work correctly', (tester) async {
         bool wasTapped = false;
 
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          UserProfileTile(
-            pubkey: testPubkey,
-            onTap: () => wasTapped = true,
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            UserProfileTile(pubkey: testPubkey, onTap: () => wasTapped = true),
           ),
-        ));
+        );
 
         await tester.pumpAndSettle();
 
@@ -485,12 +594,16 @@ void main() {
         expect(wasTapped, isTrue);
       });
 
-      testWidgets('INTERACTION: follow button is tappable when visible', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: testPubkey, showFollowButton: true),
-        ));
+      testWidgets('INTERACTION: follow button is tappable when visible', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: testPubkey, showFollowButton: true),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -510,11 +623,13 @@ void main() {
         // Don't add profile to service, simulating null/missing profile
         testUserProfileService.clearProfiles();
 
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: 'npub1missing123'),
-        ));
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: 'npub1missing123'),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -527,11 +642,13 @@ void main() {
       });
 
       testWidgets('ERROR: handles empty pubkey edge case', (tester) async {
-        await tester.pumpWidget(_buildTestWidget(
-          testUserProfileService,
-          testAuthService,
-          const UserProfileTile(pubkey: ''),
-        ));
+        await tester.pumpWidget(
+          _buildTestWidget(
+            testUserProfileService,
+            testAuthService,
+            const UserProfileTile(pubkey: ''),
+          ),
+        );
 
         await tester.pumpAndSettle();
 
@@ -554,9 +671,7 @@ Widget _buildTestWidget(
         userProfileServiceProvider.overrideWithValue(userProfileService),
         authServiceProvider.overrideWithValue(authService),
       ],
-      child: Scaffold(
-        body: child,
-      ),
+      child: Scaffold(body: child),
     ),
   );
 }
@@ -574,7 +689,10 @@ class TestUserProfileService implements UserProfileService {
   }
 
   @override
-  Future<UserProfile?> fetchProfile(String pubkey, {bool forceRefresh = false}) async {
+  Future<UserProfile?> fetchProfile(
+    String pubkey, {
+    bool forceRefresh = false,
+  }) async {
     return _profiles[pubkey];
   }
 
@@ -605,70 +723,82 @@ class TestAuthService implements AuthService {
 
 void _setupPlatformMocks() {
   // SharedPreferences mock
-  const MethodChannel sharedPreferencesChannel = MethodChannel('plugins.flutter.io/shared_preferences');
+  const MethodChannel sharedPreferencesChannel = MethodChannel(
+    'plugins.flutter.io/shared_preferences',
+  );
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(sharedPreferencesChannel, (call) async {
-    if (call.method == 'getAll') {
-      return <String, dynamic>{};
-    }
-    return null;
-  });
+        if (call.method == 'getAll') {
+          return <String, dynamic>{};
+        }
+        return null;
+      });
 
   // SecureStorage mock
-  const MethodChannel secureStorageChannel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+  const MethodChannel secureStorageChannel = MethodChannel(
+    'plugins.it_nomads.com/flutter_secure_storage',
+  );
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(secureStorageChannel, (call) async {
-    if (call.method == 'read' || call.method == 'readAll') {
-      return null;
-    }
-    if (call.method == 'write' || call.method == 'delete' || call.method == 'deleteAll') {
-      return null;
-    }
-    return null;
-  });
+        if (call.method == 'read' || call.method == 'readAll') {
+          return null;
+        }
+        if (call.method == 'write' ||
+            call.method == 'delete' ||
+            call.method == 'deleteAll') {
+          return null;
+        }
+        return null;
+      });
 
   // PathProvider mock
-  const MethodChannel pathProviderChannel = MethodChannel('plugins.flutter.io/path_provider');
+  const MethodChannel pathProviderChannel = MethodChannel(
+    'plugins.flutter.io/path_provider',
+  );
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(pathProviderChannel, (call) async {
-    if (call.method == 'getApplicationDocumentsDirectory') {
-      return '/tmp/test_documents';
-    }
-    if (call.method == 'getApplicationSupportDirectory') {
-      return '/tmp/test_support';
-    }
-    return '/tmp/test';
-  });
+        if (call.method == 'getApplicationDocumentsDirectory') {
+          return '/tmp/test_documents';
+        }
+        if (call.method == 'getApplicationSupportDirectory') {
+          return '/tmp/test_support';
+        }
+        return '/tmp/test';
+      });
 
   // Connectivity mock
-  const MethodChannel connectivityChannel = MethodChannel('dev.fluttercommunity.plus/connectivity');
+  const MethodChannel connectivityChannel = MethodChannel(
+    'dev.fluttercommunity.plus/connectivity',
+  );
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(connectivityChannel, (call) async {
-    if (call.method == 'check') {
-      return 'wifi';
-    }
-    return null;
-  });
+        if (call.method == 'check') {
+          return 'wifi';
+        }
+        return null;
+      });
 
   // DeviceInfo mock
-  const MethodChannel deviceInfoChannel = MethodChannel('dev.fluttercommunity.plus/device_info');
+  const MethodChannel deviceInfoChannel = MethodChannel(
+    'dev.fluttercommunity.plus/device_info',
+  );
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(deviceInfoChannel, (call) async {
-    if (call.method == 'getLinuxDeviceInfo') {
-      return <String, dynamic>{
-        'name': 'Test Device',
-        'version': '1.0.0',
-        'id': 'test-device-id',
-        'idLike': ['test'],
-        'versionCodename': 'test',
-        'versionId': '1.0',
-        'prettyName': 'Test OS',
-        'buildId': 'test-build',
-        'variant': 'test',
-        'variantId': 'test',
-        'machineId': 'test-machine'
-      };
-    }
-    return <String, dynamic>{};
-  });
+        if (call.method == 'getLinuxDeviceInfo') {
+          return <String, dynamic>{
+            'name': 'Test Device',
+            'version': '1.0.0',
+            'id': 'test-device-id',
+            'idLike': ['test'],
+            'versionCodename': 'test',
+            'versionId': '1.0',
+            'prettyName': 'Test OS',
+            'buildId': 'test-build',
+            'variant': 'test',
+            'variantId': 'test',
+            'machineId': 'test-machine',
+          };
+        }
+        return <String, dynamic>{};
+      });
 }

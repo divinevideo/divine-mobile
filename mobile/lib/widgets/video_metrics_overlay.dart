@@ -18,7 +18,8 @@ class VideoMetricsOverlay extends StatefulWidget {
 }
 
 class _VideoMetricsOverlayState extends State<VideoMetricsOverlay> {
-  final StreamController<List<String>> _metricsController = StreamController<List<String>>.broadcast();
+  final StreamController<List<String>> _metricsController =
+      StreamController<List<String>>.broadcast();
   final List<String> _recentMetrics = [];
   static const int maxMetrics = 5;
   Timer? _debounceTimer;
@@ -100,7 +101,11 @@ class _VideoMetricsOverlayState extends State<VideoMetricsOverlay> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.analytics, color: Colors.green, size: 16),
+                              const Icon(
+                                Icons.analytics,
+                                color: Colors.green,
+                                size: 16,
+                              ),
                               const SizedBox(width: 8),
                               const Text(
                                 'Video Metrics Debug',
@@ -113,24 +118,30 @@ class _VideoMetricsOverlayState extends State<VideoMetricsOverlay> {
                               const Spacer(),
                               GestureDetector(
                                 onTap: _clearMetrics,
-                                child: const Icon(Icons.clear, color: Colors.grey, size: 16),
+                                child: const Icon(
+                                  Icons.clear,
+                                  color: Colors.grey,
+                                  size: 16,
+                                ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
-                          ...metrics.map((metric) => Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Text(
-                                  metric,
-                                  style: const TextStyle(
-                                    color: Colors.greenAccent,
-                                    fontSize: 11,
-                                    fontFamily: 'monospace',
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                          ...metrics.map(
+                            (metric) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Text(
+                                metric,
+                                style: const TextStyle(
+                                  color: Colors.greenAccent,
+                                  fontSize: 11,
+                                  fontFamily: 'monospace',
                                 ),
-                              )),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -167,7 +178,10 @@ class VideoMetricsDebugInfo extends StatelessWidget {
           children: [
             const Text(
               '📊 Metrics Status',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               'Active Sessions: ${VideoLoadingMetrics.instance.activeSessions}',

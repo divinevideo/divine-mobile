@@ -60,16 +60,18 @@ void main() {
       final mockVideoEventService = MockVideoEventService();
 
       // Stub social service
-      when(mockSocialService.getCachedFollowerStats(testPubkey))
-          .thenReturn({'followers': 10, 'following': 20});
-      when(mockSocialService.getFollowerStats(testPubkey))
-          .thenAnswer((_) async => {'followers': 10, 'following': 20});
+      when(
+        mockSocialService.getCachedFollowerStats(testPubkey),
+      ).thenReturn({'followers': 10, 'following': 20});
+      when(
+        mockSocialService.getFollowerStats(testPubkey),
+      ).thenAnswer((_) async => {'followers': 10, 'following': 20});
 
       // Stub video event service
-      when(mockVideoEventService.subscribeToUserVideos(testPubkey, limit: 100))
-          .thenAnswer((_) async => {});
-      when(mockVideoEventService.authorVideos(testPubkey))
-          .thenReturn(videos);
+      when(
+        mockVideoEventService.subscribeToUserVideos(testPubkey, limit: 100),
+      ).thenAnswer((_) async => {});
+      when(mockVideoEventService.authorVideos(testPubkey)).thenReturn(videos);
 
       final container = ProviderContainer(
         overrides: [
@@ -80,12 +82,26 @@ void main() {
       addTearDown(container.dispose);
 
       // Wait for stats to load
-      final stats = await container.read(fetchProfileStatsProvider(testPubkey).future);
+      final stats = await container.read(
+        fetchProfileStatsProvider(testPubkey).future,
+      );
 
       // Verify totals: 100 + 200 + 150 = 450 loops, 50 + 75 + 25 = 150 likes
-      expect(stats.totalViews, equals(450), reason: 'Should sum all loops from videos');
-      expect(stats.totalLikes, equals(150), reason: 'Should sum all likes from videos');
-      expect(stats.videoCount, equals(3), reason: 'Should report correct video count');
+      expect(
+        stats.totalViews,
+        equals(450),
+        reason: 'Should sum all loops from videos',
+      );
+      expect(
+        stats.totalLikes,
+        equals(150),
+        reason: 'Should sum all likes from videos',
+      );
+      expect(
+        stats.videoCount,
+        equals(3),
+        reason: 'Should report correct video count',
+      );
       expect(stats.followers, equals(10));
       expect(stats.following, equals(20));
     });
@@ -109,15 +125,17 @@ void main() {
       final mockSocialService = MockSocialService();
       final mockVideoEventService = MockVideoEventService();
 
-      when(mockSocialService.getCachedFollowerStats(testPubkey))
-          .thenReturn({'followers': 0, 'following': 0});
-      when(mockSocialService.getFollowerStats(testPubkey))
-          .thenAnswer((_) async => {'followers': 0, 'following': 0});
+      when(
+        mockSocialService.getCachedFollowerStats(testPubkey),
+      ).thenReturn({'followers': 0, 'following': 0});
+      when(
+        mockSocialService.getFollowerStats(testPubkey),
+      ).thenAnswer((_) async => {'followers': 0, 'following': 0});
 
-      when(mockVideoEventService.subscribeToUserVideos(testPubkey, limit: 100))
-          .thenAnswer((_) async => {});
-      when(mockVideoEventService.authorVideos(testPubkey))
-          .thenReturn(videos);
+      when(
+        mockVideoEventService.subscribeToUserVideos(testPubkey, limit: 100),
+      ).thenAnswer((_) async => {});
+      when(mockVideoEventService.authorVideos(testPubkey)).thenReturn(videos);
 
       final container = ProviderContainer(
         overrides: [
@@ -127,26 +145,38 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final stats = await container.read(fetchProfileStatsProvider(testPubkey).future);
+      final stats = await container.read(
+        fetchProfileStatsProvider(testPubkey).future,
+      );
 
       // Should treat null as 0
-      expect(stats.totalViews, equals(100), reason: 'Should treat null loops as 0');
-      expect(stats.totalLikes, equals(50), reason: 'Should treat null likes as 0');
+      expect(
+        stats.totalViews,
+        equals(100),
+        reason: 'Should treat null loops as 0',
+      );
+      expect(
+        stats.totalLikes,
+        equals(50),
+        reason: 'Should treat null likes as 0',
+      );
     });
 
     test('handles empty video list', () async {
       final mockSocialService = MockSocialService();
       final mockVideoEventService = MockVideoEventService();
 
-      when(mockSocialService.getCachedFollowerStats(testPubkey))
-          .thenReturn({'followers': 5, 'following': 10});
-      when(mockSocialService.getFollowerStats(testPubkey))
-          .thenAnswer((_) async => {'followers': 5, 'following': 10});
+      when(
+        mockSocialService.getCachedFollowerStats(testPubkey),
+      ).thenReturn({'followers': 5, 'following': 10});
+      when(
+        mockSocialService.getFollowerStats(testPubkey),
+      ).thenAnswer((_) async => {'followers': 5, 'following': 10});
 
-      when(mockVideoEventService.subscribeToUserVideos(testPubkey, limit: 100))
-          .thenAnswer((_) async => {});
-      when(mockVideoEventService.authorVideos(testPubkey))
-          .thenReturn([]);
+      when(
+        mockVideoEventService.subscribeToUserVideos(testPubkey, limit: 100),
+      ).thenAnswer((_) async => {});
+      when(mockVideoEventService.authorVideos(testPubkey)).thenReturn([]);
 
       final container = ProviderContainer(
         overrides: [
@@ -156,10 +186,20 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final stats = await container.read(fetchProfileStatsProvider(testPubkey).future);
+      final stats = await container.read(
+        fetchProfileStatsProvider(testPubkey).future,
+      );
 
-      expect(stats.totalViews, equals(0), reason: 'Empty list should have 0 views');
-      expect(stats.totalLikes, equals(0), reason: 'Empty list should have 0 likes');
+      expect(
+        stats.totalViews,
+        equals(0),
+        reason: 'Empty list should have 0 views',
+      );
+      expect(
+        stats.totalLikes,
+        equals(0),
+        reason: 'Empty list should have 0 likes',
+      );
       expect(stats.videoCount, equals(0));
     });
 
@@ -178,15 +218,17 @@ void main() {
       final mockSocialService = MockSocialService();
       final mockVideoEventService = MockVideoEventService();
 
-      when(mockSocialService.getCachedFollowerStats(testPubkey))
-          .thenReturn({'followers': 0, 'following': 0});
-      when(mockSocialService.getFollowerStats(testPubkey))
-          .thenAnswer((_) async => {'followers': 0, 'following': 0});
+      when(
+        mockSocialService.getCachedFollowerStats(testPubkey),
+      ).thenReturn({'followers': 0, 'following': 0});
+      when(
+        mockSocialService.getFollowerStats(testPubkey),
+      ).thenAnswer((_) async => {'followers': 0, 'following': 0});
 
-      when(mockVideoEventService.subscribeToUserVideos(testPubkey, limit: 100))
-          .thenAnswer((_) async => {});
-      when(mockVideoEventService.authorVideos(testPubkey))
-          .thenReturn(videos);
+      when(
+        mockVideoEventService.subscribeToUserVideos(testPubkey, limit: 100),
+      ).thenAnswer((_) async => {});
+      when(mockVideoEventService.authorVideos(testPubkey)).thenReturn(videos);
 
       final container = ProviderContainer(
         overrides: [
@@ -196,10 +238,20 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final stats = await container.read(fetchProfileStatsProvider(testPubkey).future);
+      final stats = await container.read(
+        fetchProfileStatsProvider(testPubkey).future,
+      );
 
-      expect(stats.totalViews, equals(3000), reason: 'Should sum loops even with 0 likes');
-      expect(stats.totalLikes, equals(0), reason: 'Should correctly report 0 likes');
+      expect(
+        stats.totalViews,
+        equals(3000),
+        reason: 'Should sum loops even with 0 likes',
+      );
+      expect(
+        stats.totalLikes,
+        equals(0),
+        reason: 'Should correctly report 0 likes',
+      );
     });
 
     test('uses cached follower stats to avoid network delay', () async {
@@ -214,20 +266,22 @@ void main() {
       final mockVideoEventService = MockVideoEventService();
 
       // Mock cached stats
-      when(mockSocialService.getCachedFollowerStats(testPubkey))
-          .thenReturn({'followers': 100, 'following': 200});
+      when(
+        mockSocialService.getCachedFollowerStats(testPubkey),
+      ).thenReturn({'followers': 100, 'following': 200});
 
       // Network call should complete later (simulating 8s delay)
-      when(mockSocialService.getFollowerStats(testPubkey))
-          .thenAnswer((_) async {
-            await Future.delayed(const Duration(seconds: 8));
-            return {'followers': 100, 'following': 200};
-          });
+      when(mockSocialService.getFollowerStats(testPubkey)).thenAnswer((
+        _,
+      ) async {
+        await Future.delayed(const Duration(seconds: 8));
+        return {'followers': 100, 'following': 200};
+      });
 
-      when(mockVideoEventService.subscribeToUserVideos(testPubkey, limit: 100))
-          .thenAnswer((_) async => {});
-      when(mockVideoEventService.authorVideos(testPubkey))
-          .thenReturn(videos);
+      when(
+        mockVideoEventService.subscribeToUserVideos(testPubkey, limit: 100),
+      ).thenAnswer((_) async => {});
+      when(mockVideoEventService.authorVideos(testPubkey)).thenReturn(videos);
 
       final container = ProviderContainer(
         overrides: [
@@ -238,11 +292,21 @@ void main() {
       addTearDown(container.dispose);
 
       // Stats should load immediately using cached values
-      final stats = await container.read(fetchProfileStatsProvider(testPubkey).future);
+      final stats = await container.read(
+        fetchProfileStatsProvider(testPubkey).future,
+      );
 
       // Verify it used cached stats (not waiting for network)
-      expect(stats.followers, equals(100), reason: 'Should use cached follower count');
-      expect(stats.following, equals(200), reason: 'Should use cached following count');
+      expect(
+        stats.followers,
+        equals(100),
+        reason: 'Should use cached follower count',
+      );
+      expect(
+        stats.following,
+        equals(200),
+        reason: 'Should use cached following count',
+      );
       expect(stats.totalViews, equals(50));
       expect(stats.totalLikes, equals(25));
     });

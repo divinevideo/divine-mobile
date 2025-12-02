@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - macOS Segment Recording and Upload (2025-12-01)
+
+#### Bug Fixes
+- **Fixed macOS multi-segment recording failing to upload** - Videos were being rejected with "duration_exceeded" because pauses between segments were included in the final video
+  - Implemented FFmpeg segment extraction to include only actively recorded portions
+  - Removed AVFoundation wall-clock duration limit (users can take unlimited time between segments)
+  - Fixed `hasSegments` state propagation from controller to UI for correct progress bar display
+
+#### Technical Details
+- Modified `macos/NativeCameraPlugin.swift`:
+  - Set `maxRecordedDuration = CMTime.invalid` to disable native wall-clock limit
+  - Virtual segments tracked in Flutter enforce the actual 6-second content limit
+- Modified `lib/services/vine_recording_controller.dart`:
+  - Added `_extractMacOSSegments()` method for FFmpeg-based segment extraction
+  - Uses `-ss` (start offset) and `-t` (duration) to extract each virtual segment
+  - Concatenates multiple segments if needed, applies aspect ratio crop
+  - Updated `finishRecording()` for macOS single recording mode
+- Modified `lib/providers/vine_recording_provider.dart`:
+  - Fixed `updateState()` to preserve `cameraSwitchCount` for UI rebuilds
+
+### Fixed - Video Processing Status Message (2025-11-28)
+
+#### Bug Fixes
+- **Fixed "Initializing camera..." showing during video processing** - Now correctly shows "Processing video..." during the entire FFmpeg encoding phase
+  - Previously, the processing flag was set too late (after FFmpeg finished), causing the wrong message
+  - Now sets processing state immediately when stop recording is triggered
+  - Proper error handling resets processing state on failure
+
+#### Technical Details
+- Modified `lib/screens/pure/universal_camera_screen_pure.dart`:
+  - Set `_isProcessing = true` at start of `_stopRecording()` before calling provider
+  - Provider's `stopRecording()` auto-calls `finishRecording()` which runs FFmpeg
+  - Added navigation to metadata screen after draft auto-creation
+  - Added proper cleanup with `finally` block to reset processing state
+
 ### Fixed - Blossom Upload Authentication (2025-11-27)
 
 #### Bug Fixes

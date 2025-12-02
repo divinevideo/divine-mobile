@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class Nip05Service {
   Nip05Service({http.Client? httpClient})
-      : _httpClient = httpClient ?? http.Client();
+    : _httpClient = httpClient ?? http.Client();
   static const String _baseUrl =
       'https://nostrvine-backend.protestnet.workers.dev';
   final http.Client _httpClient;
@@ -62,7 +62,10 @@ class Nip05Service {
 
   /// Register a NIP-05 username
   Future<bool> registerUsername(
-      String username, String pubkey, List<String> relays) async {
+    String username,
+    String pubkey,
+    List<String> relays,
+  ) async {
     if (!_isValidUsername(username)) {
       _error = 'Invalid username format';
 

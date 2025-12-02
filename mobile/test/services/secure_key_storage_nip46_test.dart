@@ -10,9 +10,7 @@ void main() {
 
     setUp(() {
       // Use desktop config for testing (allows software-only security)
-      service = SecureKeyStorageService(
-        securityConfig: SecurityConfig.desktop,
-      );
+      service = SecureKeyStorageService(securityConfig: SecurityConfig.desktop);
     });
 
     tearDown(() {
@@ -44,21 +42,23 @@ void main() {
       expect(isUsingBunker, isFalse);
     });
 
-    test('signEventWithBunker returns null when bunker not available',
-        () async {
-      // Arrange
-      final event = {
-        'kind': 1,
-        'content': 'test',
-        'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      };
+    test(
+      'signEventWithBunker returns null when bunker not available',
+      () async {
+        // Arrange
+        final event = {
+          'kind': 1,
+          'content': 'test',
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        };
 
-      // Act
-      final signedEvent = await service.signEventWithBunker(event);
+        // Act
+        final signedEvent = await service.signEventWithBunker(event);
 
-      // Assert - should return null instead of crashing
-      expect(signedEvent, isNull);
-    });
+        // Assert - should return null instead of crashing
+        expect(signedEvent, isNull);
+      },
+    );
 
     test('disconnectBunker does not crash when bunker not configured', () {
       // Act & Assert - should not throw

@@ -41,13 +41,19 @@ void main() {
       // Test the OLD buggy implementation
       final buggyResult = <VideoEvent>[];
       for (final events in eventLists.values) {
-        buggyResult.addAll(events.where(
-            (event) => ['dog'].any((tag) => event.hashtags.contains(tag))));
+        buggyResult.addAll(
+          events.where(
+            (event) => ['dog'].any((tag) => event.hashtags.contains(tag)),
+          ),
+        );
       }
 
       Log.info('Buggy implementation results: ${buggyResult.length}');
-      expect(buggyResult.length, equals(2),
-          reason: 'Old implementation returns duplicates');
+      expect(
+        buggyResult.length,
+        equals(2),
+        reason: 'Old implementation returns duplicates',
+      );
 
       // Test the FIXED implementation with deduplication
       final fixedResult = <VideoEvent>[];
@@ -55,7 +61,8 @@ void main() {
 
       for (final events in eventLists.values) {
         for (final event in events.where(
-            (event) => ['dog'].any((tag) => event.hashtags.contains(tag)))) {
+          (event) => ['dog'].any((tag) => event.hashtags.contains(tag)),
+        )) {
           if (!seenIds.contains(event.id)) {
             seenIds.add(event.id);
             fixedResult.add(event);
@@ -64,8 +71,11 @@ void main() {
       }
 
       Log.info('Fixed implementation results: ${fixedResult.length}');
-      expect(fixedResult.length, equals(1),
-          reason: 'Fixed implementation deduplicates correctly');
+      expect(
+        fixedResult.length,
+        equals(1),
+        reason: 'Fixed implementation deduplicates correctly',
+      );
       expect(fixedResult.first.id, equals('video-1'));
 
       // Test edge cases
@@ -76,7 +86,8 @@ void main() {
 
       for (final events in eventLists.values) {
         for (final event in events.where(
-            (event) => ['cute'].any((tag) => event.hashtags.contains(tag)))) {
+          (event) => ['cute'].any((tag) => event.hashtags.contains(tag)),
+        )) {
           if (!multiSeenIds.contains(event.id)) {
             multiSeenIds.add(event.id);
             multiTagResult.add(event);
@@ -86,8 +97,10 @@ void main() {
 
       // Both videos have 'cute' hashtag, but video1 appears twice in lists
       expect(multiTagResult.length, equals(2));
-      expect(multiTagResult.map((v) => v.id).toSet(),
-          equals({'video-1', 'video-2'}));
+      expect(
+        multiTagResult.map((v) => v.id).toSet(),
+        equals({'video-1', 'video-2'}),
+      );
 
       // Test with no matches
       final noMatchResult = <VideoEvent>[];
@@ -95,7 +108,8 @@ void main() {
 
       for (final events in eventLists.values) {
         for (final event in events.where(
-            (event) => ['bird'].any((tag) => event.hashtags.contains(tag)))) {
+          (event) => ['bird'].any((tag) => event.hashtags.contains(tag)),
+        )) {
           if (!noMatchSeenIds.contains(event.id)) {
             noMatchSeenIds.add(event.id);
             noMatchResult.add(event);

@@ -52,16 +52,22 @@ class NostrKeyManager {
   /// Initialize key manager and load existing keys
   Future<void> initialize() async {
     try {
-      Log.debug('🔧 Initializing Nostr key manager with secure storage...',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.debug(
+        '🔧 Initializing Nostr key manager with secure storage...',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
 
       // Initialize secure storage service
       await _secureStorage.initialize();
 
       // Try to load existing keys from secure storage
       if (await _secureStorage.hasKeys()) {
-        Log.debug('📱 Loading existing Nostr keys from secure storage...',
-            name: 'NostrKeyManager', category: LogCategory.relay);
+        Log.debug(
+          '📱 Loading existing Nostr keys from secure storage...',
+          name: 'NostrKeyManager',
+          category: LogCategory.relay,
+        );
 
         final secureContainer = await _secureStorage.getKeyContainer();
         if (secureContainer != null) {
@@ -72,8 +78,11 @@ class NostrKeyManager {
           });
           secureContainer.dispose(); // Clean up secure memory
 
-          Log.info('Keys loaded from secure storage',
-              name: 'NostrKeyManager', category: LogCategory.relay);
+          Log.info(
+            'Keys loaded from secure storage',
+            name: 'NostrKeyManager',
+            category: LogCategory.relay,
+          );
         }
       } else {
         // Check for legacy keys in SharedPreferences for migration
@@ -91,16 +100,23 @@ class NostrKeyManager {
 
       if (hasKeys) {
         Log.info(
-            'Key manager initialized with existing identity (secure storage)',
-            name: 'NostrKeyManager',
-            category: LogCategory.relay);
+          'Key manager initialized with existing identity (secure storage)',
+          name: 'NostrKeyManager',
+          category: LogCategory.relay,
+        );
       } else {
-        Log.info('Key manager initialized, ready for key generation',
-            name: 'NostrKeyManager', category: LogCategory.relay);
+        Log.info(
+          'Key manager initialized, ready for key generation',
+          name: 'NostrKeyManager',
+          category: LogCategory.relay,
+        );
       }
     } catch (e) {
-      Log.error('Failed to initialize key manager: $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.error(
+        'Failed to initialize key manager: $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       rethrow;
     }
   }
@@ -112,8 +128,11 @@ class NostrKeyManager {
     }
 
     try {
-      Log.debug('📱 Generating new Nostr key pair with secure storage...',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.debug(
+        '📱 Generating new Nostr key pair with secure storage...',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
 
       // Generate and store keys securely
       final secureContainer = await _secureStorage.generateAndStoreKeys();
@@ -127,15 +146,24 @@ class NostrKeyManager {
       // Clean up secure container after extracting what we need
       secureContainer.dispose();
 
-      Log.info('New Nostr key pair generated and saved',
-          name: 'NostrKeyManager', category: LogCategory.relay);
-      Log.verbose('Public key: ${_keyPair!.public}',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.info(
+        'New Nostr key pair generated and saved',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
+      Log.verbose(
+        'Public key: ${_keyPair!.public}',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
 
       return _keyPair!;
     } catch (e) {
-      Log.error('Failed to generate keys: $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.error(
+        'Failed to generate keys: $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       throw NostrKeyException('Failed to generate new keys: $e');
     }
   }
@@ -147,8 +175,11 @@ class NostrKeyManager {
     }
 
     try {
-      Log.debug('📱 Importing Nostr private key to secure storage...',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.debug(
+        '📱 Importing Nostr private key to secure storage...',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
 
       // Validate private key format (64 character hex)
       if (!_isValidPrivateKey(privateKey)) {
@@ -167,15 +198,24 @@ class NostrKeyManager {
       // Clean up secure container
       secureContainer.dispose();
 
-      Log.info('Private key imported successfully',
-          name: 'NostrKeyManager', category: LogCategory.relay);
-      Log.verbose('Public key: ${_keyPair!.public}',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.info(
+        'Private key imported successfully',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
+      Log.verbose(
+        'Public key: ${_keyPair!.public}',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
 
       return _keyPair!;
     } catch (e) {
-      Log.error('Failed to import private key: $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.error(
+        'Failed to import private key: $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       throw NostrKeyException('Failed to import private key: $e');
     }
   }
@@ -210,12 +250,17 @@ class NostrKeyManager {
     }
 
     try {
-      Log.debug('📱 Importing Nostr nsec key to secure storage...',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.debug(
+        '📱 Importing Nostr nsec key to secure storage...',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
 
       // Validate nsec format
       if (!nsec.startsWith('nsec1')) {
-        throw const NostrKeyException('Invalid nsec format - must start with nsec1');
+        throw const NostrKeyException(
+          'Invalid nsec format - must start with nsec1',
+        );
       }
 
       // Decode nsec to hex private key for validation
@@ -233,10 +278,16 @@ class NostrKeyManager {
       // Clean up secure container
       secureContainer.dispose();
 
-      Log.info('Nsec key imported successfully',
-          name: 'NostrKeyManager', category: LogCategory.relay);
-      Log.verbose('Public key: ${_keyPair!.public}',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.info(
+        'Nsec key imported successfully',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
+      Log.verbose(
+        'Public key: ${_keyPair!.public}',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
 
       // Attempt to fetch profile if services are available
       await _fetchProfileAfterImport(
@@ -246,8 +297,11 @@ class NostrKeyManager {
 
       return _keyPair!;
     } catch (e) {
-      Log.error('Failed to import nsec: $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.error(
+        'Failed to import nsec: $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       throw NostrKeyException('Failed to import nsec: $e');
     }
   }
@@ -260,28 +314,40 @@ class NostrKeyManager {
   }) async {
     // Skip if no services provided
     if (nostrService == null || profileService == null) {
-      Log.debug('Skipping profile fetch - services not provided',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.debug(
+        'Skipping profile fetch - services not provided',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       return;
     }
 
     // Skip if NostrService is not initialized
     if (!nostrService.isInitialized) {
-      Log.debug('Skipping profile fetch - NostrService not initialized',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.debug(
+        'Skipping profile fetch - NostrService not initialized',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       return;
     }
 
     // Skip if we don't have keys (shouldn't happen, but be safe)
     if (!hasKeys || publicKey == null) {
-      Log.warning('Skipping profile fetch - no public key available',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.warning(
+        'Skipping profile fetch - no public key available',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       return;
     }
 
     try {
-      Log.info('🔍 Fetching user profile for imported key: ${publicKey}...',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.info(
+        '🔍 Fetching user profile for imported key: ${publicKey}...',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
 
       // Fetch profile (non-blocking - fire and forget)
       // Use forceRefresh=false to use cached profile if available
@@ -291,16 +357,25 @@ class NostrKeyManager {
       );
 
       if (profile != null) {
-        Log.info('✅ Profile fetched successfully: ${profile.bestDisplayName}',
-            name: 'NostrKeyManager', category: LogCategory.relay);
+        Log.info(
+          '✅ Profile fetched successfully: ${profile.bestDisplayName}',
+          name: 'NostrKeyManager',
+          category: LogCategory.relay,
+        );
       } else {
-        Log.info('ℹ️  No profile found for imported key (user may not have published one yet)',
-            name: 'NostrKeyManager', category: LogCategory.relay);
+        Log.info(
+          'ℹ️  No profile found for imported key (user may not have published one yet)',
+          name: 'NostrKeyManager',
+          category: LogCategory.relay,
+        );
       }
     } catch (e) {
       // Don't fail import if profile fetch fails
-      Log.warning('⚠️  Profile fetch failed (non-fatal): $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.warning(
+        '⚠️  Profile fetch failed (non-fatal): $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
     }
   }
 
@@ -310,8 +385,11 @@ class NostrKeyManager {
       throw const NostrKeyException('No keys available for export');
     }
 
-    Log.debug('📱 Exporting private key for backup',
-        name: 'NostrKeyManager', category: LogCategory.relay);
+    Log.debug(
+      '📱 Exporting private key for backup',
+      name: 'NostrKeyManager',
+      category: LogCategory.relay,
+    );
     return _keyPair!.private;
   }
 
@@ -321,8 +399,11 @@ class NostrKeyManager {
       throw const NostrKeyException('No keys available for export');
     }
 
-    Log.debug('📱 Exporting private key as nsec',
-        name: 'NostrKeyManager', category: LogCategory.relay);
+    Log.debug(
+      '📱 Exporting private key as nsec',
+      name: 'NostrKeyManager',
+      category: LogCategory.relay,
+    );
     return NostrEncoding.encodePrivateKey(_keyPair!.private);
   }
 
@@ -332,8 +413,11 @@ class NostrKeyManager {
       throw const NostrKeyException('No keys available to backup');
     }
 
-    Log.debug('📱 Replacing key with backup...',
-        name: 'NostrKeyManager', category: LogCategory.relay);
+    Log.debug(
+      '📱 Replacing key with backup...',
+      name: 'NostrKeyManager',
+      category: LogCategory.relay,
+    );
 
     try {
       // Save current keys info for return
@@ -350,8 +434,11 @@ class NostrKeyManager {
       // Generate new keypair
       await generateKeys();
 
-      Log.info('Key replaced successfully, old key backed up',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.info(
+        'Key replaced successfully, old key backed up',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
 
       return {
         'oldPrivateKey': oldPrivateKey,
@@ -359,8 +446,11 @@ class NostrKeyManager {
         'backedUpAt': backedUpAt,
       };
     } catch (e) {
-      Log.error('Failed to replace key: $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.error(
+        'Failed to replace key: $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       throw NostrKeyException('Failed to replace key: $e');
     }
   }
@@ -371,8 +461,11 @@ class NostrKeyManager {
       throw const NostrKeyException('No backup available to restore');
     }
 
-    Log.debug('📱 Restoring backup key as active key...',
-        name: 'NostrKeyManager', category: LogCategory.relay);
+    Log.debug(
+      '📱 Restoring backup key as active key...',
+      name: 'NostrKeyManager',
+      category: LogCategory.relay,
+    );
 
     try {
       // Save current key as new backup (swap operation)
@@ -408,19 +501,28 @@ class NostrKeyManager {
 
       backupContainer.dispose();
 
-      Log.info('Backup key restored as active key',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.info(
+        'Backup key restored as active key',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
     } catch (e) {
-      Log.error('Failed to restore backup: $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.error(
+        'Failed to restore backup: $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       throw NostrKeyException('Failed to restore backup: $e');
     }
   }
 
   /// Clear backup key without affecting active key
   Future<void> clearBackup() async {
-    Log.debug('📱 Clearing backup key...',
-        name: 'NostrKeyManager', category: LogCategory.relay);
+    Log.debug(
+      '📱 Clearing backup key...',
+      name: 'NostrKeyManager',
+      category: LogCategory.relay,
+    );
 
     try {
       await _secureStorage.deleteBackupKey();
@@ -430,11 +532,17 @@ class NostrKeyManager {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('backup_created_at');
 
-      Log.info('Backup key cleared',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.info(
+        'Backup key cleared',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
     } catch (e) {
-      Log.error('Failed to clear backup: $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.error(
+        'Failed to clear backup: $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       throw NostrKeyException('Failed to clear backup: $e');
     }
   }
@@ -446,8 +554,11 @@ class NostrKeyManager {
     }
 
     try {
-      Log.debug('📱 Creating mnemonic backup...',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.debug(
+        '📱 Creating mnemonic backup...',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
 
       // Use private key as entropy source for mnemonic generation
       final privateKeyBytes = _hexToBytes(_keyPair!.private);
@@ -472,12 +583,18 @@ class NostrKeyManager {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_backupHashKey, _backupHash!);
 
-      Log.info('Mnemonic backup created',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.info(
+        'Mnemonic backup created',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       return mnemonic;
     } catch (e) {
-      Log.error('Failed to create mnemonic backup: $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.error(
+        'Failed to create mnemonic backup: $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       throw NostrKeyException('Failed to create backup: $e');
     }
   }
@@ -489,12 +606,16 @@ class NostrKeyManager {
     }
 
     try {
-      Log.debug('📱 Restoring from mnemonic backup...',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.debug(
+        '📱 Restoring from mnemonic backup...',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
 
       if (mnemonic.length != 12) {
         throw const NostrKeyException(
-            'Invalid mnemonic length (expected 12 words)');
+          'Invalid mnemonic length (expected 12 words)',
+        );
       }
 
       // Validate mnemonic words
@@ -508,10 +629,14 @@ class NostrKeyManager {
       // In a real implementation, this would derive the private key from mnemonic
       // For prototype, we'll ask user to provide the private key for verification
       throw const NostrKeyException(
-          'Mnemonic restoration requires private key for verification in prototype');
+        'Mnemonic restoration requires private key for verification in prototype',
+      );
     } catch (e) {
-      Log.error('Failed to restore from mnemonic: $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.error(
+        'Failed to restore from mnemonic: $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       rethrow;
     }
   }
@@ -525,8 +650,11 @@ class NostrKeyManager {
 
       return calculatedHash == _backupHash;
     } catch (e) {
-      Log.error('Backup verification failed: $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.error(
+        'Backup verification failed: $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       return false;
     }
   }
@@ -534,8 +662,11 @@ class NostrKeyManager {
   /// Clear all stored keys (logout)
   Future<void> clearKeys() async {
     try {
-      Log.debug('📱 Clearing stored Nostr keys from secure storage...',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.debug(
+        '📱 Clearing stored Nostr keys from secure storage...',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
 
       // Clear from secure storage
       await _secureStorage.deleteKeys();
@@ -553,11 +684,17 @@ class NostrKeyManager {
       _backupHash = null;
       _hasBackupCached = false;
 
-      Log.info('Nostr keys cleared successfully',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.info(
+        'Nostr keys cleared successfully',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
     } catch (e) {
-      Log.error('Failed to clear keys: $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.error(
+        'Failed to clear keys: $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
       throw NostrKeyException('Failed to clear keys: $e');
     }
   }
@@ -570,9 +707,10 @@ class NostrKeyManager {
 
       if (existingKeyData != null) {
         Log.warning(
-            '⚠️ Found legacy keys in SharedPreferences, migrating to secure storage...',
-            name: 'NostrKeyManager',
-            category: LogCategory.relay);
+          '⚠️ Found legacy keys in SharedPreferences, migrating to secure storage...',
+          name: 'NostrKeyManager',
+          category: LogCategory.relay,
+        );
 
         try {
           final keyData = jsonDecode(existingKeyData) as Map<String, dynamic>;
@@ -597,18 +735,27 @@ class NostrKeyManager {
             await prefs.remove(_keyPairKey);
             await prefs.remove(_keyVersionKey);
 
-            Log.info('✅ Successfully migrated keys to secure storage',
-                name: 'NostrKeyManager', category: LogCategory.relay);
+            Log.info(
+              '✅ Successfully migrated keys to secure storage',
+              name: 'NostrKeyManager',
+              category: LogCategory.relay,
+            );
           }
         } catch (e) {
-          Log.error('Failed to migrate legacy keys: $e',
-              name: 'NostrKeyManager', category: LogCategory.relay);
+          Log.error(
+            'Failed to migrate legacy keys: $e',
+            name: 'NostrKeyManager',
+            category: LogCategory.relay,
+          );
           // Don't throw - allow user to regenerate if migration fails
         }
       }
     } catch (e) {
-      Log.error('Error checking for legacy keys: $e',
-          name: 'NostrKeyManager', category: LogCategory.relay);
+      Log.error(
+        'Error checking for legacy keys: $e',
+        name: 'NostrKeyManager',
+        category: LogCategory.relay,
+      );
     }
   }
 
@@ -637,255 +784,255 @@ class NostrKeyManager {
 
   /// Get simple word list for mnemonic (prototype implementation)
   List<String> _getSimpleWordList() => [
-        'abandon',
-        'ability',
-        'able',
-        'about',
-        'above',
-        'absent',
-        'absorb',
-        'abstract',
-        'absurd',
-        'abuse',
-        'access',
-        'accident',
-        'account',
-        'accuse',
-        'achieve',
-        'acid',
-        'acoustic',
-        'acquire',
-        'across',
-        'action',
-        'actor',
-        'actress',
-        'actual',
-        'adapt',
-        'add',
-        'addict',
-        'address',
-        'adjust',
-        'admit',
-        'adult',
-        'advance',
-        'advice',
-        'aerobic',
-        'affair',
-        'afford',
-        'afraid',
-        'again',
-        'agent',
-        'agree',
-        'ahead',
-        'aim',
-        'air',
-        'airport',
-        'aisle',
-        'alarm',
-        'album',
-        'alcohol',
-        'alert',
-        'alien',
-        'all',
-        'alley',
-        'allow',
-        'almost',
-        'alone',
-        'alpha',
-        'already',
-        'also',
-        'alter',
-        'always',
-        'amateur',
-        'amazing',
-        'among',
-        'amount',
-        'amused',
-        'analyst',
-        'anchor',
-        'ancient',
-        'anger',
-        'angle',
-        'angry',
-        'animal',
-        'ankle',
-        'announce',
-        'annual',
-        'another',
-        'answer',
-        'antenna',
-        'antique',
-        'anxiety',
-        'any',
-        'apart',
-        'apology',
-        'appear',
-        'apple',
-        'approve',
-        'april',
-        'area',
-        'arena',
-        'argue',
-        'arm',
-        'armed',
-        'armor',
-        'army',
-        'around',
-        'arrange',
-        'arrest',
-        'arrive',
-        'arrow',
-        'art',
-        'artist',
-        'artwork',
-        'ask',
-        'aspect',
-        'assault',
-        'asset',
-        'assist',
-        'assume',
-        'asthma',
-        'athlete',
-        'atom',
-        'attack',
-        'attend',
-        'attitude',
-        'attract',
-        'auction',
-        'audit',
-        'august',
-        'aunt',
-        'author',
-        'auto',
-        'autumn',
-        'average',
-        'avocado',
-        'avoid',
-        'awake',
-        'aware',
-        'away',
-        'awesome',
-        'awful',
-        'awkward',
-        'axis',
-        'baby',
-        'bachelor',
-        'bacon',
-        'badge',
-        'bag',
-        'balance',
-        'balcony',
-        'ball',
-        'bamboo',
-        'banana',
-        'banner',
-        'bar',
-        'barely',
-        'bargain',
-        'barrel',
-        'base',
-        'basic',
-        'basket',
-        'battle',
-        'beach',
-        'bean',
-        'beauty',
-        'because',
-        'become',
-        'beef',
-        'before',
-        'begin',
-        'behave',
-        'behind',
-        'believe',
-        'below',
-        'belt',
-        'bench',
-        'benefit',
-        'best',
-        'betray',
-        'better',
-        'between',
-        'beyond',
-        'bicycle',
-        'bid',
-        'bike',
-        'bind',
-        'biology',
-        'bird',
-        'birth',
-        'bitter',
-        'black',
-        'blade',
-        'blame',
-        'blanket',
-        'blast',
-        'bleak',
-        'bless',
-        'blind',
-        'blood',
-        'blossom',
-        'blow',
-        'blue',
-        'blur',
-        'blush',
-        'board',
-        'boat',
-        'body',
-        'boil',
-        'bomb',
-        'bone',
-        'bonus',
-        'book',
-        'boost',
-        'border',
-        'boring',
-        'borrow',
-        'boss',
-        'bottom',
-        'bounce',
-        'box',
-        'boy',
-        'bracket',
-        'brain',
-        'brand',
-        'brass',
-        'brave',
-        'bread',
-        'breeze',
-        'brick',
-        'bridge',
-        'brief',
-        'bright',
-        'bring',
-        'brisk',
-        'broccoli',
-        'broken',
-        'bronze',
-        'broom',
-        'brother',
-        'brown',
-        'brush',
-        'bubble',
-        'buddy',
-        'budget',
-        'buffalo',
-        'build',
-        'bulb',
-        'bulk',
-        'bullet',
-        'bundle',
-        'bunker',
-        'burden',
-        'burger',
-        'burst',
-        'bus',
-        'business',
-        'busy',
-        'butter',
-        'buyer',
-        'buzz',
-      ];
+    'abandon',
+    'ability',
+    'able',
+    'about',
+    'above',
+    'absent',
+    'absorb',
+    'abstract',
+    'absurd',
+    'abuse',
+    'access',
+    'accident',
+    'account',
+    'accuse',
+    'achieve',
+    'acid',
+    'acoustic',
+    'acquire',
+    'across',
+    'action',
+    'actor',
+    'actress',
+    'actual',
+    'adapt',
+    'add',
+    'addict',
+    'address',
+    'adjust',
+    'admit',
+    'adult',
+    'advance',
+    'advice',
+    'aerobic',
+    'affair',
+    'afford',
+    'afraid',
+    'again',
+    'agent',
+    'agree',
+    'ahead',
+    'aim',
+    'air',
+    'airport',
+    'aisle',
+    'alarm',
+    'album',
+    'alcohol',
+    'alert',
+    'alien',
+    'all',
+    'alley',
+    'allow',
+    'almost',
+    'alone',
+    'alpha',
+    'already',
+    'also',
+    'alter',
+    'always',
+    'amateur',
+    'amazing',
+    'among',
+    'amount',
+    'amused',
+    'analyst',
+    'anchor',
+    'ancient',
+    'anger',
+    'angle',
+    'angry',
+    'animal',
+    'ankle',
+    'announce',
+    'annual',
+    'another',
+    'answer',
+    'antenna',
+    'antique',
+    'anxiety',
+    'any',
+    'apart',
+    'apology',
+    'appear',
+    'apple',
+    'approve',
+    'april',
+    'area',
+    'arena',
+    'argue',
+    'arm',
+    'armed',
+    'armor',
+    'army',
+    'around',
+    'arrange',
+    'arrest',
+    'arrive',
+    'arrow',
+    'art',
+    'artist',
+    'artwork',
+    'ask',
+    'aspect',
+    'assault',
+    'asset',
+    'assist',
+    'assume',
+    'asthma',
+    'athlete',
+    'atom',
+    'attack',
+    'attend',
+    'attitude',
+    'attract',
+    'auction',
+    'audit',
+    'august',
+    'aunt',
+    'author',
+    'auto',
+    'autumn',
+    'average',
+    'avocado',
+    'avoid',
+    'awake',
+    'aware',
+    'away',
+    'awesome',
+    'awful',
+    'awkward',
+    'axis',
+    'baby',
+    'bachelor',
+    'bacon',
+    'badge',
+    'bag',
+    'balance',
+    'balcony',
+    'ball',
+    'bamboo',
+    'banana',
+    'banner',
+    'bar',
+    'barely',
+    'bargain',
+    'barrel',
+    'base',
+    'basic',
+    'basket',
+    'battle',
+    'beach',
+    'bean',
+    'beauty',
+    'because',
+    'become',
+    'beef',
+    'before',
+    'begin',
+    'behave',
+    'behind',
+    'believe',
+    'below',
+    'belt',
+    'bench',
+    'benefit',
+    'best',
+    'betray',
+    'better',
+    'between',
+    'beyond',
+    'bicycle',
+    'bid',
+    'bike',
+    'bind',
+    'biology',
+    'bird',
+    'birth',
+    'bitter',
+    'black',
+    'blade',
+    'blame',
+    'blanket',
+    'blast',
+    'bleak',
+    'bless',
+    'blind',
+    'blood',
+    'blossom',
+    'blow',
+    'blue',
+    'blur',
+    'blush',
+    'board',
+    'boat',
+    'body',
+    'boil',
+    'bomb',
+    'bone',
+    'bonus',
+    'book',
+    'boost',
+    'border',
+    'boring',
+    'borrow',
+    'boss',
+    'bottom',
+    'bounce',
+    'box',
+    'boy',
+    'bracket',
+    'brain',
+    'brand',
+    'brass',
+    'brave',
+    'bread',
+    'breeze',
+    'brick',
+    'bridge',
+    'brief',
+    'bright',
+    'bring',
+    'brisk',
+    'broccoli',
+    'broken',
+    'bronze',
+    'broom',
+    'brother',
+    'brown',
+    'brush',
+    'bubble',
+    'buddy',
+    'budget',
+    'buffalo',
+    'build',
+    'bulb',
+    'bulk',
+    'bullet',
+    'bundle',
+    'bunker',
+    'burden',
+    'burger',
+    'burst',
+    'bus',
+    'business',
+    'busy',
+    'butter',
+    'buyer',
+    'buzz',
+  ];
 
   /// Get user identity summary
   Map<String, dynamic> getIdentitySummary() {
@@ -896,8 +1043,7 @@ class NostrKeyManager {
     return {
       'hasIdentity': true,
       'publicKey': publicKey,
-      'publicKeyShort':
-          publicKey!,
+      'publicKeyShort': publicKey!,
       'hasBackup': hasBackup,
       'isInitialized': isInitialized,
     };

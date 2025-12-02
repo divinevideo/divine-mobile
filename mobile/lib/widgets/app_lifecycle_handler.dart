@@ -11,10 +11,7 @@ import 'package:openvine/utils/log_message_batcher.dart';
 
 /// Handles app lifecycle events for video playback
 class AppLifecycleHandler extends ConsumerStatefulWidget {
-  const AppLifecycleHandler({
-    required this.child,
-    super.key,
-  });
+  const AppLifecycleHandler({required this.child, super.key});
   final Widget child;
 
   @override
@@ -112,8 +109,6 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
   }
 
   @override
-  Widget build(BuildContext context) => TickerMode(
-        enabled: _tickersEnabled,
-        child: widget.child,
-      );
+  Widget build(BuildContext context) =>
+      TickerMode(enabled: _tickersEnabled, child: widget.child);
 }

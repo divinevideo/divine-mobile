@@ -123,7 +123,8 @@ class VideoState {
     }
     if (loadingState == VideoLoadingState.permanentlyFailed) {
       throw StateError(
-          'Cannot transition to failed from permanently failed state');
+        'Cannot transition to failed from permanently failed state',
+      );
     }
 
     final newRetryCount = retryCount + 1;
@@ -146,7 +147,8 @@ class VideoState {
   VideoState toPermanentlyFailed(String errorMessage) {
     if (loadingState == VideoLoadingState.disposed) {
       throw StateError(
-          'Cannot transition to permanently failed from disposed state');
+        'Cannot transition to permanently failed from disposed state',
+      );
     }
 
     return VideoState._internal(
@@ -217,15 +219,12 @@ class VideoState {
   }
 
   @override
-  int get hashCode => Object.hash(
-        event,
-        loadingState,
-        errorMessage,
-        retryCount,
-      );
+  int get hashCode =>
+      Object.hash(event, loadingState, errorMessage, retryCount);
 
   @override
-  String toString() => 'VideoState('
+  String toString() =>
+      'VideoState('
       'event: ${event.id}, '
       'state: $loadingState, '
       'error: $errorMessage, '

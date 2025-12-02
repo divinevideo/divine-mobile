@@ -11,7 +11,8 @@ class BlossomSettingsScreen extends ConsumerStatefulWidget {
   const BlossomSettingsScreen({super.key});
 
   @override
-  ConsumerState<BlossomSettingsScreen> createState() => _BlossomSettingsScreenState();
+  ConsumerState<BlossomSettingsScreen> createState() =>
+      _BlossomSettingsScreenState();
 }
 
 class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
@@ -35,10 +36,10 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
   Future<void> _loadSettings() async {
     try {
       final blossomService = ref.read(blossomUploadServiceProvider);
-      
+
       final isEnabled = await blossomService.isBlossomEnabled();
       final serverUrl = await blossomService.getBlossomServer();
-      
+
       if (mounted) {
         setState(() {
           _isBlossomEnabled = isEnabled;
@@ -47,8 +48,11 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
         });
       }
     } catch (e) {
-      Log.error('Failed to load Blossom settings: $e',
-          name: 'BlossomSettingsScreen', category: LogCategory.ui);
+      Log.error(
+        'Failed to load Blossom settings: $e',
+        name: 'BlossomSettingsScreen',
+        category: LogCategory.ui,
+      );
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -64,7 +68,9 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
       if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please enter a valid server URL (e.g., https://blossom.band)'),
+            content: Text(
+              'Please enter a valid server URL (e.g., https://blossom.band)',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -78,29 +84,35 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
 
     try {
       final blossomService = ref.read(blossomUploadServiceProvider);
-      
+
       // Save settings
       await blossomService.setBlossomEnabled(_isBlossomEnabled);
-      
+
       if (_isBlossomEnabled && _serverController.text.isNotEmpty) {
         await blossomService.setBlossomServer(_serverController.text);
       } else {
         await blossomService.setBlossomServer(null);
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Blossom settings saved', style: TextStyle(color: Colors.white)),
+            content: Text(
+              'Blossom settings saved',
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: VineTheme.vineGreen,
           ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
-      Log.error('Failed to save Blossom settings: $e',
-          name: 'BlossomSettingsScreen', category: LogCategory.ui);
-      
+      Log.error(
+        'Failed to save Blossom settings: $e',
+        name: 'BlossomSettingsScreen',
+        category: LogCategory.ui,
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -129,9 +141,7 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
         ),
         backgroundColor: Colors.black,
         body: const Center(
-          child: CircularProgressIndicator(
-            color: VineTheme.vineGreen,
-          ),
+          child: CircularProgressIndicator(color: VineTheme.vineGreen),
         ),
       );
     }
@@ -155,7 +165,10 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
                   )
                 : const Text(
                     'Save',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
           ),
         ],
@@ -168,149 +181,158 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-          // Info card
-          Card(
-            color: Colors.black.withValues(alpha:0.7),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: VineTheme.vineGreen.withValues(alpha:0.3)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              // Info card
+              Card(
+                color: Colors.black.withValues(alpha: 0.7),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: VineTheme.vineGreen.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.info_outline, 
-                          color: VineTheme.vineGreen.withValues(alpha:0.8)),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'About Blossom',
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: VineTheme.vineGreen.withValues(alpha: 0.8),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'About Blossom',
+                            style: TextStyle(
+                              color: VineTheme.vineGreen,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Blossom is a decentralized media storage protocol that allows you to upload videos to any compatible server. '
+                        'By default, videos are uploaded to diVine\'s Blossom server. Enable the option below to use a custom server instead.',
                         style: TextStyle(
-                          color: VineTheme.vineGreen,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 14,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Blossom is a decentralized media storage protocol that allows you to upload videos to any compatible server. '
-                    'By default, videos are uploaded to diVine\'s Blossom server. Enable the option below to use a custom server instead.',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha:0.8),
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-          // Enable/Disable toggle
-          SwitchListTile(
-            title: const Text(
-              'Use Custom Blossom Server',
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-            subtitle: Text(
-              _isBlossomEnabled
-                  ? 'Videos will be uploaded to your custom Blossom server'
-                  : 'Your videos are currently being uploaded to diVine\'s Blossom server',
-              style: TextStyle(color: Colors.white.withValues(alpha:0.6)),
-            ),
-            value: _isBlossomEnabled,
-            onChanged: (value) {
-              setState(() {
-                _isBlossomEnabled = value;
-              });
-            },
-            activeThumbColor: VineTheme.vineGreen,
-            inactiveThumbColor: Colors.grey,
-            inactiveTrackColor: Colors.grey.withValues(alpha:0.3),
-          ),
-          const SizedBox(height: 20),
+              // Enable/Disable toggle
+              SwitchListTile(
+                title: const Text(
+                  'Use Custom Blossom Server',
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                ),
+                subtitle: Text(
+                  _isBlossomEnabled
+                      ? 'Videos will be uploaded to your custom Blossom server'
+                      : 'Your videos are currently being uploaded to diVine\'s Blossom server',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+                ),
+                value: _isBlossomEnabled,
+                onChanged: (value) {
+                  setState(() {
+                    _isBlossomEnabled = value;
+                  });
+                },
+                activeThumbColor: VineTheme.vineGreen,
+                inactiveThumbColor: Colors.grey,
+                inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
+              ),
+              const SizedBox(height: 20),
 
-          // Server URL input (only shown when custom server is enabled)
-          if (_isBlossomEnabled) ...[
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              // Server URL input (only shown when custom server is enabled)
+              if (_isBlossomEnabled) ...[
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Custom Blossom Server URL',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _serverController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'https://blossom.band',
+                        hintStyle: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.4),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white.withValues(alpha: 0.1),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: VineTheme.vineGreen.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: VineTheme.vineGreen.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(
+                            color: VineTheme.vineGreen,
+                          ),
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.cloud_upload,
+                          color: VineTheme.vineGreen,
+                        ),
+                      ),
+                      keyboardType: TextInputType.url,
+                      autocorrect: false,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Enter the URL of your custom Blossom server',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 30),
+
+                // Popular Blossom servers section
                 const Text(
-                  'Custom Blossom Server URL',
+                  'Popular Blossom Servers',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _serverController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'https://blossom.band',
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha:0.4)),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha:0.1),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: VineTheme.vineGreen.withValues(alpha:0.3),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                        color: VineTheme.vineGreen.withValues(alpha:0.3),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(
-                        color: VineTheme.vineGreen,
-                      ),
-                    ),
-                    prefixIcon: const Icon(
-                      Icons.cloud_upload,
-                      color: VineTheme.vineGreen,
-                    ),
-                  ),
-                  keyboardType: TextInputType.url,
-                  autocorrect: false,
+                const SizedBox(height: 12),
+                _buildServerOption('https://blossom.band', 'Blossom Band'),
+                _buildServerOption(
+                  'https://cdn.satellite.earth',
+                  'Satellite Earth',
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Enter the URL of your custom Blossom server',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha:0.6),
-                    fontSize: 12,
-                  ),
-                ),
+                _buildServerOption('https://blossom.primal.net', 'Primal'),
+                _buildServerOption('https://nostr.download', 'Nostr Download'),
+                _buildServerOption('https://cdn.nostrcheck.me', 'NostrCheck'),
               ],
-            ),
-            const SizedBox(height: 30),
-
-            // Popular Blossom servers section
-            const Text(
-              'Popular Blossom Servers',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildServerOption('https://blossom.band', 'Blossom Band'),
-            _buildServerOption('https://cdn.satellite.earth', 'Satellite Earth'),
-            _buildServerOption('https://blossom.primal.net', 'Primal'),
-            _buildServerOption('https://nostr.download', 'Nostr Download'),
-            _buildServerOption('https://cdn.nostrcheck.me', 'NostrCheck'),
-          ],
-        ],
+            ],
           ),
         ),
       ),
@@ -319,21 +341,18 @@ class _BlossomSettingsScreenState extends ConsumerState<BlossomSettingsScreen> {
 
   Widget _buildServerOption(String url, String name) {
     return Card(
-      color: Colors.white.withValues(alpha:0.05),
+      color: Colors.white.withValues(alpha: 0.05),
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        title: Text(
-          name,
-          style: const TextStyle(color: Colors.white),
-        ),
+        title: Text(name, style: const TextStyle(color: Colors.white)),
         subtitle: Text(
           url,
-          style: TextStyle(color: Colors.white.withValues(alpha:0.6), fontSize: 12),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.6),
+            fontSize: 12,
+          ),
         ),
-        trailing: const Icon(
-          Icons.arrow_forward,
-          color: VineTheme.vineGreen,
-        ),
+        trailing: const Icon(Icons.arrow_forward, color: VineTheme.vineGreen),
         onTap: () {
           setState(() {
             _serverController.text = url;

@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/blurhash_service.dart';
 
@@ -10,7 +9,8 @@ void main() {
       final thumbnailFile = File('test/fixtures/test_thumbnail.jpg');
       if (!thumbnailFile.existsSync()) {
         fail(
-            'Test thumbnail not found at test/fixtures/test_thumbnail.jpg. Run test/fixtures/generate_test_blurhash.dart to generate it.');
+          'Test thumbnail not found at test/fixtures/test_thumbnail.jpg. Run test/fixtures/generate_test_blurhash.dart to generate it.',
+        );
       }
       final testBytes = await thumbnailFile.readAsBytes();
 
@@ -35,10 +35,12 @@ void main() {
     });
 
     test('provides content-specific blurhashes', () {
-      final comedyBlurhash =
-          BlurhashService.getBlurhashForContentType(VineContentType.comedy);
-      final natureBlurhash =
-          BlurhashService.getBlurhashForContentType(VineContentType.nature);
+      final comedyBlurhash = BlurhashService.getBlurhashForContentType(
+        VineContentType.comedy,
+      );
+      final natureBlurhash = BlurhashService.getBlurhashForContentType(
+        VineContentType.nature,
+      );
 
       expect(comedyBlurhash, isNotEmpty);
       expect(natureBlurhash, isNotEmpty);
@@ -46,8 +48,10 @@ void main() {
     });
 
     test('validates blurhash format', () {
-      expect(BlurhashService.decodeBlurhash('L6Pj0^jE.AyE_3t7t7R**0o#DgR4'),
-          isNotNull);
+      expect(
+        BlurhashService.decodeBlurhash('L6Pj0^jE.AyE_3t7t7R**0o#DgR4'),
+        isNotNull,
+      );
       expect(BlurhashService.decodeBlurhash('invalid'), isNull);
       expect(BlurhashService.decodeBlurhash(''), isNull);
       expect(BlurhashService.decodeBlurhash('short'), isNull);

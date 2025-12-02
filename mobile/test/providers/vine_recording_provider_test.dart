@@ -148,22 +148,25 @@ void main() {
   });
 
   group('RecordingResult return type (TDD)', () {
-    test('stopRecording should return RecordingResult with video and draftId', () async {
-      // This test will guide implementation
-      // Note: We can't fully test this without a real controller setup
-      // This is a structural test to verify the API exists
+    test(
+      'stopRecording should return RecordingResult with video and draftId',
+      () async {
+        // This test will guide implementation
+        // Note: We can't fully test this without a real controller setup
+        // This is a structural test to verify the API exists
 
-      // For now, just verify the RecordingResult class exists and has the right fields
-      final result = RecordingResult(
-        videoFile: File('/path/to/video.mp4'),
-        draftId: 'draft_12345',
-        proofManifest: null,
-      );
+        // For now, just verify the RecordingResult class exists and has the right fields
+        final result = RecordingResult(
+          videoFile: File('/path/to/video.mp4'),
+          draftId: 'draft_12345',
+          proofManifest: null,
+        );
 
-      expect(result.videoFile, isNotNull);
-      expect(result.draftId, isNotNull);
-      expect(result.draftId, startsWith('draft_'));
-      expect(result.proofManifest, isNull);
-    });
+        expect(result.videoFile, isNotNull);
+        expect(result.draftId, isNotNull);
+        expect(result.draftId, startsWith('draft_'));
+        expect(result.proofManifest, isNull);
+      },
+    );
   });
 }

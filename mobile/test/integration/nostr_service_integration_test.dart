@@ -45,8 +45,7 @@ void main() {
         final events = <dynamic>[];
         final subscription = eventStream.listen((event) {
           events.add(event);
-          Log.debug(
-              'Received event: ${event.kind} - ${event.id}...');
+          Log.debug('Received event: ${event.kind} - ${event.id}...');
         });
 
         // Wait for events using proper async pattern instead of arbitrary delay

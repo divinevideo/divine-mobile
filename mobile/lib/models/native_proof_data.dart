@@ -36,13 +36,13 @@ class NativeProofData {
 
   /// Convert to JSON for storage
   Map<String, dynamic> toJson() => {
-        'videoHash': videoHash,
-        if (sensorDataCsv != null) 'sensorDataCsv': sensorDataCsv,
-        if (pgpSignature != null) 'pgpSignature': pgpSignature,
-        if (publicKey != null) 'publicKey': publicKey,
-        if (deviceAttestation != null) 'deviceAttestation': deviceAttestation,
-        if (timestamp != null) 'timestamp': timestamp,
-      };
+    'videoHash': videoHash,
+    if (sensorDataCsv != null) 'sensorDataCsv': sensorDataCsv,
+    if (pgpSignature != null) 'pgpSignature': pgpSignature,
+    if (publicKey != null) 'publicKey': publicKey,
+    if (deviceAttestation != null) 'deviceAttestation': deviceAttestation,
+    if (timestamp != null) 'timestamp': timestamp,
+  };
 
   /// Create from JSON
   factory NativeProofData.fromJson(Map<String, dynamic> json) =>
@@ -97,7 +97,8 @@ class NativeProofData {
   }
 
   @override
-  String toString() => 'NativeProofData(hash: $videoHash, '
+  String toString() =>
+      'NativeProofData(hash: $videoHash, '
       'hasSignature: ${pgpSignature != null}, '
       'hasAttestation: ${deviceAttestation != null})';
 }

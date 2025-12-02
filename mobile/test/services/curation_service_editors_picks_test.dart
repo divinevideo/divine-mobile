@@ -35,8 +35,9 @@ void main() {
       // Mock discoveryVideos to avoid MissingStubError during CurationService initialization
       when(mockVideoEventService.discoveryVideos).thenReturn([]);
       // Mock subscribeToEvents to avoid MissingStubError when fetching Editor's Picks list
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => Stream<Event>.empty());
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => Stream<Event>.empty());
     });
 
     test("should show videos from Classic Vines pubkey in Editor's Picks", () {
@@ -80,17 +81,22 @@ void main() {
       );
 
       // When: Getting Editor's Picks
-      final editorsPicks =
-          curationService.getVideosForSetType(CurationSetType.editorsPicks);
+      final editorsPicks = curationService.getVideosForSetType(
+        CurationSetType.editorsPicks,
+      );
 
       // Then: Should contain only Classic Vines videos
       expect(editorsPicks.length, equals(5));
       expect(
-          editorsPicks.every(
-              (video) => video.pubkey == AppConstants.classicVinesPubkey),
-          isTrue);
-      expect(editorsPicks.every((video) => video.id.startsWith('classic_')),
-          isTrue);
+        editorsPicks.every(
+          (video) => video.pubkey == AppConstants.classicVinesPubkey,
+        ),
+        isTrue,
+      );
+      expect(
+        editorsPicks.every((video) => video.id.startsWith('classic_')),
+        isTrue,
+      );
 
       curationService.dispose();
     });
@@ -123,8 +129,9 @@ void main() {
           authService: mockAuthService,
         );
 
-        final editorsPicks =
-            service.getVideosForSetType(CurationSetType.editorsPicks);
+        final editorsPicks = service.getVideosForSetType(
+          CurationSetType.editorsPicks,
+        );
         orders.add(editorsPicks.map((v) => v.id).toList());
 
         service.dispose();
@@ -135,10 +142,9 @@ void main() {
       final hasDifferentOrder = orders.any(
         (order) =>
             order.length == firstOrder.length &&
-            !order
-                .asMap()
-                .entries
-                .every((entry) => entry.value == firstOrder[entry.key]),
+            !order.asMap().entries.every(
+              (entry) => entry.value == firstOrder[entry.key],
+            ),
       );
 
       expect(
@@ -174,8 +180,9 @@ void main() {
       );
 
       // When: Getting Editor's Picks
-      final editorsPicks =
-          curationService.getVideosForSetType(CurationSetType.editorsPicks);
+      final editorsPicks = curationService.getVideosForSetType(
+        CurationSetType.editorsPicks,
+      );
 
       // Then: Should contain at least one video (default fallback)
       expect(editorsPicks.isNotEmpty, isTrue);
@@ -196,8 +203,9 @@ void main() {
       );
 
       // When: Getting Editor's Picks
-      final editorsPicks =
-          curationService.getVideosForSetType(CurationSetType.editorsPicks);
+      final editorsPicks = curationService.getVideosForSetType(
+        CurationSetType.editorsPicks,
+      );
 
       // Then: Should still return at least the default video
       expect(editorsPicks.isNotEmpty, isTrue);

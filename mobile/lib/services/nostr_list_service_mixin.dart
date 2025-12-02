@@ -36,8 +36,11 @@ mixin NostrListServiceMixin {
     try {
       final ourPubkey = authService.currentPublicKeyHex;
       if (ourPubkey == null) {
-        Log.warning('Cannot load published events - user not authenticated',
-            name: 'NostrListServiceMixin', category: LogCategory.system);
+        Log.warning(
+          'Cannot load published events - user not authenticated',
+          name: 'NostrListServiceMixin',
+          category: LogCategory.system,
+        );
         return [];
       }
 
@@ -50,16 +53,18 @@ mixin NostrListServiceMixin {
           _lastCacheTime != null &&
           now.difference(_lastCacheTime!) < cacheExpiry) {
         Log.debug(
-            'Using cached published events: ${_cachedMyEvents!.length} events',
-            name: 'NostrListServiceMixin',
-            category: LogCategory.system);
+          'Using cached published events: ${_cachedMyEvents!.length} events',
+          name: 'NostrListServiceMixin',
+          category: LogCategory.system,
+        );
         return _cachedMyEvents!;
       }
 
       Log.info(
-          'Fetching all published events from embedded relay for pubkey: ${ourPubkey}...',
-          name: 'NostrListServiceMixin',
-          category: LogCategory.system);
+        'Fetching all published events from embedded relay for pubkey: ${ourPubkey}...',
+        name: 'NostrListServiceMixin',
+        category: LogCategory.system,
+      );
 
       // Query embedded relay for ALL our published events
       final filter = nostr.Filter(authors: [ourPubkey]);
@@ -70,13 +75,19 @@ mixin NostrListServiceMixin {
       _cachedForPubkey = ourPubkey;
       _lastCacheTime = now;
 
-      Log.info('Loaded ${events.length} published events from embedded relay',
-          name: 'NostrListServiceMixin', category: LogCategory.system);
+      Log.info(
+        'Loaded ${events.length} published events from embedded relay',
+        name: 'NostrListServiceMixin',
+        category: LogCategory.system,
+      );
 
       return events;
     } catch (e) {
-      Log.error('Failed to load published events from embedded relay: $e',
-          name: 'NostrListServiceMixin', category: LogCategory.system);
+      Log.error(
+        'Failed to load published events from embedded relay: $e',
+        name: 'NostrListServiceMixin',
+        category: LogCategory.system,
+      );
       return [];
     }
   }
@@ -94,7 +105,9 @@ mixin NostrListServiceMixin {
   /// For kinds 30000-39999, filters by both kind and d-tag value.
   /// Returns the most recent event for each unique (kind, d-tag) combination.
   Map<String, Event> filterMyParameterizedEvents(
-      List<Event> events, List<int> kinds) {
+    List<Event> events,
+    List<int> kinds,
+  ) {
     final Map<String, Event> latestEvents = {};
 
     for (final event in events) {
@@ -131,7 +144,10 @@ mixin NostrListServiceMixin {
     _cachedMyEvents = null;
     _cachedForPubkey = null;
     _lastCacheTime = null;
-    Log.debug('Cleared published events cache',
-        name: 'NostrListServiceMixin', category: LogCategory.system);
+    Log.debug(
+      'Cleared published events cache',
+      name: 'NostrListServiceMixin',
+      category: LogCategory.system,
+    );
   }
 }

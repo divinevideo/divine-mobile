@@ -80,16 +80,20 @@ NormalizedPublicIdentifier? normalizePublicIdentifier(
 ///
 /// Returns null if invalid
 String? normalizeToHex(String identifier, {String? currentUserHex}) {
-  return normalizePublicIdentifier(identifier, currentUserHex: currentUserHex)
-      ?.hexPubkey;
+  return normalizePublicIdentifier(
+    identifier,
+    currentUserHex: currentUserHex,
+  )?.hexPubkey;
 }
 
 /// Normalize to npub format
 ///
 /// Returns null if invalid
 String? normalizeToNpub(String identifier, {String? currentUserHex}) {
-  final normalized =
-      normalizePublicIdentifier(identifier, currentUserHex: currentUserHex);
+  final normalized = normalizePublicIdentifier(
+    identifier,
+    currentUserHex: currentUserHex,
+  );
   if (normalized == null) return null;
 
   try {

@@ -86,7 +86,11 @@ void main() {
       // Search with prefix (from top 1000 list)
       final results = service.searchHashtags('fun', limit: 10);
 
-      expect(results, isNotEmpty, reason: 'Should find hashtags starting with fun');
+      expect(
+        results,
+        isNotEmpty,
+        reason: 'Should find hashtags starting with fun',
+      );
     });
 
     test('searchHashtags is case insensitive', () async {

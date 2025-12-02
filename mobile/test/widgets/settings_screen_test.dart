@@ -25,12 +25,8 @@ void main() {
     testWidgets('Settings screen displays all sections', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-          ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 
@@ -43,12 +39,8 @@ void main() {
     testWidgets('Settings tiles display correctly', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-          ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 
@@ -69,12 +61,8 @@ void main() {
     testWidgets('Settings tiles have proper icons', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-          ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 
@@ -82,7 +70,10 @@ void main() {
       expect(find.byIcon(Icons.person), findsWidgets); // Edit Profile
       expect(find.byIcon(Icons.key), findsWidgets); // Key Management
       expect(find.byIcon(Icons.hub), findsWidgets); // Relays
-      expect(find.byIcon(Icons.troubleshoot), findsWidgets); // Relay Diagnostics
+      expect(
+        find.byIcon(Icons.troubleshoot),
+        findsWidgets,
+      ); // Relay Diagnostics
       expect(find.byIcon(Icons.cloud_upload), findsWidgets); // Media Servers
 
       // CRITICAL: P2P Sync icon (Icons.sync) should be hidden for release
@@ -92,12 +83,8 @@ void main() {
     testWidgets('App bar displays correctly', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-          ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 

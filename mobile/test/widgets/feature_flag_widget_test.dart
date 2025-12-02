@@ -24,8 +24,9 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(mockPrefs.setBool('ff_${flag.name}', any))
-            .thenAnswer((_) async => true);
+        when(
+          mockPrefs.setBool('ff_${flag.name}', any),
+        ).thenAnswer((_) async => true);
         when(mockPrefs.remove('ff_${flag.name}')).thenAnswer((_) async => true);
         when(mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
@@ -38,9 +39,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp(
             home: FeatureFlagWidget(
               flag: FeatureFlag.newCameraUI,
@@ -52,7 +51,8 @@ void main() {
 
       // Initialize the service with the test preferences
       final container = ProviderScope.containerOf(
-          tester.element(find.byType(FeatureFlagWidget)));
+        tester.element(find.byType(FeatureFlagWidget)),
+      );
       final service = container.read(featureFlagServiceProvider);
       await service.initialize();
 
@@ -64,9 +64,7 @@ void main() {
       // Flag is disabled by default (null/false)
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp(
             home: FeatureFlagWidget(
               flag: FeatureFlag.newCameraUI,
@@ -82,13 +80,12 @@ void main() {
       expect(find.text('Enabled Content'), findsNothing);
     });
 
-    testWidgets('should show nothing when flag disabled and no fallback',
-        (tester) async {
+    testWidgets('should show nothing when flag disabled and no fallback', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp(
             home: Scaffold(
               body: Column(
@@ -121,9 +118,7 @@ void main() {
     testWidgets('should update when flag changes', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp(
             home: FeatureFlagWidget(
               flag: FeatureFlag.newCameraUI,
@@ -146,7 +141,8 @@ void main() {
 
       // Trigger a rebuild by getting the service and changing the flag
       final container = ProviderScope.containerOf(
-          tester.element(find.byType(FeatureFlagWidget)));
+        tester.element(find.byType(FeatureFlagWidget)),
+      );
       final service = container.read(featureFlagServiceProvider);
       await service.setFlag(FeatureFlag.newCameraUI, true);
 
@@ -166,9 +162,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp(
             home: Column(
               children: [
@@ -190,7 +184,8 @@ void main() {
 
       // Initialize the service with the test preferences
       final container = ProviderScope.containerOf(
-          tester.element(find.byType(FeatureFlagWidget).first));
+        tester.element(find.byType(FeatureFlagWidget).first),
+      );
       final service = container.read(featureFlagServiceProvider);
       await service.initialize();
 
@@ -206,9 +201,7 @@ void main() {
       // Don't set up any mocks to simulate loading
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          ],
+          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
           child: MaterialApp(
             home: FeatureFlagWidget(
               flag: FeatureFlag.newCameraUI,

@@ -24,11 +24,7 @@ class ProofModeIndicator extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.verified_user,
-            color: Colors.white,
-            size: 14,
-          ),
+          Icon(Icons.verified_user, color: Colors.white, size: 14),
           const SizedBox(width: 4),
           Text(
             'ProofMode',
@@ -56,94 +52,90 @@ class VineRecordingProgressBarWithState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 4,
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.white24,
-          borderRadius: BorderRadius.circular(2),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final progressWidth =
-                constraints.maxWidth * progress.clamp(0.0, 1.0);
+    height: 4,
+    margin: const EdgeInsets.symmetric(horizontal: 20),
+    decoration: BoxDecoration(
+      color: Colors.white24,
+      borderRadius: BorderRadius.circular(2),
+    ),
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final progressWidth = constraints.maxWidth * progress.clamp(0.0, 1.0);
 
-            return Stack(
-              children: [
-                // Background
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+        return Stack(
+          children: [
+            // Background
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
 
-                // Progress fill
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 50),
-                  width: progressWidth,
-                  decoration: BoxDecoration(
-                    color: recordingState == VineRecordingState.recording
-                        ? VineTheme.vineGreen
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      );
+            // Progress fill
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 50),
+              width: progressWidth,
+              decoration: BoxDecoration(
+                color: recordingState == VineRecordingState.recording
+                    ? VineTheme.vineGreen
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ],
+        );
+      },
+    ),
+  );
 }
 
 /// Progress bar that shows recording progress with segments (legacy)
 class VineRecordingProgressBar extends StatelessWidget {
-  const VineRecordingProgressBar({
-    required this.controller,
-    super.key,
-  });
+  const VineRecordingProgressBar({required this.controller, super.key});
   final VineRecordingController controller;
 
   @override
   Widget build(BuildContext context) => Container(
-        height: 4,
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.white24,
-          borderRadius: BorderRadius.circular(2),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final progressWidth =
-                constraints.maxWidth * controller.progress.clamp(0.0, 1.0);
+    height: 4,
+    margin: const EdgeInsets.symmetric(horizontal: 20),
+    decoration: BoxDecoration(
+      color: Colors.white24,
+      borderRadius: BorderRadius.circular(2),
+    ),
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final progressWidth =
+            constraints.maxWidth * controller.progress.clamp(0.0, 1.0);
 
-            return Stack(
-              children: [
-                // Background
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+        return Stack(
+          children: [
+            // Background
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
 
-                // Progress fill
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 50),
-                  width: progressWidth,
-                  decoration: BoxDecoration(
-                    color: controller.state == VineRecordingState.recording
-                        ? VineTheme.vineGreen
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      );
+            // Progress fill
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 50),
+              width: progressWidth,
+              decoration: BoxDecoration(
+                color: controller.state == VineRecordingState.recording
+                    ? VineTheme.vineGreen
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ],
+        );
+      },
+    ),
+  );
 }
 
 /// The main record button with press-to-record functionality
@@ -173,14 +165,8 @@ class _VineRecordButtonState extends State<VineRecordButton>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1,
-      end: 0.9,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOut,
-      ),
+    _scaleAnimation = Tween<double>(begin: 1, end: 0.9).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
 
     // Set up callback for recording completion
@@ -206,14 +192,18 @@ class _VineRecordButtonState extends State<VineRecordButton>
 
   void _onTapDown(TapDownDetails details) {
     Log.debug(
-        'Record button tap down - canRecord: ${widget.controller.canRecord}, state: ${widget.controller.state}',
-        name: 'VineRecordingControls',
-        category: LogCategory.ui);
+      'Record button tap down - canRecord: ${widget.controller.canRecord}, state: ${widget.controller.state}',
+      name: 'VineRecordingControls',
+      category: LogCategory.ui,
+    );
 
     // If in error state, try to reset first
     if (widget.controller.state == VineRecordingState.error) {
-      Log.error('Resetting from error state before recording',
-          name: 'VineRecordingControls', category: LogCategory.ui);
+      Log.error(
+        'Resetting from error state before recording',
+        name: 'VineRecordingControls',
+        category: LogCategory.ui,
+      );
       widget.controller.reset();
       return;
     }
@@ -227,9 +217,10 @@ class _VineRecordButtonState extends State<VineRecordButton>
 
   void _onTapUp(TapUpDetails details) {
     Log.debug(
-        'Record button tap up - isPressed: $_isPressed, state: ${widget.controller.state}',
-        name: 'VineRecordingControls',
-        category: LogCategory.ui);
+      'Record button tap up - isPressed: $_isPressed, state: ${widget.controller.state}',
+      name: 'VineRecordingControls',
+      category: LogCategory.ui,
+    );
     if (!_isPressed || !mounted) return;
 
     setState(() => _isPressed = false);
@@ -239,9 +230,10 @@ class _VineRecordButtonState extends State<VineRecordButton>
 
   void _onTapCancel() {
     Log.debug(
-        'Record button tap cancel - isPressed: $_isPressed, state: ${widget.controller.state}',
-        name: 'VineRecordingControls',
-        category: LogCategory.ui);
+      'Record button tap cancel - isPressed: $_isPressed, state: ${widget.controller.state}',
+      name: 'VineRecordingControls',
+      category: LogCategory.ui,
+    );
     if (!_isPressed || !mounted) return;
 
     setState(() => _isPressed = false);
@@ -282,10 +274,7 @@ class _VineRecordButtonState extends State<VineRecordButton>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _getButtonColor(),
-                border: Border.all(
-                  color: Colors.white,
-                  width: 3,
-                ),
+                border: Border.all(color: Colors.white, width: 3),
                 boxShadow: _isPressed
                     ? [
                         const BoxShadow(
@@ -296,11 +285,7 @@ class _VineRecordButtonState extends State<VineRecordButton>
                       ]
                     : null,
               ),
-              child: Icon(
-                _getButtonIcon(),
-                color: Colors.white,
-                size: 40,
-              ),
+              child: Icon(_getButtonIcon(), color: Colors.white, size: 40),
             ),
           ),
         ),
@@ -341,38 +326,32 @@ class _VineRecordButtonState extends State<VineRecordButton>
 
 /// Recording instructions that use provider state for updates
 class VineRecordingInstructionsWithState extends StatelessWidget {
-  const VineRecordingInstructionsWithState({
-    required this.state,
-    super.key,
-  });
+  const VineRecordingInstructionsWithState({required this.state, super.key});
   final VineRecordingUIState state;
 
   @override
   Widget build(BuildContext context) => Column(
-        children: [
-          // Duration display
-          Text(
-            _getDurationText(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+    children: [
+      // Duration display
+      Text(
+        _getDurationText(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
 
-          const SizedBox(height: 8),
+      const SizedBox(height: 8),
 
-          // Instructions
-          Text(
-            _getInstructionText(),
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      );
+      // Instructions
+      Text(
+        _getInstructionText(),
+        style: const TextStyle(color: Colors.white70, fontSize: 14),
+        textAlign: TextAlign.center,
+      ),
+    ],
+  );
 
   String _getDurationText() {
     final recorded = state.totalRecordedDuration.inSeconds;
@@ -443,14 +422,8 @@ class _VineRecordButtonWithStateState extends State<VineRecordButtonWithState>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1,
-      end: 0.9,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOut,
-      ),
+    _scaleAnimation = Tween<double>(begin: 1, end: 0.9).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
   }
 
@@ -475,14 +448,18 @@ class _VineRecordButtonWithStateState extends State<VineRecordButtonWithState>
 
   void _onTapDown(TapDownDetails details) {
     Log.debug(
-        'Record button tap down - canRecord: ${widget.state.canRecord}, state: ${widget.state.recordingState}',
-        name: 'VineRecordingControls',
-        category: LogCategory.ui);
+      'Record button tap down - canRecord: ${widget.state.canRecord}, state: ${widget.state.recordingState}',
+      name: 'VineRecordingControls',
+      category: LogCategory.ui,
+    );
 
     // If in error state, try to reset first
     if (widget.state.recordingState == VineRecordingState.error) {
-      Log.error('Resetting from error state before recording',
-          name: 'VineRecordingControls', category: LogCategory.ui);
+      Log.error(
+        'Resetting from error state before recording',
+        name: 'VineRecordingControls',
+        category: LogCategory.ui,
+      );
       widget.controller.reset();
       return;
     }
@@ -496,9 +473,10 @@ class _VineRecordButtonWithStateState extends State<VineRecordButtonWithState>
 
   void _onTapUp(TapUpDetails details) {
     Log.debug(
-        'Record button tap up - isPressed: $_isPressed, state: ${widget.state.recordingState}',
-        name: 'VineRecordingControls',
-        category: LogCategory.ui);
+      'Record button tap up - isPressed: $_isPressed, state: ${widget.state.recordingState}',
+      name: 'VineRecordingControls',
+      category: LogCategory.ui,
+    );
     if (!_isPressed || !mounted) return;
 
     setState(() => _isPressed = false);
@@ -508,9 +486,10 @@ class _VineRecordButtonWithStateState extends State<VineRecordButtonWithState>
 
   void _onTapCancel() {
     Log.debug(
-        'Record button tap cancel - isPressed: $_isPressed, state: ${widget.state.recordingState}',
-        name: 'VineRecordingControls',
-        category: LogCategory.ui);
+      'Record button tap cancel - isPressed: $_isPressed, state: ${widget.state.recordingState}',
+      name: 'VineRecordingControls',
+      category: LogCategory.ui,
+    );
     if (!_isPressed || !mounted) return;
 
     setState(() => _isPressed = false);
@@ -551,10 +530,7 @@ class _VineRecordButtonWithStateState extends State<VineRecordButtonWithState>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _getButtonColor(),
-                border: Border.all(
-                  color: Colors.white,
-                  width: 3,
-                ),
+                border: Border.all(color: Colors.white, width: 3),
                 boxShadow: _isPressed
                     ? [
                         const BoxShadow(
@@ -565,11 +541,7 @@ class _VineRecordButtonWithStateState extends State<VineRecordButtonWithState>
                       ]
                     : null,
               ),
-              child: Icon(
-                _getButtonIcon(),
-                color: Colors.white,
-                size: 40,
-              ),
+              child: Icon(_getButtonIcon(), color: Colors.white, size: 40),
             ),
           ),
         ),
@@ -610,38 +582,32 @@ class _VineRecordButtonWithStateState extends State<VineRecordButtonWithState>
 
 /// Recording instructions and feedback text (legacy)
 class VineRecordingInstructions extends StatelessWidget {
-  const VineRecordingInstructions({
-    required this.controller,
-    super.key,
-  });
+  const VineRecordingInstructions({required this.controller, super.key});
   final VineRecordingController controller;
 
   @override
   Widget build(BuildContext context) => Column(
-        children: [
-          // Duration display
-          Text(
-            _getDurationText(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+    children: [
+      // Duration display
+      Text(
+        _getDurationText(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
 
-          const SizedBox(height: 8),
+      const SizedBox(height: 8),
 
-          // Instructions
-          Text(
-            _getInstructionText(),
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      );
+      // Instructions
+      Text(
+        _getInstructionText(),
+        style: const TextStyle(color: Colors.white70, fontSize: 14),
+        textAlign: TextAlign.center,
+      ),
+    ],
+  );
 
   String _getDurationText() {
     final recorded = controller.totalRecordedDuration.inSeconds;
@@ -698,159 +664,157 @@ class VineRecordingUIWithProvider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Top controls: ProofMode indicator, progress bar and camera switch
+          Row(
             children: [
-              // Top controls: ProofMode indicator, progress bar and camera switch
-              Row(
-                children: [
-                  // Camera switch button (only show when not recording and switching is available)
-                  if (state.recordingState != VineRecordingState.recording &&
-                      controller.canSwitchCamera)
+              // Camera switch button (only show when not recording and switching is available)
+              if (state.recordingState != VineRecordingState.recording &&
+                  controller.canSwitchCamera)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: GestureDetector(
+                    onTap: controller.switchCamera,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black54,
+                        border: Border.all(color: Colors.white54, width: 1),
+                      ),
+                      child: const Icon(
+                        Icons.flip_camera_ios,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Progress bar (takes remaining space)
+              Expanded(
+                child: Column(
+                  children: [
+                    // ProofMode indicator at top
                     Padding(
-                      padding: const EdgeInsets.only(left: 16),
-                      child: GestureDetector(
-                        onTap: controller.switchCamera,
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ProofModeIndicator(),
+                    ),
+                    // Progress bar below
+                    VineRecordingProgressBarWithState(
+                      progress: state.progress,
+                      recordingState: state.recordingState,
+                    ),
+                  ],
+                ),
+              ),
+
+              // Spacer to balance the camera switch button (only when button is shown)
+              if (state.recordingState != VineRecordingState.recording &&
+                  controller.canSwitchCamera)
+                const SizedBox(width: 56), // Same width as button + padding
+            ],
+          ),
+
+          const Spacer(),
+
+          // Recording controls at bottom
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Instructions
+              VineRecordingInstructionsWithState(state: state),
+
+              const SizedBox(height: 30),
+
+              // Control buttons
+              SizedBox(
+                height: 80, // Fixed height to prevent overflow
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Cancel/Reset button
+                    if (state.segments.isNotEmpty ||
+                        state.recordingState == VineRecordingState.error) ...[
+                      GestureDetector(
+                        onTap: () {
+                          controller.reset();
+                          onCancel?.call();
+                        },
                         child: Container(
-                          width: 40,
-                          height: 40,
+                          width: 50,
+                          height: 50,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.black54,
-                            border: Border.all(color: Colors.white54, width: 1),
+                            color: Colors.white24,
+                            border: Border.all(color: Colors.white54, width: 2),
                           ),
                           child: const Icon(
-                            Icons.flip_camera_ios,
+                            Icons.close,
                             color: Colors.white,
-                            size: 20,
+                            size: 24,
                           ),
                         ),
                       ),
-                    ),
+                    ] else ...[
+                      const SizedBox(width: 50), // Placeholder for spacing
+                    ],
 
-                  // Progress bar (takes remaining space)
-                  Expanded(
-                    child: Column(
-                      children: [
-                        // ProofMode indicator at top
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: ProofModeIndicator(),
-                        ),
-                        // Progress bar below
-                        VineRecordingProgressBarWithState(
-                          progress: state.progress,
-                          recordingState: state.recordingState,
-                        ),
-                      ],
-                    ),
-                  ),
+                    // Main record button (hide when completed to avoid duplicate check icons)
+                    if (state.recordingState !=
+                        VineRecordingState.completed) ...[
+                      VineRecordButtonWithState(
+                        controller: controller,
+                        state: state,
+                        onRecordingComplete: onRecordingComplete,
+                      ),
+                    ] else ...[
+                      const SizedBox(
+                        width: 80,
+                      ), // Placeholder matching button size
+                    ],
 
-                  // Spacer to balance the camera switch button (only when button is shown)
-                  if (state.recordingState != VineRecordingState.recording &&
-                      controller.canSwitchCamera)
-                    const SizedBox(width: 56), // Same width as button + padding
-                ],
-              ),
-
-              const Spacer(),
-
-              // Recording controls at bottom
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Instructions
-                  VineRecordingInstructionsWithState(state: state),
-
-                  const SizedBox(height: 30),
-
-                  // Control buttons
-                  SizedBox(
-                    height: 80, // Fixed height to prevent overflow
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        // Cancel/Reset button
-                        if (state.segments.isNotEmpty ||
+                    // Done/Next button
+                    if ((state.segments.isNotEmpty ||
                             state.recordingState ==
-                                VineRecordingState.error) ...[
-                          GestureDetector(
-                            onTap: () {
-                              controller.reset();
-                              onCancel?.call();
-                            },
-                            child: Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white24,
-                                border:
-                                    Border.all(color: Colors.white54, width: 2),
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
+                                VineRecordingState.completed) &&
+                        state.recordingState !=
+                            VineRecordingState.recording) ...[
+                      GestureDetector(
+                        onTap: onRecordingComplete,
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: VineTheme.vineGreen,
+                            border: Border.all(color: Colors.white, width: 2),
                           ),
-                        ] else ...[
-                          const SizedBox(width: 50), // Placeholder for spacing
-                        ],
-
-                        // Main record button (hide when completed to avoid duplicate check icons)
-                        if (state.recordingState !=
-                            VineRecordingState.completed) ...[
-                          VineRecordButtonWithState(
-                            controller: controller,
-                            state: state,
-                            onRecordingComplete: onRecordingComplete,
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 24,
                           ),
-                        ] else ...[
-                          const SizedBox(
-                              width: 80), // Placeholder matching button size
-                        ],
-
-                        // Done/Next button
-                        if ((state.segments.isNotEmpty ||
-                                state.recordingState ==
-                                    VineRecordingState.completed) &&
-                            state.recordingState !=
-                                VineRecordingState.recording) ...[
-                          GestureDetector(
-                            onTap: onRecordingComplete,
-                            child: Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: VineTheme.vineGreen,
-                                border:
-                                    Border.all(color: Colors.white, width: 2),
-                              ),
-                              child: const Icon(
-                                Icons.check,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                          ),
-                        ] else ...[
-                          const SizedBox(width: 50), // Placeholder for spacing
-                        ],
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-                ],
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(width: 50), // Placeholder for spacing
+                    ],
+                  ],
+                ),
               ),
+
+              const SizedBox(height: 20),
             ],
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 /// Complete Vine recording UI that combines all components (legacy version)
@@ -889,138 +853,135 @@ class _VineRecordingUIState extends State<VineRecordingUI> {
 
   @override
   Widget build(BuildContext context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Top controls: progress bar and camera switch
+          Row(
             children: [
-              // Top controls: progress bar and camera switch
-              Row(
-                children: [
-                  // Camera switch button (only show when not recording and switching is available)
-                  if (widget.controller.state != VineRecordingState.recording &&
-                      widget.controller.canSwitchCamera)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 16),
-                      child: GestureDetector(
-                        onTap: widget.controller.switchCamera,
+              // Camera switch button (only show when not recording and switching is available)
+              if (widget.controller.state != VineRecordingState.recording &&
+                  widget.controller.canSwitchCamera)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: GestureDetector(
+                    onTap: widget.controller.switchCamera,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black54,
+                        border: Border.all(color: Colors.white54, width: 1),
+                      ),
+                      child: const Icon(
+                        Icons.flip_camera_ios,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Progress bar (takes remaining space)
+              Expanded(
+                child: VineRecordingProgressBar(controller: widget.controller),
+              ),
+
+              // Spacer to balance the camera switch button (only when button is shown)
+              if (widget.controller.state != VineRecordingState.recording &&
+                  widget.controller.canSwitchCamera)
+                const SizedBox(width: 56), // Same width as button + padding
+            ],
+          ),
+
+          const Spacer(),
+
+          // Recording controls at bottom
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Instructions
+              VineRecordingInstructions(controller: widget.controller),
+
+              const SizedBox(height: 30),
+
+              // Control buttons
+              SizedBox(
+                height: 80, // Fixed height to prevent overflow
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Cancel/Reset button
+                    if (widget.controller.hasSegments ||
+                        widget.controller.state ==
+                            VineRecordingState.error) ...[
+                      GestureDetector(
+                        onTap: () {
+                          widget.controller.reset();
+                          widget.onCancel?.call();
+                        },
                         child: Container(
-                          width: 40,
-                          height: 40,
+                          width: 50,
+                          height: 50,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.black54,
-                            border: Border.all(color: Colors.white54, width: 1),
+                            color: Colors.white24,
+                            border: Border.all(color: Colors.white54, width: 2),
                           ),
                           child: const Icon(
-                            Icons.flip_camera_ios,
+                            Icons.close,
                             color: Colors.white,
-                            size: 20,
+                            size: 24,
                           ),
                         ),
                       ),
+                    ] else ...[
+                      const SizedBox(width: 50), // Placeholder for spacing
+                    ],
+
+                    // Main record button
+                    VineRecordButton(
+                      controller: widget.controller,
+                      onRecordingComplete: widget.onRecordingComplete,
                     ),
 
-                  // Progress bar (takes remaining space)
-                  Expanded(
-                    child:
-                        VineRecordingProgressBar(controller: widget.controller),
-                  ),
-
-                  // Spacer to balance the camera switch button (only when button is shown)
-                  if (widget.controller.state != VineRecordingState.recording &&
-                      widget.controller.canSwitchCamera)
-                    const SizedBox(width: 56), // Same width as button + padding
-                ],
-              ),
-
-              const Spacer(),
-
-              // Recording controls at bottom
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Instructions
-                  VineRecordingInstructions(controller: widget.controller),
-
-                  const SizedBox(height: 30),
-
-                  // Control buttons
-                  SizedBox(
-                    height: 80, // Fixed height to prevent overflow
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        // Cancel/Reset button
-                        if (widget.controller.hasSegments ||
+                    // Done/Next button
+                    if ((widget.controller.hasSegments ||
                             widget.controller.state ==
-                                VineRecordingState.error) ...[
-                          GestureDetector(
-                            onTap: () {
-                              widget.controller.reset();
-                              widget.onCancel?.call();
-                            },
-                            child: Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white24,
-                                border:
-                                    Border.all(color: Colors.white54, width: 2),
-                              ),
-                              child: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
+                                VineRecordingState.completed) &&
+                        widget.controller.state !=
+                            VineRecordingState.recording) ...[
+                      GestureDetector(
+                        onTap: widget.onRecordingComplete,
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: VineTheme.vineGreen,
+                            border: Border.all(color: Colors.white, width: 2),
                           ),
-                        ] else ...[
-                          const SizedBox(width: 50), // Placeholder for spacing
-                        ],
-
-                        // Main record button
-                        VineRecordButton(
-                          controller: widget.controller,
-                          onRecordingComplete: widget.onRecordingComplete,
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
-
-                        // Done/Next button
-                        if ((widget.controller.hasSegments ||
-                                widget.controller.state ==
-                                    VineRecordingState.completed) &&
-                            widget.controller.state !=
-                                VineRecordingState.recording) ...[
-                          GestureDetector(
-                            onTap: widget.onRecordingComplete,
-                            child: Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: VineTheme.vineGreen,
-                                border:
-                                    Border.all(color: Colors.white, width: 2),
-                              ),
-                              child: const Icon(
-                                Icons.check,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                          ),
-                        ] else ...[
-                          const SizedBox(width: 50), // Placeholder for spacing
-                        ],
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-                ],
+                      ),
+                    ] else ...[
+                      const SizedBox(width: 50), // Placeholder for spacing
+                    ],
+                  ],
+                ),
               ),
+
+              const SizedBox(height: 20),
             ],
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
