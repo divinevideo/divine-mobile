@@ -325,11 +325,15 @@ final class AnalyticsServiceProvider
 String _$analyticsServiceHash() => r'8ce8c6be2430cd9f271eb66d8e7fe6fcfbae0154';
 
 /// Age verification service for content creation restrictions
+/// keepAlive ensures the service persists and maintains in-memory verification state
+/// even when widgets that watch it dispose and rebuild
 
 @ProviderFor(ageVerificationService)
 const ageVerificationServiceProvider = AgeVerificationServiceProvider._();
 
 /// Age verification service for content creation restrictions
+/// keepAlive ensures the service persists and maintains in-memory verification state
+/// even when widgets that watch it dispose and rebuild
 
 final class AgeVerificationServiceProvider
     extends
@@ -340,13 +344,15 @@ final class AgeVerificationServiceProvider
         >
     with $Provider<AgeVerificationService> {
   /// Age verification service for content creation restrictions
+  /// keepAlive ensures the service persists and maintains in-memory verification state
+  /// even when widgets that watch it dispose and rebuild
   const AgeVerificationServiceProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'ageVerificationServiceProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -375,7 +381,7 @@ final class AgeVerificationServiceProvider
 }
 
 String _$ageVerificationServiceHash() =>
-    r'879c0ad45143e63b7c904983b8d542cb212828bb';
+    r'e866f0341e541ba27ba2b4e4278ed4b35edb8d8b';
 
 /// Geo-blocking service for regional compliance
 

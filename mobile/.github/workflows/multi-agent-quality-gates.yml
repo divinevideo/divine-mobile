@@ -140,9 +140,11 @@ jobs:
     - name: Build for ${{ matrix.platform }}
       run: |
         if [ "${{ matrix.platform }}" == "android" ]; then
-          flutter build apk --debug
+          flutter build apk --debug \
+            --dart-define=ZENDESK_API_TOKEN=${{ secrets.ZENDESK_API_TOKEN }}
         else
-          flutter build web
+          flutter build web \
+            --dart-define=ZENDESK_API_TOKEN=${{ secrets.ZENDESK_API_TOKEN }}
         fi
         
   performance-check:

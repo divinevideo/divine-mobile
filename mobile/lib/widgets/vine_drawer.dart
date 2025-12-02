@@ -238,6 +238,11 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                           ZendeskSupportService.isAvailable;
                       print('🔍 Zendesk available: $isZendeskAvailable');
 
+                      // CRITICAL: Capture provider values BEFORE closing drawer
+                      // to avoid "ref unmounted" error when dialog buttons are tapped
+                      final bugReportService = ref.read(bugReportServiceProvider);
+                      final userPubkey = authService.currentPublicKeyHex;
+
                       // Get navigator context before closing drawer
                       final navigatorContext = Navigator.of(context).context;
 
@@ -253,10 +258,11 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                       }
 
                       // Show support options dialog using navigator context
+                      // Pass captured services instead of ref
                       _showSupportOptionsDialog(
                         navigatorContext,
-                        ref,
-                        authService,
+                        bugReportService,
+                        userPubkey,
                         isZendeskAvailable,
                       );
                     },
@@ -401,15 +407,17 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
   );
 
   /// Show support options dialog
+  /// NOTE: bugReportService and userPubkey must be captured BEFORE the drawer
+  /// is closed, because ref becomes invalid after widget unmounts.
   void _showSupportOptionsDialog(
     BuildContext context,
-    WidgetRef ref,
-    dynamic authService,
+    dynamic bugReportService,
+    String? userPubkey,
     bool isZendeskAvailable,
   ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: VineTheme.cardBackground,
         title: const Text(
           'How can we help?',
@@ -419,15 +427,12 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildSupportOption(
-              context: context,
+              context: dialogContext,
               icon: Icons.bug_report,
               title: 'Report a Bug',
               subtitle: 'Technical issues with the app',
               onTap: () {
-                // Capture provider values BEFORE popping the dialog
-                final bugReportService = ref.read(bugReportServiceProvider);
-                final userPubkey = authService.currentPublicKeyHex;
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 _handleBugReportWithServices(
                   context,
                   bugReportService,
@@ -438,15 +443,12 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
             ),
             const SizedBox(height: 12),
             _buildSupportOption(
-              context: context,
+              context: dialogContext,
               icon: Icons.flag,
               title: 'Report Content',
               subtitle: 'Inappropriate videos or users',
               onTap: () {
-                // Capture provider values BEFORE popping the dialog
-                final bugReportService = ref.read(bugReportServiceProvider);
-                final userPubkey = authService.currentPublicKeyHex;
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 _handleContentReportWithServices(
                   context,
                   bugReportService,
@@ -457,12 +459,12 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
             ),
             const SizedBox(height: 12),
             _buildSupportOption(
-              context: context,
+              context: dialogContext,
               icon: Icons.chat,
               title: 'View Past Messages',
               subtitle: 'Check responses from support',
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 if (isZendeskAvailable) {
                   print('💬 Opening Zendesk ticket list');
                   await ZendeskSupportService.showTicketList();
@@ -480,12 +482,12 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
             ),
             const SizedBox(height: 12),
             _buildSupportOption(
-              context: context,
+              context: dialogContext,
               icon: Icons.help,
               title: 'View FAQ',
               subtitle: 'Common questions & answers',
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 _launchWebPage(context, 'https://divine.video/faq', 'FAQ');
               },
             ),
@@ -493,7 +495,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text(
               'Cancel',
               style: TextStyle(color: VineTheme.vineGreen),

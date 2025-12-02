@@ -116,10 +116,11 @@ class _BugReportDialogState extends State<BugReportDialog> {
       ),
       content: SizedBox(
         width: 400,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // Description field
             TextField(
               controller: _descriptionController,
@@ -181,7 +182,8 @@ class _BugReportDialogState extends State<BugReportDialog> {
                   ),
                 ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [

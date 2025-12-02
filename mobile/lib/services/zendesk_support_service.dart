@@ -1,7 +1,10 @@
-// ABOUTME: Flutter platform channel wrapper for Zendesk Support SDK
-// ABOUTME: Provides ticket creation and support features via native iOS/Android SDKs
+// ABOUTME: Flutter wrapper for Zendesk Support (native SDK + REST API fallback)
+// ABOUTME: Provides ticket creation via native iOS/Android SDKs or REST API for desktop
 
+import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:openvine/config/zendesk_config.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Service for interacting with Zendesk Support SDK
@@ -247,5 +250,157 @@ class ZendeskSupportService {
       );
       return false;
     }
+  }
+
+  // ========================================================================
+  // REST API Methods (for platforms without native SDK: macOS, Windows, Web)
+  // ========================================================================
+
+  /// Check if REST API is available (for platforms without native SDK)
+  static bool get isRestApiAvailable => ZendeskConfig.isRestApiConfigured;
+
+  /// Create a Zendesk ticket via REST API (no native SDK required)
+  ///
+  /// This works on ALL platforms including macOS, Windows, and Web.
+  /// Uses the Zendesk Support API with token authentication.
+  /// Returns true if ticket created successfully, false otherwise.
+  static Future<bool> createTicketViaApi({
+    required String subject,
+    required String description,
+    String? requesterEmail,
+    String? requesterName,
+    List<String>? tags,
+  }) async {
+    if (!ZendeskConfig.isRestApiConfigured) {
+      Log.warning(
+        'Zendesk REST API not configured - missing API token',
+        category: LogCategory.system,
+      );
+      return false;
+    }
+
+    try {
+      Log.info('Creating Zendesk ticket via REST API: $subject',
+          category: LogCategory.system);
+
+      // Build the request body
+      // Using the Requests API which requires a requester email
+      // Default to apiEmail if none provided (for anonymous bug reports)
+      final effectiveEmail = requesterEmail ?? ZendeskConfig.apiEmail;
+      final effectiveName = requesterName ?? 'Divine App User';
+
+      final requestBody = {
+        'request': {
+          'subject': subject,
+          'comment': {
+            'body': description,
+          },
+          'requester': {
+            'name': effectiveName,
+            'email': effectiveEmail,
+          },
+          if (tags != null && tags.isNotEmpty) 'tags': tags,
+        },
+      };
+
+      // Zendesk API URL for creating requests (end-user ticket creation)
+      final apiUrl = '${ZendeskConfig.zendeskUrl}/api/v2/requests.json';
+
+      // Create Basic Auth header: email/token:api_token
+      final credentials =
+          '${ZendeskConfig.apiEmail}/token:${ZendeskConfig.apiToken}';
+      final encodedCredentials = base64Encode(utf8.encode(credentials));
+
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic $encodedCredentials',
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final ticketId = responseData['request']?['id'];
+        Log.info(
+          '✅ Zendesk ticket created via API: #$ticketId - $subject',
+          category: LogCategory.system,
+        );
+        return true;
+      } else {
+        Log.error(
+          'Zendesk API error: ${response.statusCode} - ${response.body}',
+          category: LogCategory.system,
+        );
+        return false;
+      }
+    } catch (e, stackTrace) {
+      Log.error(
+        'Exception creating Zendesk ticket via API: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Create a bug report ticket via REST API with full diagnostics
+  ///
+  /// Formats the bug report data into a Zendesk ticket with proper structure.
+  /// Includes device info, logs summary, and error counts.
+  static Future<bool> createBugReportTicketViaApi({
+    required String reportId,
+    required String userDescription,
+    required String appVersion,
+    required Map<String, dynamic> deviceInfo,
+    String? currentScreen,
+    String? userPubkey,
+    Map<String, int>? errorCounts,
+    String? logsSummary,
+  }) async {
+    // Build comprehensive ticket description
+    final buffer = StringBuffer();
+    buffer.writeln('## Bug Report');
+    buffer.writeln('**Report ID:** $reportId');
+    buffer.writeln('**App Version:** $appVersion');
+    buffer.writeln('');
+    buffer.writeln('### User Description');
+    buffer.writeln(userDescription);
+    buffer.writeln('');
+    buffer.writeln('### Device Information');
+    deviceInfo.forEach((key, value) {
+      buffer.writeln('- **$key:** $value');
+    });
+    if (currentScreen != null) {
+      buffer.writeln('');
+      buffer.writeln('**Current Screen:** $currentScreen');
+    }
+    if (userPubkey != null) {
+      buffer.writeln('**User Pubkey:** $userPubkey');
+    }
+    if (errorCounts != null && errorCounts.isNotEmpty) {
+      buffer.writeln('');
+      buffer.writeln('### Recent Error Summary');
+      final sortedErrors = errorCounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      for (final entry in sortedErrors.take(10)) {
+        buffer.writeln('- ${entry.key}: ${entry.value} occurrences');
+      }
+    }
+    if (logsSummary != null && logsSummary.isNotEmpty) {
+      buffer.writeln('');
+      buffer.writeln('### Recent Logs (Summary)');
+      buffer.writeln('```');
+      buffer.writeln(logsSummary);
+      buffer.writeln('```');
+    }
+
+    return createTicketViaApi(
+      subject: 'Bug Report: $reportId',
+      description: buffer.toString(),
+      tags: ['bug_report', 'divine_app', appVersion],
+    );
   }
 }

@@ -5,7 +5,32 @@ All notable changes to the OpenVine mobile application will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-09-29
+## [Unreleased] - 2025-12-02
+
+### Added
+- **REST Gateway Integration**: Added REST gateway service for faster video discovery feeds
+  - New `RelayGatewayService` for REST-based queries
+  - Gateway toggle in relay settings for user control
+  - Riverpod providers for gateway service and settings
+  - Comprehensive gateway integration tests
+- **Zendesk Bug Reporting**: Added Zendesk REST API for bug reports on macOS/Windows
+  - Desktop platforms now submit bug reports directly via Zendesk API
+  - Automatic device info and logs included in reports
+
+### Fixed
+- **Share Video Menu**: Fixed null pubkey crash when sharing videos
+  - Added proper null check for pubkeyToSearch parameter
+- **Bug Report Dialog**: Fixed layout overflow in bug report form
+- **Segment Recording**: Fixed macOS segment recording to extract only recorded portions
+  - Videos with pauses now trim correctly
+- **Recording Progress Bar**: Made recording progress bar much thicker and more visible
+
+### Changed
+- **Code Quality**: Applied `dart fix --apply` and `dart format` across codebase
+- **CI/CD**: Upgraded to v4 of actions/upload-artifact
+- **Dependencies**: Started tracking pubspec.lock in repository
+
+## [Previous] - 2025-09-29
 
 ### Fixed
 - **Video Loading Issues**: Fixed critical video loading failures by correcting URL routing

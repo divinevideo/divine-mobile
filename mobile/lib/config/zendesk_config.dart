@@ -25,4 +25,22 @@ class ZendeskConfig {
     'ZENDESK_URL',
     defaultValue: 'https://rabblelabs.zendesk.com',
   );
+
+  /// Zendesk API token for REST API (used when native SDK unavailable)
+  /// Get from: Admin → Channels → API → Add API Token
+  /// Set via: --dart-define=ZENDESK_API_TOKEN=xxx
+  static const String apiToken = String.fromEnvironment(
+    'ZENDESK_API_TOKEN',
+    defaultValue: '',
+  );
+
+  /// Email for API authentication (used with API token)
+  /// Set via: --dart-define=ZENDESK_API_EMAIL=xxx
+  static const String apiEmail = String.fromEnvironment(
+    'ZENDESK_API_EMAIL',
+    defaultValue: 'support@divine.video',
+  );
+
+  /// Check if REST API is configured
+  static bool get isRestApiConfigured => apiToken.isNotEmpty;
 }
