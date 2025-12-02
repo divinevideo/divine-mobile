@@ -429,251 +429,108 @@ class _VideoMetadataScreenPureState
                 ),
             ],
           ),
-          body: Stack(
-            children: [
-              Column(
-                children: [
-                  // Error banner for failed publishes
-                  if (_currentDraft?.publishStatus == PublishStatus.failed &&
-                      _currentDraft?.publishError != null)
-                    Container(
-                      width: double.infinity,
-                      color: Colors.red[900],
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline, color: Colors.white),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _currentDraft!.publishError!,
-                              style: const TextStyle(color: Colors.white),
+          body: GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            behavior: HitTestBehavior.opaque,
+            child: Stack(
+              children: [
+                Column(
+                  children: [
+                    // Error banner for failed publishes
+                    if (_currentDraft?.publishStatus == PublishStatus.failed &&
+                        _currentDraft?.publishError != null)
+                      Container(
+                        width: double.infinity,
+                        color: Colors.red[900],
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.white,
                             ),
-                          ),
-                          Text(
-                            'Attempt ${_currentDraft!.publishAttempts}',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Video preview
-                          Container(
-                            height: 200,
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Center(
-                                child:
-                                    _isVideoInitialized &&
-                                        _videoController != null
-                                    ? Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          AspectRatio(
-                                            aspectRatio:
-                                                _currentDraft!.aspectRatio ==
-                                                    vine.AspectRatio.square
-                                                ? 1.0
-                                                : 9.0 / 16.0,
-                                            child: VideoPlayer(
-                                              _videoController!,
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    : Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          const CircularProgressIndicator(
-                                            color: VineTheme.vineGreen,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Loading preview...',
-                                            style: TextStyle(
-                                              color: Colors.grey[400],
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _currentDraft!.publishError!,
+                                style: const TextStyle(color: Colors.white),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 24),
+                            Text(
+                              'Attempt ${_currentDraft!.publishAttempts}',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Title input
-                                  const Text(
-                                    'Title',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextField(
-                                    controller: _titleController,
-                                    style: const TextStyle(color: Colors.white),
-                                    decoration: InputDecoration(
-                                      hintText: 'Enter video title...',
-                                      hintStyle: TextStyle(
-                                        color: Colors.grey[400],
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.grey[900],
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      errorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-
-                                  // Description input
-                                  const Text(
-                                    'Description',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextField(
-                                    controller: _descriptionController,
-                                    style: const TextStyle(color: Colors.white),
-                                    maxLines: 4,
-                                    decoration: InputDecoration(
-                                      hintText: 'Describe your video...',
-                                      hintStyle: TextStyle(
-                                        color: Colors.grey[400],
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.grey[900],
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      errorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-
-                                  // Hashtag input
-                                  const Text(
-                                    'Add Hashtag',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: TextField(
-                                          controller: _hashtagController,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                          ),
-                                          decoration: InputDecoration(
-                                            hintText: 'hashtag',
-                                            hintStyle: TextStyle(
-                                              color: Colors.grey[400],
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Video preview
+                            Container(
+                              height: 200,
+                              decoration: BoxDecoration(
+                                color: Colors.black,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Center(
+                                  child:
+                                      _isVideoInitialized &&
+                                          _videoController != null
+                                      ? Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            AspectRatio(
+                                              aspectRatio:
+                                                  _currentDraft!.aspectRatio ==
+                                                      vine.AspectRatio.square
+                                                  ? 1.0
+                                                  : 9.0 / 16.0,
+                                              child: VideoPlayer(
+                                                _videoController!,
+                                              ),
                                             ),
-                                            filled: true,
-                                            fillColor: Colors.grey[900],
-                                            prefixText: '#',
-                                            prefixStyle: const TextStyle(
+                                          ],
+                                        )
+                                      : Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const CircularProgressIndicator(
                                               color: VineTheme.vineGreen,
                                             ),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              borderSide: BorderSide.none,
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'Loading preview...',
+                                              style: TextStyle(
+                                                color: Colors.grey[400],
+                                                fontSize: 12,
+                                              ),
                                             ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              borderSide: BorderSide.none,
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              borderSide: BorderSide.none,
-                                            ),
-                                            errorBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              borderSide: BorderSide.none,
-                                            ),
-                                          ),
-                                          onSubmitted: _addHashtag,
+                                          ],
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      IconButton(
-                                        onPressed: () => _addHashtag(
-                                          _hashtagController.text,
-                                        ),
-                                        icon: const Icon(
-                                          Icons.add,
-                                          color: VineTheme.vineGreen,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
 
-                                  // Hashtags display
-                                  if (_hashtags.isNotEmpty) ...[
+                            Expanded(
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Title input
                                     const Text(
-                                      'Hashtags',
+                                      'Title',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 16,
@@ -681,192 +538,374 @@ class _VideoMetadataScreenPureState
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: _hashtags
-                                          .map(
-                                            (hashtag) => Chip(
-                                              label: Text('#$hashtag'),
-                                              labelStyle: const TextStyle(
-                                                color: Colors.white,
-                                              ),
-                                              backgroundColor:
-                                                  VineTheme.vineGreen,
-                                              deleteIcon: const Icon(
-                                                Icons.close,
-                                                color: Colors.white,
-                                                size: 18,
-                                              ),
-                                              onDeleted: () =>
-                                                  _removeHashtag(hashtag),
-                                            ),
-                                          )
-                                          .toList(),
-                                    ),
-                                    const SizedBox(height: 16),
-                                  ],
-
-                                  // Expiring post option
-                                  SwitchListTile(
-                                    title: const Text(
-                                      'Expiring Post',
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                    subtitle: Text(
-                                      _isExpiringPost
-                                          ? 'Delete after ${_formatExpirationDuration()}'
-                                          : 'Post will not expire',
-                                      style: TextStyle(color: Colors.grey[400]),
-                                    ),
-                                    value: _isExpiringPost,
-                                    onChanged: (value) async {
-                                      if (value) {
-                                        // Show confirmation dialog before enabling expiration
-                                        final confirmed =
-                                            await _showExpirationConfirmationDialog();
-                                        if (confirmed) {
-                                          setState(() {
-                                            _isExpiringPost = true;
-                                            _expirationConfirmed = true;
-                                          });
-                                        }
-                                      } else {
-                                        setState(() {
-                                          _isExpiringPost = false;
-                                          _expirationConfirmed = false;
-                                        });
-                                      }
-                                    },
-                                    activeThumbColor: VineTheme.vineGreen,
-                                  ),
-
-                                  if (_isExpiringPost) ...[
-                                    const SizedBox(height: 16),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
+                                    TextField(
+                                      controller: _titleController,
+                                      style: const TextStyle(
+                                        color: Colors.white,
                                       ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Delete after:',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
-                                            ),
+                                      textInputAction: TextInputAction.next,
+                                      decoration: InputDecoration(
+                                        hintText: 'Enter video title...',
+                                        hintStyle: TextStyle(
+                                          color: Colors.grey[400],
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.grey[900],
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
-                                          const SizedBox(height: 12),
-                                          Wrap(
-                                            spacing: 8,
-                                            runSpacing: 8,
-                                            children: [
-                                              _buildDurationButton('1 Day', 24),
-                                              _buildDurationButton(
-                                                '1 Week',
-                                                168,
-                                              ),
-                                              _buildDurationButton(
-                                                '1 Month',
-                                                720,
-                                              ),
-                                              _buildDurationButton(
-                                                '1 Year',
-                                                8760,
-                                              ),
-                                              _buildDurationButton(
-                                                '1 Decade',
-                                                87600,
-                                              ),
-                                            ],
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
-                                        ],
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        errorBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+
+                                    // Description input
+                                    const Text(
+                                      'Description',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                  ],
-
-                                  // ProofMode info panel
-                                  // TODO: Add proofManifest to VineDraft model if needed
-                                  // if (_currentDraft?.proofManifest != null) ...[
-                                  //   const SizedBox(height: 16),
-                                  //   ProofModeInfoPanel(manifest: _currentDraft!.proofManifest!),
-                                  // ],
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              // Publishing progress overlay
-              if (_isPublishing)
-                Container(
-                  color: Colors.black.withValues(alpha: 0.8),
-                  child: Center(
-                    child: Container(
-                      margin: const EdgeInsets.all(32),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[900],
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Progress indicator - show deterministic if we have upload progress
-                          _currentUploadId != null && _uploadProgress > 0
-                              ? Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 80,
-                                      height: 80,
-                                      child: CircularProgressIndicator(
-                                        value: _uploadProgress,
-                                        color: VineTheme.vineGreen,
-                                        strokeWidth: 4,
-                                        backgroundColor: Colors.grey[700],
-                                      ),
-                                    ),
-                                    Text(
-                                      '${(_uploadProgress * 100).toInt()}%',
+                                    TextField(
+                                      controller: _descriptionController,
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        decoration: TextDecoration.none,
+                                      ),
+                                      maxLines: 4,
+                                      textInputAction: TextInputAction.next,
+                                      decoration: InputDecoration(
+                                        hintText: 'Describe your video...',
+                                        hintStyle: TextStyle(
+                                          color: Colors.grey[400],
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.grey[900],
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        errorBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          borderSide: BorderSide.none,
+                                        ),
                                       ),
                                     ),
+                                    const SizedBox(height: 16),
+
+                                    // Hashtag input
+                                    const Text(
+                                      'Add Hashtag',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextField(
+                                            controller: _hashtagController,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                            textInputAction:
+                                                TextInputAction.done,
+                                            onEditingComplete: FocusScope.of(
+                                              context,
+                                            ).unfocus,
+                                            decoration: InputDecoration(
+                                              hintText: 'hashtag',
+                                              hintStyle: TextStyle(
+                                                color: Colors.grey[400],
+                                              ),
+                                              filled: true,
+                                              fillColor: Colors.grey[900],
+                                              prefixText: '#',
+                                              prefixStyle: const TextStyle(
+                                                color: VineTheme.vineGreen,
+                                              ),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: BorderSide.none,
+                                              ),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: BorderSide.none,
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: BorderSide.none,
+                                              ),
+                                              errorBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: BorderSide.none,
+                                              ),
+                                            ),
+                                            onSubmitted: _addHashtag,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        IconButton(
+                                          onPressed: () => _addHashtag(
+                                            _hashtagController.text,
+                                          ),
+                                          icon: const Icon(
+                                            Icons.add,
+                                            color: VineTheme.vineGreen,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+
+                                    // Hashtags display
+                                    if (_hashtags.isNotEmpty) ...[
+                                      const Text(
+                                        'Hashtags',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: _hashtags
+                                            .map(
+                                              (hashtag) => Chip(
+                                                label: Text('#$hashtag'),
+                                                labelStyle: const TextStyle(
+                                                  color: Colors.white,
+                                                ),
+                                                backgroundColor:
+                                                    VineTheme.vineGreen,
+                                                deleteIcon: const Icon(
+                                                  Icons.close,
+                                                  color: Colors.white,
+                                                  size: 18,
+                                                ),
+                                                onDeleted: () =>
+                                                    _removeHashtag(hashtag),
+                                              ),
+                                            )
+                                            .toList(),
+                                      ),
+                                      const SizedBox(height: 16),
+                                    ],
+
+                                    // Expiring post option
+                                    SwitchListTile(
+                                      title: const Text(
+                                        'Expiring Post',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                      subtitle: Text(
+                                        _isExpiringPost
+                                            ? 'Delete after ${_formatExpirationDuration()}'
+                                            : 'Post will not expire',
+                                        style: TextStyle(
+                                          color: Colors.grey[400],
+                                        ),
+                                      ),
+                                      value: _isExpiringPost,
+                                      onChanged: (value) async {
+                                        if (value) {
+                                          // Show confirmation dialog before enabling expiration
+                                          final confirmed =
+                                              await _showExpirationConfirmationDialog();
+                                          if (confirmed) {
+                                            setState(() {
+                                              _isExpiringPost = true;
+                                              _expirationConfirmed = true;
+                                            });
+                                          }
+                                        } else {
+                                          setState(() {
+                                            _isExpiringPost = false;
+                                            _expirationConfirmed = false;
+                                          });
+                                        }
+                                      },
+                                      activeThumbColor: VineTheme.vineGreen,
+                                    ),
+
+                                    if (_isExpiringPost) ...[
+                                      const SizedBox(height: 16),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Delete after:',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Wrap(
+                                              spacing: 8,
+                                              runSpacing: 8,
+                                              children: [
+                                                _buildDurationButton(
+                                                  '1 Day',
+                                                  24,
+                                                ),
+                                                _buildDurationButton(
+                                                  '1 Week',
+                                                  168,
+                                                ),
+                                                _buildDurationButton(
+                                                  '1 Month',
+                                                  720,
+                                                ),
+                                                _buildDurationButton(
+                                                  '1 Year',
+                                                  8760,
+                                                ),
+                                                _buildDurationButton(
+                                                  '1 Decade',
+                                                  87600,
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                    ],
+
+                                    // ProofMode info panel
+                                    // TODO: Add proofManifest to VineDraft model if needed
+                                    // if (_currentDraft?.proofManifest != null) ...[
+                                    //   const SizedBox(height: 16),
+                                    //   ProofModeInfoPanel(manifest: _currentDraft!.proofManifest!),
+                                    // ],
                                   ],
-                                )
-                              : const CircularProgressIndicator(
-                                  color: VineTheme.vineGreen,
-                                  strokeWidth: 3,
                                 ),
-                          const SizedBox(height: 24),
-                          Text(
-                            _publishingStatus,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              decoration: TextDecoration.none,
+                              ),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                // Publishing progress overlay
+                if (_isPublishing)
+                  Container(
+                    color: Colors.black.withValues(alpha: 0.8),
+                    child: Center(
+                      child: Container(
+                        margin: const EdgeInsets.all(32),
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[900],
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Progress indicator - show deterministic if we have upload progress
+                            _currentUploadId != null && _uploadProgress > 0
+                                ? Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: 80,
+                                        height: 80,
+                                        child: CircularProgressIndicator(
+                                          value: _uploadProgress,
+                                          color: VineTheme.vineGreen,
+                                          strokeWidth: 4,
+                                          backgroundColor: Colors.grey[700],
+                                        ),
+                                      ),
+                                      Text(
+                                        '${(_uploadProgress * 100).toInt()}%',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          decoration: TextDecoration.none,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : const CircularProgressIndicator(
+                                    color: VineTheme.vineGreen,
+                                    strokeWidth: 3,
+                                  ),
+                            const SizedBox(height: 24),
+                            Text(
+                              _publishingStatus,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                decoration: TextDecoration.none,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
