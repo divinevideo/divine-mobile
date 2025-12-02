@@ -3075,7 +3075,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
     );
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
           'Public Lists',
