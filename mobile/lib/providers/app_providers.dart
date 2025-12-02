@@ -116,7 +116,9 @@ AnalyticsService analyticsService(Ref ref) {
 }
 
 /// Age verification service for content creation restrictions
-@riverpod
+/// keepAlive ensures the service persists and maintains in-memory verification state
+/// even when widgets that watch it dispose and rebuild
+@Riverpod(keepAlive: true)
 AgeVerificationService ageVerificationService(Ref ref) {
   final service = AgeVerificationService();
   service.initialize(); // Initialize asynchronously

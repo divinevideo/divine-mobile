@@ -19,6 +19,7 @@ import 'package:openvine/services/error_analytics_tracker.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:openvine/services/nip17_message_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
+import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 // Conditional import: dart:html on web, stub on native
 import 'dart:html'
@@ -165,6 +166,11 @@ class BugReportService {
 
   /// Send bug report to Cloudflare Worker backend
   /// This is the primary method for submitting bug reports
+  ///
+  /// Fallback order:
+  /// 1. Cloudflare Worker API
+  /// 2. Zendesk REST API (works on all platforms including macOS)
+  /// 3. Log error (no blocking dialogs)
   Future<BugReportResult> sendBugReport(BugReportData data) async {
     try {
       Log.info(
@@ -198,12 +204,8 @@ class BugReportService {
           category: LogCategory.system,
         );
 
-        // Fall back to email if API fails
-        Log.info(
-          'Falling back to email attachment method',
-          category: LogCategory.system,
-        );
-        return sendBugReportViaEmail(data);
+        // Fall back to Zendesk REST API
+        return _fallbackToZendeskApi(sanitizedData);
       }
     } catch (e, stackTrace) {
       Log.error(
@@ -213,12 +215,51 @@ class BugReportService {
         stackTrace: stackTrace,
       );
 
-      // Fall back to email on network errors
-      Log.info(
-        'Falling back to email attachment method',
-        category: LogCategory.system,
+      // Sanitize and fall back to Zendesk REST API
+      final sanitizedData = sanitizeSensitiveData(data);
+      return _fallbackToZendeskApi(sanitizedData);
+    }
+  }
+
+  /// Fallback to Zendesk REST API when Worker API fails
+  Future<BugReportResult> _fallbackToZendeskApi(BugReportData data) async {
+    Log.info('Falling back to Zendesk REST API', category: LogCategory.system);
+
+    // Create a logs summary (last 50 log messages)
+    String? logsSummary;
+    if (data.recentLogs.isNotEmpty) {
+      final recentLines = data.recentLogs.take(50).map((log) =>
+          '[${log.timestamp.toIso8601String()}] ${log.level.name}: ${log.message}');
+      logsSummary = recentLines.join('\n');
+    }
+
+    final success = await ZendeskSupportService.createBugReportTicketViaApi(
+      reportId: data.reportId,
+      userDescription: data.userDescription,
+      appVersion: data.appVersion,
+      deviceInfo: data.deviceInfo,
+      currentScreen: data.currentScreen,
+      userPubkey: data.userPubkey,
+      errorCounts: data.errorCounts,
+      logsSummary: logsSummary,
+    );
+
+    if (success) {
+      Log.info('✅ Bug report sent via Zendesk REST API: ${data.reportId}',
+          category: LogCategory.system);
+      return BugReportResult.createSuccess(
+        reportId: data.reportId,
+        messageEventId: 'zendesk-${data.reportId}',
       );
-      return sendBugReportViaEmail(data);
+    } else {
+      // Don't fall back to file share - just log the error
+      Log.error(
+          'Failed to send bug report via all methods: ${data.reportId}',
+          category: LogCategory.system);
+      return BugReportResult.failure(
+        'Failed to submit bug report. Please try again later.',
+        reportId: data.reportId,
+      );
     }
   }
 

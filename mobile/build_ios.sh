@@ -21,6 +21,25 @@ elif [[ "$1" == "--increment" || "$2" == "--increment" ]]; then
     echo ""
 fi
 
+# Load environment variables from .env file
+DART_DEFINES=""
+if [ -f .env ]; then
+    echo "📦 Loading environment from .env..."
+    source .env
+
+    if [ -n "$ZENDESK_APP_ID" ]; then
+        DART_DEFINES="$DART_DEFINES --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID"
+    fi
+
+    if [ -n "$ZENDESK_CLIENT_ID" ]; then
+        DART_DEFINES="$DART_DEFINES --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID"
+    fi
+
+    if [ -n "$ZENDESK_URL" ]; then
+        DART_DEFINES="$DART_DEFINES --dart-define=ZENDESK_URL=$ZENDESK_URL"
+    fi
+fi
+
 # Ensure Flutter dependencies are up to date
 echo "📦 Getting Flutter dependencies..."
 flutter pub get
@@ -55,7 +74,7 @@ cd ..
 echo "🚀 Building iOS app..."
 if [ "$1" = "release" ]; then
     echo "🏗️  Building Flutter iOS release..."
-    flutter build ios --release 
+    flutter build ios --release $DART_DEFINES
     
     echo "📦 Creating Xcode archive..."
     cd ios
@@ -135,7 +154,7 @@ EOF
     
     cd ..
 elif [ "$1" = "debug" ]; then
-    flutter build ios --debug 
+    flutter build ios --debug $DART_DEFINES
 else
     echo "Usage: $0 [debug|release] [--increment]"
     echo "  debug       - Build debug version"
@@ -147,7 +166,7 @@ else
     echo "  $0 debug --increment    # Build debug with build number increment"
     echo ""
     echo "Building in debug mode by default..."
-    flutter build ios --debug
+    flutter build ios --debug $DART_DEFINES
 fi
 
 echo "✅ iOS build complete!"
