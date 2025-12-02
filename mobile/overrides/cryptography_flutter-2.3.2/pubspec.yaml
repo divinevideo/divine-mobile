@@ -4,8 +4,8 @@ repository: https://github.com/todd-sundsted/cryptography
 version: 2.3.2
 
 environment:
-  flutter: '>=2.8.0'
-  sdk: '>=2.15.0 <4.0.0'
+  sdk: ^3.10.0
+  flutter: ^3.38.3
 
 dependencies:
   cryptography: ^2.3.0
