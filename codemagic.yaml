@@ -31,6 +31,7 @@ definitions:
 workflows:
   ios-build:
     name: iOS Build
+    working_directory: mobile
     max_build_duration: 60
     instance_type: mac_mini_m2
     integrations:
