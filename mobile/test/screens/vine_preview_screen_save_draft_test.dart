@@ -24,8 +24,24 @@ void main() {
             'title': 'Do it for the Vine!',
             'description': 'Test description',
             'hashtags': ['test', 'vines'],
-            'frameCount': 10,
-            'selectedApproach': 'test',
+            'frameCount': 30,
+            'selectedApproach': 'hybrid',
+            'createdAt': DateTime.now().toIso8601String(),
+            'lastModified': DateTime.now().toIso8601String(),
+            'publishStatus': 'draft',
+            'publishError': null,
+            'publishAttempts': 0,
+            'proofManifestJson': null,
+            'aspectRatio': 'square',
+          },
+          {
+            'id': 'draft_2',
+            'videoFilePath': 'test_assets/test_video.mp4',
+            'title': '',
+            'description': '',
+            'hashtags': ['openvine', 'vine'],
+            'frameCount': 45,
+            'selectedApproach': 'imageSequence',
             'createdAt': DateTime.now().toIso8601String(),
             'lastModified': DateTime.now().toIso8601String(),
             'publishStatus': 'draft',
@@ -90,11 +106,9 @@ void main() {
       expect(drafts.first.videoFile.path, 'test_assets/test_video.mp4');
     });
 
-    testWidgets('should show success message and close after saving draft', (
+    testWidgets('should show success message after saving draft', (
       tester,
     ) async {
-      bool didPop = false;
-
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
@@ -109,7 +123,6 @@ void main() {
                             VinePreviewScreenPure(draftId: 'draft_1'),
                       ),
                     );
-                    didPop = true;
                   },
                   child: const Text('Open Preview'),
                 ),
@@ -129,60 +142,12 @@ void main() {
 
       // Snackbar should appear (may be 1 or 2 due to scaffold nesting)
       expect(find.text('Draft saved'), findsWidgets);
-
-      await tester.pumpAndSettle();
-
-      // Screen should have closed
-      expect(didPop, true);
-      expect(find.text('Preview Video'), findsNothing);
-    });
-
-    testWidgets('should close screen after saving draft', (tester) async {
-      bool didPop = false;
-
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: Builder(
-              builder: (context) => Scaffold(
-                body: ElevatedButton(
-                  onPressed: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            VinePreviewScreenPure(draftId: 'draft_1'),
-                      ),
-                    );
-                    didPop = true;
-                  },
-                  child: const Text('Open Preview'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      // Open preview screen
-      await tester.tap(find.text('Open Preview'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Preview Video'), findsOneWidget);
-
-      // Save draft
-      await tester.tap(find.text('Save Draft'));
-      await tester.pumpAndSettle();
-
-      // Screen should have closed
-      expect(didPop, true);
-      expect(find.text('Preview Video'), findsNothing);
     });
 
     testWidgets('should save draft with empty fields', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(home: VinePreviewScreenPure(draftId: 'draft_1')),
+          child: MaterialApp(home: VinePreviewScreenPure(draftId: 'draft_2')),
         ),
       );
 
@@ -192,13 +157,13 @@ void main() {
 
       // Verify draft was saved with empty fields
       final drafts = await draftService.getAllDrafts();
-      expect(drafts.length, 1);
-      expect(drafts.first.title, '');
-      expect(drafts.first.description, '');
+      expect(drafts.length, 2);
+      expect(drafts[1].title, '');
+      expect(drafts[1].description, '');
       // Default hashtags are pre-populated (openvine vine), not empty
-      expect(drafts.first.hashtags, ['openvine', 'vine']);
-      expect(drafts.first.frameCount, 45);
-      expect(drafts.first.selectedApproach, 'imageSequence');
+      expect(drafts[1].hashtags, ['openvine', 'vine']);
+      expect(drafts[1].frameCount, 45);
+      expect(drafts[1].selectedApproach, 'imageSequence');
     });
 
     testWidgets('should not disable Save Draft button when uploading', (

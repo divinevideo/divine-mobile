@@ -335,6 +335,7 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
                     ),
                     const SizedBox(height: 8),
                     TextField(
+                      key: const Key('title-input'),
                       controller: _titleController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
@@ -361,6 +362,7 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
                     ),
                     const SizedBox(height: 8),
                     TextField(
+                      key: const Key('description-input'),
                       controller: _descriptionController,
                       style: const TextStyle(color: Colors.white),
                       maxLines: 3,
@@ -388,6 +390,7 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
                     ),
                     const SizedBox(height: 8),
                     TextField(
+                      key: const Key('hashtags-input'),
                       controller: _hashtagsController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
