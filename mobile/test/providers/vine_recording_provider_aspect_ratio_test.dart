@@ -1,6 +1,3 @@
-// ABOUTME: Tests for VineRecordingUIState aspect ratio functionality
-// ABOUTME: Verifies aspectRatio is included in state and copyWith works
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/aspect_ratio.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
@@ -17,7 +14,6 @@ void main() {
         remainingDuration: controller.remainingDuration,
         canRecord: controller.canRecord,
         segments: controller.segments,
-        hasSegments: controller.hasSegments,
         isCameraInitialized: controller.isCameraInitialized,
         canSwitchCamera: controller.canSwitchCamera,
         aspectRatio: controller.aspectRatio,
@@ -35,7 +31,6 @@ void main() {
         remainingDuration: controller.remainingDuration,
         canRecord: controller.canRecord,
         segments: controller.segments,
-        hasSegments: controller.hasSegments,
         isCameraInitialized: controller.isCameraInitialized,
         canSwitchCamera: controller.canSwitchCamera,
         aspectRatio: AspectRatio.square,
