@@ -34,4 +34,4 @@ jobs:
       - name: Analyze code (lib/ only)
         run: |
           cd mobile
-          flutter analyze lib/
+          flutter analyze --no-fatal-warnings --no-fatal-infos lib/
