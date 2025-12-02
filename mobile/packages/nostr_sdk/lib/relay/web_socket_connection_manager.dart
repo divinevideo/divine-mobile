@@ -95,6 +95,9 @@ class WebSocketConnectionManager {
   Timer? _pongTimeoutTimer;
   bool _awaitingPong = false;
 
+  // Fixed ping subscription ID to avoid leaking subscriptions on the relay
+  late final String _pingSubId = '_ping_${hashCode.toRadixString(16)}';
+
   // Stream controllers for external consumers
   final _stateController = StreamController<ConnectionState>.broadcast();
   final _messageController = StreamController<String>.broadcast();
@@ -364,11 +367,9 @@ class WebSocketConnectionManager {
       }
     });
 
-    // Send a minimal Nostr REQ as ping (limit:0 returns EOSE immediately)
-    final pingSubId = '_ping_${DateTime.now().millisecondsSinceEpoch}';
     final pingMsg = jsonEncode([
       'REQ',
-      pingSubId,
+      _pingSubId,
       {'limit': 0},
     ]);
 
