@@ -37,7 +37,6 @@ class FakeVideoEventService extends ChangeNotifier
   @override
   Future<void> subscribeToHashtagVideos(
     List<String> hashtags, {
-    bool force = false,
     int limit = 100,
   }) async {
     subscribedHashtags.add(hashtags);
