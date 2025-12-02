@@ -1488,6 +1488,8 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
         category: LogCategory.ui,
       );
 
+      if (pubkeyToSearch == null) return;
+
       // If we have a specific pubkey to search for
       try {
         // Fetch profile if not cached - this returns a Future we should await
