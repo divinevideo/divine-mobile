@@ -253,10 +253,11 @@ class CuratedListService {
     List<String> allowedCollaborators = const [],
     String? thumbnailEventId,
     PlayOrder playOrder = PlayOrder.chronological,
+    String? listId,
   }) async {
     try {
-      final listId = 'list_${DateTime.now().millisecondsSinceEpoch}';
       final now = DateTime.now();
+      listId ??= 'list_${now.millisecondsSinceEpoch}';
 
       final newList = CuratedList(
         id: listId,
@@ -891,15 +892,8 @@ class CuratedListService {
       name: 'My List',
       description: 'My favorite vines and videos',
       isPublic: true,
+      listId: defaultListId,
     );
-
-    // Update the ID to be the default ID
-    final listIndex = _lists.indexWhere((list) => list.name == 'My List');
-    if (listIndex != -1) {
-      final list = _lists[listIndex];
-      _lists[listIndex] = list.copyWith(id: defaultListId);
-      await _saveLists();
-    }
   }
 
   /// Publish list to Nostr as NIP-51 kind 30005 event
