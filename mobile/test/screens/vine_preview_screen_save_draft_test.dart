@@ -85,7 +85,7 @@ void main() {
       expect(drafts.first.videoFile.path, videoFile.path);
     });
 
-    testWidgets('should show success message after saving draft', (
+    testWidgets('should show success message and close after saving draft', (
       tester,
     ) async {
       final videoFile = File('/path/to/test/video.mp4');
@@ -108,6 +108,7 @@ void main() {
                         ),
                       ),
                     );
+                    didPop = true;
                   },
                   child: const Text('Open Preview'),
                 ),
@@ -202,13 +203,13 @@ void main() {
 
       // Verify draft was saved with empty fields
       final drafts = await draftService.getAllDrafts();
-      expect(drafts.length, 2);
-      expect(drafts[1].title, '');
-      expect(drafts[1].description, '');
+      expect(drafts.length, 1);
+      expect(drafts.first.title, '');
+      expect(drafts.first.description, '');
       // Default hashtags are pre-populated (openvine vine), not empty
-      expect(drafts[1].hashtags, ['openvine', 'vine']);
-      expect(drafts[1].frameCount, 45);
-      expect(drafts[1].selectedApproach, 'imageSequence');
+      expect(drafts.first.hashtags, ['openvine', 'vine']);
+      expect(drafts.first.frameCount, 45);
+      expect(drafts.first.selectedApproach, 'imageSequence');
     });
 
     testWidgets('should not disable Save Draft button when uploading', (
