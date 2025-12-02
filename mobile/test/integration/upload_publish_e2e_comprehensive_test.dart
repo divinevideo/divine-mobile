@@ -505,7 +505,7 @@ void _configureMockBlossomService(MockBlossomUploadService mock) {
     return BlossomUploadResult(
       success: true,
       videoId: 'test_video_hash_abc123',
-      url: 'https://cdn.divine.video/test_video_hash_abc123.mp4',
+      cdnUrl: 'https://cdn.divine.video/test_video_hash_abc123.mp4',
     );
   });
 
@@ -527,7 +527,7 @@ void _configureMockBlossomService(MockBlossomUploadService mock) {
     return BlossomUploadResult(
       success: true,
       videoId: 'test_thumbnail_hash_xyz789',
-      url: 'https://cdn.divine.video/test_thumbnail_hash_xyz789.jpg',
+      cdnUrl: 'https://cdn.divine.video/test_thumbnail_hash_xyz789.jpg',
     );
   });
 }
