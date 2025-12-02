@@ -20,7 +20,7 @@ class BookmarkItem {
   });
 
   final String
-      type; // 'e' (event), 'a' (parameterized replaceable), 't' (hashtag), 'r' (URL)
+  type; // 'e' (event), 'a' (parameterized replaceable), 't' (hashtag), 'r' (URL)
   final String id; // Event ID, article ID, hashtag, or URL
   final String? relay; // Optional relay hint
   final String? petname; // Optional petname/label
@@ -42,18 +42,18 @@ class BookmarkItem {
   }
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'id': id,
-        'relay': relay,
-        'petname': petname,
-      };
+    'type': type,
+    'id': id,
+    'relay': relay,
+    'petname': petname,
+  };
 
   static BookmarkItem fromJson(Map<String, dynamic> json) => BookmarkItem(
-        type: json['type'],
-        id: json['id'],
-        relay: json['relay'],
-        petname: json['petname'],
-      );
+    type: json['type'],
+    id: json['id'],
+    relay: json['relay'],
+    petname: json['petname'],
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -94,41 +94,40 @@ class BookmarkSet {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? nostrEventId,
-  }) =>
-      BookmarkSet(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        description: description ?? this.description,
-        imageUrl: imageUrl ?? this.imageUrl,
-        items: items ?? this.items,
-        createdAt: createdAt ?? this.createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        nostrEventId: nostrEventId ?? this.nostrEventId,
-      );
+  }) => BookmarkSet(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    description: description ?? this.description,
+    imageUrl: imageUrl ?? this.imageUrl,
+    items: items ?? this.items,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    nostrEventId: nostrEventId ?? this.nostrEventId,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'description': description,
-        'imageUrl': imageUrl,
-        'items': items.map((item) => item.toJson()).toList(),
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-        'nostrEventId': nostrEventId,
-      };
+    'id': id,
+    'name': name,
+    'description': description,
+    'imageUrl': imageUrl,
+    'items': items.map((item) => item.toJson()).toList(),
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'nostrEventId': nostrEventId,
+  };
 
   static BookmarkSet fromJson(Map<String, dynamic> json) => BookmarkSet(
-        id: json['id'],
-        name: json['name'],
-        description: json['description'],
-        imageUrl: json['imageUrl'],
-        items: (json['items'] as List<dynamic>)
-            .map((item) => BookmarkItem.fromJson(item as Map<String, dynamic>))
-            .toList(),
-        createdAt: DateTime.parse(json['createdAt']),
-        updatedAt: DateTime.parse(json['updatedAt']),
-        nostrEventId: json['nostrEventId'],
-      );
+    id: json['id'],
+    name: json['name'],
+    description: json['description'],
+    imageUrl: json['imageUrl'],
+    items: (json['items'] as List<dynamic>)
+        .map((item) => BookmarkItem.fromJson(item as Map<String, dynamic>))
+        .toList(),
+    createdAt: DateTime.parse(json['createdAt']),
+    updatedAt: DateTime.parse(json['updatedAt']),
+    nostrEventId: json['nostrEventId'],
+  );
 }
 
 /// Service for managing NIP-51 bookmarks and bookmark sets
@@ -137,9 +136,9 @@ class BookmarkService with NostrListServiceMixin {
     required INostrService nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
-  })  : _nostrService = nostrService,
-        _authService = authService,
-        _prefs = prefs {
+  }) : _nostrService = nostrService,
+       _authService = authService,
+       _prefs = prefs {
     _loadBookmarksFromSharedPreferences();
   }
 
@@ -174,8 +173,11 @@ class BookmarkService with NostrListServiceMixin {
   Future<void> initialize() async {
     try {
       if (!_authService.isAuthenticated) {
-        Log.warning('Cannot initialize bookmarks - user not authenticated',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.warning(
+          'Cannot initialize bookmarks - user not authenticated',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -190,27 +192,29 @@ class BookmarkService with NostrListServiceMixin {
 
       _isInitialized = true;
       Log.info(
-          'Bookmark service initialized with ${_globalBookmarks.length} global bookmarks and ${_bookmarkSets.length} bookmark sets',
-          name: 'BookmarkService',
-          category: LogCategory.system);
+        'Bookmark service initialized with ${_globalBookmarks.length} global bookmarks and ${_bookmarkSets.length} bookmark sets',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to initialize bookmark service: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize bookmark service: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
     }
   }
 
   // === GLOBAL BOOKMARKS (Kind 10003) ===
 
   /// Add a video event to global bookmarks
-  Future<bool> addVideoToGlobalBookmarks(String videoEventId,
-      {String? relay, String? petname}) async {
+  Future<bool> addVideoToGlobalBookmarks(
+    String videoEventId, {
+    String? relay,
+    String? petname,
+  }) async {
     return addToGlobalBookmarks(
-      BookmarkItem(
-        type: 'e',
-        id: videoEventId,
-        relay: relay,
-        petname: petname,
-      ),
+      BookmarkItem(type: 'e', id: videoEventId, relay: relay, petname: petname),
     );
   }
 
@@ -219,8 +223,11 @@ class BookmarkService with NostrListServiceMixin {
     try {
       // Check if already bookmarked
       if (_globalBookmarks.contains(item)) {
-        Log.debug('Item already in global bookmarks: ${item.id}',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.debug(
+          'Item already in global bookmarks: ${item.id}',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
         return true;
       }
 
@@ -232,13 +239,19 @@ class BookmarkService with NostrListServiceMixin {
         await _publishGlobalBookmarksToNostr();
       }
 
-      Log.info('Added item to global bookmarks: ${item.id}',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.info(
+        'Added item to global bookmarks: ${item.id}',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to add to global bookmarks: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to add to global bookmarks: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -248,8 +261,11 @@ class BookmarkService with NostrListServiceMixin {
     try {
       final removed = _globalBookmarks.remove(item);
       if (!removed) {
-        Log.warning('Item not found in global bookmarks: ${item.id}',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.warning(
+          'Item not found in global bookmarks: ${item.id}',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -260,21 +276,28 @@ class BookmarkService with NostrListServiceMixin {
         await _publishGlobalBookmarksToNostr();
       }
 
-      Log.info('Removed item from global bookmarks: ${item.id}',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.info(
+        'Removed item from global bookmarks: ${item.id}',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to remove from global bookmarks: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to remove from global bookmarks: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
 
   /// Check if an item is in global bookmarks
   bool isInGlobalBookmarks(String itemId, String type) {
-    return _globalBookmarks
-        .any((item) => item.id == itemId && item.type == type);
+    return _globalBookmarks.any(
+      (item) => item.id == itemId && item.type == type,
+    );
   }
 
   /// Check if a video event is bookmarked globally
@@ -312,13 +335,19 @@ class BookmarkService with NostrListServiceMixin {
         await _publishBookmarkSetToNostr(newSet);
       }
 
-      Log.info('Created new bookmark set: $name ($setId)',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.info(
+        'Created new bookmark set: $name ($setId)',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
 
       return newSet;
     } catch (e) {
-      Log.error('Failed to create bookmark set: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to create bookmark set: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -328,8 +357,11 @@ class BookmarkService with NostrListServiceMixin {
     try {
       final setIndex = _bookmarkSets.indexWhere((set) => set.id == setId);
       if (setIndex == -1) {
-        Log.warning('Bookmark set not found: $setId',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.warning(
+          'Bookmark set not found: $setId',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -337,8 +369,11 @@ class BookmarkService with NostrListServiceMixin {
 
       // Check if item is already in the set
       if (set.items.contains(item)) {
-        Log.debug('Item already in bookmark set: ${item.id}',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.debug(
+          'Item already in bookmark set: ${item.id}',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
         return true;
       }
 
@@ -356,13 +391,19 @@ class BookmarkService with NostrListServiceMixin {
         await _publishBookmarkSetToNostr(updatedSet);
       }
 
-      Log.debug('Added item to bookmark set "${set.name}": ${item.id}',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.debug(
+        'Added item to bookmark set "${set.name}": ${item.id}',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to add to bookmark set: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to add to bookmark set: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -372,8 +413,11 @@ class BookmarkService with NostrListServiceMixin {
     try {
       final setIndex = _bookmarkSets.indexWhere((set) => set.id == setId);
       if (setIndex == -1) {
-        Log.warning('Bookmark set not found: $setId',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.warning(
+          'Bookmark set not found: $setId',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
@@ -393,13 +437,19 @@ class BookmarkService with NostrListServiceMixin {
         await _publishBookmarkSetToNostr(updatedSet);
       }
 
-      Log.debug('Removed item from bookmark set "${set.name}": ${item.id}',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.debug(
+        'Removed item from bookmark set "${set.name}": ${item.id}',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to remove from bookmark set: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to remove from bookmark set: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -433,13 +483,19 @@ class BookmarkService with NostrListServiceMixin {
         await _publishBookmarkSetToNostr(updatedSet);
       }
 
-      Log.debug('Updated bookmark set: ${updatedSet.name}',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.debug(
+        'Updated bookmark set: ${updatedSet.name}',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to update bookmark set: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to update bookmark set: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -460,13 +516,19 @@ class BookmarkService with NostrListServiceMixin {
       _bookmarkSets.removeAt(setIndex);
       await _saveBookmarks();
 
-      Log.debug('Deleted bookmark set: ${set.name}',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.debug(
+        'Deleted bookmark set: ${set.name}',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
 
       return true;
     } catch (e) {
-      Log.error('Failed to delete bookmark set: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to delete bookmark set: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -494,16 +556,22 @@ class BookmarkService with NostrListServiceMixin {
     try {
       final set = getBookmarkSetById(setId);
       if (set == null) {
-        Log.warning('Cannot publish bookmark set - not found: $setId',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.warning(
+          'Cannot publish bookmark set - not found: $setId',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
         return false;
       }
 
       await _publishBookmarkSetToNostr(set);
       return true;
     } catch (e) {
-      Log.error('Failed to publish bookmark set $setId: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to publish bookmark set $setId: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -512,8 +580,11 @@ class BookmarkService with NostrListServiceMixin {
   Future<void> _publishGlobalBookmarksToNostr() async {
     try {
       if (!_authService.isAuthenticated) {
-        Log.warning('Cannot publish bookmarks - user not authenticated',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.warning(
+          'Cannot publish bookmarks - user not authenticated',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -536,13 +607,19 @@ class BookmarkService with NostrListServiceMixin {
       if (event != null) {
         final result = await _nostrService.broadcastEvent(event);
         if (result.successCount > 0) {
-          Log.debug('Published global bookmarks to Nostr: ${event.id}',
-              name: 'BookmarkService', category: LogCategory.system);
+          Log.debug(
+            'Published global bookmarks to Nostr: ${event.id}',
+            name: 'BookmarkService',
+            category: LogCategory.system,
+          );
         }
       }
     } catch (e) {
-      Log.error('Failed to publish global bookmarks to Nostr: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to publish global bookmarks to Nostr: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -550,8 +627,11 @@ class BookmarkService with NostrListServiceMixin {
   Future<void> _publishBookmarkSetToNostr(BookmarkSet set) async {
     try {
       if (!_authService.isAuthenticated) {
-        Log.warning('Cannot publish bookmark set - user not authenticated',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.warning(
+          'Cannot publish bookmark set - user not authenticated',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -595,14 +675,18 @@ class BookmarkService with NostrListServiceMixin {
             await _saveBookmarks();
           }
           Log.debug(
-              'Published bookmark set to Nostr: ${set.name} (${event.id})',
-              name: 'BookmarkService',
-              category: LogCategory.system);
+            'Published bookmark set to Nostr: ${set.name} (${event.id})',
+            name: 'BookmarkService',
+            category: LogCategory.system,
+          );
         }
       }
     } catch (e) {
-      Log.error('Failed to publish bookmark set to Nostr: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to publish bookmark set to Nostr: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -618,22 +702,27 @@ class BookmarkService with NostrListServiceMixin {
       final bookmarkEvents = filterMyEventsByKind(myEvents, [10003, 30003]);
 
       if (bookmarkEvents.isEmpty) {
-        Log.debug('No bookmark events found in embedded relay',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.debug(
+          'No bookmark events found in embedded relay',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
         return;
       }
 
       // Process global bookmarks (kind 10003) - latest replaces previous
-      final globalBookmarkEvents =
-          bookmarkEvents.where((e) => e.kind == 10003).toList();
+      final globalBookmarkEvents = bookmarkEvents
+          .where((e) => e.kind == 10003)
+          .toList();
       if (globalBookmarkEvents.isNotEmpty) {
         // Sort by created_at to get the latest
         globalBookmarkEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         _parseGlobalBookmarksFromEvent(globalBookmarkEvents.first);
         Log.debug(
-            'Loaded global bookmarks from Nostr event: ${globalBookmarkEvents.first.id}',
-            name: 'BookmarkService',
-            category: LogCategory.system);
+          'Loaded global bookmarks from Nostr event: ${globalBookmarkEvents.first.id}',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
       }
 
       // Process bookmark sets (kind 30003) - latest per d-tag
@@ -643,12 +732,16 @@ class BookmarkService with NostrListServiceMixin {
       }
 
       Log.info(
-          'Loaded ${_globalBookmarks.length} global bookmarks and ${_bookmarkSets.length} bookmark sets from embedded relay',
-          name: 'BookmarkService',
-          category: LogCategory.system);
+        'Loaded ${_globalBookmarks.length} global bookmarks and ${_bookmarkSets.length} bookmark sets from embedded relay',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to load bookmarks from embedded relay: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to load bookmarks from embedded relay: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -697,8 +790,11 @@ class BookmarkService with NostrListServiceMixin {
     }
 
     if (dTag == null) {
-      Log.warning('Bookmark set event missing d-tag: ${event.id}',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.warning(
+        'Bookmark set event missing d-tag: ${event.id}',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -744,15 +840,20 @@ class BookmarkService with NostrListServiceMixin {
         _globalBookmarks.clear();
         _globalBookmarks.addAll(
           bookmarksData.map(
-              (json) => BookmarkItem.fromJson(json as Map<String, dynamic>)),
+            (json) => BookmarkItem.fromJson(json as Map<String, dynamic>),
+          ),
         );
         Log.debug(
-            'Loaded ${_globalBookmarks.length} global bookmarks from storage',
-            name: 'BookmarkService',
-            category: LogCategory.system);
+          'Loaded ${_globalBookmarks.length} global bookmarks from storage',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.error('Failed to load global bookmarks: $e',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.error(
+          'Failed to load global bookmarks: $e',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
       }
     }
 
@@ -764,13 +865,20 @@ class BookmarkService with NostrListServiceMixin {
         _bookmarkSets.clear();
         _bookmarkSets.addAll(
           setsData.map(
-              (json) => BookmarkSet.fromJson(json as Map<String, dynamic>)),
+            (json) => BookmarkSet.fromJson(json as Map<String, dynamic>),
+          ),
         );
-        Log.debug('Loaded ${_bookmarkSets.length} bookmark sets from storage',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.debug(
+          'Loaded ${_bookmarkSets.length} bookmark sets from storage',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.error('Failed to load bookmark sets: $e',
-            name: 'BookmarkService', category: LogCategory.system);
+        Log.error(
+          'Failed to load bookmark sets: $e',
+          name: 'BookmarkService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -778,8 +886,11 @@ class BookmarkService with NostrListServiceMixin {
   /// Get all bookmark sets that contain a specific video
   List<BookmarkSet> getBookmarkSetsContainingVideo(String videoEventId) {
     return _bookmarkSets
-        .where((set) => set.items
-            .any((item) => item.type == 'e' && item.id == videoEventId))
+        .where(
+          (set) => set.items.any(
+            (item) => item.type == 'e' && item.id == videoEventId,
+          ),
+        )
         .toList();
   }
 
@@ -812,19 +923,28 @@ class BookmarkService with NostrListServiceMixin {
   Future<void> _saveBookmarksToSharedPreferences() async {
     try {
       // Save global bookmarks
-      final globalBookmarksJson =
-          _globalBookmarks.map((item) => item.toJson()).toList();
+      final globalBookmarksJson = _globalBookmarks
+          .map((item) => item.toJson())
+          .toList();
       await _prefs.setString(
-          globalBookmarksStorageKey, jsonEncode(globalBookmarksJson));
+        globalBookmarksStorageKey,
+        jsonEncode(globalBookmarksJson),
+      );
 
       // Save bookmark sets
-      final bookmarkSetsJson =
-          _bookmarkSets.map((set) => set.toJson()).toList();
+      final bookmarkSetsJson = _bookmarkSets
+          .map((set) => set.toJson())
+          .toList();
       await _prefs.setString(
-          bookmarkSetsStorageKey, jsonEncode(bookmarkSetsJson));
+        bookmarkSetsStorageKey,
+        jsonEncode(bookmarkSetsJson),
+      );
     } catch (e) {
-      Log.error('Failed to save bookmarks to SharedPreferences: $e',
-          name: 'BookmarkService', category: LogCategory.system);
+      Log.error(
+        'Failed to save bookmarks to SharedPreferences: $e',
+        name: 'BookmarkService',
+        category: LogCategory.system,
+      );
     }
   }
 

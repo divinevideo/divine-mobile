@@ -21,7 +21,9 @@ void main() async {
         final event = decoded[2];
         print('📥 EVENT: ${event['id'].substring(0, 8)}');
         print('   Kind: ${event['kind']}');
-        print('   Created: ${DateTime.fromMillisecondsSinceEpoch(event['created_at'] * 1000)}');
+        print(
+          '   Created: ${DateTime.fromMillisecondsSinceEpoch(event['created_at'] * 1000)}',
+        );
 
         // Check for loop count in tags
         final tags = event['tags'] as List;
@@ -61,7 +63,7 @@ void main() async {
     {
       'kinds': [34236, 22, 21],
       'limit': 5,
-    }
+    },
   ]);
   print('📤 Sending: $standardReq\n');
   ws.add(standardReq);
@@ -80,11 +82,8 @@ void main() async {
     {
       'kinds': [34236, 22, 21],
       'limit': 5,
-      'sort': {
-        'field': 'loop_count',
-        'dir': 'desc',
-      }
-    }
+      'sort': {'field': 'loop_count', 'dir': 'desc'},
+    },
   ]);
   print('📤 Sending: $divineReq\n');
   ws.add(divineReq);
@@ -103,14 +102,11 @@ void main() async {
     {
       'kinds': [34236, 22, 21],
       'limit': 5,
-      'sort': {
-        'field': 'loop_count',
-        'dir': 'desc',
-      },
+      'sort': {'field': 'loop_count', 'dir': 'desc'},
       'int#loop_count': {
-        'gte': 100,  // Only videos with 100+ loops
-      }
-    }
+        'gte': 100, // Only videos with 100+ loops
+      },
+    },
   ]);
   print('📤 Sending: $intFilterReq\n');
   ws.add(intFilterReq);

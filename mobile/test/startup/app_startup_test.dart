@@ -57,14 +57,23 @@ void main() {
 
     test('Logging can handle early startup phase', () {
       // These should not crash even before full initialization
-      Log.info('[STARTUP] App initialization started',
-          name: 'Main', category: LogCategory.system);
+      Log.info(
+        '[STARTUP] App initialization started',
+        name: 'Main',
+        category: LogCategory.system,
+      );
 
-      Log.warning('[STARTUP] WARNING: Slow initialization',
-          name: 'Main', category: LogCategory.system);
+      Log.warning(
+        '[STARTUP] WARNING: Slow initialization',
+        name: 'Main',
+        category: LogCategory.system,
+      );
 
-      Log.error('[STARTUP] Initialization failed',
-          name: 'Main', category: LogCategory.system);
+      Log.error(
+        '[STARTUP] Initialization failed',
+        name: 'Main',
+        category: LogCategory.system,
+      );
     });
   });
 }

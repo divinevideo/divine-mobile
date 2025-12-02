@@ -23,116 +23,136 @@ void main() {
       testVideoFile = File('test_assets/test_video.mp4');
     });
 
-    testWidgets('VideoMetadataScreenPure should initialize with default title "Do it for the Vine!"',
-        (WidgetTester tester) async {
-      // Arrange - Build the screen
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: VideoMetadataScreenPure(
-              videoFile: testVideoFile,
-              duration: const Duration(seconds: 5),
+    testWidgets(
+      'VideoMetadataScreenPure should initialize with default title "Do it for the Vine!"',
+      (WidgetTester tester) async {
+        // Arrange - Build the screen
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              home: VideoMetadataScreenPure(
+                videoFile: testVideoFile,
+                duration: const Duration(seconds: 5),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Allow widget to build
-      await tester.pump();
+        // Allow widget to build
+        await tester.pump();
 
-      // Act - Find the title TextField by its hint text
-      final titleTextField = find.widgetWithText(TextField, 'Enter video title...');
+        // Act - Find the title TextField by its hint text
+        final titleTextField = find.widgetWithText(
+          TextField,
+          'Enter video title...',
+        );
 
-      // Assert - Verify default title is set
-      expect(titleTextField, findsOneWidget);
+        // Assert - Verify default title is set
+        expect(titleTextField, findsOneWidget);
 
-      final TextField textField = tester.widget(titleTextField);
-      expect(textField.controller?.text, equals('Do it for the Vine!'));
-    });
+        final TextField textField = tester.widget(titleTextField);
+        expect(textField.controller?.text, equals('Do it for the Vine!'));
+      },
+    );
 
-    testWidgets('VinePreviewScreenPure should initialize with default title "Do it for the Vine!"',
-        (WidgetTester tester) async {
-      // Arrange - Build the screen
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: VinePreviewScreenPure(
-              videoFile: testVideoFile,
-              frameCount: 10,
-              selectedApproach: 'test',
+    testWidgets(
+      'VinePreviewScreenPure should initialize with default title "Do it for the Vine!"',
+      (WidgetTester tester) async {
+        // Arrange - Build the screen
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              home: VinePreviewScreenPure(
+                videoFile: testVideoFile,
+                frameCount: 10,
+                selectedApproach: 'test',
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Allow widget to build
-      await tester.pump();
+        // Allow widget to build
+        await tester.pump();
 
-      // Act - Find the title TextField by its hint text
-      final titleTextField = find.widgetWithText(TextField, 'Enter video title...');
+        // Act - Find the title TextField by its hint text
+        final titleTextField = find.widgetWithText(
+          TextField,
+          'Enter video title...',
+        );
 
-      // Assert - Verify default title is set
-      expect(titleTextField, findsOneWidget);
+        // Assert - Verify default title is set
+        expect(titleTextField, findsOneWidget);
 
-      final TextField textField = tester.widget(titleTextField);
-      expect(textField.controller?.text, equals('Do it for the Vine!'));
-    });
+        final TextField textField = tester.widget(titleTextField);
+        expect(textField.controller?.text, equals('Do it for the Vine!'));
+      },
+    );
 
-    testWidgets('VideoMetadataScreenPure should allow users to change the default title',
-        (WidgetTester tester) async {
-      // Arrange - Build the screen
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: VideoMetadataScreenPure(
-              videoFile: testVideoFile,
-              duration: const Duration(seconds: 5),
+    testWidgets(
+      'VideoMetadataScreenPure should allow users to change the default title',
+      (WidgetTester tester) async {
+        // Arrange - Build the screen
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              home: VideoMetadataScreenPure(
+                videoFile: testVideoFile,
+                duration: const Duration(seconds: 5),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pump();
+        await tester.pump();
 
-      // Act - Find the title TextField and enter new text
-      final titleTextField = find.widgetWithText(TextField, 'Enter video title...');
+        // Act - Find the title TextField and enter new text
+        final titleTextField = find.widgetWithText(
+          TextField,
+          'Enter video title...',
+        );
 
-      // Clear default title and enter custom title
-      await tester.enterText(titleTextField, 'My Custom Title');
-      await tester.pump();
+        // Clear default title and enter custom title
+        await tester.enterText(titleTextField, 'My Custom Title');
+        await tester.pump();
 
-      // Assert - Verify title was changed
-      final TextField textField = tester.widget(titleTextField);
-      expect(textField.controller?.text, equals('My Custom Title'));
-    });
+        // Assert - Verify title was changed
+        final TextField textField = tester.widget(titleTextField);
+        expect(textField.controller?.text, equals('My Custom Title'));
+      },
+    );
 
-    testWidgets('VinePreviewScreenPure should allow users to change the default title',
-        (WidgetTester tester) async {
-      // Arrange - Build the screen
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: VinePreviewScreenPure(
-              videoFile: testVideoFile,
-              frameCount: 10,
-              selectedApproach: 'test',
+    testWidgets(
+      'VinePreviewScreenPure should allow users to change the default title',
+      (WidgetTester tester) async {
+        // Arrange - Build the screen
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              home: VinePreviewScreenPure(
+                videoFile: testVideoFile,
+                frameCount: 10,
+                selectedApproach: 'test',
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pump();
+        await tester.pump();
 
-      // Act - Find the title TextField and enter new text
-      final titleTextField = find.widgetWithText(TextField, 'Enter video title...');
+        // Act - Find the title TextField and enter new text
+        final titleTextField = find.widgetWithText(
+          TextField,
+          'Enter video title...',
+        );
 
-      // Clear default title and enter custom title
-      await tester.enterText(titleTextField, 'Another Custom Title');
-      await tester.pump();
+        // Clear default title and enter custom title
+        await tester.enterText(titleTextField, 'Another Custom Title');
+        await tester.pump();
 
-      // Assert - Verify title was changed
-      final TextField textField = tester.widget(titleTextField);
-      expect(textField.controller?.text, equals('Another Custom Title'));
-    });
+        // Assert - Verify title was changed
+        final TextField textField = tester.widget(titleTextField);
+        expect(textField.controller?.text, equals('Another Custom Title'));
+      },
+    );
   });
 }

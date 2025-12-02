@@ -82,8 +82,9 @@ class ReadyEventData {
       // Add duration if available (round to nearest second)
       final duration = metadata!['duration'];
       if (duration != null) {
-        final durationSeconds =
-            (duration is double) ? duration.round() : duration as int;
+        final durationSeconds = (duration is double)
+            ? duration.round()
+            : duration as int;
         tags.add(['duration', durationSeconds.toString()]);
       }
     }

@@ -14,7 +14,13 @@ import 'package:openvine/services/video_event_service.dart';
 
 import 'curation_service_create_test.mocks.dart';
 
-@GenerateMocks([INostrService, VideoEventService, SocialService, NostrKeyManager, AuthService])
+@GenerateMocks([
+  INostrService,
+  VideoEventService,
+  SocialService,
+  NostrKeyManager,
+  AuthService,
+])
 void main() {
   group('CurationService.createCurationSet()', () {
     late MockINostrService mockNostrService;
@@ -112,9 +118,9 @@ void main() {
       );
 
       // Verify: Event has correct kind
-      final capturedEvent = verify(mockNostrService.broadcastEvent(captureAny))
-          .captured
-          .single as Event;
+      final capturedEvent =
+          verify(mockNostrService.broadcastEvent(captureAny)).captured.single
+              as Event;
       expect(capturedEvent.kind, 30005);
     });
 
@@ -140,16 +146,21 @@ void main() {
       );
 
       // Verify: Event has correct tags
-      final capturedEvent = verify(mockNostrService.broadcastEvent(captureAny))
-          .captured
-          .single as Event;
+      final capturedEvent =
+          verify(mockNostrService.broadcastEvent(captureAny)).captured.single
+              as Event;
 
       // Find specific tags
       final dTag = capturedEvent.tags.firstWhere((tag) => tag[0] == 'd');
-      final titleTag = capturedEvent.tags.firstWhere((tag) => tag[0] == 'title');
-      final descTag =
-          capturedEvent.tags.firstWhere((tag) => tag[0] == 'description');
-      final imageTag = capturedEvent.tags.firstWhere((tag) => tag[0] == 'image');
+      final titleTag = capturedEvent.tags.firstWhere(
+        (tag) => tag[0] == 'title',
+      );
+      final descTag = capturedEvent.tags.firstWhere(
+        (tag) => tag[0] == 'description',
+      );
+      final imageTag = capturedEvent.tags.firstWhere(
+        (tag) => tag[0] == 'image',
+      );
 
       expect(dTag[1], 'my_list');
       expect(titleTag[1], 'My List');
@@ -255,9 +266,9 @@ void main() {
       );
 
       // Verify: Event pubkey matches keypair
-      final capturedEvent = verify(mockNostrService.broadcastEvent(captureAny))
-          .captured
-          .single as Event;
+      final capturedEvent =
+          verify(mockNostrService.broadcastEvent(captureAny)).captured.single
+              as Event;
       expect(capturedEvent.pubkey, testKeychain.public);
 
       // Verify: Stored curation set has correct curator pubkey
@@ -302,8 +313,9 @@ void main() {
 
     test('handles broadcast exception', () async {
       when(mockKeyManager.keyPair).thenReturn(testKeychain);
-      when(mockNostrService.broadcastEvent(any))
-          .thenThrow(Exception('Network error'));
+      when(
+        mockNostrService.broadcastEvent(any),
+      ).thenThrow(Exception('Network error'));
 
       // Execute - should not throw
       final result = await curationService.createCurationSet(

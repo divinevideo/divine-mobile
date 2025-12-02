@@ -70,7 +70,9 @@ void main() {
       when(mockVideoEventService.hasListeners).thenReturn(false);
     });
 
-    testWidgets('should display videos in grid when data is available', (tester) async {
+    testWidgets('should display videos in grid when data is available', (
+      tester,
+    ) async {
       // Arrange
       final container = ProviderContainer(
         overrides: [
@@ -83,7 +85,9 @@ void main() {
             );
           }),
           seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
-          videoEventsProvider.overrideWith(() => _MockVideoEventsWithData(testVideos)),
+          videoEventsProvider.overrideWith(
+            () => _MockVideoEventsWithData(testVideos),
+          ),
         ],
       );
 
@@ -91,9 +95,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(
-            home: ExploreScreen(),
-          ),
+          child: MaterialApp(home: ExploreScreen()),
         ),
       );
 
@@ -110,7 +112,9 @@ void main() {
       container.dispose();
     });
 
-    testWidgets('should show empty state when no videos available', (tester) async {
+    testWidgets('should show empty state when no videos available', (
+      tester,
+    ) async {
       // Arrange - No videos
       final container = ProviderContainer(
         overrides: [
@@ -131,9 +135,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(
-            home: ExploreScreen(),
-          ),
+          child: MaterialApp(home: ExploreScreen()),
         ),
       );
 
@@ -147,7 +149,9 @@ void main() {
       container.dispose();
     });
 
-    testWidgets('should show loading state while fetching videos', (tester) async {
+    testWidgets('should show loading state while fetching videos', (
+      tester,
+    ) async {
       // Arrange - Loading state
       final container = ProviderContainer(
         overrides: [
@@ -171,9 +175,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(
-            home: ExploreScreen(),
-          ),
+          child: MaterialApp(home: ExploreScreen()),
         ),
       );
 
@@ -200,7 +202,9 @@ void main() {
             );
           }),
           seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
-          videoEventsProvider.overrideWith(() => _MockVideoEventsWithData(testVideos)),
+          videoEventsProvider.overrideWith(
+            () => _MockVideoEventsWithData(testVideos),
+          ),
         ],
       );
 
@@ -208,9 +212,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(
-            home: ExploreScreen(),
-          ),
+          child: MaterialApp(home: ExploreScreen()),
         ),
       );
 

@@ -16,27 +16,33 @@ void main() {
       notificationService.dispose();
     });
 
-    test('ensurePermission requests platform permissions on first call', () async {
-      // Initially permissions should be false (not yet granted)
-      expect(notificationService.hasPermissions, isFalse);
+    test(
+      'ensurePermission requests platform permissions on first call',
+      () async {
+        // Initially permissions should be false (not yet granted)
+        expect(notificationService.hasPermissions, isFalse);
 
-      // Request permissions
-      await notificationService.ensurePermission();
+        // Request permissions
+        await notificationService.ensurePermission();
 
-      // After requesting, permissions should be granted
-      // Note: In test environment, this will simulate granting permissions
-      expect(notificationService.hasPermissions, isTrue);
-    });
+        // After requesting, permissions should be granted
+        // Note: In test environment, this will simulate granting permissions
+        expect(notificationService.hasPermissions, isTrue);
+      },
+    );
 
-    test('ensurePermission skips re-request if permissions already granted', () async {
-      // Grant permissions first time
-      await notificationService.ensurePermission();
-      expect(notificationService.hasPermissions, isTrue);
+    test(
+      'ensurePermission skips re-request if permissions already granted',
+      () async {
+        // Grant permissions first time
+        await notificationService.ensurePermission();
+        expect(notificationService.hasPermissions, isTrue);
 
-      // Second call should not throw or change state
-      await notificationService.ensurePermission();
-      expect(notificationService.hasPermissions, isTrue);
-    });
+        // Second call should not throw or change state
+        await notificationService.ensurePermission();
+        expect(notificationService.hasPermissions, isTrue);
+      },
+    );
 
     test('ensurePermission handles permission denial gracefully', () async {
       // This test verifies that even if permissions are denied,
@@ -59,8 +65,14 @@ void main() {
 
       // Verify notification was added to internal list
       expect(notificationService.notifications.length, equals(1));
-      expect(notificationService.notifications.first.title, equals('Test Notification'));
-      expect(notificationService.notifications.first.body, equals('This is a test notification body'));
+      expect(
+        notificationService.notifications.first.title,
+        equals('Test Notification'),
+      );
+      expect(
+        notificationService.notifications.first.body,
+        equals('This is a test notification body'),
+      );
     });
 
     test('sendLocal without permissions only adds to internal list', () async {
@@ -75,7 +87,10 @@ void main() {
 
       // Should still add to internal list for in-app display
       expect(notificationService.notifications.length, equals(1));
-      expect(notificationService.notifications.first.title, equals('No Permission Test'));
+      expect(
+        notificationService.notifications.first.title,
+        equals('No Permission Test'),
+      );
     });
 
     test('sendLocal handles empty title and body', () async {
@@ -91,9 +106,18 @@ void main() {
     test('sendLocal adds multiple notifications in order', () async {
       await notificationService.ensurePermission();
 
-      await notificationService.sendLocal(title: 'First', body: 'First notification');
-      await notificationService.sendLocal(title: 'Second', body: 'Second notification');
-      await notificationService.sendLocal(title: 'Third', body: 'Third notification');
+      await notificationService.sendLocal(
+        title: 'First',
+        body: 'First notification',
+      );
+      await notificationService.sendLocal(
+        title: 'Second',
+        body: 'Second notification',
+      );
+      await notificationService.sendLocal(
+        title: 'Third',
+        body: 'Third notification',
+      );
 
       expect(notificationService.notifications.length, equals(3));
       // Newest first (inserted at beginning)
@@ -140,20 +164,26 @@ void main() {
       service.dispose();
     });
 
-    test('show() calls sendLocal internally when using custom notification', () async {
-      await service.ensurePermission();
+    test(
+      'show() calls sendLocal internally when using custom notification',
+      () async {
+        await service.ensurePermission();
 
-      final notification = AppNotification(
-        title: 'Custom Notification',
-        body: 'Custom body text',
-        type: NotificationType.uploadComplete,
-      );
+        final notification = AppNotification(
+          title: 'Custom Notification',
+          body: 'Custom body text',
+          type: NotificationType.uploadComplete,
+        );
 
-      await service.show(notification);
+        await service.show(notification);
 
-      expect(service.notifications.length, equals(1));
-      expect(service.notifications.first.title, equals('Custom Notification'));
-    });
+        expect(service.notifications.length, equals(1));
+        expect(
+          service.notifications.first.title,
+          equals('Custom Notification'),
+        );
+      },
+    );
 
     test('showVideoPublished sends local notification', () async {
       await service.ensurePermission();
@@ -165,7 +195,10 @@ void main() {
       );
 
       expect(service.notifications.length, equals(1));
-      expect(service.notifications.first.type, equals(NotificationType.videoPublished));
+      expect(
+        service.notifications.first.type,
+        equals(NotificationType.videoPublished),
+      );
     });
 
     test('showUploadComplete sends local notification', () async {
@@ -174,7 +207,10 @@ void main() {
       await service.showUploadComplete(videoTitle: 'Upload Test');
 
       expect(service.notifications.length, equals(1));
-      expect(service.notifications.first.type, equals(NotificationType.uploadComplete));
+      expect(
+        service.notifications.first.type,
+        equals(NotificationType.uploadComplete),
+      );
     });
 
     test('showUploadFailed sends local notification', () async {
@@ -186,7 +222,10 @@ void main() {
       );
 
       expect(service.notifications.length, equals(1));
-      expect(service.notifications.first.type, equals(NotificationType.uploadFailed));
+      expect(
+        service.notifications.first.type,
+        equals(NotificationType.uploadFailed),
+      );
     });
   });
 }

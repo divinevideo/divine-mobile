@@ -119,7 +119,8 @@ class VideoEventProcessor {
         repostEventId: repostEvent.id,
         reposterPubkey: repostEvent.pubkey,
         repostedAt: DateTime.fromMillisecondsSinceEpoch(
-            repostEvent.createdAt * 1000),
+          repostEvent.createdAt * 1000,
+        ),
       );
 
       // Emit the repost video event

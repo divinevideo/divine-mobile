@@ -13,8 +13,11 @@ void main() {
     late SecureKeyStorageService storageService;
 
     setUp(() async {
-      Log.info('Setting up keychain persistence test',
-          name: 'Test', category: LogCategory.system);
+      Log.info(
+        'Setting up keychain persistence test',
+        name: 'Test',
+        category: LogCategory.system,
+      );
       SharedPreferences.setMockInitialValues({});
 
       // Use desktop config for testing (allows software fallback)
@@ -42,8 +45,11 @@ void main() {
       final originalNpub = generatedContainer.npub;
       final originalPublicKey = generatedContainer.publicKeyHex;
 
-      Log.info('Generated and stored key: $originalNpub',
-          name: 'Test', category: LogCategory.system);
+      Log.info(
+        'Generated and stored key: $originalNpub',
+        name: 'Test',
+        category: LogCategory.system,
+      );
 
       generatedContainer.dispose();
       storageService.dispose();
@@ -57,19 +63,33 @@ void main() {
       final retrievedContainer = await newStorageService.getKeyContainer();
 
       // Assert - Key should be the same
-      expect(retrievedContainer, isNotNull,
-          reason: 'Key should persist across app restart');
-      expect(retrievedContainer!.npub, equals(originalNpub),
-          reason: 'npub should match original');
-      expect(retrievedContainer.publicKeyHex, equals(originalPublicKey),
-          reason: 'Public key should match original');
+      expect(
+        retrievedContainer,
+        isNotNull,
+        reason: 'Key should persist across app restart',
+      );
+      expect(
+        retrievedContainer!.npub,
+        equals(originalNpub),
+        reason: 'npub should match original',
+      );
+      expect(
+        retrievedContainer.publicKeyHex,
+        equals(originalPublicKey),
+        reason: 'Public key should match original',
+      );
 
       // Verify the private key is also accessible
-      final privateKeyMatches = await retrievedContainer.withPrivateKey((pk) async {
+      final privateKeyMatches = await retrievedContainer.withPrivateKey((
+        pk,
+      ) async {
         return pk.isNotEmpty && pk.length == 64;
       });
-      expect(privateKeyMatches, isTrue,
-          reason: 'Private key should be retrievable and valid');
+      expect(
+        privateKeyMatches,
+        isTrue,
+        reason: 'Private key should be retrievable and valid',
+      );
 
       // Cleanup
       retrievedContainer.dispose();
@@ -77,53 +97,65 @@ void main() {
       newStorageService.dispose();
     });
 
-    test('should use correct keychain accessibility for iOS persistence', () async {
-      // This test documents the expected behavior:
-      //
-      // iOS Keychain Accessibility Options:
-      // - KeychainAccessibility.first_unlock_this_device
-      //   → Data is DELETED when app is uninstalled ❌
-      //   → Device-specific, no iCloud sync
-      //
-      // - KeychainAccessibility.first_unlock
-      //   → Data PERSISTS across app uninstall ✅
-      //   → Syncs via iCloud Keychain (if enabled)
-      //   → Still requires device unlock before access
-      //
-      // For Nostr identity keys, we WANT persistence across app reinstall,
-      // so we must use `first_unlock` (without the `_this_device` suffix).
-      //
-      // See Apple docs: https://developer.apple.com/documentation/security/keychain_services/keychain_items/item_attribute_keys_and_values
+    test(
+      'should use correct keychain accessibility for iOS persistence',
+      () async {
+        // This test documents the expected behavior:
+        //
+        // iOS Keychain Accessibility Options:
+        // - KeychainAccessibility.first_unlock_this_device
+        //   → Data is DELETED when app is uninstalled ❌
+        //   → Device-specific, no iCloud sync
+        //
+        // - KeychainAccessibility.first_unlock
+        //   → Data PERSISTS across app uninstall ✅
+        //   → Syncs via iCloud Keychain (if enabled)
+        //   → Still requires device unlock before access
+        //
+        // For Nostr identity keys, we WANT persistence across app reinstall,
+        // so we must use `first_unlock` (without the `_this_device` suffix).
+        //
+        // See Apple docs: https://developer.apple.com/documentation/security/keychain_services/keychain_items/item_attribute_keys_and_values
 
-      await storageService.initialize();
+        await storageService.initialize();
 
-      // Generate and store a key
-      final keyContainer = await storageService.generateAndStoreKeys();
-      expect(keyContainer, isNotNull);
+        // Generate and store a key
+        final keyContainer = await storageService.generateAndStoreKeys();
+        expect(keyContainer, isNotNull);
 
-      // Verify key is stored
-      final hasKeys = await storageService.hasKeys();
-      expect(hasKeys, isTrue,
-          reason: 'Keys should be stored in platform secure storage');
+        // Verify key is stored
+        final hasKeys = await storageService.hasKeys();
+        expect(
+          hasKeys,
+          isTrue,
+          reason: 'Keys should be stored in platform secure storage',
+        );
 
-      // This key should survive app reinstall on iOS/macOS
-      // (cannot be tested in unit test, requires actual device testing)
+        // This key should survive app reinstall on iOS/macOS
+        // (cannot be tested in unit test, requires actual device testing)
 
-      keyContainer.dispose();
-    });
+        keyContainer.dispose();
+      },
+    );
 
     test('should import nsec and persist across service instances', () async {
       // Test that imported keys also persist correctly
 
       // Arrange - Import a test key
       await storageService.initialize();
-      const testPrivateKeyHex = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      const testPrivateKeyHex =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
-      final importedContainer = await storageService.importFromHex(testPrivateKeyHex);
+      final importedContainer = await storageService.importFromHex(
+        testPrivateKeyHex,
+      );
       final importedNpub = importedContainer.npub;
 
-      Log.info('Imported key: $importedNpub',
-          name: 'Test', category: LogCategory.system);
+      Log.info(
+        'Imported key: $importedNpub',
+        name: 'Test',
+        category: LogCategory.system,
+      );
 
       importedContainer.dispose();
       storageService.dispose();
@@ -137,15 +169,24 @@ void main() {
       final retrievedContainer = await newStorageService.getKeyContainer();
 
       // Assert - Imported key should persist
-      expect(retrievedContainer, isNotNull,
-          reason: 'Imported key should persist across app restart');
-      expect(retrievedContainer!.npub, equals(importedNpub),
-          reason: 'Imported npub should match original');
+      expect(
+        retrievedContainer,
+        isNotNull,
+        reason: 'Imported key should persist across app restart',
+      );
+      expect(
+        retrievedContainer!.npub,
+        equals(importedNpub),
+        reason: 'Imported npub should match original',
+      );
 
       // Verify we can access the private key
       final privateKeyHex = await retrievedContainer.withPrivateKey((pk) => pk);
-      expect(privateKeyHex, equals(testPrivateKeyHex),
-          reason: 'Imported private key should be retrievable');
+      expect(
+        privateKeyHex,
+        equals(testPrivateKeyHex),
+        reason: 'Imported private key should be retrievable',
+      );
 
       // Cleanup
       retrievedContainer.dispose();
@@ -178,8 +219,11 @@ void main() {
       // ✅ May sync via iCloud Keychain (user benefit for multi-device)
       // ✅ Persists across app deletion (intended behavior for identity keys)
 
-      expect(true, isTrue,
-          reason: 'This test documents the keychain persistence requirements');
+      expect(
+        true,
+        isTrue,
+        reason: 'This test documents the keychain persistence requirements',
+      );
     });
   });
 
@@ -203,8 +247,12 @@ void main() {
       // - Without _this_device: Data persists in iCloud Keychain, survives app deletion ✅
       // - With _this_device: Data is device-only, deleted on app uninstall ❌
 
-      expect(true, isTrue,
-          reason: 'Keychain accessibility must be first_unlock (not first_unlock_this_device)');
+      expect(
+        true,
+        isTrue,
+        reason:
+            'Keychain accessibility must be first_unlock (not first_unlock_this_device)',
+      );
     });
   });
 
@@ -223,7 +271,8 @@ void main() {
       await storageService.initialize();
 
       // Import a key (which will be stored with NEW accessibility)
-      const testPrivateKeyHex = 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
+      const testPrivateKeyHex =
+          'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
       await storageService.importFromHex(testPrivateKeyHex);
 
       // Verify key exists
@@ -235,34 +284,43 @@ void main() {
       storageService.dispose();
     });
 
-    test('retrieveKey() should retrieve from legacy storage if new storage is empty', () async {
-      // This simulates: User upgrades app, key is in legacy storage
-      // Expected: retrieveKey() finds and returns the key from legacy storage
+    test(
+      'retrieveKey() should retrieve from legacy storage if new storage is empty',
+      () async {
+        // This simulates: User upgrades app, key is in legacy storage
+        // Expected: retrieveKey() finds and returns the key from legacy storage
 
-      final storageService = SecureKeyStorageService(
-        securityConfig: SecurityConfig.desktop,
-      );
+        final storageService = SecureKeyStorageService(
+          securityConfig: SecurityConfig.desktop,
+        );
 
-      await storageService.initialize();
+        await storageService.initialize();
 
-      // Import a key
-      const testPrivateKeyHex = 'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
-      await storageService.importFromHex(testPrivateKeyHex);
+        // Import a key
+        const testPrivateKeyHex =
+            'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
+        await storageService.importFromHex(testPrivateKeyHex);
 
-      // Retrieve the key
-      final retrievedContainer = await storageService.getKeyContainer();
-      expect(retrievedContainer, isNotNull, reason: 'Should retrieve key');
+        // Retrieve the key
+        final retrievedContainer = await storageService.getKeyContainer();
+        expect(retrievedContainer, isNotNull, reason: 'Should retrieve key');
 
-      // Verify it's the same key
-      final retrievedPrivateKey = await retrievedContainer!.withPrivateKey((pk) => pk);
-      expect(retrievedPrivateKey, equals(testPrivateKeyHex),
-          reason: 'Retrieved key should match original');
+        // Verify it's the same key
+        final retrievedPrivateKey = await retrievedContainer!.withPrivateKey(
+          (pk) => pk,
+        );
+        expect(
+          retrievedPrivateKey,
+          equals(testPrivateKeyHex),
+          reason: 'Retrieved key should match original',
+        );
 
-      // Cleanup
-      retrievedContainer.dispose();
-      await storageService.deleteKeys();
-      storageService.dispose();
-    });
+        // Cleanup
+        retrievedContainer.dispose();
+        await storageService.deleteKeys();
+        storageService.dispose();
+      },
+    );
 
     test('should NOT generate new key if legacy key exists', () async {
       // This is the critical test: Don't create a NEW identity if user has an existing one
@@ -275,8 +333,11 @@ void main() {
       await storageService.initialize();
 
       // Import a test key (simulates existing user's key)
-      const originalPrivateKeyHex = '1111111111111111111111111111111111111111111111111111111111111111';
-      final originalContainer = await storageService.importFromHex(originalPrivateKeyHex);
+      const originalPrivateKeyHex =
+          '1111111111111111111111111111111111111111111111111111111111111111';
+      final originalContainer = await storageService.importFromHex(
+        originalPrivateKeyHex,
+      );
       final originalNpub = originalContainer.npub;
       originalContainer.dispose();
 
@@ -292,9 +353,16 @@ void main() {
 
       // Retrieve the key (should get the SAME key, not generate new one)
       final retrievedContainer = await newStorageService.getKeyContainer();
-      expect(retrievedContainer, isNotNull, reason: 'Should retrieve existing key');
-      expect(retrievedContainer!.npub, equals(originalNpub),
-          reason: 'Should retrieve SAME key, not generate new one');
+      expect(
+        retrievedContainer,
+        isNotNull,
+        reason: 'Should retrieve existing key',
+      );
+      expect(
+        retrievedContainer!.npub,
+        equals(originalNpub),
+        reason: 'Should retrieve SAME key, not generate new one',
+      );
 
       // Cleanup
       retrievedContainer.dispose();
@@ -302,51 +370,61 @@ void main() {
       newStorageService.dispose();
     });
 
-    test('end-to-end migration: legacy key → detect → retrieve → migrate on next store', () async {
-      // Full migration flow test:
-      // 1. Key exists in legacy storage
-      // 2. hasKeys() detects it
-      // 3. retrieveKey() retrieves it
-      // 4. Next store operation migrates it to new accessibility
-      // 5. Future retrievals use new storage
+    test(
+      'end-to-end migration: legacy key → detect → retrieve → migrate on next store',
+      () async {
+        // Full migration flow test:
+        // 1. Key exists in legacy storage
+        // 2. hasKeys() detects it
+        // 3. retrieveKey() retrieves it
+        // 4. Next store operation migrates it to new accessibility
+        // 5. Future retrievals use new storage
 
-      final storageService = SecureKeyStorageService(
-        securityConfig: SecurityConfig.desktop,
-      );
+        final storageService = SecureKeyStorageService(
+          securityConfig: SecurityConfig.desktop,
+        );
 
-      await storageService.initialize();
+        await storageService.initialize();
 
-      // Step 1: Create a key (simulates legacy key)
-      const legacyPrivateKeyHex = '2222222222222222222222222222222222222222222222222222222222222222';
-      final legacyContainer = await storageService.importFromHex(legacyPrivateKeyHex);
-      final legacyNpub = legacyContainer.npub;
-      legacyContainer.dispose();
-      storageService.dispose();
+        // Step 1: Create a key (simulates legacy key)
+        const legacyPrivateKeyHex =
+            '2222222222222222222222222222222222222222222222222222222222222222';
+        final legacyContainer = await storageService.importFromHex(
+          legacyPrivateKeyHex,
+        );
+        final legacyNpub = legacyContainer.npub;
+        legacyContainer.dispose();
+        storageService.dispose();
 
-      // Step 2: New instance (simulates app restart after upgrade)
-      final migratedStorageService = SecureKeyStorageService(
-        securityConfig: SecurityConfig.desktop,
-      );
-      await migratedStorageService.initialize();
+        // Step 2: New instance (simulates app restart after upgrade)
+        final migratedStorageService = SecureKeyStorageService(
+          securityConfig: SecurityConfig.desktop,
+        );
+        await migratedStorageService.initialize();
 
-      // Step 3: Detect key exists
-      final hasKeys = await migratedStorageService.hasKeys();
-      expect(hasKeys, isTrue, reason: 'Should detect legacy key');
+        // Step 3: Detect key exists
+        final hasKeys = await migratedStorageService.hasKeys();
+        expect(hasKeys, isTrue, reason: 'Should detect legacy key');
 
-      // Step 4: Retrieve key (from legacy storage)
-      final retrievedContainer = await migratedStorageService.getKeyContainer();
-      expect(retrievedContainer, isNotNull);
-      expect(retrievedContainer!.npub, equals(legacyNpub),
-          reason: 'Should retrieve same legacy key');
+        // Step 4: Retrieve key (from legacy storage)
+        final retrievedContainer = await migratedStorageService
+            .getKeyContainer();
+        expect(retrievedContainer, isNotNull);
+        expect(
+          retrievedContainer!.npub,
+          equals(legacyNpub),
+          reason: 'Should retrieve same legacy key',
+        );
 
-      // Step 5: Trigger migration by trying to store (simulate any store operation)
-      // This should detect the duplicate and migrate
-      // Note: In real usage, this might happen during a profile update or similar
+        // Step 5: Trigger migration by trying to store (simulate any store operation)
+        // This should detect the duplicate and migrate
+        // Note: In real usage, this might happen during a profile update or similar
 
-      // Cleanup
-      retrievedContainer.dispose();
-      await migratedStorageService.deleteKeys();
-      migratedStorageService.dispose();
-    });
+        // Cleanup
+        retrievedContainer.dispose();
+        await migratedStorageService.deleteKeys();
+        migratedStorageService.dispose();
+      },
+    );
   });
 }

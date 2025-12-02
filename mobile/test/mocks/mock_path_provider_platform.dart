@@ -59,7 +59,9 @@ class MockPathProviderPlatform
   }
 
   @override
-  Future<List<String>?> getExternalStoragePaths({StorageDirectory? type}) async {
+  Future<List<String>?> getExternalStoragePaths({
+    StorageDirectory? type,
+  }) async {
     return null;
   }
 

@@ -33,18 +33,18 @@ class BugReportData {
 
   /// Convert to JSON for NIP-17 message
   Map<String, dynamic> toJson() => {
-        'reportId': reportId,
-        'timestamp': timestamp.toIso8601String(),
-        'userDescription': userDescription,
-        'deviceInfo': deviceInfo,
-        'appVersion': appVersion,
-        'recentLogs': recentLogs.map((log) => log.toJson()).toList(),
-        'errorCounts': errorCounts,
-        if (relayStatus != null) 'relayStatus': relayStatus,
-        if (currentScreen != null) 'currentScreen': currentScreen,
-        if (userPubkey != null) 'userPubkey': userPubkey,
-        if (additionalContext != null) 'additionalContext': additionalContext,
-      };
+    'reportId': reportId,
+    'timestamp': timestamp.toIso8601String(),
+    'userDescription': userDescription,
+    'deviceInfo': deviceInfo,
+    'appVersion': appVersion,
+    'recentLogs': recentLogs.map((log) => log.toJson()).toList(),
+    'errorCounts': errorCounts,
+    if (relayStatus != null) 'relayStatus': relayStatus,
+    if (currentScreen != null) 'currentScreen': currentScreen,
+    if (userPubkey != null) 'userPubkey': userPubkey,
+    if (additionalContext != null) 'additionalContext': additionalContext,
+  };
 
   /// Create formatted report text for NIP-17 message content
   String toFormattedReport() {
@@ -96,7 +96,9 @@ class BugReportData {
         final name = log.name ?? '';
 
         buffer.writeln();
-        buffer.writeln('[$timestamp] [$level] ${name.isNotEmpty ? '[$name] ' : ''}$category');
+        buffer.writeln(
+          '[$timestamp] [$level] ${name.isNotEmpty ? '[$name] ' : ''}$category',
+        );
         buffer.writeln('  ${log.message}');
 
         if (log.error != null) {
@@ -106,7 +108,8 @@ class BugReportData {
         if (log.stackTrace != null) {
           buffer.writeln('  Stack Trace:');
           final stackLines = log.stackTrace.toString().split('\n');
-          for (final line in stackLines.take(10)) { // Limit to first 10 lines
+          for (final line in stackLines.take(10)) {
+            // Limit to first 10 lines
             buffer.writeln('    $line');
           }
           if (stackLines.length > 10) {

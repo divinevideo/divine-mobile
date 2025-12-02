@@ -6,7 +6,8 @@ import 'package:openvine/utils/unified_logger.dart';
 
 /// Service for tracking Nostr relay and event performance
 class NostrPerformanceTracker {
-  static final NostrPerformanceTracker _instance = NostrPerformanceTracker._internal();
+  static final NostrPerformanceTracker _instance =
+      NostrPerformanceTracker._internal();
   factory NostrPerformanceTracker() => _instance;
   NostrPerformanceTracker._internal();
 
@@ -77,7 +78,10 @@ class NostrPerformanceTracker {
         'relay_url': _sanitizeRelayUrl(relayUrl),
         'connection_time_ms': attemptTime,
         'success': false,
-        'error_message': errorMessage.substring(0, errorMessage.length > 100 ? 100 : errorMessage.length),
+        'error_message': errorMessage.substring(
+          0,
+          errorMessage.length > 100 ? 100 : errorMessage.length,
+        ),
       },
     );
 
@@ -85,7 +89,9 @@ class NostrPerformanceTracker {
   }
 
   /// Start tracking subscription
-  void startSubscription(String subscriptionId, String subscriptionType, {
+  void startSubscription(
+    String subscriptionId,
+    String subscriptionType, {
     List<String>? relays,
     Map<String, dynamic>? filters,
   }) {
@@ -131,7 +137,8 @@ class NostrPerformanceTracker {
   }
 
   /// Track subscription completion
-  void trackSubscriptionComplete(String subscriptionId, {
+  void trackSubscriptionComplete(
+    String subscriptionId, {
     required int eventsReceived,
     int? relaysResponded,
   }) {
@@ -195,7 +202,8 @@ class NostrPerformanceTracker {
   }
 
   /// Track relay reconnection
-  void trackRelayReconnection(String relayUrl, {
+  void trackRelayReconnection(
+    String relayUrl, {
     required int attemptNumber,
     required bool success,
   }) {
@@ -251,7 +259,8 @@ class NostrPerformanceTracker {
   }
 
   /// Track subscription retry
-  void trackSubscriptionRetry(String subscriptionType, {
+  void trackSubscriptionRetry(
+    String subscriptionType, {
     required int attemptNumber,
     required String reason,
   }) {
@@ -275,10 +284,7 @@ class NostrPerformanceTracker {
 
 /// Internal session tracking for relay connection
 class _RelayConnectionSession {
-  _RelayConnectionSession({
-    required this.relayUrl,
-    required this.startTime,
-  });
+  _RelayConnectionSession({required this.relayUrl, required this.startTime});
 
   final String relayUrl;
   final DateTime startTime;

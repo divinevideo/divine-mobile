@@ -27,12 +27,8 @@ void main() {
     testWidgets('SettingsScreen has Vine green AppBar', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-          ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 
@@ -49,12 +45,8 @@ void main() {
     testWidgets('SettingsScreen has black background', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-          ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 
@@ -70,9 +62,7 @@ void main() {
     testWidgets('SettingsScreen has back button when pushed', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-          ],
+          overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
           child: MaterialApp(
             home: Scaffold(
               body: Builder(
@@ -99,16 +89,13 @@ void main() {
       expect(find.byType(BackButton), findsOneWidget);
     });
 
-    testWidgets('NotificationSettingsScreen has Vine green AppBar',
-        (tester) async {
+    testWidgets('NotificationSettingsScreen has Vine green AppBar', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-          ],
-          child: const MaterialApp(
-            home: NotificationSettingsScreen(),
-          ),
+          overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+          child: const MaterialApp(home: NotificationSettingsScreen()),
         ),
       );
 
@@ -122,16 +109,13 @@ void main() {
       expect(appBar.foregroundColor, equals(VineTheme.whiteText));
     });
 
-    testWidgets('NotificationSettingsScreen has black background',
-        (tester) async {
+    testWidgets('NotificationSettingsScreen has black background', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            authServiceProvider.overrideWithValue(mockAuthService),
-          ],
-          child: const MaterialApp(
-            home: NotificationSettingsScreen(),
-          ),
+          overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
+          child: const MaterialApp(home: NotificationSettingsScreen()),
         ),
       );
 

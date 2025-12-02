@@ -16,9 +16,9 @@ class BookmarkSyncWorker {
     required BookmarkService bookmarkService,
     required ConnectionStatusService connectionStatusService,
     required SharedPreferences prefs,
-  })  : _bookmarkService = bookmarkService,
-        _connectionStatusService = connectionStatusService,
-        _prefs = prefs {
+  }) : _bookmarkService = bookmarkService,
+       _connectionStatusService = connectionStatusService,
+       _prefs = prefs {
     _initializeSync();
   }
 
@@ -52,8 +52,11 @@ class BookmarkSyncWorker {
         final Map<String, dynamic> hashesData = jsonDecode(hashesJson);
         _publishedHashes.addAll(hashesData.cast<String, String>());
       } catch (e) {
-        Log.error('Failed to load published hashes: $e',
-            name: 'BookmarkSyncWorker', category: LogCategory.system);
+        Log.error(
+          'Failed to load published hashes: $e',
+          name: 'BookmarkSyncWorker',
+          category: LogCategory.system,
+        );
       }
     }
 
@@ -64,17 +67,24 @@ class BookmarkSyncWorker {
         final List<dynamic> pendingData = jsonDecode(pendingJson);
         _pendingChanges.addAll(pendingData.cast<String>());
       } catch (e) {
-        Log.error('Failed to load pending changes: $e',
-            name: 'BookmarkSyncWorker', category: LogCategory.system);
+        Log.error(
+          'Failed to load pending changes: $e',
+          name: 'BookmarkSyncWorker',
+          category: LogCategory.system,
+        );
       }
     }
 
     // Listen to connectivity changes
-    _connectivitySubscription =
-        _connectionStatusService.statusStream.listen((isOnline) {
+    _connectivitySubscription = _connectionStatusService.statusStream.listen((
+      isOnline,
+    ) {
       if (isOnline && _pendingChanges.isNotEmpty) {
-        Log.info('Connection restored, syncing pending bookmark changes',
-            name: 'BookmarkSyncWorker', category: LogCategory.system);
+        Log.info(
+          'Connection restored, syncing pending bookmark changes',
+          name: 'BookmarkSyncWorker',
+          category: LogCategory.system,
+        );
         syncSets();
       }
     });
@@ -94,8 +104,11 @@ class BookmarkSyncWorker {
   /// Sync all bookmark sets that have local changes
   Future<void> syncSets() async {
     if (_isSyncing || !_connectionStatusService.isOnline) {
-      Log.debug('Skipping sync - ${_isSyncing ? "already syncing" : "offline"}',
-          name: 'BookmarkSyncWorker', category: LogCategory.system);
+      Log.debug(
+        'Skipping sync - ${_isSyncing ? "already syncing" : "offline"}',
+        name: 'BookmarkSyncWorker',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -116,14 +129,20 @@ class BookmarkSyncWorker {
       }
 
       if (changedSets.isEmpty) {
-        Log.debug('No bookmark sets need syncing',
-            name: 'BookmarkSyncWorker', category: LogCategory.system);
+        Log.debug(
+          'No bookmark sets need syncing',
+          name: 'BookmarkSyncWorker',
+          category: LogCategory.system,
+        );
         _isSyncing = false;
         return;
       }
 
-      Log.info('Syncing ${changedSets.length} bookmark sets to Nostr',
-          name: 'BookmarkSyncWorker', category: LogCategory.system);
+      Log.info(
+        'Syncing ${changedSets.length} bookmark sets to Nostr',
+        name: 'BookmarkSyncWorker',
+        category: LogCategory.system,
+      );
 
       int successCount = 0;
       int failureCount = 0;
@@ -144,12 +163,16 @@ class BookmarkSyncWorker {
       await _saveState();
 
       Log.info(
-          'Bookmark sync complete: $successCount succeeded, $failureCount failed',
-          name: 'BookmarkSyncWorker',
-          category: LogCategory.system);
+        'Bookmark sync complete: $successCount succeeded, $failureCount failed',
+        name: 'BookmarkSyncWorker',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Bookmark sync failed: $e',
-          name: 'BookmarkSyncWorker', category: LogCategory.system);
+      Log.error(
+        'Bookmark sync failed: $e',
+        name: 'BookmarkSyncWorker',
+        category: LogCategory.system,
+      );
     } finally {
       _isSyncing = false;
     }
@@ -170,21 +193,29 @@ class BookmarkSyncWorker {
   Future<bool> _publishSet(BookmarkSet set) async {
     try {
       // Use BookmarkService's public publish method
-      final success =
-          await _bookmarkService.publishBookmarkSetToNostr(set.id);
+      final success = await _bookmarkService.publishBookmarkSetToNostr(set.id);
 
       if (success) {
-        Log.debug('Successfully published bookmark set: ${set.name}',
-            name: 'BookmarkSyncWorker', category: LogCategory.system);
+        Log.debug(
+          'Successfully published bookmark set: ${set.name}',
+          name: 'BookmarkSyncWorker',
+          category: LogCategory.system,
+        );
         return true;
       } else {
-        Log.warning('Failed to publish bookmark set: ${set.name}',
-            name: 'BookmarkSyncWorker', category: LogCategory.system);
+        Log.warning(
+          'Failed to publish bookmark set: ${set.name}',
+          name: 'BookmarkSyncWorker',
+          category: LogCategory.system,
+        );
         return false;
       }
     } catch (e) {
-      Log.error('Error publishing bookmark set ${set.name}: $e',
-          name: 'BookmarkSyncWorker', category: LogCategory.system);
+      Log.error(
+        'Error publishing bookmark set ${set.name}: $e',
+        name: 'BookmarkSyncWorker',
+        category: LogCategory.system,
+      );
       return false;
     }
   }
@@ -197,12 +228,16 @@ class BookmarkSyncWorker {
       'name': set.name,
       'description': set.description ?? '',
       'imageUrl': set.imageUrl ?? '',
-      'items': set.items.map((item) => {
-            'type': item.type,
-            'id': item.id,
-            'relay': item.relay ?? '',
-            'petname': item.petname ?? '',
-          }).toList(),
+      'items': set.items
+          .map(
+            (item) => {
+              'type': item.type,
+              'id': item.id,
+              'relay': item.relay ?? '',
+              'petname': item.petname ?? '',
+            },
+          )
+          .toList(),
     };
 
     final jsonStr = jsonEncode(content);
@@ -219,10 +254,15 @@ class BookmarkSyncWorker {
 
       // Save pending changes
       await _prefs.setString(
-          _pendingChangesKey, jsonEncode(_pendingChanges.toList()));
+        _pendingChangesKey,
+        jsonEncode(_pendingChanges.toList()),
+      );
     } catch (e) {
-      Log.error('Failed to save sync state: $e',
-          name: 'BookmarkSyncWorker', category: LogCategory.system);
+      Log.error(
+        'Failed to save sync state: $e',
+        name: 'BookmarkSyncWorker',
+        category: LogCategory.system,
+      );
     }
   }
 

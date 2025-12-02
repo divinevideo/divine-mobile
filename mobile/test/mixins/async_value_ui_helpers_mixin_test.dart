@@ -8,7 +8,9 @@ import 'package:openvine/mixins/async_value_ui_helpers_mixin.dart';
 
 void main() {
   group('AsyncValueUIHelpersMixin', () {
-    testWidgets('SPEC: should render data widget when AsyncValue has data', (tester) async {
+    testWidgets('SPEC: should render data widget when AsyncValue has data', (
+      tester,
+    ) async {
       final mixin = TestAsyncValueUIHelpersMixin();
       final asyncValue = const AsyncValue.data('test data');
 
@@ -27,26 +29,31 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
-    testWidgets('SPEC: should render default loading widget when AsyncValue is loading', (tester) async {
-      final mixin = TestAsyncValueUIHelpersMixin();
-      final asyncValue = const AsyncValue<String>.loading();
+    testWidgets(
+      'SPEC: should render default loading widget when AsyncValue is loading',
+      (tester) async {
+        final mixin = TestAsyncValueUIHelpersMixin();
+        final asyncValue = const AsyncValue<String>.loading();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: mixin.buildAsyncUI(
-              asyncValue,
-              onData: (data) => Text('Data: $data'),
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: mixin.buildAsyncUI(
+                asyncValue,
+                onData: (data) => Text('Data: $data'),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Data: test data'), findsNothing);
-    });
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.text('Data: test data'), findsNothing);
+      },
+    );
 
-    testWidgets('SPEC: should render custom loading widget when provided', (tester) async {
+    testWidgets('SPEC: should render custom loading widget when provided', (
+      tester,
+    ) async {
       final mixin = TestAsyncValueUIHelpersMixin();
       final asyncValue = const AsyncValue<String>.loading();
 
@@ -66,28 +73,39 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
-    testWidgets('SPEC: should render default error widget when AsyncValue has error', (tester) async {
-      final mixin = TestAsyncValueUIHelpersMixin();
-      final asyncValue = AsyncValue<String>.error('Test error', StackTrace.empty);
+    testWidgets(
+      'SPEC: should render default error widget when AsyncValue has error',
+      (tester) async {
+        final mixin = TestAsyncValueUIHelpersMixin();
+        final asyncValue = AsyncValue<String>.error(
+          'Test error',
+          StackTrace.empty,
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: mixin.buildAsyncUI(
-              asyncValue,
-              onData: (data) => Text('Data: $data'),
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: mixin.buildAsyncUI(
+                asyncValue,
+                onData: (data) => Text('Data: $data'),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.byIcon(Icons.error_outline), findsOneWidget);
-      expect(find.textContaining('Test error'), findsOneWidget);
-    });
+        expect(find.byIcon(Icons.error_outline), findsOneWidget);
+        expect(find.textContaining('Test error'), findsOneWidget);
+      },
+    );
 
-    testWidgets('SPEC: should render custom error widget when provided', (tester) async {
+    testWidgets('SPEC: should render custom error widget when provided', (
+      tester,
+    ) async {
       final mixin = TestAsyncValueUIHelpersMixin();
-      final asyncValue = AsyncValue<String>.error('Test error', StackTrace.empty);
+      final asyncValue = AsyncValue<String>.error(
+        'Test error',
+        StackTrace.empty,
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -105,7 +123,9 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsNothing);
     });
 
-    testWidgets('SPEC: default loading widget should be centered', (tester) async {
+    testWidgets('SPEC: default loading widget should be centered', (
+      tester,
+    ) async {
       final mixin = TestAsyncValueUIHelpersMixin();
       final asyncValue = const AsyncValue<String>.loading();
 
@@ -120,42 +140,49 @@ void main() {
         ),
       );
 
-      final center = tester.widget<Center>(find.ancestor(
-        of: find.byType(CircularProgressIndicator),
-        matching: find.byType(Center),
-      ));
-
-      expect(center, isNotNull);
-    });
-
-    testWidgets('SPEC: default error widget should show error icon and message', (tester) async {
-      final mixin = TestAsyncValueUIHelpersMixin();
-      final asyncValue = AsyncValue<String>.error('Network timeout', StackTrace.empty);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: mixin.buildAsyncUI(
-              asyncValue,
-              onData: (data) => Text('Data: $data'),
-            ),
-          ),
+      final center = tester.widget<Center>(
+        find.ancestor(
+          of: find.byType(CircularProgressIndicator),
+          matching: find.byType(Center),
         ),
       );
 
-      // Should have error icon
-      expect(find.byIcon(Icons.error_outline), findsOneWidget);
-
-      // Should have error message
-      expect(find.textContaining('Network timeout'), findsOneWidget);
-
-      // Should be centered
-      final center = tester.widget<Center>(find.ancestor(
-        of: find.byType(Column),
-        matching: find.byType(Center),
-      ));
       expect(center, isNotNull);
     });
+
+    testWidgets(
+      'SPEC: default error widget should show error icon and message',
+      (tester) async {
+        final mixin = TestAsyncValueUIHelpersMixin();
+        final asyncValue = AsyncValue<String>.error(
+          'Network timeout',
+          StackTrace.empty,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: mixin.buildAsyncUI(
+                asyncValue,
+                onData: (data) => Text('Data: $data'),
+              ),
+            ),
+          ),
+        );
+
+        // Should have error icon
+        expect(find.byIcon(Icons.error_outline), findsOneWidget);
+
+        // Should have error message
+        expect(find.textContaining('Network timeout'), findsOneWidget);
+
+        // Should be centered
+        final center = tester.widget<Center>(
+          find.ancestor(of: find.byType(Column), matching: find.byType(Center)),
+        );
+        expect(center, isNotNull);
+      },
+    );
 
     testWidgets('SPEC: should handle null data correctly', (tester) async {
       final mixin = TestAsyncValueUIHelpersMixin();

@@ -34,7 +34,8 @@ class NostrBroadcastResult {
       results.entries.where((e) => !e.value).map((e) => e.key).toList();
 
   @override
-  String toString() => 'NostrBroadcastResult('
+  String toString() =>
+      'NostrBroadcastResult('
       'success: $successCount/$totalRelays, '
       'rate: ${(successRate * 100).toStringAsFixed(1)}%'
       ')';
@@ -87,10 +88,7 @@ abstract class INostrService {
   Future<void> closeAllSubscriptions();
 
   // Event querying
-  Future<List<Event>> getEvents({
-    required List<Filter> filters,
-    int? limit,
-  });
+  Future<List<Event>> getEvents({required List<Filter> filters, int? limit});
 
   /// Fetch a single event by ID
   Future<Event?> fetchEventById(String eventId, {String? relayUrl});

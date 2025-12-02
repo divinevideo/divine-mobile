@@ -18,11 +18,7 @@ import 'nav_extensions.dart';
 import 'last_tab_position_provider.dart';
 
 class AppShell extends ConsumerWidget {
-  const AppShell({
-    super.key,
-    required this.child,
-    required this.currentIndex,
-  });
+  const AppShell({super.key, required this.child, required this.currentIndex});
 
   final Widget child;
   final int currentIndex;
@@ -80,11 +76,16 @@ class AppShell extends ConsumerWidget {
   /// Handles tab tap - navigates to last known position in that tab
   void _handleTabTap(BuildContext context, WidgetRef ref, int tabIndex) {
     final routeType = _routeTypeForTab(tabIndex);
-    final lastIndex = ref.read(lastTabPositionProvider.notifier).getPosition(routeType);
+    final lastIndex = ref
+        .read(lastTabPositionProvider.notifier)
+        .getPosition(routeType);
 
     // Log user interaction
-    Log.info('👆 User tapped bottom nav: tab=$tabIndex (${_tabName(tabIndex)})',
-        name: 'Navigation', category: LogCategory.ui);
+    Log.info(
+      '👆 User tapped bottom nav: tab=$tabIndex (${_tabName(tabIndex)})',
+      name: 'Navigation',
+      category: LogCategory.ui,
+    );
 
     // Pop any pushed routes (like CuratedListFeedScreen, UserListPeopleScreen)
     // that were pushed via Navigator.push() on top of the shell
@@ -94,7 +95,7 @@ class AppShell extends ConsumerWidget {
     // Navigate to last position in that tab
     switch (tabIndex) {
       case 0:
-        context.goHome(lastIndex ?? 0);  // Home always has an index
+        context.goHome(lastIndex ?? 0); // Home always has an index
         break;
       case 1:
         // Always reset to grid mode (null) when tapping Explore tab
@@ -102,7 +103,9 @@ class AppShell extends ConsumerWidget {
         context.goExplore(null);
         break;
       case 2:
-        context.goNotifications(lastIndex ?? 0);  // Notifications always has an index
+        context.goNotifications(
+          lastIndex ?? 0,
+        ); // Notifications always has an index
         break;
       case 3:
         // Always navigate to current user's profile when tapping Profile tab
@@ -114,36 +117,40 @@ class AppShell extends ConsumerWidget {
 
   String _tabName(int index) {
     switch (index) {
-      case 0: return 'Home';
-      case 1: return 'Explore';
-      case 2: return 'Notifications';
-      case 3: return 'Profile';
-      default: return 'Unknown';
+      case 0:
+        return 'Home';
+      case 1:
+        return 'Explore';
+      case 2:
+        return 'Notifications';
+      case 3:
+        return 'Profile';
+      default:
+        return 'Unknown';
     }
   }
 
   /// Builds the header title - tappable for Explore and Hashtag routes to navigate back
-  Widget _buildTappableTitle(BuildContext context, WidgetRef ref, String title) {
+  Widget _buildTappableTitle(
+    BuildContext context,
+    WidgetRef ref,
+    String title,
+  ) {
     final ctx = ref.watch(pageContextProvider).asData?.value;
     final routeType = ctx?.type;
 
     // Check if title should be tappable (Explore-related routes)
-    final isTappable = routeType == RouteType.explore || routeType == RouteType.hashtag;
+    final isTappable =
+        routeType == RouteType.explore || routeType == RouteType.hashtag;
 
     final titleWidget = Text(
       title,
       // Use Pacifico font only for 'Divine' on home feed, system font elsewhere
       style: title == 'Divine'
           ? GoogleFonts.pacifico(
-              textStyle: const TextStyle(
-                fontSize: 24,
-                letterSpacing: 0.2,
-              ),
+              textStyle: const TextStyle(fontSize: 24, letterSpacing: 0.2),
             )
-          : const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
+          : const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
@@ -154,7 +161,11 @@ class AppShell extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        Log.info('👆 User tapped header title: $title', name: 'Navigation', category: LogCategory.ui);
+        Log.info(
+          '👆 User tapped header title: $title',
+          name: 'Navigation',
+          category: LogCategory.ui,
+        );
         // Pop any pushed routes first (like CuratedListFeedScreen)
         Navigator.of(context).popUntil((route) => route.isFirst);
         // Navigate to main explore view
@@ -174,7 +185,8 @@ class AppShell extends ConsumerWidget {
     // Watch page context to determine if back button should show
     final pageCtxAsync = ref.watch(pageContextProvider);
     final showBackButton = pageCtxAsync.maybeWhen(
-      data: (ctx) => ctx.type == RouteType.hashtag || ctx.type == RouteType.search,
+      data: (ctx) =>
+          ctx.type == RouteType.hashtag || ctx.type == RouteType.search,
       orElse: () => false,
     );
 
@@ -185,7 +197,11 @@ class AppShell extends ConsumerWidget {
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () {
-                  Log.info('👆 User tapped back button', name: 'Navigation', category: LogCategory.ui);
+                  Log.info(
+                    '👆 User tapped back button',
+                    name: 'Navigation',
+                    category: LogCategory.ui,
+                  );
 
                   // Get current route context
                   final ctx = ref.read(pageContextProvider).asData?.value;
@@ -214,10 +230,16 @@ class AppShell extends ConsumerWidget {
                   tooltip: 'Menu',
                   icon: const Icon(Icons.menu),
                   onPressed: () {
-                    Log.info('👆 User tapped menu button', name: 'Navigation', category: LogCategory.ui);
+                    Log.info(
+                      '👆 User tapped menu button',
+                      name: 'Navigation',
+                      category: LogCategory.ui,
+                    );
 
                     // Pause all videos when drawer opens
-                    final visibilityManager = ref.read(videoVisibilityManagerProvider);
+                    final visibilityManager = ref.read(
+                      videoVisibilityManagerProvider,
+                    );
                     visibilityManager.pauseAllVideos();
 
                     Scaffold.of(context).openDrawer();
@@ -230,7 +252,11 @@ class AppShell extends ConsumerWidget {
             tooltip: 'Search',
             icon: const Icon(Icons.search),
             onPressed: () {
-              Log.info('👆 User tapped search button', name: 'Navigation', category: LogCategory.ui);
+              Log.info(
+                '👆 User tapped search button',
+                name: 'Navigation',
+                category: LogCategory.ui,
+              );
               context.goSearch();
             },
           ),
@@ -238,7 +264,11 @@ class AppShell extends ConsumerWidget {
             tooltip: 'Open camera',
             icon: const Icon(Icons.photo_camera_outlined),
             onPressed: () {
-              Log.info('👆 User tapped camera button', name: 'Navigation', category: LogCategory.ui);
+              Log.info(
+                '👆 User tapped camera button',
+                name: 'Navigation',
+                category: LogCategory.ui,
+              );
               context.pushCamera();
             },
           ),
@@ -253,10 +283,13 @@ class AppShell extends ConsumerWidget {
         currentIndex: currentIndex.clamp(0, 3),
         onTap: (index) => _handleTabTap(context, ref, index),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home),          label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore),       label: 'Explore'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'Notifications'),
-          BottomNavigationBarItem(icon: Icon(Icons.person),        label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explore'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications),
+            label: 'Notifications',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

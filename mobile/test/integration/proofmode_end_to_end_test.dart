@@ -15,8 +15,10 @@ void main() {
       final nativeProof = NativeProofData(
         videoHash: 'abc123def456',
         sensorDataCsv: 'timestamp,lat,lon\n2025-01-01,40.7,-74.0',
-        pgpSignature: '-----BEGIN PGP SIGNATURE-----\ntest\n-----END PGP SIGNATURE-----',
-        publicKey: '-----BEGIN PGP PUBLIC KEY BLOCK-----\ntest\n-----END PGP PUBLIC KEY BLOCK-----',
+        pgpSignature:
+            '-----BEGIN PGP SIGNATURE-----\ntest\n-----END PGP SIGNATURE-----',
+        publicKey:
+            '-----BEGIN PGP PUBLIC KEY BLOCK-----\ntest\n-----END PGP PUBLIC KEY BLOCK-----',
         deviceAttestation: 'attestation_token_12345',
       );
 
@@ -47,8 +49,16 @@ void main() {
       print('✅ Step 3: VineDraft created');
       print('   hasProofMode: ${draft.hasProofMode}');
       print('   nativeProof: ${draft.nativeProof}');
-      expect(draft.hasProofMode, isTrue, reason: 'Draft MUST have ProofMode data');
-      expect(draft.nativeProof, isNotNull, reason: 'Draft MUST parse NativeProofData');
+      expect(
+        draft.hasProofMode,
+        isTrue,
+        reason: 'Draft MUST have ProofMode data',
+      );
+      expect(
+        draft.nativeProof,
+        isNotNull,
+        reason: 'Draft MUST parse NativeProofData',
+      );
       expect(draft.nativeProof!.videoHash, equals('abc123def456'));
 
       // Step 4: Convert draft to PendingUpload (as done in UploadManager:startUpload)
@@ -64,8 +74,16 @@ void main() {
       print('✅ Step 4: PendingUpload created');
       print('   hasProofMode: ${upload.hasProofMode}');
       print('   nativeProof: ${upload.nativeProof}');
-      expect(upload.hasProofMode, isTrue, reason: 'Upload MUST have ProofMode data');
-      expect(upload.nativeProof, isNotNull, reason: 'Upload MUST parse NativeProofData');
+      expect(
+        upload.hasProofMode,
+        isTrue,
+        reason: 'Upload MUST have ProofMode data',
+      );
+      expect(
+        upload.nativeProof,
+        isNotNull,
+        reason: 'Upload MUST parse NativeProofData',
+      );
       expect(upload.nativeProof!.videoHash, equals('abc123def456'));
 
       // Step 5: Verify tags would be generated (as done in VideoEventPublisher:392-416)
@@ -78,8 +96,12 @@ void main() {
       print('✅ Step 5: Nostr tags would be generated');
       print('   proof-verification-level: $verificationLevel');
       print('   proofmode tag length: ${manifestTag.length} chars');
-      print('   proof-device-attestation: ${attestationTag != null ? "present" : "missing"}');
-      print('   proof-pgp-fingerprint: ${pgpTag != null ? "present" : "missing"}');
+      print(
+        '   proof-device-attestation: ${attestationTag != null ? "present" : "missing"}',
+      );
+      print(
+        '   proof-pgp-fingerprint: ${pgpTag != null ? "present" : "missing"}',
+      );
 
       expect(verificationLevel, equals('verified_mobile'));
       expect(manifestTag, contains('videoHash'));

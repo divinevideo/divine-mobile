@@ -18,10 +18,7 @@ void main() {
 
         expect(json['kinds'], [34236]);
         expect(json['limit'], 50);
-        expect(json['sort'], {
-          'field': 'loop_count',
-          'dir': 'desc',
-        });
+        expect(json['sort'], {'field': 'loop_count', 'dir': 'desc'});
       });
 
       test('includes int# filters in JSON', () {
@@ -58,9 +55,7 @@ void main() {
             limit: 100,
           ),
           sort: SortConfig(field: 'likes', direction: SortDirection.asc),
-          intFilters: {
-            'views': IntRangeFilter(gte: 500),
-          },
+          intFilters: {'views': IntRangeFilter(gte: 500)},
           cursor: 'pagination_cursor',
         );
 
@@ -75,9 +70,7 @@ void main() {
       });
 
       test('omits extensions when not provided', () {
-        final filter = DivineFilter(
-          baseFilter: Filter(kinds: [34236]),
-        );
+        final filter = DivineFilter(baseFilter: Filter(kinds: [34236]));
 
         final json = filter.toJson();
 
@@ -89,12 +82,7 @@ void main() {
 
     group('IntRangeFilter', () {
       test('supports all range operators', () {
-        final filter = IntRangeFilter(
-          gte: 10,
-          lte: 100,
-          gt: 5,
-          lt: 105,
-        );
+        final filter = IntRangeFilter(gte: 10, lte: 100, gt: 5, lt: 105);
 
         final json = filter.toJson();
 
@@ -167,10 +155,7 @@ void main() {
 
         final json = filter.toJson();
 
-        expect(json['sort'], {
-          'field': 'loop_count',
-          'dir': 'desc',
-        });
+        expect(json['sort'], {'field': 'loop_count', 'dir': 'desc'});
       });
 
       test('trending with minLoops adds int# filter', () {
@@ -192,10 +177,7 @@ void main() {
 
         final json = filter.toJson();
 
-        expect(json['sort'], {
-          'field': 'likes',
-          'dir': 'desc',
-        });
+        expect(json['sort'], {'field': 'likes', 'dir': 'desc'});
       });
 
       test('mostLiked with minLikes adds int# filter', () {
@@ -217,10 +199,7 @@ void main() {
 
         final json = filter.toJson();
 
-        expect(json['sort'], {
-          'field': 'views',
-          'dir': 'desc',
-        });
+        expect(json['sort'], {'field': 'views', 'dir': 'desc'});
       });
 
       test('mostViewed with minViews adds int# filter', () {
@@ -236,16 +215,11 @@ void main() {
       });
 
       test('newest creates created_at sorted filter', () {
-        final filter = DivineFilter.newest(
-          baseFilter: Filter(kinds: [34236]),
-        );
+        final filter = DivineFilter.newest(baseFilter: Filter(kinds: [34236]));
 
         final json = filter.toJson();
 
-        expect(json['sort'], {
-          'field': 'created_at',
-          'dir': 'desc',
-        });
+        expect(json['sort'], {'field': 'created_at', 'dir': 'desc'});
       });
     });
 
@@ -273,11 +247,7 @@ void main() {
 
       test('popular hashtag videos', () {
         final filter = DivineFilter(
-          baseFilter: Filter(
-            kinds: [34236],
-            t: ['comedy'],
-            limit: 20,
-          ),
+          baseFilter: Filter(kinds: [34236], t: ['comedy'], limit: 20),
           sort: SortConfig(field: 'likes', direction: SortDirection.desc),
           intFilters: {
             'likes': IntRangeFilter(gte: 50),

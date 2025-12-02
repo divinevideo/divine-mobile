@@ -27,10 +27,7 @@ void main() {
     testGoldens('SettingsScreen light theme', (tester) async {
       await tester.pumpWidgetBuilder(
         createSettingsScreen(),
-        wrapper: (child) => MaterialApp(
-          theme: ThemeData.light(),
-          home: child,
-        ),
+        wrapper: (child) => MaterialApp(theme: ThemeData.light(), home: child),
         surfaceSize: const Size(400, 800),
       );
 
@@ -52,9 +49,7 @@ void main() {
     });
 
     testGoldens('SettingsScreen on multiple devices', (tester) async {
-      await tester.pumpWidgetBuilder(
-        createSettingsScreen(),
-      );
+      await tester.pumpWidgetBuilder(createSettingsScreen());
 
       await multiScreenGolden(
         tester,
@@ -74,9 +69,7 @@ void main() {
     });
 
     testGoldens('SettingsScreen tablet layouts', (tester) async {
-      await tester.pumpWidgetBuilder(
-        createSettingsScreen(),
-      );
+      await tester.pumpWidgetBuilder(createSettingsScreen());
 
       await multiScreenGolden(
         tester,

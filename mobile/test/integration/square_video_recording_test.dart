@@ -27,8 +27,16 @@ void main() {
       final (videoFile, _) = await controller.finishRecording();
 
       // Assert - Video should exist and be square
-      expect(videoFile, isNotNull, reason: 'Recording should produce a video file');
-      expect(videoFile!.existsSync(), isTrue, reason: 'Video file should exist');
+      expect(
+        videoFile,
+        isNotNull,
+        reason: 'Recording should produce a video file',
+      );
+      expect(
+        videoFile!.existsSync(),
+        isTrue,
+        reason: 'Video file should exist',
+      );
 
       // Check video dimensions using video_player
       final videoController = VideoPlayerController.file(videoFile);
@@ -41,7 +49,8 @@ void main() {
       expect(
         aspectRatio,
         closeTo(1.0, 0.05),
-        reason: 'Video aspect ratio should be 1:1 (square), but got ${size.width}x${size.height} = $aspectRatio',
+        reason:
+            'Video aspect ratio should be 1:1 (square), but got ${size.width}x${size.height} = $aspectRatio',
       );
 
       // Cleanup
@@ -49,7 +58,6 @@ void main() {
       await videoFile.delete();
       container.dispose();
     });
-
 
     test('recorded segments should maintain square aspect ratio', () async {
       // Arrange
@@ -116,7 +124,8 @@ void main() {
       expect(
         width,
         equals(height),
-        reason: 'Video width ($width) should equal height ($height) for square format',
+        reason:
+            'Video width ($width) should equal height ($height) for square format',
       );
 
       // Cleanup

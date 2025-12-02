@@ -47,16 +47,21 @@ void main() {
       test('ExploreScreen should have TabController', () {
         // RED: Testing that the screen has proper tab structure
         expect(() {
-          throw UnimplementedError('TabController not implemented in ExploreScreen');
+          throw UnimplementedError(
+            'TabController not implemented in ExploreScreen',
+          );
         }, throwsA(isA<UnimplementedError>()));
       });
 
-      test('ExploreScreen should have 3 tabs (Popular Now, Trending, Editors Pick)', () {
-        // RED: Testing 3-tab structure
-        expect(() {
-          throw UnimplementedError('3-tab structure not implemented');
-        }, throwsA(isA<UnimplementedError>()));
-      });
+      test(
+        'ExploreScreen should have 3 tabs (Popular Now, Trending, Editors Pick)',
+        () {
+          // RED: Testing 3-tab structure
+          expect(() {
+            throw UnimplementedError('3-tab structure not implemented');
+          }, throwsA(isA<UnimplementedError>()));
+        },
+      );
 
       test('ExploreScreen should support grid and feed modes', () {
         // RED: Testing dual mode functionality
@@ -70,14 +75,18 @@ void main() {
       test('ExploreScreen should use videoEventsProvider', () {
         // RED: Testing pure Riverpod integration
         expect(() {
-          throw UnimplementedError('videoEventsProvider integration not implemented');
+          throw UnimplementedError(
+            'videoEventsProvider integration not implemented',
+          );
         }, throwsA(isA<UnimplementedError>()));
       });
 
       test('ExploreScreen should integrate with video playback providers', () {
         // RED: Testing playback state integration
         expect(() {
-          throw UnimplementedError('Video playback provider integration not implemented');
+          throw UnimplementedError(
+            'Video playback provider integration not implemented',
+          );
         }, throwsA(isA<UnimplementedError>()));
       });
 
@@ -90,12 +99,17 @@ void main() {
     });
 
     group('Phase 4: State Management Tests', () {
-      test('ExploreScreen should update video index when entering feed mode', () {
-        // RED: Testing state coordination
-        expect(() {
-          throw UnimplementedError('Video index state management not implemented');
-        }, throwsA(isA<UnimplementedError>()));
-      });
+      test(
+        'ExploreScreen should update video index when entering feed mode',
+        () {
+          // RED: Testing state coordination
+          expect(() {
+            throw UnimplementedError(
+              'Video index state management not implemented',
+            );
+          }, throwsA(isA<UnimplementedError>()));
+        },
+      );
 
       test('ExploreScreen should maintain tab state correctly', () {
         // RED: Testing tab state persistence
@@ -135,9 +149,7 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: testContainer,
-            child: MaterialApp(
-              home: ExploreScreen(),
-            ),
+            child: MaterialApp(home: ExploreScreen()),
           ),
         );
 

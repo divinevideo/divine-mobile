@@ -50,7 +50,9 @@ void main() {
         if (request.url.path == '/analytics/view') {
           requestCount++;
           return http.Response(
-              '{"success": true, "views": $requestCount}', 200);
+            '{"success": true, "views": $requestCount}',
+            200,
+          );
         }
         return http.Response('Not Found', 404);
       });
@@ -111,16 +113,15 @@ void main() {
         timestamp: DateTime.now(),
       );
 
-      mockClient = MockClient((request) async =>
-          http.Response('{"error": "Rate limit exceeded"}', 429));
+      mockClient = MockClient(
+        (request) async =>
+            http.Response('{"error": "Rate limit exceeded"}', 429),
+      );
       analyticsService = AnalyticsService(client: mockClient);
       await analyticsService.initialize();
 
       // Act & Assert - Should not throw
-      await expectLater(
-        analyticsService.trackVideoView(video),
-        completes,
-      );
+      await expectLater(analyticsService.trackVideoView(video), completes);
     });
 
     test('should allow rapid successive views of the same video', () async {
@@ -144,8 +145,10 @@ void main() {
       await analyticsService.initialize();
 
       // Act - Track rapidly without delays
-      final futures =
-          List.generate(5, (_) => analyticsService.trackVideoView(video));
+      final futures = List.generate(
+        5,
+        (_) => analyticsService.trackVideoView(video),
+      );
       await Future.wait(futures);
 
       // Wait for async fire-and-forget requests to complete

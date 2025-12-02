@@ -10,11 +10,7 @@ void main() {
       // This is a simple display test - just verify the "?" appears in the widget tree
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: Center(
-              child: Text('?'),
-            ),
-          ),
+          home: Scaffold(body: Center(child: Text('?'))),
         ),
       );
 

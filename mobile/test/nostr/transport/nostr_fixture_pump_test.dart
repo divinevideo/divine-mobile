@@ -53,10 +53,7 @@ void main() {
 
       await Future.delayed(Duration.zero);
 
-      expect(messages, [
-        '["EVENT","sub1",{"id":"abc"}]',
-        '["EOSE","sub1"]',
-      ]);
+      expect(messages, ['["EVENT","sub1",{"id":"abc"}]', '["EOSE","sub1"]']);
     });
 
     test('handles malformed JSON by throwing exception', () {

@@ -31,55 +31,66 @@ void main() {
       await RealIntegrationTestHelper.cleanup();
     });
 
-    testWidgets('can fetch real video events from staging-relay.divine.video relay',
-        (tester) async {
-      // This test uses REAL network connections to staging-relay.divine.video
-      // No mocking of NostrService, network, or relay connections
+    testWidgets(
+      'can fetch real video events from staging-relay.divine.video relay',
+      (tester) async {
+        // This test uses REAL network connections to staging-relay.divine.video
+        // No mocking of NostrService, network, or relay connections
 
-      // Subscribe to video feed
-      await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery, limit: 5);
+        // Subscribe to video feed
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+          limit: 5,
+        );
 
-      // Wait for events to load
-      await Future.delayed(const Duration(seconds: 2));
-      await tester.pump();
+        // Wait for events to load
+        await Future.delayed(const Duration(seconds: 2));
+        await tester.pump();
 
-      // Get video events from cache
-      final videoEvents = videoEventService.discoveryVideos;
+        // Get video events from cache
+        final videoEvents = videoEventService.discoveryVideos;
 
-      // Should get real video events from the relay
-      expect(videoEvents, isNotNull);
-      // May be empty if no videos on relay, but should not error
-      expect(videoEvents, isA<List<VideoEvent>>());
+        // Should get real video events from the relay
+        expect(videoEvents, isNotNull);
+        // May be empty if no videos on relay, but should not error
+        expect(videoEvents, isA<List<VideoEvent>>());
 
-      // If we got videos, they should be valid
-      for (final video in videoEvents) {
-        expect(video.id, isNotEmpty);
-        expect(video.pubkey, isNotEmpty);
-        expect(video.createdAt, greaterThan(0));
-      }
-    }, timeout: const Timeout(Duration(seconds: 30)));
+        // If we got videos, they should be valid
+        for (final video in videoEvents) {
+          expect(video.id, isNotEmpty);
+          expect(video.pubkey, isNotEmpty);
+          expect(video.createdAt, greaterThan(0));
+        }
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+    );
 
-    testWidgets('can subscribe to real video events', (tester) async {
-      // Test real subscription to live relay
-      int initialCount = videoEventService.discoveryVideos.length;
+    testWidgets(
+      'can subscribe to real video events',
+      (tester) async {
+        // Test real subscription to live relay
+        int initialCount = videoEventService.discoveryVideos.length;
 
-      // Subscribe to video feed
-      await videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.discovery, limit: 10);
+        // Subscribe to video feed
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.discovery,
+          limit: 10,
+        );
 
-      // Wait a bit for any events
-      await Future.delayed(const Duration(seconds: 3));
-      await tester.pump();
+        // Wait a bit for any events
+        await Future.delayed(const Duration(seconds: 3));
+        await tester.pump();
 
-      // Check if we got any new events
-      int finalCount = videoEventService.discoveryVideos.length;
+        // Check if we got any new events
+        int finalCount = videoEventService.discoveryVideos.length;
 
-      // May not receive events immediately, but subscription should work
-      expect(finalCount, greaterThanOrEqualTo(initialCount));
+        // May not receive events immediately, but subscription should work
+        expect(finalCount, greaterThanOrEqualTo(initialCount));
 
-      // Clean up subscription
-      await videoEventService.unsubscribeFromVideoFeed();
-    }, timeout: const Timeout(Duration(seconds: 15)));
+        // Clean up subscription
+        await videoEventService.unsubscribeFromVideoFeed();
+      },
+      timeout: const Timeout(Duration(seconds: 15)),
+    );
   });
 }

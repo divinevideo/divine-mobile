@@ -33,12 +33,12 @@ class GeoBlockResponse {
   }
 
   Map<String, dynamic> toJson() => {
-        'blocked': blocked,
-        'country': country,
-        'region': region,
-        'city': city,
-        'reason': reason,
-      };
+    'blocked': blocked,
+    'country': country,
+    'region': region,
+    'city': city,
+    'reason': reason,
+  };
 }
 
 class GeoBlockingService {
@@ -187,7 +187,9 @@ class GeoBlockingService {
       final json = jsonEncode(response.toJson());
       await prefs.setString(_cacheKey, json);
       await prefs.setInt(
-          _cacheTimestampKey, DateTime.now().millisecondsSinceEpoch);
+        _cacheTimestampKey,
+        DateTime.now().millisecondsSinceEpoch,
+      );
 
       Log.debug(
         'Cached geo-block status saved',

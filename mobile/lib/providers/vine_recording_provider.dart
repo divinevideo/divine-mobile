@@ -8,7 +8,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:riverpod/riverpod.dart' show Ref;
 import 'package:openvine/services/vine_recording_controller.dart'
-    show VineRecordingController, VineRecordingState, RecordingSegment, MacOSCameraInterface, CameraPlatformInterface, MobileCameraInterface;
+    show
+        VineRecordingController,
+        VineRecordingState,
+        RecordingSegment,
+        MacOSCameraInterface,
+        CameraPlatformInterface,
+        MobileCameraInterface;
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/models/aspect_ratio.dart' as model;
@@ -52,15 +58,20 @@ class VineRecordingUIState {
   final Duration remainingDuration;
   final bool canRecord;
   final List<RecordingSegment> segments;
-  final bool hasSegments; // From controller.hasSegments - includes virtual segments for macOS
+  final bool
+  hasSegments; // From controller.hasSegments - includes virtual segments for macOS
   final bool isCameraInitialized;
   final bool canSwitchCamera;
   final model.AspectRatio aspectRatio;
-  final int cameraSwitchCount; // Increments each time camera switches to force UI rebuild
+  final int
+  cameraSwitchCount; // Increments each time camera switches to force UI rebuild
 
   // Convenience getters used by UI
   bool get isRecording => recordingState == VineRecordingState.recording;
-  bool get isInitialized => isCameraInitialized && recordingState != VineRecordingState.processing && recordingState != VineRecordingState.error;
+  bool get isInitialized =>
+      isCameraInitialized &&
+      recordingState != VineRecordingState.processing &&
+      recordingState != VineRecordingState.error;
   bool get isError => recordingState == VineRecordingState.error;
   Duration get recordingDuration => totalRecordedDuration;
   String? get errorMessage => isError ? 'Recording error occurred' : null;
@@ -97,23 +108,21 @@ class VineRecordingUIState {
 
 /// StateNotifier that wraps VineRecordingController and provides reactive updates
 class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
-  VineRecordingNotifier(
-    this._controller,
-    this._ref,
-  ) : super(
-          VineRecordingUIState(
-            recordingState: _controller.state,
-            progress: _controller.progress,
-            totalRecordedDuration: _controller.totalRecordedDuration,
-            remainingDuration: _controller.remainingDuration,
-            canRecord: _controller.canRecord,
-            segments: _controller.segments,
-            hasSegments: _controller.hasSegments,
-            isCameraInitialized: _controller.isCameraInitialized,
-            canSwitchCamera: _controller.canSwitchCamera,
-            aspectRatio: _controller.aspectRatio,
-          ),
-        ) {
+  VineRecordingNotifier(this._controller, this._ref)
+    : super(
+        VineRecordingUIState(
+          recordingState: _controller.state,
+          progress: _controller.progress,
+          totalRecordedDuration: _controller.totalRecordedDuration,
+          remainingDuration: _controller.remainingDuration,
+          canRecord: _controller.canRecord,
+          segments: _controller.segments,
+          hasSegments: _controller.hasSegments,
+          isCameraInitialized: _controller.isCameraInitialized,
+          canSwitchCamera: _controller.canSwitchCamera,
+          aspectRatio: _controller.aspectRatio,
+        ),
+      ) {
     // Set up callback for recording progress updates
     _controller.setStateChangeCallback(updateState);
   }
@@ -157,11 +166,13 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
       remainingDuration: _controller.remainingDuration,
       canRecord: _controller.canRecord,
       segments: _controller.segments,
-      hasSegments: _controller.hasSegments, // CRITICAL: Use controller's hasSegments which includes virtual segments for macOS
+      hasSegments: _controller
+          .hasSegments, // CRITICAL: Use controller's hasSegments which includes virtual segments for macOS
       isCameraInitialized: _controller.isCameraInitialized,
       canSwitchCamera: _controller.canSwitchCamera,
       aspectRatio: _controller.aspectRatio,
-      cameraSwitchCount: state.cameraSwitchCount, // CRITICAL: Preserve camera switch count
+      cameraSwitchCount:
+          state.cameraSwitchCount, // CRITICAL: Preserve camera switch count
     );
   }
 
@@ -181,28 +192,54 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
     final result = await _controller.finishRecording();
     updateState();
 
-    Log.info('🔍 PROOFMODE DEBUG: stopRecording() called', category: LogCategory.video);
-    Log.info('🔍 Video file: ${result.$1?.path ?? "NULL"}', category: LogCategory.video);
-    Log.info('🔍 Native proof: ${result.$2?.toString() ?? "NULL"}', category: LogCategory.video);
+    Log.info(
+      '🔍 PROOFMODE DEBUG: stopRecording() called',
+      category: LogCategory.video,
+    );
+    Log.info(
+      '🔍 Video file: ${result.$1?.path ?? "NULL"}',
+      category: LogCategory.video,
+    );
+    Log.info(
+      '🔍 Native proof: ${result.$2?.toString() ?? "NULL"}',
+      category: LogCategory.video,
+    );
 
     // Auto-create draft immediately after recording finishes
     if (result.$1 != null) {
       try {
-        final draftStorage = await _ref.read(draftStorageServiceProvider.future);
+        final draftStorage = await _ref.read(
+          draftStorageServiceProvider.future,
+        );
 
         // Serialize NativeProofData to JSON if available
         String? proofManifestJson;
         if (result.$2 != null) {
           try {
             proofManifestJson = jsonEncode(result.$2!.toJson());
-            Log.info('📜 Native ProofMode data attached to draft', category: LogCategory.video);
-            Log.info('🔍 Proof JSON length: ${proofManifestJson.length} chars', category: LogCategory.video);
-            Log.info('🔍 Proof verification level: ${result.$2!.verificationLevel}', category: LogCategory.video);
+            Log.info(
+              '📜 Native ProofMode data attached to draft',
+              category: LogCategory.video,
+            );
+            Log.info(
+              '🔍 Proof JSON length: ${proofManifestJson.length} chars',
+              category: LogCategory.video,
+            );
+            Log.info(
+              '🔍 Proof verification level: ${result.$2!.verificationLevel}',
+              category: LogCategory.video,
+            );
           } catch (e) {
-            Log.error('Failed to serialize NativeProofData for draft: $e', category: LogCategory.video);
+            Log.error(
+              'Failed to serialize NativeProofData for draft: $e',
+              category: LogCategory.video,
+            );
           }
         } else {
-          Log.warning('⚠️ NO NATIVE PROOF DATA FROM RECORDING! ProofMode will not be published.', category: LogCategory.video);
+          Log.warning(
+            '⚠️ NO NATIVE PROOF DATA FROM RECORDING! ProofMode will not be published.',
+            category: LogCategory.video,
+          );
         }
 
         final draft = VineDraft.create(
@@ -217,8 +254,12 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
         );
 
         await draftStorage.saveDraft(draft);
-        _currentDraftId = draft.id; // Track draft to prevent duplicate on dispose
-        Log.info('📹 Auto-created draft: ${draft.id}', category: LogCategory.video);
+        _currentDraftId =
+            draft.id; // Track draft to prevent duplicate on dispose
+        Log.info(
+          '📹 Auto-created draft: ${draft.id}',
+          category: LogCategory.video,
+        );
 
         return RecordingResult(
           videoFile: result.$1,
@@ -226,7 +267,10 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
           nativeProof: result.$2,
         );
       } catch (e) {
-        Log.error('📹 Failed to auto-create draft: $e', category: LogCategory.video);
+        Log.error(
+          '📹 Failed to auto-create draft: $e',
+          category: LogCategory.video,
+        );
         // Still return the video file so user can manually save
         return RecordingResult(
           videoFile: result.$1,
@@ -248,8 +292,10 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
   Future<void> stopSegment() async {
     await _controller.stopRecording();
     updateState();
-    Log.info('📹 Segment stopped, total segments: ${_controller.segments.length}',
-        category: LogCategory.video);
+    Log.info(
+      '📹 Segment stopped, total segments: ${_controller.segments.length}',
+      category: LogCategory.video,
+    );
   }
 
   Future<(File?, NativeProofData?)> finishRecording() async {
@@ -263,9 +309,7 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
 
     // Force state update to rebuild UI with new camera preview
     // Increment camera switch count to ensure state object changes and triggers UI rebuild
-    state = state.copyWith(
-      cameraSwitchCount: state.cameraSwitchCount + 1,
-    );
+    state = state.copyWith(cameraSwitchCount: state.cameraSwitchCount + 1);
     updateState();
   }
 
@@ -285,8 +329,11 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
   /// Mark recording as published to prevent auto-save on dispose
   void markAsPublished() {
     _wasPublished = true;
-    Log.info('Recording marked as published - auto-save will be skipped',
-        name: 'VineRecordingProvider', category: LogCategory.system);
+    Log.info(
+      'Recording marked as published - auto-save will be skipped',
+      name: 'VineRecordingProvider',
+      category: LogCategory.system,
+    );
   }
 
   /// Clean up temp files and reset for new recording
@@ -299,11 +346,17 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
       _wasPublished = false;
       _currentDraftId = null; // Clear draft ID for new recording
       updateState();
-      Log.info('Cleaned up temp files and reset for new recording',
-          name: 'VineRecordingProvider', category: LogCategory.system);
+      Log.info(
+        'Cleaned up temp files and reset for new recording',
+        name: 'VineRecordingProvider',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error during cleanup and reset: $e',
-          name: 'VineRecordingProvider', category: LogCategory.system);
+      Log.error(
+        'Error during cleanup and reset: $e',
+        name: 'VineRecordingProvider',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -312,19 +365,25 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
     // Auto-save as draft if recording completed but not published
     // Note: We can't await in dispose(), so we use unawaited future
     // The controller cleanup will be delayed until save completes via the future chain
-    _autoSaveDraftBeforeDispose().then((_) {
-      // Clear callback to prevent memory leaks
-      _controller.setStateChangeCallback(null);
-      _controller.dispose();
-    }).catchError((e) {
-      Log.error('Error during auto-save, proceeding with cleanup: $e',
-          name: 'VineRecordingProvider', category: LogCategory.system);
-      // Ensure cleanup happens even if save fails
-      _controller.setStateChangeCallback(null);
-      _controller.dispose();
-    }).whenComplete(() {
-      super.dispose();
-    });
+    _autoSaveDraftBeforeDispose()
+        .then((_) {
+          // Clear callback to prevent memory leaks
+          _controller.setStateChangeCallback(null);
+          _controller.dispose();
+        })
+        .catchError((e) {
+          Log.error(
+            'Error during auto-save, proceeding with cleanup: $e',
+            name: 'VineRecordingProvider',
+            category: LogCategory.system,
+          );
+          // Ensure cleanup happens even if save fails
+          _controller.setStateChangeCallback(null);
+          _controller.dispose();
+        })
+        .whenComplete(() {
+          super.dispose();
+        });
   }
 
   /// Auto-save recording as draft if completed but not published
@@ -332,15 +391,21 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
     try {
       // Skip auto-save if video was successfully published
       if (_wasPublished) {
-        Log.info('Skipping auto-save - video was published',
-            name: 'VineRecordingProvider', category: LogCategory.system);
+        Log.info(
+          'Skipping auto-save - video was published',
+          name: 'VineRecordingProvider',
+          category: LogCategory.system,
+        );
         return;
       }
 
       // Skip auto-save if we already created a draft in stopRecording()
       if (_currentDraftId != null) {
-        Log.info('Skipping auto-save - draft already created: $_currentDraftId',
-            name: 'VineRecordingProvider', category: LogCategory.system);
+        Log.info(
+          'Skipping auto-save - draft already created: $_currentDraftId',
+          name: 'VineRecordingProvider',
+          category: LogCategory.system,
+        );
         return;
       }
 
@@ -351,14 +416,19 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
 
       // Check if we have segments to save
       if (_controller.segments.isEmpty) {
-        Log.debug('No segments to auto-save as draft',
-            name: 'VineRecordingProvider', category: LogCategory.system);
+        Log.debug(
+          'No segments to auto-save as draft',
+          name: 'VineRecordingProvider',
+          category: LogCategory.system,
+        );
         return;
       }
 
       // Get the video file path from macOS single recording mode
-      if (Platform.isMacOS && _controller.cameraInterface is MacOSCameraInterface) {
-        final macOSInterface = _controller.cameraInterface as MacOSCameraInterface;
+      if (Platform.isMacOS &&
+          _controller.cameraInterface is MacOSCameraInterface) {
+        final macOSInterface =
+            _controller.cameraInterface as MacOSCameraInterface;
         final videoPath = macOSInterface.currentRecordingPath;
 
         if (videoPath != null && File(videoPath).existsSync()) {
@@ -373,8 +443,11 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
         await _saveDraftFromPath(segment.filePath!);
       }
     } catch (e) {
-      Log.error('Failed to auto-save draft on dispose: $e',
-          name: 'VineRecordingProvider', category: LogCategory.system);
+      Log.error(
+        'Failed to auto-save draft on dispose: $e',
+        name: 'VineRecordingProvider',
+        category: LogCategory.system,
+      );
       // Don't rethrow - ensure cleanup continues
     }
   }
@@ -393,19 +466,26 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final extension = path.extension(videoPath);
-      final permanentPath = path.join(draftsDir.path, 'draft_$timestamp$extension');
+      final permanentPath = path.join(
+        draftsDir.path,
+        'draft_$timestamp$extension',
+      );
 
       // Copy the file to permanent location
       final sourceFile = File(videoPath);
       final permanentFile = await sourceFile.copy(permanentPath);
 
-      Log.info('📁 Copied draft video to permanent location: $permanentPath',
-          name: 'VineRecordingProvider', category: LogCategory.system);
+      Log.info(
+        '📁 Copied draft video to permanent location: $permanentPath',
+        name: 'VineRecordingProvider',
+        category: LogCategory.system,
+      );
 
       // Create draft with permanent file path
       final draft = VineDraft.create(
         videoFile: permanentFile,
-        title: 'Untitled Draft - ${DateTime.now().toLocal().toString().split('.')[0]}',
+        title:
+            'Untitled Draft - ${DateTime.now().toLocal().toString().split('.')[0]}',
         description: '',
         hashtags: [],
         frameCount: 0,
@@ -414,11 +494,17 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
 
       await draftStorage.saveDraft(draft);
 
-      Log.info('✅ Auto-saved recording as draft: ${draft.id}',
-          name: 'VineRecordingProvider', category: LogCategory.system);
+      Log.info(
+        '✅ Auto-saved recording as draft: ${draft.id}',
+        name: 'VineRecordingProvider',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to save draft: $e',
-          name: 'VineRecordingProvider', category: LogCategory.system);
+      Log.error(
+        'Failed to save draft: $e',
+        name: 'VineRecordingProvider',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -431,13 +517,13 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
 /// Provider for VineRecordingController with reactive state management
 final vineRecordingProvider =
     StateNotifierProvider<VineRecordingNotifier, VineRecordingUIState>((ref) {
-  // Create recording controller (ProofMode handled by Guardian Project native library)
-  final controller = VineRecordingController();
-  final notifier = VineRecordingNotifier(controller, ref);
+      // Create recording controller (ProofMode handled by Guardian Project native library)
+      final controller = VineRecordingController();
+      final notifier = VineRecordingNotifier(controller, ref);
 
-  ref.onDispose(() {
-    notifier.dispose();
-  });
+      ref.onDispose(() {
+        notifier.dispose();
+      });
 
-  return notifier;
-});
+      return notifier;
+    });

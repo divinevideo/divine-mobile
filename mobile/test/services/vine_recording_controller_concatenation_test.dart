@@ -84,10 +84,7 @@ void main() {
           controller.totalRecordedDuration.inMilliseconds,
           greaterThan(1400), // Allow some timing variance
         );
-        expect(
-          controller.totalRecordedDuration.inMilliseconds,
-          lessThan(1800),
-        );
+        expect(controller.totalRecordedDuration.inMilliseconds, lessThan(1800));
       });
 
       test('should respect maximum recording duration', () async {
@@ -95,71 +92,79 @@ void main() {
 
         // Try to record beyond max duration
         await controller.startRecording();
-        await Future.delayed(VineRecordingController.maxRecordingDuration + const Duration(milliseconds: 100));
+        await Future.delayed(
+          VineRecordingController.maxRecordingDuration +
+              const Duration(milliseconds: 100),
+        );
 
         // Should auto-stop at max duration
         expect(controller.canRecord, isFalse);
         expect(
           controller.totalRecordedDuration.inMilliseconds,
-          lessThanOrEqualTo(VineRecordingController.maxRecordingDuration.inMilliseconds),
+          lessThanOrEqualTo(
+            VineRecordingController.maxRecordingDuration.inMilliseconds,
+          ),
         );
       });
     });
 
     group('FFmpeg concatenation', () {
-      test('should concatenate multiple video segments into single file', () async {
-        // Create mock video segment files
-        final segment1 = File('${tempDir.path}/test_segment_1.mp4');
-        final segment2 = File('${tempDir.path}/test_segment_2.mp4');
-        final segment3 = File('${tempDir.path}/test_segment_3.mp4');
+      test(
+        'should concatenate multiple video segments into single file',
+        () async {
+          // Create mock video segment files
+          final segment1 = File('${tempDir.path}/test_segment_1.mp4');
+          final segment2 = File('${tempDir.path}/test_segment_2.mp4');
+          final segment3 = File('${tempDir.path}/test_segment_3.mp4');
 
-        // Create minimal valid MP4 files for testing
-        // (In real test, would use actual video data)
-        await segment1.writeAsBytes(_createMinimalMP4());
-        await segment2.writeAsBytes(_createMinimalMP4());
-        await segment3.writeAsBytes(_createMinimalMP4());
+          // Create minimal valid MP4 files for testing
+          // (In real test, would use actual video data)
+          await segment1.writeAsBytes(_createMinimalMP4());
+          await segment2.writeAsBytes(_createMinimalMP4());
+          await segment3.writeAsBytes(_createMinimalMP4());
 
-        // Create recording segments
-        final segments = [
-          RecordingSegment(
-            startTime: DateTime.now(),
-            endTime: DateTime.now().add(const Duration(seconds: 1)),
-            duration: const Duration(seconds: 1),
-            filePath: segment1.path,
-          ),
-          RecordingSegment(
-            startTime: DateTime.now().add(const Duration(seconds: 1)),
-            endTime: DateTime.now().add(const Duration(seconds: 2)),
-            duration: const Duration(seconds: 1),
-            filePath: segment2.path,
-          ),
-          RecordingSegment(
-            startTime: DateTime.now().add(const Duration(seconds: 2)),
-            endTime: DateTime.now().add(const Duration(seconds: 3)),
-            duration: const Duration(seconds: 1),
-            filePath: segment3.path,
-          ),
-        ];
+          // Create recording segments
+          final segments = [
+            RecordingSegment(
+              startTime: DateTime.now(),
+              endTime: DateTime.now().add(const Duration(seconds: 1)),
+              duration: const Duration(seconds: 1),
+              filePath: segment1.path,
+            ),
+            RecordingSegment(
+              startTime: DateTime.now().add(const Duration(seconds: 1)),
+              endTime: DateTime.now().add(const Duration(seconds: 2)),
+              duration: const Duration(seconds: 1),
+              filePath: segment2.path,
+            ),
+            RecordingSegment(
+              startTime: DateTime.now().add(const Duration(seconds: 2)),
+              endTime: DateTime.now().add(const Duration(seconds: 3)),
+              duration: const Duration(seconds: 1),
+              filePath: segment3.path,
+            ),
+          ];
 
-        // Add segments to controller
-        controller.segments.addAll(segments);
+          // Add segments to controller
+          controller.segments.addAll(segments);
 
-        // Finish recording (should trigger concatenation) - returns (File?, ProofManifest?)
-        final recordingResult = await controller.finishRecording();
-        final (videoFile, proofManifest) = recordingResult;
+          // Finish recording (should trigger concatenation) - returns (File?, ProofManifest?)
+          final recordingResult = await controller.finishRecording();
+          final (videoFile, proofManifest) = recordingResult;
 
-        // Verify concatenation occurred
-        expect(videoFile, isNotNull);
-        expect(await videoFile!.exists(), isTrue);
-        expect(videoFile.path, contains('vine_final_'));
-        expect(videoFile.path, endsWith('.mp4'));
+          // Verify concatenation occurred
+          expect(videoFile, isNotNull);
+          expect(await videoFile!.exists(), isTrue);
+          expect(videoFile.path, contains('vine_final_'));
+          expect(videoFile.path, endsWith('.mp4'));
 
-        // Clean up
-        await videoFile.delete();
-        await segment1.delete();
-        await segment2.delete();
-        await segment3.delete();
-      });
+          // Clean up
+          await videoFile.delete();
+          await segment1.delete();
+          await segment2.delete();
+          await segment3.delete();
+        },
+      );
 
       test('should handle single segment without concatenation', () async {
         final segment = File('${tempDir.path}/test_single_segment.mp4');
@@ -186,10 +191,7 @@ void main() {
       test('should throw error when no segments exist', () async {
         await controller.initialize();
 
-        expect(
-          () => controller.finishRecording(),
-          throwsA(isA<Exception>()),
-        );
+        expect(() => controller.finishRecording(), throwsA(isA<Exception>()));
       });
 
       test('should create valid concat list file', () async {

@@ -28,17 +28,19 @@ void main() {
 
       // When checkForPrefetch is called
       final mixin = TestVideoPrefetchMixin(mockCache);
-      mixin.checkForPrefetch(
-        currentIndex: currentIndex,
-        videos: videos,
-      );
+      mixin.checkForPrefetch(currentIndex: currentIndex, videos: videos);
 
       // Then it should call preCache with correct videos
-      final captured = verify(mockCache.preCache(captureAny, captureAny)).captured;
+      final captured = verify(
+        mockCache.preCache(captureAny, captureAny),
+      ).captured;
       final cachedIds = captured[1] as List<String>;
 
       // Should prefetch videos 3, 4, 6, 7, 8 (before=2, after=3)
-      expect(cachedIds, containsAll(['video-3', 'video-4', 'video-6', 'video-7', 'video-8']));
+      expect(
+        cachedIds,
+        containsAll(['video-3', 'video-4', 'video-6', 'video-7', 'video-8']),
+      );
       expect(cachedIds, isNot(contains('video-5'))); // Skip current
     });
 
@@ -49,7 +51,9 @@ void main() {
       final mixin = TestVideoPrefetchMixin(mockCache);
       mixin.checkForPrefetch(currentIndex: currentIndex, videos: videos);
 
-      final captured = verify(mockCache.preCache(captureAny, captureAny)).captured;
+      final captured = verify(
+        mockCache.preCache(captureAny, captureAny),
+      ).captured;
       final cachedIds = captured[1] as List<String>;
 
       // Should only prefetch after (1, 2, 3), no videos before
@@ -64,7 +68,9 @@ void main() {
       final mixin = TestVideoPrefetchMixin(mockCache);
       mixin.checkForPrefetch(currentIndex: currentIndex, videos: videos);
 
-      final captured = verify(mockCache.preCache(captureAny, captureAny)).captured;
+      final captured = verify(
+        mockCache.preCache(captureAny, captureAny),
+      ).captured;
       final cachedIds = captured[1] as List<String>;
 
       // Should only prefetch before (2, 3), no videos after
@@ -89,7 +95,9 @@ void main() {
       final mixin = TestVideoPrefetchMixin(mockCache);
       mixin.checkForPrefetch(currentIndex: 1, videos: videos);
 
-      final captured = verify(mockCache.preCache(captureAny, captureAny)).captured;
+      final captured = verify(
+        mockCache.preCache(captureAny, captureAny),
+      ).captured;
       final cachedIds = captured[1] as List<String>;
 
       // Should skip video-2 (no URL)
@@ -136,8 +144,7 @@ void main() {
     test('SPEC: should handle prefetch errors gracefully', () {
       final videos = _createMockVideos(5);
 
-      when(mockCache.preCache(any, any))
-          .thenThrow(Exception('Network error'));
+      when(mockCache.preCache(any, any)).thenThrow(Exception('Network error'));
 
       final mixin = TestVideoPrefetchMixin(mockCache);
 

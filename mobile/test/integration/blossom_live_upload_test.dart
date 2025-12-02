@@ -10,7 +10,6 @@ import 'package:openvine/utils/hash_util.dart';
 void main() {
   group('Blossom Live Server Upload', () {
     test('LIVE: Upload to cf-stream-service-prod.protestnet.workers.dev', () async {
-
       // Create a minimal test video file
       final testFile = File('test_live_upload.mp4');
       final testBytes = [
@@ -31,14 +30,17 @@ void main() {
         final authEvent = {
           'kind': 24242,
           'created_at': now,
-          'pubkey': '0000000000000000000000000000000000000000000000000000000000000000', // Dummy key
+          'pubkey':
+              '0000000000000000000000000000000000000000000000000000000000000000', // Dummy key
           'tags': [
             ['t', 'upload'],
             ['expiration', (now + 60).toString()],
           ],
           'content': 'Test upload',
-          'id': '0000000000000000000000000000000000000000000000000000000000000000',
-          'sig': '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+          'id':
+              '0000000000000000000000000000000000000000000000000000000000000000',
+          'sig':
+              '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
         };
 
         final authJson = jsonEncode(authEvent);
@@ -48,7 +50,9 @@ void main() {
 
         // Upload to Blossom server
         final dio = Dio();
-        print('📤 Uploading to https://cf-stream-service-prod.protestnet.workers.dev/upload');
+        print(
+          '📤 Uploading to https://cf-stream-service-prod.protestnet.workers.dev/upload',
+        );
 
         final response = await dio.put(
           'https://cf-stream-service-prod.protestnet.workers.dev/upload',
@@ -69,7 +73,11 @@ void main() {
 
         // Verify response
         if (response.statusCode == 200 || response.statusCode == 201) {
-          expect(response.data, isA<Map>(), reason: 'Response should be JSON object');
+          expect(
+            response.data,
+            isA<Map>(),
+            reason: 'Response should be JSON object',
+          );
 
           final data = response.data as Map;
           print('✅ Upload successful!');
@@ -79,35 +87,49 @@ void main() {
           print('   Type: ${data['type']}');
 
           // Verify URL is cdn.divine.video
-          expect(data['url'], isNotNull, reason: 'Response must include url field');
-          expect(data['url'].toString(), contains('cdn.divine.video'),
-              reason: 'URL must be on cdn.divine.video domain');
+          expect(
+            data['url'],
+            isNotNull,
+            reason: 'Response must include url field',
+          );
+          expect(
+            data['url'].toString(),
+            contains('cdn.divine.video'),
+            reason: 'URL must be on cdn.divine.video domain',
+          );
 
           // Verify SHA256 matches
-          expect(data['sha256'], equals(fileHash),
-              reason: 'Server SHA256 should match client calculated hash');
-
+          expect(
+            data['sha256'],
+            equals(fileHash),
+            reason: 'Server SHA256 should match client calculated hash',
+          );
         } else if (response.statusCode == 401) {
           print('⚠️  Authentication failed (expected with dummy keys)');
           print('   This is OK - it confirms auth is being checked');
           print('   Response: ${response.data}');
 
           // Auth failure is expected with dummy keys, but proves the endpoint works
-          expect(response.statusCode, equals(401),
-              reason: 'Should get 401 with invalid auth (proves endpoint exists)');
-
+          expect(
+            response.statusCode,
+            equals(401),
+            reason: 'Should get 401 with invalid auth (proves endpoint exists)',
+          );
         } else if (response.statusCode == 409) {
           print('✅ File already exists (409) - this is success!');
           print('   Hash: $fileHash');
           print('   URL should be: https://cdn.divine.video/$fileHash');
 
-          expect(response.statusCode, equals(409),
-              reason: '409 means file exists - upload succeeded previously');
-
+          expect(
+            response.statusCode,
+            equals(409),
+            reason: '409 means file exists - upload succeeded previously',
+          );
         } else {
-          fail('Unexpected status code: ${response.statusCode}\nResponse: ${response.data}');
+          fail(
+            'Unexpected status code: ${response.statusCode}\nResponse: ${response.data}',
+          );
         }
-
       } finally {
         // Clean up
         if (testFile.existsSync()) {
@@ -129,9 +151,11 @@ void main() {
         print('   Headers: ${response.headers}');
 
         // Endpoint should respond (even if it requires auth for actual upload)
-        expect(response.statusCode, lessThan(500),
-            reason: 'Upload endpoint should be accessible');
-
+        expect(
+          response.statusCode,
+          lessThan(500),
+          reason: 'Upload endpoint should be accessible',
+        );
       } catch (e) {
         print('⚠️  Error checking endpoint: $e');
         // This is OK - HEAD might not be supported, or it requires auth

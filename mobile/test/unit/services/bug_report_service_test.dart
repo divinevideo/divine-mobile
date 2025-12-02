@@ -15,8 +15,9 @@ void main() {
       TestWidgetsFlutterBinding.ensureInitialized();
 
       // Mock package_info_plus
-      const MethodChannel('dev.fluttercommunity.plus/package_info')
-          .setMockMethodCallHandler((MethodCall methodCall) async {
+      const MethodChannel(
+        'dev.fluttercommunity.plus/package_info',
+      ).setMockMethodCallHandler((MethodCall methodCall) async {
         if (methodCall.method == 'getAll') {
           return <String, dynamic>{
             'appName': 'OpenVine',
@@ -29,8 +30,9 @@ void main() {
       });
 
       // Mock Firebase Core
-      const MethodChannel('plugins.flutter.io/firebase_core')
-          .setMockMethodCallHandler((MethodCall methodCall) async {
+      const MethodChannel(
+        'plugins.flutter.io/firebase_core',
+      ).setMockMethodCallHandler((MethodCall methodCall) async {
         if (methodCall.method == 'Firebase#initializeCore') {
           return [
             {
@@ -42,15 +44,16 @@ void main() {
                 'projectId': 'test',
               },
               'pluginConstants': {},
-            }
+            },
           ];
         }
         return null;
       });
 
       // Mock Firebase Analytics
-      const MethodChannel('plugins.flutter.io/firebase_analytics')
-          .setMockMethodCallHandler((MethodCall methodCall) async {
+      const MethodChannel(
+        'plugins.flutter.io/firebase_analytics',
+      ).setMockMethodCallHandler((MethodCall methodCall) async {
         return null; // Just return null for all analytics calls
       });
 
@@ -75,7 +78,8 @@ void main() {
       final input = BugReportData(
         reportId: 'test-123',
         timestamp: DateTime.now(),
-        userDescription: 'My nsec is nsec1qqqsyrhq4p4d8hf40q7tlujzw87hqhz9axhfnm35s2a3u3rrnwsq9sp5p6',
+        userDescription:
+            'My nsec is nsec1qqqsyrhq4p4d8hf40q7tlujzw87hqhz9axhfnm35s2a3u3rrnwsq9sp5p6',
         deviceInfo: {},
         appVersion: '1.0.0',
         recentLogs: [],
@@ -110,10 +114,14 @@ void main() {
       final sanitized = service.sanitizeSensitiveData(input);
 
       // Hex event IDs and pubkeys should be preserved for debugging
-      expect(sanitized.additionalContext.toString(),
-          contains('0123456789abcdef'));
-      expect(sanitized.additionalContext.toString(),
-          contains('fedcba9876543210'));
+      expect(
+        sanitized.additionalContext.toString(),
+        contains('0123456789abcdef'),
+      );
+      expect(
+        sanitized.additionalContext.toString(),
+        contains('fedcba9876543210'),
+      );
     });
 
     test('should sanitize password patterns', () {
@@ -154,7 +162,8 @@ void main() {
       final input = BugReportData(
         reportId: 'test-123',
         timestamp: DateTime.now(),
-        userDescription: 'Request failed with Authorization: Bearer secret_token_here',
+        userDescription:
+            'Request failed with Authorization: Bearer secret_token_here',
         deviceInfo: {},
         appVersion: '1.0.0',
         recentLogs: [],
@@ -189,12 +198,13 @@ void main() {
     });
 
     test('should handle empty diagnostics gracefully', () async {
-      final data = await service.collectDiagnostics(
-        userDescription: '',
-      );
+      final data = await service.collectDiagnostics(userDescription: '');
 
       expect(data.reportId, isNotEmpty);
-      expect(data.deviceInfo, isNotEmpty); // Device info should still be collected
+      expect(
+        data.deviceInfo,
+        isNotEmpty,
+      ); // Device info should still be collected
     });
 
     test('should validate report size', () {

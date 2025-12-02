@@ -3,14 +3,7 @@
 
 import 'package:equatable/equatable.dart';
 
-enum NotificationType {
-  like,
-  comment,
-  follow,
-  mention,
-  repost,
-  system,
-}
+enum NotificationType { like, comment, follow, mention, repost, system }
 
 class NotificationModel extends Equatable {
   // Additional data
@@ -71,36 +64,35 @@ class NotificationModel extends Equatable {
     String? targetVideoUrl,
     String? targetVideoThumbnail,
     Map<String, dynamic>? metadata,
-  }) =>
-      NotificationModel(
-        id: id ?? this.id,
-        type: type ?? this.type,
-        actorPubkey: actorPubkey ?? this.actorPubkey,
-        actorName: actorName ?? this.actorName,
-        actorPictureUrl: actorPictureUrl ?? this.actorPictureUrl,
-        message: message ?? this.message,
-        timestamp: timestamp ?? this.timestamp,
-        isRead: isRead ?? this.isRead,
-        targetEventId: targetEventId ?? this.targetEventId,
-        targetVideoUrl: targetVideoUrl ?? this.targetVideoUrl,
-        targetVideoThumbnail: targetVideoThumbnail ?? this.targetVideoThumbnail,
-        metadata: metadata ?? this.metadata,
-      );
+  }) => NotificationModel(
+    id: id ?? this.id,
+    type: type ?? this.type,
+    actorPubkey: actorPubkey ?? this.actorPubkey,
+    actorName: actorName ?? this.actorName,
+    actorPictureUrl: actorPictureUrl ?? this.actorPictureUrl,
+    message: message ?? this.message,
+    timestamp: timestamp ?? this.timestamp,
+    isRead: isRead ?? this.isRead,
+    targetEventId: targetEventId ?? this.targetEventId,
+    targetVideoUrl: targetVideoUrl ?? this.targetVideoUrl,
+    targetVideoThumbnail: targetVideoThumbnail ?? this.targetVideoThumbnail,
+    metadata: metadata ?? this.metadata,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'type': type.index,
-        'actorPubkey': actorPubkey,
-        'actorName': actorName,
-        'actorPictureUrl': actorPictureUrl,
-        'message': message,
-        'timestamp': timestamp.toIso8601String(),
-        'isRead': isRead,
-        'targetEventId': targetEventId,
-        'targetVideoUrl': targetVideoUrl,
-        'targetVideoThumbnail': targetVideoThumbnail,
-        'metadata': metadata,
-      };
+    'id': id,
+    'type': type.index,
+    'actorPubkey': actorPubkey,
+    'actorName': actorName,
+    'actorPictureUrl': actorPictureUrl,
+    'message': message,
+    'timestamp': timestamp.toIso8601String(),
+    'isRead': isRead,
+    'targetEventId': targetEventId,
+    'targetVideoUrl': targetVideoUrl,
+    'targetVideoThumbnail': targetVideoThumbnail,
+    'metadata': metadata,
+  };
 
   String get typeIcon {
     switch (type) {
@@ -168,17 +160,17 @@ class NotificationModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        type,
-        actorPubkey,
-        actorName,
-        actorPictureUrl,
-        message,
-        timestamp,
-        isRead,
-        targetEventId,
-        targetVideoUrl,
-        targetVideoThumbnail,
-        metadata,
-      ];
+    id,
+    type,
+    actorPubkey,
+    actorName,
+    actorPictureUrl,
+    message,
+    timestamp,
+    isRead,
+    targetEventId,
+    targetVideoUrl,
+    targetVideoThumbnail,
+    metadata,
+  ];
 }

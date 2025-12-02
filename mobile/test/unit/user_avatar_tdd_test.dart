@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 void main() {
-  testWidgets('UserAvatar renders without error when image URL is invalid', (tester) async {
+  testWidgets('UserAvatar renders without error when image URL is invalid', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
@@ -23,15 +25,13 @@ void main() {
     expect(find.byType(UserAvatar), findsOneWidget);
   });
 
-  testWidgets('UserAvatar renders without error when no imageUrl provided', (tester) async {
+  testWidgets('UserAvatar renders without error when no imageUrl provided', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          body: UserAvatar(
-            imageUrl: null,
-            name: 'Test User',
-            size: 40,
-          ),
+          body: UserAvatar(imageUrl: null, name: 'Test User', size: 40),
         ),
       ),
     );
@@ -42,15 +42,13 @@ void main() {
     expect(find.byType(UserAvatar), findsOneWidget);
   });
 
-  testWidgets('UserAvatar renders without error with empty imageUrl', (tester) async {
+  testWidgets('UserAvatar renders without error with empty imageUrl', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          body: UserAvatar(
-            imageUrl: '',
-            name: 'Test User',
-            size: 40,
-          ),
+          body: UserAvatar(imageUrl: '', name: 'Test User', size: 40),
         ),
       ),
     );
@@ -64,12 +62,7 @@ void main() {
   testWidgets('UserAvatar has green border decoration', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: UserAvatar(
-            imageUrl: null,
-            size: 40,
-          ),
-        ),
+        home: Scaffold(body: UserAvatar(imageUrl: null, size: 40)),
       ),
     );
 
@@ -80,4 +73,3 @@ void main() {
     expect(find.byType(UserAvatar), findsOneWidget);
   });
 }
-

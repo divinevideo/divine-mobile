@@ -42,91 +42,89 @@ class RealIntegrationTestHelper {
   /// Setup minimal platform channel mocks (only what's needed, not business logic)
   static void _setupPlatformChannelMocks() {
     // Mock SharedPreferences
-    const MethodChannel prefsChannel =
-        MethodChannel('plugins.flutter.io/shared_preferences');
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      prefsChannel,
-      (MethodCall methodCall) async {
-        if (methodCall.method == 'getAll') {
-          return <String, dynamic>{};
-        }
-        if (methodCall.method == 'setString' ||
-            methodCall.method == 'setStringList') {
-          return true;
-        }
-        if (methodCall.method == 'setBool') {
-          return true;
-        }
-        if (methodCall.method == 'setInt') {
-          return true;
-        }
-        if (methodCall.method == 'setDouble') {
-          return true;
-        }
-        if (methodCall.method == 'remove') {
-          return true;
-        }
-        if (methodCall.method == 'clear') {
-          return true;
-        }
-        return null;
-      },
+    const MethodChannel prefsChannel = MethodChannel(
+      'plugins.flutter.io/shared_preferences',
     );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(prefsChannel, (MethodCall methodCall) async {
+          if (methodCall.method == 'getAll') {
+            return <String, dynamic>{};
+          }
+          if (methodCall.method == 'setString' ||
+              methodCall.method == 'setStringList') {
+            return true;
+          }
+          if (methodCall.method == 'setBool') {
+            return true;
+          }
+          if (methodCall.method == 'setInt') {
+            return true;
+          }
+          if (methodCall.method == 'setDouble') {
+            return true;
+          }
+          if (methodCall.method == 'remove') {
+            return true;
+          }
+          if (methodCall.method == 'clear') {
+            return true;
+          }
+          return null;
+        });
 
     // Mock connectivity
-    const MethodChannel connectivityChannel =
-        MethodChannel('dev.fluttercommunity.plus/connectivity');
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      connectivityChannel,
-      (MethodCall methodCall) async {
-        if (methodCall.method == 'check') {
-          return ['wifi']; // Always online for tests
-        }
-        return null;
-      },
+    const MethodChannel connectivityChannel = MethodChannel(
+      'dev.fluttercommunity.plus/connectivity',
     );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(connectivityChannel, (
+          MethodCall methodCall,
+        ) async {
+          if (methodCall.method == 'check') {
+            return ['wifi']; // Always online for tests
+          }
+          return null;
+        });
 
     // Mock secure storage
-    const MethodChannel secureStorageChannel =
-        MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      secureStorageChannel,
-      (MethodCall methodCall) async {
-        if (methodCall.method == 'write') {
-          return null;
-        }
-        if (methodCall.method == 'read') {
-          return null;
-        }
-        if (methodCall.method == 'readAll') {
-          return <String, String>{};
-        }
-        return null;
-      },
+    const MethodChannel secureStorageChannel = MethodChannel(
+      'plugins.it_nomads.com/flutter_secure_storage',
     );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(secureStorageChannel, (
+          MethodCall methodCall,
+        ) async {
+          if (methodCall.method == 'write') {
+            return null;
+          }
+          if (methodCall.method == 'read') {
+            return null;
+          }
+          if (methodCall.method == 'readAll') {
+            return <String, String>{};
+          }
+          return null;
+        });
 
     // Mock path_provider
-    const MethodChannel pathProviderChannel =
-        MethodChannel('plugins.flutter.io/path_provider');
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      pathProviderChannel,
-      (MethodCall methodCall) async {
-        if (methodCall.method == 'getApplicationDocumentsDirectory') {
-          return '/tmp/test_documents';
-        }
-        if (methodCall.method == 'getTemporaryDirectory') {
-          return '/tmp';
-        }
-        if (methodCall.method == 'getApplicationSupportDirectory') {
-          return '/tmp/test_support';
-        }
-        return null;
-      },
+    const MethodChannel pathProviderChannel = MethodChannel(
+      'plugins.flutter.io/path_provider',
     );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(pathProviderChannel, (
+          MethodCall methodCall,
+        ) async {
+          if (methodCall.method == 'getApplicationDocumentsDirectory') {
+            return '/tmp/test_documents';
+          }
+          if (methodCall.method == 'getTemporaryDirectory') {
+            return '/tmp';
+          }
+          if (methodCall.method == 'getApplicationSupportDirectory') {
+            return '/tmp/test_support';
+          }
+          return null;
+        });
   }
 
   /// Clean up after tests

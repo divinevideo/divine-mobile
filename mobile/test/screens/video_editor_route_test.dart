@@ -38,91 +38,93 @@ void main() {
       );
     });
 
-    testWidgets('Edit button appears when video is owned by current user and feature flag is enabled', (tester) async {
-      // Arrange: Create a ProviderContainer with overrides
-      final container = ProviderContainer(
-        overrides: [
-          // Override auth service to return our test user as authenticated
-          authServiceProvider.overrideWith((ref) {
-            return _MockAuthService(
-              pubkey: testUserPubkey,
-              authenticated: true,
-            );
-          }),
-          // Override feature flag service to enable video editor
-          featureFlagServiceProvider.overrideWith((ref) {
-            return _MockFeatureFlagService(enableVideoEditor: true);
-          }),
-          // Override social provider
-          socialProvider.overrideWith(() => _MockSocialNotifier()),
-          // Force overlay to always be visible
-          overlayPolicyProvider.overrideWith((ref) => OverlayPolicy.alwaysOn),
-        ],
-      );
+    testWidgets(
+      'Edit button appears when video is owned by current user and feature flag is enabled',
+      (tester) async {
+        // Arrange: Create a ProviderContainer with overrides
+        final container = ProviderContainer(
+          overrides: [
+            // Override auth service to return our test user as authenticated
+            authServiceProvider.overrideWith((ref) {
+              return _MockAuthService(
+                pubkey: testUserPubkey,
+                authenticated: true,
+              );
+            }),
+            // Override feature flag service to enable video editor
+            featureFlagServiceProvider.overrideWith((ref) {
+              return _MockFeatureFlagService(enableVideoEditor: true);
+            }),
+            // Override social provider
+            socialProvider.overrideWith(() => _MockSocialNotifier()),
+            // Force overlay to always be visible
+            overlayPolicyProvider.overrideWith((ref) => OverlayPolicy.alwaysOn),
+          ],
+        );
 
-      // Act: Build the widget
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp(
-            home: Scaffold(
-              body: VideoOverlayActions(
-                video: testVideo,
-                isVisible: true,
+        // Act: Build the widget
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              home: Scaffold(
+                body: VideoOverlayActions(video: testVideo, isVisible: true),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Assert: Edit button should be visible
-      expect(find.byIcon(Icons.edit), findsOneWidget);
+        // Assert: Edit button should be visible
+        expect(find.byIcon(Icons.edit), findsOneWidget);
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
 
-    testWidgets('Edit button does NOT appear when video is owned by different user', (tester) async {
-      // Arrange: Create a ProviderContainer with different user authenticated
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWith((ref) {
-            return _MockAuthService(
-              pubkey: 'different-user-pubkey', // Different user!
-              authenticated: true,
-            );
-          }),
-          featureFlagServiceProvider.overrideWith((ref) {
-            return _MockFeatureFlagService(enableVideoEditor: true);
-          }),
-          socialProvider.overrideWith(() => _MockSocialNotifier()),
-          overlayPolicyProvider.overrideWith((ref) => OverlayPolicy.alwaysOn),
-        ],
-      );
+    testWidgets(
+      'Edit button does NOT appear when video is owned by different user',
+      (tester) async {
+        // Arrange: Create a ProviderContainer with different user authenticated
+        final container = ProviderContainer(
+          overrides: [
+            authServiceProvider.overrideWith((ref) {
+              return _MockAuthService(
+                pubkey: 'different-user-pubkey', // Different user!
+                authenticated: true,
+              );
+            }),
+            featureFlagServiceProvider.overrideWith((ref) {
+              return _MockFeatureFlagService(enableVideoEditor: true);
+            }),
+            socialProvider.overrideWith(() => _MockSocialNotifier()),
+            overlayPolicyProvider.overrideWith((ref) => OverlayPolicy.alwaysOn),
+          ],
+        );
 
-      // Act: Build the widget
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp(
-            home: Scaffold(
-              body: VideoOverlayActions(
-                video: testVideo,
-                isVisible: true,
+        // Act: Build the widget
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              home: Scaffold(
+                body: VideoOverlayActions(video: testVideo, isVisible: true),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Assert: Edit button should NOT be visible
-      expect(find.byIcon(Icons.edit), findsNothing);
+        // Assert: Edit button should NOT be visible
+        expect(find.byIcon(Icons.edit), findsNothing);
 
-      container.dispose();
-    });
+        container.dispose();
+      },
+    );
 
-    testWidgets('Edit button does NOT appear when feature flag is disabled', (tester) async {
+    testWidgets('Edit button does NOT appear when feature flag is disabled', (
+      tester,
+    ) async {
       // Arrange: Feature flag disabled
       final container = ProviderContainer(
         overrides: [
@@ -147,10 +149,7 @@ void main() {
           container: container,
           child: MaterialApp(
             home: Scaffold(
-              body: VideoOverlayActions(
-                video: testVideo,
-                isVisible: true,
-              ),
+              body: VideoOverlayActions(video: testVideo, isVisible: true),
             ),
           ),
         ),
@@ -168,10 +167,7 @@ void main() {
 // Mock classes for testing
 
 class _MockAuthService extends AuthService {
-  _MockAuthService({
-    required this.pubkey,
-    required this.authenticated,
-  });
+  _MockAuthService({required this.pubkey, required this.authenticated});
 
   final String? pubkey;
   final bool authenticated;
@@ -183,15 +179,13 @@ class _MockAuthService extends AuthService {
   String? get currentPublicKeyHex => pubkey;
 
   @override
-  AuthState get authState => authenticated ? AuthState.authenticated : AuthState.unauthenticated;
+  AuthState get authState =>
+      authenticated ? AuthState.authenticated : AuthState.unauthenticated;
 }
 
 class _MockFeatureFlagService extends FeatureFlagService {
   _MockFeatureFlagService({required this.enableVideoEditor})
-      : super(
-          _MockSharedPreferences._(),
-          const BuildConfiguration(),
-        );
+    : super(_MockSharedPreferences._(), const BuildConfiguration());
 
   final bool enableVideoEditor;
 

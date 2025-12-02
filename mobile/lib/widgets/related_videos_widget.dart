@@ -71,12 +71,16 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
       }
 
       Log.info(
-          '📊 Loaded ${videos.length} related videos for ${widget.currentVideo.id}',
-          name: 'RelatedVideosWidget',
-          category: LogCategory.ui);
+        '📊 Loaded ${videos.length} related videos for ${widget.currentVideo.id}',
+        name: 'RelatedVideosWidget',
+        category: LogCategory.ui,
+      );
     } catch (e) {
-      Log.error('❌ Failed to load related videos: $e',
-          name: 'RelatedVideosWidget', category: LogCategory.ui);
+      Log.error(
+        '❌ Failed to load related videos: $e',
+        name: 'RelatedVideosWidget',
+        category: LogCategory.ui,
+      );
 
       if (mounted) {
         setState(() {
@@ -93,9 +97,7 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(16.0),
-          child: CircularProgressIndicator(
-            color: VineTheme.vineGreen,
-          ),
+          child: CircularProgressIndicator(color: VineTheme.vineGreen),
         ),
       );
     }
@@ -107,11 +109,7 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.error_outline,
-                color: Colors.red,
-                size: 48,
-              ),
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
               const SizedBox(height: 8),
               const Text(
                 'Failed to load related videos',
@@ -124,10 +122,7 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
               const SizedBox(height: 4),
               const Text(
                 'Try again later',
-                style: TextStyle(
-                  color: VineTheme.secondaryText,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
               ),
             ],
           ),
@@ -159,10 +154,7 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
               const SizedBox(height: 4),
               const Text(
                 'Explore more content in the app',
-                style: TextStyle(
-                  color: VineTheme.secondaryText,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
               ),
             ],
           ),
@@ -188,8 +180,10 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
               ),
               if (_relatedVideos.isNotEmpty)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: VineTheme.vineGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),

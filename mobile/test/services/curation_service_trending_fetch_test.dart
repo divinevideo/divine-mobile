@@ -14,12 +14,7 @@ import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 
-@GenerateMocks([
-  INostrService,
-  VideoEventService,
-  SocialService,
-  AuthService,
-])
+@GenerateMocks([INostrService, VideoEventService, SocialService, AuthService])
 import 'curation_service_trending_fetch_test.mocks.dart';
 
 void main() {
@@ -44,8 +39,9 @@ void main() {
     when(mockVideoEventService.addListener(any)).thenReturn(null);
 
     // Mock subscribeToEvents to avoid MissingStubError when fetching Editor's Picks list
-    when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-        .thenAnswer((_) => Stream<Event>.empty());
+    when(
+      mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+    ).thenAnswer((_) => Stream<Event>.empty());
 
     curationService = CurationService(
       nostrService: mockNostrService,
@@ -83,9 +79,7 @@ void main() {
 
       final streamController = StreamController<Event>();
       when(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-        ),
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
       ).thenAnswer((_) {
         // Emit the video event
         Timer(const Duration(milliseconds: 100), () {
@@ -104,11 +98,7 @@ void main() {
 
       // Verify that when subscribeToEvents is called with the right filters,
       // it would fetch the missing videos
-      final filter = Filter(
-        kinds: [22],
-        ids: missingEventIds,
-        h: ['vine'],
-      );
+      final filter = Filter(kinds: [22], ids: missingEventIds, h: ['vine']);
 
       final eventStream = mockNostrService.subscribeToEvents(filters: [filter]);
       final fetchedEvents = <Event>[];
@@ -129,8 +119,9 @@ void main() {
       // Test that the service handles no trending videos without errors
       when(mockVideoEventService.videoEvents).thenReturn([]);
 
-      final trendingVideos =
-          curationService.getVideosForSetType(CurationSetType.trending);
+      final trendingVideos = curationService.getVideosForSetType(
+        CurationSetType.trending,
+      );
       expect(trendingVideos, isEmpty);
     });
 

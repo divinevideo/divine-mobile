@@ -17,8 +17,8 @@ class UserProfileBuilder {
     this.lud16 = 'test@walletofsatoshi.com',
     int? createdAt,
     Map<String, dynamic>? metadata,
-  })  : createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        metadata = metadata ?? {};
+  }) : createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
+       metadata = metadata ?? {};
   String pubkey;
   String? name;
   String? displayName;
@@ -33,28 +33,28 @@ class UserProfileBuilder {
 
   /// Build the UserProfile instance
   UserProfile build() => UserProfile(
-        pubkey: pubkey,
-        eventId: 'test-event-id-${DateTime.now().millisecondsSinceEpoch}',
-        rawData: {
-          'name': name,
-          'display_name': displayName,
-          'picture': picture,
-          'banner': banner,
-          'about': about,
-          'website': website,
-          'nip05': nip05,
-          'lud16': lud16,
-        },
-        createdAt: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
-        name: name,
-        displayName: displayName,
-        picture: picture,
-        banner: banner,
-        about: about,
-        website: website,
-        nip05: nip05,
-        lud16: lud16,
-      );
+    pubkey: pubkey,
+    eventId: 'test-event-id-${DateTime.now().millisecondsSinceEpoch}',
+    rawData: {
+      'name': name,
+      'display_name': displayName,
+      'picture': picture,
+      'banner': banner,
+      'about': about,
+      'website': website,
+      'nip05': nip05,
+      'lud16': lud16,
+    },
+    createdAt: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
+    name: name,
+    displayName: displayName,
+    picture: picture,
+    banner: banner,
+    about: about,
+    website: website,
+    nip05: nip05,
+    lud16: lud16,
+  );
 
   /// Create a minimal profile (only required fields)
   UserProfileBuilder minimal() {
@@ -92,13 +92,12 @@ class UserProfileBuilder {
     required int count,
     String Function(int index)? pubkeyGenerator,
     String Function(int index)? nameGenerator,
-  }) =>
-      List.generate(
-        count,
-        (index) => UserProfileBuilder(
-          pubkey: pubkeyGenerator?.call(index) ?? 'pubkey-$index',
-          name: nameGenerator?.call(index) ?? 'user$index',
-          displayName: 'User $index',
-        ).build(),
-      );
+  }) => List.generate(
+    count,
+    (index) => UserProfileBuilder(
+      pubkey: pubkeyGenerator?.call(index) ?? 'pubkey-$index',
+      name: nameGenerator?.call(index) ?? 'user$index',
+      displayName: 'User $index',
+    ).build(),
+  );
 }

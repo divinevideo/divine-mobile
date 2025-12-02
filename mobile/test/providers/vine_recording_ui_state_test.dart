@@ -15,12 +15,11 @@ void main() {
         remainingDuration: const Duration(seconds: 6),
         canRecord: true,
         isCameraInitialized: true,
-          canSwitchCamera: false,
+        canSwitchCamera: false,
         segments: [],
       );
 
-      expect(state.hasSegments, isFalse,
-          reason: 'Should have no segments');
+      expect(state.hasSegments, isFalse, reason: 'Should have no segments');
     });
 
     test('hasSegments should be true when segments exist', () {
@@ -31,7 +30,7 @@ void main() {
         remainingDuration: const Duration(seconds: 4),
         canRecord: true,
         isCameraInitialized: true,
-          canSwitchCamera: false,
+        canSwitchCamera: false,
         segments: [
           RecordingSegment(
             startTime: DateTime.now(),
@@ -42,8 +41,7 @@ void main() {
         ],
       );
 
-      expect(state.hasSegments, isTrue,
-          reason: 'Should have segments');
+      expect(state.hasSegments, isTrue, reason: 'Should have segments');
       expect(state.segments.length, equals(1));
     });
 
@@ -55,7 +53,7 @@ void main() {
         remainingDuration: const Duration(seconds: 5),
         canRecord: false,
         isCameraInitialized: true,
-          canSwitchCamera: false,
+        canSwitchCamera: false,
         segments: [],
       );
 
@@ -66,7 +64,7 @@ void main() {
         remainingDuration: const Duration(seconds: 6),
         canRecord: true,
         isCameraInitialized: true,
-          canSwitchCamera: false,
+        canSwitchCamera: false,
         segments: [],
       );
 
@@ -82,7 +80,7 @@ void main() {
         remainingDuration: const Duration(seconds: 3),
         canRecord: true,
         isCameraInitialized: true,
-          canSwitchCamera: false,
+        canSwitchCamera: false,
         segments: [],
       );
 
@@ -119,7 +117,7 @@ void main() {
         remainingDuration: const Duration(seconds: 3),
         canRecord: true,
         isCameraInitialized: true,
-          canSwitchCamera: false,
+        canSwitchCamera: false,
         segments: segments,
       );
 
@@ -135,7 +133,7 @@ void main() {
         remainingDuration: const Duration(seconds: 6),
         canRecord: true,
         isCameraInitialized: true,
-          canSwitchCamera: false,
+        canSwitchCamera: false,
         segments: [],
       );
 
@@ -146,7 +144,7 @@ void main() {
         remainingDuration: Duration.zero,
         canRecord: false,
         isCameraInitialized: true,
-          canSwitchCamera: false,
+        canSwitchCamera: false,
         segments: [],
       );
 

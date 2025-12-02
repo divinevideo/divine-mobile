@@ -22,9 +22,9 @@ class MockVideoEvents extends VideoEvents {
 
 void main() {
   Widget shell(ProviderContainer c) => UncontrolledProviderScope(
-        container: c,
-        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
-      );
+    container: c,
+    child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+  );
 
   String currentLocation(ProviderContainer c) {
     final router = c.read(goRouterProvider);
@@ -62,14 +62,17 @@ void main() {
       ];
     });
 
-    testWidgets('tapping user in search results navigates to profile screen',
-        (WidgetTester tester) async {
+    testWidgets('tapping user in search results navigates to profile screen', (
+      WidgetTester tester,
+    ) async {
       final user123Npub = NostrEncoding.encodePublicKey('user123');
 
       // Arrange: Setup provider override with test videos
-      final c = ProviderContainer(overrides: [
-        videoEventsProvider.overrideWith(() => MockVideoEvents(testVideos)),
-      ]);
+      final c = ProviderContainer(
+        overrides: [
+          videoEventsProvider.overrideWith(() => MockVideoEvents(testVideos)),
+        ],
+      );
       addTearDown(c.dispose);
 
       await tester.pumpWidget(shell(c));
@@ -109,12 +112,15 @@ void main() {
       expect(currentLocation(c), contains('/profile/$user123Npub'));
     });
 
-    testWidgets('tapping hashtag in search results navigates to hashtag feed',
-        (WidgetTester tester) async {
+    testWidgets('tapping hashtag in search results navigates to hashtag feed', (
+      WidgetTester tester,
+    ) async {
       // Arrange: Setup provider override with test videos
-      final c = ProviderContainer(overrides: [
-        videoEventsProvider.overrideWith(() => MockVideoEvents(testVideos)),
-      ]);
+      final c = ProviderContainer(
+        overrides: [
+          videoEventsProvider.overrideWith(() => MockVideoEvents(testVideos)),
+        ],
+      );
       addTearDown(c.dispose);
 
       await tester.pumpWidget(shell(c));

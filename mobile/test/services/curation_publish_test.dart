@@ -33,17 +33,20 @@ void main() {
       // Mock authenticated user with a valid 64-char hex pubkey
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentPublicKeyHex).thenReturn(
-          'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2');
+        'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
+      );
 
       // Mock empty video events initially
       when(mockVideoEventService.discoveryVideos).thenReturn([]);
 
       // Mock createAndSignEvent to return a properly signed event with captured tags
-      when(mockAuthService.createAndSignEvent(
-        kind: anyNamed('kind'),
-        content: anyNamed('content'),
-        tags: anyNamed('tags'),
-      )).thenAnswer((invocation) async {
+      when(
+        mockAuthService.createAndSignEvent(
+          kind: anyNamed('kind'),
+          content: anyNamed('content'),
+          tags: anyNamed('tags'),
+        ),
+      ).thenAnswer((invocation) async {
         final kind = invocation.namedArguments[#kind] as int;
         final content = invocation.namedArguments[#content] as String;
         final tags = invocation.namedArguments[#tags] as List<List<String>>;
@@ -82,10 +85,11 @@ void main() {
         expect(event!.kind, equals(30005));
         expect(event.tags, contains(['d', 'test_curation_1']));
         expect(event.tags, contains(['title', 'Test Curation']));
+        expect(event.tags, contains(['description', 'A test curation set']));
         expect(
-            event.tags, contains(['description', 'A test curation set']));
-        expect(event.tags,
-            contains(['image', 'https://example.com/image.jpg']));
+          event.tags,
+          contains(['image', 'https://example.com/image.jpg']),
+        );
 
         // Verify video references as 'e' tags
         expect(event.tags, contains(['e', 'video1']));
@@ -114,8 +118,7 @@ void main() {
         expect(event.tags, contains(['e', 'video1']));
 
         // Optional tags should not be present
-        expect(
-            event.tags.where((tag) => tag[0] == 'description'), isEmpty);
+        expect(event.tags.where((tag) => tag[0] == 'description'), isEmpty);
         expect(event.tags.where((tag) => tag[0] == 'image'), isEmpty);
       });
 
@@ -154,14 +157,9 @@ void main() {
     group('publishCuration', () {
       test('should publish event to Nostr and return success', () async {
         // Given: Mock successful broadcast
-        final mockEvent = Event(
-          'test_pubkey',
-          30005,
-          [
-            ['d', 'test_id']
-          ],
-          'Test content',
-        );
+        final mockEvent = Event('test_pubkey', 30005, [
+          ['d', 'test_id'],
+        ], 'Test content');
         when(mockNostrService.broadcastEvent(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockEvent,
@@ -197,15 +195,11 @@ void main() {
             event: Event('test', 30005, [], ''),
             successCount: 0,
             totalRelays: 3,
-            results: {
-              'relay1': false,
-              'relay2': false,
-              'relay3': false
-            },
+            results: {'relay1': false, 'relay2': false, 'relay3': false},
             errors: {
               'relay1': 'Connection refused',
               'relay2': 'Timeout',
-              'relay3': 'Rejected'
+              'relay3': 'Rejected',
             },
           ),
         );
@@ -225,18 +219,16 @@ void main() {
 
       test('should timeout after 5 seconds', () async {
         // Given: Mock slow broadcast
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
-          (_) async {
-            await Future.delayed(const Duration(seconds: 10));
-            return NostrBroadcastResult(
-              event: Event('test', 30005, [], ''),
-              successCount: 1,
-              totalRelays: 1,
-              results: {'relay1': true},
-              errors: {},
-            );
-          },
-        );
+        when(mockNostrService.broadcastEvent(any)).thenAnswer((_) async {
+          await Future.delayed(const Duration(seconds: 10));
+          return NostrBroadcastResult(
+            event: Event('test', 30005, [], ''),
+            successCount: 1,
+            totalRelays: 1,
+            results: {'relay1': true},
+            errors: {},
+          );
+        });
 
         // When: Publishing with timeout
         final stopwatch = Stopwatch()..start();
@@ -261,10 +253,7 @@ void main() {
             successCount: 1,
             totalRelays: 3,
             results: {'relay1': true, 'relay2': false, 'relay3': false},
-            errors: {
-              'relay2': 'Connection timeout',
-              'relay3': 'Relay offline'
-            },
+            errors: {'relay2': 'Connection timeout', 'relay3': 'Relay offline'},
           ),
         );
 
@@ -284,8 +273,7 @@ void main() {
     });
 
     group('Local Persistence', () {
-      test('should mark curation as published locally after success',
-          () async {
+      test('should mark curation as published locally after success', () async {
         // Given: Mock successful publish
         when(mockNostrService.broadcastEvent(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
@@ -305,8 +293,9 @@ void main() {
         );
 
         // Then: Should be marked as published
-        final publishStatus =
-            curationService.getCurationPublishStatus('test_curation');
+        final publishStatus = curationService.getCurationPublishStatus(
+          'test_curation',
+        );
         expect(publishStatus.isPublished, isTrue);
         expect(publishStatus.lastPublishedAt, isNotNull);
         expect(publishStatus.publishedEventId, isNotNull);
@@ -332,15 +321,15 @@ void main() {
         );
 
         // Then: Should track failed attempt
-        final publishStatus =
-            curationService.getCurationPublishStatus('failed_curation');
+        final publishStatus = curationService.getCurationPublishStatus(
+          'failed_curation',
+        );
         expect(publishStatus.isPublished, isFalse);
         expect(publishStatus.failedAttempts, greaterThan(0));
         expect(publishStatus.lastFailureReason, isNotNull);
       });
 
-      test('should persist publish status across service restarts',
-          () async {
+      test('should persist publish status across service restarts', () async {
         // Given: Published curation
         when(mockNostrService.broadcastEvent(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
@@ -367,51 +356,55 @@ void main() {
         );
 
         // Then: Should retain publish status
-        final publishStatus =
-            newService.getCurationPublishStatus('persistent_curation');
+        final publishStatus = newService.getCurationPublishStatus(
+          'persistent_curation',
+        );
         expect(publishStatus.isPublished, isTrue);
       });
     });
 
     group('Background Retry Worker', () {
-      test('should retry unpublished curations with exponential backoff',
-          () async {
-        // Given: Failed initial publish
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
-          (_) async => NostrBroadcastResult(
-            event: Event('test', 30005, [], ''),
-            successCount: 0,
-            totalRelays: 1,
-            results: {'relay1': false},
-            errors: {'relay1': 'Temporary error'},
-          ),
-        );
+      test(
+        'should retry unpublished curations with exponential backoff',
+        () async {
+          // Given: Failed initial publish
+          when(mockNostrService.broadcastEvent(any)).thenAnswer(
+            (_) async => NostrBroadcastResult(
+              event: Event('test', 30005, [], ''),
+              successCount: 0,
+              totalRelays: 1,
+              results: {'relay1': false},
+              errors: {'relay1': 'Temporary error'},
+            ),
+          );
 
-        await curationService.publishCuration(
-          id: 'retry_curation',
-          title: 'Test',
-          videoIds: [],
-        );
+          await curationService.publishCuration(
+            id: 'retry_curation',
+            title: 'Test',
+            videoIds: [],
+          );
 
-        // Mock successful retry
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
-          (_) async => NostrBroadcastResult(
-            event: Event('test', 30005, [], ''),
-            successCount: 1,
-            totalRelays: 1,
-            results: {'relay1': true},
-            errors: {},
-          ),
-        );
+          // Mock successful retry
+          when(mockNostrService.broadcastEvent(any)).thenAnswer(
+            (_) async => NostrBroadcastResult(
+              event: Event('test', 30005, [], ''),
+              successCount: 1,
+              totalRelays: 1,
+              results: {'relay1': true},
+              errors: {},
+            ),
+          );
 
-        // When: Background worker runs
-        await curationService.retryUnpublishedCurations();
+          // When: Background worker runs
+          await curationService.retryUnpublishedCurations();
 
-        // Then: Should successfully publish on retry
-        final publishStatus =
-            curationService.getCurationPublishStatus('retry_curation');
-        expect(publishStatus.isPublished, isTrue);
-      });
+          // Then: Should successfully publish on retry
+          final publishStatus = curationService.getCurationPublishStatus(
+            'retry_curation',
+          );
+          expect(publishStatus.isPublished, isTrue);
+        },
+      );
 
       test('should stop retrying after max attempts', () async {
         // Given: Persistent failures
@@ -431,8 +424,9 @@ void main() {
         }
 
         // Then: Should stop retrying after max attempts
-        final publishStatus = curationService
-            .getCurationPublishStatus('max_retry_curation');
+        final publishStatus = curationService.getCurationPublishStatus(
+          'max_retry_curation',
+        );
         expect(publishStatus.failedAttempts, lessThanOrEqualTo(5));
         expect(publishStatus.shouldRetry, isFalse);
       });
@@ -468,17 +462,20 @@ void main() {
         // When: Publishing same curation multiple times rapidly
         final futures = <Future>[];
         for (var i = 0; i < 5; i++) {
-          futures.add(curationService.publishCuration(
-            id: 'rapid_curation',
-            title: 'Test $i',
-            videoIds: [],
-          ));
+          futures.add(
+            curationService.publishCuration(
+              id: 'rapid_curation',
+              title: 'Test $i',
+              videoIds: [],
+            ),
+          );
         }
         await Future.wait(futures);
 
         // Then: Should coalesce into single publish (or very few)
-        verify(mockNostrService.broadcastEvent(any))
-            .called(lessThanOrEqualTo(2));
+        verify(
+          mockNostrService.broadcastEvent(any),
+        ).called(lessThanOrEqualTo(2));
       });
     });
 
@@ -486,8 +483,9 @@ void main() {
       test('should report "Publishing..." status during publish', () async {
         // Given: Slow broadcast simulation
         final completer = Completer<NostrBroadcastResult>();
-        when(mockNostrService.broadcastEvent(any))
-            .thenAnswer((_) => completer.future);
+        when(
+          mockNostrService.broadcastEvent(any),
+        ).thenAnswer((_) => completer.future);
 
         // When: Starting publish
         final publishFuture = curationService.publishCuration(
@@ -500,24 +498,28 @@ void main() {
         await Future.delayed(const Duration(milliseconds: 10));
 
         // Then: Should show publishing status
-        final status =
-            curationService.getCurationPublishStatus('publishing_curation');
+        final status = curationService.getCurationPublishStatus(
+          'publishing_curation',
+        );
         expect(status.isPublishing, isTrue);
         expect(status.statusText, equals('Publishing...'));
 
         // Complete the publish
-        completer.complete(NostrBroadcastResult(
-          event: Event('test', 30005, [], ''),
-          successCount: 1,
-          totalRelays: 1,
-          results: {'relay1': true},
-          errors: {},
-        ));
+        completer.complete(
+          NostrBroadcastResult(
+            event: Event('test', 30005, [], ''),
+            successCount: 1,
+            totalRelays: 1,
+            results: {'relay1': true},
+            errors: {},
+          ),
+        );
         await publishFuture;
 
         // Should now show published
-        final finalStatus =
-            curationService.getCurationPublishStatus('publishing_curation');
+        final finalStatus = curationService.getCurationPublishStatus(
+          'publishing_curation',
+        );
         expect(finalStatus.isPublishing, isFalse);
         expect(finalStatus.statusText, equals('Published'));
       });
@@ -536,11 +538,7 @@ void main() {
               'relay4': false,
               'relay5': false,
             },
-            errors: {
-              'relay3': 'Error',
-              'relay4': 'Error',
-              'relay5': 'Error'
-            },
+            errors: {'relay3': 'Error', 'relay4': 'Error', 'relay5': 'Error'},
           ),
         );
 
@@ -552,8 +550,9 @@ void main() {
         );
 
         // Then: Status should show relay count
-        final status =
-            curationService.getCurationPublishStatus('partial_curation');
+        final status = curationService.getCurationPublishStatus(
+          'partial_curation',
+        );
         expect(status.statusText, contains('2/5'));
       });
 
@@ -577,8 +576,9 @@ void main() {
         );
 
         // Then: Should show error status
-        final status =
-            curationService.getCurationPublishStatus('error_curation');
+        final status = curationService.getCurationPublishStatus(
+          'error_curation',
+        );
         expect(status.statusText, contains('Error'));
         expect(status.isError, isTrue);
       });

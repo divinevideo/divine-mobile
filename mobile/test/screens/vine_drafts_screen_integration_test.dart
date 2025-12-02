@@ -62,7 +62,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            draftStorageServiceProvider.overrideWith((ref) async => draftService),
+            draftStorageServiceProvider.overrideWith(
+              (ref) async => draftService,
+            ),
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
@@ -91,7 +93,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            draftStorageServiceProvider.overrideWith((ref) async => draftService),
+            draftStorageServiceProvider.overrideWith(
+              (ref) async => draftService,
+            ),
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
@@ -106,7 +110,10 @@ void main() {
 
       // Assert: Should show empty state
       expect(find.text('No Drafts Yet'), findsOneWidget);
-      expect(find.text('Your saved Vine drafts will appear here'), findsOneWidget);
+      expect(
+        find.text('Your saved Vine drafts will appear here'),
+        findsOneWidget,
+      );
       expect(find.text('Record a Vine'), findsOneWidget);
     });
 
@@ -150,7 +157,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            draftStorageServiceProvider.overrideWith((ref) async => draftService),
+            draftStorageServiceProvider.overrideWith(
+              (ref) async => draftService,
+            ),
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
@@ -186,7 +195,9 @@ void main() {
       expect(remainingDrafts.first.title, 'To Keep');
     });
 
-    testWidgets('should clear all drafts when clear all is confirmed', (tester) async {
+    testWidgets('should clear all drafts when clear all is confirmed', (
+      tester,
+    ) async {
       // Arrange: Save multiple drafts
       final now = DateTime.now();
       final draft1 = VineDraft(
@@ -226,7 +237,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            draftStorageServiceProvider.overrideWith((ref) async => draftService),
+            draftStorageServiceProvider.overrideWith(
+              (ref) async => draftService,
+            ),
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),
@@ -261,7 +274,9 @@ void main() {
       expect(remainingDrafts, isEmpty);
     });
 
-    testWidgets('should not delete draft when cancel is tapped', (tester) async {
+    testWidgets('should not delete draft when cancel is tapped', (
+      tester,
+    ) async {
       // Arrange
       final now = DateTime.now();
       final draft = VineDraft(
@@ -285,7 +300,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            draftStorageServiceProvider.overrideWith((ref) async => draftService),
+            draftStorageServiceProvider.overrideWith(
+              (ref) async => draftService,
+            ),
           ],
           child: MaterialApp(
             theme: ThemeData.dark(),

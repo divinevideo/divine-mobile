@@ -28,22 +28,28 @@ void main() {
       when(mockAuthService.currentPublicKeyHex).thenReturn('test_user_pubkey');
 
       // Set up default stubs for NostrService
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => Stream.fromIterable([]));
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => Stream.fromIterable([]));
 
       // Mock createSubscription for SocialService initialization
-      when(mockSubscriptionManager.createSubscription(
-        name: anyNamed('name'),
-        filters: anyNamed('filters'),
-        onEvent: anyNamed('onEvent'),
-        onError: anyNamed('onError'),
-        onComplete: anyNamed('onComplete'),
-        timeout: anyNamed('timeout'),
-        priority: anyNamed('priority'),
-      )).thenAnswer((_) async => 'test_subscription_id');
+      when(
+        mockSubscriptionManager.createSubscription(
+          name: anyNamed('name'),
+          filters: anyNamed('filters'),
+          onEvent: anyNamed('onEvent'),
+          onError: anyNamed('onError'),
+          onComplete: anyNamed('onComplete'),
+          timeout: anyNamed('timeout'),
+          priority: anyNamed('priority'),
+        ),
+      ).thenAnswer((_) async => 'test_subscription_id');
 
-      socialService = SocialService(mockNostrService, mockAuthService,
-          subscriptionManager: mockSubscriptionManager);
+      socialService = SocialService(
+        mockNostrService,
+        mockAuthService,
+        subscriptionManager: mockSubscriptionManager,
+      );
     });
 
     tearDown(() {
@@ -84,81 +90,73 @@ void main() {
         // This would need a public method or getter for testing
       });
 
-      test('should create proper NIP-25 like event when toggling like',
-          () async {
-        // Mock event creation
-        const privateKey =
-            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-        final publicKey = getPublicKey(privateKey);
-        final mockEvent = Event(
-          publicKey,
-          7,
-          [
+      test(
+        'should create proper NIP-25 like event when toggling like',
+        () async {
+          // Mock event creation
+          const privateKey =
+              '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+          final publicKey = getPublicKey(privateKey);
+          final mockEvent = Event(publicKey, 7, [
             ['e', testEventId],
             ['p', testAuthorPubkey],
-          ],
-          '+',
-        );
-        mockEvent.sign(privateKey);
+          ], '+');
+          mockEvent.sign(privateKey);
 
-        when(
-          mockAuthService.createAndSignEvent(
-            kind: 7,
-            content: '+',
-            tags: [
-              ['e', testEventId],
-              ['p', testAuthorPubkey],
-            ],
-          ),
-        ).thenAnswer((_) async => mockEvent);
+          when(
+            mockAuthService.createAndSignEvent(
+              kind: 7,
+              content: '+',
+              tags: [
+                ['e', testEventId],
+                ['p', testAuthorPubkey],
+              ],
+            ),
+          ).thenAnswer((_) async => mockEvent);
 
-        // Mock successful broadcast
-        when(mockNostrService.broadcastEvent(mockEvent)).thenAnswer(
-          (_) async => NostrBroadcastResult(
-            event: mockEvent,
-            successCount: 1,
-            totalRelays: 1,
-            results: const {'relay1': true},
-            errors: const {},
-          ),
-        );
+          // Mock successful broadcast
+          when(mockNostrService.broadcastEvent(mockEvent)).thenAnswer(
+            (_) async => NostrBroadcastResult(
+              event: mockEvent,
+              successCount: 1,
+              totalRelays: 1,
+              results: const {'relay1': true},
+              errors: const {},
+            ),
+          );
 
-        // Test toggling like
-        await socialService.toggleLike(testEventId, testAuthorPubkey);
+          // Test toggling like
+          await socialService.toggleLike(testEventId, testAuthorPubkey);
 
-        // Verify event creation was called with correct parameters
-        verify(
-          mockAuthService.createAndSignEvent(
-            kind: 7,
-            content: '+',
-            tags: [
-              ['e', testEventId],
-              ['p', testAuthorPubkey],
-            ],
-          ),
-        ).called(1);
+          // Verify event creation was called with correct parameters
+          verify(
+            mockAuthService.createAndSignEvent(
+              kind: 7,
+              content: '+',
+              tags: [
+                ['e', testEventId],
+                ['p', testAuthorPubkey],
+              ],
+            ),
+          ).called(1);
 
-        // Verify broadcast was called
-        verify(mockNostrService.broadcastEvent(mockEvent)).called(1);
+          // Verify broadcast was called
+          verify(mockNostrService.broadcastEvent(mockEvent)).called(1);
 
-        // Verify event is now liked locally
-        expect(socialService.isLiked(testEventId), true);
-      });
+          // Verify event is now liked locally
+          expect(socialService.isLiked(testEventId), true);
+        },
+      );
 
       test('should handle broadcast failure gracefully', () async {
         // Mock event creation
         const privateKey2 =
             '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
         final publicKey2 = getPublicKey(privateKey2);
-        final mockEvent = Event(
-          publicKey2,
-          7,
-          [
-            ['e', testEventId],
-            ['p', testAuthorPubkey],
-          ],
-          '+',
-        );
+        final mockEvent = Event(publicKey2, 7, [
+          ['e', testEventId],
+          ['p', testAuthorPubkey],
+        ], '+');
         mockEvent.sign(privateKey2);
 
         when(
@@ -235,15 +233,10 @@ void main() {
         const privateKey2 =
             '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
         final publicKey2 = getPublicKey(privateKey2);
-        final mockEvent = Event(
-          publicKey2,
-          7,
-          [
-            ['e', testEventId],
-            ['p', testAuthorPubkey],
-          ],
-          '+',
-        );
+        final mockEvent = Event(publicKey2, 7, [
+          ['e', testEventId],
+          ['p', testAuthorPubkey],
+        ], '+');
         mockEvent.sign(privateKey2);
 
         when(
@@ -268,14 +261,9 @@ void main() {
         );
 
         // Mock deletion event for unlike
-        final mockDeletionEvent = Event(
-          publicKey2,
-          5,
-          [
-            ['e', mockEvent.id]
-          ],
-          'Unliked',
-        );
+        final mockDeletionEvent = Event(publicKey2, 5, [
+          ['e', mockEvent.id],
+        ], 'Unliked');
         mockDeletionEvent.sign(privateKey2);
 
         when(
@@ -283,7 +271,7 @@ void main() {
             kind: 5,
             content: 'Unliked',
             tags: [
-              ['e', mockEvent.id]
+              ['e', mockEvent.id],
             ],
           ),
         ).thenAnswer((_) async => mockDeletionEvent);
@@ -316,34 +304,47 @@ void main() {
 
       test('should fetch like count from network', () async {
         // Mock createSubscription to simulate like count subscription
-        when(mockSubscriptionManager.createSubscription(
-          name: 'like_count_$testEventId',
-          filters: anyNamed('filters'),
-          onEvent: anyNamed('onEvent'),
-          onError: anyNamed('onError'),
-          onComplete: anyNamed('onComplete'),
-          timeout: anyNamed('timeout'),
-          priority: anyNamed('priority'),
-        )).thenAnswer((invocation) async {
-          final onEvent = invocation.namedArguments[Symbol('onEvent')] as Function;
-          final onComplete = invocation.namedArguments[Symbol('onComplete')] as Function;
+        when(
+          mockSubscriptionManager.createSubscription(
+            name: 'like_count_$testEventId',
+            filters: anyNamed('filters'),
+            onEvent: anyNamed('onEvent'),
+            onError: anyNamed('onError'),
+            onComplete: anyNamed('onComplete'),
+            timeout: anyNamed('timeout'),
+            priority: anyNamed('priority'),
+          ),
+        ).thenAnswer((invocation) async {
+          final onEvent =
+              invocation.namedArguments[Symbol('onEvent')] as Function;
+          final onComplete =
+              invocation.namedArguments[Symbol('onComplete')] as Function;
 
           // Simulate 2 like events and 1 non-like event
-          const pk1 = '1111111111111111111111111111111111111111111111111111111111111111';
+          const pk1 =
+              '1111111111111111111111111111111111111111111111111111111111111111';
           final pub1 = getPublicKey(pk1);
-          final e1 = Event(pub1, 7, [['e', testEventId]], '+');
+          final e1 = Event(pub1, 7, [
+            ['e', testEventId],
+          ], '+');
           e1.sign(pk1);
           onEvent(e1);
 
-          const pk2 = '2222222222222222222222222222222222222222222222222222222222222222';
+          const pk2 =
+              '2222222222222222222222222222222222222222222222222222222222222222';
           final pub2 = getPublicKey(pk2);
-          final e2 = Event(pub2, 7, [['e', testEventId]], '+');
+          final e2 = Event(pub2, 7, [
+            ['e', testEventId],
+          ], '+');
           e2.sign(pk2);
           onEvent(e2);
 
-          const pk3 = '3333333333333333333333333333333333333333333333333333333333333333';
+          const pk3 =
+              '3333333333333333333333333333333333333333333333333333333333333333';
           final pub3 = getPublicKey(pk3);
-          final e3 = Event(pub3, 7, [['e', testEventId]], '-');
+          final e3 = Event(pub3, 7, [
+            ['e', testEventId],
+          ], '-');
           e3.sign(pk3);
           onEvent(e3); // Should not count
 
@@ -362,34 +363,47 @@ void main() {
 
       test('should return cached like count when available', () async {
         // First call: fetch from network and cache
-        when(mockSubscriptionManager.createSubscription(
-          name: 'like_count_$testEventId',
-          filters: anyNamed('filters'),
-          onEvent: anyNamed('onEvent'),
-          onError: anyNamed('onError'),
-          onComplete: anyNamed('onComplete'),
-          timeout: anyNamed('timeout'),
-          priority: anyNamed('priority'),
-        )).thenAnswer((invocation) async {
-          final onEvent = invocation.namedArguments[Symbol('onEvent')] as Function;
-          final onComplete = invocation.namedArguments[Symbol('onComplete')] as Function;
+        when(
+          mockSubscriptionManager.createSubscription(
+            name: 'like_count_$testEventId',
+            filters: anyNamed('filters'),
+            onEvent: anyNamed('onEvent'),
+            onError: anyNamed('onError'),
+            onComplete: anyNamed('onComplete'),
+            timeout: anyNamed('timeout'),
+            priority: anyNamed('priority'),
+          ),
+        ).thenAnswer((invocation) async {
+          final onEvent =
+              invocation.namedArguments[Symbol('onEvent')] as Function;
+          final onComplete =
+              invocation.namedArguments[Symbol('onComplete')] as Function;
 
           // Simulate 3 like events
-          const pk1 = '1111111111111111111111111111111111111111111111111111111111111111';
+          const pk1 =
+              '1111111111111111111111111111111111111111111111111111111111111111';
           final pub1 = getPublicKey(pk1);
-          final e1 = Event(pub1, 7, [['e', testEventId]], '+');
+          final e1 = Event(pub1, 7, [
+            ['e', testEventId],
+          ], '+');
           e1.sign(pk1);
           onEvent(e1);
 
-          const pk2 = '2222222222222222222222222222222222222222222222222222222222222222';
+          const pk2 =
+              '2222222222222222222222222222222222222222222222222222222222222222';
           final pub2 = getPublicKey(pk2);
-          final e2 = Event(pub2, 7, [['e', testEventId]], '+');
+          final e2 = Event(pub2, 7, [
+            ['e', testEventId],
+          ], '+');
           e2.sign(pk2);
           onEvent(e2);
 
-          const pk3 = '3333333333333333333333333333333333333333333333333333333333333333';
+          const pk3 =
+              '3333333333333333333333333333333333333333333333333333333333333333';
           final pub3 = getPublicKey(pk3);
-          final e3 = Event(pub3, 7, [['e', testEventId]], '+');
+          final e3 = Event(pub3, 7, [
+            ['e', testEventId],
+          ], '+');
           e3.sign(pk3);
           onEvent(e3);
 
@@ -409,15 +423,17 @@ void main() {
         expect(result2['user_liked'], false);
 
         // Verify createSubscription was only called once (for the first request)
-        verify(mockSubscriptionManager.createSubscription(
-          name: 'like_count_$testEventId',
-          filters: anyNamed('filters'),
-          onEvent: anyNamed('onEvent'),
-          onError: anyNamed('onError'),
-          onComplete: anyNamed('onComplete'),
-          timeout: anyNamed('timeout'),
-          priority: anyNamed('priority'),
-        )).called(1);
+        verify(
+          mockSubscriptionManager.createSubscription(
+            name: 'like_count_$testEventId',
+            filters: anyNamed('filters'),
+            onEvent: anyNamed('onEvent'),
+            onError: anyNamed('onError'),
+            onComplete: anyNamed('onComplete'),
+            timeout: anyNamed('timeout'),
+            priority: anyNamed('priority'),
+          ),
+        ).called(1);
       });
     });
 
@@ -431,14 +447,10 @@ void main() {
             const pk =
                 '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
             final pub = getPublicKey(pk);
-            final e = Event(
-                pub,
-                7,
-                [
-                  ['e', 'video1'],
-                  ['p', 'author1']
-                ],
-                '+');
+            final e = Event(pub, 7, [
+              ['e', 'video1'],
+              ['p', 'author1'],
+            ], '+');
             e.sign(pk);
             return e;
           }(),
@@ -446,14 +458,10 @@ void main() {
             const pk =
                 '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
             final pub = getPublicKey(pk);
-            final e = Event(
-                pub,
-                7,
-                [
-                  ['e', 'video2'],
-                  ['p', 'author2']
-                ],
-                '+');
+            final e = Event(pub, 7, [
+              ['e', 'video2'],
+              ['p', 'author2'],
+            ], '+');
             e.sign(pk);
             return e;
           }(),
@@ -465,13 +473,9 @@ void main() {
             const pk =
                 '1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
             final pub = getPublicKey(pk);
-            final e = Event(
-                pub,
-                34236,
-                [
-                  ['d', 'video1']
-                ],
-                'Video 1 content');
+            final e = Event(pub, 34236, [
+              ['d', 'video1'],
+            ], 'Video 1 content');
             e.sign(pk);
             return e;
           }(),
@@ -479,13 +483,9 @@ void main() {
             const pk =
                 '2123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
             final pub = getPublicKey(pk);
-            final e = Event(
-                pub,
-                34236,
-                [
-                  ['d', 'video2']
-                ],
-                'Video 2 content');
+            final e = Event(pub, 34236, [
+              ['d', 'video2'],
+            ], 'Video 2 content');
             e.sign(pk);
             return e;
           }(),
@@ -493,8 +493,9 @@ void main() {
 
         // Mock two sequential subscription calls
         var callCount = 0;
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((invocation) {
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((invocation) {
           callCount++;
           if (callCount == 1) {
             // First call returns reactions (kind 7)
@@ -508,8 +509,9 @@ void main() {
         final result = await socialService.fetchLikedEvents(testUserPubkey);
 
         // Verify two subscriptions were called (reactions, then videos)
-        verify(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .called(2);
+        verify(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).called(2);
 
         // Should return the actual video events
         expect(result, isA<List<Event>>());
@@ -520,8 +522,9 @@ void main() {
 
       test('should return empty list when user has no liked events', () async {
         // Mock empty reaction stream
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.fromIterable([]));
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => Stream.fromIterable([]));
 
         final result = await socialService.fetchLikedEvents(testUserPubkey);
 
@@ -530,8 +533,9 @@ void main() {
 
       test('should handle errors when fetching liked events', () async {
         // Mock stream with error
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.error('Network error'));
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => Stream.error('Network error'));
 
         final result = await socialService.fetchLikedEvents(testUserPubkey);
 
@@ -564,30 +568,25 @@ void main() {
         expect(followingList, isEmpty); // Initially empty
       });
 
-      test('should fetch current user follow list from Kind 3 events',
-          () async {
+      test('should fetch current user follow list from Kind 3 events', () async {
         // Mock Kind 3 contact list event
         const privateKey =
             '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
         final publicKey = getPublicKey(privateKey);
-        final contactListEvent = Event(
-          publicKey,
-          3,
-          [
-            ['p', 'pubkey1'],
-            ['p', 'pubkey2'],
-            ['p', 'pubkey3'],
-          ],
-          '',
-        );
+        final contactListEvent = Event(publicKey, 3, [
+          ['p', 'pubkey1'],
+          ['p', 'pubkey2'],
+          ['p', 'pubkey3'],
+        ], '');
         contactListEvent.sign(privateKey);
 
         // Mock authenticated user with matching public key
         when(mockAuthService.isAuthenticated).thenReturn(true);
         when(mockAuthService.currentPublicKeyHex).thenReturn(publicKey);
 
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.fromIterable([contactListEvent]));
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => Stream.fromIterable([contactListEvent]));
 
         await socialService.fetchCurrentUserFollowList();
 
@@ -610,14 +609,9 @@ void main() {
         const privateKey =
             '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
         final publicKey = getPublicKey(privateKey);
-        final mockContactListEvent = Event(
-          publicKey,
-          3,
-          [
-            ['p', testTargetPubkey]
-          ],
-          '',
-        );
+        final mockContactListEvent = Event(publicKey, 3, [
+          ['p', testTargetPubkey],
+        ], '');
         mockContactListEvent.sign(privateKey);
 
         when(
@@ -625,7 +619,7 @@ void main() {
             kind: 3,
             content: '',
             tags: [
-              ['p', testTargetPubkey]
+              ['p', testTargetPubkey],
             ],
             biometricPrompt: anyNamed('biometricPrompt'),
           ),
@@ -650,7 +644,7 @@ void main() {
             kind: 3,
             content: '',
             tags: [
-              ['p', testTargetPubkey]
+              ['p', testTargetPubkey],
             ],
           ),
         ).called(1);
@@ -672,12 +666,7 @@ void main() {
         const privateKey =
             '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
         final publicKey = getPublicKey(privateKey);
-        final mockEmptyContactListEvent = Event(
-          publicKey,
-          3,
-          [],
-          '',
-        );
+        final mockEmptyContactListEvent = Event(publicKey, 3, [], '');
         mockEmptyContactListEvent.sign(privateKey);
 
         when(
@@ -689,8 +678,9 @@ void main() {
           ),
         ).thenAnswer((_) async => mockEmptyContactListEvent);
 
-        when(mockNostrService.broadcastEvent(mockEmptyContactListEvent))
-            .thenAnswer(
+        when(
+          mockNostrService.broadcastEvent(mockEmptyContactListEvent),
+        ).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockEmptyContactListEvent,
             successCount: 1,
@@ -705,47 +695,49 @@ void main() {
 
         // Verify event creation with empty tags
         verify(
-          mockAuthService.createAndSignEvent(
-            kind: 3,
-            content: '',
-            tags: [],
-          ),
+          mockAuthService.createAndSignEvent(kind: 3, content: '', tags: []),
         ).called(1);
 
         // Verify broadcast was called
-        verify(mockNostrService.broadcastEvent(mockEmptyContactListEvent))
-            .called(1);
+        verify(
+          mockNostrService.broadcastEvent(mockEmptyContactListEvent),
+        ).called(1);
 
         // Verify user is no longer followed locally
         expect(socialService.isFollowing(testTargetPubkey), false);
       });
 
-      test('RED: should preserve other users when unfollowing one user from multiple', () async {
-        const userA = 'pubkey_user_A';
-        const userB = 'pubkey_user_B';
-        const userC = 'pubkey_user_C';
+      test(
+        'RED: should preserve other users when unfollowing one user from multiple',
+        () async {
+          const userA = 'pubkey_user_A';
+          const userB = 'pubkey_user_B';
+          const userC = 'pubkey_user_C';
 
-        const privateKey =
-            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-        final publicKey = getPublicKey(privateKey);
+          const privateKey =
+              '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+          final publicKey = getPublicKey(privateKey);
 
-        // Mock follow operations for all three users
-        when(
-          mockAuthService.createAndSignEvent(
-            kind: 3,
-            content: anyNamed('content'),
-            tags: anyNamed('tags'),
-            biometricPrompt: anyNamed('biometricPrompt'),
-          ),
-        ).thenAnswer((invocation) async {
-          final tags = invocation.namedArguments[const Symbol('tags')] as List<List<String>>;
-          final event = Event(publicKey, 3, tags, '');
-          event.sign(privateKey);
-          return event;
-        });
+          // Mock follow operations for all three users
+          when(
+            mockAuthService.createAndSignEvent(
+              kind: 3,
+              content: anyNamed('content'),
+              tags: anyNamed('tags'),
+              biometricPrompt: anyNamed('biometricPrompt'),
+            ),
+          ).thenAnswer((invocation) async {
+            final tags =
+                invocation.namedArguments[const Symbol('tags')]
+                    as List<List<String>>;
+            final event = Event(publicKey, 3, tags, '');
+            event.sign(privateKey);
+            return event;
+          });
 
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
-          (invocation) async {
+          when(mockNostrService.broadcastEvent(any)).thenAnswer((
+            invocation,
+          ) async {
             final event = invocation.positionalArguments[0] as Event;
             return NostrBroadcastResult(
               event: event,
@@ -754,83 +746,95 @@ void main() {
               results: const {'relay1': true},
               errors: const {},
             );
-          },
-        );
+          });
 
-        // Follow three users
-        await socialService.followUser(userA);
-        await socialService.followUser(userB);
-        await socialService.followUser(userC);
+          // Follow three users
+          await socialService.followUser(userA);
+          await socialService.followUser(userB);
+          await socialService.followUser(userC);
 
-        // Verify all three are followed
-        expect(socialService.isFollowing(userA), true);
-        expect(socialService.isFollowing(userB), true);
-        expect(socialService.isFollowing(userC), true);
-        expect(socialService.followingPubkeys.length, 3);
+          // Verify all three are followed
+          expect(socialService.isFollowing(userA), true);
+          expect(socialService.isFollowing(userB), true);
+          expect(socialService.isFollowing(userC), true);
+          expect(socialService.followingPubkeys.length, 3);
 
-        reset(mockAuthService);
-        reset(mockNostrService);
+          reset(mockAuthService);
+          reset(mockNostrService);
 
-        // Re-setup authentication state after reset
-        when(mockAuthService.isAuthenticated).thenReturn(true);
-        when(mockAuthService.currentPublicKeyHex).thenReturn(testUserPubkey);
+          // Re-setup authentication state after reset
+          when(mockAuthService.isAuthenticated).thenReturn(true);
+          when(mockAuthService.currentPublicKeyHex).thenReturn(testUserPubkey);
 
-        // Mock unfollowing user B - should preserve A and C
-        final mockUpdatedContactListEvent = Event(
-          publicKey,
-          3,
-          [
+          // Mock unfollowing user B - should preserve A and C
+          final mockUpdatedContactListEvent = Event(publicKey, 3, [
             ['p', userA],
             ['p', userC],
-          ],
-          '',
-        );
-        mockUpdatedContactListEvent.sign(privateKey);
+          ], '');
+          mockUpdatedContactListEvent.sign(privateKey);
 
-        when(
-          mockAuthService.createAndSignEvent(
-            kind: 3,
-            content: '',
-            tags: [
-              ['p', userA],
-              ['p', userC],
-            ],
-            biometricPrompt: anyNamed('biometricPrompt'),
-          ),
-        ).thenAnswer((_) async => mockUpdatedContactListEvent);
+          when(
+            mockAuthService.createAndSignEvent(
+              kind: 3,
+              content: '',
+              tags: [
+                ['p', userA],
+                ['p', userC],
+              ],
+              biometricPrompt: anyNamed('biometricPrompt'),
+            ),
+          ).thenAnswer((_) async => mockUpdatedContactListEvent);
 
-        when(mockNostrService.broadcastEvent(mockUpdatedContactListEvent))
-            .thenAnswer(
-          (_) async => NostrBroadcastResult(
-            event: mockUpdatedContactListEvent,
-            successCount: 1,
-            totalRelays: 1,
-            results: const {'relay1': true},
-            errors: const {},
-          ),
-        );
+          when(
+            mockNostrService.broadcastEvent(mockUpdatedContactListEvent),
+          ).thenAnswer(
+            (_) async => NostrBroadcastResult(
+              event: mockUpdatedContactListEvent,
+              successCount: 1,
+              totalRelays: 1,
+              results: const {'relay1': true},
+              errors: const {},
+            ),
+          );
 
-        // Unfollow user B
-        await socialService.unfollowUser(userB);
+          // Unfollow user B
+          await socialService.unfollowUser(userB);
 
-        // Verify event was created with only A and C (not B)
-        verify(
-          mockAuthService.createAndSignEvent(
-            kind: 3,
-            content: '',
-            tags: [
-              ['p', userA],
-              ['p', userC],
-            ],
-          ),
-        ).called(1);
+          // Verify event was created with only A and C (not B)
+          verify(
+            mockAuthService.createAndSignEvent(
+              kind: 3,
+              content: '',
+              tags: [
+                ['p', userA],
+                ['p', userC],
+              ],
+            ),
+          ).called(1);
 
-        // Verify user B is no longer followed but A and C are still followed
-        expect(socialService.isFollowing(userA), true, reason: 'User A should still be followed');
-        expect(socialService.isFollowing(userB), false, reason: 'User B should be unfollowed');
-        expect(socialService.isFollowing(userC), true, reason: 'User C should still be followed');
-        expect(socialService.followingPubkeys.length, 2, reason: 'Should have exactly 2 users in following list');
-      });
+          // Verify user B is no longer followed but A and C are still followed
+          expect(
+            socialService.isFollowing(userA),
+            true,
+            reason: 'User A should still be followed',
+          );
+          expect(
+            socialService.isFollowing(userB),
+            false,
+            reason: 'User B should be unfollowed',
+          );
+          expect(
+            socialService.isFollowing(userC),
+            true,
+            reason: 'User C should still be followed',
+          );
+          expect(
+            socialService.followingPubkeys.length,
+            2,
+            reason: 'Should have exactly 2 users in following list',
+          );
+        },
+      );
 
       test('should not follow when user is not authenticated', () async {
         when(mockAuthService.isAuthenticated).thenReturn(false);
@@ -855,14 +859,9 @@ void main() {
         const privateKey =
             '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
         final publicKey = getPublicKey(privateKey);
-        final mockContactListEvent = Event(
-          publicKey,
-          3,
-          [
-            ['p', testTargetPubkey]
-          ],
-          '',
-        );
+        final mockContactListEvent = Event(publicKey, 3, [
+          ['p', testTargetPubkey],
+        ], '');
         mockContactListEvent.sign(privateKey);
 
         when(
@@ -870,7 +869,7 @@ void main() {
             kind: 3,
             content: '',
             tags: [
-              ['p', testTargetPubkey]
+              ['p', testTargetPubkey],
             ],
           ),
         ).thenAnswer((_) async => mockContactListEvent);
@@ -932,16 +931,11 @@ void main() {
         final targetPubkey = getPublicKey(targetPrivateKey);
 
         // Mock target user's Kind 3 event (following count)
-        final userContactList = Event(
-          targetPubkey,
-          3,
-          [
-            ['p', 'pubkey1'],
-            ['p', 'pubkey2'],
-            ['p', 'pubkey3'],
-          ],
-          '',
-        );
+        final userContactList = Event(targetPubkey, 3, [
+          ['p', 'pubkey1'],
+          ['p', 'pubkey2'],
+          ['p', 'pubkey3'],
+        ], '');
         userContactList.sign(targetPrivateKey);
 
         // Mock followers' Kind 3 events that mention target user
@@ -950,13 +944,9 @@ void main() {
             const pk1 =
                 '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
             final pub1 = getPublicKey(pk1);
-            final e1 = Event(
-                pub1,
-                3,
-                [
-                  ['p', targetPubkey]
-                ],
-                '');
+            final e1 = Event(pub1, 3, [
+              ['p', targetPubkey],
+            ], '');
             e1.sign(pk1);
             return e1;
           }(),
@@ -964,21 +954,18 @@ void main() {
             const pk2 =
                 '1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
             final pub2 = getPublicKey(pk2);
-            final e2 = Event(
-                pub2,
-                3,
-                [
-                  ['p', targetPubkey]
-                ],
-                '');
+            final e2 = Event(pub2, 3, [
+              ['p', targetPubkey],
+            ], '');
             e2.sign(pk2);
             return e2;
           }(),
         ];
 
         // Mock subscription calls
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((invocation) {
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((invocation) {
           final filters =
               invocation.namedArguments[const Symbol('filters')] as List;
           final filter = filters.first as Filter;
@@ -1003,8 +990,9 @@ void main() {
         const targetPubkey = 'target_pubkey';
 
         // First call will fetch from network
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.fromIterable([]));
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => Stream.fromIterable([]));
 
         final firstResult = await socialService.getFollowerStats(targetPubkey);
 
@@ -1014,15 +1002,17 @@ void main() {
         expect(firstResult, equals(secondResult));
 
         // Should only call network once
-        verify(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .called(2); // Once for following, once for followers
+        verify(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).called(2); // Once for following, once for followers
       });
 
       test('should handle follower stats fetch failure', () async {
         const targetPubkey = 'target_pubkey';
 
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.error('Network error'));
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => Stream.error('Network error'));
 
         final stats = await socialService.getFollowerStats(targetPubkey);
 
@@ -1068,8 +1058,9 @@ void main() {
           }(),
         ];
 
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.fromIterable(videoEvents));
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => Stream.fromIterable(videoEvents));
 
         final count = await socialService.getUserVideoCount(testUserPubkey);
 
@@ -1084,8 +1075,9 @@ void main() {
       });
 
       test('should return zero for user with no videos', () async {
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.fromIterable([]));
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => Stream.fromIterable([]));
 
         final count = await socialService.getUserVideoCount(testUserPubkey);
 
@@ -1109,7 +1101,9 @@ void main() {
             const pk =
                 '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
             final pub = getPublicKey(pk);
-            final e = Event(pub, 34236, [['d', 'test-video-1']], 'Addressable Short Video 1');
+            final e = Event(pub, 34236, [
+              ['d', 'test-video-1'],
+            ], 'Addressable Short Video 1');
             e.sign(pk);
             return e;
           }(),
@@ -1118,7 +1112,9 @@ void main() {
             const pk =
                 '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
             final pub = getPublicKey(pk);
-            final e = Event(pub, 34236, [['d', 'test-video-2']], 'Addressable Short Video 2');
+            final e = Event(pub, 34236, [
+              ['d', 'test-video-2'],
+            ], 'Addressable Short Video 2');
             e.sign(pk);
             return e;
           }(),
@@ -1133,8 +1129,9 @@ void main() {
           }(),
         ];
 
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.fromIterable(videoEvents));
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => Stream.fromIterable(videoEvents));
 
         final count = await socialService.getUserVideoCount(testUserPubkey);
 
@@ -1142,11 +1139,13 @@ void main() {
         expect(count, 4);
 
         // Verify subscription was called with correct NIP-71 kinds filter
-        final captured = verify(
-          mockNostrService.subscribeToEvents(
-            filters: captureAnyNamed('filters'),
-          ),
-        ).captured.single as List<Filter>;
+        final captured =
+            verify(
+                  mockNostrService.subscribeToEvents(
+                    filters: captureAnyNamed('filters'),
+                  ),
+                ).captured.single
+                as List<Filter>;
 
         // Verify the filter includes NIP-71 video kinds: 22, 21, 34236, 34235
         expect(captured.length, 1);
@@ -1182,13 +1181,9 @@ void main() {
             const pk =
                 '1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
             final pub = getPublicKey(pk);
-            final e = Event(
-                pub,
-                7,
-                [
-                  ['e', videoEvents[0].id]
-                ],
-                '+');
+            final e = Event(pub, 7, [
+              ['e', videoEvents[0].id],
+            ], '+');
             e.sign(pk);
             return e;
           }(),
@@ -1196,13 +1191,9 @@ void main() {
             const pk =
                 '2123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
             final pub = getPublicKey(pk);
-            final e = Event(
-                pub,
-                7,
-                [
-                  ['e', videoEvents[0].id]
-                ],
-                '+');
+            final e = Event(pub, 7, [
+              ['e', videoEvents[0].id],
+            ], '+');
             e.sign(pk);
             return e;
           }(),
@@ -1210,13 +1201,9 @@ void main() {
             const pk =
                 '3123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
             final pub = getPublicKey(pk);
-            final e = Event(
-                pub,
-                7,
-                [
-                  ['e', videoEvents[1].id]
-                ],
-                '+');
+            final e = Event(pub, 7, [
+              ['e', videoEvents[1].id],
+            ], '+');
             e.sign(pk);
             return e;
           }(),
@@ -1224,20 +1211,17 @@ void main() {
             const pk =
                 '4123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
             final pub = getPublicKey(pk);
-            final e = Event(
-                pub,
-                7,
-                [
-                  ['e', videoEvents[1].id]
-                ],
-                '-'); // Should not count
+            final e = Event(pub, 7, [
+              ['e', videoEvents[1].id],
+            ], '-'); // Should not count
             e.sign(pk);
             return e;
           }(),
         ];
 
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((invocation) {
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((invocation) {
           final filters =
               invocation.namedArguments[const Symbol('filters')] as List;
           final filter = filters.first as Filter;
@@ -1252,29 +1236,34 @@ void main() {
           return Stream.fromIterable([]);
         });
 
-        final totalLikes =
-            await socialService.getUserTotalLikes(testUserPubkey);
+        final totalLikes = await socialService.getUserTotalLikes(
+          testUserPubkey,
+        );
 
         expect(totalLikes, 3); // Only '+' reactions should count
 
         // Should call subscription twice: once for videos, once for likes
-        verify(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .called(2);
+        verify(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).called(2);
       });
 
       test('should return zero likes for user with no videos', () async {
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.fromIterable([]));
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => Stream.fromIterable([]));
 
-        final totalLikes =
-            await socialService.getUserTotalLikes(testUserPubkey);
+        final totalLikes = await socialService.getUserTotalLikes(
+          testUserPubkey,
+        );
 
         expect(totalLikes, 0);
       });
 
       test('should handle video count fetch error gracefully', () async {
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.error('Network error'));
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => Stream.error('Network error'));
 
         final count = await socialService.getUserVideoCount(testUserPubkey);
 
@@ -1282,11 +1271,13 @@ void main() {
       });
 
       test('should handle total likes fetch error gracefully', () async {
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.error('Network error'));
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => Stream.error('Network error'));
 
-        final totalLikes =
-            await socialService.getUserTotalLikes(testUserPubkey);
+        final totalLikes = await socialService.getUserTotalLikes(
+          testUserPubkey,
+        );
 
         expect(totalLikes, 0);
       });
@@ -1300,112 +1291,117 @@ void main() {
         reset(mockNostrService);
         when(mockAuthService.isAuthenticated).thenReturn(true);
         when(mockAuthService.currentPublicKeyHex).thenReturn(testUserPubkey);
-        when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-            .thenAnswer((_) => Stream.fromIterable([]));
-      });
-
-      test('should publish NIP-62 deletion request event with correct format',
-          () async {
-        // Mock successful deletion event creation
-        const privateKey =
-            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-        final publicKey = getPublicKey(privateKey);
-        final mockDeletionEvent = Event(
-          publicKey,
-          5, // Kind 5 for deletion
-          [
-            ['p', testUserPubkey], // Reference to own pubkey
-            ['k', '0'], // Request deletion of Kind 0 (profile) events
-            ['k', '1'], // Request deletion of Kind 1 (text note) events
-            ['k', '3'], // Request deletion of Kind 3 (contact list) events
-            ['k', '6'], // Request deletion of Kind 6 (repost) events
-            ['k', '7'], // Request deletion of Kind 7 (reaction) events
-            ['k', '22'], // Request deletion of Kind 22 (video) events
-          ],
-          'REQUEST: Delete all data associated with this pubkey under right to be forgotten',
-        );
-        mockDeletionEvent.sign(privateKey);
-
         when(
-          mockAuthService.createAndSignEvent(
-            kind: 5,
-            content:
-                'REQUEST: Delete all data associated with this pubkey under right to be forgotten',
-            tags: [
-              ['p', testUserPubkey],
-              ['k', '0'],
-              ['k', '1'],
-              ['k', '3'],
-              ['k', '6'],
-              ['k', '7'],
-              ['k', '34236'],
-            ],
-            biometricPrompt: anyNamed('biometricPrompt'),
-          ),
-        ).thenAnswer((_) async => mockDeletionEvent);
-
-        when(mockNostrService.broadcastEvent(mockDeletionEvent)).thenAnswer(
-          (_) async => NostrBroadcastResult(
-            event: mockDeletionEvent,
-            successCount: 1,
-            totalRelays: 1,
-            results: const {'relay1': true},
-            errors: const {},
-          ),
-        );
-
-        // Test publishing deletion request
-        await socialService.publishRightToBeForgotten();
-
-        // Verify event creation with correct NIP-62 parameters
-        verify(
-          mockAuthService.createAndSignEvent(
-            kind: 5,
-            content:
-                'REQUEST: Delete all data associated with this pubkey under right to be forgotten',
-            tags: [
-              ['p', testUserPubkey],
-              ['k', '0'],
-              ['k', '1'],
-              ['k', '3'],
-              ['k', '6'],
-              ['k', '7'],
-              ['k', '34236'],
-            ],
-            biometricPrompt: anyNamed('biometricPrompt'),
-          ),
-        ).called(1);
-
-        // Verify broadcast was called
-        verify(mockNostrService.broadcastEvent(mockDeletionEvent)).called(1);
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => Stream.fromIterable([]));
       });
 
-      test('should not publish deletion request when user is not authenticated',
-          () async {
-        reset(mockAuthService);
-        when(mockAuthService.isAuthenticated).thenReturn(false);
+      test(
+        'should publish NIP-62 deletion request event with correct format',
+        () async {
+          // Mock successful deletion event creation
+          const privateKey =
+              '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+          final publicKey = getPublicKey(privateKey);
+          final mockDeletionEvent = Event(
+            publicKey,
+            5, // Kind 5 for deletion
+            [
+              ['p', testUserPubkey], // Reference to own pubkey
+              ['k', '0'], // Request deletion of Kind 0 (profile) events
+              ['k', '1'], // Request deletion of Kind 1 (text note) events
+              ['k', '3'], // Request deletion of Kind 3 (contact list) events
+              ['k', '6'], // Request deletion of Kind 6 (repost) events
+              ['k', '7'], // Request deletion of Kind 7 (reaction) events
+              ['k', '22'], // Request deletion of Kind 22 (video) events
+            ],
+            'REQUEST: Delete all data associated with this pubkey under right to be forgotten',
+          );
+          mockDeletionEvent.sign(privateKey);
 
-        // Test should throw exception
-        expect(
-          () => socialService.publishRightToBeForgotten(),
-          throwsA(
-            isA<Exception>().having(
-              (e) => e.toString(),
-              'message',
-              contains('User not authenticated'),
+          when(
+            mockAuthService.createAndSignEvent(
+              kind: 5,
+              content:
+                  'REQUEST: Delete all data associated with this pubkey under right to be forgotten',
+              tags: [
+                ['p', testUserPubkey],
+                ['k', '0'],
+                ['k', '1'],
+                ['k', '3'],
+                ['k', '6'],
+                ['k', '7'],
+                ['k', '34236'],
+              ],
+              biometricPrompt: anyNamed('biometricPrompt'),
             ),
-          ),
-        );
+          ).thenAnswer((_) async => mockDeletionEvent);
 
-        // Verify no event creation was attempted
-        verifyNever(
-          mockAuthService.createAndSignEvent(
-            kind: anyNamed('kind'),
-            content: anyNamed('content'),
-            tags: anyNamed('tags'),
-          ),
-        );
-      });
+          when(mockNostrService.broadcastEvent(mockDeletionEvent)).thenAnswer(
+            (_) async => NostrBroadcastResult(
+              event: mockDeletionEvent,
+              successCount: 1,
+              totalRelays: 1,
+              results: const {'relay1': true},
+              errors: const {},
+            ),
+          );
+
+          // Test publishing deletion request
+          await socialService.publishRightToBeForgotten();
+
+          // Verify event creation with correct NIP-62 parameters
+          verify(
+            mockAuthService.createAndSignEvent(
+              kind: 5,
+              content:
+                  'REQUEST: Delete all data associated with this pubkey under right to be forgotten',
+              tags: [
+                ['p', testUserPubkey],
+                ['k', '0'],
+                ['k', '1'],
+                ['k', '3'],
+                ['k', '6'],
+                ['k', '7'],
+                ['k', '34236'],
+              ],
+              biometricPrompt: anyNamed('biometricPrompt'),
+            ),
+          ).called(1);
+
+          // Verify broadcast was called
+          verify(mockNostrService.broadcastEvent(mockDeletionEvent)).called(1);
+        },
+      );
+
+      test(
+        'should not publish deletion request when user is not authenticated',
+        () async {
+          reset(mockAuthService);
+          when(mockAuthService.isAuthenticated).thenReturn(false);
+
+          // Test should throw exception
+          expect(
+            () => socialService.publishRightToBeForgotten(),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                contains('User not authenticated'),
+              ),
+            ),
+          );
+
+          // Verify no event creation was attempted
+          verifyNever(
+            mockAuthService.createAndSignEvent(
+              kind: anyNamed('kind'),
+              content: anyNamed('content'),
+              tags: anyNamed('tags'),
+            ),
+          );
+        },
+      );
 
       test('should handle event creation failure gracefully', () async {
         // Ensure user is authenticated for this test
@@ -1520,8 +1516,7 @@ void main() {
         // with mock state but the functionality is confirmed working.
       });
 
-      test('should include all required event kinds in deletion request',
-          () async {
+      test('should include all required event kinds in deletion request', () async {
         // Ensure user is authenticated for this test
         reset(mockAuthService);
         when(mockAuthService.isAuthenticated).thenReturn(true);

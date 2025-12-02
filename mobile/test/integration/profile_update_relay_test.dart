@@ -31,8 +31,10 @@ void main() {
       nostrService = NostrService(keyManager);
       authService = AuthService();
       subscriptionManager = SubscriptionManager(nostrService);
-      userProfileService = UserProfileService(nostrService,
-          subscriptionManager: subscriptionManager);
+      userProfileService = UserProfileService(
+        nostrService,
+        subscriptionManager: subscriptionManager,
+      );
 
       // Initialize services
       await authService.initialize();
@@ -62,7 +64,8 @@ void main() {
       };
 
       Log.info(
-          '📝 Creating kind 0 event with data: ${jsonEncode(profileData)}');
+        '📝 Creating kind 0 event with data: ${jsonEncode(profileData)}',
+      );
 
       final event = await authService.createAndSignEvent(
         kind: 0,
@@ -87,7 +90,8 @@ void main() {
       );
 
       Log.info(
-          '✅ Broadcast successful to ${broadcastResult.successCount} relays');
+        '✅ Broadcast successful to ${broadcastResult.successCount} relays',
+      );
 
       // Step 3: Wait for relay to process
       Log.info('⏳ Waiting for relay to process event...');
@@ -96,11 +100,7 @@ void main() {
       // Step 4: Query the event back using direct subscription
       Log.info('🔍 Querying event back with direct subscription...');
 
-      final filter = Filter(
-        kinds: [0],
-        authors: [pubkey],
-        limit: 1,
-      );
+      final filter = Filter(kinds: [0], authors: [pubkey], limit: 1);
 
       Event? foundEvent;
       var queryCompleted = false;
@@ -109,7 +109,8 @@ void main() {
       final subscriptionListener = subscription.listen(
         (receivedEvent) {
           Log.info(
-              '📨 Received event: ${receivedEvent.id}, kind: ${receivedEvent.kind}');
+            '📨 Received event: ${receivedEvent.id}, kind: ${receivedEvent.kind}',
+          );
           if (receivedEvent.kind == 0 && receivedEvent.pubkey == pubkey) {
             foundEvent = receivedEvent;
             Log.info('🎯 Found profile event for our pubkey');
@@ -153,8 +154,10 @@ void main() {
 
         // Additional debugging - try with UserProfileService
         Log.info('🔍 Trying with UserProfileService.fetchProfile...');
-        final profile =
-            await userProfileService.fetchProfile(pubkey, forceRefresh: true);
+        final profile = await userProfileService.fetchProfile(
+          pubkey,
+          forceRefresh: true,
+        );
 
         if (profile != null) {
           Log.info('📋 UserProfileService found profile:');
@@ -173,8 +176,10 @@ void main() {
           Log.info('❌ UserProfileService also found no profile');
         }
 
-        fail('Event was broadcast successfully but not retrievable from relay. '
-            'This indicates a relay storage or query issue.');
+        fail(
+          'Event was broadcast successfully but not retrievable from relay. '
+          'This indicates a relay storage or query issue.',
+        );
       }
     });
 
@@ -204,8 +209,10 @@ void main() {
       // Wait and fetch through UserProfileService
       await Future.delayed(const Duration(seconds: 2));
 
-      final profile =
-          await userProfileService.fetchProfile(pubkey, forceRefresh: true);
+      final profile = await userProfileService.fetchProfile(
+        pubkey,
+        forceRefresh: true,
+      );
 
       expect(
         profile,

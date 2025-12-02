@@ -4,7 +4,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -12,9 +11,12 @@ import 'package:openvine/utils/nostr_encoding.dart';
 
 void main() {
   group('Profile /me/ Redirect', () {
-    testWidgets('should redirect /profile/me/0 to current user npub', (tester) async {
+    testWidgets('should redirect /profile/me/0 to current user npub', (
+      tester,
+    ) async {
       // ARRANGE: Create a test user with known public key
-      const testUserHex = '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
+      const testUserHex =
+          '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
       final testUserNpub = NostrEncoding.encodePublicKey(testUserHex);
 
       // Create a mock auth service that returns our test user
@@ -22,9 +24,7 @@ void main() {
 
       // Create a container with the mock auth service
       final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(mockAuthService),
-        ],
+        overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
       );
 
       // Build the app with GoRouter
@@ -54,16 +54,17 @@ void main() {
       );
     });
 
-    testWidgets('should handle /profile/me/1 (grid tab) redirect', (tester) async {
+    testWidgets('should handle /profile/me/1 (grid tab) redirect', (
+      tester,
+    ) async {
       // ARRANGE
-      const testUserHex = '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
+      const testUserHex =
+          '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
       final testUserNpub = NostrEncoding.encodePublicKey(testUserHex);
 
       final mockAuthService = _MockAuthService(testUserHex);
       final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(mockAuthService),
-        ],
+        overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
       );
 
       await tester.pumpWidget(
@@ -93,15 +94,15 @@ void main() {
 
     testWidgets('should NOT redirect when npub is not "me"', (tester) async {
       // ARRANGE
-      const currentUserHex = '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
-      const otherUserHex = 'aaaaaa1b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
+      const currentUserHex =
+          '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
+      const otherUserHex =
+          'aaaaaa1b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
       final otherUserNpub = NostrEncoding.encodePublicKey(otherUserHex);
 
       final mockAuthService = _MockAuthService(currentUserHex);
       final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(mockAuthService),
-        ],
+        overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
       );
 
       await tester.pumpWidget(
@@ -133,9 +134,7 @@ void main() {
       // ARRANGE: Auth service with no current user
       final mockAuthService = _MockAuthService(null);
       final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(mockAuthService),
-        ],
+        overrides: [authServiceProvider.overrideWithValue(mockAuthService)],
       );
 
       await tester.pumpWidget(
@@ -178,9 +177,8 @@ class _MockAuthService implements AuthService {
   bool get isAuthenticated => _currentUserHex != null;
 
   @override
-  AuthState get authState => isAuthenticated
-      ? AuthState.authenticated
-      : AuthState.unauthenticated;
+  AuthState get authState =>
+      isAuthenticated ? AuthState.authenticated : AuthState.unauthenticated;
 
   // Implement other required methods as no-ops for this test
   @override

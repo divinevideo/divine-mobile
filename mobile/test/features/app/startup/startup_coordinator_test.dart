@@ -56,8 +56,10 @@ void main() {
 
       // Critical services should start immediately
       await Future.delayed(Duration.zero);
-      expect(initializationLog,
-          containsAll(['AuthService:start', 'NostrService:start']));
+      expect(
+        initializationLog,
+        containsAll(['AuthService:start', 'NostrService:start']),
+      );
       expect(initializationLog, isNot(contains('VideoService:start')));
 
       // Complete critical services
@@ -98,9 +100,13 @@ void main() {
       final metrics = coordinator.metrics;
       expect(metrics.totalDuration.inMilliseconds, greaterThanOrEqualTo(200));
       expect(
-          metrics.serviceTimings['FastService']!.inMilliseconds, lessThan(100));
-      expect(metrics.serviceTimings['SlowService']!.inMilliseconds,
-          greaterThanOrEqualTo(200));
+        metrics.serviceTimings['FastService']!.inMilliseconds,
+        lessThan(100),
+      );
+      expect(
+        metrics.serviceTimings['SlowService']!.inMilliseconds,
+        greaterThanOrEqualTo(200),
+      );
     });
 
     test('should handle service dependencies', () async {
@@ -267,8 +273,9 @@ void main() {
 
       await coordinator.initialize();
 
-      final bottlenecks = coordinator.metrics
-          .getBottlenecks(threshold: const Duration(milliseconds: 100));
+      final bottlenecks = coordinator.metrics.getBottlenecks(
+        threshold: const Duration(milliseconds: 100),
+      );
       expect(bottlenecks, contains('SlowService'));
       expect(bottlenecks, isNot(contains('QuickService1')));
       expect(bottlenecks, isNot(contains('QuickService2')));
@@ -301,7 +308,9 @@ void main() {
 
       // Late service should now be initializing
       expect(
-          initializationLog.any((log) => log.contains('LateService')), isTrue);
+        initializationLog.any((log) => log.contains('LateService')),
+        isTrue,
+      );
 
       serviceCompleters['LateService']!.complete();
       await initFuture;

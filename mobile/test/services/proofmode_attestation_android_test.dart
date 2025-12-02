@@ -21,30 +21,46 @@ void main() {
     });
 
     group('Play Integrity Token Generation', () {
-      test('generates Play Integrity token with challenge nonce on Android', () async {
-        // Skip if not on Android
-        if (!Platform.isAndroid) {
-          markTestSkipped('Test requires Android platform');
-          return;
-        }
+      test(
+        'generates Play Integrity token with challenge nonce on Android',
+        () async {
+          // Skip if not on Android
+          if (!Platform.isAndroid) {
+            markTestSkipped('Test requires Android platform');
+            return;
+          }
 
-        // Generate a challenge nonce (hex string)
-        final challenge = 'challenge-nonce-${DateTime.now().millisecondsSinceEpoch}';
+          // Generate a challenge nonce (hex string)
+          final challenge =
+              'challenge-nonce-${DateTime.now().millisecondsSinceEpoch}';
 
-        final attestation = await attestationService.generateAttestation(challenge);
+          final attestation = await attestationService.generateAttestation(
+            challenge,
+          );
 
-        expect(attestation, isNotNull, reason: 'Should generate attestation on Android');
-        expect(attestation!.platform, equals('Android'));
-        expect(attestation.challenge, equals(challenge),
-            reason: 'Attestation should include original challenge');
+          expect(
+            attestation,
+            isNotNull,
+            reason: 'Should generate attestation on Android',
+          );
+          expect(attestation!.platform, equals('Android'));
+          expect(
+            attestation.challenge,
+            equals(challenge),
+            reason: 'Attestation should include original challenge',
+          );
 
-        // Token should be substantial and not a mock
-        expect(attestation.token.length, greaterThan(50));
+          // Token should be substantial and not a mock
+          expect(attestation.token.length, greaterThan(50));
 
-        // Should include Play Integrity metadata
-        expect(attestation.metadata, isNotNull);
-        expect(attestation.metadata!['attestationType'], equals('play_integrity'));
-      });
+          // Should include Play Integrity metadata
+          expect(attestation.metadata, isNotNull);
+          expect(
+            attestation.metadata!['attestationType'],
+            equals('play_integrity'),
+          );
+        },
+      );
 
       test('includes challenge nonce in attestation token', () async {
         if (!Platform.isAndroid) {
@@ -52,13 +68,19 @@ void main() {
           return;
         }
 
-        final challenge = 'test-challenge-${DateTime.now().millisecondsSinceEpoch}';
+        final challenge =
+            'test-challenge-${DateTime.now().millisecondsSinceEpoch}';
 
-        final attestation = await attestationService.generateAttestation(challenge);
+        final attestation = await attestationService.generateAttestation(
+          challenge,
+        );
 
         expect(attestation, isNotNull);
-        expect(attestation!.challenge, equals(challenge),
-            reason: 'Challenge must be stored in attestation for verification');
+        expect(
+          attestation!.challenge,
+          equals(challenge),
+          reason: 'Challenge must be stored in attestation for verification',
+        );
       });
 
       test('generates different tokens for different challenges', () async {
@@ -67,18 +89,27 @@ void main() {
           return;
         }
 
-        final challenge1 = 'challenge-1-${DateTime.now().millisecondsSinceEpoch}';
-        final challenge2 = 'challenge-2-${DateTime.now().millisecondsSinceEpoch}';
+        final challenge1 =
+            'challenge-1-${DateTime.now().millisecondsSinceEpoch}';
+        final challenge2 =
+            'challenge-2-${DateTime.now().millisecondsSinceEpoch}';
 
-        final attestation1 = await attestationService.generateAttestation(challenge1);
-        final attestation2 = await attestationService.generateAttestation(challenge2);
+        final attestation1 = await attestationService.generateAttestation(
+          challenge1,
+        );
+        final attestation2 = await attestationService.generateAttestation(
+          challenge2,
+        );
 
         expect(attestation1, isNotNull);
         expect(attestation2, isNotNull);
 
         // Different challenges should produce different tokens
-        expect(attestation1!.token, isNot(equals(attestation2!.token)),
-            reason: 'Different challenges should produce different tokens');
+        expect(
+          attestation1!.token,
+          isNot(equals(attestation2!.token)),
+          reason: 'Different challenges should produce different tokens',
+        );
       });
     });
 
@@ -93,18 +124,28 @@ void main() {
         final isPhysicalDevice = deviceInfo.isPhysicalDevice ?? false;
 
         final challenge = 'hw-test-${DateTime.now().millisecondsSinceEpoch}';
-        final attestation = await attestationService.generateAttestation(challenge);
+        final attestation = await attestationService.generateAttestation(
+          challenge,
+        );
 
         expect(attestation, isNotNull);
 
         if (isPhysicalDevice) {
           // Physical devices should have hardware-backed attestation
-          expect(attestation!.isHardwareBacked, isTrue,
-              reason: 'Physical Android devices should use hardware-backed attestation');
+          expect(
+            attestation!.isHardwareBacked,
+            isTrue,
+            reason:
+                'Physical Android devices should use hardware-backed attestation',
+          );
 
           // Token should NOT be a mock on physical devices
-          expect(attestation.token, isNot(startsWith('MOCK_')),
-              reason: 'Physical devices should generate real Play Integrity tokens');
+          expect(
+            attestation.token,
+            isNot(startsWith('MOCK_')),
+            reason:
+                'Physical devices should generate real Play Integrity tokens',
+          );
         }
       });
 
@@ -117,18 +158,30 @@ void main() {
         final deviceInfo = await attestationService.getDeviceInfo();
         final isPhysicalDevice = deviceInfo.isPhysicalDevice ?? false;
 
-        final challenge = 'emulator-test-${DateTime.now().millisecondsSinceEpoch}';
-        final attestation = await attestationService.generateAttestation(challenge);
+        final challenge =
+            'emulator-test-${DateTime.now().millisecondsSinceEpoch}';
+        final attestation = await attestationService.generateAttestation(
+          challenge,
+        );
 
-        expect(attestation, isNotNull,
-            reason: 'Should generate attestation even on emulators');
+        expect(
+          attestation,
+          isNotNull,
+          reason: 'Should generate attestation even on emulators',
+        );
 
         if (!isPhysicalDevice) {
           // Emulators should use fallback attestation
-          expect(attestation!.token, startsWith('MOCK_ATTESTATION_'),
-              reason: 'Emulators should use fallback attestation');
-          expect(attestation.isHardwareBacked, isFalse,
-              reason: 'Emulator attestation is not hardware-backed');
+          expect(
+            attestation!.token,
+            startsWith('MOCK_ATTESTATION_'),
+            reason: 'Emulators should use fallback attestation',
+          );
+          expect(
+            attestation.isHardwareBacked,
+            isFalse,
+            reason: 'Emulator attestation is not hardware-backed',
+          );
         }
       });
 
@@ -138,13 +191,18 @@ void main() {
           return;
         }
 
-        final isAvailable = await attestationService.isHardwareAttestationAvailable();
+        final isAvailable = await attestationService
+            .isHardwareAttestationAvailable();
         final deviceInfo = await attestationService.getDeviceInfo();
 
         // On physical Android devices with Play Services, should be available
         if (deviceInfo.isPhysicalDevice == true) {
-          expect(isAvailable, isTrue,
-              reason: 'Physical Android devices should support hardware attestation');
+          expect(
+            isAvailable,
+            isTrue,
+            reason:
+                'Physical Android devices should support hardware attestation',
+          );
         }
       });
     });
@@ -153,8 +211,11 @@ void main() {
       test('retrieves GCP Project ID from config', () async {
         final gcpProjectId = await ProofModeConfig.gcpProjectId;
 
-        expect(gcpProjectId, isA<int>(),
-            reason: 'GCP Project ID should be an integer');
+        expect(
+          gcpProjectId,
+          isA<int>(),
+          reason: 'GCP Project ID should be an integer',
+        );
 
         // Should be >= 0 (0 means not configured, positive means configured)
         expect(gcpProjectId, greaterThanOrEqualTo(0));
@@ -183,19 +244,28 @@ void main() {
 
         if (gcpProjectId == 0) {
           // Not configured - should use fallback attestation
-          final challenge = 'gcp-error-test-${DateTime.now().millisecondsSinceEpoch}';
+          final challenge =
+              'gcp-error-test-${DateTime.now().millisecondsSinceEpoch}';
 
           // This might throw or return null/fallback depending on implementation
           try {
-            final attestation = await attestationService.generateAttestation(challenge);
+            final attestation = await attestationService.generateAttestation(
+              challenge,
+            );
 
             // Should still generate some form of attestation
-            expect(attestation, isNotNull,
-                reason: 'Should handle missing GCP config gracefully');
+            expect(
+              attestation,
+              isNotNull,
+              reason: 'Should handle missing GCP config gracefully',
+            );
           } catch (e) {
             // If it throws, that's also acceptable for missing config
-            expect(e, isA<Exception>(),
-                reason: 'Should throw proper exception for missing GCP config');
+            expect(
+              e,
+              isA<Exception>(),
+              reason: 'Should throw proper exception for missing GCP config',
+            );
           }
         }
       });
@@ -211,12 +281,21 @@ void main() {
         // If GCP is configured (non-zero), should be used in attestation
         if (gcpProjectId > 0) {
           final challenge = 'gcp-test-${DateTime.now().millisecondsSinceEpoch}';
-          final attestation = await attestationService.generateAttestation(challenge);
+          final attestation = await attestationService.generateAttestation(
+            challenge,
+          );
 
-          expect(attestation, isNotNull,
-              reason: 'Should generate attestation with configured GCP Project ID');
+          expect(
+            attestation,
+            isNotNull,
+            reason:
+                'Should generate attestation with configured GCP Project ID',
+          );
           expect(attestation!.metadata, isNotNull);
-          expect(attestation.metadata!['attestationType'], equals('play_integrity'));
+          expect(
+            attestation.metadata!['attestationType'],
+            equals('play_integrity'),
+          );
         }
       });
     });
@@ -231,8 +310,11 @@ void main() {
         // Empty challenge should still work
         final attestation = await attestationService.generateAttestation('');
 
-        expect(attestation, isA<DeviceAttestation?>(),
-            reason: 'Should handle empty challenge gracefully');
+        expect(
+          attestation,
+          isA<DeviceAttestation?>(),
+          reason: 'Should handle empty challenge gracefully',
+        );
       });
 
       test('handles Play Integrity API errors gracefully', () async {
@@ -245,17 +327,25 @@ void main() {
         final challenge = 'error-test-${DateTime.now().millisecondsSinceEpoch}';
 
         try {
-          final attestation = await attestationService.generateAttestation(challenge);
+          final attestation = await attestationService.generateAttestation(
+            challenge,
+          );
 
           // Should either succeed or fail gracefully
           if (attestation != null) {
-            expect(attestation.token, isNotEmpty,
-                reason: 'If attestation succeeds, token should not be empty');
+            expect(
+              attestation.token,
+              isNotEmpty,
+              reason: 'If attestation succeeds, token should not be empty',
+            );
           }
         } catch (e) {
           // Errors should be logged but not crash the app
-          expect(e, isA<Exception>(),
-              reason: 'Should throw proper exception types');
+          expect(
+            e,
+            isA<Exception>(),
+            reason: 'Should throw proper exception types',
+          );
         }
       });
 
@@ -265,20 +355,37 @@ void main() {
           return;
         }
 
-        final challenge = 'validation-test-${DateTime.now().millisecondsSinceEpoch}';
-        final attestation = await attestationService.generateAttestation(challenge);
+        final challenge =
+            'validation-test-${DateTime.now().millisecondsSinceEpoch}';
+        final attestation = await attestationService.generateAttestation(
+          challenge,
+        );
 
         if (attestation != null) {
           // Valid attestation with correct challenge should pass
-          final isValid = await attestationService.verifyAttestation(attestation, challenge);
-          expect(isValid, isTrue,
-              reason: 'Valid attestation with correct challenge should pass verification');
+          final isValid = await attestationService.verifyAttestation(
+            attestation,
+            challenge,
+          );
+          expect(
+            isValid,
+            isTrue,
+            reason:
+                'Valid attestation with correct challenge should pass verification',
+          );
 
           // Invalid challenge should fail
-          final wrongChallenge = 'wrong-challenge-${DateTime.now().millisecondsSinceEpoch}';
-          final isInvalid = await attestationService.verifyAttestation(attestation, wrongChallenge);
-          expect(isInvalid, isFalse,
-              reason: 'Attestation with wrong challenge should fail verification');
+          final wrongChallenge =
+              'wrong-challenge-${DateTime.now().millisecondsSinceEpoch}';
+          final isInvalid = await attestationService.verifyAttestation(
+            attestation,
+            wrongChallenge,
+          );
+          expect(
+            isInvalid,
+            isFalse,
+            reason: 'Attestation with wrong challenge should fail verification',
+          );
         }
       });
     });
@@ -290,8 +397,11 @@ void main() {
           return;
         }
 
-        final challenge = 'platform-test-${DateTime.now().millisecondsSinceEpoch}';
-        final attestation = await attestationService.generateAttestation(challenge);
+        final challenge =
+            'platform-test-${DateTime.now().millisecondsSinceEpoch}';
+        final attestation = await attestationService.generateAttestation(
+          challenge,
+        );
 
         expect(attestation, isNotNull);
         expect(attestation!.platform, equals('Android'));
@@ -299,8 +409,12 @@ void main() {
 
         // Should use Play Integrity, not App Attest or other APIs
         final attestationType = attestation.metadata!['attestationType'];
-        expect(attestationType, anyOf(equals('play_integrity'), equals('fallback')),
-            reason: 'Android should use Play Integrity or fallback, not iOS App Attest');
+        expect(
+          attestationType,
+          anyOf(equals('play_integrity'), equals('fallback')),
+          reason:
+              'Android should use Play Integrity or fallback, not iOS App Attest',
+        );
       });
 
       test('includes Android device metadata', () async {
@@ -312,8 +426,11 @@ void main() {
         final deviceInfo = await attestationService.getDeviceInfo();
 
         expect(deviceInfo.platform, equals('Android'));
-        expect(deviceInfo.manufacturer, isNotNull,
-            reason: 'Android device info should include manufacturer');
+        expect(
+          deviceInfo.manufacturer,
+          isNotNull,
+          reason: 'Android device info should include manufacturer',
+        );
         expect(deviceInfo.metadata, isNotNull);
 
         // Should include Android-specific metadata
@@ -341,8 +458,11 @@ void main() {
 
         // Play Integrity API calls can take 1-3 seconds on real devices
         // Allow up to 10 seconds to account for network latency
-        expect(stopwatch.elapsedMilliseconds, lessThan(10000),
-            reason: 'Attestation should complete within 10 seconds');
+        expect(
+          stopwatch.elapsedMilliseconds,
+          lessThan(10000),
+          reason: 'Attestation should complete within 10 seconds',
+        );
       });
     });
   });

@@ -23,8 +23,9 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(mockPrefs.setBool('ff_${flag.name}', any))
-            .thenAnswer((_) async => true);
+        when(
+          mockPrefs.setBool('ff_${flag.name}', any),
+        ).thenAnswer((_) async => true);
         when(mockPrefs.remove('ff_${flag.name}')).thenAnswer((_) async => true);
         when(mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
@@ -86,7 +87,8 @@ void main() {
         expect(
           service.isEnabled(FeatureFlag.newCameraUI),
           equals(
-              const BuildConfiguration().getDefault(FeatureFlag.newCameraUI)),
+            const BuildConfiguration().getDefault(FeatureFlag.newCameraUI),
+          ),
         );
       });
 
@@ -111,7 +113,9 @@ void main() {
 
         expect(service.hasUserOverride(FeatureFlag.newCameraUI), isTrue);
         expect(
-            service.hasUserOverride(FeatureFlag.enhancedVideoPlayer), isFalse);
+          service.hasUserOverride(FeatureFlag.enhancedVideoPlayer),
+          isFalse,
+        );
       });
 
       test('should provide flag metadata', () {

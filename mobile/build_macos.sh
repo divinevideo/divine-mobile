@@ -14,6 +14,25 @@ echo "🔐 Resetting camera permissions for fresh build..."
 tccutil reset Camera com.openvine.divine 2>/dev/null || true
 echo "✅ Camera permissions reset (will need to re-grant on first launch)"
 
+# Load environment variables from .env file
+DART_DEFINES=""
+if [ -f .env ]; then
+    echo "📦 Loading environment from .env..."
+    source .env
+
+    if [ -n "$ZENDESK_APP_ID" ]; then
+        DART_DEFINES="$DART_DEFINES --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID"
+    fi
+
+    if [ -n "$ZENDESK_CLIENT_ID" ]; then
+        DART_DEFINES="$DART_DEFINES --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID"
+    fi
+
+    if [ -n "$ZENDESK_URL" ]; then
+        DART_DEFINES="$DART_DEFINES --dart-define=ZENDESK_URL=$ZENDESK_URL"
+    fi
+fi
+
 # Ensure Flutter dependencies are up to date
 echo "📦 Getting Flutter dependencies..."
 flutter pub get
@@ -48,7 +67,7 @@ cd ..
 echo "🚀 Building macOS app..."
 if [ "$1" = "release" ]; then
     echo "🏗️  Building Flutter macOS release..."
-    flutter build macos --release 
+    flutter build macos --release $DART_DEFINES
     
     echo "📦 Creating Xcode archive..."
     cd macos
@@ -128,13 +147,13 @@ EOF
     
     cd ..
 elif [ "$1" = "debug" ]; then
-    flutter build macos --debug 
+    flutter build macos --debug $DART_DEFINES
 else
     echo "Usage: $0 [debug|release]"
     echo "  debug   - Build debug version"
     echo "  release - Build release version and create Xcode archive"
     echo "Building in debug mode by default..."
-    flutter build macos --debug 
+    flutter build macos --debug $DART_DEFINES
 fi
 
 echo "✅ macOS build complete!"

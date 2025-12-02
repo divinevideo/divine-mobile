@@ -34,8 +34,11 @@ void main() {
       bunkerPrivateKey = keys.generatePrivateKey();
       bunkerPublicKey = keys.getPublicKey(bunkerPrivateKey);
 
-      Log.info('Test keys generated',
-          name: 'Test', category: LogCategory.system);
+      Log.info(
+        'Test keys generated',
+        name: 'Test',
+        category: LogCategory.system,
+      );
 
       bunkerClient = NsecBunkerClient(authEndpoint: testEndpoint);
     });
@@ -119,7 +122,7 @@ void main() {
         final bunkerDecrypted = NIP04.decrypt(
           clientEncrypted,
           bunkerAgreement,
-          clientPublicKey
+          clientPublicKey,
         );
 
         // Bunker encrypts response
@@ -127,7 +130,7 @@ void main() {
         final bunkerEncrypted = NIP04.encrypt(
           response,
           bunkerAgreement,
-          clientPublicKey
+          clientPublicKey,
         );
 
         // Client decrypts response
@@ -165,10 +168,14 @@ void main() {
         bunkerClient.setBunkerPublicKey(bunkerPublicKey);
 
         // Act & Assert
-        expect(bunkerClient.decryptContent('invalid_encrypted_data'),
-               equals('')); // Returns empty string for invalid data
-        expect(bunkerClient.decryptContent('no_iv_marker'),
-               equals('')); // Returns empty string when no IV marker
+        expect(
+          bunkerClient.decryptContent('invalid_encrypted_data'),
+          equals(''),
+        ); // Returns empty string for invalid data
+        expect(
+          bunkerClient.decryptContent('no_iv_marker'),
+          equals(''),
+        ); // Returns empty string when no IV marker
       });
     });
 
@@ -186,9 +193,9 @@ void main() {
               'kind': 1,
               'content': 'Test note',
               'created_at': 1234567890,
-              'tags': []
-            }
-          ]
+              'tags': [],
+            },
+          ],
         };
 
         // Act
@@ -214,7 +221,7 @@ void main() {
         final decryptedContent = NIP04.decrypt(
           event['content'] as String,
           bunkerAgreement,
-          clientPublicKey
+          clientPublicKey,
         );
         expect(decryptedContent, contains('sign_event'));
       });
@@ -228,7 +235,7 @@ void main() {
         final connectRequest = {
           'id': 'connect_1',
           'method': 'connect',
-          'params': [clientPublicKey, secret]
+          'params': [clientPublicKey, secret],
         };
 
         // Act
@@ -242,7 +249,7 @@ void main() {
         final decryptedContent = NIP04.decrypt(
           event['content'] as String,
           bunkerAgreement,
-          clientPublicKey
+          clientPublicKey,
         );
 
         expect(decryptedContent, contains('connect'));
@@ -261,8 +268,8 @@ void main() {
           'result': {
             'id': 'event_id_123',
             'pubkey': 'user_pubkey',
-            'sig': 'signature_abc'
-          }
+            'sig': 'signature_abc',
+          },
         };
 
         // Bunker encrypts response
@@ -270,14 +277,16 @@ void main() {
         final encryptedContent = NIP04.encrypt(
           jsonEncode(responseData),
           bunkerAgreement,
-          clientPublicKey
+          clientPublicKey,
         );
 
         final event = {
           'kind': 24133,
           'pubkey': bunkerPublicKey,
           'content': encryptedContent,
-          'tags': [['p', clientPublicKey]]
+          'tags': [
+            ['p', clientPublicKey],
+          ],
         };
 
         // Act
@@ -297,7 +306,7 @@ void main() {
 
         const errorResponse = {
           'id': '12345',
-          'error': 'User rejected signing request'
+          'error': 'User rejected signing request',
         };
 
         // Bunker encrypts error response
@@ -305,14 +314,16 @@ void main() {
         final encryptedContent = NIP04.encrypt(
           jsonEncode(errorResponse),
           bunkerAgreement,
-          clientPublicKey
+          clientPublicKey,
         );
 
         final event = {
           'kind': 24133,
           'pubkey': bunkerPublicKey,
           'content': encryptedContent,
-          'tags': [['p', clientPublicKey]]
+          'tags': [
+            ['p', clientPublicKey],
+          ],
         };
 
         // Act
@@ -333,7 +344,7 @@ void main() {
           relayUrl: 'wss://relay.test.com',
           bunkerPubkey: bunkerPublicKey,
           secret: 'config_secret',
-          permissions: ['sign_event', 'nip04_encrypt', 'nip04_decrypt']
+          permissions: ['sign_event', 'nip04_encrypt', 'nip04_decrypt'],
         );
 
         bunkerClient.setConfig(config);
@@ -348,7 +359,7 @@ void main() {
         final decrypted = NIP04.decrypt(
           encrypted,
           bunkerAgreement,
-          clientPublicKey
+          clientPublicKey,
         );
 
         // Assert
@@ -361,7 +372,7 @@ void main() {
           relayUrl: 'wss://relay.test.com',
           bunkerPubkey: bunkerPublicKey,
           secret: 'config_secret',
-          permissions: ['sign_event', 'nip04_encrypt', 'nip04_decrypt']
+          permissions: ['sign_event', 'nip04_encrypt', 'nip04_decrypt'],
         );
 
         // Act & Assert
@@ -387,7 +398,7 @@ void main() {
       // Act & Assert
       expect(
         () => bunkerClient.encryptContent('test'),
-        throwsA(isA<StateError>())
+        throwsA(isA<StateError>()),
       );
     });
   });

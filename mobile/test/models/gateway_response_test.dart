@@ -17,7 +17,7 @@ void main() {
             'tags': [],
             'content': 'Hello',
             'sig': 'sig123',
-          }
+          },
         ],
         'eose': true,
         'complete': true,
@@ -51,9 +51,7 @@ void main() {
     });
 
     test('handles missing optional fields', () {
-      final json = {
-        'events': [],
-      };
+      final json = {'events': []};
 
       final response = GatewayResponse.fromJson(json);
 
@@ -66,7 +64,7 @@ void main() {
     test('hasEvents returns true when events present', () {
       final json = {
         'events': [
-          {'id': 'test'}
+          {'id': 'test'},
         ],
       };
 
@@ -76,9 +74,7 @@ void main() {
     });
 
     test('hasEvents returns false when events empty', () {
-      final json = {
-        'events': [],
-      };
+      final json = {'events': []};
 
       final response = GatewayResponse.fromJson(json);
 

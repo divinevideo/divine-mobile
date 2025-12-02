@@ -73,8 +73,9 @@ class VideoEventCacheService {
     } else {
       // We have videos - ensure default videos are present with correct priority
       final defaultVideoIds = defaultVideos.map((v) => v.id).toSet();
-      final hasDefaultVideo =
-          _videoEvents.any((v) => defaultVideoIds.contains(v.id));
+      final hasDefaultVideo = _videoEvents.any(
+        (v) => defaultVideoIds.contains(v.id),
+      );
 
       if (!hasDefaultVideo) {
         Log.debug(
@@ -94,8 +95,9 @@ class VideoEventCacheService {
   /// Internal method to add video with priority-based ordering
   void _addVideoWithPriority(VideoEvent videoEvent) {
     // Check for duplicates
-    final existingIndex =
-        _videoEvents.indexWhere((existing) => existing.id == videoEvent.id);
+    final existingIndex = _videoEvents.indexWhere(
+      (existing) => existing.id == videoEvent.id,
+    );
     if (existingIndex != -1) {
       _duplicateVideoEventCount++;
       Log.verbose(

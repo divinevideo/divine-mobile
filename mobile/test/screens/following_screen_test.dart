@@ -41,9 +41,12 @@ void main() {
     eventStreamController = StreamController<nostr_sdk.Event>();
 
     // Default setup for non-cached scenario
-    when(mockAuthService.currentPublicKeyHex).thenReturn(validPubkey('different'));
-    when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-        .thenAnswer((_) => eventStreamController.stream);
+    when(
+      mockAuthService.currentPublicKeyHex,
+    ).thenReturn(validPubkey('different'));
+    when(
+      mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+    ).thenAnswer((_) => eventStreamController.stream);
     when(mockNostrService.isInitialized).thenReturn(true);
     when(mockSocialService.isFollowing(any)).thenReturn(false);
   });
@@ -61,10 +64,7 @@ void main() {
         socialServiceProvider.overrideWithValue(mockSocialService),
       ],
       child: MaterialApp(
-        home: FollowingScreen(
-          pubkey: testPubkey,
-          displayName: 'Test User',
-        ),
+        home: FollowingScreen(pubkey: testPubkey, displayName: 'Test User'),
       ),
     );
   }
@@ -109,8 +109,9 @@ void main() {
       // Setup current user scenario
       final currentUser = validPubkey('current');
       when(mockAuthService.currentPublicKeyHex).thenReturn(currentUser);
-      when(mockSocialService.followingPubkeys)
-          .thenReturn([validPubkey('cached1'), validPubkey('cached2')]);
+      when(
+        mockSocialService.followingPubkeys,
+      ).thenReturn([validPubkey('cached1'), validPubkey('cached2')]);
 
       await tester.pumpWidget(createTestWidget(pubkey: currentUser));
       await tester.pump(); // Process initState
@@ -121,8 +122,9 @@ void main() {
       expect(find.byType(ListView), findsOneWidget);
 
       // Should NOT have called subscribeToEvents
-      verifyNever(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters')));
+      verifyNever(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      );
     });
 
     testWidgets('shows empty state when no following', (tester) async {
@@ -131,7 +133,9 @@ void main() {
 
       // Close stream without adding events
       await eventStreamController.close();
-      await tester.pump(const Duration(seconds: 6)); // Wait for timeout to complete
+      await tester.pump(
+        const Duration(seconds: 6),
+      ); // Wait for timeout to complete
       await tester.pump(); // Process onDone callback
 
       // Should show empty state
@@ -149,9 +153,11 @@ void main() {
 
       // Should show error UI
       expect(
-          find.text(
-              'Failed to connect to relay server. Please check your connection and try again.'),
-          findsOneWidget);
+        find.text(
+          'Failed to connect to relay server. Please check your connection and try again.',
+        ),
+        findsOneWidget,
+      );
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
 
@@ -163,8 +169,9 @@ void main() {
     testWidgets('handles timeout when no data received', (tester) async {
       // Create a controller that will timeout
       final timeoutController = StreamController<nostr_sdk.Event>();
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => timeoutController.stream);
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => timeoutController.stream);
 
       await tester.pumpWidget(createTestWidget());
       await tester.pump(); // Process initState
@@ -175,9 +182,11 @@ void main() {
 
       // Should show error message
       expect(
-          find.text(
-              'Failed to connect to relay server. Please check your connection and try again.'),
-          findsOneWidget);
+        find.text(
+          'Failed to connect to relay server. Please check your connection and try again.',
+        ),
+        findsOneWidget,
+      );
 
       await timeoutController.close();
     });
@@ -293,8 +302,9 @@ void main() {
 
       // Create new stream controller for retry
       final retryStreamController = StreamController<nostr_sdk.Event>();
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => retryStreamController.stream);
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => retryStreamController.stream);
 
       // Tap retry button
       await tester.tap(find.text('Retry'));

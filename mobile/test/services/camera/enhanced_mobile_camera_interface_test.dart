@@ -49,116 +49,131 @@ void main() {
     });
 
     group('Real Camera Initialization', () {
-      test('should initialize with actual camera hardware', () async {
-        // Skip test if no cameras available (e.g., in CI)
-        final cameras = await availableCameras();
-        if (cameras.isEmpty) {
-          return;
-        }
+      test(
+        'should initialize with actual camera hardware',
+        () async {
+          // Skip test if no cameras available (e.g., in CI)
+          final cameras = await availableCameras();
+          if (cameras.isEmpty) {
+            return;
+          }
 
-        // Test actual initialization
-        await expectLater(
-          cameraInterface.initialize(),
-          completes,
-        );
+          // Test actual initialization
+          await expectLater(cameraInterface.initialize(), completes);
 
-        // Verify camera is ready
-        expect(cameraInterface.canSwitchCamera, cameras.length > 1);
-      }, timeout: const Timeout(Duration(seconds: 30)));
+          // Verify camera is ready
+          expect(cameraInterface.canSwitchCamera, cameras.length > 1);
+        },
+        timeout: const Timeout(Duration(seconds: 30)),
+      );
 
-      test('should provide a valid preview widget after initialization',
-          () async {
-        final cameras = await availableCameras();
-        if (cameras.isEmpty) {
-          return;
-        }
+      test(
+        'should provide a valid preview widget after initialization',
+        () async {
+          final cameras = await availableCameras();
+          if (cameras.isEmpty) {
+            return;
+          }
 
-        await cameraInterface.initialize();
+          await cameraInterface.initialize();
 
-        final preview = cameraInterface.previewWidget;
-        expect(preview, isA<Widget>());
+          final preview = cameraInterface.previewWidget;
+          expect(preview, isA<Widget>());
 
-        // The preview should be an EnhancedCameraPreview when initialized
-        expect(preview, isA<EnhancedCameraPreview>());
-      });
+          // The preview should be an EnhancedCameraPreview when initialized
+          expect(preview, isA<EnhancedCameraPreview>());
+        },
+      );
     });
 
     group('Real Video Recording', () {
-      test('should record actual video to disk', () async {
-        final cameras = await availableCameras();
-        if (cameras.isEmpty) {
-          return;
-        }
+      test(
+        'should record actual video to disk',
+        () async {
+          final cameras = await availableCameras();
+          if (cameras.isEmpty) {
+            return;
+          }
 
-        // Initialize camera
-        await cameraInterface.initialize();
+          // Initialize camera
+          await cameraInterface.initialize();
 
-        // Create output file path
-        final videoPath = path.join(testDirectory.path, 'test_video.mp4');
+          // Create output file path
+          final videoPath = path.join(testDirectory.path, 'test_video.mp4');
 
-        // Start recording
-        await cameraInterface.startRecordingSegment(videoPath);
+          // Start recording
+          await cameraInterface.startRecordingSegment(videoPath);
 
-        // Record for 2 seconds
-        await Future.delayed(const Duration(seconds: 2));
+          // Record for 2 seconds
+          await Future.delayed(const Duration(seconds: 2));
 
-        // Stop recording
-        final outputPath = await cameraInterface.stopRecordingSegment();
+          // Stop recording
+          final outputPath = await cameraInterface.stopRecordingSegment();
 
-        // Verify file was created
-        expect(outputPath, isNotNull);
-        final videoFile = File(outputPath!);
-        expect(videoFile.existsSync(), isTrue);
-        expect(videoFile.lengthSync(), greaterThan(0));
-      }, timeout: const Timeout(Duration(seconds: 30)));
+          // Verify file was created
+          expect(outputPath, isNotNull);
+          final videoFile = File(outputPath!);
+          expect(videoFile.existsSync(), isTrue);
+          expect(videoFile.lengthSync(), greaterThan(0));
+        },
+        timeout: const Timeout(Duration(seconds: 30)),
+      );
 
-      test('should handle multiple recording segments', () async {
-        final cameras = await availableCameras();
-        if (cameras.isEmpty) {
-          return;
-        }
+      test(
+        'should handle multiple recording segments',
+        () async {
+          final cameras = await availableCameras();
+          if (cameras.isEmpty) {
+            return;
+          }
 
-        await cameraInterface.initialize();
+          await cameraInterface.initialize();
 
-        // Record first segment
-        final path1 = path.join(testDirectory.path, 'segment1.mp4');
-        await cameraInterface.startRecordingSegment(path1);
-        await Future.delayed(const Duration(seconds: 1));
-        final output1 = await cameraInterface.stopRecordingSegment();
+          // Record first segment
+          final path1 = path.join(testDirectory.path, 'segment1.mp4');
+          await cameraInterface.startRecordingSegment(path1);
+          await Future.delayed(const Duration(seconds: 1));
+          final output1 = await cameraInterface.stopRecordingSegment();
 
-        // Record second segment
-        final path2 = path.join(testDirectory.path, 'segment2.mp4');
-        await cameraInterface.startRecordingSegment(path2);
-        await Future.delayed(const Duration(seconds: 1));
-        final output2 = await cameraInterface.stopRecordingSegment();
+          // Record second segment
+          final path2 = path.join(testDirectory.path, 'segment2.mp4');
+          await cameraInterface.startRecordingSegment(path2);
+          await Future.delayed(const Duration(seconds: 1));
+          final output2 = await cameraInterface.stopRecordingSegment();
 
-        // Verify both files exist
-        expect(File(output1!).existsSync(), isTrue);
-        expect(File(output2!).existsSync(), isTrue);
-      }, timeout: const Timeout(Duration(seconds: 30)));
+          // Verify both files exist
+          expect(File(output1!).existsSync(), isTrue);
+          expect(File(output2!).existsSync(), isTrue);
+        },
+        timeout: const Timeout(Duration(seconds: 30)),
+      );
     });
 
     group('Real Camera Switching', () {
-      test('should switch between available cameras', () async {
-        final cameras = await availableCameras();
-        if (cameras.length < 2) {
-          return;
-        }
+      test(
+        'should switch between available cameras',
+        () async {
+          final cameras = await availableCameras();
+          if (cameras.length < 2) {
+            return;
+          }
 
-        await cameraInterface.initialize();
+          await cameraInterface.initialize();
 
-        // Verify we can switch
-        expect(cameraInterface.canSwitchCamera, isTrue);
+          // Verify we can switch
+          expect(cameraInterface.canSwitchCamera, isTrue);
 
-        // Perform camera switch
-        await cameraInterface.switchCamera();
+          // Perform camera switch
+          await cameraInterface.switchCamera();
 
-        // The switch should complete without errors
-        // We can't easily verify which camera is active without exposing internals
-        // But we can verify the interface still works
-        final preview = cameraInterface.previewWidget;
-        expect(preview, isA<EnhancedCameraPreview>());
-      }, timeout: const Timeout(Duration(seconds: 30)));
+          // The switch should complete without errors
+          // We can't easily verify which camera is active without exposing internals
+          // But we can verify the interface still works
+          final preview = cameraInterface.previewWidget;
+          expect(preview, isA<EnhancedCameraPreview>());
+        },
+        timeout: const Timeout(Duration(seconds: 30)),
+      );
     });
 
     group('Real Zoom Functionality', () {
@@ -173,8 +188,9 @@ void main() {
         // Set various zoom levels
         await cameraInterface.setZoom(1.0); // Min zoom
         await cameraInterface.setZoom(2.0); // Mid zoom
-        await cameraInterface
-            .setZoom(5.0); // High zoom (will be clamped to max)
+        await cameraInterface.setZoom(
+          5.0,
+        ); // High zoom (will be clamped to max)
 
         // Verify zoom operations complete without error
         // The actual zoom level depends on device capabilities
@@ -208,8 +224,9 @@ void main() {
         // Set various focus points
         await cameraInterface.setFocusPoint(const Offset(0.5, 0.5)); // Center
         await cameraInterface.setFocusPoint(const Offset(0.2, 0.2)); // Top-left
-        await cameraInterface
-            .setFocusPoint(const Offset(0.8, 0.8)); // Bottom-right
+        await cameraInterface.setFocusPoint(
+          const Offset(0.8, 0.8),
+        ); // Bottom-right
 
         // Operations should complete without error
       });
@@ -236,19 +253,19 @@ void main() {
     });
 
     group('Preview Widget Integration', () {
-      testWidgets('should show loading indicator before initialization',
-          (WidgetTester tester) async {
+      testWidgets('should show loading indicator before initialization', (
+        WidgetTester tester,
+      ) async {
         final widget = cameraInterface.previewWidget;
 
-        await tester.pumpWidget(
-          MaterialApp(home: Scaffold(body: widget)),
-        );
+        await tester.pumpWidget(MaterialApp(home: Scaffold(body: widget)));
 
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
       });
 
-      testWidgets('should show real camera preview after initialization',
-          (WidgetTester tester) async {
+      testWidgets('should show real camera preview after initialization', (
+        WidgetTester tester,
+      ) async {
         final cameras = await availableCameras();
         if (cameras.isEmpty) {
           return;

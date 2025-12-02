@@ -16,8 +16,11 @@ class NotificationPersistence {
     try {
       await _box.put(notification.id, notification.toJson());
     } catch (e) {
-      Log.error('Failed to save notification: $e',
-          name: 'NotificationPersistence', category: LogCategory.system);
+      Log.error(
+        'Failed to save notification: $e',
+        name: 'NotificationPersistence',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -37,23 +40,30 @@ class NotificationPersistence {
           notifications.add(notification);
         } catch (e) {
           // Log corrupted notification and continue with others
-          Log.warning('Skipping corrupted notification: $e',
-              name: 'NotificationPersistence', category: LogCategory.system);
+          Log.warning(
+            'Skipping corrupted notification: $e',
+            name: 'NotificationPersistence',
+            category: LogCategory.system,
+          );
           corruptedCount++;
         }
       }
 
       if (corruptedCount > 0) {
         Log.debug(
-            'Loaded ${notifications.length} notifications ($corruptedCount corrupted entries skipped)',
-            name: 'NotificationPersistence',
-            category: LogCategory.system);
+          'Loaded ${notifications.length} notifications ($corruptedCount corrupted entries skipped)',
+          name: 'NotificationPersistence',
+          category: LogCategory.system,
+        );
       }
 
       return notifications;
     } catch (e) {
-      Log.error('Failed to load notifications: $e',
-          name: 'NotificationPersistence', category: LogCategory.system);
+      Log.error(
+        'Failed to load notifications: $e',
+        name: 'NotificationPersistence',
+        category: LogCategory.system,
+      );
       return [];
     }
   }
@@ -63,8 +73,11 @@ class NotificationPersistence {
     try {
       await _box.clear();
     } catch (e) {
-      Log.error('Failed to clear notifications: $e',
-          name: 'NotificationPersistence', category: LogCategory.system);
+      Log.error(
+        'Failed to clear notifications: $e',
+        name: 'NotificationPersistence',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -82,20 +95,29 @@ class NotificationPersistence {
           }
         } catch (e) {
           // If we can't parse it, mark for removal
-          Log.warning('Removing unparseable notification during cleanup: $e',
-              name: 'NotificationPersistence', category: LogCategory.system);
+          Log.warning(
+            'Removing unparseable notification during cleanup: $e',
+            name: 'NotificationPersistence',
+            category: LogCategory.system,
+          );
           keysToRemove.add(entry.key);
         }
       }
 
       if (keysToRemove.isNotEmpty) {
         await _box.deleteAll(keysToRemove);
-        Log.debug('Removed ${keysToRemove.length} old notifications',
-            name: 'NotificationPersistence', category: LogCategory.system);
+        Log.debug(
+          'Removed ${keysToRemove.length} old notifications',
+          name: 'NotificationPersistence',
+          category: LogCategory.system,
+        );
       }
     } catch (e) {
-      Log.error('Failed to clear old notifications: $e',
-          name: 'NotificationPersistence', category: LogCategory.system);
+      Log.error(
+        'Failed to clear old notifications: $e',
+        name: 'NotificationPersistence',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }

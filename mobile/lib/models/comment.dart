@@ -20,15 +20,15 @@ class Comment {
 
   /// Hive serialization
   factory Comment.fromJson(Map<String, dynamic> json) => Comment(
-        id: json['id'] as String,
-        content: json['content'] as String,
-        authorPubkey: json['authorPubkey'] as String,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        rootEventId: json['rootEventId'] as String,
-        replyToEventId: json['replyToEventId'] as String?,
-        rootAuthorPubkey: json['rootAuthorPubkey'] as String,
-        replyToAuthorPubkey: json['replyToAuthorPubkey'] as String?,
-      );
+    id: json['id'] as String,
+    content: json['content'] as String,
+    authorPubkey: json['authorPubkey'] as String,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    rootEventId: json['rootEventId'] as String,
+    replyToEventId: json['replyToEventId'] as String?,
+    rootAuthorPubkey: json['rootAuthorPubkey'] as String,
+    replyToAuthorPubkey: json['replyToAuthorPubkey'] as String?,
+  );
 
   /// Unique comment ID (Nostr event ID)
   @HiveField(0)
@@ -98,28 +98,27 @@ class Comment {
     String? replyToEventId,
     String? rootAuthorPubkey,
     String? replyToAuthorPubkey,
-  }) =>
-      Comment(
-        id: id ?? this.id,
-        content: content ?? this.content,
-        authorPubkey: authorPubkey ?? this.authorPubkey,
-        createdAt: createdAt ?? this.createdAt,
-        rootEventId: rootEventId ?? this.rootEventId,
-        replyToEventId: replyToEventId ?? this.replyToEventId,
-        rootAuthorPubkey: rootAuthorPubkey ?? this.rootAuthorPubkey,
-        replyToAuthorPubkey: replyToAuthorPubkey ?? this.replyToAuthorPubkey,
-      );
+  }) => Comment(
+    id: id ?? this.id,
+    content: content ?? this.content,
+    authorPubkey: authorPubkey ?? this.authorPubkey,
+    createdAt: createdAt ?? this.createdAt,
+    rootEventId: rootEventId ?? this.rootEventId,
+    replyToEventId: replyToEventId ?? this.replyToEventId,
+    rootAuthorPubkey: rootAuthorPubkey ?? this.rootAuthorPubkey,
+    replyToAuthorPubkey: replyToAuthorPubkey ?? this.replyToAuthorPubkey,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'content': content,
-        'authorPubkey': authorPubkey,
-        'createdAt': createdAt.toIso8601String(),
-        'rootEventId': rootEventId,
-        'replyToEventId': replyToEventId,
-        'rootAuthorPubkey': rootAuthorPubkey,
-        'replyToAuthorPubkey': replyToAuthorPubkey,
-      };
+    'id': id,
+    'content': content,
+    'authorPubkey': authorPubkey,
+    'createdAt': createdAt.toIso8601String(),
+    'rootEventId': rootEventId,
+    'replyToEventId': replyToEventId,
+    'rootAuthorPubkey': rootAuthorPubkey,
+    'replyToAuthorPubkey': replyToAuthorPubkey,
+  };
 
   @override
   bool operator ==(Object other) {

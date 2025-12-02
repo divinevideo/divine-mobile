@@ -8,7 +8,10 @@ import 'package:openvine/utils/unified_logger.dart';
 
 class VideoStopNavigatorObserver extends NavigatorObserver {
   @override
-  void didStartUserGesture(Route<dynamic> route, Route<dynamic>? previousRoute) {
+  void didStartUserGesture(
+    Route<dynamic> route,
+    Route<dynamic>? previousRoute,
+  ) {
     super.didStartUserGesture(route, previousRoute);
     // Stop videos as soon as user starts navigation gesture
     // This fires BEFORE the new route is pushed
@@ -18,7 +21,9 @@ class VideoStopNavigatorObserver extends NavigatorObserver {
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
-    print('🟪 NAV OBSERVER: didPush - route=${route.settings.name}, previousRoute=${previousRoute?.settings.name}');
+    print(
+      '🟪 NAV OBSERVER: didPush - route=${route.settings.name}, previousRoute=${previousRoute?.settings.name}',
+    );
     // Also stop on push for programmatic navigation (non-gesture)
     _stopAllVideos('didPush', route.settings.name);
   }
@@ -26,19 +31,25 @@ class VideoStopNavigatorObserver extends NavigatorObserver {
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPop(route, previousRoute);
-    print('🟪 NAV OBSERVER: didPop - route=${route.settings.name}, previousRoute=${previousRoute?.settings.name}');
+    print(
+      '🟪 NAV OBSERVER: didPop - route=${route.settings.name}, previousRoute=${previousRoute?.settings.name}',
+    );
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didRemove(route, previousRoute);
-    print('🟪 NAV OBSERVER: didRemove - route=${route.settings.name}, previousRoute=${previousRoute?.settings.name}');
+    print(
+      '🟪 NAV OBSERVER: didRemove - route=${route.settings.name}, previousRoute=${previousRoute?.settings.name}',
+    );
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    print('🟪 NAV OBSERVER: didReplace - newRoute=${newRoute?.settings.name}, oldRoute=${oldRoute?.settings.name}');
+    print(
+      '🟪 NAV OBSERVER: didReplace - newRoute=${newRoute?.settings.name}, oldRoute=${oldRoute?.settings.name}',
+    );
   }
 
   void _stopAllVideos(String action, String? routeName) {
@@ -51,13 +62,17 @@ class VideoStopNavigatorObserver extends NavigatorObserver {
         // This ensures videos stop BEFORE the new route builds
         disposeAllVideoControllers(container);
         Log.info(
-            '📱 Navigation $action to route: ${routeName ?? 'unnamed'} - stopped all videos',
-            name: 'VideoStopNavigatorObserver',
-            category: LogCategory.system);
+          '📱 Navigation $action to route: ${routeName ?? 'unnamed'} - stopped all videos',
+          name: 'VideoStopNavigatorObserver',
+          category: LogCategory.system,
+        );
       }
     } catch (e) {
-      Log.error('Failed to handle navigation: $e',
-          name: 'VideoStopNavigatorObserver', category: LogCategory.system);
+      Log.error(
+        'Failed to handle navigation: $e',
+        name: 'VideoStopNavigatorObserver',
+        category: LogCategory.system,
+      );
     }
   }
 }

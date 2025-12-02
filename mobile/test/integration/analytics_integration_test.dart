@@ -8,13 +8,15 @@ void main() {
   group('Analytics API Integration Tests', () {
     group('Trending Endpoint (/analytics/trending/vines)', () {
       test('returns valid trending data structure', () async {
-        final response = await http.get(
-          Uri.parse('https://api.openvine.co/analytics/trending/vines'),
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'OpenVine-Mobile-Test/1.0',
-          },
-        ).timeout(const Duration(seconds: 10));
+        final response = await http
+            .get(
+              Uri.parse('https://api.openvine.co/analytics/trending/vines'),
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'OpenVine-Mobile-Test/1.0',
+              },
+            )
+            .timeout(const Duration(seconds: 10));
 
         expect(response.statusCode, 200);
 
@@ -43,17 +45,21 @@ void main() {
       test('handles trending API timeout gracefully', () async {
         // This test might timeout, but shouldn't crash
         try {
-          await http.get(
-            Uri.parse('https://api.openvine.co/analytics/trending/vines'),
-            headers: {
-              'Accept': 'application/json',
-              'User-Agent': 'OpenVine-Mobile-Test/1.0',
-            },
-          ).timeout(const Duration(milliseconds: 100)); // Very short timeout
+          await http
+              .get(
+                Uri.parse('https://api.openvine.co/analytics/trending/vines'),
+                headers: {
+                  'Accept': 'application/json',
+                  'User-Agent': 'OpenVine-Mobile-Test/1.0',
+                },
+              )
+              .timeout(const Duration(milliseconds: 100)); // Very short timeout
         } catch (e) {
           // Should handle timeout gracefully - TimeoutException or contains 'timeout'
-          expect(e.toString().toLowerCase(),
-              anyOf(contains('timeout'), contains('timeoutexception')));
+          expect(
+            e.toString().toLowerCase(),
+            anyOf(contains('timeout'), contains('timeoutexception')),
+          );
         }
       });
     });
@@ -111,7 +117,8 @@ void main() {
 
         Log.info('✅ View tracking malformed data test passed');
         Log.info(
-            '   Response status for malformed data: ${response.statusCode}');
+          '   Response status for malformed data: ${response.statusCode}',
+        );
       });
 
       test('handles view tracking with minimal data', () async {
@@ -161,21 +168,25 @@ void main() {
               .timeout(const Duration(milliseconds: 50)); // Very short timeout
         } catch (e) {
           // Should handle timeout gracefully - TimeoutException or contains 'timeout'
-          expect(e.toString().toLowerCase(),
-              anyOf(contains('timeout'), contains('timeoutexception')));
+          expect(
+            e.toString().toLowerCase(),
+            anyOf(contains('timeout'), contains('timeoutexception')),
+          );
         }
       });
     });
 
     group('Error Handling', () {
       test('handles invalid endpoints gracefully', () async {
-        final response = await http.get(
-          Uri.parse('https://api.openvine.co/analytics/invalid-endpoint'),
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'OpenVine-Mobile-Test/1.0',
-          },
-        ).timeout(const Duration(seconds: 10));
+        final response = await http
+            .get(
+              Uri.parse('https://api.openvine.co/analytics/invalid-endpoint'),
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'OpenVine-Mobile-Test/1.0',
+              },
+            )
+            .timeout(const Duration(seconds: 10));
 
         expect(response.statusCode, 404);
 
@@ -185,14 +196,17 @@ void main() {
       test('handles network connectivity issues', () async {
         // Test with intentionally invalid domain
         try {
-          await http.get(
-            Uri.parse(
-                'https://nonexistent-analytics-domain.invalid/analytics/trending/vines'),
-            headers: {
-              'Accept': 'application/json',
-              'User-Agent': 'OpenVine-Mobile-Test/1.0',
-            },
-          ).timeout(const Duration(seconds: 2));
+          await http
+              .get(
+                Uri.parse(
+                  'https://nonexistent-analytics-domain.invalid/analytics/trending/vines',
+                ),
+                headers: {
+                  'Accept': 'application/json',
+                  'User-Agent': 'OpenVine-Mobile-Test/1.0',
+                },
+              )
+              .timeout(const Duration(seconds: 2));
         } catch (e) {
           // Should handle network errors gracefully
           expect(e, isA<Exception>());
@@ -206,19 +220,23 @@ void main() {
       test('trending endpoint responds within reasonable time', () async {
         final stopwatch = Stopwatch()..start();
 
-        final response = await http.get(
-          Uri.parse('https://api.openvine.co/analytics/trending/vines'),
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'OpenVine-Mobile-Test/1.0',
-          },
-        ).timeout(const Duration(seconds: 10));
+        final response = await http
+            .get(
+              Uri.parse('https://api.openvine.co/analytics/trending/vines'),
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'OpenVine-Mobile-Test/1.0',
+              },
+            )
+            .timeout(const Duration(seconds: 10));
 
         stopwatch.stop();
 
         expect(response.statusCode, 200);
-        expect(stopwatch.elapsedMilliseconds,
-            lessThan(5000)); // Should respond within 5 seconds
+        expect(
+          stopwatch.elapsedMilliseconds,
+          lessThan(5000),
+        ); // Should respond within 5 seconds
 
         Log.info('✅ Trending API performance test passed');
         Log.info('   Response time: ${stopwatch.elapsedMilliseconds}ms');
@@ -248,8 +266,10 @@ void main() {
         stopwatch.stop();
 
         // Should respond quickly for analytics
-        expect(stopwatch.elapsedMilliseconds,
-            lessThan(3000)); // Should respond within 3 seconds
+        expect(
+          stopwatch.elapsedMilliseconds,
+          lessThan(3000),
+        ); // Should respond within 3 seconds
 
         Log.info('✅ View tracking API performance test passed');
         Log.info('   Response time: ${stopwatch.elapsedMilliseconds}ms');

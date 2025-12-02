@@ -49,6 +49,25 @@ fi
 # Navigate to project root
 cd "$(dirname "$0")"
 
+# Load environment variables from .env file
+DART_DEFINES=""
+if [ -f .env ]; then
+    echo "📦 Loading environment from .env..."
+    source .env
+
+    if [ -n "$ZENDESK_APP_ID" ]; then
+        DART_DEFINES="$DART_DEFINES --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID"
+    fi
+
+    if [ -n "$ZENDESK_CLIENT_ID" ]; then
+        DART_DEFINES="$DART_DEFINES --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID"
+    fi
+
+    if [ -n "$ZENDESK_URL" ]; then
+        DART_DEFINES="$DART_DEFINES --dart-define=ZENDESK_URL=$ZENDESK_URL"
+    fi
+fi
+
 # Function to build iOS
 build_ios() {
     echo "🍎 Building iOS App..."
@@ -78,8 +97,8 @@ build_ios() {
     
     # Build the iOS app
     echo "🚀 Building iOS app ($BUILD_TYPE)..."
-    flutter build ios --$BUILD_TYPE 
-    
+    flutter build ios --$BUILD_TYPE $DART_DEFINES
+
     echo "✅ iOS build complete!"
 }
 
@@ -117,8 +136,8 @@ build_macos() {
     
     # Build the macOS app
     echo "🚀 Building macOS app ($BUILD_TYPE)..."
-    flutter build macos --$BUILD_TYPE 
-    
+    flutter build macos --$BUILD_TYPE $DART_DEFINES
+
     echo "✅ macOS build complete!"
 }
 

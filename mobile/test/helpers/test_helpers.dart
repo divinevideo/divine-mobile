@@ -1,7 +1,6 @@
 // ABOUTME: Test helper utilities for creating mock data and testing video system
 // ABOUTME: Provides consistent test data generation and common testing patterns
 
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,11 +30,7 @@ class TestHelpers {
   static ProviderScope createTestProviderScope({
     required Widget child,
     List? overrides,
-  }) =>
-      ProviderScope(
-        overrides: (overrides ?? []).cast(),
-        child: child,
-      );
+  }) => ProviderScope(overrides: (overrides ?? []).cast(), child: child);
 
   /// Mock network images for widget tests
   /// TODO: Implement proper HTTP mocking using package:mockito or http_mock_adapter
@@ -75,11 +70,13 @@ class TestHelpers {
       createdAt: effectiveCreatedAt.millisecondsSinceEpoch ~/ 1000,
       content: content ?? 'Test video content',
       timestamp: effectiveTimestamp,
-      videoUrl: videoUrl ??
+      videoUrl:
+          videoUrl ??
           (isGif
               ? 'https://example.com/test.gif'
               : 'https://example.com/test_video.mp4'),
-      thumbnailUrl: thumbnailUrl ??
+      thumbnailUrl:
+          thumbnailUrl ??
           'https://picsum.photos/640/480?random=${now.millisecondsSinceEpoch % 1000}',
       title: title ?? 'Test Video Title',
       hashtags: hashtags ?? ['test', 'video'],
@@ -95,10 +92,7 @@ class TestHelpers {
   ///
   /// Uses invalid URLs and patterns that mock implementations recognize
   /// as failure conditions.
-  static VideoEvent createFailingVideoEvent({
-    String? id,
-    String? errorType,
-  }) {
+  static VideoEvent createFailingVideoEvent({String? id, String? errorType}) {
     final now = DateTime.now();
     final baseId = id ?? 'failing_video_${now.millisecondsSinceEpoch}';
 
@@ -148,9 +142,7 @@ class TestHelpers {
 
     for (var i = 0; i < count; i++) {
       final timestamp = baseTime.subtract(
-        Duration(
-          milliseconds: spacing.inMilliseconds * (count - 1 - i),
-        ),
+        Duration(milliseconds: spacing.inMilliseconds * (count - 1 - i)),
       );
 
       videos.add(
@@ -247,10 +239,7 @@ class TestHelpers {
       );
 
   /// Create a GIF VideoEvent for testing immediate readiness
-  static VideoEvent createGifVideoEvent({
-    String? id,
-    String? title,
-  }) =>
+  static VideoEvent createGifVideoEvent({String? id, String? title}) =>
       createVideoEvent(
         id: id,
         title: title ?? 'Test GIF',
@@ -288,17 +277,13 @@ class TestHelpers {
   static Future<void> waitForVideoState(
     dynamic manager, // IVideoManager but keeping dynamic to avoid import issues
     String videoId,
-    dynamic expectedState, // VideoLoadingState
-    {
+    dynamic expectedState, { // VideoLoadingState
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    await waitForCondition(
-      () {
-        final state = manager.getVideoState(videoId);
-        return state?.loadingState == expectedState;
-      },
-      timeout: timeout,
-    );
+    await waitForCondition(() {
+      final state = manager.getVideoState(videoId);
+      return state?.loadingState == expectedState;
+    }, timeout: timeout);
   }
 
   /// Create a test configuration for specific scenarios
@@ -309,15 +294,14 @@ class TestHelpers {
     int timeoutSeconds = 10,
     bool enableMemoryManagement = true,
     int memoryKeepRange = 10,
-  }) =>
-      {
-        'maxVideos': maxVideos,
-        'preloadAhead': preloadAhead,
-        'maxRetries': maxRetries,
-        'preloadTimeout': Duration(seconds: timeoutSeconds),
-        'enableMemoryManagement': enableMemoryManagement,
-        'memoryKeepRange': memoryKeepRange,
-      };
+  }) => {
+    'maxVideos': maxVideos,
+    'preloadAhead': preloadAhead,
+    'maxRetries': maxRetries,
+    'preloadTimeout': Duration(seconds: timeoutSeconds),
+    'enableMemoryManagement': enableMemoryManagement,
+    'memoryKeepRange': memoryKeepRange,
+  };
 
   /// Verify video list ordering (newest first)
   static void verifyVideoOrdering(List<VideoEvent> videos) {
@@ -329,7 +313,8 @@ class TestHelpers {
         current.timestamp.isAfter(next.timestamp) ||
             current.timestamp.isAtSameMomentAs(next.timestamp),
         isTrue,
-        reason: 'Videos should be ordered newest first. '
+        reason:
+            'Videos should be ordered newest first. '
             'Video at index $i (${current.id}) should be newer than '
             'video at index ${i + 1} (${next.id})',
       );
@@ -342,13 +327,7 @@ class TestHelpers {
     String? url,
     String? title,
     bool isGif = false,
-  }) =>
-      createVideoEvent(
-        id: id,
-        videoUrl: url,
-        title: title,
-        isGif: isGif,
-      );
+  }) => createVideoEvent(id: id, videoUrl: url, title: title, isGif: isGif);
 
   /// Create a mock Nostr Event for testing video event processing
   static Map<String, dynamic> createMockNostrEvent({
@@ -365,7 +344,8 @@ class TestHelpers {
       'id': id ?? 'mock_nostr_${now.millisecondsSinceEpoch}',
       'kind': kind,
       'content': content ?? 'Mock video event content',
-      'tags': tags ??
+      'tags':
+          tags ??
           [
             ['url', 'https://example.com/video.mp4'],
             ['m', 'video/mp4'],
@@ -393,15 +373,14 @@ class TestHelpers {
     bool? hasFailed,
     bool? canRetry,
     bool? isDisposed,
-  }) =>
-      _VideoStateMatcher(
-        loadingState: loadingState,
-        isReady: isReady,
-        isLoading: isLoading,
-        hasFailed: hasFailed,
-        canRetry: canRetry,
-        isDisposed: isDisposed,
-      );
+  }) => _VideoStateMatcher(
+    loadingState: loadingState,
+    isReady: isReady,
+    isLoading: isLoading,
+    hasFailed: hasFailed,
+    canRetry: canRetry,
+    isDisposed: isDisposed,
+  );
 }
 
 /// Custom matcher for video state properties
@@ -472,8 +451,10 @@ Future<void> setupTestEnvironment() async {
   ServiceInitHelper.initializeTestEnvironment();
 
   // Initialize any test environment configuration
-  Log.debug('Setting up ProofMode test environment',
-      category: LogCategory.system);
+  Log.debug(
+    'Setting up ProofMode test environment',
+    category: LogCategory.system,
+  );
 }
 
 /// Get test SharedPreferences instance
@@ -487,73 +468,79 @@ class MockSecureStorage implements FlutterSecureStorage {
   final Map<String, String> _storage = {};
 
   @override
-  Future<bool> containsKey(
-      {required String key,
-      IOSOptions? iOptions,
-      AndroidOptions? aOptions,
-      LinuxOptions? lOptions,
-      WebOptions? webOptions,
-      MacOsOptions? mOptions,
-      WindowsOptions? wOptions}) async {
+  Future<bool> containsKey({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
     return _storage.containsKey(key);
   }
 
   @override
-  Future<void> delete(
-      {required String key,
-      IOSOptions? iOptions,
-      AndroidOptions? aOptions,
-      LinuxOptions? lOptions,
-      WebOptions? webOptions,
-      MacOsOptions? mOptions,
-      WindowsOptions? wOptions}) async {
+  Future<void> delete({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
     _storage.remove(key);
   }
 
   @override
-  Future<void> deleteAll(
-      {IOSOptions? iOptions,
-      AndroidOptions? aOptions,
-      LinuxOptions? lOptions,
-      WebOptions? webOptions,
-      MacOsOptions? mOptions,
-      WindowsOptions? wOptions}) async {
+  Future<void> deleteAll({
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
     _storage.clear();
   }
 
   @override
-  Future<String?> read(
-      {required String key,
-      IOSOptions? iOptions,
-      AndroidOptions? aOptions,
-      LinuxOptions? lOptions,
-      WebOptions? webOptions,
-      MacOsOptions? mOptions,
-      WindowsOptions? wOptions}) async {
+  Future<String?> read({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
     return _storage[key];
   }
 
   @override
-  Future<Map<String, String>> readAll(
-      {IOSOptions? iOptions,
-      AndroidOptions? aOptions,
-      LinuxOptions? lOptions,
-      WebOptions? webOptions,
-      MacOsOptions? mOptions,
-      WindowsOptions? wOptions}) async {
+  Future<Map<String, String>> readAll({
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
     return Map<String, String>.from(_storage);
   }
 
   @override
-  Future<void> write(
-      {required String key,
-      required String? value,
-      IOSOptions? iOptions,
-      AndroidOptions? aOptions,
-      LinuxOptions? lOptions,
-      WebOptions? webOptions,
-      MacOsOptions? mOptions,
-      WindowsOptions? wOptions}) async {
+  Future<void> write({
+    required String key,
+    required String? value,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
     if (value == null) {
       _storage.remove(key);
     } else {
@@ -586,8 +573,10 @@ class MockSecureStorage implements FlutterSecureStorage {
   Stream<bool>? get onCupertinoProtectedDataAvailabilityChanged => null;
 
   @override
-  void registerListener(
-      {required String key, required void Function(String key) listener}) {}
+  void registerListener({
+    required String key,
+    required void Function(String key) listener,
+  }) {}
 
   @override
   void unregisterAllListeners() {}
@@ -596,6 +585,8 @@ class MockSecureStorage implements FlutterSecureStorage {
   void unregisterAllListenersForKey({required String key}) {}
 
   @override
-  void unregisterListener(
-      {required String key, required void Function(String key) listener}) {}
+  void unregisterListener({
+    required String key,
+    required void Function(String key) listener,
+  }) {}
 }

@@ -4,7 +4,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/widgets.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/secure_key_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -81,7 +80,7 @@ class UserProfile {
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class AuthService {
   AuthService({SecureKeyStorageService? keyStorage})
-      : _keyStorage = keyStorage ?? SecureKeyStorageService();
+    : _keyStorage = keyStorage ?? SecureKeyStorageService();
   final SecureKeyStorageService _keyStorage;
 
   AuthState _authState = AuthState.checking;
@@ -121,8 +120,11 @@ class AuthService {
 
   /// Initialize the authentication service
   Future<void> initialize() async {
-    Log.debug('Initializing SecureAuthService',
-        name: 'AuthService', category: LogCategory.auth);
+    Log.debug(
+      'Initializing SecureAuthService',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
 
     // Set checking state immediately - we're starting the auth check now
     _setAuthState(AuthState.checking);
@@ -134,11 +136,17 @@ class AuthService {
       // Check for existing keys
       await _checkExistingAuth();
 
-      Log.info('SecureAuthService initialized',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.info(
+        'SecureAuthService initialized',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
     } catch (e) {
-      Log.error('SecureAuthService initialization failed: $e',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.error(
+        'SecureAuthService initialization failed: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       _lastError = 'Failed to initialize auth: $e';
 
       // Set state synchronously to prevent loading screen deadlock
@@ -148,8 +156,11 @@ class AuthService {
 
   /// Create a new Nostr identity
   Future<AuthResult> createNewIdentity({String? biometricPrompt}) async {
-    Log.debug('📱 Creating new secure Nostr identity',
-        name: 'AuthService', category: LogCategory.auth);
+    Log.debug(
+      '📱 Creating new secure Nostr identity',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
@@ -163,15 +174,24 @@ class AuthService {
       // Set up user session
       await _setupUserSession(keyContainer);
 
-      Log.info('New secure identity created successfully',
-          name: 'AuthService', category: LogCategory.auth);
-      Log.debug('📱 Public key: ${NostrEncoding.maskKey(keyContainer.npub)}',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.info(
+        'New secure identity created successfully',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.debug(
+        '📱 Public key: ${NostrEncoding.maskKey(keyContainer.npub)}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
 
       return AuthResult.success(keyContainer);
     } catch (e) {
-      Log.error('Failed to create secure identity: $e',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.error(
+        'Failed to create secure identity: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       _lastError = 'Failed to create identity: $e';
       _setAuthState(AuthState.unauthenticated);
 
@@ -180,10 +200,15 @@ class AuthService {
   }
 
   /// Import identity from nsec (bech32 private key)
-  Future<AuthResult> importFromNsec(String nsec,
-      {String? biometricPrompt}) async {
-    Log.debug('Importing identity from nsec to secure storage',
-        name: 'AuthService', category: LogCategory.auth);
+  Future<AuthResult> importFromNsec(
+    String nsec, {
+    String? biometricPrompt,
+  }) async {
+    Log.debug(
+      'Importing identity from nsec to secure storage',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
@@ -203,15 +228,24 @@ class AuthService {
       // Set up user session
       await _setupUserSession(keyContainer);
 
-      Log.info('Identity imported to secure storage successfully',
-          name: 'AuthService', category: LogCategory.auth);
-      Log.debug('📱 Public key: ${NostrEncoding.maskKey(keyContainer.npub)}',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.info(
+        'Identity imported to secure storage successfully',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.debug(
+        '📱 Public key: ${NostrEncoding.maskKey(keyContainer.npub)}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
 
       return AuthResult.success(keyContainer);
     } catch (e) {
-      Log.error('Failed to import identity: $e',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.error(
+        'Failed to import identity: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       _lastError = 'Failed to import identity: $e';
       _setAuthState(AuthState.unauthenticated);
 
@@ -220,10 +254,15 @@ class AuthService {
   }
 
   /// Import identity from hex private key
-  Future<AuthResult> importFromHex(String privateKeyHex,
-      {String? biometricPrompt}) async {
-    Log.debug('Importing identity from hex to secure storage',
-        name: 'AuthService', category: LogCategory.auth);
+  Future<AuthResult> importFromHex(
+    String privateKeyHex, {
+    String? biometricPrompt,
+  }) async {
+    Log.debug(
+      'Importing identity from hex to secure storage',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
 
     _setAuthState(AuthState.authenticating);
     _lastError = null;
@@ -243,15 +282,24 @@ class AuthService {
       // Set up user session
       await _setupUserSession(keyContainer);
 
-      Log.info('Identity imported from hex to secure storage successfully',
-          name: 'AuthService', category: LogCategory.auth);
-      Log.debug('📱 Public key: ${NostrEncoding.maskKey(keyContainer.npub)}',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.info(
+        'Identity imported from hex to secure storage successfully',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.debug(
+        '📱 Public key: ${NostrEncoding.maskKey(keyContainer.npub)}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
 
       return AuthResult.success(keyContainer);
     } catch (e) {
-      Log.error('Failed to import from hex: $e',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.error(
+        'Failed to import from hex: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       _lastError = 'Failed to import from hex: $e';
       _setAuthState(AuthState.unauthenticated);
 
@@ -261,31 +309,49 @@ class AuthService {
 
   /// Refresh the current user's profile from UserProfileService
   Future<void> refreshCurrentProfile(
-      ups.UserProfileService userProfileService) async {
+    ups.UserProfileService userProfileService,
+  ) async {
     if (_currentKeyContainer == null) return;
 
-    Log.debug('🔄 Refreshing current user profile from UserProfileService',
-        name: 'AuthService', category: LogCategory.auth);
+    Log.debug(
+      '🔄 Refreshing current user profile from UserProfileService',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
 
     // Get the latest profile from UserProfileService
-    final cachedProfile =
-        userProfileService.getCachedProfile(_currentKeyContainer!.publicKeyHex);
+    final cachedProfile = userProfileService.getCachedProfile(
+      _currentKeyContainer!.publicKeyHex,
+    );
 
     if (cachedProfile != null) {
-      Log.info('📋 Found updated profile:',
-          name: 'AuthService', category: LogCategory.auth);
-      Log.info('  - name: ${cachedProfile.name}',
-          name: 'AuthService', category: LogCategory.auth);
-      Log.info('  - displayName: ${cachedProfile.displayName}',
-          name: 'AuthService', category: LogCategory.auth);
-      Log.info('  - about: ${cachedProfile.about}',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.info(
+        '📋 Found updated profile:',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.info(
+        '  - name: ${cachedProfile.name}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.info(
+        '  - displayName: ${cachedProfile.displayName}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      Log.info(
+        '  - about: ${cachedProfile.about}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
 
       // Update the AuthService profile with data from UserProfileService
       _currentProfile = UserProfile(
         npub: _currentKeyContainer!.npub,
         publicKeyHex: _currentKeyContainer!.publicKeyHex,
-        displayName: cachedProfile.displayName ??
+        displayName:
+            cachedProfile.displayName ??
             cachedProfile.name ??
             NostrEncoding.maskKey(_currentKeyContainer!.npub),
         about: cachedProfile.about,
@@ -296,23 +362,35 @@ class AuthService {
       // Notify listeners and stream
       _profileController.add(_currentProfile);
 
-      Log.info('✅ AuthService profile updated',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.info(
+        '✅ AuthService profile updated',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
     } else {
-      Log.warning('⚠️ No cached profile found in UserProfileService',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.warning(
+        '⚠️ No cached profile found in UserProfileService',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
     }
   }
 
   /// Sign out the current user
   Future<void> signOut({bool deleteKeys = false}) async {
-    Log.debug('📱 Signing out user',
-        name: 'AuthService', category: LogCategory.auth);
+    Log.debug(
+      '📱 Signing out user',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
 
     try {
       if (deleteKeys) {
-        Log.debug('📱️ Deleting stored keys',
-            name: 'AuthService', category: LogCategory.auth);
+        Log.debug(
+          '📱️ Deleting stored keys',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
         await _keyStorage.deleteKeys();
       } else {
         // Just clear cache
@@ -327,11 +405,17 @@ class AuthService {
 
       _setAuthState(AuthState.unauthenticated);
 
-      Log.info('User signed out',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.info(
+        'User signed out',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
     } catch (e) {
-      Log.error('Error during sign out: $e',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.error(
+        'Error during sign out: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       _lastError = 'Sign out failed: $e';
     }
   }
@@ -346,8 +430,11 @@ class AuthService {
         biometricPrompt: biometricPrompt,
       );
     } catch (e) {
-      Log.error('Failed to get private key: $e',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.error(
+        'Failed to get private key: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       return null;
     }
   }
@@ -357,12 +444,18 @@ class AuthService {
     if (!isAuthenticated) return null;
 
     try {
-      Log.warning('Exporting nsec - ensure secure handling',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.warning(
+        'Exporting nsec - ensure secure handling',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       return await _keyStorage.exportNsec(biometricPrompt: biometricPrompt);
     } catch (e) {
-      Log.error('Failed to export nsec: $e',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.error(
+        'Failed to export nsec: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       return null;
     }
   }
@@ -375,122 +468,195 @@ class AuthService {
     String? biometricPrompt,
   }) async {
     if (!isAuthenticated || _currentKeyContainer == null) {
-      Log.error('Cannot sign event - user not authenticated',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.error(
+        'Cannot sign event - user not authenticated',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       return null;
     }
 
     try {
-      return await _keyStorage.withPrivateKey<Event?>(
-        (privateKey) {
-          // Create event with current user's public key
-          // Use appropriate timestamp backdating based on event kind
-          final driftTolerance = NostrTimestamp.getDriftToleranceForKind(kind);
+      return await _keyStorage.withPrivateKey<Event?>((privateKey) {
+        // Create event with current user's public key
+        // Use appropriate timestamp backdating based on event kind
+        final driftTolerance = NostrTimestamp.getDriftToleranceForKind(kind);
 
-          // CRITICAL: divine relays require specific tags for storage
-          final eventTags = List<List<String>>.from(tags ?? []);
+        // CRITICAL: divine relays require specific tags for storage
+        final eventTags = List<List<String>>.from(tags ?? []);
 
-          // CRITICAL: Kind 0 events require expiration tag FIRST (matching Python script order)
-          if (kind == 0) {
-            final expirationTimestamp =
-                (DateTime.now().millisecondsSinceEpoch ~/ 1000) +
-                    (72 * 60 * 60); // 72 hours
-            eventTags.add(['expiration', expirationTimestamp.toString()]);
-          }
+        // CRITICAL: Kind 0 events require expiration tag FIRST (matching Python script order)
+        if (kind == 0) {
+          final expirationTimestamp =
+              (DateTime.now().millisecondsSinceEpoch ~/ 1000) +
+              (72 * 60 * 60); // 72 hours
+          eventTags.add(['expiration', expirationTimestamp.toString()]);
+        }
 
-          final event = Event(
-            _currentKeyContainer!.publicKeyHex,
-            kind,
-            eventTags,
-            content,
-            createdAt: NostrTimestamp.now(driftTolerance: driftTolerance),
+        final event = Event(
+          _currentKeyContainer!.publicKeyHex,
+          kind,
+          eventTags,
+          content,
+          createdAt: NostrTimestamp.now(driftTolerance: driftTolerance),
+        );
+
+        // DEBUG: Log event details before signing
+        Log.info(
+          '🔍 Event BEFORE signing:',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - ID: ${event.id}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - Pubkey: ${event.pubkey}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - Kind: ${event.kind}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - Created at: ${event.createdAt}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - Tags: ${event.tags}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - Content: ${event.content}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - Signature (before): ${event.sig}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - Is valid (before): ${event.isValid}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - Is signed (before): ${event.isSigned}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+
+        // CRITICAL DEBUG: Log the exact JSON array used for ID calculation
+        final idCalculationArray = [
+          0,
+          event.pubkey,
+          event.createdAt,
+          event.kind,
+          event.tags,
+          event.content,
+        ];
+        final idCalculationJson = jsonEncode(idCalculationArray);
+        Log.info(
+          '📊 CRITICAL: ID calculation JSON array:',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '   Raw Array: $idCalculationArray',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '   JSON: $idCalculationJson',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '   JSON Length: ${idCalculationJson.length} chars',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+
+        // Sign the event
+        event.sign(privateKey);
+
+        // DEBUG: Log event details after signing
+        Log.info(
+          '🔍 Event AFTER signing:',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - ID (should be same): ${event.id}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - Signature (after): ${event.sig}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - Is valid (after): ${event.isValid}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        Log.info(
+          '  - Is signed (after): ${event.isSigned}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+
+        // CRITICAL: Verify signature is actually valid
+        if (!event.isSigned) {
+          Log.error(
+            '❌ Event signature validation FAILED!',
+            name: 'AuthService',
+            category: LogCategory.auth,
           );
+          Log.error(
+            '   This would cause relay to accept but not store the event',
+            name: 'AuthService',
+            category: LogCategory.auth,
+          );
+          return null;
+        }
 
-          // DEBUG: Log event details before signing
-          Log.info('🔍 Event BEFORE signing:',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - ID: ${event.id}',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - Pubkey: ${event.pubkey}',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - Kind: ${event.kind}',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - Created at: ${event.createdAt}',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - Tags: ${event.tags}',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - Content: ${event.content}',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - Signature (before): ${event.sig}',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - Is valid (before): ${event.isValid}',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - Is signed (before): ${event.isSigned}',
-              name: 'AuthService', category: LogCategory.auth);
+        if (!event.isValid) {
+          Log.error(
+            '❌ Event structure validation FAILED!',
+            name: 'AuthService',
+            category: LogCategory.auth,
+          );
+          Log.error(
+            '   Event ID does not match computed hash',
+            name: 'AuthService',
+            category: LogCategory.auth,
+          );
+          return null;
+        }
 
-          // CRITICAL DEBUG: Log the exact JSON array used for ID calculation
-          final idCalculationArray = [
-            0,
-            event.pubkey,
-            event.createdAt,
-            event.kind,
-            event.tags,
-            event.content
-          ];
-          final idCalculationJson = jsonEncode(idCalculationArray);
-          Log.info('📊 CRITICAL: ID calculation JSON array:',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('   Raw Array: $idCalculationArray',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('   JSON: $idCalculationJson',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('   JSON Length: ${idCalculationJson.length} chars',
-              name: 'AuthService', category: LogCategory.auth);
+        Log.info(
+          '✅ Event signature and structure validation PASSED',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
 
-          // Sign the event
-          event.sign(privateKey);
-
-          // DEBUG: Log event details after signing
-          Log.info('🔍 Event AFTER signing:',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - ID (should be same): ${event.id}',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - Signature (after): ${event.sig}',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - Is valid (after): ${event.isValid}',
-              name: 'AuthService', category: LogCategory.auth);
-          Log.info('  - Is signed (after): ${event.isSigned}',
-              name: 'AuthService', category: LogCategory.auth);
-
-          // CRITICAL: Verify signature is actually valid
-          if (!event.isSigned) {
-            Log.error('❌ Event signature validation FAILED!',
-                name: 'AuthService', category: LogCategory.auth);
-            Log.error(
-                '   This would cause relay to accept but not store the event',
-                name: 'AuthService',
-                category: LogCategory.auth);
-            return null;
-          }
-
-          if (!event.isValid) {
-            Log.error('❌ Event structure validation FAILED!',
-                name: 'AuthService', category: LogCategory.auth);
-            Log.error('   Event ID does not match computed hash',
-                name: 'AuthService', category: LogCategory.auth);
-            return null;
-          }
-
-          Log.info('✅ Event signature and structure validation PASSED',
-              name: 'AuthService', category: LogCategory.auth);
-
-          return event;
-        },
-        biometricPrompt: biometricPrompt,
-      );
+        return event;
+      }, biometricPrompt: biometricPrompt);
     } catch (e) {
-      Log.error('Failed to create event: $e',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.error(
+        'Failed to create event: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       return null;
     }
   }
@@ -501,51 +667,65 @@ class AuthService {
       final hasKeys = await _keyStorage.hasKeys();
 
       if (hasKeys) {
-        Log.info('Found existing secure keys, loading saved identity...',
-            name: 'AuthService', category: LogCategory.auth);
+        Log.info(
+          'Found existing secure keys, loading saved identity...',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
 
         final keyContainer = await _keyStorage.getKeyContainer();
         if (keyContainer != null) {
           Log.info(
-              'Loaded existing secure identity: ${NostrEncoding.maskKey(keyContainer.npub)}',
-              name: 'AuthService',
-              category: LogCategory.auth);
+            'Loaded existing secure identity: ${NostrEncoding.maskKey(keyContainer.npub)}',
+            name: 'AuthService',
+            category: LogCategory.auth,
+          );
           await _setupUserSession(keyContainer);
           return;
         } else {
           Log.warning(
-              'Has keys flag set but could not load secure key container',
-              name: 'AuthService',
-              category: LogCategory.auth);
+            'Has keys flag set but could not load secure key container',
+            name: 'AuthService',
+            category: LogCategory.auth,
+          );
         }
       }
 
       Log.info(
-          'No existing secure keys found, creating new identity automatically...',
-          name: 'AuthService',
-          category: LogCategory.auth);
+        'No existing secure keys found, creating new identity automatically...',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
 
       // Auto-create identity like TikTok - seamless onboarding
       // Note: createNewIdentity() sets state to authenticating immediately, so no need to set it here
       final result = await createNewIdentity();
       if (result.success && result.keyContainer != null) {
         Log.info(
-            'Auto-created NEW secure Nostr identity: ${NostrEncoding.maskKey(result.keyContainer!.npub)}',
-            name: 'AuthService',
-            category: LogCategory.auth);
+          'Auto-created NEW secure Nostr identity: ${NostrEncoding.maskKey(result.keyContainer!.npub)}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
         Log.debug(
-            '📱 This identity is now securely saved and will be reused on next launch',
-            name: 'AuthService',
-            category: LogCategory.auth);
+          '📱 This identity is now securely saved and will be reused on next launch',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
       } else {
-        Log.error('Failed to auto-create identity: ${result.errorMessage}',
-            name: 'AuthService', category: LogCategory.auth);
+        Log.error(
+          'Failed to auto-create identity: ${result.errorMessage}',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
         // Set state synchronously to prevent loading screen deadlock
         _setAuthState(AuthState.unauthenticated);
       }
     } catch (e) {
-      Log.error('Error checking existing auth: $e',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.error(
+        'Error checking existing auth: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       // Set state synchronously to prevent loading screen deadlock
       _setAuthState(AuthState.unauthenticated);
     }
@@ -567,21 +747,35 @@ class AuthService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
-          'current_user_pubkey_hex', keyContainer.publicKeyHex);
+        'current_user_pubkey_hex',
+        keyContainer.publicKeyHex,
+      );
     } catch (e) {
-      Log.warning('Failed to save current user pubkey to prefs: $e',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.warning(
+        'Failed to save current user pubkey to prefs: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
     }
 
     _setAuthState(AuthState.authenticated);
     _profileController.add(_currentProfile);
 
-    Log.info('Secure user session established',
-        name: 'AuthService', category: LogCategory.auth);
-    Log.verbose('Profile: ${_currentProfile!.displayName}',
-        name: 'AuthService', category: LogCategory.auth);
-    Log.debug('📱 Security: Hardware-backed storage active',
-        name: 'AuthService', category: LogCategory.auth);
+    Log.info(
+      'Secure user session established',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
+    Log.verbose(
+      'Profile: ${_currentProfile!.displayName}',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
+    Log.debug(
+      '📱 Security: Hardware-backed storage active',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
   }
 
   /// Update authentication state and notify listeners
@@ -590,26 +784,31 @@ class AuthService {
       _authState = newState;
       _authStateController.add(newState);
 
-      Log.debug('Auth state changed: ${newState.name}',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.debug(
+        'Auth state changed: ${newState.name}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
     }
   }
 
   /// Get user statistics
   Map<String, dynamic> get userStats => {
-        'is_authenticated': isAuthenticated,
-        'auth_state': authState.name,
-        'npub':
-            currentNpub != null ? NostrEncoding.maskKey(currentNpub!) : null,
-        'key_created_at': _currentProfile?.keyCreatedAt?.toIso8601String(),
-        'last_access_at': _currentProfile?.lastAccessAt?.toIso8601String(),
-        'has_error': _lastError != null,
-        'last_error': _lastError,
-      };
+    'is_authenticated': isAuthenticated,
+    'auth_state': authState.name,
+    'npub': currentNpub != null ? NostrEncoding.maskKey(currentNpub!) : null,
+    'key_created_at': _currentProfile?.keyCreatedAt?.toIso8601String(),
+    'last_access_at': _currentProfile?.lastAccessAt?.toIso8601String(),
+    'has_error': _lastError != null,
+    'last_error': _lastError,
+  };
 
   void dispose() {
-    Log.debug('📱️ Disposing SecureAuthService',
-        name: 'AuthService', category: LogCategory.auth);
+    Log.debug(
+      '📱️ Disposing SecureAuthService',
+      name: 'AuthService',
+      category: LogCategory.auth,
+    );
 
     // Securely dispose of key container
     _currentKeyContainer?.dispose();

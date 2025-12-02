@@ -3,12 +3,11 @@
 
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 
 /// Aspect ratio options for video recording
 enum AspectRatio {
-  square,   // 1:1
+  square, // 1:1
   vertical, // 9:16
 }
 
@@ -49,7 +48,8 @@ void main() {
 
     test('Square crop filter matches production formula', () {
       final filter = buildCropFilter(AspectRatio.square);
-      const expectedFilter = "crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2";
+      const expectedFilter =
+          "crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2";
 
       expect(filter, equals(expectedFilter));
     });
@@ -74,59 +74,101 @@ void main() {
       final outputPath = path.join(tempDir.path, 'output_square.mp4');
 
       // Generate 1-second test video (1920x1080, 16:9)
-      final generateCmd = 'ffmpeg -f lavfi -i testsrc=duration=1:size=1920x1080:rate=30 -pix_fmt yuv420p "$inputPath"';
+      final generateCmd =
+          'ffmpeg -f lavfi -i testsrc=duration=1:size=1920x1080:rate=30 -pix_fmt yuv420p "$inputPath"';
       final generateResult = await Process.run('sh', ['-c', generateCmd]);
 
-      expect(generateResult.exitCode, equals(0), reason: 'Failed to generate test video: ${generateResult.stderr}');
+      expect(
+        generateResult.exitCode,
+        equals(0),
+        reason: 'Failed to generate test video: ${generateResult.stderr}',
+      );
       expect(File(inputPath).existsSync(), isTrue);
 
       // Apply square crop filter
       final cropFilter = buildCropFilter(AspectRatio.square);
-      final cropCmd = 'ffmpeg -i "$inputPath" -vf "$cropFilter" -c:v libx264 -preset ultrafast "$outputPath"';
+      final cropCmd =
+          'ffmpeg -i "$inputPath" -vf "$cropFilter" -c:v libx264 -preset ultrafast "$outputPath"';
       final cropResult = await Process.run('sh', ['-c', cropCmd]);
 
-      expect(cropResult.exitCode, equals(0), reason: 'FFmpeg crop failed: ${cropResult.stderr}');
+      expect(
+        cropResult.exitCode,
+        equals(0),
+        reason: 'FFmpeg crop failed: ${cropResult.stderr}',
+      );
       expect(File(outputPath).existsSync(), isTrue);
 
       // Verify output dimensions are 1:1 (square)
-      final probeCmd = 'ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$outputPath"';
+      final probeCmd =
+          'ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$outputPath"';
       final probeResult = await Process.run('sh', ['-c', probeCmd]);
 
-      expect(probeResult.exitCode, equals(0), reason: 'FFprobe failed: ${probeResult.stderr}');
+      expect(
+        probeResult.exitCode,
+        equals(0),
+        reason: 'FFprobe failed: ${probeResult.stderr}',
+      );
 
       final dimensions = probeResult.stdout.toString().trim().split('x');
       final width = int.parse(dimensions[0]);
       final height = int.parse(dimensions[1]);
 
-      expect(width, equals(height), reason: 'Square crop should produce 1:1 aspect ratio, got ${width}x${height}');
-      expect(width, equals(1080), reason: 'Square crop of 1920x1080 should be 1080x1080');
+      expect(
+        width,
+        equals(height),
+        reason:
+            'Square crop should produce 1:1 aspect ratio, got ${width}x${height}',
+      );
+      expect(
+        width,
+        equals(1080),
+        reason: 'Square crop of 1920x1080 should be 1080x1080',
+      );
     });
 
     test('Vertical crop produces 9:16 aspect ratio from landscape input', () async {
       // Create a test video: 1920x1080 (landscape 16:9)
-      final inputPath = path.join(tempDir.path, 'input_landscape_vertical_test.mp4');
+      final inputPath = path.join(
+        tempDir.path,
+        'input_landscape_vertical_test.mp4',
+      );
       final outputPath = path.join(tempDir.path, 'output_vertical.mp4');
 
       // Generate 1-second test video (1920x1080, 16:9)
-      final generateCmd = 'ffmpeg -f lavfi -i testsrc=duration=1:size=1920x1080:rate=30 -pix_fmt yuv420p "$inputPath"';
+      final generateCmd =
+          'ffmpeg -f lavfi -i testsrc=duration=1:size=1920x1080:rate=30 -pix_fmt yuv420p "$inputPath"';
       final generateResult = await Process.run('sh', ['-c', generateCmd]);
 
-      expect(generateResult.exitCode, equals(0), reason: 'Failed to generate test video: ${generateResult.stderr}');
+      expect(
+        generateResult.exitCode,
+        equals(0),
+        reason: 'Failed to generate test video: ${generateResult.stderr}',
+      );
       expect(File(inputPath).existsSync(), isTrue);
 
       // Apply vertical crop filter
       final cropFilter = buildCropFilter(AspectRatio.vertical);
-      final cropCmd = 'ffmpeg -i "$inputPath" -vf "$cropFilter" -c:v libx264 -preset ultrafast "$outputPath"';
+      final cropCmd =
+          'ffmpeg -i "$inputPath" -vf "$cropFilter" -c:v libx264 -preset ultrafast "$outputPath"';
       final cropResult = await Process.run('sh', ['-c', cropCmd]);
 
-      expect(cropResult.exitCode, equals(0), reason: 'FFmpeg crop failed: ${cropResult.stderr}');
+      expect(
+        cropResult.exitCode,
+        equals(0),
+        reason: 'FFmpeg crop failed: ${cropResult.stderr}',
+      );
       expect(File(outputPath).existsSync(), isTrue);
 
       // Verify output dimensions are 9:16 (vertical)
-      final probeCmd = 'ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$outputPath"';
+      final probeCmd =
+          'ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$outputPath"';
       final probeResult = await Process.run('sh', ['-c', probeCmd]);
 
-      expect(probeResult.exitCode, equals(0), reason: 'FFprobe failed: ${probeResult.stderr}');
+      expect(
+        probeResult.exitCode,
+        equals(0),
+        reason: 'FFprobe failed: ${probeResult.stderr}',
+      );
 
       final dimensions = probeResult.stdout.toString().trim().split('x');
       final width = int.parse(dimensions[0]);
@@ -136,40 +178,70 @@ void main() {
       final aspectRatio = width / height;
       final expected916 = 9.0 / 16.0;
 
-      expect(aspectRatio, closeTo(expected916, 0.01),
-        reason: 'Vertical crop should produce 9:16 aspect ratio, got ${width}x${height} (ratio: $aspectRatio)');
+      expect(
+        aspectRatio,
+        closeTo(expected916, 0.01),
+        reason:
+            'Vertical crop should produce 9:16 aspect ratio, got ${width}x${height} (ratio: $aspectRatio)',
+      );
 
       // From 1920x1080 input, crop width to match 9:16
       // Expected: 1080 * 9/16 = 607.5 ≈ 608 width, 1080 height
-      expect(height, equals(1080), reason: 'Height should match input height (1080)');
-      expect(width, closeTo(607, 2), reason: 'Width should be cropped to 9:16 ratio (~607)');
+      expect(
+        height,
+        equals(1080),
+        reason: 'Height should match input height (1080)',
+      );
+      expect(
+        width,
+        closeTo(607, 2),
+        reason: 'Width should be cropped to 9:16 ratio (~607)',
+      );
     });
 
     test('Vertical crop produces 9:16 aspect ratio from portrait input', () async {
       // Create a test video: 1080x1920 (portrait 9:16 - already correct ratio)
       final inputPath = path.join(tempDir.path, 'input_portrait.mp4');
-      final outputPath = path.join(tempDir.path, 'output_portrait_vertical.mp4');
+      final outputPath = path.join(
+        tempDir.path,
+        'output_portrait_vertical.mp4',
+      );
 
       // Generate 1-second test video (1080x1920, 9:16)
-      final generateCmd = 'ffmpeg -f lavfi -i testsrc=duration=1:size=1080x1920:rate=30 -pix_fmt yuv420p "$inputPath"';
+      final generateCmd =
+          'ffmpeg -f lavfi -i testsrc=duration=1:size=1080x1920:rate=30 -pix_fmt yuv420p "$inputPath"';
       final generateResult = await Process.run('sh', ['-c', generateCmd]);
 
-      expect(generateResult.exitCode, equals(0), reason: 'Failed to generate test video: ${generateResult.stderr}');
+      expect(
+        generateResult.exitCode,
+        equals(0),
+        reason: 'Failed to generate test video: ${generateResult.stderr}',
+      );
       expect(File(inputPath).existsSync(), isTrue);
 
       // Apply vertical crop filter
       final cropFilter = buildCropFilter(AspectRatio.vertical);
-      final cropCmd = 'ffmpeg -i "$inputPath" -vf "$cropFilter" -c:v libx264 -preset ultrafast "$outputPath"';
+      final cropCmd =
+          'ffmpeg -i "$inputPath" -vf "$cropFilter" -c:v libx264 -preset ultrafast "$outputPath"';
       final cropResult = await Process.run('sh', ['-c', cropCmd]);
 
-      expect(cropResult.exitCode, equals(0), reason: 'FFmpeg crop failed: ${cropResult.stderr}');
+      expect(
+        cropResult.exitCode,
+        equals(0),
+        reason: 'FFmpeg crop failed: ${cropResult.stderr}',
+      );
       expect(File(outputPath).existsSync(), isTrue);
 
       // Verify output dimensions remain 9:16 (no cropping needed)
-      final probeCmd = 'ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$outputPath"';
+      final probeCmd =
+          'ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$outputPath"';
       final probeResult = await Process.run('sh', ['-c', probeCmd]);
 
-      expect(probeResult.exitCode, equals(0), reason: 'FFprobe failed: ${probeResult.stderr}');
+      expect(
+        probeResult.exitCode,
+        equals(0),
+        reason: 'FFprobe failed: ${probeResult.stderr}',
+      );
 
       final dimensions = probeResult.stdout.toString().trim().split('x');
       final width = int.parse(dimensions[0]);
@@ -181,8 +253,11 @@ void main() {
 
       final aspectRatio = width / height;
       final expected916 = 9.0 / 16.0;
-      expect(aspectRatio, closeTo(expected916, 0.01),
-        reason: 'Should preserve 9:16 aspect ratio');
+      expect(
+        aspectRatio,
+        closeTo(expected916, 0.01),
+        reason: 'Should preserve 9:16 aspect ratio',
+      );
     });
   });
 }

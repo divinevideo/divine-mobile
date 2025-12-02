@@ -56,7 +56,9 @@ void main() {
       expect(find.text('Delete My Account'), findsOneWidget);
     });
 
-    testWidgets('should call onConfirm when Delete button tapped', (tester) async {
+    testWidgets('should call onConfirm when Delete button tapped', (
+      tester,
+    ) async {
       var confirmed = false;
 
       await tester.pumpWidget(
@@ -133,10 +135,15 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('✓ Account Deleted'), findsOneWidget);
-      expect(find.textContaining('deletion request has been sent'), findsOneWidget);
+      expect(
+        find.textContaining('deletion request has been sent'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('should show Create New Account and Close buttons', (tester) async {
+    testWidgets('should show Create New Account and Close buttons', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -160,7 +167,9 @@ void main() {
       expect(find.text('Close'), findsOneWidget);
     });
 
-    testWidgets('should call onCreateNewAccount when button tapped', (tester) async {
+    testWidgets('should call onCreateNewAccount when button tapped', (
+      tester,
+    ) async {
       var createAccountCalled = false;
 
       await tester.pumpWidget(

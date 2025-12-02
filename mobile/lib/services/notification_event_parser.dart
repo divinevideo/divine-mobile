@@ -66,9 +66,7 @@ class NotificationEventParser {
       targetEventId: videoEventId,
       targetVideoUrl: videoEvent?.videoUrl,
       targetVideoThumbnail: videoEvent?.thumbnailUrl,
-      metadata: {
-        'comment': event.content,
-      },
+      metadata: {'comment': event.content},
     );
   }
 
@@ -107,9 +105,7 @@ class NotificationEventParser {
       actorPictureUrl: actorProfile?.picture,
       message: '$actorName mentioned you',
       timestamp: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
-      metadata: {
-        'text': event.content,
-      },
+      metadata: {'text': event.content},
     );
   }
 

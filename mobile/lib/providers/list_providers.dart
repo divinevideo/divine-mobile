@@ -27,7 +27,8 @@ Future<List<CuratedList>> curatedLists(Ref ref) async {
 /// Combined provider for both types of lists
 @riverpod
 Future<({List<UserList> userLists, List<CuratedList> curatedLists})> allLists(
-    Ref ref) async {
+  Ref ref,
+) async {
   // Fetch both in parallel for better performance
   final results = await Future.wait([
     ref.watch(userListsProvider.future),
@@ -57,7 +58,9 @@ Future<List<String>> curatedListVideos(Ref ref, String listId) async {
 /// Provider for videos from all members of a user list
 @riverpod
 Stream<List<VideoEvent>> userListMemberVideos(
-    Ref ref, List<String> pubkeys) async* {
+  Ref ref,
+  List<String> pubkeys,
+) async* {
   // Watch discovery videos and filter to only those from list members
   final allVideosAsync = ref.watch(videoEventsProvider);
 
@@ -83,14 +86,15 @@ Stream<List<VideoEvent>> userListMemberVideos(
 /// on each new result. This enables progressive UI updates via Riverpod.
 @riverpod
 Stream<List<CuratedList>> publicListsContainingVideo(
-    Ref ref, String videoId) async* {
+  Ref ref,
+  String videoId,
+) async* {
   final service = await ref.watch(curatedListServiceProvider.future);
   final accumulated = <CuratedList>[];
   final seenIds = <String>{};
 
   // Stream events from Nostr relays, accumulating as they arrive
-  await for (final list
-      in service.streamPublicListsContainingVideo(videoId)) {
+  await for (final list in service.streamPublicListsContainingVideo(videoId)) {
     if (!seenIds.contains(list.id)) {
       seenIds.add(list.id);
       accumulated.add(list);

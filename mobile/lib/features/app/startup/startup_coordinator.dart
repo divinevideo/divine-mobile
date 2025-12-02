@@ -127,15 +127,19 @@ class StartupCoordinator {
     }
 
     _isInitializing = true;
-    Log.info('Starting progressive app initialization',
-        name: 'StartupCoordinator');
+    Log.info(
+      'Starting progressive app initialization',
+      name: 'StartupCoordinator',
+    );
 
     // Start all phases concurrently but respect dependencies
     final phaseFutures = <StartupPhase, Future<void>>{};
 
     for (final phase in StartupPhase.values) {
-      phaseFutures[phase] =
-          _initializePhaseWithDependencies(phase, phaseFutures);
+      phaseFutures[phase] = _initializePhaseWithDependencies(
+        phase,
+        phaseFutures,
+      );
     }
 
     // Wait for all phases
@@ -225,7 +229,9 @@ class StartupCoordinator {
   /// Initialize a single service
   Future<void> _initializeService(ServiceRegistration service) async {
     Log.debug('Initializing ${service.name}', name: 'StartupCoordinator');
-    CrashReportingService.instance.logInitializationStep('Initializing service: ${service.name}');
+    CrashReportingService.instance.logInitializationStep(
+      'Initializing service: ${service.name}',
+    );
     _metricsCollector.startService(service.name);
 
     try {
@@ -239,7 +245,9 @@ class StartupCoordinator {
         '✓ ${service.name} initialized in ${_metricsCollector.generateMetrics().serviceTimings[service.name]?.inMilliseconds ?? 0}ms',
         name: 'StartupCoordinator',
       );
-      CrashReportingService.instance.logInitializationStep('✓ ${service.name} initialized successfully');
+      CrashReportingService.instance.logInitializationStep(
+        '✓ ${service.name} initialized successfully',
+      );
     } catch (error, stackTrace) {
       _metricsCollector.completeService(
         service.name,
@@ -248,9 +256,14 @@ class StartupCoordinator {
         stackTrace: stackTrace,
       );
 
-      CrashReportingService.instance.recordError(error, stackTrace,
-          reason: 'Service initialization failed: ${service.name}');
-      CrashReportingService.instance.logInitializationStep('✗ ${service.name} failed: $error');
+      CrashReportingService.instance.recordError(
+        error,
+        stackTrace,
+        reason: 'Service initialization failed: ${service.name}',
+      );
+      CrashReportingService.instance.logInitializationStep(
+        '✗ ${service.name} failed: $error',
+      );
 
       if (!service.optional) {
         Log.error(
@@ -309,10 +322,7 @@ class StartupCoordinator {
     _completedPhases[phase] = true;
     _phaseCompletedController.add(phase);
 
-    Log.info(
-      '✓ ${phase.name} phase complete',
-      name: 'StartupCoordinator',
-    );
+    Log.info('✓ ${phase.name} phase complete', name: 'StartupCoordinator');
   }
 
   /// Update initialization progress

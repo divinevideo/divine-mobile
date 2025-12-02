@@ -37,20 +37,26 @@ void main() {
       // Set up default stubs
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentPublicKeyHex).thenReturn(testUserPubkey);
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => Stream.fromIterable([]));
-      when(mockSubscriptionManager.createSubscription(
-        name: anyNamed('name'),
-        filters: anyNamed('filters'),
-        onEvent: anyNamed('onEvent'),
-        onError: anyNamed('onError'),
-        onComplete: anyNamed('onComplete'),
-        timeout: anyNamed('timeout'),
-        priority: anyNamed('priority'),
-      )).thenAnswer((_) async => 'test_subscription_id');
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => Stream.fromIterable([]));
+      when(
+        mockSubscriptionManager.createSubscription(
+          name: anyNamed('name'),
+          filters: anyNamed('filters'),
+          onEvent: anyNamed('onEvent'),
+          onError: anyNamed('onError'),
+          onComplete: anyNamed('onComplete'),
+          timeout: anyNamed('timeout'),
+          priority: anyNamed('priority'),
+        ),
+      ).thenAnswer((_) async => 'test_subscription_id');
 
-      socialService = SocialService(mockNostrService, mockAuthService,
-          subscriptionManager: mockSubscriptionManager);
+      socialService = SocialService(
+        mockNostrService,
+        mockAuthService,
+        subscriptionManager: mockSubscriptionManager,
+      );
 
       // Create test video with d tag in rawTags
       testVideo = VideoEvent(
@@ -72,154 +78,198 @@ void main() {
       reset(mockSubscriptionManager);
     });
 
-    test('should create NIP-18 repost event (Kind 6) when toggling repost on', () async {
-      // Mock event creation for repost
-      const privateKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-      final publicKey = getPublicKey(privateKey);
-      final mockRepostEvent = Event(
-        publicKey,
-        6, // Kind 6 = Repost
-        [
-          ['a', '32222:$testAuthorPubkey:$testDTag'], // Addressable event reference
-          ['p', testAuthorPubkey],
-        ],
-        '', // Repost content is empty
-      );
-      mockRepostEvent.sign(privateKey);
+    test(
+      'should create NIP-18 repost event (Kind 6) when toggling repost on',
+      () async {
+        // Mock event creation for repost
+        const privateKey =
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        final publicKey = getPublicKey(privateKey);
+        final mockRepostEvent = Event(
+          publicKey,
+          6, // Kind 6 = Repost
+          [
+            [
+              'a',
+              '32222:$testAuthorPubkey:$testDTag',
+            ], // Addressable event reference
+            ['p', testAuthorPubkey],
+          ],
+          '', // Repost content is empty
+        );
+        mockRepostEvent.sign(privateKey);
 
-      when(mockAuthService.createAndSignEvent(
-        kind: 16,
-        content: '',
-        tags: [
+        when(
+          mockAuthService.createAndSignEvent(
+            kind: 16,
+            content: '',
+            tags: [
+              ['k', '34236'],
+              ['a', '32222:$testAuthorPubkey:$testDTag'],
+              ['p', testAuthorPubkey],
+            ],
+          ),
+        ).thenAnswer((_) async => mockRepostEvent);
+
+        // Mock successful broadcast
+        when(mockNostrService.broadcastEvent(mockRepostEvent)).thenAnswer(
+          (_) async => NostrBroadcastResult(
+            event: mockRepostEvent,
+            successCount: 1,
+            totalRelays: 1,
+            results: const {'relay1': true},
+            errors: const {},
+          ),
+        );
+
+        // Initially not reposted
+        expect(
+          socialService.hasReposted(
+            testVideoId,
+            pubkey: testAuthorPubkey,
+            dTag: testDTag,
+          ),
+          false,
+        );
+
+        // Test toggling repost ON
+        await socialService.toggleRepost(testVideo);
+
+        // Verify repost event was created
+        verify(
+          mockAuthService.createAndSignEvent(
+            kind: 16,
+            content: '',
+            tags: [
+              ['k', '34236'],
+              ['a', '32222:$testAuthorPubkey:$testDTag'],
+              ['p', testAuthorPubkey],
+            ],
+          ),
+        ).called(1);
+
+        // Verify broadcast was called
+        verify(mockNostrService.broadcastEvent(mockRepostEvent)).called(1);
+
+        // Verify video is now reposted locally
+        expect(
+          socialService.hasReposted(
+            testVideoId,
+            pubkey: testAuthorPubkey,
+            dTag: testDTag,
+          ),
+          true,
+        );
+      },
+    );
+
+    test(
+      'should create NIP-09 deletion event (Kind 5) when toggling repost off',
+      () async {
+        // Setup: First repost the video
+        const privateKey =
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        final publicKey = getPublicKey(privateKey);
+
+        final mockRepostEvent = Event(publicKey, 16, [
           ['k', '34236'],
           ['a', '32222:$testAuthorPubkey:$testDTag'],
           ['p', testAuthorPubkey],
-        ],
-      )).thenAnswer((_) async => mockRepostEvent);
+        ], '');
+        mockRepostEvent.sign(privateKey);
 
-      // Mock successful broadcast
-      when(mockNostrService.broadcastEvent(mockRepostEvent)).thenAnswer(
-        (_) async => NostrBroadcastResult(
-          event: mockRepostEvent,
-          successCount: 1,
-          totalRelays: 1,
-          results: const {'relay1': true},
-          errors: const {},
-        ),
-      );
+        when(
+          mockAuthService.createAndSignEvent(
+            kind: 16,
+            content: '',
+            tags: [
+              ['k', '34236'],
+              ['a', '32222:$testAuthorPubkey:$testDTag'],
+              ['p', testAuthorPubkey],
+            ],
+          ),
+        ).thenAnswer((_) async => mockRepostEvent);
 
-      // Initially not reposted
-      expect(socialService.hasReposted(testVideoId, pubkey: testAuthorPubkey, dTag: testDTag), false);
+        when(mockNostrService.broadcastEvent(mockRepostEvent)).thenAnswer(
+          (_) async => NostrBroadcastResult(
+            event: mockRepostEvent,
+            successCount: 1,
+            totalRelays: 1,
+            results: const {'relay1': true},
+            errors: const {},
+          ),
+        );
 
-      // Test toggling repost ON
-      await socialService.toggleRepost(testVideo);
+        // First toggle: repost the video
+        await socialService.toggleRepost(testVideo);
+        expect(
+          socialService.hasReposted(
+            testVideoId,
+            pubkey: testAuthorPubkey,
+            dTag: testDTag,
+          ),
+          true,
+        );
 
-      // Verify repost event was created
-      verify(mockAuthService.createAndSignEvent(
-        kind: 16,
-        content: '',
-        tags: [
-          ['k', '34236'],
-          ['a', '32222:$testAuthorPubkey:$testDTag'],
-          ['p', testAuthorPubkey],
-        ],
-      )).called(1);
+        // Mock deletion event creation
+        final mockDeletionEvent = Event(
+          publicKey,
+          5, // Kind 5 = Deletion
+          [
+            ['e', mockRepostEvent.id], // Delete the repost event
+          ],
+          'Unreposted',
+        );
+        mockDeletionEvent.sign(privateKey);
 
-      // Verify broadcast was called
-      verify(mockNostrService.broadcastEvent(mockRepostEvent)).called(1);
+        when(
+          mockAuthService.createAndSignEvent(
+            kind: 5,
+            content: 'Unreposted',
+            tags: [
+              ['e', mockRepostEvent.id],
+            ],
+          ),
+        ).thenAnswer((_) async => mockDeletionEvent);
 
-      // Verify video is now reposted locally
-      expect(socialService.hasReposted(testVideoId, pubkey: testAuthorPubkey, dTag: testDTag), true);
-    });
+        when(mockNostrService.broadcastEvent(mockDeletionEvent)).thenAnswer(
+          (_) async => NostrBroadcastResult(
+            event: mockDeletionEvent,
+            successCount: 1,
+            totalRelays: 1,
+            results: const {'relay1': true},
+            errors: const {},
+          ),
+        );
 
-    test('should create NIP-09 deletion event (Kind 5) when toggling repost off', () async {
-      // Setup: First repost the video
-      const privateKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-      final publicKey = getPublicKey(privateKey);
+        // Second toggle: unrepost the video
+        await socialService.toggleRepost(testVideo);
 
-      final mockRepostEvent = Event(
-        publicKey,
-        16,
-        [
-          ['k', '34236'],
-          ['a', '32222:$testAuthorPubkey:$testDTag'],
-          ['p', testAuthorPubkey],
-        ],
-        '',
-      );
-      mockRepostEvent.sign(privateKey);
+        // Verify deletion event was created
+        verify(
+          mockAuthService.createAndSignEvent(
+            kind: 5,
+            content: 'Unreposted',
+            tags: [
+              ['e', mockRepostEvent.id],
+            ],
+          ),
+        ).called(1);
 
-      when(mockAuthService.createAndSignEvent(
-        kind: 16,
-        content: '',
-        tags: [
-          ['k', '34236'],
-          ['a', '32222:$testAuthorPubkey:$testDTag'],
-          ['p', testAuthorPubkey],
-        ],
-      )).thenAnswer((_) async => mockRepostEvent);
+        // Verify deletion broadcast
+        verify(mockNostrService.broadcastEvent(mockDeletionEvent)).called(1);
 
-      when(mockNostrService.broadcastEvent(mockRepostEvent)).thenAnswer(
-        (_) async => NostrBroadcastResult(
-          event: mockRepostEvent,
-          successCount: 1,
-          totalRelays: 1,
-          results: const {'relay1': true},
-          errors: const {},
-        ),
-      );
-
-      // First toggle: repost the video
-      await socialService.toggleRepost(testVideo);
-      expect(socialService.hasReposted(testVideoId, pubkey: testAuthorPubkey, dTag: testDTag), true);
-
-      // Mock deletion event creation
-      final mockDeletionEvent = Event(
-        publicKey,
-        5, // Kind 5 = Deletion
-        [
-          ['e', mockRepostEvent.id], // Delete the repost event
-        ],
-        'Unreposted',
-      );
-      mockDeletionEvent.sign(privateKey);
-
-      when(mockAuthService.createAndSignEvent(
-        kind: 5,
-        content: 'Unreposted',
-        tags: [
-          ['e', mockRepostEvent.id],
-        ],
-      )).thenAnswer((_) async => mockDeletionEvent);
-
-      when(mockNostrService.broadcastEvent(mockDeletionEvent)).thenAnswer(
-        (_) async => NostrBroadcastResult(
-          event: mockDeletionEvent,
-          successCount: 1,
-          totalRelays: 1,
-          results: const {'relay1': true},
-          errors: const {},
-        ),
-      );
-
-      // Second toggle: unrepost the video
-      await socialService.toggleRepost(testVideo);
-
-      // Verify deletion event was created
-      verify(mockAuthService.createAndSignEvent(
-        kind: 5,
-        content: 'Unreposted',
-        tags: [
-          ['e', mockRepostEvent.id],
-        ],
-      )).called(1);
-
-      // Verify deletion broadcast
-      verify(mockNostrService.broadcastEvent(mockDeletionEvent)).called(1);
-
-      // Verify video is no longer reposted locally
-      expect(socialService.hasReposted(testVideoId, pubkey: testAuthorPubkey, dTag: testDTag), false);
-    });
+        // Verify video is no longer reposted locally
+        expect(
+          socialService.hasReposted(
+            testVideoId,
+            pubkey: testAuthorPubkey,
+            dTag: testDTag,
+          ),
+          false,
+        );
+      },
+    );
 
     test('should throw exception when user is not authenticated', () async {
       when(mockAuthService.isAuthenticated).thenReturn(false);

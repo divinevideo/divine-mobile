@@ -45,9 +45,21 @@ void main() {
 
       // ASSERT: Videos should be in reverse chronological order (newest first)
       expect(sortedVideos.length, 3);
-      expect(sortedVideos[0].id, 'video3', reason: 'First video should be the newest (video3)');
-      expect(sortedVideos[1].id, 'video2', reason: 'Second video should be middle (video2)');
-      expect(sortedVideos[2].id, 'video1', reason: 'Third video should be oldest (video1)');
+      expect(
+        sortedVideos[0].id,
+        'video3',
+        reason: 'First video should be the newest (video3)',
+      );
+      expect(
+        sortedVideos[1].id,
+        'video2',
+        reason: 'Second video should be middle (video2)',
+      );
+      expect(
+        sortedVideos[2].id,
+        'video1',
+        reason: 'Third video should be oldest (video1)',
+      );
 
       // Verify timestamps are in descending order
       expect(sortedVideos[0].createdAt, 3000);

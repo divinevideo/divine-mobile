@@ -13,7 +13,8 @@ part 'feature_flag_providers.g.dart';
 @riverpod
 SharedPreferences sharedPreferences(Ref ref) {
   throw UnimplementedError(
-      'sharedPreferencesProvider must be overridden in tests');
+    'sharedPreferencesProvider must be overridden in tests',
+  );
 }
 
 /// Build configuration provider

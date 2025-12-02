@@ -25,9 +25,11 @@ class FollowActionsHelper {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isCurrentlyFollowing
-              ? 'Please login to unfollow users'
-              : 'Please login to follow users'),
+            content: Text(
+              isCurrentlyFollowing
+                  ? 'Please login to unfollow users'
+                  : 'Please login to follow users',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -54,16 +56,20 @@ class FollowActionsHelper {
         );
       }
     } catch (e) {
-      Log.error('Failed to toggle follow state: $e',
-          name: contextName ?? 'FollowActionsHelper',
-          category: LogCategory.ui);
+      Log.error(
+        'Failed to toggle follow state: $e',
+        name: contextName ?? 'FollowActionsHelper',
+        category: LogCategory.ui,
+      );
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isCurrentlyFollowing
-                ? 'Failed to unfollow user: ${e.toString()}'
-                : 'Failed to follow user: ${e.toString()}'),
+            content: Text(
+              isCurrentlyFollowing
+                  ? 'Failed to unfollow user: ${e.toString()}'
+                  : 'Failed to follow user: ${e.toString()}',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -101,9 +107,11 @@ class FollowActionsHelper {
         contextName: contextName,
       );
     } catch (e) {
-      Log.error('Failed to follow user: $e',
-          name: contextName ?? 'FollowActionsHelper',
-          category: LogCategory.ui);
+      Log.error(
+        'Failed to follow user: $e',
+        name: contextName ?? 'FollowActionsHelper',
+        category: LogCategory.ui,
+      );
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -146,9 +154,11 @@ class FollowActionsHelper {
         contextName: contextName,
       );
     } catch (e) {
-      Log.error('Failed to unfollow user: $e',
-          name: contextName ?? 'FollowActionsHelper',
-          category: LogCategory.ui);
+      Log.error(
+        'Failed to unfollow user: $e',
+        name: contextName ?? 'FollowActionsHelper',
+        category: LogCategory.ui,
+      );
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -170,9 +180,11 @@ class FollowActionsHelper {
   }) async {
     await optimisticMethods.followUser(pubkey);
 
-    Log.info('👤 Followed user: ${pubkey}...',
-        name: contextName ?? 'FollowActionsHelper',
-        category: LogCategory.ui);
+    Log.info(
+      '👤 Followed user: ${pubkey}...',
+      name: contextName ?? 'FollowActionsHelper',
+      category: LogCategory.ui,
+    );
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -186,11 +198,7 @@ class FollowActionsHelper {
                   color: VineTheme.vineGreen,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.check,
-                  color: Colors.white,
-                  size: 14,
-                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 14),
               ),
               const SizedBox(width: 12),
               Text(
@@ -213,9 +221,11 @@ class FollowActionsHelper {
   }) async {
     await optimisticMethods.unfollowUser(pubkey);
 
-    Log.info('👤 Unfollowed user: ${pubkey}...',
-        name: contextName ?? 'FollowActionsHelper',
-        category: LogCategory.ui);
+    Log.info(
+      '👤 Unfollowed user: ${pubkey}...',
+      name: contextName ?? 'FollowActionsHelper',
+      category: LogCategory.ui,
+    );
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -229,11 +239,7 @@ class FollowActionsHelper {
                   color: VineTheme.vineGreen,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.check,
-                  color: Colors.white,
-                  size: 14,
-                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 14),
               ),
               const SizedBox(width: 12),
               Text(

@@ -25,17 +25,17 @@ void main() {
       when(mockService.addListener(any)).thenReturn(null);
       when(mockService.removeListener(any)).thenReturn(null);
       when(mockService.popularNowVideos).thenReturn([]);
-      when(mockService.subscribeToVideoFeed(
-        subscriptionType: anyNamed('subscriptionType'),
-        limit: anyNamed('limit'),
-        sortBy: anyNamed('sortBy'),
-        force: anyNamed('force'),
-      )).thenAnswer((_) async => Future.value());
+      when(
+        mockService.subscribeToVideoFeed(
+          subscriptionType: anyNamed('subscriptionType'),
+          limit: anyNamed('limit'),
+          sortBy: anyNamed('sortBy'),
+          force: anyNamed('force'),
+        ),
+      ).thenAnswer((_) async => Future.value());
 
       container = ProviderContainer(
-        overrides: [
-          videoEventServiceProvider.overrideWithValue(mockService),
-        ],
+        overrides: [videoEventServiceProvider.overrideWithValue(mockService)],
       );
     });
 
@@ -60,34 +60,41 @@ void main() {
       await container.read(popularNowFeedProvider.notifier).refresh();
 
       // Assert - Should call subscribeToVideoFeed with force:true to get fresh videos
-      verify(mockService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.popularNow,
-        limit: 100,
-        sortBy: argThat(isNotNull, named: 'sortBy'),
-        force: true, // CRITICAL: Must force refresh to bypass caching
-      )).called(1);
+      verify(
+        mockService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.popularNow,
+          limit: 100,
+          sortBy: argThat(isNotNull, named: 'sortBy'),
+          force: true, // CRITICAL: Must force refresh to bypass caching
+        ),
+      ).called(1);
     });
 
-    test('should call subscribeToVideoFeed with force:true on refresh', () async {
-      // Arrange - Get initial state
-      when(mockService.popularNowVideos).thenReturn([]);
-      await container.read(popularNowFeedProvider.future);
+    test(
+      'should call subscribeToVideoFeed with force:true on refresh',
+      () async {
+        // Arrange - Get initial state
+        when(mockService.popularNowVideos).thenReturn([]);
+        await container.read(popularNowFeedProvider.future);
 
-      // Clear previous invocations
-      clearInteractions(mockService);
+        // Clear previous invocations
+        clearInteractions(mockService);
 
-      // Act - Call refresh
-      await container.read(popularNowFeedProvider.notifier).refresh();
+        // Act - Call refresh
+        await container.read(popularNowFeedProvider.notifier).refresh();
 
-      // Assert - Should call subscribeToVideoFeed with force:true
-      // This bypasses the "Skipping re-subscribe" logic and gets fresh videos
-      verify(mockService.subscribeToVideoFeed(
-        subscriptionType: SubscriptionType.popularNow,
-        limit: 100,
-        sortBy: argThat(isNotNull, named: 'sortBy'),
-        force: true, // CRITICAL: Must force refresh to bypass caching
-      )).called(1);
-    });
+        // Assert - Should call subscribeToVideoFeed with force:true
+        // This bypasses the "Skipping re-subscribe" logic and gets fresh videos
+        verify(
+          mockService.subscribeToVideoFeed(
+            subscriptionType: SubscriptionType.popularNow,
+            limit: 100,
+            sortBy: argThat(isNotNull, named: 'sortBy'),
+            force: true, // CRITICAL: Must force refresh to bypass caching
+          ),
+        ).called(1);
+      },
+    );
 
     test('should invalidate and rebuild provider on refresh', () async {
       // Arrange
@@ -104,21 +111,20 @@ void main() {
       // Assert - Should have subscribed twice:
       // 1. Once for the forced refresh in refresh() method
       // 2. Once for the rebuild after invalidateSelf()
-      verify(mockService.subscribeToVideoFeed(
-        subscriptionType: anyNamed('subscriptionType'),
-        limit: anyNamed('limit'),
-        sortBy: anyNamed('sortBy'),
-        force: anyNamed('force'),
-      )).called(greaterThanOrEqualTo(1));
+      verify(
+        mockService.subscribeToVideoFeed(
+          subscriptionType: anyNamed('subscriptionType'),
+          limit: anyNamed('limit'),
+          sortBy: anyNamed('sortBy'),
+          force: anyNamed('force'),
+        ),
+      ).called(greaterThanOrEqualTo(1));
     });
   });
 }
 
 // Helper to create mock VideoEvent for testing
-VideoEvent _createMockVideo({
-  required String id,
-  DateTime? createdAt,
-}) {
+VideoEvent _createMockVideo({required String id, DateTime? createdAt}) {
   final timestamp = createdAt ?? DateTime.now();
   return VideoEvent(
     id: id,

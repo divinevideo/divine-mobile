@@ -101,10 +101,7 @@ class IOSUploadDebugHelper {
             children: [
               const Text(
                 'Please take a screenshot of this error and report it:',
-                style: TextStyle(
-                  color: VineTheme.secondaryText,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
               ),
               const SizedBox(height: 16),
               Container(

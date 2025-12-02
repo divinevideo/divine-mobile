@@ -34,11 +34,9 @@ class RelayGatewayService {
   final String gatewayUrl;
   final http.Client _client;
 
-  RelayGatewayService({
-    String? gatewayUrl,
-    http.Client? client,
-  })  : gatewayUrl = gatewayUrl ?? defaultGatewayUrl,
-        _client = client ?? http.Client();
+  RelayGatewayService({String? gatewayUrl, http.Client? client})
+    : gatewayUrl = gatewayUrl ?? defaultGatewayUrl,
+      _client = client ?? http.Client();
 
   /// Query events using NIP-01 filter via REST gateway
   ///

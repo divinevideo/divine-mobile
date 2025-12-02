@@ -43,10 +43,22 @@ void main() {
         expect(keyPair.privateKey, isNot(startsWith('MOCK_')));
 
         // Should be armored PGP format
-        expect(keyPair.publicKey, contains('-----BEGIN PGP PUBLIC KEY BLOCK-----'));
-        expect(keyPair.publicKey, contains('-----END PGP PUBLIC KEY BLOCK-----'));
-        expect(keyPair.privateKey, contains('-----BEGIN PGP PRIVATE KEY BLOCK-----'));
-        expect(keyPair.privateKey, contains('-----END PGP PRIVATE KEY BLOCK-----'));
+        expect(
+          keyPair.publicKey,
+          contains('-----BEGIN PGP PUBLIC KEY BLOCK-----'),
+        );
+        expect(
+          keyPair.publicKey,
+          contains('-----END PGP PUBLIC KEY BLOCK-----'),
+        );
+        expect(
+          keyPair.privateKey,
+          contains('-----BEGIN PGP PRIVATE KEY BLOCK-----'),
+        );
+        expect(
+          keyPair.privateKey,
+          contains('-----END PGP PRIVATE KEY BLOCK-----'),
+        );
 
         // Fingerprint should be valid hex (uppercase)
         expect(keyPair.fingerprint, matches(RegExp(r'^[0-9A-F]+$')));
@@ -76,8 +88,14 @@ void main() {
 
         // Note: User ID is embedded in binary packet data, not visible in armored text
         // Just verify it's proper PGP armored format with substantial length
-        expect(keyPair.publicKey, contains('-----BEGIN PGP PUBLIC KEY BLOCK-----'));
-        expect(keyPair.publicKey, contains('-----END PGP PUBLIC KEY BLOCK-----'));
+        expect(
+          keyPair.publicKey,
+          contains('-----BEGIN PGP PUBLIC KEY BLOCK-----'),
+        );
+        expect(
+          keyPair.publicKey,
+          contains('-----END PGP PUBLIC KEY BLOCK-----'),
+        );
 
         // Keys should be substantial length (armored PGP is verbose)
         expect(keyPair.publicKey.length, greaterThan(500));
@@ -106,30 +124,41 @@ void main() {
         expect(signature.signedAt, isA<DateTime>());
       });
 
-      test('generates unique signatures each time (includes timestamp)', () async {
-        await keyService.generateKeyPair();
-        const testData = 'consistent test data';
+      test(
+        'generates unique signatures each time (includes timestamp)',
+        () async {
+          await keyService.generateKeyPair();
+          const testData = 'consistent test data';
 
-        final signature1 = await keyService.signData(testData);
-        await Future.delayed(Duration(milliseconds: 100)); // Ensure different timestamp
-        final signature2 = await keyService.signData(testData);
+          final signature1 = await keyService.signData(testData);
+          await Future.delayed(
+            Duration(milliseconds: 100),
+          ); // Ensure different timestamp
+          final signature2 = await keyService.signData(testData);
 
-        // Real PGP signatures include timestamps, so they're unique each time
-        // This is CORRECT behavior (prevents replay attacks)
-        expect(signature1!.signature, isNot(equals(signature2!.signature)));
+          // Real PGP signatures include timestamps, so they're unique each time
+          // This is CORRECT behavior (prevents replay attacks)
+          expect(signature1!.signature, isNot(equals(signature2!.signature)));
 
-        // But both should use the same key
-        expect(
-          signature1.publicKeyFingerprint,
-          equals(signature2.publicKeyFingerprint),
-        );
+          // But both should use the same key
+          expect(
+            signature1.publicKeyFingerprint,
+            equals(signature2.publicKeyFingerprint),
+          );
 
-        // Both signatures should still verify correctly
-        final isValid1 = await keyService.verifySignature(testData, signature1);
-        final isValid2 = await keyService.verifySignature(testData, signature2);
-        expect(isValid1, isTrue);
-        expect(isValid2, isTrue);
-      });
+          // Both signatures should still verify correctly
+          final isValid1 = await keyService.verifySignature(
+            testData,
+            signature1,
+          );
+          final isValid2 = await keyService.verifySignature(
+            testData,
+            signature2,
+          );
+          expect(isValid1, isTrue);
+          expect(isValid2, isTrue);
+        },
+      );
 
       test('generates different signatures for different data', () async {
         await keyService.generateKeyPair();
@@ -175,7 +204,10 @@ void main() {
         const tamperedData = 'tampered proof data';
 
         final signature = await keyService.signData(originalData);
-        final isValid = await keyService.verifySignature(tamperedData, signature!);
+        final isValid = await keyService.verifySignature(
+          tamperedData,
+          signature!,
+        );
 
         // Tampering should be detected
         expect(isValid, isFalse);
@@ -207,7 +239,10 @@ void main() {
           signedAt: DateTime.now(),
         );
 
-        final isValid = await keyService.verifySignature(testData, fakeSignature);
+        final isValid = await keyService.verifySignature(
+          testData,
+          fakeSignature,
+        );
         expect(isValid, isFalse);
       });
     });
@@ -220,14 +255,32 @@ void main() {
         final json = originalKeyPair.toJson();
         final deserializedKeyPair = ProofModeKeyPair.fromJson(json);
 
-        expect(deserializedKeyPair.publicKey, equals(originalKeyPair.publicKey));
-        expect(deserializedKeyPair.privateKey, equals(originalKeyPair.privateKey));
-        expect(deserializedKeyPair.fingerprint, equals(originalKeyPair.fingerprint));
-        expect(deserializedKeyPair.createdAt, equals(originalKeyPair.createdAt));
+        expect(
+          deserializedKeyPair.publicKey,
+          equals(originalKeyPair.publicKey),
+        );
+        expect(
+          deserializedKeyPair.privateKey,
+          equals(originalKeyPair.privateKey),
+        );
+        expect(
+          deserializedKeyPair.fingerprint,
+          equals(originalKeyPair.fingerprint),
+        );
+        expect(
+          deserializedKeyPair.createdAt,
+          equals(originalKeyPair.createdAt),
+        );
 
         // Verify keys contain armored PGP format
-        expect(deserializedKeyPair.publicKey, contains('-----BEGIN PGP PUBLIC KEY BLOCK-----'));
-        expect(deserializedKeyPair.privateKey, contains('-----BEGIN PGP PRIVATE KEY BLOCK-----'));
+        expect(
+          deserializedKeyPair.publicKey,
+          contains('-----BEGIN PGP PUBLIC KEY BLOCK-----'),
+        );
+        expect(
+          deserializedKeyPair.privateKey,
+          contains('-----BEGIN PGP PRIVATE KEY BLOCK-----'),
+        );
       });
     });
 
@@ -269,4 +322,3 @@ void main() {
     });
   });
 }
-

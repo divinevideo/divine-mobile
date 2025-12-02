@@ -29,11 +29,11 @@ class VideoEventPublisher {
     AuthService? authService,
     PersonalEventCacheService? personalEventCache,
     VideoEventService? videoEventService,
-  })  : _uploadManager = uploadManager,
-        _nostrService = nostrService,
-        _authService = authService,
-        _personalEventCache = personalEventCache,
-        _videoEventService = videoEventService;
+  }) : _uploadManager = uploadManager,
+       _nostrService = nostrService,
+       _authService = authService,
+       _personalEventCache = personalEventCache,
+       _videoEventService = videoEventService;
   final UploadManager _uploadManager;
   final INostrService _nostrService;
   final AuthService? _authService;
@@ -47,104 +47,169 @@ class VideoEventPublisher {
 
   /// Initialize the publisher
   Future<void> initialize() async {
-    Log.debug('Initializing VideoEventPublisher',
-        name: 'VideoEventPublisher', category: LogCategory.video);
+    Log.debug(
+      'Initializing VideoEventPublisher',
+      name: 'VideoEventPublisher',
+      category: LogCategory.video,
+    );
 
-    Log.info('VideoEventPublisher initialized',
-        name: 'VideoEventPublisher', category: LogCategory.video);
+    Log.info(
+      'VideoEventPublisher initialized',
+      name: 'VideoEventPublisher',
+      category: LogCategory.video,
+    );
   }
 
   /// Publish event to Nostr relays
   Future<bool> _publishEventToNostr(Event event) async {
     try {
-      Log.debug('Publishing event to Nostr relays: ${event.id}',
-          name: 'VideoEventPublisher', category: LogCategory.video);
+      Log.debug(
+        'Publishing event to Nostr relays: ${event.id}',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
 
       // Log the complete event details
-      Log.info('📤 FULL EVENT TO PUBLISH:',
-          name: 'VideoEventPublisher', category: LogCategory.video);
-      Log.info('  ID: ${event.id}',
-          name: 'VideoEventPublisher', category: LogCategory.video);
-      Log.info('  Pubkey: ${event.pubkey}',
-          name: 'VideoEventPublisher', category: LogCategory.video);
-      Log.info('  Created At: ${event.createdAt}',
-          name: 'VideoEventPublisher', category: LogCategory.video);
-      Log.info('  Kind: ${event.kind}',
-          name: 'VideoEventPublisher', category: LogCategory.video);
-      Log.info('  Content: "${event.content}"',
-          name: 'VideoEventPublisher', category: LogCategory.video);
-      Log.info('  Tags (${event.tags.length} total):',
-          name: 'VideoEventPublisher', category: LogCategory.video);
+      Log.info(
+        '📤 FULL EVENT TO PUBLISH:',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  ID: ${event.id}',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  Pubkey: ${event.pubkey}',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  Created At: ${event.createdAt}',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  Kind: ${event.kind}',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  Content: "${event.content}"',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  Tags (${event.tags.length} total):',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
       for (final tag in event.tags) {
-        Log.info('    - ${tag.join(", ")}',
-            name: 'VideoEventPublisher', category: LogCategory.video);
+        Log.info(
+          '    - ${tag.join(", ")}',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
       }
-      Log.info('  Signature: ${event.sig}',
-          name: 'VideoEventPublisher', category: LogCategory.video);
-      Log.info('  Is Valid: ${event.isValid}',
-          name: 'VideoEventPublisher', category: LogCategory.video);
-      Log.info('  Is Signed: ${event.isSigned}',
-          name: 'VideoEventPublisher', category: LogCategory.video);
+      Log.info(
+        '  Signature: ${event.sig}',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  Is Valid: ${event.isValid}',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
+      Log.info(
+        '  Is Signed: ${event.isSigned}',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
 
       // Log the raw JSON representation
       try {
         final eventMap = event.toJson();
         final jsonStr = jsonEncode(eventMap);
-        Log.info('📋 FULL EVENT JSON:',
-            name: 'VideoEventPublisher', category: LogCategory.video);
-        Log.info(jsonStr,
-            name: 'VideoEventPublisher', category: LogCategory.video);
+        Log.info(
+          '📋 FULL EVENT JSON:',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
+        Log.info(
+          jsonStr,
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
       } catch (e) {
-        Log.warning('Could not serialize event to JSON: $e',
-            name: 'VideoEventPublisher', category: LogCategory.video);
+        Log.warning(
+          'Could not serialize event to JSON: $e',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
       }
 
       // Use the existing Nostr service to broadcast
       final broadcastResult = await _nostrService.broadcastEvent(event);
 
       Log.info(
-          '✅ Event broadcast completed with result: successful=${broadcastResult.successCount}, failed=${broadcastResult.failedRelays.length}',
-          name: 'VideoEventPublisher',
-          category: LogCategory.video);
+        '✅ Event broadcast completed with result: successful=${broadcastResult.successCount}, failed=${broadcastResult.failedRelays.length}',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
 
       // Check if broadcast was successful
       if (broadcastResult.successCount > 0) {
         Log.info(
-            '✅ Event successfully published to ${broadcastResult.successCount} relay(s)',
-            name: 'VideoEventPublisher',
-            category: LogCategory.video);
+          '✅ Event successfully published to ${broadcastResult.successCount} relay(s)',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
 
         // Log any relay-specific errors
         if (broadcastResult.errors.isNotEmpty) {
           for (final entry in broadcastResult.errors.entries) {
-            Log.warning('Relay ${entry.key} error: ${entry.value}',
-                name: 'VideoEventPublisher', category: LogCategory.video);
+            Log.warning(
+              'Relay ${entry.key} error: ${entry.value}',
+              name: 'VideoEventPublisher',
+              category: LogCategory.video,
+            );
           }
         }
 
         return true;
       } else {
-        Log.error('❌ Event broadcast failed to all relays',
-            name: 'VideoEventPublisher', category: LogCategory.video);
+        Log.error(
+          '❌ Event broadcast failed to all relays',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
         for (final entry in broadcastResult.errors.entries) {
-          Log.error('Relay ${entry.key} error: ${entry.value}',
-              name: 'VideoEventPublisher', category: LogCategory.video);
+          Log.error(
+            'Relay ${entry.key} error: ${entry.value}',
+            name: 'VideoEventPublisher',
+            category: LogCategory.video,
+          );
         }
         return false;
       }
     } catch (e) {
-      Log.error('Failed to publish event to relays: $e',
-          name: 'VideoEventPublisher', category: LogCategory.video);
+      Log.error(
+        'Failed to publish event to relays: $e',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
       return false;
     }
   }
 
   /// Get publishing statistics
   Map<String, dynamic> get publishingStats => {
-        'total_published': _totalEventsPublished,
-        'total_failed': _totalEventsFailed,
-        'last_publish_time': _lastPublishTime?.toIso8601String(),
-      };
+    'total_published': _totalEventsPublished,
+    'total_failed': _totalEventsFailed,
+    'last_publish_time': _lastPublishTime?.toIso8601String(),
+  };
 
   /// Publish a video event with custom metadata
   Future<bool> publishVideoEvent({
@@ -161,29 +226,40 @@ class VideoEventPublisher {
       hashtags: hashtags ?? upload.hashtags,
     );
 
-    return publishDirectUpload(updatedUpload,
-        expirationTimestamp: expirationTimestamp);
+    return publishDirectUpload(
+      updatedUpload,
+      expirationTimestamp: expirationTimestamp,
+    );
   }
 
   /// Publish a video directly without polling (for direct upload)
-  Future<bool> publishDirectUpload(PendingUpload upload,
-      {int? expirationTimestamp}) async {
+  Future<bool> publishDirectUpload(
+    PendingUpload upload, {
+    int? expirationTimestamp,
+  }) async {
     if (upload.videoId == null || upload.cdnUrl == null) {
-      Log.error('Cannot publish upload - missing videoId or cdnUrl',
-          name: 'VideoEventPublisher', category: LogCategory.video);
+      Log.error(
+        'Cannot publish upload - missing videoId or cdnUrl',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
       return false;
     }
 
     try {
-      Log.debug('Publishing direct upload: ${upload.videoId}',
-          name: 'VideoEventPublisher', category: LogCategory.video);
+      Log.debug(
+        'Publishing direct upload: ${upload.videoId}',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
 
       // Create NIP-71 compliant tags for the video
       final tags = <List<String>>[];
 
       // Generate unique identifier for the addressable event
       // Use videoId if available, otherwise generate from timestamp and upload ID
-      final dTag = upload.videoId ??
+      final dTag =
+          upload.videoId ??
           '${DateTime.now().millisecondsSinceEpoch}_${upload.id}';
       tags.add(['d', dTag]);
 
@@ -201,8 +277,10 @@ class VideoEventPublisher {
       // Validate BunnyStream MP4 URL - must have quality suffix (e.g., play_360p.mp4)
       // Invalid: .../play.mp4 (returns 404)
       // Valid: .../play_360p.mp4, .../play_480p.mp4, etc.
-      if (upload.streamingMp4Url != null && upload.streamingMp4Url!.isNotEmpty) {
-        final isValidBunnyMp4 = upload.streamingMp4Url!.contains('stream.divine.video')
+      if (upload.streamingMp4Url != null &&
+          upload.streamingMp4Url!.isNotEmpty) {
+        final isValidBunnyMp4 =
+            upload.streamingMp4Url!.contains('stream.divine.video')
             ? upload.streamingMp4Url!.contains(RegExp(r'play_\d+p\.mp4'))
             : true; // Non-BunnyStream URLs are assumed valid
 
@@ -223,13 +301,16 @@ class VideoEventPublisher {
         urlsAdded.add('MP4(R2 fallback): ${upload.fallbackUrl}');
       }
 
-      if (upload.streamingHlsUrl != null && upload.streamingHlsUrl!.isNotEmpty) {
+      if (upload.streamingHlsUrl != null &&
+          upload.streamingHlsUrl!.isNotEmpty) {
         imetaComponents.add('url ${upload.streamingHlsUrl}');
         urlsAdded.add('HLS: ${upload.streamingHlsUrl}');
       }
 
       // Fallback to legacy cdnUrl if no Blossom-specific URLs
-      if (urlsAdded.isEmpty && upload.cdnUrl != null && upload.cdnUrl!.isNotEmpty) {
+      if (urlsAdded.isEmpty &&
+          upload.cdnUrl != null &&
+          upload.cdnUrl!.isNotEmpty) {
         imetaComponents.add('url ${upload.cdnUrl}');
         urlsAdded.add('Legacy CDN: ${upload.cdnUrl}');
       }
@@ -241,9 +322,11 @@ class VideoEventPublisher {
           category: LogCategory.video,
         );
       } else {
-        Log.error('❌ No video URLs available from upload',
+        Log.error(
+          '❌ No video URLs available from upload',
           name: 'VideoEventPublisher',
-          category: LogCategory.video);
+          category: LogCategory.video,
+        );
       }
 
       imetaComponents.add('m video/mp4');
@@ -252,10 +335,14 @@ class VideoEventPublisher {
       if (upload.thumbnailPath != null && upload.thumbnailPath!.isNotEmpty) {
         final thumbnailPath = upload.thumbnailPath!;
         // Only include HTTP/HTTPS CDN URLs
-        if (thumbnailPath.startsWith('http://') || thumbnailPath.startsWith('https://')) {
+        if (thumbnailPath.startsWith('http://') ||
+            thumbnailPath.startsWith('https://')) {
           imetaComponents.add('image $thumbnailPath');
-          Log.info('✅ Using uploaded thumbnail CDN URL: $thumbnailPath',
-              name: 'VideoEventPublisher', category: LogCategory.video);
+          Log.info(
+            '✅ Using uploaded thumbnail CDN URL: $thumbnailPath',
+            name: 'VideoEventPublisher',
+            category: LogCategory.video,
+          );
         }
       }
 
@@ -279,64 +366,89 @@ class VideoEventPublisher {
             imetaComponents.add('x $hash');
 
             Log.verbose(
-                'Added file metadata - size: $fileSize bytes, hash: $hash',
-                name: 'VideoEventPublisher',
-                category: LogCategory.video);
+              'Added file metadata - size: $fileSize bytes, hash: $hash',
+              name: 'VideoEventPublisher',
+              category: LogCategory.video,
+            );
           }
         } catch (e) {
-          Log.warning('Failed to calculate file metadata: $e',
-              name: 'VideoEventPublisher', category: LogCategory.video);
+          Log.warning(
+            'Failed to calculate file metadata: $e',
+            name: 'VideoEventPublisher',
+            category: LogCategory.video,
+          );
         }
       }
 
       // Generate blurhash for progressive image loading
       if (upload.localVideoPath.isNotEmpty) {
         try {
-          Log.debug('🎨 Generating blurhash from video thumbnail',
-              name: 'VideoEventPublisher', category: LogCategory.video);
+          Log.debug(
+            '🎨 Generating blurhash from video thumbnail',
+            name: 'VideoEventPublisher',
+            category: LogCategory.video,
+          );
 
           // Extract thumbnail bytes with 10-second timeout
-          final thumbnailBytes = await VideoThumbnailService.extractThumbnailBytes(
-            videoPath: upload.localVideoPath,
-            timeMs: 500,
-            quality: 75,
-          ).timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              Log.warning('⏱️ Thumbnail extraction timed out after 10 seconds',
-                  name: 'VideoEventPublisher', category: LogCategory.video);
-              return null;
-            },
-          );
+          final thumbnailBytes =
+              await VideoThumbnailService.extractThumbnailBytes(
+                videoPath: upload.localVideoPath,
+                timeMs: 500,
+                quality: 75,
+              ).timeout(
+                const Duration(seconds: 10),
+                onTimeout: () {
+                  Log.warning(
+                    '⏱️ Thumbnail extraction timed out after 10 seconds',
+                    name: 'VideoEventPublisher',
+                    category: LogCategory.video,
+                  );
+                  return null;
+                },
+              );
 
           if (thumbnailBytes != null) {
             // Generate blurhash with 3-second timeout
-            final blurhash = await BlurhashService.generateBlurhash(
-              thumbnailBytes,
-            ).timeout(
-              const Duration(seconds: 3),
-              onTimeout: () {
-                Log.warning('⏱️ Blurhash generation timed out after 3 seconds',
-                    name: 'VideoEventPublisher', category: LogCategory.video);
-                return null;
-              },
-            );
+            final blurhash =
+                await BlurhashService.generateBlurhash(thumbnailBytes).timeout(
+                  const Duration(seconds: 3),
+                  onTimeout: () {
+                    Log.warning(
+                      '⏱️ Blurhash generation timed out after 3 seconds',
+                      name: 'VideoEventPublisher',
+                      category: LogCategory.video,
+                    );
+                    return null;
+                  },
+                );
 
             if (blurhash != null && blurhash.isNotEmpty) {
               imetaComponents.add('blurhash $blurhash');
-              Log.info('✅ Generated blurhash: $blurhash',
-                  name: 'VideoEventPublisher', category: LogCategory.video);
+              Log.info(
+                '✅ Generated blurhash: $blurhash',
+                name: 'VideoEventPublisher',
+                category: LogCategory.video,
+              );
             } else {
-              Log.warning('Blurhash generation returned null or empty',
-                  name: 'VideoEventPublisher', category: LogCategory.video);
+              Log.warning(
+                'Blurhash generation returned null or empty',
+                name: 'VideoEventPublisher',
+                category: LogCategory.video,
+              );
             }
           } else {
-            Log.warning('Thumbnail extraction returned null',
-                name: 'VideoEventPublisher', category: LogCategory.video);
+            Log.warning(
+              'Thumbnail extraction returned null',
+              name: 'VideoEventPublisher',
+              category: LogCategory.video,
+            );
           }
         } catch (e) {
-          Log.warning('Failed to generate blurhash: $e',
-              name: 'VideoEventPublisher', category: LogCategory.video);
+          Log.warning(
+            'Failed to generate blurhash: $e',
+            name: 'VideoEventPublisher',
+            category: LogCategory.video,
+          );
           // Continue publishing without blurhash - it's optional metadata
         }
       }
@@ -363,7 +475,7 @@ class VideoEventPublisher {
       // Add published_at tag (current timestamp)
       tags.add([
         'published_at',
-        (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString()
+        (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString(),
       ]);
 
       // Add duration tag if available
@@ -385,43 +497,64 @@ class VideoEventPublisher {
         try {
           final nativeProof = upload.nativeProof;
           if (nativeProof != null) {
-            Log.info('📜 Adding ProofMode verification tags to Nostr event',
-                name: 'VideoEventPublisher', category: LogCategory.video);
+            Log.info(
+              '📜 Adding ProofMode verification tags to Nostr event',
+              name: 'VideoEventPublisher',
+              category: LogCategory.video,
+            );
 
             // Add verification level tag (NIP-145)
             final verificationLevel = getVerificationLevel(nativeProof);
             tags.add(['verification', verificationLevel]);
-            Log.verbose('Added verification tag: $verificationLevel',
-                name: 'VideoEventPublisher', category: LogCategory.video);
+            Log.verbose(
+              'Added verification tag: $verificationLevel',
+              name: 'VideoEventPublisher',
+              category: LogCategory.video,
+            );
 
             // Add ProofMode native proof tag (complete JSON proof data)
             final proofTag = createProofManifestTag(nativeProof);
             tags.add(['proofmode', proofTag]);
-            Log.verbose('Added proofmode proof tag (${proofTag.length} chars)',
-                name: 'VideoEventPublisher', category: LogCategory.video);
+            Log.verbose(
+              'Added proofmode proof tag (${proofTag.length} chars)',
+              name: 'VideoEventPublisher',
+              category: LogCategory.video,
+            );
 
             // Add device attestation tag if available (NIP-145)
             final deviceTag = createDeviceAttestationTag(nativeProof);
             if (deviceTag != null) {
               tags.add(['device_attestation', deviceTag]);
-              Log.verbose('Added device_attestation tag',
-                  name: 'VideoEventPublisher', category: LogCategory.video);
+              Log.verbose(
+                'Added device_attestation tag',
+                name: 'VideoEventPublisher',
+                category: LogCategory.video,
+              );
             }
 
             // Add PGP fingerprint tag if available (NIP-145)
             final pgpTag = createPgpFingerprintTag(nativeProof);
             if (pgpTag != null) {
               tags.add(['pgp_fingerprint', pgpTag]);
-              Log.verbose('Added pgp_fingerprint tag: $pgpTag',
-                  name: 'VideoEventPublisher', category: LogCategory.video);
+              Log.verbose(
+                'Added pgp_fingerprint tag: $pgpTag',
+                name: 'VideoEventPublisher',
+                category: LogCategory.video,
+              );
             }
 
-            Log.info('✅ ProofMode verification tags added successfully',
-                name: 'VideoEventPublisher', category: LogCategory.video);
+            Log.info(
+              '✅ ProofMode verification tags added successfully',
+              name: 'VideoEventPublisher',
+              category: LogCategory.video,
+            );
           }
         } catch (e) {
-          Log.error('Failed to add ProofMode tags: $e',
-              name: 'VideoEventPublisher', category: LogCategory.video);
+          Log.error(
+            'Failed to add ProofMode tags: $e',
+            name: 'VideoEventPublisher',
+            category: LogCategory.video,
+          );
           // Continue publishing even if ProofMode tag generation fails
         }
       }
@@ -431,47 +564,70 @@ class VideoEventPublisher {
 
       // Create and sign the event
       if (_authService == null) {
-        Log.error('Auth service is null - cannot create video event',
-            name: 'VideoEventPublisher', category: LogCategory.video);
+        Log.error(
+          'Auth service is null - cannot create video event',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
         return false;
       }
 
       if (!_authService.isAuthenticated) {
-        Log.error('User not authenticated - cannot create video event',
-            name: 'VideoEventPublisher', category: LogCategory.video);
+        Log.error(
+          'User not authenticated - cannot create video event',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
         return false;
       }
 
-      Log.debug('📱 Creating and signing video event...',
-          name: 'VideoEventPublisher', category: LogCategory.video);
-      Log.verbose('Content: "$content"',
-          name: 'VideoEventPublisher', category: LogCategory.video);
-      Log.verbose('Tags: ${tags.length} tags',
-          name: 'VideoEventPublisher', category: LogCategory.video);
+      Log.debug(
+        '📱 Creating and signing video event...',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
+      Log.verbose(
+        'Content: "$content"',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
+      Log.verbose(
+        'Tags: ${tags.length} tags',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
 
       final event = await _authService.createAndSignEvent(
-        kind: NIP71VideoKinds.getPreferredAddressableKind(), // NIP-71 addressable short video
+        kind:
+            NIP71VideoKinds.getPreferredAddressableKind(), // NIP-71 addressable short video
         content: content,
         tags: tags,
       );
 
       if (event == null) {
         Log.error(
-            'Failed to create and sign video event - createAndSignEvent returned null',
-            name: 'VideoEventPublisher',
-            category: LogCategory.video);
+          'Failed to create and sign video event - createAndSignEvent returned null',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
         return false;
       }
 
       // Cache the video event immediately after creation
       _personalEventCache?.cacheUserEvent(event);
 
-      Log.info('Created video event: ${event.id}',
-          name: 'VideoEventPublisher', category: LogCategory.video);
+      Log.info(
+        'Created video event: ${event.id}',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
 
       // Publish to Nostr relays
-      Log.info('🚀 Starting relay publication for event ${event.id}',
-          name: 'VideoEventPublisher', category: LogCategory.video);
+      Log.info(
+        '🚀 Starting relay publication for event ${event.id}',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
       final publishResult = await _publishEventToNostr(event);
 
       if (publishResult) {
@@ -490,37 +646,61 @@ class VideoEventPublisher {
           try {
             final videoEvent = VideoEvent.fromNostrEvent(event);
             _videoEventService.addVideoEvent(videoEvent);
-            Log.info('Added published video to discovery cache: ${event.id}',
-                name: 'VideoEventPublisher', category: LogCategory.video);
+            Log.info(
+              'Added published video to discovery cache: ${event.id}',
+              name: 'VideoEventPublisher',
+              category: LogCategory.video,
+            );
           } catch (e) {
-            Log.warning('Failed to add published video to cache: $e',
-                name: 'VideoEventPublisher', category: LogCategory.video);
+            Log.warning(
+              'Failed to add published video to cache: $e',
+              name: 'VideoEventPublisher',
+              category: LogCategory.video,
+            );
           }
         }
 
-        Log.info('Successfully published direct upload: ${event.id}',
-            name: 'VideoEventPublisher', category: LogCategory.video);
-        Log.debug('Video URL: ${upload.cdnUrl}',
-            name: 'VideoEventPublisher', category: LogCategory.video);
+        Log.info(
+          'Successfully published direct upload: ${event.id}',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
+        Log.debug(
+          'Video URL: ${upload.cdnUrl}',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
 
         return true;
       } else {
-        Log.error('Failed to publish to Nostr relays',
-            name: 'VideoEventPublisher', category: LogCategory.video);
+        Log.error(
+          'Failed to publish to Nostr relays',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
         return false;
       }
     } catch (e, stackTrace) {
-      Log.error('Error publishing direct upload: $e',
-          name: 'VideoEventPublisher', category: LogCategory.video);
-      Log.verbose('📱 Stack trace: $stackTrace',
-          name: 'VideoEventPublisher', category: LogCategory.video);
+      Log.error(
+        'Error publishing direct upload: $e',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
+      Log.verbose(
+        '📱 Stack trace: $stackTrace',
+        name: 'VideoEventPublisher',
+        category: LogCategory.video,
+      );
       _totalEventsFailed++;
       return false;
     }
   }
 
   void dispose() {
-    Log.debug('📱️ Disposing VideoEventPublisher',
-        name: 'VideoEventPublisher', category: LogCategory.video);
+    Log.debug(
+      '📱️ Disposing VideoEventPublisher',
+      name: 'VideoEventPublisher',
+      category: LogCategory.video,
+    );
   }
 }

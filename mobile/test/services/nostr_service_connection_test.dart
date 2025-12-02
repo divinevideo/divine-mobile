@@ -31,58 +31,61 @@ void main() {
     });
 
     test(
-        'should wait for relay authentication completion without Future.delayed',
-        () async {
-      // This test demonstrates how the connection should wait for actual
-      // authentication events rather than arbitrary delays
+      'should wait for relay authentication completion without Future.delayed',
+      () async {
+        // This test demonstrates how the connection should wait for actual
+        // authentication events rather than arbitrary delays
 
-      // Start initialization
-      final initFuture = service.initialize();
+        // Start initialization
+        final initFuture = service.initialize();
 
-      // The service should track relay authentication states
-      expect(service.isInitialized, false);
+        // The service should track relay authentication states
+        expect(service.isInitialized, false);
 
-      // Wait for initialization with proper patterns
-      await initFuture;
+        // Wait for initialization with proper patterns
+        await initFuture;
 
-      // Verify all relays are properly authenticated
-      expect(service.isInitialized, true);
-      expect(service.connectedRelayCount, greaterThan(0));
+        // Verify all relays are properly authenticated
+        expect(service.isInitialized, true);
+        expect(service.connectedRelayCount, greaterThan(0));
 
-      // Verify we waited for actual AUTH completion, not arbitrary delay
-      for (final relayUrl in service.relays) {
-        final status = service.getRelayStatus()[relayUrl];
-        if (status == true) {
-          // Connected relays should have completed AUTH
-          expect(service.isRelayAuthenticated(relayUrl), true);
+        // Verify we waited for actual AUTH completion, not arbitrary delay
+        for (final relayUrl in service.relays) {
+          final status = service.getRelayStatus()[relayUrl];
+          if (status == true) {
+            // Connected relays should have completed AUTH
+            expect(service.isRelayAuthenticated(relayUrl), true);
+          }
         }
-      }
-    });
+      },
+    );
 
-    test('should use AsyncUtils.waitForCondition instead of Future.delayed',
-        () async {
-      // Mock scenario where we need to wait for relays to be ready
-      var relaysReady = false;
+    test(
+      'should use AsyncUtils.waitForCondition instead of Future.delayed',
+      () async {
+        // Mock scenario where we need to wait for relays to be ready
+        var relaysReady = false;
 
-      // Start async operation
-      Timer(const Duration(milliseconds: 100), () {
-        relaysReady = true;
-      });
+        // Start async operation
+        Timer(const Duration(milliseconds: 100), () {
+          relaysReady = true;
+        });
 
-      // OLD PATTERN (what we're replacing):
-      // await Future.delayed(const Duration(seconds: 3));
+        // OLD PATTERN (what we're replacing):
+        // await Future.delayed(const Duration(seconds: 3));
 
-      // NEW PATTERN:
-      final ready = await AsyncUtils.waitForCondition(
-        condition: () => relaysReady,
-        timeout: const Duration(seconds: 5),
-        checkInterval: const Duration(milliseconds: 100),
-        debugName: 'relay-auth-completion',
-      );
+        // NEW PATTERN:
+        final ready = await AsyncUtils.waitForCondition(
+          condition: () => relaysReady,
+          timeout: const Duration(seconds: 5),
+          checkInterval: const Duration(milliseconds: 100),
+          debugName: 'relay-auth-completion',
+        );
 
-      expect(ready, true);
-      expect(relaysReady, true);
-    });
+        expect(ready, true);
+        expect(relaysReady, true);
+      },
+    );
 
     test('should track individual relay authentication states', () async {
       // This demonstrates the proper pattern for tracking relay states

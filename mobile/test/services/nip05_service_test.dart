@@ -27,10 +27,7 @@ void main() {
         // Arrange
         const username = 'testuser';
         when(mockClient.get(any)).thenAnswer(
-          (_) async => http.Response(
-            jsonEncode({'names': {}}),
-            200,
-          ),
+          (_) async => http.Response(jsonEncode({'names': {}}), 200),
         );
 
         // Act
@@ -47,9 +44,7 @@ void main() {
         when(mockClient.get(any)).thenAnswer(
           (_) async => http.Response(
             jsonEncode({
-              'names': {
-                'taken': 'pubkey123',
-              },
+              'names': {'taken': 'pubkey123'},
             }),
             200,
           ),
@@ -66,13 +61,21 @@ void main() {
         // Test invalid usernames
         expect(await service.checkUsernameAvailability(''), false);
         expect(
-            await service.checkUsernameAvailability('a'), false); // too short
-        expect(await service.checkUsernameAvailability('user name'),
-            false); // contains space
-        expect(await service.checkUsernameAvailability('user@name'),
-            false); // invalid char
-        expect(await service.checkUsernameAvailability('aaaaaaaaaaaaaaaaaaaaa'),
-            false); // too long (21 chars)
+          await service.checkUsernameAvailability('a'),
+          false,
+        ); // too short
+        expect(
+          await service.checkUsernameAvailability('user name'),
+          false,
+        ); // contains space
+        expect(
+          await service.checkUsernameAvailability('user@name'),
+          false,
+        ); // invalid char
+        expect(
+          await service.checkUsernameAvailability('aaaaaaaaaaaaaaaaaaaaa'),
+          false,
+        ); // too long (21 chars)
 
         // Check error message is set
         expect(service.error, contains('Invalid username format'));
@@ -107,10 +110,7 @@ void main() {
             body: anyNamed('body'),
           ),
         ).thenAnswer(
-          (_) async => http.Response(
-            jsonEncode({'success': true}),
-            201,
-          ),
+          (_) async => http.Response(jsonEncode({'success': true}), 201),
         );
 
         // Act
@@ -165,10 +165,8 @@ void main() {
             body: anyNamed('body'),
           ),
         ).thenAnswer(
-          (_) async => http.Response(
-            jsonEncode({'error': 'Username is reserved'}),
-            403,
-          ),
+          (_) async =>
+              http.Response(jsonEncode({'error': 'Username is reserved'}), 403),
         );
 
         // Act
@@ -183,17 +181,21 @@ void main() {
         // Test invalid pubkeys
         expect(await service.registerUsername('user', 'invalid', []), false);
         expect(
-            await service.registerUsername(
-                'user',
-                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-                []),
-            false); // too short (63 chars)
+          await service.registerUsername(
+            'user',
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            [],
+          ),
+          false,
+        ); // too short (63 chars)
         expect(
-            await service.registerUsername(
-                'user',
-                'gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg',
-                []),
-            false); // non-hex
+          await service.registerUsername(
+            'user',
+            'gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg',
+            [],
+          ),
+          false,
+        ); // non-hex
 
         // Check error message is set
         expect(service.error, contains('Invalid public key format'));
@@ -208,9 +210,7 @@ void main() {
         when(mockClient.get(any)).thenAnswer(
           (_) async => http.Response(
             jsonEncode({
-              'names': {
-                'alice': 'pubkey123',
-              },
+              'names': {'alice': 'pubkey123'},
             }),
             200,
           ),
@@ -243,10 +243,7 @@ void main() {
         const identifier = 'unknown@openvine.co';
 
         when(mockClient.get(any)).thenAnswer(
-          (_) async => http.Response(
-            jsonEncode({'names': {}}),
-            200,
-          ),
+          (_) async => http.Response(jsonEncode({'names': {}}), 200),
         );
 
         // Act

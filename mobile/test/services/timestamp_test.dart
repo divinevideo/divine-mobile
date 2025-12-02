@@ -40,9 +40,11 @@ void main() {
       final currentTime = DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
 
       Log.info(
-          'Current time: $currentTime (${NostrTimestamp.format(currentTime)})');
+        'Current time: $currentTime (${NostrTimestamp.format(currentTime)})',
+      );
       Log.info(
-          'Kind 0 timestamp: $timestamp (${NostrTimestamp.format(timestamp)})');
+        'Kind 0 timestamp: $timestamp (${NostrTimestamp.format(timestamp)})',
+      );
       Log.info('Difference: ${currentTime - timestamp} seconds');
 
       // Should be exactly 5 minutes (300 seconds) behind

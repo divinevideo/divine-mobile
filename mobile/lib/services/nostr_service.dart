@@ -24,18 +24,31 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Production implementation of NostrService using EmbeddedNostrRelay directly
 /// Manages external relay connections and provides unified API to the app
 class NostrService implements INostrService {
-  NostrService(this._keyManager, {
+  NostrService(
+    this._keyManager, {
     embedded.EmbeddedNostrRelay? embeddedRelay,
     void Function()? onInitialized,
   }) : _onInitialized = onInitialized {
-    UnifiedLogger.info('🏗️  NostrService CONSTRUCTOR called - creating NEW instance', name: 'NostrService');
-    UnifiedLogger.info('   Initial relay count: ${_configuredRelays.length}', name: 'NostrService');
-    UnifiedLogger.warning('⚠️  This is a new instance - any previously added relays are LOST!', name: 'NostrService');
+    UnifiedLogger.info(
+      '🏗️  NostrService CONSTRUCTOR called - creating NEW instance',
+      name: 'NostrService',
+    );
+    UnifiedLogger.info(
+      '   Initial relay count: ${_configuredRelays.length}',
+      name: 'NostrService',
+    );
+    UnifiedLogger.warning(
+      '⚠️  This is a new instance - any previously added relays are LOST!',
+      name: 'NostrService',
+    );
 
     // Allow injecting an embedded relay for testing
     if (embeddedRelay != null) {
       _embeddedRelay = embeddedRelay;
-      UnifiedLogger.info('   Embedded relay injected (testing mode)', name: 'NostrService');
+      UnifiedLogger.info(
+        '   Embedded relay injected (testing mode)',
+        name: 'NostrService',
+      );
     }
   }
 
@@ -61,28 +74,45 @@ class NostrService implements INostrService {
   static const String _relayConfigKey = 'configured_relays';
 
   @override
-  Future<void> initialize(
-      {List<String>? customRelays, bool enableP2P = true}) async {
+  Future<void> initialize({
+    List<String>? customRelays,
+    bool enableP2P = true,
+  }) async {
     if (_isDisposed) throw StateError('NostrService is disposed');
     if (_isInitialized) {
-      UnifiedLogger.info('🔄 initialize() called but service is already initialized', name: 'NostrService');
+      UnifiedLogger.info(
+        '🔄 initialize() called but service is already initialized',
+        name: 'NostrService',
+      );
       return; // Already initialized
     }
 
-    UnifiedLogger.info('🚀 initialize() called - starting NostrService initialization', name: 'NostrService');
-    UnifiedLogger.info('   customRelays parameter: ${customRelays ?? "null (will use default)"}', name: 'NostrService');
+    UnifiedLogger.info(
+      '🚀 initialize() called - starting NostrService initialization',
+      name: 'NostrService',
+    );
+    UnifiedLogger.info(
+      '   customRelays parameter: ${customRelays ?? "null (will use default)"}',
+      name: 'NostrService',
+    );
     UnifiedLogger.info('   enableP2P: $enableP2P', name: 'NostrService');
 
-    Log.info('Starting initialization with embedded relay',
-        name: 'NostrService', category: LogCategory.relay);
+    Log.info(
+      'Starting initialization with embedded relay',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
 
     // Load relay configuration from SharedPreferences (unless customRelays is explicitly provided)
     List<String> relaysToAdd;
     if (customRelays != null) {
       // If customRelays explicitly provided, use them
       relaysToAdd = customRelays;
-      Log.info('Using provided customRelays: $customRelays',
-          name: 'NostrService', category: LogCategory.relay);
+      Log.info(
+        'Using provided customRelays: $customRelays',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
     } else {
       // Load from SharedPreferences or use default
       final prefs = await SharedPreferences.getInstance();
@@ -90,14 +120,20 @@ class NostrService implements INostrService {
 
       if (savedRelays != null && savedRelays.isNotEmpty) {
         relaysToAdd = savedRelays;
-        Log.info('✅ Loaded ${savedRelays.length} relay(s) from SharedPreferences',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.info(
+          '✅ Loaded ${savedRelays.length} relay(s) from SharedPreferences',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
 
         // MIGRATION: Remove old relay3.openvine.co if present in saved config
         const oldRelay = 'wss://relay3.openvine.co';
         if (relaysToAdd.contains(oldRelay)) {
-          Log.info('🔄 MIGRATION: Removing old relay from saved config: $oldRelay',
-              name: 'NostrService', category: LogCategory.relay);
+          Log.info(
+            '🔄 MIGRATION: Removing old relay from saved config: $oldRelay',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
           relaysToAdd = relaysToAdd.where((r) => r != oldRelay).toList();
 
           // Ensure we have at least the default relay
@@ -108,15 +144,21 @@ class NostrService implements INostrService {
 
           // Save migrated config back to SharedPreferences
           await _saveRelayConfig(relaysToAdd);
-          Log.info('✅ MIGRATION: Saved updated relay config',
-              name: 'NostrService', category: LogCategory.relay);
+          Log.info(
+            '✅ MIGRATION: Saved updated relay config',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
         }
       } else {
         // No saved config, use default
         final defaultRelay = AppConstants.defaultRelayUrl;
         relaysToAdd = [defaultRelay];
-        Log.info('📋 No saved relay config found, using default: $defaultRelay',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.info(
+          '📋 No saved relay config found, using default: $defaultRelay',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
 
         // Save default to SharedPreferences for next time
         await _saveRelayConfig(relaysToAdd);
@@ -129,60 +171,103 @@ class NostrService implements INostrService {
       relaysToAdd.add(defaultRelay);
     }
 
-    UnifiedLogger.info('📋 Relays to be loaded at startup:', name: 'NostrService');
+    UnifiedLogger.info(
+      '📋 Relays to be loaded at startup:',
+      name: 'NostrService',
+    );
     for (var relay in relaysToAdd) {
       UnifiedLogger.info('   - $relay', name: 'NostrService');
     }
-    UnifiedLogger.warning('⚠️  NOTE: Only these relays will be loaded. Any relays added via UI are NOT persisted!', name: 'NostrService');
+    UnifiedLogger.warning(
+      '⚠️  NOTE: Only these relays will be loaded. Any relays added via UI are NOT persisted!',
+      name: 'NostrService',
+    );
 
     try {
       // Skip embedded relay initialization on web platform
       if (kIsWeb) {
-        Log.info('Skipping embedded relay initialization on web platform',
-            name: 'NostrService', category: LogCategory.relay);
-        CrashReportingService.instance.logInitializationStep('Skipped embedded relay on web');
+        Log.info(
+          'Skipping embedded relay initialization on web platform',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
+        CrashReportingService.instance.logInitializationStep(
+          'Skipped embedded relay on web',
+        );
       } else {
         // Initialize embedded relay (use injected instance if provided)
         _embeddedRelay ??= embedded.EmbeddedNostrRelay();
 
-        Log.info('Initializing embedded relay...',
-            name: 'NostrService', category: LogCategory.relay);
-        CrashReportingService.instance.logInitializationStep('Creating embedded relay instance');
+        Log.info(
+          'Initializing embedded relay...',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
+        CrashReportingService.instance.logInitializationStep(
+          'Creating embedded relay instance',
+        );
 
         try {
-          CrashReportingService.instance.logInitializationStep('Starting embedded relay initialization');
-          await _embeddedRelay!.initialize(
-            logLevel: logging.Level.WARNING, // Reduce logging spam - only warnings and errors
-            enableGarbageCollection: false, // CRITICAL: Disabled - GC was deleting events too aggressively
+          CrashReportingService.instance.logInitializationStep(
+            'Starting embedded relay initialization',
           );
-          Log.info('Embedded relay initialized successfully',
-              name: 'NostrService', category: LogCategory.relay);
-          CrashReportingService.instance.logInitializationStep('Embedded relay initialized successfully');
+          await _embeddedRelay!.initialize(
+            logLevel: logging
+                .Level
+                .WARNING, // Reduce logging spam - only warnings and errors
+            enableGarbageCollection:
+                false, // CRITICAL: Disabled - GC was deleting events too aggressively
+          );
+          Log.info(
+            'Embedded relay initialized successfully',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
+          CrashReportingService.instance.logInitializationStep(
+            'Embedded relay initialized successfully',
+          );
         } catch (e) {
-        Log.error('Embedded relay initialization encountered issues: $e',
-            name: 'NostrService', category: LogCategory.relay);
-        CrashReportingService.instance.recordError(e, StackTrace.current,
-            reason: 'Embedded relay initialization failed');
-        CrashReportingService.instance.logInitializationStep('Embedded relay failed: $e');
+          Log.error(
+            'Embedded relay initialization encountered issues: $e',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
+          CrashReportingService.instance.recordError(
+            e,
+            StackTrace.current,
+            reason: 'Embedded relay initialization failed',
+          );
+          CrashReportingService.instance.logInitializationStep(
+            'Embedded relay failed: $e',
+          );
 
-        // Check if this is a Web platform issue (path_provider not supported)
-        if (e.toString().contains('path_provider') ||
-            e.toString().contains('getApplicationSupportDirectory')) {
-          Log.warning('Embedded relay not supported on Web platform, will use fallback',
-              name: 'NostrService', category: LogCategory.relay);
-          _embeddedRelay = null; // Clear the failed instance
-        } else {
-          // On iOS, the relay might continue with limited functionality
-          // Check if it's still marked as initialized
-          if (!_embeddedRelay!.isInitialized) {
-            Log.warning('Embedded relay failed to initialize properly',
-                name: 'NostrService', category: LogCategory.relay);
+          // Check if this is a Web platform issue (path_provider not supported)
+          if (e.toString().contains('path_provider') ||
+              e.toString().contains('getApplicationSupportDirectory')) {
+            Log.warning(
+              'Embedded relay not supported on Web platform, will use fallback',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
+            _embeddedRelay = null; // Clear the failed instance
           } else {
-            Log.info('Embedded relay continuing with limited functionality',
-                name: 'NostrService', category: LogCategory.relay);
+            // On iOS, the relay might continue with limited functionality
+            // Check if it's still marked as initialized
+            if (!_embeddedRelay!.isInitialized) {
+              Log.warning(
+                'Embedded relay failed to initialize properly',
+                name: 'NostrService',
+                category: LogCategory.relay,
+              );
+            } else {
+              Log.info(
+                'Embedded relay continuing with limited functionality',
+                name: 'NostrService',
+                category: LogCategory.relay,
+              );
+            }
           }
         }
-      }
       }
 
       // Initialize embeddedRelayFailed for web platform
@@ -194,29 +279,44 @@ class NostrService implements INostrService {
         final currentRelays = _embeddedRelay!.connectedRelays;
 
         if (currentRelays.contains(oldRelay)) {
-          Log.info('🔄 MIGRATION: Removing old relay $oldRelay',
-              name: 'NostrService', category: LogCategory.relay);
+          Log.info(
+            '🔄 MIGRATION: Removing old relay $oldRelay',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
           try {
             await _embeddedRelay!.removeExternalRelay(oldRelay);
-            Log.info('✅ MIGRATION: Successfully removed old relay',
-                name: 'NostrService', category: LogCategory.relay);
+            Log.info(
+              '✅ MIGRATION: Successfully removed old relay',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
           } catch (e) {
-            Log.error('❌ MIGRATION: Failed to remove old relay: $e',
-                name: 'NostrService', category: LogCategory.relay);
+            Log.error(
+              '❌ MIGRATION: Failed to remove old relay: $e',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
           }
         }
       }
 
       // Add external relays (embedded relay will manage connections if available)
       if (!embeddedRelayFailed && _embeddedRelay != null) {
-        Log.info('🔗 Connecting to ${relaysToAdd.length} external relay(s)...',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.info(
+          '🔗 Connecting to ${relaysToAdd.length} external relay(s)...',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
 
         for (final relayUrl in relaysToAdd) {
           try {
             final connectStart = DateTime.now();
-            Log.info('🔌 Connecting to external relay: $relayUrl',
-                name: 'NostrService', category: LogCategory.relay);
+            Log.info(
+              '🔌 Connecting to external relay: $relayUrl',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
 
             await _embeddedRelay!.addExternalRelay(relayUrl);
 
@@ -228,27 +328,40 @@ class NostrService implements INostrService {
             final isConnected = connectedRelays.contains(relayUrl);
 
             if (isConnected) {
-              Log.info('✅ External relay connected: $relayUrl (${connectDuration.inMilliseconds}ms)',
-                  name: 'NostrService', category: LogCategory.relay);
+              Log.info(
+                '✅ External relay connected: $relayUrl (${connectDuration.inMilliseconds}ms)',
+                name: 'NostrService',
+                category: LogCategory.relay,
+              );
             } else {
-              Log.error('❌ External relay FAILED to connect: $relayUrl (${connectDuration.inMilliseconds}ms) - not in connectedRelays list!',
-                  name: 'NostrService', category: LogCategory.relay);
+              Log.error(
+                '❌ External relay FAILED to connect: $relayUrl (${connectDuration.inMilliseconds}ms) - not in connectedRelays list!',
+                name: 'NostrService',
+                category: LogCategory.relay,
+              );
 
               // Report relay connection failure to Crashlytics
               CrashReportingService.instance.recordError(
                 Exception('Relay connection failed: $relayUrl'),
                 StackTrace.current,
-                reason: 'Relay not in connected list after ${connectDuration.inMilliseconds}ms\n'
+                reason:
+                    'Relay not in connected list after ${connectDuration.inMilliseconds}ms\n'
                     'Configured relays: ${_configuredRelays.length}\n'
                     'Connected relays: ${connectedRelays.length}',
               );
             }
 
-            Log.info('📊 Connected relays: ${connectedRelays.length}/${_configuredRelays.length} total',
-                name: 'NostrService', category: LogCategory.relay);
+            Log.info(
+              '📊 Connected relays: ${connectedRelays.length}/${_configuredRelays.length} total',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
           } catch (e, stackTrace) {
-            Log.error('❌ Failed to add relay $relayUrl: $e',
-                name: 'NostrService', category: LogCategory.relay);
+            Log.error(
+              '❌ Failed to add relay $relayUrl: $e',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
 
             // Report relay add exception to Crashlytics
             CrashReportingService.instance.recordError(
@@ -261,18 +374,25 @@ class NostrService implements INostrService {
 
         // Final connection summary
         final finalConnected = _embeddedRelay!.connectedRelays;
-        Log.info('🎯 External relay connection complete: ${finalConnected.length}/${_configuredRelays.length} relays connected',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.info(
+          '🎯 External relay connection complete: ${finalConnected.length}/${_configuredRelays.length} relays connected',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
         if (finalConnected.isEmpty && _configuredRelays.isNotEmpty) {
-          Log.error('⚠️ WARNING: No external relays connected! App will have limited functionality.',
-              name: 'NostrService', category: LogCategory.relay);
+          Log.error(
+            '⚠️ WARNING: No external relays connected! App will have limited functionality.',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
 
           // Report complete relay connection failure to Crashlytics
           // This is the most critical case - user won't see any content
           CrashReportingService.instance.recordError(
             Exception('CRITICAL: No relays connected'),
             StackTrace.current,
-            reason: 'All relay connections failed\n'
+            reason:
+                'All relay connections failed\n'
                 'Configured relays: ${_configuredRelays.join(", ")}\n'
                 'Attempted: ${_configuredRelays.length} relays\n'
                 'Connected: 0 relays',
@@ -299,30 +419,39 @@ class NostrService implements INostrService {
       _isInitialized = true;
       _onInitialized?.call(); // Notify that initialization is complete
       Log.info(
-          'Initialization complete with ${_configuredRelays.length} external relays',
-          name: 'NostrService',
-          category: LogCategory.relay);
+        'Initialization complete with ${_configuredRelays.length} external relays',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
     } catch (e) {
-      Log.error('Embedded relay initialization failed, attempting fallback: $e',
-          name: 'NostrService', category: LogCategory.relay);
+      Log.error(
+        'Embedded relay initialization failed, attempting fallback: $e',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
 
       // FALLBACK: Ensure at least the default relay is in the configured list
       // even if embedded relay fails, so UI shows the relay and retry is possible
       if (!_configuredRelays.contains(defaultRelay)) {
         _configuredRelays.add(defaultRelay);
-        Log.info('Added default relay to configured list for retry capability',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.info(
+          'Added default relay to configured list for retry capability',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
       }
 
       // Mark as partially initialized to allow app to continue
       _isInitialized = true; // Allow app to continue even with failures
-      _onInitialized?.call(); // Notify that initialization is complete (even if partial)
+      _onInitialized
+          ?.call(); // Notify that initialization is complete (even if partial)
 
       // Don't throw error - let app continue with limited functionality
       Log.warning(
-          'NostrService initialized with limited functionality - relay connections may need manual retry',
-          name: 'NostrService',
-          category: LogCategory.relay);
+        'NostrService initialized with limited functionality - relay connections may need manual retry',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
     }
   }
 
@@ -417,10 +546,11 @@ class NostrService implements INostrService {
   }
 
   @override
-  Stream<Event> subscribeToEvents(
-      {required List<nostr.Filter> filters,
-      bool bypassLimits = false,
-      void Function()? onEose}) {
+  Stream<Event> subscribeToEvents({
+    required List<nostr.Filter> filters,
+    bool bypassLimits = false,
+    void Function()? onEose,
+  }) {
     if (_isDisposed) throw StateError('NostrService is disposed');
     if (!_isInitialized) throw StateError('NostrService not initialized');
     if (_embeddedRelay == null) {
@@ -434,23 +564,30 @@ class NostrService implements INostrService {
 
     // Check if we already have this exact subscription
     if (_subscriptions.containsKey(id) && !_subscriptions[id]!.isClosed) {
-      Log.info('🔄 Reusing existing subscription $id with identical filters',
-          name: 'NostrService', category: LogCategory.relay);
+      Log.info(
+        '🔄 Reusing existing subscription $id with identical filters',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
       return _subscriptions[id]!.stream;
     }
 
     // Check for too many concurrent subscriptions
     if (_subscriptions.length >= 10 && !bypassLimits) {
       Log.warning(
-          'Too many concurrent subscriptions (${_subscriptions.length}). Cleaning up old ones.',
-          name: 'NostrService',
-          category: LogCategory.relay);
+        'Too many concurrent subscriptions (${_subscriptions.length}). Cleaning up old ones.',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
 
       // Clean up any closed controllers
       _subscriptions.removeWhere((key, controller) => controller.isClosed);
 
-      Log.info('After cleanup of closed controllers: ${_subscriptions.length}',
-          name: 'NostrService', category: LogCategory.relay);
+      Log.info(
+        'After cleanup of closed controllers: ${_subscriptions.length}',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
     }
 
     final controller = StreamController<Event>.broadcast();
@@ -462,40 +599,58 @@ class NostrService implements INostrService {
     // Pre-initialize replaceableEvents map from database AND deliver cached events to subscriber
     // This ensures cached profiles are available immediately without waiting for relay sync
     // Skip for discovery/explore subscriptions (no authors filter = all videos, doesn't benefit from pre-init)
-    final hasAuthorsFilter = filters.any((f) => f.authors != null && f.authors!.isNotEmpty);
+    final hasAuthorsFilter = filters.any(
+      (f) => f.authors != null && f.authors!.isNotEmpty,
+    );
     if (hasAuthorsFilter) {
-      _preInitializeReplaceableEvents(replaceableEvents, filters, controller, seenEventIds);
+      _preInitializeReplaceableEvents(
+        replaceableEvents,
+        filters,
+        controller,
+        seenEventIds,
+      );
     }
 
     _subscriptions[id] = controller;
-    Log.debug('Total active subscriptions: ${_subscriptions.length}',
-        name: 'NostrService', category: LogCategory.relay);
+    Log.debug(
+      'Total active subscriptions: ${_subscriptions.length}',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
 
     // Convert nostr_sdk filters to embedded relay filters
     final embeddedFilters = filters.map(_convertToEmbeddedFilter).toList();
 
     // Debug logging for filters
     Log.debug(
-        'Creating subscription $id with ${embeddedFilters.length} filters',
-        name: 'NostrService',
-        category: LogCategory.relay);
+      'Creating subscription $id with ${embeddedFilters.length} filters',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
     for (var i = 0; i < embeddedFilters.length; i++) {
       final filter = embeddedFilters[i];
       Log.debug(
-          '  Filter $i: kinds=${filter.kinds}, authors=${filter.authors?.length ?? 0} authors, tags=${filter.tags}',
-          name: 'NostrService',
-          category: LogCategory.relay);
+        '  Filter $i: kinds=${filter.kinds}, authors=${filter.authors?.length ?? 0} authors, tags=${filter.tags}',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
       // Log first few authors for debugging
       if (filter.authors != null && filter.authors!.isNotEmpty) {
         final authorsPreview = filter.authors!.take(3).join(', ');
-        Log.debug('    First authors: $authorsPreview',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.debug(
+          '    First authors: $authorsPreview',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
       }
     }
 
     // Use embedded relay directly - it handles external relay subscriptions automatically
-    Log.debug('Calling embedded relay subscribe with $id',
-        name: 'NostrService', category: LogCategory.relay);
+    Log.debug(
+      'Calling embedded relay subscribe with $id',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
     final subscription = _embeddedRelay!.subscribe(
       subscriptionId: id,
       filters: embeddedFilters,
@@ -518,10 +673,11 @@ class NostrService implements INostrService {
         // Handle replaceable events (NIP-01, NIP-16, NIP-33)
         // Replaceable: kind 0, 3, 10000-19999
         // Parameterized replaceable: kind 30000-39999
-        final isReplaceable = event.kind == 0 ||
-                             event.kind == 3 ||
-                             (event.kind >= 10000 && event.kind < 20000) ||
-                             (event.kind >= 30000 && event.kind < 40000);
+        final isReplaceable =
+            event.kind == 0 ||
+            event.kind == 3 ||
+            (event.kind >= 10000 && event.kind < 20000) ||
+            (event.kind >= 30000 && event.kind < 40000);
 
         if (isReplaceable) {
           // Key for tracking: "kind:pubkey" (or "kind:pubkey:d-tag" for parameterized)
@@ -544,8 +700,11 @@ class NostrService implements INostrService {
 
             if (event.createdAt > oldTimestamp) {
               // New event is newer - replace the old one
-              Log.debug('Replacing old ${event.kind} event (ts:$oldTimestamp) with newer (ts:${event.createdAt})',
-                  name: 'NostrService', category: LogCategory.relay);
+              Log.debug(
+                'Replacing old ${event.kind} event (ts:$oldTimestamp) with newer (ts:${event.createdAt})',
+                name: 'NostrService',
+                category: LogCategory.relay,
+              );
               replaceableEvents[replaceKey] = (event.id, event.createdAt);
               seenEventIds.remove(oldEventId); // Clean up old ID
               seenEventIds.add(event.id);
@@ -572,35 +731,41 @@ class NostrService implements INostrService {
           // Debug log for home feed events
           if (id.contains('homeFeed')) {
             Log.debug(
-                'Received home feed event - kind: ${event.kind}, author: ${event.pubkey}...',
-                name: 'NostrService',
-                category: LogCategory.relay);
+              'Received home feed event - kind: ${event.kind}, author: ${event.pubkey}...',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
           }
           controller.add(event);
         }
       },
       onEose: () {
-        UnifiedLogger.debug('EOSE received for subscription $id',
-            name: 'NostrService');
+        UnifiedLogger.debug(
+          'EOSE received for subscription $id',
+          name: 'NostrService',
+        );
         try {
           onEose?.call();
         } catch (e) {
-          UnifiedLogger.error('Error in onEose callback for $id: $e',
-              name: 'NostrService');
+          UnifiedLogger.error(
+            'Error in onEose callback for $id: $e',
+            name: 'NostrService',
+          );
         }
 
         // Auto-cleanup profile subscriptions (kind 0) after EOSE to prevent leaks
         // Profile fetches are one-time queries, not live subscriptions
-        final isProfileSubscription = filters.any((f) =>
-          f.kinds != null &&
-          f.kinds!.length == 1 &&
-          f.kinds!.first == 0
+        final isProfileSubscription = filters.any(
+          (f) => f.kinds != null && f.kinds!.length == 1 && f.kinds!.first == 0,
         );
 
         if (isProfileSubscription && _subscriptions.containsKey(id)) {
           // Close profile subscriptions immediately after EOSE since they're one-time fetches
-          Log.debug('Auto-closing profile subscription after EOSE: $id',
-              name: 'NostrService', category: LogCategory.relay);
+          Log.debug(
+            'Auto-closing profile subscription after EOSE: $id',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
 
           // Schedule cleanup to allow any in-flight events to complete
           Timer(const Duration(milliseconds: 500), () {
@@ -608,8 +773,11 @@ class NostrService implements INostrService {
               try {
                 _subscriptions[id]?.close();
                 _subscriptions.remove(id);
-                Log.debug('Closed profile subscription $id (${_subscriptions.length} remaining)',
-                    name: 'NostrService', category: LogCategory.relay);
+                Log.debug(
+                  'Closed profile subscription $id (${_subscriptions.length} remaining)',
+                  name: 'NostrService',
+                  category: LogCategory.relay,
+                );
               } catch (e) {
                 // Ignore errors
               }
@@ -627,15 +795,17 @@ class NostrService implements INostrService {
     // Handle controller disposal
     controller.onCancel = () {
       Log.debug(
-          'Stream cancelled for subscription $id - scheduling graceful shutdown in 2 seconds',
-          name: 'NostrService',
-          category: LogCategory.relay);
+        'Stream cancelled for subscription $id - scheduling graceful shutdown in 2 seconds',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
 
       // Remove from tracking immediately to prevent reuse during grace period
       _subscriptions.remove(id);
       UnifiedLogger.debug(
-          'Active subscriptions after removal: ${_subscriptions.length}',
-          name: 'NostrService');
+        'Active subscriptions after removal: ${_subscriptions.length}',
+        name: 'NostrService',
+      );
 
       // CRITICAL: Keep subscription AND controller alive for grace period
       // This allows external relays (200-500ms latency) to finish sending events
@@ -645,18 +815,23 @@ class NostrService implements INostrService {
           // Close the embedded relay subscription first
           subscription.close();
           UnifiedLogger.info(
-              'Closed embedded relay subscription $id after grace period',
-              name: 'NostrService');
+            'Closed embedded relay subscription $id after grace period',
+            name: 'NostrService',
+          );
 
           // Then close the controller
           if (!controller.isClosed) {
             await controller.close();
-            UnifiedLogger.debug('Closed stream controller for $id',
-                name: 'NostrService');
+            UnifiedLogger.debug(
+              'Closed stream controller for $id',
+              name: 'NostrService',
+            );
           }
         } catch (e) {
-          UnifiedLogger.error('Error during graceful shutdown of $id: $e',
-              name: 'NostrService');
+          UnifiedLogger.error(
+            'Error during graceful shutdown of $id: $e',
+            name: 'NostrService',
+          );
         }
       });
     };
@@ -674,21 +849,30 @@ class NostrService implements INostrService {
   ) async {
     try {
       // Create filter for just replaceable events matching the subscription filters
-      final replaceableFilters = filters.map((f) {
-        // Extract kinds from filter that are replaceable
-        final kindsToQuery = f.kinds?.where((k) =>
-          k == 0 || k == 3 || (k >= 10000 && k < 20000) || (k >= 30000 && k < 40000)
-        ).toList();
+      final replaceableFilters = filters
+          .map((f) {
+            // Extract kinds from filter that are replaceable
+            final kindsToQuery = f.kinds
+                ?.where(
+                  (k) =>
+                      k == 0 ||
+                      k == 3 ||
+                      (k >= 10000 && k < 20000) ||
+                      (k >= 30000 && k < 40000),
+                )
+                .toList();
 
-        if (kindsToQuery == null || kindsToQuery.isEmpty) return null;
+            if (kindsToQuery == null || kindsToQuery.isEmpty) return null;
 
-        // Create new filter with only replaceable kinds
-        return nostr.Filter(
-          kinds: kindsToQuery,
-          authors: f.authors,
-          limit: 1000, // Limit to avoid loading too much
-        );
-      }).whereType<nostr.Filter>().toList();
+            // Create new filter with only replaceable kinds
+            return nostr.Filter(
+              kinds: kindsToQuery,
+              authors: f.authors,
+              limit: 1000, // Limit to avoid loading too much
+            );
+          })
+          .whereType<nostr.Filter>()
+          .toList();
 
       if (replaceableFilters.isEmpty) return; // No replaceable events to query
 
@@ -744,8 +928,11 @@ class NostrService implements INostrService {
   Future<NostrBroadcastResult> broadcastEvent(Event event) async {
     // Allow reinitializing if disposed (since we're keepAlive)
     if (_isDisposed) {
-      Log.warning('NostrService was disposed, attempting to reinitialize',
-          name: 'NostrService', category: LogCategory.relay);
+      Log.warning(
+        'NostrService was disposed, attempting to reinitialize',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
       _isDisposed = false;
       _isInitialized = false;
       await initialize();
@@ -757,16 +944,31 @@ class NostrService implements INostrService {
     }
 
     // Log broadcast attempt
-    Log.info('🚀 Broadcasting event ${event.id} (kind ${event.kind})',
-        name: 'NostrService', category: LogCategory.relay);
-    Log.info('📊 Relay Status:',
-        name: 'NostrService', category: LogCategory.relay);
-    Log.info('   - Embedded relay initialized: ${_embeddedRelay!.isInitialized}',
-        name: 'NostrService', category: LogCategory.relay);
-    Log.info('   - Configured relays: ${_configuredRelays.join(", ")}',
-        name: 'NostrService', category: LogCategory.relay);
-    Log.info('   - Connected relays: ${_embeddedRelay!.connectedRelays.join(", ")}',
-        name: 'NostrService', category: LogCategory.relay);
+    Log.info(
+      '🚀 Broadcasting event ${event.id} (kind ${event.kind})',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
+    Log.info(
+      '📊 Relay Status:',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
+    Log.info(
+      '   - Embedded relay initialized: ${_embeddedRelay!.isInitialized}',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
+    Log.info(
+      '   - Configured relays: ${_configuredRelays.join(", ")}',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
+    Log.info(
+      '   - Connected relays: ${_embeddedRelay!.connectedRelays.join(", ")}',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
 
     final results = <String, bool>{};
     final errors = <String, String>{};
@@ -774,32 +976,50 @@ class NostrService implements INostrService {
     try {
       // Check if embedded relay is still initialized before publishing
       if (!_embeddedRelay!.isInitialized) {
-        Log.warning('Embedded relay is not initialized, attempting to reinitialize',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.warning(
+          'Embedded relay is not initialized, attempting to reinitialize',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
 
         // Try to reinitialize the embedded relay
         try {
           await _embeddedRelay!.initialize(
-            logLevel: logging.Level.WARNING, // Reduce logging spam - only warnings and errors
-            enableGarbageCollection: false, // CRITICAL: Disabled - GC was deleting events too aggressively
+            logLevel: logging
+                .Level
+                .WARNING, // Reduce logging spam - only warnings and errors
+            enableGarbageCollection:
+                false, // CRITICAL: Disabled - GC was deleting events too aggressively
           );
-          Log.info('Embedded relay reinitialized successfully',
-              name: 'NostrService', category: LogCategory.relay);
+          Log.info(
+            'Embedded relay reinitialized successfully',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
 
           // Re-add external relays
           for (final relayUrl in _configuredRelays) {
             try {
               await _embeddedRelay!.addExternalRelay(relayUrl);
-              Log.info('Re-added external relay: $relayUrl',
-                  name: 'NostrService', category: LogCategory.relay);
+              Log.info(
+                'Re-added external relay: $relayUrl',
+                name: 'NostrService',
+                category: LogCategory.relay,
+              );
             } catch (e) {
-              Log.warning('Failed to re-add external relay $relayUrl: $e',
-                  name: 'NostrService', category: LogCategory.relay);
+              Log.warning(
+                'Failed to re-add external relay $relayUrl: $e',
+                name: 'NostrService',
+                category: LogCategory.relay,
+              );
             }
           }
         } catch (e) {
-          Log.error('Failed to reinitialize embedded relay: $e',
-              name: 'NostrService', category: LogCategory.relay);
+          Log.error(
+            'Failed to reinitialize embedded relay: $e',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
           throw StateError('Embedded relay cannot be reinitialized: $e');
         }
       }
@@ -809,55 +1029,85 @@ class NostrService implements INostrService {
 
       // Debug logging for contact list events
       if (event.kind == 3) {
-        Log.info('📋 Publishing contact list event to embedded relay',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.info(
+          '📋 Publishing contact list event to embedded relay',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
       }
 
       // Try to publish with stream closure recovery
       bool success = false;
       try {
         // Publish to embedded relay - it will automatically forward to external relays
-        Log.info('📤 Publishing to embedded relay...',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.info(
+          '📤 Publishing to embedded relay...',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
         success = await _embeddedRelay!.publish(embeddedEvent);
-        Log.info('✅ Embedded relay publish result: $success',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.info(
+          '✅ Embedded relay publish result: $success',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
       } catch (e) {
-        Log.error('❌ Embedded relay publish error: $e',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.error(
+          '❌ Embedded relay publish error: $e',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
         // Check if the error is due to stream closure
-        if (e.toString().contains('Cannot add new events after calling close') ||
+        if (e.toString().contains(
+              'Cannot add new events after calling close',
+            ) ||
             e.toString().contains('Bad state')) {
-          Log.warning('Embedded relay stream closed, attempting recovery',
-              name: 'NostrService', category: LogCategory.relay);
+          Log.warning(
+            'Embedded relay stream closed, attempting recovery',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
 
           // Try to reinitialize the embedded relay completely
           try {
             // Create a new embedded relay instance
             _embeddedRelay = embedded.EmbeddedNostrRelay();
             await _embeddedRelay!.initialize(
-              enableGarbageCollection: false, // CRITICAL: Disabled - GC was deleting events too aggressively
+              enableGarbageCollection:
+                  false, // CRITICAL: Disabled - GC was deleting events too aggressively
             );
 
             // Re-add external relays
             for (final relayUrl in _configuredRelays) {
               try {
                 await _embeddedRelay!.addExternalRelay(relayUrl);
-                Log.info('Re-added external relay after recovery: $relayUrl',
-                    name: 'NostrService', category: LogCategory.relay);
+                Log.info(
+                  'Re-added external relay after recovery: $relayUrl',
+                  name: 'NostrService',
+                  category: LogCategory.relay,
+                );
               } catch (e) {
-                Log.warning('Failed to re-add external relay $relayUrl: $e',
-                    name: 'NostrService', category: LogCategory.relay);
+                Log.warning(
+                  'Failed to re-add external relay $relayUrl: $e',
+                  name: 'NostrService',
+                  category: LogCategory.relay,
+                );
               }
             }
 
             // Retry the publish
             success = await _embeddedRelay!.publish(embeddedEvent);
-            Log.info('Successfully published after stream recovery',
-                name: 'NostrService', category: LogCategory.relay);
+            Log.info(
+              'Successfully published after stream recovery',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
           } catch (recoveryError) {
-            Log.error('Failed to recover from stream closure: $recoveryError',
-                name: 'NostrService', category: LogCategory.relay);
+            Log.error(
+              'Failed to recover from stream closure: $recoveryError',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
             rethrow;
           }
         } else {
@@ -869,35 +1119,51 @@ class NostrService implements INostrService {
       if (success) {
         // Mark local and connected external relays as successful
         results['local'] = true;
-        Log.info('✅ Local embedded relay: SUCCESS',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.info(
+          '✅ Local embedded relay: SUCCESS',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
 
         // The embedded relay handles external relay publishing
         for (final relayUrl in _configuredRelays) {
-          final isConnected =
-              _embeddedRelay!.connectedRelays.contains(relayUrl);
+          final isConnected = _embeddedRelay!.connectedRelays.contains(
+            relayUrl,
+          );
           results[relayUrl] = isConnected;
           if (isConnected) {
-            Log.info('✅ External relay $relayUrl: CONNECTED (event forwarded)',
-                name: 'NostrService', category: LogCategory.relay);
+            Log.info(
+              '✅ External relay $relayUrl: CONNECTED (event forwarded)',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
           } else {
-            Log.warning('⚠️  External relay $relayUrl: NOT CONNECTED',
-                name: 'NostrService', category: LogCategory.relay);
+            Log.warning(
+              '⚠️  External relay $relayUrl: NOT CONNECTED',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
             errors[relayUrl] = 'Relay not connected';
           }
         }
       } else {
         results['local'] = false;
         errors['local'] = 'Event rejected by embedded relay';
-        Log.error('❌ Local embedded relay: REJECTED',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.error(
+          '❌ Local embedded relay: REJECTED',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
 
         // Mark all external relays as failed too
         for (final relayUrl in _configuredRelays) {
           results[relayUrl] = false;
           errors[relayUrl] = 'Local relay publish failed';
-          Log.error('❌ External relay $relayUrl: FAILED (local publish rejected)',
-              name: 'NostrService', category: LogCategory.relay);
+          Log.error(
+            '❌ External relay $relayUrl: FAILED (local publish rejected)',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
         }
       }
     } catch (e) {
@@ -913,15 +1179,27 @@ class NostrService implements INostrService {
 
     final successCount = results.values.where((success) => success).length;
 
-    Log.info('📊 Broadcast Summary:',
-        name: 'NostrService', category: LogCategory.relay);
-    Log.info('   - Success: $successCount/${results.length} relays',
-        name: 'NostrService', category: LogCategory.relay);
-    Log.info('   - Results: $results',
-        name: 'NostrService', category: LogCategory.relay);
+    Log.info(
+      '📊 Broadcast Summary:',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
+    Log.info(
+      '   - Success: $successCount/${results.length} relays',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
+    Log.info(
+      '   - Results: $results',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
     if (errors.isNotEmpty) {
-      Log.info('   - Errors: $errors',
-          name: 'NostrService', category: LogCategory.relay);
+      Log.info(
+        '   - Errors: $errors',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
     }
 
     return NostrBroadcastResult(
@@ -945,19 +1223,37 @@ class NostrService implements INostrService {
 
   @override
   Future<bool> addRelay(String relayUrl) async {
-    UnifiedLogger.info('🔌 addRelay() called for: $relayUrl', name: 'NostrService');
-    UnifiedLogger.info('   Current relay count: ${_configuredRelays.length}', name: 'NostrService');
-    UnifiedLogger.info('   Current relays: $_configuredRelays', name: 'NostrService');
+    UnifiedLogger.info(
+      '🔌 addRelay() called for: $relayUrl',
+      name: 'NostrService',
+    );
+    UnifiedLogger.info(
+      '   Current relay count: ${_configuredRelays.length}',
+      name: 'NostrService',
+    );
+    UnifiedLogger.info(
+      '   Current relays: $_configuredRelays',
+      name: 'NostrService',
+    );
 
     if (_configuredRelays.contains(relayUrl)) {
-      UnifiedLogger.warning('⚠️  Relay already in configuration: $relayUrl', name: 'NostrService');
+      UnifiedLogger.warning(
+        '⚠️  Relay already in configuration: $relayUrl',
+        name: 'NostrService',
+      );
       return false; // Already added
     }
 
     // Add to configured list even if embedded relay isn't ready
     _configuredRelays.add(relayUrl);
-    UnifiedLogger.info('✅ Added relay to configuration: $relayUrl', name: 'NostrService');
-    UnifiedLogger.info('   New relay count: ${_configuredRelays.length}', name: 'NostrService');
+    UnifiedLogger.info(
+      '✅ Added relay to configuration: $relayUrl',
+      name: 'NostrService',
+    );
+    UnifiedLogger.info(
+      '   New relay count: ${_configuredRelays.length}',
+      name: 'NostrService',
+    );
 
     // Persist to SharedPreferences
     await _saveRelayConfig(_configuredRelays);
@@ -966,8 +1262,10 @@ class NostrService implements INostrService {
     if (_embeddedRelay != null) {
       try {
         await _embeddedRelay!.addExternalRelay(relayUrl);
-        UnifiedLogger.info('🔗 Connected to relay: $relayUrl',
-            name: 'NostrService');
+        UnifiedLogger.info(
+          '🔗 Connected to relay: $relayUrl',
+          name: 'NostrService',
+        );
 
         // Notify auth state listeners
         _relayAuthStates[relayUrl] = true;
@@ -975,11 +1273,16 @@ class NostrService implements INostrService {
 
         return true;
       } catch (e) {
-        UnifiedLogger.error('❌ Failed to connect relay (will retry): $e',
-            name: 'NostrService');
+        UnifiedLogger.error(
+          '❌ Failed to connect relay (will retry): $e',
+          name: 'NostrService',
+        );
       }
     } else {
-      UnifiedLogger.warning('⚠️  Embedded relay not ready, will retry initialization', name: 'NostrService');
+      UnifiedLogger.warning(
+        '⚠️  Embedded relay not ready, will retry initialization',
+        name: 'NostrService',
+      );
       // Try to initialize embedded relay again
       await retryInitialization();
     }
@@ -990,23 +1293,36 @@ class NostrService implements INostrService {
   /// Retry initialization of embedded relay and reconnect configured relays
   @override
   Future<void> retryInitialization() async {
-    Log.info('🔄 Starting relay connection retry...', name: 'NostrService', category: LogCategory.relay);
+    Log.info(
+      '🔄 Starting relay connection retry...',
+      name: 'NostrService',
+      category: LogCategory.relay,
+    );
 
     if (_embeddedRelay != null) {
-      Log.info('Embedded relay already exists - attempting to reconnect external relays',
-          name: 'NostrService', category: LogCategory.relay);
+      Log.info(
+        'Embedded relay already exists - attempting to reconnect external relays',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
 
       // Get current connection status before retry
       final beforeConnected = _embeddedRelay!.connectedRelays;
-      Log.info('📊 Before retry: ${beforeConnected.length}/${_configuredRelays.length} relays connected',
-          name: 'NostrService', category: LogCategory.relay);
+      Log.info(
+        '📊 Before retry: ${beforeConnected.length}/${_configuredRelays.length} relays connected',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
 
       // Try to reconnect configured relays
       for (final relayUrl in _configuredRelays) {
         try {
           final connectStart = DateTime.now();
-          Log.info('🔌 Reconnecting to relay: $relayUrl',
-              name: 'NostrService', category: LogCategory.relay);
+          Log.info(
+            '🔌 Reconnecting to relay: $relayUrl',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
 
           await _embeddedRelay!.addExternalRelay(relayUrl);
 
@@ -1016,88 +1332,139 @@ class NostrService implements INostrService {
 
           if (isConnected) {
             _relayAuthStates[relayUrl] = true;
-            Log.info('✅ Reconnected to relay: $relayUrl (${connectDuration.inMilliseconds}ms)',
-                name: 'NostrService', category: LogCategory.relay);
+            Log.info(
+              '✅ Reconnected to relay: $relayUrl (${connectDuration.inMilliseconds}ms)',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
           } else {
-            Log.error('❌ Failed to reconnect relay: $relayUrl (${connectDuration.inMilliseconds}ms) - not in connectedRelays',
-                name: 'NostrService', category: LogCategory.relay);
+            Log.error(
+              '❌ Failed to reconnect relay: $relayUrl (${connectDuration.inMilliseconds}ms) - not in connectedRelays',
+              name: 'NostrService',
+              category: LogCategory.relay,
+            );
           }
         } catch (e) {
-          Log.error('❌ Failed to reconnect relay $relayUrl: $e',
-              name: 'NostrService', category: LogCategory.relay);
+          Log.error(
+            '❌ Failed to reconnect relay $relayUrl: $e',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
         }
       }
 
       // Final status after retry
       final afterConnected = _embeddedRelay!.connectedRelays;
-      Log.info('🎯 Retry complete: ${afterConnected.length}/${_configuredRelays.length} relays connected',
-          name: 'NostrService', category: LogCategory.relay);
+      Log.info(
+        '🎯 Retry complete: ${afterConnected.length}/${_configuredRelays.length} relays connected',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
       if (afterConnected.length > beforeConnected.length) {
-        Log.info('✨ Successfully connected ${afterConnected.length - beforeConnected.length} additional relay(s)',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.info(
+          '✨ Successfully connected ${afterConnected.length - beforeConnected.length} additional relay(s)',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
       } else if (afterConnected.isEmpty) {
-        Log.error('⚠️ WARNING: Still no relays connected after retry!',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.error(
+          '⚠️ WARNING: Still no relays connected after retry!',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
       }
 
       _authStateController.add(Map.from(_relayAuthStates));
       return;
     }
 
-    UnifiedLogger.info('Retrying embedded relay initialization...',
-        name: 'NostrService');
+    UnifiedLogger.info(
+      'Retrying embedded relay initialization...',
+      name: 'NostrService',
+    );
 
     try {
       // Try to initialize embedded relay again
       _embeddedRelay = embedded.EmbeddedNostrRelay();
       await _embeddedRelay!.initialize(
-        logLevel: logging.Level.WARNING, // Reduce logging spam - only warnings and errors
-        enableGarbageCollection: false, // CRITICAL: Disabled - GC was deleting events too aggressively
+        logLevel: logging
+            .Level
+            .WARNING, // Reduce logging spam - only warnings and errors
+        enableGarbageCollection:
+            false, // CRITICAL: Disabled - GC was deleting events too aggressively
       );
-      UnifiedLogger.info('Embedded relay initialized on retry',
-          name: 'NostrService');
+      UnifiedLogger.info(
+        'Embedded relay initialized on retry',
+        name: 'NostrService',
+      );
 
       // Reconnect all configured relays
       for (final relayUrl in _configuredRelays) {
         try {
           await _embeddedRelay!.addExternalRelay(relayUrl);
           _relayAuthStates[relayUrl] = true;
-          UnifiedLogger.info('Reconnected to relay: $relayUrl',
-              name: 'NostrService');
+          UnifiedLogger.info(
+            'Reconnected to relay: $relayUrl',
+            name: 'NostrService',
+          );
         } catch (e) {
-          UnifiedLogger.error('Failed to reconnect relay $relayUrl: $e',
-              name: 'NostrService');
+          UnifiedLogger.error(
+            'Failed to reconnect relay $relayUrl: $e',
+            name: 'NostrService',
+          );
         }
       }
 
       // Notify auth state listeners
       _authStateController.add(Map.from(_relayAuthStates));
     } catch (e) {
-      UnifiedLogger.error('Embedded relay retry failed: $e',
-          name: 'NostrService');
+      UnifiedLogger.error(
+        'Embedded relay retry failed: $e',
+        name: 'NostrService',
+      );
     }
   }
 
   @override
   Future<void> removeRelay(String relayUrl) async {
-    UnifiedLogger.info('🔌 removeRelay() called for: $relayUrl', name: 'NostrService');
-    UnifiedLogger.info('   Current relay count: ${_configuredRelays.length}', name: 'NostrService');
-    UnifiedLogger.info('   Current relays: $_configuredRelays', name: 'NostrService');
+    UnifiedLogger.info(
+      '🔌 removeRelay() called for: $relayUrl',
+      name: 'NostrService',
+    );
+    UnifiedLogger.info(
+      '   Current relay count: ${_configuredRelays.length}',
+      name: 'NostrService',
+    );
+    UnifiedLogger.info(
+      '   Current relays: $_configuredRelays',
+      name: 'NostrService',
+    );
 
     if (_embeddedRelay != null) {
       try {
         await _embeddedRelay!.removeExternalRelay(relayUrl);
-        UnifiedLogger.info('🔗 Disconnected from embedded relay: $relayUrl', name: 'NostrService');
+        UnifiedLogger.info(
+          '🔗 Disconnected from embedded relay: $relayUrl',
+          name: 'NostrService',
+        );
       } catch (e) {
-        UnifiedLogger.error('❌ Failed to remove relay from embedded relay: $e',
-            name: 'NostrService');
+        UnifiedLogger.error(
+          '❌ Failed to remove relay from embedded relay: $e',
+          name: 'NostrService',
+        );
       }
     }
 
     _configuredRelays.remove(relayUrl);
     _relayAuthStates.remove(relayUrl);
-    UnifiedLogger.info('✅ Removed relay from configuration: $relayUrl', name: 'NostrService');
-    UnifiedLogger.info('   New relay count: ${_configuredRelays.length}', name: 'NostrService');
+    UnifiedLogger.info(
+      '✅ Removed relay from configuration: $relayUrl',
+      name: 'NostrService',
+    );
+    UnifiedLogger.info(
+      '   New relay count: ${_configuredRelays.length}',
+      name: 'NostrService',
+    );
 
     // Persist to SharedPreferences
     await _saveRelayConfig(_configuredRelays);
@@ -1239,8 +1606,10 @@ class NostrService implements INostrService {
       await _p2pService!.startDiscovery();
       return true;
     } catch (e) {
-      UnifiedLogger.error('Failed to start P2P discovery: $e',
-          name: 'NostrService');
+      UnifiedLogger.error(
+        'Failed to start P2P discovery: $e',
+        name: 'NostrService',
+      );
       return false;
     }
   }
@@ -1263,8 +1632,10 @@ class NostrService implements INostrService {
       await _p2pService!.startAdvertising();
       return true;
     } catch (e) {
-      UnifiedLogger.error('Failed to start P2P advertising: $e',
-          name: 'NostrService');
+      UnifiedLogger.error(
+        'Failed to start P2P advertising: $e',
+        name: 'NostrService',
+      );
       return false;
     }
   }
@@ -1295,14 +1666,17 @@ class NostrService implements INostrService {
         connection.dataStream.listen(
           (data) => _handleP2PMessage(connection.peer.id, data),
           onError: (error) => UnifiedLogger.error(
-              'P2P: Data stream error from ${connection.peer.name}: $error',
-              name: 'NostrService'),
+            'P2P: Data stream error from ${connection.peer.name}: $error',
+            name: 'NostrService',
+          ),
         );
         return true;
       }
     } catch (e) {
-      UnifiedLogger.error('Failed to connect to P2P peer ${peer.name}: $e',
-          name: 'NostrService');
+      UnifiedLogger.error(
+        'Failed to connect to P2P peer ${peer.name}: $e',
+        name: 'NostrService',
+      );
     }
 
     return false;
@@ -1314,17 +1688,22 @@ class NostrService implements INostrService {
 
     try {
       await _videoSyncService!.syncWithAllPeers();
-      UnifiedLogger.info('P2P: Video sync completed with all peers',
-          name: 'NostrService');
+      UnifiedLogger.info(
+        'P2P: Video sync completed with all peers',
+        name: 'NostrService',
+      );
     } catch (e) {
-      UnifiedLogger.error('Failed to sync with P2P peers: $e',
-          name: 'NostrService');
+      UnifiedLogger.error(
+        'Failed to sync with P2P peers: $e',
+        name: 'NostrService',
+      );
     }
   }
 
   /// Start automatic P2P video syncing
-  Future<void> startAutoP2PSync(
-      {Duration interval = const Duration(minutes: 5)}) async {
+  Future<void> startAutoP2PSync({
+    Duration interval = const Duration(minutes: 5),
+  }) async {
     if (!_p2pEnabled || _videoSyncService == null) return;
 
     await _videoSyncService!.startAutoSync(interval: interval);
@@ -1361,33 +1740,42 @@ class NostrService implements INostrService {
       try {
         // Check if the relay is still being used before shutting down
         if (_embeddedRelay!.isInitialized) {
-          UnifiedLogger.info('Embedded relay is still initialized, checking if shutdown is safe',
-              name: 'NostrService');
-          
+          UnifiedLogger.info(
+            'Embedded relay is still initialized, checking if shutdown is safe',
+            name: 'NostrService',
+          );
+
           // For now, we'll skip shutdown to avoid the "cannot add events after close" error
           // The relay will be cleaned up when the app terminates
           UnifiedLogger.warning(
-              'Skipping embedded relay shutdown to prevent event publishing issues',
-              name: 'NostrService');
-          
+            'Skipping embedded relay shutdown to prevent event publishing issues',
+            name: 'NostrService',
+          );
+
           // Optionally disconnect from external relays without shutting down the embedded relay
           for (final relayUrl in _configuredRelays) {
             try {
               await _embeddedRelay!.removeExternalRelay(relayUrl);
-              UnifiedLogger.info('Removed external relay: $relayUrl',
-                  name: 'NostrService');
+              UnifiedLogger.info(
+                'Removed external relay: $relayUrl',
+                name: 'NostrService',
+              );
             } catch (e) {
-              UnifiedLogger.warning('Failed to remove external relay $relayUrl: $e',
-                  name: 'NostrService');
+              UnifiedLogger.warning(
+                'Failed to remove external relay $relayUrl: $e',
+                name: 'NostrService',
+              );
             }
           }
           _configuredRelays.clear();
         }
       } catch (e) {
-        UnifiedLogger.error('Error during embedded relay cleanup: $e',
-            name: 'NostrService');
+        UnifiedLogger.error(
+          'Error during embedded relay cleanup: $e',
+          name: 'NostrService',
+        );
       }
-      
+
       // Don't null out the embedded relay reference to allow potential reuse
       // _embeddedRelay = null;
     }
@@ -1441,7 +1829,9 @@ class NostrService implements INostrService {
   @override
   Future<Event?> fetchEventById(String eventId, {String? relayUrl}) async {
     final events = await getEvents(
-      filters: [nostr.Filter(ids: [eventId])],
+      filters: [
+        nostr.Filter(ids: [eventId]),
+      ],
       limit: 1,
     );
     return events.isNotEmpty ? events.first : null;
@@ -1531,21 +1921,31 @@ class NostrService implements INostrService {
     final filterJson = filter.toJson();
 
     // Check if this filter has divine extensions
-    final hasDivineExtensions = filterJson.containsKey('sort') ||
+    final hasDivineExtensions =
+        filterJson.containsKey('sort') ||
         filterJson.keys.any((key) => key.startsWith('int#')) ||
         filterJson.containsKey('cursor');
 
     if (hasDivineExtensions) {
-      Log.info('🎯 Converting filter with divine extensions:',
-          name: 'NostrService', category: LogCategory.relay);
+      Log.info(
+        '🎯 Converting filter with divine extensions:',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
       if (filterJson.containsKey('sort')) {
-        Log.info('  - Sort: ${filterJson['sort']}',
-            name: 'NostrService', category: LogCategory.relay);
+        Log.info(
+          '  - Sort: ${filterJson['sort']}',
+          name: 'NostrService',
+          category: LogCategory.relay,
+        );
       }
       for (final key in filterJson.keys) {
         if (key.startsWith('int#')) {
-          Log.info('  - Int filter $key: ${filterJson[key]}',
-              name: 'NostrService', category: LogCategory.relay);
+          Log.info(
+            '  - Int filter $key: ${filterJson[key]}',
+            name: 'NostrService',
+            category: LogCategory.relay,
+          );
         }
       }
     }
@@ -1593,20 +1993,25 @@ class NostrService implements INostrService {
         // Initialize video sync service
         _videoSyncService = P2PVideoSyncService(_embeddedRelay!, _p2pService!);
 
-        UnifiedLogger.info('P2P: Sync initialized successfully',
-            name: 'NostrService');
+        UnifiedLogger.info(
+          'P2P: Sync initialized successfully',
+          name: 'NostrService',
+        );
 
         // Auto-start advertising when P2P is enabled
         await _p2pService!.startAdvertising();
       } else {
         UnifiedLogger.warning(
-            'P2P: Initialization failed - permissions not granted',
-            name: 'NostrService');
+          'P2P: Initialization failed - permissions not granted',
+          name: 'NostrService',
+        );
         _p2pService = null;
       }
     } catch (e) {
-      UnifiedLogger.error('P2P: Initialization error: $e',
-          name: 'NostrService');
+      UnifiedLogger.error(
+        'P2P: Initialization error: $e',
+        name: 'NostrService',
+      );
       _p2pService = null;
     }
   }
@@ -1621,12 +2026,16 @@ class NostrService implements INostrService {
       if (_videoSyncService != null) {
         await _videoSyncService!.handleIncomingSync(peerId, message);
       } else {
-        UnifiedLogger.warning('P2P: Video sync service not initialized',
-            name: 'NostrService');
+        UnifiedLogger.warning(
+          'P2P: Video sync service not initialized',
+          name: 'NostrService',
+        );
       }
     } catch (e) {
-      UnifiedLogger.error('P2P: Failed to handle message from $peerId: $e',
-          name: 'NostrService');
+      UnifiedLogger.error(
+        'P2P: Failed to handle message from $peerId: $e',
+        name: 'NostrService',
+      );
     }
   }
 
@@ -1648,8 +2057,9 @@ class NostrService implements INostrService {
         limit: 1,
       );
 
-      final relayListEvents =
-          await _embeddedRelay!.queryEvents([relayListFilter]);
+      final relayListEvents = await _embeddedRelay!.queryEvents([
+        relayListFilter,
+      ]);
 
       if (relayListEvents.isNotEmpty) {
         final relayListEvent = relayListEvents.first;
@@ -1664,8 +2074,9 @@ class NostrService implements INostrService {
 
               await addRelay(relayUrl);
               UnifiedLogger.debug(
-                  'Discovered relay from NIP-65: $relayUrl (write: $isWrite, read: $isRead)',
-                  name: 'NostrService');
+                'Discovered relay from NIP-65: $relayUrl (write: $isWrite, read: $isRead)',
+                name: 'NostrService',
+              );
             }
           }
         }
@@ -1678,8 +2089,9 @@ class NostrService implements INostrService {
         limit: 1,
       );
 
-      final contactListEvents =
-          await _embeddedRelay!.queryEvents([contactListFilter]);
+      final contactListEvents = await _embeddedRelay!.queryEvents([
+        contactListFilter,
+      ]);
 
       if (contactListEvents.isNotEmpty) {
         final contactEvent = contactListEvents.first;
@@ -1695,19 +2107,24 @@ class NostrService implements INostrService {
               if (relayUrl != null && !_configuredRelays.contains(relayUrl)) {
                 await addRelay(relayUrl);
                 UnifiedLogger.debug(
-                    'Discovered relay from contact list: $relayUrl',
-                    name: 'NostrService');
+                  'Discovered relay from contact list: $relayUrl',
+                  name: 'NostrService',
+                );
               }
             }
           }
         } catch (e) {
-          UnifiedLogger.error('Error parsing contact list for relays: $e',
-              name: 'NostrService');
+          UnifiedLogger.error(
+            'Error parsing contact list for relays: $e',
+            name: 'NostrService',
+          );
         }
       }
     } catch (e) {
-      UnifiedLogger.error('Error discovering user relays: $e',
-          name: 'NostrService');
+      UnifiedLogger.error(
+        'Error discovering user relays: $e',
+        name: 'NostrService',
+      );
     }
   }
 
@@ -1744,13 +2161,17 @@ class NostrService implements INostrService {
       for (final relayUrl in discoveredRelays) {
         if (!_configuredRelays.contains(relayUrl)) {
           await addRelay(relayUrl);
-          UnifiedLogger.debug('Discovered relay from event hints: $relayUrl',
-              name: 'NostrService');
+          UnifiedLogger.debug(
+            'Discovered relay from event hints: $relayUrl',
+            name: 'NostrService',
+          );
         }
       }
     } catch (e) {
-      UnifiedLogger.error('Error discovering relays from event hints: $e',
-          name: 'NostrService');
+      UnifiedLogger.error(
+        'Error discovering relays from event hints: $e',
+        name: 'NostrService',
+      );
     }
   }
 
@@ -1763,11 +2184,17 @@ class NostrService implements INostrService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList(_relayConfigKey, relays);
-      Log.debug('💾 Saved ${relays.length} relay(s) to SharedPreferences',
-          name: 'NostrService', category: LogCategory.relay);
+      Log.debug(
+        '💾 Saved ${relays.length} relay(s) to SharedPreferences',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
     } catch (e) {
-      Log.error('Failed to save relay config to SharedPreferences: $e',
-          name: 'NostrService', category: LogCategory.relay);
+      Log.error(
+        'Failed to save relay config to SharedPreferences: $e',
+        name: 'NostrService',
+        category: LogCategory.relay,
+      );
     }
   }
 }

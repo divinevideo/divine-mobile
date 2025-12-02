@@ -14,10 +14,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/video_event_service.dart';
 
-@GenerateMocks([
-  INostrService,
-  VideoEventService,
-])
+@GenerateMocks([INostrService, VideoEventService])
 import 'profile_videos_provider_test.mocks.dart';
 
 void main() {
@@ -28,23 +25,30 @@ void main() {
 
     /// Helper to setup mock subscription with onEose callback support
     /// Returns a tuple: (triggerEose function, subscription started completer)
-    (void Function(), Completer<void>) setupMockSubscription(StreamController<Event> controller) {
+    (void Function(), Completer<void>) setupMockSubscription(
+      StreamController<Event> controller,
+    ) {
       void Function()? capturedOnEose;
       final subscriptionStarted = Completer<void>();
-      when(mockNostrService.subscribeToEvents(
-        filters: anyNamed('filters'),
-        onEose: anyNamed('onEose'),
-      )).thenAnswer((invocation) {
+      when(
+        mockNostrService.subscribeToEvents(
+          filters: anyNamed('filters'),
+          onEose: anyNamed('onEose'),
+        ),
+      ).thenAnswer((invocation) {
         capturedOnEose = invocation.namedArguments[#onEose] as void Function()?;
         subscriptionStarted.complete();
         return controller.stream;
       });
       // Return a function to manually trigger EOSE and the completer
-      return (() {
-        if (capturedOnEose != null) {
-          capturedOnEose!();
-        }
-      }, subscriptionStarted);
+      return (
+        () {
+          if (capturedOnEose != null) {
+            capturedOnEose!();
+          }
+        },
+        subscriptionStarted,
+      );
     }
 
     setUp(() {
@@ -106,8 +110,9 @@ void main() {
         ];
 
         // Mock VideoEventService to return cached videos
-        when(mockVideoEventService.getVideosByAuthor(testPubkey))
-            .thenReturn(cachedVideos);
+        when(
+          mockVideoEventService.getVideosByAuthor(testPubkey),
+        ).thenReturn(cachedVideos);
 
         // Mock empty subscription (no new events)
         final controller = StreamController<Event>();
@@ -137,73 +142,87 @@ void main() {
       });
 
       test(
-          'should display cached videos immediately without waiting for relay',
-          () async {
-        // Arrange
-        final now = DateTime.now();
-        final cachedVideos = <VideoEvent>[
-          VideoEvent(
-            id: 'cached1',
-            pubkey: testPubkey,
-            content: 'cached video',
-            createdAt: now.millisecondsSinceEpoch ~/ 1000,
-            timestamp: now,
-            videoUrl: 'https://example.com/cached1.mp4',
-            title: 'Cached Video',
-          ),
-        ];
+        'should display cached videos immediately without waiting for relay',
+        () async {
+          // Arrange
+          final now = DateTime.now();
+          final cachedVideos = <VideoEvent>[
+            VideoEvent(
+              id: 'cached1',
+              pubkey: testPubkey,
+              content: 'cached video',
+              createdAt: now.millisecondsSinceEpoch ~/ 1000,
+              timestamp: now,
+              videoUrl: 'https://example.com/cached1.mp4',
+              title: 'Cached Video',
+            ),
+          ];
 
-        // Mock VideoEventService to return cached videos
-        when(mockVideoEventService.getVideosByAuthor(testPubkey))
-            .thenReturn(cachedVideos);
+          // Mock VideoEventService to return cached videos
+          when(
+            mockVideoEventService.getVideosByAuthor(testPubkey),
+          ).thenReturn(cachedVideos);
 
-        // Create a stream controller that we WON'T close immediately
-        // This simulates a slow/delayed relay response
-        final controller = StreamController<Event>();
-        void Function()? capturedOnEose;
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          onEose: anyNamed('onEose'),
-        )).thenAnswer((invocation) {
-          capturedOnEose = invocation.namedArguments[#onEose] as void Function()?;
-          return controller.stream;
-        });
+          // Create a stream controller that we WON'T close immediately
+          // This simulates a slow/delayed relay response
+          final controller = StreamController<Event>();
+          void Function()? capturedOnEose;
+          when(
+            mockNostrService.subscribeToEvents(
+              filters: anyNamed('filters'),
+              onEose: anyNamed('onEose'),
+            ),
+          ).thenAnswer((invocation) {
+            capturedOnEose =
+                invocation.namedArguments[#onEose] as void Function()?;
+            return controller.stream;
+          });
 
-        // Act
-        final notifier = container.read(profileVideosProvider.notifier);
-        final loadFuture = notifier.loadVideosForUser(testPubkey);
+          // Act
+          final notifier = container.read(profileVideosProvider.notifier);
+          final loadFuture = notifier.loadVideosForUser(testPubkey);
 
-        // Give microtasks a chance to execute
-        await Future.microtask(() {});
+          // Give microtasks a chance to execute
+          await Future.microtask(() {});
 
-        // Assert - videos should be displayed IMMEDIATELY from cache
-        // even though the relay subscription hasn't completed
-        final stateBeforeRelayResponse =
-            container.read(profileVideosProvider);
-        expect(stateBeforeRelayResponse.videos.length, equals(1),
+          // Assert - videos should be displayed IMMEDIATELY from cache
+          // even though the relay subscription hasn't completed
+          final stateBeforeRelayResponse = container.read(
+            profileVideosProvider,
+          );
+          expect(
+            stateBeforeRelayResponse.videos.length,
+            equals(1),
             reason:
-                'Cached videos should be displayed immediately without waiting for relay');
-        expect(stateBeforeRelayResponse.videos.first.id, equals('cached1'));
-        expect(stateBeforeRelayResponse.isLoading, false,
-            reason:
-                'Should not be loading when displaying cached content');
+                'Cached videos should be displayed immediately without waiting for relay',
+          );
+          expect(stateBeforeRelayResponse.videos.first.id, equals('cached1'));
+          expect(
+            stateBeforeRelayResponse.isLoading,
+            false,
+            reason: 'Should not be loading when displaying cached content',
+          );
 
-        // Clean up - trigger EOSE and close the stream
-        if (capturedOnEose != null) {
-          capturedOnEose!();
-        }
-        await controller.close();
-        await loadFuture;
-      });
+          // Clean up - trigger EOSE and close the stream
+          if (capturedOnEose != null) {
+            capturedOnEose!();
+          }
+          await controller.close();
+          await loadFuture;
+        },
+      );
 
       test('should handle loading errors gracefully', () async {
         // Arrange
-        when(mockVideoEventService.getVideosByAuthor(testPubkey))
-            .thenReturn([]);
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          onEose: anyNamed('onEose'),
-        )).thenAnswer((_) => Stream.error(Exception('Network error')));
+        when(
+          mockVideoEventService.getVideosByAuthor(testPubkey),
+        ).thenReturn([]);
+        when(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).thenAnswer((_) => Stream.error(Exception('Network error')));
 
         // Act
         final notifier = container.read(profileVideosProvider.notifier);
@@ -219,8 +238,9 @@ void main() {
 
       test('should prevent concurrent loads for same user', () async {
         // Arrange
-        when(mockVideoEventService.getVideosByAuthor(testPubkey))
-            .thenReturn([]);
+        when(
+          mockVideoEventService.getVideosByAuthor(testPubkey),
+        ).thenReturn([]);
 
         final controller = StreamController<Event>();
         final (triggerEose, _) = setupMockSubscription(controller);
@@ -259,8 +279,9 @@ void main() {
           ),
         ];
 
-        when(mockVideoEventService.getVideosByAuthor(testPubkey))
-            .thenReturn(initialVideos);
+        when(
+          mockVideoEventService.getVideosByAuthor(testPubkey),
+        ).thenReturn(initialVideos);
 
         final controller1 = StreamController<Event>();
         final (triggerEose1, _) = setupMockSubscription(controller1);
@@ -297,11 +318,14 @@ void main() {
           ),
         ];
 
-        when(mockVideoEventService.getVideosByAuthor(testPubkey))
-            .thenReturn(updatedVideos);
+        when(
+          mockVideoEventService.getVideosByAuthor(testPubkey),
+        ).thenReturn(updatedVideos);
 
         final controller2 = StreamController<Event>();
-        final (triggerEose2, subscriptionStarted2) = setupMockSubscription(controller2);
+        final (triggerEose2, subscriptionStarted2) = setupMockSubscription(
+          controller2,
+        );
 
         // Act - refresh videos (don't await yet)
         final refreshFuture = notifier.refreshVideos(testPubkey);
@@ -312,17 +336,23 @@ void main() {
             const Duration(seconds: 2),
             onTimeout: () {
               // Debug: check if subscribeToEvents was ever called
-              final verification = verify(mockNostrService.subscribeToEvents(
-                filters: anyNamed('filters'),
-                onEose: anyNamed('onEose'),
-              ));
+              final verification = verify(
+                mockNostrService.subscribeToEvents(
+                  filters: anyNamed('filters'),
+                  onEose: anyNamed('onEose'),
+                ),
+              );
               final callCount = verification.callCount;
-              throw Exception('subscribeToEvents called $callCount time(s), but completer never completed');
+              throw Exception(
+                'subscribeToEvents called $callCount time(s), but completer never completed',
+              );
             },
           );
         } catch (e) {
           if (e.toString().contains('No matching calls')) {
-            throw Exception('subscribeToEvents was NEVER called during refresh!');
+            throw Exception(
+              'subscribeToEvents was NEVER called during refresh!',
+            );
           }
           rethrow;
         }
@@ -344,12 +374,15 @@ void main() {
 
       test('should clear error state', () async {
         // Create error state first by failing a load
-        when(mockVideoEventService.getVideosByAuthor(testPubkey))
-            .thenReturn([]);
-        when(mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          onEose: anyNamed('onEose'),
-        )).thenAnswer((_) => Stream.error(Exception('Test error')));
+        when(
+          mockVideoEventService.getVideosByAuthor(testPubkey),
+        ).thenReturn([]);
+        when(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).thenAnswer((_) => Stream.error(Exception('Test error')));
 
         final notifier = container.read(profileVideosProvider.notifier);
         await notifier.loadVideosForUser(testPubkey);
@@ -393,8 +426,9 @@ void main() {
           );
         });
 
-        when(mockVideoEventService.getVideosByAuthor(testPubkey))
-            .thenReturn(initialVideos);
+        when(
+          mockVideoEventService.getVideosByAuthor(testPubkey),
+        ).thenReturn(initialVideos);
 
         final controller1 = StreamController<Event>();
         final (triggerEose1, _) = setupMockSubscription(controller1);
@@ -417,7 +451,9 @@ void main() {
 
         // Mock load more subscription
         final controller2 = StreamController<Event>();
-        final (triggerEose2, subscriptionStarted2) = setupMockSubscription(controller2);
+        final (triggerEose2, subscriptionStarted2) = setupMockSubscription(
+          controller2,
+        );
 
         // Act - try to load more
         final loadMoreFuture = notifier.loadMoreVideos();
@@ -453,8 +489,9 @@ void main() {
 
       test('should add video optimistically', () async {
         // Load some initial videos first
-        when(mockVideoEventService.getVideosByAuthor(testPubkey))
-            .thenReturn([]);
+        when(
+          mockVideoEventService.getVideosByAuthor(testPubkey),
+        ).thenReturn([]);
 
         final controller = StreamController<Event>();
         final (triggerEose, _) = setupMockSubscription(controller);
@@ -505,8 +542,9 @@ void main() {
           title: 'Video to Remove',
         );
 
-        when(mockVideoEventService.getVideosByAuthor(testPubkey))
-            .thenReturn([initialVideo]);
+        when(
+          mockVideoEventService.getVideosByAuthor(testPubkey),
+        ).thenReturn([initialVideo]);
 
         final controller = StreamController<Event>();
         final (triggerEose, _) = setupMockSubscription(controller);
@@ -543,18 +581,23 @@ void main() {
 
       test('should handle disposal during async loading gracefully', () async {
         // Arrange
-        when(mockVideoEventService.getVideosByAuthor(testPubkey))
-            .thenReturn([]);
+        when(
+          mockVideoEventService.getVideosByAuthor(testPubkey),
+        ).thenReturn([]);
 
         final controller = StreamController<Event>();
         void Function()? capturedOnEose;
 
-        when(mockNostrService.subscribeToEvents(
-                filters: anyNamed('filters'), onEose: anyNamed('onEose')))
-            .thenAnswer((invocation) {
+        when(
+          mockNostrService.subscribeToEvents(
+            filters: anyNamed('filters'),
+            onEose: anyNamed('onEose'),
+          ),
+        ).thenAnswer((invocation) {
           // Capture the onEose callback
-          capturedOnEose = invocation.namedArguments[const Symbol('onEose')]
-              as void Function()?;
+          capturedOnEose =
+              invocation.namedArguments[const Symbol('onEose')]
+                  as void Function()?;
           return controller.stream;
         });
 

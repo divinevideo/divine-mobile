@@ -29,11 +29,15 @@ class PerformanceMonitoringService {
       await _performance.setPerformanceCollectionEnabled(true);
 
       _initialized = true;
-      Log.info('Performance monitoring initialized successfully',
-          name: 'PerformanceMonitoring');
+      Log.info(
+        'Performance monitoring initialized successfully',
+        name: 'PerformanceMonitoring',
+      );
     } catch (e) {
-      Log.error('Failed to initialize performance monitoring: $e',
-          name: 'PerformanceMonitoring');
+      Log.error(
+        'Failed to initialize performance monitoring: $e',
+        name: 'PerformanceMonitoring',
+      );
       // Don't throw - app should continue even if performance monitoring fails
     }
   }
@@ -50,11 +54,15 @@ class PerformanceMonitoringService {
       await trace.start();
       _activeTraces[traceName] = trace;
 
-      Log.debug('Started performance trace: $traceName',
-          name: 'PerformanceMonitoring');
+      Log.debug(
+        'Started performance trace: $traceName',
+        name: 'PerformanceMonitoring',
+      );
     } catch (e) {
-      Log.error('Failed to start trace $traceName: $e',
-          name: 'PerformanceMonitoring');
+      Log.error(
+        'Failed to start trace $traceName: $e',
+        name: 'PerformanceMonitoring',
+      );
     }
   }
 
@@ -66,12 +74,16 @@ class PerformanceMonitoringService {
       final trace = _activeTraces.remove(traceName);
       if (trace != null) {
         await trace.stop();
-        Log.debug('Stopped performance trace: $traceName',
-            name: 'PerformanceMonitoring');
+        Log.debug(
+          'Stopped performance trace: $traceName',
+          name: 'PerformanceMonitoring',
+        );
       }
     } catch (e) {
-      Log.error('Failed to stop trace $traceName: $e',
-          name: 'PerformanceMonitoring');
+      Log.error(
+        'Failed to stop trace $traceName: $e',
+        name: 'PerformanceMonitoring',
+      );
     }
   }
 
@@ -84,15 +96,20 @@ class PerformanceMonitoringService {
       if (trace != null) {
         trace.incrementMetric(metricName, value);
         Log.debug(
-            'Incremented metric $metricName by $value for trace $traceName',
-            name: 'PerformanceMonitoring');
+          'Incremented metric $metricName by $value for trace $traceName',
+          name: 'PerformanceMonitoring',
+        );
       } else {
-        Log.warning('Trace $traceName not found for metric $metricName',
-            name: 'PerformanceMonitoring');
+        Log.warning(
+          'Trace $traceName not found for metric $metricName',
+          name: 'PerformanceMonitoring',
+        );
       }
     } catch (e) {
-      Log.error('Failed to increment metric $metricName: $e',
-          name: 'PerformanceMonitoring');
+      Log.error(
+        'Failed to increment metric $metricName: $e',
+        name: 'PerformanceMonitoring',
+      );
     }
   }
 
@@ -104,15 +121,21 @@ class PerformanceMonitoringService {
       final trace = _activeTraces[traceName];
       if (trace != null) {
         trace.setMetric(metricName, value);
-        Log.debug('Set metric $metricName to $value for trace $traceName',
-            name: 'PerformanceMonitoring');
+        Log.debug(
+          'Set metric $metricName to $value for trace $traceName',
+          name: 'PerformanceMonitoring',
+        );
       } else {
-        Log.warning('Trace $traceName not found for metric $metricName',
-            name: 'PerformanceMonitoring');
+        Log.warning(
+          'Trace $traceName not found for metric $metricName',
+          name: 'PerformanceMonitoring',
+        );
       }
     } catch (e) {
-      Log.error('Failed to set metric $metricName: $e',
-          name: 'PerformanceMonitoring');
+      Log.error(
+        'Failed to set metric $metricName: $e',
+        name: 'PerformanceMonitoring',
+      );
     }
   }
 
@@ -124,15 +147,21 @@ class PerformanceMonitoringService {
       final trace = _activeTraces[traceName];
       if (trace != null) {
         trace.putAttribute(attribute, value);
-        Log.debug('Set attribute $attribute=$value for trace $traceName',
-            name: 'PerformanceMonitoring');
+        Log.debug(
+          'Set attribute $attribute=$value for trace $traceName',
+          name: 'PerformanceMonitoring',
+        );
       } else {
-        Log.warning('Trace $traceName not found for attribute $attribute',
-            name: 'PerformanceMonitoring');
+        Log.warning(
+          'Trace $traceName not found for attribute $attribute',
+          name: 'PerformanceMonitoring',
+        );
       }
     } catch (e) {
-      Log.error('Failed to put attribute $attribute: $e',
-          name: 'PerformanceMonitoring');
+      Log.error(
+        'Failed to put attribute $attribute: $e',
+        name: 'PerformanceMonitoring',
+      );
     }
   }
 

@@ -2,7 +2,6 @@
 // ABOUTME: Replaces Flutter camera package with CamerAwesome for seamless multi-camera support
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:flutter/material.dart';
@@ -30,7 +29,8 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
   // Front camera and flip state
   PhysicalCameraSensor? _frontCamera;
   bool _isFrontCamera = false;
-  int _lastRearCameraIndex = 0; // Remember which rear camera was active before flip
+  int _lastRearCameraIndex =
+      0; // Remember which rear camera was active before flip
 
   // Stream controller for camera state updates
   final _stateController = StreamController<CameraState>.broadcast();
@@ -38,15 +38,21 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
   @override
   Future<void> initialize() async {
     try {
-      Log.info('Initializing CamerAwesome camera interface...',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.info(
+        'Initializing CamerAwesome camera interface...',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
 
       // Lock device orientation to portrait
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
       ]);
-      Log.info('Device orientation locked to portrait up',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.info(
+        'Device orientation locked to portrait up',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
 
       // Detect available physical cameras and their zoom factors
       _availableSensors = await CameraZoomDetector.getSortedBackCameras();
@@ -59,13 +65,15 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       // If only 1 physical camera, add synthetic 2x digital zoom to simulate multi-camera behavior
       if (_availableSensors.length == 1) {
         final physicalCamera = _availableSensors[0];
-        _availableSensors.add(PhysicalCameraSensor(
-          type: 'digital',
-          zoomFactor: 2.0,
-          deviceId: physicalCamera.deviceId, // Same device, digital zoom
-          displayName: '2x',
-          isDigital: true,
-        ));
+        _availableSensors.add(
+          PhysicalCameraSensor(
+            type: 'digital',
+            zoomFactor: 2.0,
+            deviceId: physicalCamera.deviceId, // Same device, digital zoom
+            displayName: '2x',
+            isDigital: true,
+          ),
+        );
         Log.info(
           'Added digital 2x zoom for single-camera device',
           name: 'CamerAwesomeCamera',
@@ -75,7 +83,9 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
 
       // CamerAwesome defaults to wide-angle camera (1.0x), so set current index to match
       // Sorted list: [0.5x ultrawide, 1.0x wide, 3.0x telephoto] or [1.0x wide, 2.0x digital]
-      _currentSensorIndex = _availableSensors.indexWhere((s) => s.zoomFactor == 1.0);
+      _currentSensorIndex = _availableSensors.indexWhere(
+        (s) => s.zoomFactor == 1.0,
+      );
       if (_currentSensorIndex == -1) {
         _currentSensorIndex = 0; // Fallback to first camera if 1.0x not found
       }
@@ -101,11 +111,17 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       // CamerAwesome will be initialized via the builder widget
       // We don't initialize it here - the widget handles that
 
-      Log.info('CamerAwesome camera initialized successfully',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.info(
+        'CamerAwesome camera initialized successfully',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('CamerAwesome camera initialization failed: $e',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.error(
+        'CamerAwesome camera initialization failed: $e',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -117,14 +133,20 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
     }
 
     if (_isRecording) {
-      Log.warning('Already recording, ignoring duplicate start request',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.warning(
+        'Already recording, ignoring duplicate start request',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
       return;
     }
 
     try {
-      Log.info('Starting video recording to: $filePath',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.info(
+        'Starting video recording to: $filePath',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
 
       // IMPORTANT: Set BOTH static and instance path BEFORE calling startRecording
       // The static is used by pathBuilder (which may be in a different instance due to closure capture)
@@ -132,8 +154,11 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       _currentRecordingPath = filePath;
       _isRecording = true;
 
-      Log.info('Path set to $filePath (static: $_pendingRecordingPath) before starting recording',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.info(
+        'Path set to $filePath (static: $_pendingRecordingPath) before starting recording',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
 
       // Start recording via CamerAwesome state
       await _cameraState!.when(
@@ -143,12 +168,18 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
         onVideoMode: (state) async {
           // startRecording returns CaptureRequest - hold reference to prevent GC
           _currentCaptureRequest = await state.startRecording();
-          Log.info('Recording started with capture request: ${_currentCaptureRequest?.path}',
-              name: 'CamerAwesomeCamera', category: LogCategory.system);
+          Log.info(
+            'Recording started with capture request: ${_currentCaptureRequest?.path}',
+            name: 'CamerAwesomeCamera',
+            category: LogCategory.system,
+          );
         },
         onVideoRecordingMode: (state) async {
-          Log.warning('Already in recording mode',
-              name: 'CamerAwesomeCamera', category: LogCategory.system);
+          Log.warning(
+            'Already in recording mode',
+            name: 'CamerAwesomeCamera',
+            category: LogCategory.system,
+          );
         },
         onPreparingCamera: (state) async {
           throw Exception('Camera still preparing');
@@ -157,17 +188,26 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
 
       // Verify the path was used correctly
       if (_currentCaptureRequest?.path != filePath) {
-        Log.warning('Recording path mismatch! Expected: $filePath, Got: ${_currentCaptureRequest?.path}',
-            name: 'CamerAwesomeCamera', category: LogCategory.system);
+        Log.warning(
+          'Recording path mismatch! Expected: $filePath, Got: ${_currentCaptureRequest?.path}',
+          name: 'CamerAwesomeCamera',
+          category: LogCategory.system,
+        );
       }
 
-      Log.info('Video recording started successfully',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.info(
+        'Video recording started successfully',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
     } catch (e) {
       _isRecording = false;
       _currentRecordingPath = null;
-      Log.error('Failed to start recording: $e',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.error(
+        'Failed to start recording: $e',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -179,14 +219,20 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
     }
 
     if (!_isRecording) {
-      Log.warning('Not currently recording, ignoring stop request',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.warning(
+        'Not currently recording, ignoring stop request',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
       return null;
     }
 
     try {
-      Log.info('Stopping video recording...',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.info(
+        'Stopping video recording...',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
 
       final recordedPath = _currentRecordingPath;
       bool didStop = false;
@@ -194,20 +240,29 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       // Stop recording via CamerAwesome state
       await _cameraState!.when(
         onPhotoMode: (state) async {
-          Log.warning('Camera in photo mode during stop - recording may have failed',
-              name: 'CamerAwesomeCamera', category: LogCategory.system);
+          Log.warning(
+            'Camera in photo mode during stop - recording may have failed',
+            name: 'CamerAwesomeCamera',
+            category: LogCategory.system,
+          );
         },
         onVideoMode: (state) async {
-          Log.warning('Camera in video mode (not recording mode) during stop - recording may have failed',
-              name: 'CamerAwesomeCamera', category: LogCategory.system);
+          Log.warning(
+            'Camera in video mode (not recording mode) during stop - recording may have failed',
+            name: 'CamerAwesomeCamera',
+            category: LogCategory.system,
+          );
         },
         onVideoRecordingMode: (state) async {
           await state.stopRecording();
           didStop = true;
         },
         onPreparingCamera: (state) async {
-          Log.warning('Camera still preparing during stop',
-              name: 'CamerAwesomeCamera', category: LogCategory.system);
+          Log.warning(
+            'Camera still preparing during stop',
+            name: 'CamerAwesomeCamera',
+            category: LogCategory.system,
+          );
         },
       );
 
@@ -216,12 +271,18 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       _currentCaptureRequest = null; // Clear reference
 
       if (didStop) {
-        Log.info('Video recording stopped: $recordedPath',
-            name: 'CamerAwesomeCamera', category: LogCategory.system);
+        Log.info(
+          'Video recording stopped: $recordedPath',
+          name: 'CamerAwesomeCamera',
+          category: LogCategory.system,
+        );
         return recordedPath;
       } else {
-        Log.warning('Recording stop may not have completed properly',
-            name: 'CamerAwesomeCamera', category: LogCategory.system);
+        Log.warning(
+          'Recording stop may not have completed properly',
+          name: 'CamerAwesomeCamera',
+          category: LogCategory.system,
+        );
         // Still return the path - the file might exist from a successful recording
         return recordedPath;
       }
@@ -229,8 +290,11 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       _isRecording = false;
       _currentRecordingPath = null;
       _currentCaptureRequest = null;
-      Log.error('Failed to stop recording: $e',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.error(
+        'Failed to stop recording: $e',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -238,8 +302,11 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
   @override
   Future<void> switchCamera() async {
     if (_frontCamera == null) {
-      Log.warning('No front camera available for flipping',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.warning(
+        'No front camera available for flipping',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -279,8 +346,11 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
         category: LogCategory.system,
       );
     } catch (e) {
-      Log.error('Failed to flip camera: $e',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.error(
+        'Failed to flip camera: $e',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -288,8 +358,11 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
   /// Switch to a specific sensor by zoom factor
   Future<void> switchToSensor(double zoomFactor) async {
     if (_availableSensors.isEmpty) {
-      Log.warning('No physical sensors available',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.warning(
+        'No physical sensors available',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -299,8 +372,11 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
     );
 
     if (sensorIndex == -1) {
-      Log.warning('No sensor found for zoom factor: $zoomFactor',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.warning(
+        'No sensor found for zoom factor: $zoomFactor',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -315,8 +391,11 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
     }
 
     if (sensorIndex == _currentSensorIndex && !_isFrontCamera) {
-      Log.debug('Already on sensor: ${_availableSensors[sensorIndex].displayName}',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.debug(
+        'Already on sensor: ${_availableSensors[sensorIndex].displayName}',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -335,18 +414,24 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       // CamerAwesome zoom is normalized 0.0-1.0, where:
       // 0.0 = 1x (no zoom), 1.0 = max zoom (typically 4x-10x)
       // For 2x digital zoom, use 0.33 (assumes ~6x max zoom)
-      final normalizedZoom = (sensor.zoomFactor - 1.0) / 3.0; // Maps 2x to ~0.33
+      final normalizedZoom =
+          (sensor.zoomFactor - 1.0) / 3.0; // Maps 2x to ~0.33
 
       try {
-        await _cameraState!.sensorConfig.setZoom(normalizedZoom.clamp(0.0, 1.0));
+        await _cameraState!.sensorConfig.setZoom(
+          normalizedZoom.clamp(0.0, 1.0),
+        );
         Log.info(
           'Applied digital zoom: ${sensor.zoomFactor}x (normalized: ${normalizedZoom.toStringAsFixed(2)})',
           name: 'CamerAwesomeCamera',
           category: LogCategory.system,
         );
       } catch (e) {
-        Log.error('Failed to apply digital zoom: $e',
-            name: 'CamerAwesomeCamera', category: LogCategory.system);
+        Log.error(
+          'Failed to apply digital zoom: $e',
+          name: 'CamerAwesomeCamera',
+          category: LogCategory.system,
+        );
       }
     } else {
       // Physical sensor switch
@@ -358,8 +443,11 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       try {
         await _cameraState!.sensorConfig.setZoom(0.0);
       } catch (e) {
-        Log.error('Failed to reset zoom: $e',
-            name: 'CamerAwesomeCamera', category: LogCategory.system);
+        Log.error(
+          'Failed to reset zoom: $e',
+          name: 'CamerAwesomeCamera',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -385,16 +473,19 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
           // Use static path to avoid closure capture issues
           // The static is set by startRecordingSegment before this is called
           final path = CamerAwesomeMobileCameraInterface._pendingRecordingPath;
-          Log.info('pathBuilder called, using path: $path',
-              name: 'CamerAwesomeCamera', category: LogCategory.system);
-          if (path == null || path == '/tmp/temp.mp4') {
-            Log.error('pathBuilder called with invalid path! _pendingRecordingPath=$path',
-                name: 'CamerAwesomeCamera', category: LogCategory.system);
-          }
-          return SingleCaptureRequest(
-            path ?? '/tmp/temp.mp4',
-            sensors.first,
+          Log.info(
+            'pathBuilder called, using path: $path',
+            name: 'CamerAwesomeCamera',
+            category: LogCategory.system,
           );
+          if (path == null || path == '/tmp/temp.mp4') {
+            Log.error(
+              'pathBuilder called with invalid path! _pendingRecordingPath=$path',
+              name: 'CamerAwesomeCamera',
+              category: LogCategory.system,
+            );
+          }
+          return SingleCaptureRequest(path ?? '/tmp/temp.mp4', sensors.first);
         },
       ),
       sensorConfig: SensorConfig.single(
@@ -417,7 +508,8 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
   }
 
   @override
-  bool get canSwitchCamera => _availableSensors.length > 1 || _frontCamera != null;
+  bool get canSwitchCamera =>
+      _availableSensors.length > 1 || _frontCamera != null;
 
   /// Get available physical sensors for zoom UI
   List<PhysicalCameraSensor> get availableSensors => _availableSensors;
@@ -439,15 +531,21 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
   /// Set flash mode (torch for video recording)
   Future<void> setFlashMode(dynamic mode) async {
     if (_cameraState == null) {
-      Log.warning('Cannot set flash mode - camera not initialized',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.warning(
+        'Cannot set flash mode - camera not initialized',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
       return;
     }
 
     // Don't enable flash for front camera
     if (_isFrontCamera) {
-      Log.info('Flash not available for front camera',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.info(
+        'Flash not available for front camera',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
       return;
     }
 
@@ -458,7 +556,8 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       // Handle both camera package FlashMode and direct string/enum
       final modeStr = mode.toString().toLowerCase();
       if (modeStr.contains('torch')) {
-        awesomeFlashMode = FlashMode.always; // CamerAwesome's equivalent for continuous light
+        awesomeFlashMode =
+            FlashMode.always; // CamerAwesome's equivalent for continuous light
       } else if (modeStr.contains('auto')) {
         awesomeFlashMode = FlashMode.auto;
       } else if (modeStr.contains('always') || modeStr.contains('on')) {
@@ -468,11 +567,17 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       }
 
       await _cameraState!.sensorConfig.setFlashMode(awesomeFlashMode);
-      Log.info('Flash mode set to $awesomeFlashMode',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.info(
+        'Flash mode set to $awesomeFlashMode',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to set flash mode: $e',
-          name: 'CamerAwesomeCamera', category: LogCategory.system);
+      Log.error(
+        'Failed to set flash mode: $e',
+        name: 'CamerAwesomeCamera',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -483,7 +588,10 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
     _isRecording = false;
     _currentRecordingPath = null;
 
-    Log.info('CamerAwesome camera interface disposed',
-        name: 'CamerAwesomeCamera', category: LogCategory.system);
+    Log.info(
+      'CamerAwesome camera interface disposed',
+      name: 'CamerAwesomeCamera',
+      category: LogCategory.system,
+    );
   }
 }
