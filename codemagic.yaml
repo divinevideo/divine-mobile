@@ -35,8 +35,7 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     integrations:
-      # TODO: Add App Store Connect API key name from Codemagic UI
-      app_store_connect: TODO
+      app_store_connect: API key for Codemagic
     environment:
       flutter: stable
       xcode: latest
