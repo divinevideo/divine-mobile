@@ -4,8 +4,7 @@
 import 'dart:io';
 
 import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/services/proofmode_session_service.dart'
-    show ProofManifest;
+import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/services/upload_manager.dart';
 
 class MockUploadManager implements UploadManager {
@@ -22,7 +21,7 @@ class MockUploadManager implements UploadManager {
     int? videoWidth,
     int? videoHeight,
     Duration? videoDuration,
-    ProofManifest? proofManifest,
+    NativeProofData? nativeProof,
   }) async {
     final upload = PendingUpload.create(
       localVideoPath: videoFile.path,
