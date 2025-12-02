@@ -228,8 +228,12 @@ class BugReportService {
     // Create a logs summary (last 50 log messages)
     String? logsSummary;
     if (data.recentLogs.isNotEmpty) {
-      final recentLines = data.recentLogs.take(50).map((log) =>
-          '[${log.timestamp.toIso8601String()}] ${log.level.name}: ${log.message}');
+      final recentLines = data.recentLogs
+          .take(50)
+          .map(
+            (log) =>
+                '[${log.timestamp.toIso8601String()}] ${log.level.name}: ${log.message}',
+          );
       logsSummary = recentLines.join('\n');
     }
 
@@ -245,8 +249,10 @@ class BugReportService {
     );
 
     if (success) {
-      Log.info('✅ Bug report sent via Zendesk REST API: ${data.reportId}',
-          category: LogCategory.system);
+      Log.info(
+        '✅ Bug report sent via Zendesk REST API: ${data.reportId}',
+        category: LogCategory.system,
+      );
       return BugReportResult.createSuccess(
         reportId: data.reportId,
         messageEventId: 'zendesk-${data.reportId}',
@@ -254,8 +260,9 @@ class BugReportService {
     } else {
       // Don't fall back to file share - just log the error
       Log.error(
-          'Failed to send bug report via all methods: ${data.reportId}',
-          category: LogCategory.system);
+        'Failed to send bug report via all methods: ${data.reportId}',
+        category: LogCategory.system,
+      );
       return BugReportResult.failure(
         'Failed to submit bug report. Please try again later.',
         reportId: data.reportId,

@@ -121,67 +121,69 @@ class _BugReportDialogState extends State<BugReportDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            // Description field
-            TextField(
-              controller: _descriptionController,
-              maxLines: 5,
-              enabled: !_isSubmitting,
-              style: const TextStyle(color: VineTheme.whiteText),
-              decoration: InputDecoration(
-                hintText: 'Describe the issue (optional)...',
-                hintStyle: TextStyle(color: Colors.grey.shade600),
-                border: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey),
+              // Description field
+              TextField(
+                controller: _descriptionController,
+                maxLines: 5,
+                enabled: !_isSubmitting,
+                style: const TextStyle(color: VineTheme.whiteText),
+                decoration: InputDecoration(
+                  hintText: 'Describe the issue (optional)...',
+                  hintStyle: TextStyle(color: Colors.grey.shade600),
+                  border: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey.shade700),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: VineTheme.vineGreen),
+                  ),
+                  helperText: 'Diagnostic info will be sent automatically',
+                  helperStyle: TextStyle(color: Colors.grey.shade600),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade700),
-                ),
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: VineTheme.vineGreen),
-                ),
-                helperText: 'Diagnostic info will be sent automatically',
-                helperStyle: TextStyle(color: Colors.grey.shade600),
-              ),
-              onChanged: (_) =>
-                  setState(() {}), // Rebuild to update button state
-            ),
-
-            const SizedBox(height: 16),
-
-            // Loading indicator
-            if (_isSubmitting)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(color: VineTheme.vineGreen),
-                ),
+                onChanged: (_) =>
+                    setState(() {}), // Rebuild to update button state
               ),
 
-            // Result message
-            if (_resultMessage != null && !_isSubmitting)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _isSuccess == true
-                      ? VineTheme.vineGreen.withValues(alpha: 0.2)
-                      : Colors.red.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: _isSuccess == true
-                        ? VineTheme.vineGreen
-                        : Colors.red,
-                    width: 1,
+              const SizedBox(height: 16),
+
+              // Loading indicator
+              if (_isSubmitting)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(
+                      color: VineTheme.vineGreen,
+                    ),
                   ),
                 ),
-                child: Text(
-                  _resultMessage!,
-                  style: TextStyle(
+
+              // Result message
+              if (_resultMessage != null && !_isSubmitting)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
                     color: _isSuccess == true
-                        ? VineTheme.vineGreen
-                        : Colors.red,
+                        ? VineTheme.vineGreen.withValues(alpha: 0.2)
+                        : Colors.red.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _isSuccess == true
+                          ? VineTheme.vineGreen
+                          : Colors.red,
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    _resultMessage!,
+                    style: TextStyle(
+                      color: _isSuccess == true
+                          ? VineTheme.vineGreen
+                          : Colors.red,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
