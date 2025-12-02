@@ -2,7 +2,6 @@
 // ABOUTME: Tests state getters and properties without requiring camera
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/aspect_ratio.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/services/vine_recording_controller.dart';
 
@@ -18,8 +17,6 @@ void main() {
         isCameraInitialized: true,
         canSwitchCamera: false,
         segments: [],
-        hasSegments: false,
-        aspectRatio: AspectRatio.square,
       );
 
       expect(state.hasSegments, isFalse, reason: 'Should have no segments');
@@ -42,8 +39,6 @@ void main() {
             filePath: '/test/segment.mp4',
           ),
         ],
-        hasSegments: true,
-        aspectRatio: AspectRatio.square,
       );
 
       expect(state.hasSegments, isTrue, reason: 'Should have segments');
@@ -60,8 +55,6 @@ void main() {
         isCameraInitialized: true,
         canSwitchCamera: false,
         segments: [],
-        hasSegments: false,
-        aspectRatio: AspectRatio.square,
       );
 
       final idleState = VineRecordingUIState(
@@ -73,8 +66,6 @@ void main() {
         isCameraInitialized: true,
         canSwitchCamera: false,
         segments: [],
-        hasSegments: false,
-        aspectRatio: AspectRatio.square,
       );
 
       expect(recordingState.isRecording, isTrue);
@@ -91,8 +82,6 @@ void main() {
         isCameraInitialized: true,
         canSwitchCamera: false,
         segments: [],
-        hasSegments: false,
-        aspectRatio: AspectRatio.square,
       );
 
       expect(state.recordingDuration, equals(const Duration(seconds: 3)));
@@ -130,8 +119,6 @@ void main() {
         isCameraInitialized: true,
         canSwitchCamera: false,
         segments: segments,
-        hasSegments: true,
-        aspectRatio: AspectRatio.square,
       );
 
       expect(state.segments.length, equals(3));
@@ -148,8 +135,6 @@ void main() {
         isCameraInitialized: true,
         canSwitchCamera: false,
         segments: [],
-        hasSegments: false,
-        aspectRatio: AspectRatio.square,
       );
 
       final cannotRecordState = VineRecordingUIState(
@@ -161,8 +146,6 @@ void main() {
         isCameraInitialized: true,
         canSwitchCamera: false,
         segments: [],
-        hasSegments: false,
-        aspectRatio: AspectRatio.square,
       );
 
       expect(canRecordState.canRecord, isTrue);
@@ -180,8 +163,6 @@ void main() {
           isCameraInitialized: true,
           canSwitchCamera: false,
           segments: [],
-          hasSegments: false,
-          aspectRatio: AspectRatio.square,
         ),
         VineRecordingUIState(
           recordingState: VineRecordingState.recording,
@@ -192,8 +173,6 @@ void main() {
           isCameraInitialized: true,
           canSwitchCamera: false,
           segments: [],
-          hasSegments: false,
-          aspectRatio: AspectRatio.square,
         ),
         VineRecordingUIState(
           recordingState: VineRecordingState.completed,
@@ -204,8 +183,6 @@ void main() {
           isCameraInitialized: true,
           canSwitchCamera: false,
           segments: [],
-          hasSegments: false,
-          aspectRatio: AspectRatio.square,
         ),
       ];
 
