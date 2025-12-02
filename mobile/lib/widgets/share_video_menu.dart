@@ -901,11 +901,20 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
     }
   }
 
-  void _showCreateListDialog() {
-    showDialog(
+  Future<void> _showCreateListDialog() async {
+    final result = await showDialog<String>(
       context: context,
       builder: (context) => _CreateListDialog(video: widget.video),
     );
+
+    // If list was created successfully, handle closing share menu and showing snackbar
+    if (result != null && mounted) {
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Created list "$result" and added video')),
+      );
+    }
   }
 
   void _showSelectListDialog() {
@@ -1670,12 +1679,8 @@ class _CreateListDialogState extends ConsumerState<_CreateListDialog> {
         await listService.addVideoToList(newList.id, widget.video.id);
 
         if (mounted) {
-          Navigator.of(context).pop(); // Close dialog
-          Navigator.of(context).pop(); // Close share menu
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Created list "$name" and added video')),
-          );
+          // Close dialog and return the list name
+          Navigator.of(context).pop(name);
         }
       }
     } catch (e) {
@@ -1684,6 +1689,17 @@ class _CreateListDialogState extends ConsumerState<_CreateListDialog> {
         name: 'ShareVideoMenu',
         category: LogCategory.ui,
       );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to create list'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        // Return null to indicate failure
+        Navigator.of(context).pop();
+      }
     }
   }
 
