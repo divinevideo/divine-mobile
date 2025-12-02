@@ -2,38 +2,20 @@
 // ABOUTME: Ensures expired events are filtered out and not added to feeds
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/video_event.dart';
 
-import 'video_event_service_expiration_test.mocks.dart';
-
-@GenerateNiceMocks([MockSpec<INostrService>(), MockSpec<SubscriptionManager>()])
 void main() {
   group('VideoEventService NIP-40 Expiration Filtering', () {
     late VideoEventService service;
-    late MockINostrService mockNostrService;
-    late MockSubscriptionManager mockSubscriptionManager;
 
     setUp(() {
-      mockNostrService = MockINostrService();
-      mockSubscriptionManager = MockSubscriptionManager();
-      
-      when(mockNostrService.isInitialized).thenReturn(true);
-      when(mockNostrService.connectedRelayCount).thenReturn(1);
-      
-      service = VideoEventService(
-        mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
-      );
+      service = VideoEventService();
     });
 
-    tearDown(() {
-      service.dispose();
+    tearDown(() async {
+      await service.dispose();
     });
 
     test('filters out expired events when adding to discovery feed', () {
@@ -58,9 +40,15 @@ void main() {
         'sig': 'sig123',
       });
 
+      final videoEvent = VideoEvent.fromNostrEvent(expiredEvent);
+
       // Before fix: This would add the video to discovery
       // After fix: This should NOT add expired video
       service.subscribeToDiscovery();
+
+      // Manually call internal _addVideoToSubscription (testing private method behavior through public API)
+      // We'll check by verifying the event list doesn't contain it
+      final initialCount = service.getVideos(SubscriptionType.discovery).length;
 
       // This would normally be called internally, but we're testing the filtering logic
       // In practice, expired events should never make it into the feed
