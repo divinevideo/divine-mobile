@@ -207,13 +207,13 @@ class CuratedListService {
         return;
       }
 
+      // Sync with relays to get all user's lists
+      await fetchUserListsFromRelays();
+
       // Create default list if it doesn't exist
       if (!hasDefaultList()) {
         await _createDefaultList();
       }
-
-      // Sync with relays to get all user's lists
-      await fetchUserListsFromRelays();
 
       _isInitialized = true;
       Log.info(
