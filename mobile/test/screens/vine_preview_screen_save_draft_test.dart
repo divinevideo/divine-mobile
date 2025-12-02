@@ -1,7 +1,7 @@
 // ABOUTME: TDD test for save draft functionality in VinePreviewScreenPure
 // ABOUTME: Ensures draft save button exists and saves to storage correctly
 
-import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,52 +15,23 @@ void main() {
     late DraftStorageService draftService;
 
     setUp(() async {
-      SharedPreferences.setMockInitialValues({
-        'vine_drafts': jsonEncode([
-          {
-            'id': 'draft_1',
-            // Create a test video file path (file doesn't need to exist for title test)
-            'videoFilePath': 'test_assets/test_video.mp4',
-            'title': 'Do it for the Vine!',
-            'description': 'Test description',
-            'hashtags': ['test', 'vines'],
-            'frameCount': 30,
-            'selectedApproach': 'hybrid',
-            'createdAt': DateTime.now().toIso8601String(),
-            'lastModified': DateTime.now().toIso8601String(),
-            'publishStatus': 'draft',
-            'publishError': null,
-            'publishAttempts': 0,
-            'proofManifestJson': null,
-            'aspectRatio': 'square',
-          },
-          {
-            'id': 'draft_2',
-            'videoFilePath': 'test_assets/test_video.mp4',
-            'title': '',
-            'description': '',
-            'hashtags': ['openvine', 'vine'],
-            'frameCount': 45,
-            'selectedApproach': 'imageSequence',
-            'createdAt': DateTime.now().toIso8601String(),
-            'lastModified': DateTime.now().toIso8601String(),
-            'publishStatus': 'draft',
-            'publishError': null,
-            'publishAttempts': 0,
-            'proofManifestJson': null,
-            'aspectRatio': 'square',
-          },
-        ]),
-      });
-
+      SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       draftService = DraftStorageService(prefs);
     });
 
     testWidgets('should have a Save Draft button in app bar', (tester) async {
+      final videoFile = File('/path/to/test/video.mp4');
+
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(home: VinePreviewScreenPure(draftId: 'draft_1')),
+          child: MaterialApp(
+            home: VinePreviewScreenPure(
+              videoFile: videoFile,
+              frameCount: 30,
+              selectedApproach: 'hybrid',
+            ),
+          ),
         ),
       );
 
@@ -71,9 +42,17 @@ void main() {
     testWidgets('should save draft when Save Draft button is tapped', (
       tester,
     ) async {
+      final videoFile = File('/path/to/test/video.mp4');
+
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(home: VinePreviewScreenPure(draftId: 'draft_1')),
+          child: MaterialApp(
+            home: VinePreviewScreenPure(
+              videoFile: videoFile,
+              frameCount: 30,
+              selectedApproach: 'hybrid',
+            ),
+          ),
         ),
       );
 
@@ -103,12 +82,15 @@ void main() {
       expect(drafts.first.hashtags, ['test', 'vine']);
       expect(drafts.first.frameCount, 30);
       expect(drafts.first.selectedApproach, 'hybrid');
-      expect(drafts.first.videoFile.path, 'test_assets/test_video.mp4');
+      expect(drafts.first.videoFile.path, videoFile.path);
     });
 
     testWidgets('should show success message after saving draft', (
       tester,
     ) async {
+      final videoFile = File('/path/to/test/video.mp4');
+      bool didPop = false;
+
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
@@ -119,8 +101,11 @@ void main() {
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            VinePreviewScreenPure(draftId: 'draft_1'),
+                        builder: (_) => VinePreviewScreenPure(
+                          videoFile: videoFile,
+                          frameCount: 30,
+                          selectedApproach: 'hybrid',
+                        ),
                       ),
                     );
                   },
@@ -142,12 +127,72 @@ void main() {
 
       // Snackbar should appear (may be 1 or 2 due to scaffold nesting)
       expect(find.text('Draft saved'), findsWidgets);
+
+      await tester.pumpAndSettle();
+
+      // Screen should have closed
+      expect(didPop, true);
+      expect(find.text('Preview Video'), findsNothing);
+    });
+
+    testWidgets('should close screen after saving draft', (tester) async {
+      final videoFile = File('/path/to/test/video.mp4');
+      bool didPop = false;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => VinePreviewScreenPure(
+                          videoFile: videoFile,
+                          frameCount: 30,
+                          selectedApproach: 'hybrid',
+                        ),
+                      ),
+                    );
+                    didPop = true;
+                  },
+                  child: const Text('Open Preview'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Open preview screen
+      await tester.tap(find.text('Open Preview'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Preview Video'), findsOneWidget);
+
+      // Save draft
+      await tester.tap(find.text('Save Draft'));
+      await tester.pumpAndSettle();
+
+      // Screen should have closed
+      expect(didPop, true);
+      expect(find.text('Preview Video'), findsNothing);
     });
 
     testWidgets('should save draft with empty fields', (tester) async {
+      final videoFile = File('/path/to/test/video.mp4');
+
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(home: VinePreviewScreenPure(draftId: 'draft_2')),
+          child: MaterialApp(
+            home: VinePreviewScreenPure(
+              videoFile: videoFile,
+              frameCount: 45,
+              selectedApproach: 'imageSequence',
+            ),
+          ),
         ),
       );
 
@@ -169,9 +214,17 @@ void main() {
     testWidgets('should not disable Save Draft button when uploading', (
       tester,
     ) async {
+      final videoFile = File('/path/to/test/video.mp4');
+
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(home: VinePreviewScreenPure(draftId: 'draft_1')),
+          child: MaterialApp(
+            home: VinePreviewScreenPure(
+              videoFile: videoFile,
+              frameCount: 30,
+              selectedApproach: 'hybrid',
+            ),
+          ),
         ),
       );
 
