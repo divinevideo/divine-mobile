@@ -1,7 +1,6 @@
 // ABOUTME: TDD tests for UniversalCameraScreenPure flash and timer toggle features
 // ABOUTME: Tests camera control functionality for flash mode switching and countdown timer
 
-import 'package:camera/camera.dart' show FlashMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
@@ -17,7 +16,7 @@ void main() {
         containsAll([
           FlashMode.off,
           FlashMode.auto,
-          FlashMode.always,
+          FlashMode.on,
           FlashMode.torch,
         ]),
       );
@@ -26,7 +25,7 @@ void main() {
     test('FlashMode enum values have correct order', () {
       expect(FlashMode.values[0], FlashMode.off);
       expect(FlashMode.values[1], FlashMode.auto);
-      expect(FlashMode.values[2], FlashMode.always);
+      expect(FlashMode.values[2], FlashMode.on);
       expect(FlashMode.values[3], FlashMode.torch);
     });
   });
@@ -61,8 +60,8 @@ void main() {
           case FlashMode.off:
             return FlashMode.auto;
           case FlashMode.auto:
-            return FlashMode.always;
-          case FlashMode.always:
+            return FlashMode.on;
+          case FlashMode.on:
             return FlashMode.torch;
           case FlashMode.torch:
             return FlashMode.off;
@@ -74,7 +73,7 @@ void main() {
       expect(currentMode, FlashMode.auto);
 
       currentMode = toggleFlash(currentMode);
-      expect(currentMode, FlashMode.always);
+      expect(currentMode, FlashMode.on);
 
       currentMode = toggleFlash(currentMode);
       expect(currentMode, FlashMode.torch);
@@ -94,7 +93,7 @@ void main() {
             return Icons.flash_off;
           case FlashMode.auto:
             return Icons.flash_auto;
-          case FlashMode.always:
+          case FlashMode.on:
             return Icons.flash_on;
           case FlashMode.torch:
             return Icons.flashlight_on;
@@ -103,7 +102,7 @@ void main() {
 
       expect(getFlashIcon(FlashMode.off), Icons.flash_off);
       expect(getFlashIcon(FlashMode.auto), Icons.flash_auto);
-      expect(getFlashIcon(FlashMode.always), Icons.flash_on);
+      expect(getFlashIcon(FlashMode.on), Icons.flash_on);
       expect(getFlashIcon(FlashMode.torch), Icons.flashlight_on);
     });
   });
