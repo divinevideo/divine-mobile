@@ -1,7 +1,8 @@
 // ABOUTME: Tests for default video title "Do it for the Vine!" functionality
 // ABOUTME: Ensures all video metadata screens initialize with the correct default title
 
-import 'dart:io';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,16 +12,35 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('Default Video Title Tests (TDD)', () {
-    late File testVideoFile;
-
     setUp(() async {
       TestWidgetsFlutterBinding.ensureInitialized();
 
       // Mock SharedPreferences
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({
+        'vine_drafts': jsonEncode([
+          {
+            'id': 'draft_1',
+            // Create a test video file path (file doesn't need to exist for title test)
+            'videoFilePath': 'test_assets/test_video.mp4',
+            'title': 'Do it for the Vine!',
+            'description': 'Test description',
+            'hashtags': ['test', 'vines'],
+            'frameCount': 10,
+            'selectedApproach': 'test',
+            'createdAt': DateTime.now().toIso8601String(),
+            'lastModified': DateTime.now().toIso8601String(),
+            'publishStatus': 'draft',
+            'publishError': null,
+            'publishAttempts': 0,
+            'proofManifestJson': null,
+            'aspectRatio': 'square',
+          },
+        ]),
+      });
+    });
 
-      // Create a test video file path (file doesn't need to exist for title test)
-      testVideoFile = File('test_assets/test_video.mp4');
+    tearDown(() {
+      SharedPreferences.resetStatic();
     });
 
     testWidgets(
@@ -30,10 +50,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: MaterialApp(
-              home: VideoMetadataScreenPure(
-                videoFile: testVideoFile,
-                duration: const Duration(seconds: 5),
-              ),
+              home: VideoMetadataScreenPure(draftId: 'draft_1'),
             ),
           ),
         );
@@ -61,13 +78,7 @@ void main() {
         // Arrange - Build the screen
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: VinePreviewScreenPure(
-                videoFile: testVideoFile,
-                frameCount: 10,
-                selectedApproach: 'test',
-              ),
-            ),
+            child: MaterialApp(home: VinePreviewScreenPure(draftId: 'draft_1')),
           ),
         );
 
@@ -95,10 +106,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: MaterialApp(
-              home: VideoMetadataScreenPure(
-                videoFile: testVideoFile,
-                duration: const Duration(seconds: 5),
-              ),
+              home: VideoMetadataScreenPure(draftId: 'draft_1'),
             ),
           ),
         );
@@ -127,13 +135,7 @@ void main() {
         // Arrange - Build the screen
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: VinePreviewScreenPure(
-                videoFile: testVideoFile,
-                frameCount: 10,
-                selectedApproach: 'test',
-              ),
-            ),
+            child: MaterialApp(home: VinePreviewScreenPure(draftId: 'draft_1')),
           ),
         );
 

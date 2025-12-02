@@ -1,7 +1,7 @@
 // ABOUTME: TDD test for save draft functionality in VinePreviewScreenPure
 // ABOUTME: Ensures draft save button exists and saves to storage correctly
 
-import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,23 +15,36 @@ void main() {
     late DraftStorageService draftService;
 
     setUp(() async {
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({
+        'vine_drafts': jsonEncode([
+          {
+            'id': 'draft_1',
+            // Create a test video file path (file doesn't need to exist for title test)
+            'videoFilePath': 'test_assets/test_video.mp4',
+            'title': 'Do it for the Vine!',
+            'description': 'Test description',
+            'hashtags': ['test', 'vines'],
+            'frameCount': 10,
+            'selectedApproach': 'test',
+            'createdAt': DateTime.now().toIso8601String(),
+            'lastModified': DateTime.now().toIso8601String(),
+            'publishStatus': 'draft',
+            'publishError': null,
+            'publishAttempts': 0,
+            'proofManifestJson': null,
+            'aspectRatio': 'square',
+          },
+        ]),
+      });
+
       final prefs = await SharedPreferences.getInstance();
       draftService = DraftStorageService(prefs);
     });
 
     testWidgets('should have a Save Draft button in app bar', (tester) async {
-      final videoFile = File('/path/to/test/video.mp4');
-
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VinePreviewScreenPure(
-              videoFile: videoFile,
-              frameCount: 30,
-              selectedApproach: 'hybrid',
-            ),
-          ),
+          child: MaterialApp(home: VinePreviewScreenPure(draftId: 'draft_1')),
         ),
       );
 
@@ -42,17 +55,9 @@ void main() {
     testWidgets('should save draft when Save Draft button is tapped', (
       tester,
     ) async {
-      final videoFile = File('/path/to/test/video.mp4');
-
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VinePreviewScreenPure(
-              videoFile: videoFile,
-              frameCount: 30,
-              selectedApproach: 'hybrid',
-            ),
-          ),
+          child: MaterialApp(home: VinePreviewScreenPure(draftId: 'draft_1')),
         ),
       );
 
@@ -82,13 +87,12 @@ void main() {
       expect(drafts.first.hashtags, ['test', 'vine']);
       expect(drafts.first.frameCount, 30);
       expect(drafts.first.selectedApproach, 'hybrid');
-      expect(drafts.first.videoFile.path, videoFile.path);
+      expect(drafts.first.videoFile.path, 'test_assets/test_video.mp4');
     });
 
     testWidgets('should show success message and close after saving draft', (
       tester,
     ) async {
-      final videoFile = File('/path/to/test/video.mp4');
       bool didPop = false;
 
       await tester.pumpWidget(
@@ -101,11 +105,8 @@ void main() {
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => VinePreviewScreenPure(
-                          videoFile: videoFile,
-                          frameCount: 30,
-                          selectedApproach: 'hybrid',
-                        ),
+                        builder: (_) =>
+                            VinePreviewScreenPure(draftId: 'draft_1'),
                       ),
                     );
                     didPop = true;
@@ -137,7 +138,6 @@ void main() {
     });
 
     testWidgets('should close screen after saving draft', (tester) async {
-      final videoFile = File('/path/to/test/video.mp4');
       bool didPop = false;
 
       await tester.pumpWidget(
@@ -150,11 +150,8 @@ void main() {
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => VinePreviewScreenPure(
-                          videoFile: videoFile,
-                          frameCount: 30,
-                          selectedApproach: 'hybrid',
-                        ),
+                        builder: (_) =>
+                            VinePreviewScreenPure(draftId: 'draft_1'),
                       ),
                     );
                     didPop = true;
@@ -183,17 +180,9 @@ void main() {
     });
 
     testWidgets('should save draft with empty fields', (tester) async {
-      final videoFile = File('/path/to/test/video.mp4');
-
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VinePreviewScreenPure(
-              videoFile: videoFile,
-              frameCount: 45,
-              selectedApproach: 'imageSequence',
-            ),
-          ),
+          child: MaterialApp(home: VinePreviewScreenPure(draftId: 'draft_1')),
         ),
       );
 
@@ -215,17 +204,9 @@ void main() {
     testWidgets('should not disable Save Draft button when uploading', (
       tester,
     ) async {
-      final videoFile = File('/path/to/test/video.mp4');
-
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VinePreviewScreenPure(
-              videoFile: videoFile,
-              frameCount: 30,
-              selectedApproach: 'hybrid',
-            ),
-          ),
+          child: MaterialApp(home: VinePreviewScreenPure(draftId: 'draft_1')),
         ),
       );
 
