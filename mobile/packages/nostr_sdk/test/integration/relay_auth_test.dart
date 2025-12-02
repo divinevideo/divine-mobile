@@ -3,12 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:nostr_sdk/relay/relay.dart';
-import 'package:nostr_sdk/relay/relay_base.dart';
-import 'package:nostr_sdk/relay/relay_pool.dart';
-import 'package:nostr_sdk/relay/relay_status.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
-import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
 class MockRelay extends RelayBase {
   final List<List<dynamic>> sentMessages = [];
@@ -18,9 +13,13 @@ class MockRelay extends RelayBase {
   MockRelay(String url) : super(url, RelayStatus(url));
 
   @override
-  bool send(List<dynamic> message, {bool? forceSend}) {
+  bool send(
+    List<dynamic> message, {
+    bool? forceSend,
+    bool queueIfFailed = true,
+  }) {
     sentMessages.add(message);
-    
+
     // Simulate auth challenge response if configured
     if (shouldSendAuthChallenge && message[0] == 'REQ') {
       Future.delayed(Duration(milliseconds: 100), () {
@@ -28,19 +27,19 @@ class MockRelay extends RelayBase {
         onMessage?.call(this, ['AUTH', authChallenge]);
       });
     }
-    
+
     return true;
   }
 
   @override
   Future<bool> doConnect() async {
-    relayStatus.connected = ClientConneccted.CONNECTED;
+    relayStatus.connected = ClientConnected.CONNECTED;
     return true;
   }
 
   @override
   Future<void> disconnect() async {
-    relayStatus.connected = ClientConneccted.UN_CONNECT;
+    relayStatus.connected = ClientConnected.DISCONNECT;
   }
 
   void clearSentMessages() {
@@ -61,18 +60,15 @@ void main() {
     late LocalNostrSigner signer;
     late String testPrivateKey;
     late String testPublicKey;
-    
+
     setUp(() {
-      testPrivateKey = '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
-      testPublicKey = '87979b28328fa41994eb9a5d9c76cdf3a605df66fbb4c5f82c3608939b2545d5';
+      testPrivateKey =
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
+      testPublicKey =
+          '87979b28328fa41994eb9a5d9c76cdf3a605df66fbb4c5f82c3608939b2545d5';
       signer = LocalNostrSigner(testPrivateKey);
-      
-      nostr = Nostr(
-        signer,
-        testPublicKey,
-        [],
-        (url) => MockRelay(url),
-      );
+
+      nostr = Nostr(signer, testPublicKey, [], (url) => MockRelay(url));
     });
 
     test('Configure relay with alwaysAuth', () async {
@@ -96,7 +92,7 @@ void main() {
       final relay1 = MockRelay('wss://relay1.com');
       final relay2 = MockRelay('wss://relay2.com');
       final relay3 = MockRelay('wss://relay3.com');
-      
+
       await nostr.relayPool.add(relay1);
       await nostr.relayPool.add(relay2);
       await nostr.relayPool.add(relay3);
@@ -118,15 +114,14 @@ void main() {
       final relayUrl = 'wss://auth.relay.com';
       final relay = MockRelay(relayUrl);
       relay.shouldSendAuthChallenge = true;
-      
+
       await nostr.relayPool.add(relay);
       nostr.setRelayAlwaysAuth(relayUrl, true);
 
       // Subscribe should be queued for authentication
-      final subscription = nostr.subscribe(
-        [Filter(kinds: [EventKind.TEXT_NOTE]).toJson()],
-        (event) {},
-      );
+      final subscription = nostr.subscribe([
+        Filter(kinds: [EventKind.TEXT_NOTE]).toJson(),
+      ], (event) {});
 
       // Message should be in pending auth messages, not sent yet
       expect(relay.sentMessages.isEmpty, isTrue);
@@ -137,7 +132,7 @@ void main() {
     test('Events queued when relay requires alwaysAuth', () async {
       final relayUrl = 'wss://auth.relay.com';
       final relay = MockRelay(relayUrl);
-      
+
       await nostr.relayPool.add(relay);
       nostr.setRelayAlwaysAuth(relayUrl, true);
 
@@ -148,7 +143,7 @@ void main() {
         [],
         'Test message',
       );
-      
+
       await nostr.sendEvent(event);
 
       // Event should be queued for authentication
@@ -160,22 +155,21 @@ void main() {
     test('Messages sent after authentication when alwaysAuth is true', () async {
       final relayUrl = 'wss://auth.relay.com';
       final relay = MockRelay(relayUrl);
-      
+
       await nostr.relayPool.add(relay);
       nostr.setRelayAlwaysAuth(relayUrl, true);
 
       // Queue a subscription
-      nostr.subscribe(
-        [Filter(kinds: [EventKind.TEXT_NOTE]).toJson()],
-        (event) {},
-      );
+      nostr.subscribe([
+        Filter(kinds: [EventKind.TEXT_NOTE]).toJson(),
+      ], (event) {});
 
       expect(relay.sentMessages.isEmpty, isTrue);
       expect(relay.pendingAuthedMessages.length, equals(1));
 
       // Simulate successful authentication
       relay.relayStatus.authed = true;
-      
+
       // Manually trigger sending of pending messages (normally done after AUTH response)
       relay.sendPendingMessages();
 
@@ -188,15 +182,14 @@ void main() {
     test('Auth challenge functionality basic test', () async {
       final relayUrl = 'wss://auth.relay.com';
       final relay = MockRelay(relayUrl);
-      
+
       await nostr.relayPool.add(relay);
       nostr.setRelayAlwaysAuth(relayUrl, true);
 
       // Send subscription that should be queued for auth
-      nostr.subscribe(
-        [Filter(kinds: [EventKind.TEXT_NOTE]).toJson()],
-        (event) {},
-      );
+      nostr.subscribe([
+        Filter(kinds: [EventKind.TEXT_NOTE]).toJson(),
+      ], (event) {});
 
       // Message should be queued for authentication
       expect(relay.pendingAuthedMessages.isNotEmpty, isTrue);
@@ -206,10 +199,10 @@ void main() {
     test('Mixed relay configuration - some with alwaysAuth', () async {
       final authRelay = MockRelay('wss://auth.relay.com');
       final normalRelay = MockRelay('wss://normal.relay.com');
-      
+
       await nostr.relayPool.add(authRelay);
       await nostr.relayPool.add(normalRelay);
-      
+
       // Only auth relay requires authentication
       nostr.setRelayAlwaysAuth('wss://auth.relay.com', true);
 
@@ -220,13 +213,13 @@ void main() {
         [],
         'Test message',
       );
-      
+
       await nostr.sendEvent(event);
 
       // Auth relay should queue the message
       expect(authRelay.sentMessages.isEmpty, isTrue);
       expect(authRelay.pendingAuthedMessages.length, equals(1));
-      
+
       // Normal relay should send immediately
       expect(normalRelay.sentMessages.length, equals(1));
       expect(normalRelay.sentMessages.first[0], equals('EVENT'));

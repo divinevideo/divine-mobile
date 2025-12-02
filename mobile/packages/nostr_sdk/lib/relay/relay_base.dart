@@ -29,9 +29,7 @@ class RelayBase extends Relay {
     }
 
     try {
-      relayStatus.connected = ClientConneccted.CONNECTING;
       getRelayInfo(url);
-
       log("Connect begin: $url");
 
       // Create connection manager if needed
@@ -48,10 +46,6 @@ class RelayBase extends Relay {
       final result = await _connectionManager!.connect();
 
       if (result) {
-        relayStatus.connected = ClientConneccted.CONNECTED;
-        if (relayStatusCallback != null) {
-          relayStatusCallback!();
-        }
         log("Connect complete: $url");
       }
 
@@ -71,15 +65,20 @@ class RelayBase extends Relay {
 
     // Listen for state changes
     _stateSubscription = _connectionManager!.stateStream.listen((state) {
+      final wasDisconnected =
+          relayStatus.connected != ClientConnected.CONNECTED;
+
       switch (state) {
         case ConnectionState.connected:
-          relayStatus.connected = ClientConneccted.CONNECTED;
-          // Reset reconnect attempts tracked in parent class
-          resetReconnection();
+          relayStatus.connected = ClientConnected.CONNECTED;
+          // Flush pending messages on reconnection
+          if (wasDisconnected) {
+            onConnected();
+          }
         case ConnectionState.connecting:
-          relayStatus.connected = ClientConneccted.CONNECTING;
+          relayStatus.connected = ClientConnected.CONNECTING;
         case ConnectionState.disconnected:
-          relayStatus.connected = ClientConneccted.UN_CONNECT;
+          relayStatus.connected = ClientConnected.DISCONNECT;
       }
       if (relayStatusCallback != null) {
         relayStatusCallback!();
@@ -112,7 +111,11 @@ class RelayBase extends Relay {
   }
 
   @override
-  bool send(List<dynamic> message, {bool? forceSend}) {
+  bool send(
+    List<dynamic> message, {
+    bool? forceSend,
+    bool queueIfFailed = true,
+  }) {
     if (_connectionManager == null) {
       return false;
     }
@@ -130,7 +133,10 @@ class RelayBase extends Relay {
       } catch (e) {
         onError(e.toString(), reconnect: true);
       }
+    } else if (queueIfFailed) {
+      pendingMessages.add(message);
     }
+
     return false;
   }
 
@@ -155,8 +161,9 @@ class RelayBase extends Relay {
       // For any other type, try to convert to JSON-compatible format
       try {
         // If it has a toJson method, use it
-        if (data is dynamic && data.toJson != null) {
-          return sanitizeForJson(data.toJson());
+        final toJsonResult = data.toJson();
+        if (toJsonResult != null) {
+          return sanitizeForJson(toJsonResult);
         }
       } catch (e) {
         // Ignore toJson errors and fall through
@@ -169,7 +176,7 @@ class RelayBase extends Relay {
 
   @override
   Future<void> disconnect() async {
-    relayStatus.connected = ClientConneccted.UN_CONNECT;
+    relayStatus.connected = ClientConnected.DISCONNECT;
     await _connectionManager?.disconnect();
   }
 

@@ -1,5 +1,5 @@
-class ClientConneccted {
-  static int UN_CONNECT = -1;
+class ClientConnected {
+  static int DISCONNECT = -1;
 
   static int CONNECTING = 1;
 

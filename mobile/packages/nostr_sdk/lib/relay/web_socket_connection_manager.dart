@@ -344,7 +344,7 @@ class WebSocketConnectionManager {
   }
 
   void _sendPing() {
-    if (_state != ConnectionState.connected || _channel == null) {
+    if (_state != ConnectionState.connected) {
       return;
     }
 
@@ -365,19 +365,20 @@ class WebSocketConnectionManager {
     });
 
     // Send a minimal Nostr REQ as ping (limit:0 returns EOSE immediately)
-    try {
-      final pingSubId = '_ping_${DateTime.now().millisecondsSinceEpoch}';
-      final pingMsg = jsonEncode([
-        'REQ',
-        pingSubId,
-        {'limit': 0},
-      ]);
-      _channel!.sink.add(pingMsg);
+    final pingSubId = '_ping_${DateTime.now().millisecondsSinceEpoch}';
+    final pingMsg = jsonEncode([
+      'REQ',
+      pingSubId,
+      {'limit': 0},
+    ]);
+
+    if (send(pingMsg)) {
       log('Ping sent');
-    } catch (e) {
-      log('Ping failed: $e');
-      _errorController.add('Ping failed: $e');
-      _handleDisconnect();
+    } else {
+      log('Ping failed to send');
+      _awaitingPong = false;
+      _pongTimeoutTimer?.cancel();
+      _pongTimeoutTimer = null;
     }
   }
 

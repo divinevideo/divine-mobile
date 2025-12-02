@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
-import '../nip19/nip19.dart';
-import '../relay/client_connected.dart';
 import '../event.dart';
 import '../event_kind.dart';
 import '../filter.dart';
+import '../nip19/nip19.dart';
+import '../relay/client_connected.dart';
 import '../relay/relay.dart';
 import '../relay/relay_base.dart';
 import '../relay/relay_isolate.dart';
@@ -26,10 +26,7 @@ class NostrRemoteSigner extends NostrSigner {
 
   late LocalNostrSigner localNostrSigner;
 
-  NostrRemoteSigner(
-    this.relayMode,
-    this.info,
-  );
+  NostrRemoteSigner(this.relayMode, this.info);
 
   List<Relay> relays = [];
 
@@ -51,7 +48,7 @@ class NostrRemoteSigner extends NostrSigner {
       var request = NostrRemoteRequest("connect", [
         info.remoteSignerPubkey,
         info.optionalSecret ?? "",
-        "sign_event,get_relays,get_public_key,nip04_encrypt,nip04_decrypt,nip44_encrypt,nip44_decrypt"
+        "sign_event,get_relays,get_public_key,nip04_encrypt,nip04_decrypt,nip44_encrypt,nip44_decrypt",
       ]);
       // send connect but not await this request.
       await sendAndWaitForResult(request, timeout: 120);
@@ -78,7 +75,10 @@ class NostrRemoteSigner extends NostrSigner {
         final event = Event.fromJson(json[2]);
         if (event.kind == EventKind.NOSTR_REMOTE_SIGNING) {
           var response = await NostrRemoteResponse.decrypt(
-              event.content, localNostrSigner, event.pubkey);
+            event.content,
+            localNostrSigner,
+            event.pubkey,
+          );
           if (response != null) {
             var completer = callbacks.remove(response.id);
             if (completer != null) {
@@ -100,20 +100,14 @@ class NostrRemoteSigner extends NostrSigner {
     RelayStatus relayStatus = RelayStatus(relayAddr);
     Relay? relay;
     if (relayMode == RelayMode.BASE_MODE) {
-      relay = RelayBase(
-        relayAddr,
-        relayStatus,
-      );
+      relay = RelayBase(relayAddr, relayStatus);
     } else {
-      relay = RelayIsolate(
-        relayAddr,
-        relayStatus,
-      );
+      relay = RelayIsolate(relayAddr, relayStatus);
     }
     relay.onMessage = onMessage;
     addPenddingQueryMsg(relay);
     relay.relayStatusCallback = () {
-      if (relayStatus.connected == ClientConneccted.UN_CONNECT) {
+      if (relayStatus.connected == ClientConnected.DISCONNECT) {
         if (relay!.pendingMessages.isEmpty) {
           addPenddingQueryMsg(relay);
         }
@@ -149,14 +143,19 @@ class NostrRemoteSigner extends NostrSigner {
     return queryMsg;
   }
 
-  Future<String?> sendAndWaitForResult(NostrRemoteRequest request,
-      {int timeout = 60}) async {
+  Future<String?> sendAndWaitForResult(
+    NostrRemoteRequest request, {
+    int timeout = 60,
+  }) async {
     var senderPubkey = await localNostrSigner.getPublicKey();
-    var content =
-        await request.encrypt(localNostrSigner, info.remoteSignerPubkey);
+    var content = await request.encrypt(
+      localNostrSigner,
+      info.remoteSignerPubkey,
+    );
     if (StringUtil.isNotBlank(senderPubkey) && content != null) {
-      Event? event = Event(senderPubkey!, EventKind.NOSTR_REMOTE_SIGNING,
-          [getRemoteSignerPubkeyTags()], content);
+      Event? event = Event(senderPubkey!, EventKind.NOSTR_REMOTE_SIGNING, [
+        getRemoteSignerPubkeyTags(),
+      ], content);
       event = await localNostrSigner.signEvent(event);
       if (event != null) {
         var json = ["EVENT", event.toJson()];
@@ -170,10 +169,12 @@ class NostrRemoteSigner extends NostrSigner {
           relay.send(json, forceSend: true);
         }
 
-        return await completer.future.timeout(Duration(seconds: timeout),
-            onTimeout: () {
-          return null;
-        });
+        return await completer.future.timeout(
+          Duration(seconds: timeout),
+          onTimeout: () {
+            return null;
+          },
+        );
       }
     }
     return null;

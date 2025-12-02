@@ -80,17 +80,11 @@ abstract class Relay {
   void onError(String errMsg, {bool reconnect = false}) {
     print("relay error $errMsg");
     relayStatus.onError();
-    relayStatus.connected = ClientConneccted.UN_CONNECT;
+    relayStatus.connected = ClientConnected.DISCONNECT;
     if (relayStatusCallback != null) {
       relayStatusCallback!();
     }
     // Note: reconnection is now handled by WebSocketConnectionManager
-  }
-
-  /// Reset reconnection state - called by subclass when connection succeeds
-  void resetReconnection() {
-    // Connection manager handles reconnection state internally
-    // This method exists for subclass notification
   }
 
   List<Subscription> getSubscriptions() {

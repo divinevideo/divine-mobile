@@ -48,7 +48,7 @@ class RelayPool {
   List<EventFilter> eventFilters;
 
   Function(String, String)? onNotice;
-  
+
   // Track pending AUTH events to match with OK responses
   final Map<String, String> _pendingAuthEvents = {};
 
@@ -111,7 +111,7 @@ class RelayPool {
     List<Relay> list = [];
     var it = _relays.values;
     for (var relay in it) {
-      if (relay.relayStatus.connected == ClientConneccted.CONNECTED) {
+      if (relay.relayStatus.connected == ClientConnected.CONNECTED) {
         list.add(relay);
       }
     }
@@ -144,10 +144,14 @@ class RelayPool {
     return _relays[url];
   }
 
-  bool relayDoQuery(Relay relay, Subscription subscription, bool sendAfterAuth,
-      {bool runBeforeConnected = false}) {
+  bool relayDoQuery(
+    Relay relay,
+    Subscription subscription,
+    bool sendAfterAuth, {
+    bool runBeforeConnected = false,
+  }) {
     if ((!runBeforeConnected &&
-            relay.relayStatus.connected != ClientConneccted.CONNECTED) ||
+            relay.relayStatus.connected != ClientConnected.CONNECTED) ||
         !relay.relayStatus.readAccess) {
       return false;
     }
@@ -157,7 +161,8 @@ class RelayPool {
 
     try {
       var message = subscription.toJson();
-      if ((sendAfterAuth || relay.relayStatus.alwaysAuth) && !relay.relayStatus.authed) {
+      if ((sendAfterAuth || relay.relayStatus.alwaysAuth) &&
+          !relay.relayStatus.authed) {
         // For vine.hol.is, send the query to trigger AUTH challenge
         if (relay.url.contains('vine.hol.is')) {
           print('🔐 vine.hol.is query - sending to trigger AUTH challenge');
@@ -170,7 +175,7 @@ class RelayPool {
           return true;
         }
       } else {
-        if (relay.relayStatus.connected == ClientConneccted.CONNECTED) {
+        if (relay.relayStatus.connected == ClientConnected.CONNECTED) {
           return relay.send(message);
         } else {
           relay.pendingMessages.add(message);
@@ -191,7 +196,7 @@ class RelayPool {
     }
 
     for (var relay in _cacheRelays.values) {
-      if (relay.relayStatus.connected == ClientConneccted.CONNECTED) {
+      if (relay.relayStatus.connected == ClientConnected.CONNECTED) {
         relay.send(["EVENT", event]);
       }
     }
@@ -200,7 +205,7 @@ class RelayPool {
   Future<void> _onEvent(Relay relay, List<dynamic> json) async {
     final messageType = json[0];
     print('📡 Raw message from ${relay.url}: $json');
-    
+
     if (messageType == 'EVENT') {
       try {
         if (relay is! RelayLocal &&
@@ -283,27 +288,27 @@ class RelayPool {
       }
     } else if (messageType == "OK") {
       print('📡 OK response from ${relay.url}: $json');
-      
+
       // Check if this OK is for an AUTH event
       if (json.length >= 3) {
         final eventId = json[1] as String;
         final success = json[2] as bool;
         final message = json.length > 3 ? json[3] as String : '';
-        
+
         // Check if this is responding to our AUTH event
         if (_pendingAuthEvents.containsKey(eventId)) {
           _pendingAuthEvents.remove(eventId);
-          
+
           if (success) {
             relay.relayStatus.authed = true;
             print('🔐 AUTH succeeded for ${relay.url}');
-            
+
             // Send pending messages
             for (var message in relay.pendingAuthedMessages) {
               relay.send(message);
             }
             relay.pendingAuthedMessages.clear();
-            
+
             // Send subscriptions
             if (relay.hasSubscription()) {
               var subs = relay.getSubscriptions();
@@ -340,29 +345,41 @@ class RelayPool {
       print('🔐 Challenge: ${challenge.substring(0, 16)}...');
       var tags = [
         ["relay", relay.url],
-        ["challenge", challenge]
+        ["challenge", challenge],
       ];
-      Event? event =
-          Event(localNostr.publicKey, EventKind.AUTHENTICATION, tags, "");
+      Event? event = Event(
+        localNostr.publicKey,
+        EventKind.AUTHENTICATION,
+        tags,
+        "",
+      );
       event = await localNostr.nostrSigner.signEvent(event);
       if (event != null) {
-        print('🔐 Sending AUTH response for challenge: ${challenge.substring(0, 16)}...');
-        
+        print(
+          '🔐 Sending AUTH response for challenge: ${challenge.substring(0, 16)}...',
+        );
+
         // Track this AUTH event to match with OK response
         _pendingAuthEvents[event.id] = relay.url;
-        
+
         relay.send(["AUTH", event.toJson()], forceSend: true);
         print('🔐 AUTH response sent, waiting for relay confirmation...');
-        
+
         if (relay.pendingAuthedMessages.isNotEmpty) {
-          print('🔐 Pending ${relay.pendingAuthedMessages.length} messages for after auth confirmation');
+          print(
+            '🔐 Pending ${relay.pendingAuthedMessages.length} messages for after auth confirmation',
+          );
         }
       }
     }
   }
 
-  void addInitQuery(List<Map<String, dynamic>> filters, Function(Event) onEvent,
-      {String? id, Function? onComplete}) {
+  void addInitQuery(
+    List<Map<String, dynamic>> filters,
+    Function(Event) onEvent, {
+    String? id,
+    Function? onComplete,
+  }) {
     if (filters.isEmpty) {
       throw ArgumentError("No filters given", "filters");
     }
@@ -408,8 +425,12 @@ class RelayPool {
         Relay? relay = _relays[tempRelayAddr];
         relay ??= checkAndGenTempRelay(tempRelayAddr);
 
-        relayDoSubscribe(relay, subscription, sendAfterAuth,
-            runBeforeConnected: true);
+        relayDoSubscribe(
+          relay,
+          subscription,
+          sendAfterAuth,
+          runBeforeConnected: true,
+        );
       }
     }
 
@@ -445,10 +466,13 @@ class RelayPool {
   }
 
   bool relayDoSubscribe(
-      Relay relay, Subscription subscription, bool sendAfterAuth,
-      {bool runBeforeConnected = false}) {
+    Relay relay,
+    Subscription subscription,
+    bool sendAfterAuth, {
+    bool runBeforeConnected = false,
+  }) {
     if ((!runBeforeConnected &&
-            relay.relayStatus.connected != ClientConneccted.CONNECTED) ||
+            relay.relayStatus.connected != ClientConnected.CONNECTED) ||
         !relay.relayStatus.readAccess) {
       return false;
     }
@@ -459,10 +483,13 @@ class RelayPool {
       relay.saveSubscription(subscription);
 
       var message = subscription.toJson();
-      if ((sendAfterAuth || relay.relayStatus.alwaysAuth) && !relay.relayStatus.authed) {
+      if ((sendAfterAuth || relay.relayStatus.alwaysAuth) &&
+          !relay.relayStatus.authed) {
         // For vine.hol.is, send the subscription to trigger AUTH challenge
         if (relay.url.contains('vine.hol.is')) {
-          print('🔐 vine.hol.is subscription - sending to trigger AUTH challenge');
+          print(
+            '🔐 vine.hol.is subscription - sending to trigger AUTH challenge',
+          );
           var result = relay.send(message, forceSend: true);
           if (result) {
             return true;
@@ -472,7 +499,7 @@ class RelayPool {
           return true;
         }
       } else {
-        if (relay.relayStatus.connected == ClientConneccted.CONNECTED) {
+        if (relay.relayStatus.connected == ClientConnected.CONNECTED) {
           return relay.send(message);
         } else {
           relay.pendingMessages.add(message);
@@ -534,9 +561,12 @@ class RelayPool {
   }
 
   // different relay use different filter
-  String queryByFilters(Map<String, List<Map<String, dynamic>>> filtersMap,
-      Function(Event) onEvent,
-      {String? id, Function? onComplete}) {
+  String queryByFilters(
+    Map<String, List<Map<String, dynamic>>> filtersMap,
+    Function(Event) onEvent, {
+    String? id,
+    Function? onComplete,
+  }) {
     if (filtersMap.isEmpty) {
       throw ArgumentError("No filters given", "filters");
     }
@@ -605,8 +635,12 @@ class RelayPool {
         Relay? relay = _relays[tempRelayAddr];
         relay ??= checkAndGenTempRelay(tempRelayAddr);
 
-        relayDoQuery(relay, subscription, sendAfterAuth,
-            runBeforeConnected: true);
+        relayDoQuery(
+          relay,
+          subscription,
+          sendAfterAuth,
+          runBeforeConnected: true,
+        );
       }
     }
 
@@ -643,8 +677,11 @@ class RelayPool {
 
   /// send message to relay
   /// there are tempRelays, it also send to tempRelays too.
-  bool send(List<dynamic> message,
-      {List<String>? tempRelays, List<String>? targetRelays}) {
+  bool send(
+    List<dynamic> message, {
+    List<String>? tempRelays,
+    List<String>? targetRelays,
+  }) {
     bool hadSubmitSend = false;
 
     for (Relay relay in _relays.values) {
@@ -664,12 +701,16 @@ class RelayPool {
       try {
         // Check if relay requires authentication
         if (relay.relayStatus.alwaysAuth && !relay.relayStatus.authed) {
-          print('🔐 Relay ${relay.url} requires auth (alwaysAuth=${relay.relayStatus.alwaysAuth}, authed=${relay.relayStatus.authed})');
-          
+          print(
+            '🔐 Relay ${relay.url} requires auth (alwaysAuth=${relay.relayStatus.alwaysAuth}, authed=${relay.relayStatus.authed})',
+          );
+
           // For vine.hol.is, we need to send one message to trigger AUTH challenge
           // Many relays only send AUTH challenges when they receive a message that needs auth
           if (relay.url.contains('vine.hol.is')) {
-            print('🔐 vine.hol.is detected - sending message to trigger AUTH challenge');
+            print(
+              '🔐 vine.hol.is detected - sending message to trigger AUTH challenge',
+            );
             var result = relay.send(message, forceSend: true);
             if (result) {
               hadSubmitSend = true;
@@ -680,9 +721,13 @@ class RelayPool {
             relay.pendingAuthedMessages.add(message);
             hadSubmitSend = true;
           }
-          print('🔐 Pending authed messages count: ${relay.pendingAuthedMessages.length}');
+          print(
+            '🔐 Pending authed messages count: ${relay.pendingAuthedMessages.length}',
+          );
         } else {
-          print('🔐 Relay ${relay.url} sending immediately (alwaysAuth=${relay.relayStatus.alwaysAuth}, authed=${relay.relayStatus.authed})');
+          print(
+            '🔐 Relay ${relay.url} sending immediately (alwaysAuth=${relay.relayStatus.alwaysAuth}, authed=${relay.relayStatus.authed})',
+          );
           var result = relay.send(message);
           if (result) {
             hadSubmitSend = true;
@@ -697,7 +742,7 @@ class RelayPool {
     if (tempRelays != null) {
       for (var tempRelayAddr in tempRelays) {
         var tempRelay = checkAndGenTempRelay(tempRelayAddr);
-        if (tempRelay.relayStatus.connected == ClientConneccted.CONNECTED) {
+        if (tempRelay.relayStatus.connected == ClientConnected.CONNECTED) {
           tempRelay.send(message);
           hadSubmitSend = true;
         } else {
@@ -729,7 +774,9 @@ class RelayPool {
   }
 
   List<String> getExtralReadableRelays(
-      List<String> extralRelays, int maxRelayNum) {
+    List<String> extralRelays,
+    int maxRelayNum,
+  ) {
     List<String> list = [];
 
     int sameNum = 0;
@@ -770,7 +817,7 @@ class RelayPool {
 
   bool readable() {
     for (var relay in _relays.values) {
-      if (relay.relayStatus.connected == ClientConneccted.CONNECTED &&
+      if (relay.relayStatus.connected == ClientConnected.CONNECTED &&
           relay.relayStatus.readAccess) {
         return true;
       }
@@ -805,7 +852,7 @@ class RelayPool {
 
   bool writable() {
     for (var relay in _relays.values) {
-      if (relay.relayStatus.connected == ClientConneccted.CONNECTED &&
+      if (relay.relayStatus.connected == ClientConnected.CONNECTED &&
           relay.relayStatus.writeAccess) {
         return true;
       }
@@ -815,9 +862,9 @@ class RelayPool {
   }
 
   /// Convenience method for searching events using NIP-50.
-  /// 
+  ///
   /// Performs a full-text search across event content on NIP-50 compatible relays.
-  /// 
+  ///
   /// Parameters:
   /// - [query]: The search query string
   /// - [kinds]: Optional list of event kinds to filter
@@ -827,7 +874,7 @@ class RelayPool {
   /// - [limit]: Maximum number of results to return (default: 100)
   /// - [timeout]: How long to wait for results (default: 5 seconds)
   /// - [relayUrls]: Optional specific relays to query (uses all connected relays if not specified)
-  /// 
+  ///
   /// Returns a list of [Event] objects matching the search criteria.
   /// Results are automatically deduplicated by event ID.
   Future<List<Event>> searchEvents(
@@ -852,23 +899,19 @@ class RelayPool {
 
     // Collect events
     final eventMap = <String, Event>{};
-    
+
     // Set up timeout
     final timeoutDuration = timeout ?? Duration(seconds: 5);
     final completer = Completer<List<Event>>();
     Timer? timeoutTimer;
     String? subscriptionId;
-    
+
     // Query with callback - use regular subscribe which doesn't wait for all relays
-    subscriptionId = subscribe(
-      [filter.toJson()],
-      (event) {
-        // Deduplicate by event ID
-        eventMap[event.id] = event;
-      },
-      targetRelays: relayUrls,
-    );
-    
+    subscriptionId = subscribe([filter.toJson()], (event) {
+      // Deduplicate by event ID
+      eventMap[event.id] = event;
+    }, targetRelays: relayUrls);
+
     // Set up timeout to complete with whatever we have
     timeoutTimer = Timer(timeoutDuration, () {
       // Timeout reached, return what we have
@@ -879,7 +922,7 @@ class RelayPool {
         completer.complete(eventMap.values.toList());
       }
     });
-    
+
     return completer.future;
   }
 }
