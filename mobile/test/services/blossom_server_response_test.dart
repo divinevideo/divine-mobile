@@ -2,10 +2,14 @@
 // ABOUTME: Uploads real file to blossom.divine.video to see what fields are returned
 
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../mocks/mock_nostr_service.dart';
 
 void main() {
   test(
@@ -22,7 +26,12 @@ void main() {
       try {
         // Initialize services
         final authService = AuthService();
-        final blossomService = BlossomUploadService(authService: authService);
+        final nostrService = MockNostrService();
+        nostrService.setInitialized(true);
+        final blossomService = BlossomUploadService(
+          authService: authService,
+          nostrService: nostrService,
+        );
 
         // Override Blossom server to blossom.divine.video
         final prefs = await SharedPreferences.getInstance();
