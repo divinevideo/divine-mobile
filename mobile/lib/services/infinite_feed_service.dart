@@ -19,9 +19,9 @@ class InfiniteFeedService {
     required INostrService nostrService,
     required VideoEventService videoEventService,
     http.Client? httpClient,
-  })  : _nostrService = nostrService,
-        _videoEventService = videoEventService,
-        _httpClient = httpClient ?? http.Client();
+  }) : _nostrService = nostrService,
+       _videoEventService = videoEventService,
+       _httpClient = httpClient ?? http.Client();
 
   final INostrService _nostrService;
   final VideoEventService _videoEventService;
@@ -86,8 +86,9 @@ class InfiniteFeedService {
 
       // Filter out videos we've already seen
       final seenIds = _seenVideoIds[feedType]!;
-      final uniqueNewVideos =
-          newVideos.where((video) => !seenIds.contains(video.id)).toList();
+      final uniqueNewVideos = newVideos
+          .where((video) => !seenIds.contains(video.id))
+          .toList();
 
       if (uniqueNewVideos.isEmpty) {
         // If we got no new unique videos, try to get more from Nostr
@@ -95,8 +96,9 @@ class InfiniteFeedService {
         final uniqueFallback = fallbackVideos
             .where((video) => !seenIds.contains(video.id))
             .toList();
-        uniqueNewVideos
-            .addAll(uniqueFallback.take(10)); // Add up to 10 fallback videos
+        uniqueNewVideos.addAll(
+          uniqueFallback.take(10),
+        ); // Add up to 10 fallback videos
       }
 
       // Add new videos to the feed
@@ -114,12 +116,16 @@ class InfiniteFeedService {
       }
 
       Log.info(
-          'Loaded ${uniqueNewVideos.length} new videos for ${feedType.displayName}',
-          name: 'InfiniteFeedService',
-          category: LogCategory.system);
+        'Loaded ${uniqueNewVideos.length} new videos for ${feedType.displayName}',
+        name: 'InfiniteFeedService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Error loading content for ${feedType.displayName}: $e',
-          name: 'InfiniteFeedService', category: LogCategory.system);
+      Log.error(
+        'Error loading content for ${feedType.displayName}: $e',
+        name: 'InfiniteFeedService',
+        category: LogCategory.system,
+      );
     } finally {
       _isLoading[feedType] = false;
     }
@@ -131,11 +137,14 @@ class InfiniteFeedService {
       final page = _currentPage[FeedType.trending] ?? 0;
       final offset = page * _pageSize;
 
-      final response = await _httpClient.get(
-        Uri.parse(
-            '$_analyticsEndpoint/analytics/trending?limit=$_pageSize&offset=$offset'),
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 10));
+      final response = await _httpClient
+          .get(
+            Uri.parse(
+              '$_analyticsEndpoint/analytics/trending?limit=$_pageSize&offset=$offset',
+            ),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -176,8 +185,11 @@ class InfiniteFeedService {
         return trendingVideos;
       }
     } catch (e) {
-      Log.warning('Failed to load trending from API: $e',
-          name: 'InfiniteFeedService', category: LogCategory.system);
+      Log.warning(
+        'Failed to load trending from API: $e',
+        name: 'InfiniteFeedService',
+        category: LogCategory.system,
+      );
     }
 
     // Fallback to local videos if API fails
@@ -202,8 +214,9 @@ class InfiniteFeedService {
     final seenIds = _seenVideoIds[feedType] ?? {};
 
     // Filter out already seen videos
-    final unseenVideos =
-        allVideos.where((video) => !seenIds.contains(video.id)).toList();
+    final unseenVideos = allVideos
+        .where((video) => !seenIds.contains(video.id))
+        .toList();
 
     // Sort based on feed type
     switch (feedType) {
@@ -220,8 +233,9 @@ class InfiniteFeedService {
     // If we don't have enough local videos, try to fetch more from Nostr
     if (unseenVideos.length < _pageSize) {
       final moreVideos = await _fetchMoreFromNostr(feedType);
-      final uniqueMore =
-          moreVideos.where((video) => !seenIds.contains(video.id)).toList();
+      final uniqueMore = moreVideos
+          .where((video) => !seenIds.contains(video.id))
+          .toList();
       unseenVideos.addAll(uniqueMore);
     }
 
@@ -237,23 +251,30 @@ class InfiniteFeedService {
       final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
 
       final fetchedVideos = <VideoEvent>[];
-      await for (final event
-          in eventStream.timeout(const Duration(seconds: 30))) {
+      await for (final event in eventStream.timeout(
+        const Duration(seconds: 30),
+      )) {
         try {
           final video = VideoEvent.fromNostrEvent(event);
           fetchedVideos.add(video);
           // Also add to video event service cache
           _videoEventService.addVideoEvent(video);
         } catch (e) {
-          Log.warning('Failed to parse video event: $e',
-              name: 'InfiniteFeedService', category: LogCategory.system);
+          Log.warning(
+            'Failed to parse video event: $e',
+            name: 'InfiniteFeedService',
+            category: LogCategory.system,
+          );
         }
       }
 
       return fetchedVideos;
     } catch (e) {
-      Log.warning('Failed to fetch videos from Nostr: $e',
-          name: 'InfiniteFeedService', category: LogCategory.system);
+      Log.warning(
+        'Failed to fetch videos from Nostr: $e',
+        name: 'InfiniteFeedService',
+        category: LogCategory.system,
+      );
       return [];
     }
   }
@@ -279,23 +300,30 @@ class InfiniteFeedService {
       final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
 
       final newVideos = <VideoEvent>[];
-      await for (final event
-          in eventStream.timeout(const Duration(seconds: 30))) {
+      await for (final event in eventStream.timeout(
+        const Duration(seconds: 30),
+      )) {
         try {
           final video = VideoEvent.fromNostrEvent(event);
           newVideos.add(video);
           // Also add to video event service cache
           _videoEventService.addVideoEvent(video);
         } catch (e) {
-          Log.warning('Failed to parse video event: $e',
-              name: 'InfiniteFeedService', category: LogCategory.system);
+          Log.warning(
+            'Failed to parse video event: $e',
+            name: 'InfiniteFeedService',
+            category: LogCategory.system,
+          );
         }
       }
 
       return newVideos;
     } catch (e) {
-      Log.warning('Failed to fetch more videos from Nostr: $e',
-          name: 'InfiniteFeedService', category: LogCategory.system);
+      Log.warning(
+        'Failed to fetch more videos from Nostr: $e',
+        name: 'InfiniteFeedService',
+        category: LogCategory.system,
+      );
       return [];
     }
   }
@@ -330,8 +358,9 @@ class InfiniteFeedService {
 
       // Filter out videos we've already seen
       final seenIds = _seenVideoIds[feedType] ?? <String>{};
-      final uniqueNewVideos =
-          newVideos.where((video) => !seenIds.contains(video.id)).toList();
+      final uniqueNewVideos = newVideos
+          .where((video) => !seenIds.contains(video.id))
+          .toList();
 
       if (uniqueNewVideos.isNotEmpty) {
         // Prepend new videos to the beginning of the feed
@@ -344,18 +373,23 @@ class InfiniteFeedService {
         }
 
         Log.info(
-            'Refreshed feed with ${uniqueNewVideos.length} new videos for ${feedType.displayName}',
-            name: 'InfiniteFeedService',
-            category: LogCategory.system);
+          'Refreshed feed with ${uniqueNewVideos.length} new videos for ${feedType.displayName}',
+          name: 'InfiniteFeedService',
+          category: LogCategory.system,
+        );
       } else {
         Log.info(
-            'No new videos found during refresh for ${feedType.displayName}',
-            name: 'InfiniteFeedService',
-            category: LogCategory.system);
+          'No new videos found during refresh for ${feedType.displayName}',
+          name: 'InfiniteFeedService',
+          category: LogCategory.system,
+        );
       }
     } catch (e) {
-      Log.error('Error refreshing feed for ${feedType.displayName}: $e',
-          name: 'InfiniteFeedService', category: LogCategory.system);
+      Log.error(
+        'Error refreshing feed for ${feedType.displayName}: $e',
+        name: 'InfiniteFeedService',
+        category: LogCategory.system,
+      );
     } finally {
       _isLoading[feedType] = false;
     }

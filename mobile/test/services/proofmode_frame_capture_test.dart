@@ -17,7 +17,6 @@ void main() {
     });
 
     setUp(() async {
-
       // Enable crypto for all tests
 
       final keyService = ProofModeKeyService();
@@ -169,8 +168,14 @@ void main() {
       expect(session.segments.first.frameTimestamps!.length, equals(1));
 
       final timestamp = session.segments.first.frameTimestamps!.first;
-      expect(timestamp.isAfter(beforeCapture.subtract(Duration(seconds: 1))), isTrue);
-      expect(timestamp.isBefore(afterCapture.add(Duration(seconds: 1))), isTrue);
+      expect(
+        timestamp.isAfter(beforeCapture.subtract(Duration(seconds: 1))),
+        isTrue,
+      );
+      expect(
+        timestamp.isBefore(afterCapture.add(Duration(seconds: 1))),
+        isTrue,
+      );
     });
 
     test('limits total frame hashes to prevent memory issues', () async {
@@ -199,8 +204,6 @@ void main() {
     });
 
     setUp(() async {
-
-
       final keyService = ProofModeKeyService();
       final attestationService = ProofModeAttestationService();
       await keyService.initialize();
@@ -243,4 +246,3 @@ void main() {
     });
   });
 }
-

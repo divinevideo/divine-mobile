@@ -20,23 +20,33 @@ class SeedMediaPreloadService {
     try {
       // Check if cache already populated
       final tempDir = await getTemporaryDirectory();
-      final cacheDir = Directory(path.join(tempDir.path, 'openvine_video_cache'));
+      final cacheDir = Directory(
+        path.join(tempDir.path, 'openvine_video_cache'),
+      );
       final markerFile = File(path.join(cacheDir.path, '.seed_media_loaded'));
 
       if (await markerFile.exists()) {
-        Log.info('[SEED] Cache already populated, skipping media preload',
-            name: 'SeedMediaPreload', category: LogCategory.system);
+        Log.info(
+          '[SEED] Cache already populated, skipping media preload',
+          name: 'SeedMediaPreload',
+          category: LogCategory.system,
+        );
         return;
       }
 
-      Log.info('[SEED] Cache empty, loading bundled seed media...',
-          name: 'SeedMediaPreload', category: LogCategory.system);
+      Log.info(
+        '[SEED] Cache empty, loading bundled seed media...',
+        name: 'SeedMediaPreload',
+        category: LogCategory.system,
+      );
 
       // Ensure cache directory exists
       await cacheDir.create(recursive: true);
 
       // Load manifest.json from assets
-      final manifestJson = await rootBundle.loadString('assets/seed_media/manifest.json');
+      final manifestJson = await rootBundle.loadString(
+        'assets/seed_media/manifest.json',
+      );
       final manifest = jsonDecode(manifestJson) as Map<String, dynamic>;
 
       int videoCount = 0;
@@ -59,11 +69,17 @@ class SeedMediaPreloadService {
           await videoFile.writeAsBytes(videoBytes.buffer.asUint8List());
 
           videoCount++;
-          Log.debug('[SEED] ✅ Cached video $eventId (${videoFile.lengthSync()} bytes)',
-              name: 'SeedMediaPreload', category: LogCategory.system);
+          Log.debug(
+            '[SEED] ✅ Cached video $eventId (${videoFile.lengthSync()} bytes)',
+            name: 'SeedMediaPreload',
+            category: LogCategory.system,
+          );
         } catch (e) {
-          Log.error('[SEED] ⚠️ Failed to preload video $eventId: $e',
-              name: 'SeedMediaPreload', category: LogCategory.system);
+          Log.error(
+            '[SEED] ⚠️ Failed to preload video $eventId: $e',
+            name: 'SeedMediaPreload',
+            category: LogCategory.system,
+          );
           // Continue with other videos - non-critical
         }
       }
@@ -81,15 +97,25 @@ class SeedMediaPreloadService {
             final thumbnailBytes = await rootBundle.load(assetPath);
 
             // Write to cache directory with thumbnail-specific naming
-            final thumbnailFile = File(path.join(cacheDir.path, 'thumbnail_$eventId.jpg'));
-            await thumbnailFile.writeAsBytes(thumbnailBytes.buffer.asUint8List());
+            final thumbnailFile = File(
+              path.join(cacheDir.path, 'thumbnail_$eventId.jpg'),
+            );
+            await thumbnailFile.writeAsBytes(
+              thumbnailBytes.buffer.asUint8List(),
+            );
 
             thumbnailCount++;
-            Log.debug('[SEED] ✅ Cached thumbnail $eventId (${thumbnailFile.lengthSync()} bytes)',
-                name: 'SeedMediaPreload', category: LogCategory.system);
+            Log.debug(
+              '[SEED] ✅ Cached thumbnail $eventId (${thumbnailFile.lengthSync()} bytes)',
+              name: 'SeedMediaPreload',
+              category: LogCategory.system,
+            );
           } catch (e) {
-            Log.error('[SEED] ⚠️ Failed to preload thumbnail $eventId: $e',
-                name: 'SeedMediaPreload', category: LogCategory.system);
+            Log.error(
+              '[SEED] ⚠️ Failed to preload thumbnail $eventId: $e',
+              name: 'SeedMediaPreload',
+              category: LogCategory.system,
+            );
             // Continue - thumbnails are optional
           }
         }
@@ -97,16 +123,27 @@ class SeedMediaPreloadService {
 
       // Create marker file to indicate preload complete
       await markerFile.create(recursive: true);
-      await markerFile.writeAsString('loaded at ${DateTime.now().toIso8601String()}');
+      await markerFile.writeAsString(
+        'loaded at ${DateTime.now().toIso8601String()}',
+      );
 
-      Log.info('[SEED] ✅ Media preload completed: $videoCount videos, $thumbnailCount thumbnails',
-          name: 'SeedMediaPreload', category: LogCategory.system);
+      Log.info(
+        '[SEED] ✅ Media preload completed: $videoCount videos, $thumbnailCount thumbnails',
+        name: 'SeedMediaPreload',
+        category: LogCategory.system,
+      );
     } catch (e, stack) {
       // Non-critical failure: user will download videos from network normally
-      Log.error('[SEED] ❌ Failed to load seed media (non-critical): $e',
-          name: 'SeedMediaPreload', category: LogCategory.system);
-      Log.verbose('[SEED] Stack trace: $stack',
-          name: 'SeedMediaPreload', category: LogCategory.system);
+      Log.error(
+        '[SEED] ❌ Failed to load seed media (non-critical): $e',
+        name: 'SeedMediaPreload',
+        category: LogCategory.system,
+      );
+      Log.verbose(
+        '[SEED] Stack trace: $stack',
+        name: 'SeedMediaPreload',
+        category: LogCategory.system,
+      );
     }
   }
 }

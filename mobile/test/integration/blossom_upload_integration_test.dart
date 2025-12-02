@@ -4,8 +4,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/services/blossom_upload_service.dart';
-import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -46,7 +44,9 @@ void main() {
       final authResult = await authService.createNewIdentity();
 
       if (!authResult.success) {
-        throw Exception('Failed to create test identity: ${authResult.errorMessage}');
+        throw Exception(
+          'Failed to create test identity: ${authResult.errorMessage}',
+        );
       }
 
       print('✅ Test identity created and authenticated');
@@ -57,9 +57,30 @@ void main() {
 
       // Write minimal MP4 header
       await testFile.writeAsBytes([
-        0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70,
-        0x69, 0x73, 0x6F, 0x6D, 0x00, 0x00, 0x02, 0x00,
-        0x69, 0x73, 0x6F, 0x6D, 0x69, 0x73, 0x6F, 0x32,
+        0x00,
+        0x00,
+        0x00,
+        0x20,
+        0x66,
+        0x74,
+        0x79,
+        0x70,
+        0x69,
+        0x73,
+        0x6F,
+        0x6D,
+        0x00,
+        0x00,
+        0x02,
+        0x00,
+        0x69,
+        0x73,
+        0x6F,
+        0x6D,
+        0x69,
+        0x73,
+        0x6F,
+        0x32,
       ]);
     });
 

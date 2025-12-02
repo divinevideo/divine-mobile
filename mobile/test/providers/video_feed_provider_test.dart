@@ -50,11 +50,8 @@ class MockCuration extends Curation {
   final List<VideoEvent> editorsPicks;
 
   @override
-  CurationState build() => CurationState(
-        editorsPicks: editorsPicks,
-        trending: [],
-        isLoading: false,
-      );
+  CurationState build() =>
+      CurationState(editorsPicks: editorsPicks, trending: [], isLoading: false);
 }
 
 // Mock UserProfileNotifier provider
@@ -66,8 +63,10 @@ class MockUserProfileNotifier extends UserProfileNotifier {
   UserProfileState build() => const UserProfileState();
 
   @override
-  Future<void> fetchMultipleProfiles(List<String> pubkeys,
-      {bool forceRefresh = false}) async {
+  Future<void> fetchMultipleProfiles(
+    List<String> pubkeys, {
+    bool forceRefresh = false,
+  }) async {
     onFetchProfiles(pubkeys);
   }
 
@@ -113,21 +112,25 @@ void main() {
             return MockVideoEvents(customVideoEvents ?? mockVideoEvents);
           }),
           // Override curation provider with mock state
-          curationProvider.overrideWith(() => MockCuration(
-                editorsPicks: customEditorsPicks ?? [],
-              )),
+          curationProvider.overrideWith(
+            () => MockCuration(editorsPicks: customEditorsPicks ?? []),
+          ),
           // Override service dependencies
           videoEventsNostrServiceProvider.overrideWithValue(mockNostrService1),
-          videoEventsSubscriptionManagerProvider
-              .overrideWithValue(MockSubscriptionManager()),
+          videoEventsSubscriptionManagerProvider.overrideWithValue(
+            MockSubscriptionManager(),
+          ),
           curationServiceProvider.overrideWithValue(mockCurationService),
           // Override dependencies for userProfileProvider
           nostrServiceProvider.overrideWithValue(mockNostrService2),
-          subscriptionManagerProvider
-              .overrideWithValue(MockSubscriptionManager()),
-          userProfileProvider.overrideWith(() =>
-              customUserProfiles ??
-              MockUserProfileNotifier(onFetchProfiles: (_) {})),
+          subscriptionManagerProvider.overrideWithValue(
+            MockSubscriptionManager(),
+          ),
+          userProfileProvider.overrideWith(
+            () =>
+                customUserProfiles ??
+                MockUserProfileNotifier(onFetchProfiles: (_) {}),
+          ),
         ],
       );
     }
@@ -141,8 +144,9 @@ void main() {
         when(() => event.createdAt).thenReturn(1234567890 - i);
         when(() => event.title).thenReturn('Video $i');
         when(() => event.content).thenReturn('Content $i');
-        when(() => event.videoUrl)
-            .thenReturn('https://example.com/video$i.mp4');
+        when(
+          () => event.videoUrl,
+        ).thenReturn('https://example.com/video$i.mp4');
         when(() => event.hashtags).thenReturn([]);
         return event;
       });
@@ -158,17 +162,18 @@ void main() {
       container.dispose();
     });
 
-    test('should use Classic Vines as fallback when no following list',
-        () async {
+    test('should use Classic Vines as fallback when no following list', () async {
       // Override video events with Classic Vines pubkey BEFORE reading the provider
       final classicVineEvent = MockVideoEvent();
       when(() => classicVineEvent.id).thenReturn('classic1');
-      when(() => classicVineEvent.pubkey)
-          .thenReturn(AppConstants.classicVinesPubkey);
+      when(
+        () => classicVineEvent.pubkey,
+      ).thenReturn(AppConstants.classicVinesPubkey);
       when(() => classicVineEvent.createdAt).thenReturn(1234567890);
       when(() => classicVineEvent.title).thenReturn('Classic Vine');
-      when(() => classicVineEvent.videoUrl)
-          .thenReturn('https://example.com/classic.mp4');
+      when(
+        () => classicVineEvent.videoUrl,
+      ).thenReturn('https://example.com/classic.mp4');
       when(() => classicVineEvent.hashtags).thenReturn([]);
 
       // Create new container with updated overrides
@@ -181,52 +186,64 @@ void main() {
       final feedState = await container.read(videoFeedProvider.future);
 
       expect(feedState.videos.length, equals(1));
-      expect(feedState.videos.first.pubkey,
-          equals(AppConstants.classicVinesPubkey));
+      expect(
+        feedState.videos.first.pubkey,
+        equals(AppConstants.classicVinesPubkey),
+      );
       expect(feedState.videos.length, equals(1));
     });
 
     test('should filter videos by following list', () async {
       // Set following list BEFORE reading provider
-      container
-          .read(social.socialProvider.notifier)
-          .updateFollowingList(['pubkey1', 'pubkey3']);
+      container.read(social.socialProvider.notifier).updateFollowingList([
+        'pubkey1',
+        'pubkey3',
+      ]);
 
       final feedState = await container.read(videoFeedProvider.future);
 
       // Should only include videos from followed users
       expect(feedState.videos.length, equals(2));
-      expect(feedState.videos.map((v) => v.pubkey),
-          containsAll(['pubkey1', 'pubkey3']));
+      expect(
+        feedState.videos.map((v) => v.pubkey),
+        containsAll(['pubkey1', 'pubkey3']),
+      );
       expect(feedState.videos.length, equals(2));
     });
 
     test('should update feed when following list changes', () async {
       // Initial following list
-      container
-          .read(social.socialProvider.notifier)
-          .updateFollowingList(['pubkey1']);
+      container.read(social.socialProvider.notifier).updateFollowingList([
+        'pubkey1',
+      ]);
 
       var feedState = await container.read(videoFeedProvider.future);
       expect(feedState.videos.length, equals(1));
 
       // Add another follow
-      container
-          .read(social.socialProvider.notifier)
-          .updateFollowingList(['pubkey1', 'pubkey2']);
+      container.read(social.socialProvider.notifier).updateFollowingList([
+        'pubkey1',
+        'pubkey2',
+      ]);
 
       // Feed should auto-update
       feedState = await container.read(videoFeedProvider.future);
       expect(feedState.videos.length, equals(2));
-      expect(feedState.videos.map((v) => v.pubkey),
-          containsAll(['pubkey1', 'pubkey2']));
+      expect(
+        feedState.videos.map((v) => v.pubkey),
+        containsAll(['pubkey1', 'pubkey2']),
+      );
     });
 
     test('should sort videos by creation time (newest first)', () async {
       // Set following list BEFORE reading provider
-      container.read(social.socialProvider.notifier).updateFollowingList(
-        ['pubkey0', 'pubkey1', 'pubkey2', 'pubkey3', 'pubkey4'],
-      );
+      container.read(social.socialProvider.notifier).updateFollowingList([
+        'pubkey0',
+        'pubkey1',
+        'pubkey2',
+        'pubkey3',
+        'pubkey4',
+      ]);
 
       final feedState = await container.read(videoFeedProvider.future);
 
@@ -252,9 +269,10 @@ void main() {
       );
 
       // Set following list BEFORE reading provider
-      container
-          .read(social.socialProvider.notifier)
-          .updateFollowingList(['pubkey1', 'pubkey2']);
+      container.read(social.socialProvider.notifier).updateFollowingList([
+        'pubkey1',
+        'pubkey2',
+      ]);
 
       // Read feed to trigger profile fetching
       await container.read(videoFeedProvider.future);
@@ -264,8 +282,10 @@ void main() {
 
       // Should have requested profiles for video authors (or verify the timer was called)
       // The profile fetching only happens for missing profiles, so let's check the call was made
-      expect(fetchedPubkeys.isNotEmpty || fetchedPubkeys.isEmpty,
-          isTrue); // Accept either outcome based on hasProfile logic
+      expect(
+        fetchedPubkeys.isNotEmpty || fetchedPubkeys.isEmpty,
+        isTrue,
+      ); // Accept either outcome based on hasProfile logic
     });
 
     test('should handle refresh action', () async {
@@ -276,8 +296,9 @@ void main() {
       await container.read(videoFeedProvider.notifier).refresh();
 
       // Should be able to read the provider again after refresh
-      final feedStateAfterRefresh =
-          await container.read(videoFeedProvider.future);
+      final feedStateAfterRefresh = await container.read(
+        videoFeedProvider.future,
+      );
       expect(feedStateAfterRefresh.videos, isA<List<VideoEvent>>());
     });
   });

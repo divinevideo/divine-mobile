@@ -28,52 +28,49 @@ class _NotificationSettingsScreenState
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: VineTheme.backgroundColor,
-        appBar: AppBar(
-          backgroundColor: VineTheme.vineGreen,
-          foregroundColor: VineTheme.whiteText,
-          elevation: 0,
-          title: const Text(
-            'Notification Settings',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () {
-                setState(() {
-                  _likesEnabled = true;
-                  _commentsEnabled = true;
-                  _followsEnabled = true;
-                  _mentionsEnabled = true;
-                  _repostsEnabled = true;
-                  _systemEnabled = true;
-                  _pushNotificationsEnabled = true;
-                  _soundEnabled = true;
-                  _vibrationEnabled = true;
-                });
+    backgroundColor: VineTheme.backgroundColor,
+    appBar: AppBar(
+      backgroundColor: VineTheme.vineGreen,
+      foregroundColor: VineTheme.whiteText,
+      elevation: 0,
+      title: const Text(
+        'Notification Settings',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () {
+            setState(() {
+              _likesEnabled = true;
+              _commentsEnabled = true;
+              _followsEnabled = true;
+              _mentionsEnabled = true;
+              _repostsEnabled = true;
+              _systemEnabled = true;
+              _pushNotificationsEnabled = true;
+              _soundEnabled = true;
+              _vibrationEnabled = true;
+            });
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Settings reset to defaults'),
-                    duration: Duration(seconds: 2),
-                    backgroundColor: VineTheme.vineGreen,
-                  ),
-                );
-              },
-            ),
-          ],
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Settings reset to defaults'),
+                duration: Duration(seconds: 2),
+                backgroundColor: VineTheme.vineGreen,
+              ),
+            );
+          },
         ),
-        body: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
+      ],
+    ),
+    body: Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
             // Notification Types Section
             _buildSectionHeader('Notification Types'),
             const SizedBox(height: 8),
@@ -214,19 +211,19 @@ class _NotificationSettingsScreenState
             // Info Section
             _buildInfoCard(),
           ],
-            ),
-          ),
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _buildSectionHeader(String title) => Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: VineTheme.primaryText,
-        ),
-      );
+    title,
+    style: const TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+      color: VineTheme.primaryText,
+    ),
+  );
 
   Widget _buildNotificationCard({
     required IconData icon,
@@ -235,40 +232,36 @@ class _NotificationSettingsScreenState
     required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
-  }) =>
-      Card(
-        color: VineTheme.cardBackground,
-        margin: const EdgeInsets.only(bottom: 8),
-        child: ListTile(
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: iconColor, size: 24),
-          ),
-          title: Text(
-            title,
-            style: const TextStyle(
-              color: VineTheme.primaryText,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: const TextStyle(
-              color: VineTheme.secondaryText,
-              fontSize: 12,
-            ),
-          ),
-          trailing: Switch(
-            value: value,
-            onChanged: onChanged,
-            activeTrackColor: VineTheme.vineGreen,
-          ),
+  }) => Card(
+    color: VineTheme.cardBackground,
+    margin: const EdgeInsets.only(bottom: 8),
+    child: ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: iconColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
         ),
-      );
+        child: Icon(icon, color: iconColor, size: 24),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: VineTheme.primaryText,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(color: VineTheme.secondaryText, fontSize: 12),
+      ),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeTrackColor: VineTheme.vineGreen,
+      ),
+    ),
+  );
 
   Widget _buildActionCard({
     required IconData icon,
@@ -276,78 +269,70 @@ class _NotificationSettingsScreenState
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-  }) =>
-      Card(
-        color: VineTheme.cardBackground,
-        margin: const EdgeInsets.only(bottom: 8),
-        child: ListTile(
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: iconColor, size: 24),
-          ),
-          title: Text(
-            title,
-            style: const TextStyle(
-              color: VineTheme.primaryText,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: const TextStyle(
-              color: VineTheme.secondaryText,
-              fontSize: 12,
-            ),
-          ),
-          trailing: const Icon(
-            Icons.arrow_forward_ios,
-            color: VineTheme.lightText,
-            size: 16,
-          ),
-          onTap: onTap,
+  }) => Card(
+    color: VineTheme.cardBackground,
+    margin: const EdgeInsets.only(bottom: 8),
+    child: ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: iconColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
         ),
-      );
+        child: Icon(icon, color: iconColor, size: 24),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: VineTheme.primaryText,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(color: VineTheme.secondaryText, fontSize: 12),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        color: VineTheme.lightText,
+        size: 16,
+      ),
+      onTap: onTap,
+    ),
+  );
 
   Widget _buildInfoCard() => Card(
-        color: VineTheme.cardBackground,
-        child: const Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    color: VineTheme.cardBackground,
+    child: const Padding(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: VineTheme.commentBlue,
-                    size: 20,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'About Notifications',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: VineTheme.primaryText,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8),
+              Icon(Icons.info_outline, color: VineTheme.commentBlue, size: 20),
+              SizedBox(width: 8),
               Text(
-                'Notifications are powered by the Nostr protocol. Real-time updates depend on your connection to Nostr relays. Some notifications may have delays.',
+                'About Notifications',
                 style: TextStyle(
-                  fontSize: 13,
-                  color: VineTheme.secondaryText,
-                  height: 1.4,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: VineTheme.primaryText,
                 ),
               ),
             ],
           ),
-        ),
-      );
+          SizedBox(height: 8),
+          Text(
+            'Notifications are powered by the Nostr protocol. Real-time updates depend on your connection to Nostr relays. Some notifications may have delays.',
+            style: TextStyle(
+              fontSize: 13,
+              color: VineTheme.secondaryText,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

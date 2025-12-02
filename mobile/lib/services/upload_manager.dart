@@ -82,9 +82,9 @@ class UploadManager {
     required BlossomUploadService blossomService,
     VideoCircuitBreaker? circuitBreaker,
     UploadRetryConfig? retryConfig,
-  })  : _blossomService = blossomService,
-        _circuitBreaker = circuitBreaker ?? VideoCircuitBreaker(),
-        _retryConfig = retryConfig ?? const UploadRetryConfig();
+  }) : _blossomService = blossomService,
+       _circuitBreaker = circuitBreaker ?? VideoCircuitBreaker(),
+       _retryConfig = retryConfig ?? const UploadRetryConfig();
   // Removed unused _uploadsBoxName constant
   static const String _uploadTargetKey = 'upload_target';
 
@@ -110,10 +110,12 @@ class UploadManager {
   Future<void> setUploadTarget(dynamic target) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_uploadTargetKey, target.index);
-    Log.info('Upload target set to: ${target.name}',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      'Upload target set to: ${target.name}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
   }
-
 
   /// Check if Blossom is available and configured
   Future<bool> isBlossomAvailable() async {
@@ -124,13 +126,19 @@ class UploadManager {
   /// Uses robust initialization with retry logic and recovery strategies
   Future<void> initialize() async {
     if (_isInitialized && _uploadsBox != null && _uploadsBox!.isOpen) {
-      Log.info('UploadManager already initialized',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        'UploadManager already initialized',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return;
     }
 
-    Log.info('🚀 Initializing UploadManager with robust retry logic',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '🚀 Initializing UploadManager with robust retry logic',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     try {
       // Use the robust initialization helper
@@ -140,15 +148,17 @@ class UploadManager {
 
       if (_uploadsBox == null || !_uploadsBox!.isOpen) {
         throw Exception(
-            'Failed to initialize uploads box after all recovery attempts');
+          'Failed to initialize uploads box after all recovery attempts',
+        );
       }
 
       _isInitialized = true;
 
       Log.info(
-          '✅ UploadManager initialized successfully with ${_uploadsBox!.length} existing uploads',
-          name: 'UploadManager',
-          category: LogCategory.video);
+        '✅ UploadManager initialized successfully with ${_uploadsBox!.length} existing uploads',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
 
       // Clean up any problematic uploads first
       await cleanupProblematicUploads();
@@ -160,10 +170,16 @@ class UploadManager {
       _uploadsBox = null;
 
       // Log the error but don't rethrow immediately - the helper already retried
-      Log.error('❌ Failed to initialize UploadManager after all retries: $e',
-          name: 'UploadManager', category: LogCategory.video);
-      Log.verbose('📱 Stack trace: $stackTrace',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        '❌ Failed to initialize UploadManager after all retries: $e',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
+      Log.verbose(
+        '📱 Stack trace: $stackTrace',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
 
       // Send crash report for initialization failure
       await _sendInitializationFailureCrashReport(e, stackTrace);
@@ -172,7 +188,6 @@ class UploadManager {
       // rethrow;
     }
   }
-
 
   /// Get all pending uploads
   List<PendingUpload> get pendingUploads {
@@ -210,17 +225,25 @@ class UploadManager {
       );
 
       await _updateUpload(updatedUpload);
-      Log.info('Upload marked as published: $uploadId -> $nostrEventId',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        'Upload marked as published: $uploadId -> $nostrEventId',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     } else {
-      Log.warning('Could not find upload to mark as published: $uploadId',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.warning(
+        'Could not find upload to mark as published: $uploadId',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     }
   }
 
   /// Update an upload's status to ready for publishing
   Future<void> markUploadReadyToPublish(
-      String uploadId, String cloudinaryPublicId) async {
+    String uploadId,
+    String cloudinaryPublicId,
+  ) async {
     final upload = getUpload(uploadId);
     if (upload != null) {
       final updatedUpload = upload.copyWith(
@@ -229,8 +252,11 @@ class UploadManager {
       );
 
       await _updateUpload(updatedUpload);
-      Log.debug('Upload marked as ready to publish: $uploadId',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.debug(
+        'Upload marked as ready to publish: $uploadId',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -244,14 +270,23 @@ class UploadManager {
     required String nostrPubkey,
     Duration? videoDuration,
   }) async {
-    Log.info('🚀 === STARTING UPLOAD FROM DRAFT ===',
-        name: 'UploadManager', category: LogCategory.video);
-    Log.info('📜 Draft ID: ${draft.id}, hasProofMode: ${draft.hasProofMode}',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '🚀 === STARTING UPLOAD FROM DRAFT ===',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.info(
+      '📜 Draft ID: ${draft.id}, hasProofMode: ${draft.hasProofMode}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     if (draft.hasProofMode) {
-      Log.info('📜 Native ProofMode JSON length: ${draft.proofManifestJson?.length ?? 0} characters',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        '📜 Native ProofMode JSON length: ${draft.proofManifestJson?.length ?? 0} characters',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     }
 
     return _startUploadInternal(
@@ -278,19 +313,28 @@ class UploadManager {
     Duration? videoDuration,
     NativeProofData? nativeProof,
   }) async {
-    Log.warning('⚠️ Using legacy startUpload() - prefer startUploadFromDraft()',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.warning(
+      '⚠️ Using legacy startUpload() - prefer startUploadFromDraft()',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Convert NativeProofData to JSON if present
     String? proofManifestJson;
     if (nativeProof != null) {
       try {
         proofManifestJson = jsonEncode(nativeProof.toJson());
-        Log.info('📜 Native ProofMode data attached to upload',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.info(
+          '📜 Native ProofMode data attached to upload',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
       } catch (e) {
-        Log.error('Failed to serialize NativeProofData: $e',
-            name: 'UploadManager', category: LogCategory.system);
+        Log.error(
+          'Failed to serialize NativeProofData: $e',
+          name: 'UploadManager',
+          category: LogCategory.system,
+        );
       }
     }
 
@@ -320,15 +364,19 @@ class UploadManager {
     Duration? videoDuration,
     String? proofManifestJson,
   }) async {
-    Log.info('🚀 === STARTING UPLOAD ===',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '🚀 === STARTING UPLOAD ===',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Ensure initialization with robust retry
     if (!isInitialized || _uploadsBox == null || !_uploadsBox!.isOpen) {
       Log.warning(
-          'UploadManager not ready, attempting robust initialization...',
-          name: 'UploadManager',
-          category: LogCategory.video);
+        'UploadManager not ready, attempting robust initialization...',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
 
       try {
         // Use the robust helper directly for immediate retry
@@ -338,64 +386,101 @@ class UploadManager {
 
         if (_uploadsBox != null && _uploadsBox!.isOpen) {
           _isInitialized = true;
-          Log.info('✅ Robust initialization successful',
-              name: 'UploadManager', category: LogCategory.video);
+          Log.info(
+            '✅ Robust initialization successful',
+            name: 'UploadManager',
+            category: LogCategory.video,
+          );
         } else {
           throw Exception('Box initialization returned null or closed box');
         }
       } catch (e) {
-        Log.error('❌ Robust initialization failed: $e',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.error(
+          '❌ Robust initialization failed: $e',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
 
         // Check if circuit breaker is active
         final debugState = UploadInitializationHelper.getDebugState();
         if (debugState['circuitBreakerActive'] == true) {
           throw Exception(
-              'Upload service temporarily unavailable - too many failures. Please try again later.');
+            'Upload service temporarily unavailable - too many failures. Please try again later.',
+          );
         }
 
         throw Exception(
-            'Failed to initialize upload storage after multiple retries: $e');
+          'Failed to initialize upload storage after multiple retries: $e',
+        );
       }
     }
 
-    Log.info('📁 Video path: ${videoFile.path}',
-        name: 'UploadManager', category: LogCategory.video);
-    Log.info('📊 File exists: ${videoFile.existsSync()}',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '📁 Video path: ${videoFile.path}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.info(
+      '📊 File exists: ${videoFile.existsSync()}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
     if (videoFile.existsSync()) {
-      Log.info('📊 File size: ${videoFile.lengthSync()} bytes',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        '📊 File size: ${videoFile.lengthSync()} bytes',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     }
 
     // Validate file format - reject WebM videos (not supported on iOS/macOS)
     final fileName = videoFile.path.toLowerCase();
     if (fileName.endsWith('.webm')) {
-      Log.error('❌ WebM format not supported - rejecting upload',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        '❌ WebM format not supported - rejecting upload',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       throw Exception(
-          'WebM video format is not supported. Please use MP4 format instead.');
+        'WebM video format is not supported. Please use MP4 format instead.',
+      );
     }
     Log.info(
-        '👤 Nostr pubkey: $nostrPubkey',
-        name: 'UploadManager',
-        category: LogCategory.video);
-    Log.info('📝 Title: $title',
-        name: 'UploadManager', category: LogCategory.video);
-    Log.info('🏷️ Hashtags: $hashtags',
-        name: 'UploadManager', category: LogCategory.video);
+      '👤 Nostr pubkey: $nostrPubkey',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.info(
+      '📝 Title: $title',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.info(
+      '🏷️ Hashtags: $hashtags',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Create pending upload record
-    Log.info('📦 Creating PendingUpload record...',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '📦 Creating PendingUpload record...',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Log ProofMode status
     if (proofManifestJson != null && proofManifestJson.isNotEmpty) {
-      Log.info('📜 Native ProofMode data attached to upload (${proofManifestJson.length} characters)',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        '📜 Native ProofMode data attached to upload (${proofManifestJson.length} characters)',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     } else {
-      Log.info('📜 No native ProofMode data provided to upload',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        '📜 No native ProofMode data provided to upload',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     }
 
     final upload = PendingUpload.create(
@@ -410,19 +495,31 @@ class UploadManager {
       videoDuration: videoDuration,
       proofManifestJson: proofManifestJson,
     );
-    Log.info('✅ Created upload with ID: ${upload.id}',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '✅ Created upload with ID: ${upload.id}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Save to local storage
-    Log.info('💾 Saving upload to local storage...',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '💾 Saving upload to local storage...',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
     await _saveUpload(upload);
-    Log.info('✅ Upload saved to storage',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '✅ Upload saved to storage',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Start the upload process and WAIT for it to complete
-    Log.info('🔄 Starting upload process...',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '🔄 Starting upload process...',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // CRITICAL FIX: Await upload completion before returning
     // This ensures videoId and cdnUrl are populated before publishing
@@ -435,51 +532,80 @@ class UploadManager {
         throw Exception('Upload not found after completion: ${upload.id}');
       }
 
-      Log.info('✅ Upload completed with ID: ${upload.id}',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        '✅ Upload completed with ID: ${upload.id}',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return completedUpload;
     } catch (error) {
-      Log.error('❌ Upload failed: $error',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        '❌ Upload failed: $error',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       rethrow;
     }
   }
 
   /// Perform upload with circuit breaker and retry logic
   Future<void> _performUpload(PendingUpload upload) async {
-    Log.info('🏃 === PERFORM UPLOAD STARTED ===',
-        name: 'UploadManager', category: LogCategory.video);
-    Log.info('🆔 Upload ID: ${upload.id}',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '🏃 === PERFORM UPLOAD STARTED ===',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.info(
+      '🆔 Upload ID: ${upload.id}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Web platform uses different upload flow (File picker -> Blob upload)
     if (kIsWeb) {
-      Log.warning('Web platform upload not yet implemented - skipping',
-          name: 'UploadManager', category: LogCategory.video);
-      await _handleUploadFailure(upload,
-          Exception('Web platform uploads not yet implemented'));
+      Log.warning(
+        'Web platform upload not yet implemented - skipping',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
+      await _handleUploadFailure(
+        upload,
+        Exception('Web platform uploads not yet implemented'),
+      );
       return;
     }
 
     final startTime = DateTime.now();
     final videoFile = File(upload.localVideoPath);
 
-    Log.info('📁 Checking video file: ${upload.localVideoPath}',
-        name: 'UploadManager', category: LogCategory.video);
-    Log.info('📊 File exists: ${videoFile.existsSync()}',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '📁 Checking video file: ${upload.localVideoPath}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.info(
+      '📊 File exists: ${videoFile.existsSync()}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     if (!videoFile.existsSync()) {
-      Log.error('❌ VIDEO FILE DOES NOT EXIST!',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        '❌ VIDEO FILE DOES NOT EXIST!',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       await _handleUploadFailure(upload, Exception('Video file not found'));
       return;
     }
 
     // Initialize metrics
     final fileSizeMB = videoFile.lengthSync() / (1024 * 1024);
-    Log.info('📊 File size: ${fileSizeMB.toStringAsFixed(2)} MB',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '📊 File size: ${fileSizeMB.toStringAsFixed(2)} MB',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     _uploadMetrics[upload.id] = UploadMetrics(
       uploadId: upload.id,
@@ -490,19 +616,27 @@ class UploadManager {
     );
 
     try {
-      Log.info('🔁 Starting upload with retry logic...',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        '🔁 Starting upload with retry logic...',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       await _performUploadWithRetry(upload, videoFile);
     } catch (e) {
-      Log.error('❌ Upload failed: $e',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        '❌ Upload failed: $e',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       await _handleUploadFailure(upload, e);
     }
   }
 
   /// Perform upload with exponential backoff retry using proper async patterns
   Future<void> _performUploadWithRetry(
-      PendingUpload upload, File videoFile) async {
+    PendingUpload upload,
+    File videoFile,
+  ) async {
     try {
       await AsyncUtils.retryWithBackoff(
         operation: () async {
@@ -513,9 +647,10 @@ class UploadManager {
           // Update status based on current retry count
           final currentRetry = upload.retryCount ?? 0;
           Log.warning(
-              'Upload attempt ${currentRetry + 1}/${_retryConfig.maxRetries + 1} for ${upload.id}',
-              name: 'UploadManager',
-              category: LogCategory.video);
+            'Upload attempt ${currentRetry + 1}/${_retryConfig.maxRetries + 1} for ${upload.id}',
+            name: 'UploadManager',
+            category: LogCategory.video,
+          );
 
           await _updateUpload(
             upload.copyWith(
@@ -547,32 +682,53 @@ class UploadManager {
         debugName: 'Upload-${upload.id}',
       );
     } catch (e) {
-      Log.error('Upload failed after all retries: $e',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Upload failed after all retries: $e',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       rethrow;
     }
   }
 
   /// Execute upload with timeout and progress tracking
   Future<dynamic> _executeUploadWithTimeout(
-      PendingUpload upload, File videoFile) async {
-    Log.info('📤 === EXECUTING UPLOAD ===',
-        name: 'UploadManager', category: LogCategory.video);
-    Log.info('📁 Video: ${videoFile.path}',
-        name: 'UploadManager', category: LogCategory.video);
+    PendingUpload upload,
+    File videoFile,
+  ) async {
     Log.info(
-        '👤 Pubkey: ${upload.nostrPubkey}',
-        name: 'UploadManager',
-        category: LogCategory.video);
-    Log.info('📝 Title: ${upload.title}',
-        name: 'UploadManager', category: LogCategory.video);
-    Log.info('⏱️ Timeout: ${_retryConfig.networkTimeout.inMinutes} minutes',
-        name: 'UploadManager', category: LogCategory.video);
+      '📤 === EXECUTING UPLOAD ===',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.info(
+      '📁 Video: ${videoFile.path}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.info(
+      '👤 Pubkey: ${upload.nostrPubkey}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.info(
+      '📝 Title: ${upload.title}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.info(
+      '⏱️ Timeout: ${_retryConfig.networkTimeout.inMinutes} minutes',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     try {
       // Use Blossom upload service exclusively
-      Log.info('🌸 Using Blossom upload service',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        '🌸 Using Blossom upload service',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
 
       // Check if custom server is enabled, otherwise use default diVine server
       final isCustomServerEnabled = await _blossomService.isBlossomEnabled();
@@ -581,49 +737,72 @@ class UploadManager {
       if (isCustomServerEnabled) {
         final customServer = await _blossomService.getBlossomServer();
         if (customServer == null || customServer.isEmpty) {
-          throw Exception('Custom Blossom server enabled but not configured. Please configure a server in settings.');
+          throw Exception(
+            'Custom Blossom server enabled but not configured. Please configure a server in settings.',
+          );
         }
         blossomServer = customServer;
-        Log.info('🌸 Uploading to custom Blossom server: $blossomServer',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.info(
+          '🌸 Uploading to custom Blossom server: $blossomServer',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
       } else {
         blossomServer = 'https://blossom.divine.video';
-        Log.info('🌸 Uploading to default diVine Blossom server: $blossomServer',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.info(
+          '🌸 Uploading to default diVine Blossom server: $blossomServer',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
       }
 
-      final result = await _blossomService.uploadVideo(
-        videoFile: videoFile,
-        nostrPubkey: upload.nostrPubkey,
-        title: upload.title ?? '',
-        description: upload.description,
-        hashtags: upload.hashtags,
-        onProgress: (progress) {
-          _updateUploadProgress(upload.id, progress * 0.8); // Reserve 20% for thumbnail
-        },
-      ).timeout(
-        _retryConfig.networkTimeout,
-        onTimeout: () {
-          Log.error('⏱️ Upload timed out!',
-              name: 'UploadManager', category: LogCategory.video);
-          final timeoutError = TimeoutException(
-              'Upload timed out after ${_retryConfig.networkTimeout.inMinutes} minutes');
+      final result = await _blossomService
+          .uploadVideo(
+            videoFile: videoFile,
+            nostrPubkey: upload.nostrPubkey,
+            title: upload.title ?? '',
+            description: upload.description,
+            hashtags: upload.hashtags,
+            onProgress: (progress) {
+              _updateUploadProgress(
+                upload.id,
+                progress * 0.8,
+              ); // Reserve 20% for thumbnail
+            },
+          )
+          .timeout(
+            _retryConfig.networkTimeout,
+            onTimeout: () {
+              Log.error(
+                '⏱️ Upload timed out!',
+                name: 'UploadManager',
+                category: LogCategory.video,
+              );
+              final timeoutError = TimeoutException(
+                'Upload timed out after ${_retryConfig.networkTimeout.inMinutes} minutes',
+              );
 
-          // Send timeout crash report asynchronously
-          _sendTimeoutCrashReport(upload, timeoutError).catchError((e) {
-            Log.error('Failed to send timeout crash report: $e',
-                name: 'UploadManager', category: LogCategory.video);
-          });
+              // Send timeout crash report asynchronously
+              _sendTimeoutCrashReport(upload, timeoutError).catchError((e) {
+                Log.error(
+                  'Failed to send timeout crash report: $e',
+                  name: 'UploadManager',
+                  category: LogCategory.video,
+                );
+              });
 
-          throw timeoutError;
-        },
-      );
+              throw timeoutError;
+            },
+          );
 
       // Generate and upload thumbnail after video upload succeeds
       String? thumbnailCdnUrl;
       if (result.success && result.cdnUrl != null) {
-        Log.info('✅ Video uploaded successfully',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.info(
+          '✅ Video uploaded successfully',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
 
         // Generate and upload thumbnail to Blossom CDN
         thumbnailCdnUrl = await _generateAndUploadThumbnail(
@@ -633,11 +812,17 @@ class UploadManager {
         );
 
         if (thumbnailCdnUrl != null) {
-          Log.info('✅ Thumbnail uploaded to CDN: $thumbnailCdnUrl',
-              name: 'UploadManager', category: LogCategory.video);
+          Log.info(
+            '✅ Thumbnail uploaded to CDN: $thumbnailCdnUrl',
+            name: 'UploadManager',
+            category: LogCategory.video,
+          );
         } else {
-          Log.warning('❌ Failed to upload thumbnail to CDN',
-              name: 'UploadManager', category: LogCategory.video);
+          Log.warning(
+            '❌ Failed to upload thumbnail to CDN',
+            name: 'UploadManager',
+            category: LogCategory.video,
+          );
         }
 
         _updateUploadProgress(upload.id, 1.0);
@@ -648,19 +833,27 @@ class UploadManager {
         await _updateUpload(upload.copyWith(thumbnailPath: thumbnailCdnUrl));
       }
 
-      Log.info('✅ Upload execution completed',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        '✅ Upload execution completed',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return result;
     } catch (e) {
-      Log.error('❌ Upload execution failed: $e',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        '❌ Upload execution failed: $e',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       rethrow;
     }
   }
 
   /// Handle successful upload
   Future<void> _handleUploadSuccess(
-      PendingUpload upload, dynamic result) async {
+    PendingUpload upload,
+    dynamic result,
+  ) async {
     final endTime = DateTime.now();
     final metrics = _uploadMetrics[upload.id];
 
@@ -674,8 +867,11 @@ class UploadManager {
 
       // Record successful metrics
       if (metrics != null) {
-        final updatedMetrics =
-            _createSuccessMetrics(metrics, endTime, upload.retryCount ?? 0);
+        final updatedMetrics = _createSuccessMetrics(
+          metrics,
+          endTime,
+          upload.retryCount ?? 0,
+        );
         _uploadMetrics[upload.id] = updatedMetrics;
 
         // Log success with formatted output
@@ -688,7 +884,8 @@ class UploadManager {
       }
     } else {
       throw Exception(
-          result.errorMessage ?? 'Upload failed with unknown error');
+        result.errorMessage ?? 'Upload failed with unknown error',
+      );
     }
   }
 
@@ -700,16 +897,31 @@ class UploadManager {
     // Check network connectivity and categorize error
     final connectivity = await _checkNetworkConnectivity();
     final errorCategory = await _categorizeError(error);
-    final userMessage = _getUserFriendlyErrorMessage(errorCategory, connectivity);
+    final userMessage = _getUserFriendlyErrorMessage(
+      errorCategory,
+      connectivity,
+    );
 
-    Log.error('Upload failed for ${upload.id}: $error',
-        name: 'UploadManager', category: LogCategory.video);
-    Log.error('Error category: $errorCategory',
-        name: 'UploadManager', category: LogCategory.video);
-    Log.error('Network: ${_getNetworkTypeString(connectivity)}',
-        name: 'UploadManager', category: LogCategory.video);
-    Log.error('User message: $userMessage',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.error(
+      'Upload failed for ${upload.id}: $error',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.error(
+      'Error category: $errorCategory',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.error(
+      'Network: ${_getNetworkTypeString(connectivity)}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.error(
+      'User message: $userMessage',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Send comprehensive crash report to Crashlytics with network state
     await _sendUploadFailureCrashReport(
@@ -790,28 +1002,29 @@ class UploadManager {
 
       // connectivity_plus 7.x returns List<ConnectivityResult>
       // Return first non-none result, or none if all are none
-      if (result is List) {
-        final resultList = result.cast<ConnectivityResult>();
-        // Prefer WiFi > Cellular > Ethernet > VPN > None
-        if (resultList.contains(ConnectivityResult.wifi)) {
-          return ConnectivityResult.wifi;
-        }
-        if (resultList.contains(ConnectivityResult.mobile)) {
-          return ConnectivityResult.mobile;
-        }
-        if (resultList.contains(ConnectivityResult.ethernet)) {
-          return ConnectivityResult.ethernet;
-        }
-        if (resultList.contains(ConnectivityResult.vpn)) {
-          return ConnectivityResult.vpn;
-        }
-        return ConnectivityResult.none;
+      final resultList = result.cast<ConnectivityResult>();
+      // Prefer WiFi > Cellular > Ethernet > VPN > None
+      if (resultList.contains(ConnectivityResult.wifi)) {
+        return ConnectivityResult.wifi;
       }
+      if (resultList.contains(ConnectivityResult.mobile)) {
+        return ConnectivityResult.mobile;
+      }
+      if (resultList.contains(ConnectivityResult.ethernet)) {
+        return ConnectivityResult.ethernet;
+      }
+      if (resultList.contains(ConnectivityResult.vpn)) {
+        return ConnectivityResult.vpn;
+      }
+      return ConnectivityResult.none;
       // Older versions return single ConnectivityResult
       return result as ConnectivityResult;
     } catch (e) {
-      Log.error('Failed to check network connectivity: $e',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Failed to check network connectivity: $e',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return ConnectivityResult.none;
     }
   }
@@ -943,19 +1156,28 @@ class UploadManager {
   Future<void> pauseUpload(String uploadId) async {
     final upload = getUpload(uploadId);
     if (upload == null) {
-      Log.error('Upload not found for pause: $uploadId',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Upload not found for pause: $uploadId',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return;
     }
 
     if (upload.status != UploadStatus.uploading) {
-      Log.error('Upload is not currently uploading: ${upload.status}',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Upload is not currently uploading: ${upload.status}',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return;
     }
 
-    Log.debug('Pausing upload: $uploadId',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.debug(
+      'Pausing upload: $uploadId',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Cancel the active upload (Blossom uploads are canceled by stopping the request)
     // No additional cleanup needed for Blossom uploads
@@ -972,27 +1194,39 @@ class UploadManager {
     _progressSubscriptions[uploadId]?.cancel();
     _progressSubscriptions.remove(uploadId);
 
-    Log.info('Upload paused: $uploadId',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      'Upload paused: $uploadId',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
   }
 
   /// Resume a paused upload
   Future<void> resumeUpload(String uploadId) async {
     final upload = getUpload(uploadId);
     if (upload == null) {
-      Log.error('Upload not found for resume: $uploadId',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Upload not found for resume: $uploadId',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return;
     }
 
     if (upload.status != UploadStatus.paused) {
-      Log.error('Upload is not paused: ${upload.status}',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Upload is not paused: ${upload.status}',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return;
     }
 
-    Log.debug('▶️ Resuming upload: $uploadId',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.debug(
+      '▶️ Resuming upload: $uploadId',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Reset to pending to restart upload from beginning
     final resumedUpload = upload.copyWith(
@@ -1006,29 +1240,39 @@ class UploadManager {
     // Start upload process again
     _performUpload(resumedUpload);
 
-    Log.info('Upload resumed: $uploadId',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      'Upload resumed: $uploadId',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
   }
 
   /// Retry a failed upload
   Future<void> retryUpload(String uploadId) async {
     final upload = getUpload(uploadId);
     if (upload == null) {
-      Log.error('Upload not found for retry: $uploadId',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Upload not found for retry: $uploadId',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return;
     }
 
     if (!upload.canRetry) {
       Log.error(
-          'Upload cannot be retried: $uploadId (retries: ${upload.retryCount})',
-          name: 'UploadManager',
-          category: LogCategory.video);
+        'Upload cannot be retried: $uploadId (retries: ${upload.retryCount})',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return;
     }
 
-    Log.warning('Retrying upload: $uploadId',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.warning(
+      'Retrying upload: $uploadId',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Reset status and error
     final resetUpload = upload.copyWith(
@@ -1048,8 +1292,11 @@ class UploadManager {
     final upload = getUpload(uploadId);
     if (upload == null) return;
 
-    Log.debug('Cancelling upload: $uploadId',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.debug(
+      'Cancelling upload: $uploadId',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Cancel any active upload
     if (upload.cloudinaryPublicId != null) {
@@ -1069,8 +1316,11 @@ class UploadManager {
     _progressSubscriptions[uploadId]?.cancel();
     _progressSubscriptions.remove(uploadId);
 
-    Log.warning('Upload cancelled and available for retry: $uploadId',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.warning(
+      'Upload cancelled and available for retry: $uploadId',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
   }
 
   /// Delete an upload permanently (removes from storage)
@@ -1078,8 +1328,11 @@ class UploadManager {
     final upload = getUpload(uploadId);
     if (upload == null) return;
 
-    Log.debug('📱️ Deleting upload: $uploadId',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.debug(
+      '📱️ Deleting upload: $uploadId',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Cancel any active upload first
     if (upload.status == UploadStatus.uploading) {
@@ -1095,8 +1348,11 @@ class UploadManager {
     // Remove from storage
     await _uploadsBox?.delete(uploadId);
 
-    Log.info('Upload deleted permanently: $uploadId',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      'Upload deleted permanently: $uploadId',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
   }
 
   /// Remove completed or failed uploads
@@ -1113,8 +1369,11 @@ class UploadManager {
 
     for (final upload in completedUploads) {
       await _uploadsBox!.delete(upload.id);
-      Log.debug('📱️ Cleaned up old upload: ${upload.id}',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.debug(
+        '📱️ Cleaned up old upload: ${upload.id}',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     }
 
     if (completedUploads.isNotEmpty) {}
@@ -1127,8 +1386,11 @@ class UploadManager {
         .toList();
 
     for (final upload in interruptedUploads) {
-      Log.debug('Resuming interrupted upload: ${upload.id}',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.debug(
+        'Resuming interrupted upload: ${upload.id}',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
 
       // Reset to pending and restart
       final resetUpload = upload.copyWith(
@@ -1147,20 +1409,27 @@ class UploadManager {
     if (_uploadsBox != null && _uploadsBox!.isOpen) {
       try {
         await _uploadsBox!.put(upload.id, upload);
-        Log.info('✅ Upload saved to Hive box with ID: ${upload.id}',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.info(
+          '✅ Upload saved to Hive box with ID: ${upload.id}',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
         return;
       } catch (e) {
         Log.warning(
-            'Failed to save with existing box: $e, attempting recovery...',
-            name: 'UploadManager',
-            category: LogCategory.video);
+          'Failed to save with existing box: $e, attempting recovery...',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
       }
     }
 
     // Box is null or save failed - use robust initialization
-    Log.warning('Upload box not ready, using robust initialization...',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.warning(
+      'Upload box not ready, using robust initialization...',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     try {
       _uploadsBox = await UploadInitializationHelper.initializeUploadsBox(
@@ -1175,17 +1444,24 @@ class UploadManager {
 
       // Retry save with new box
       await _uploadsBox!.put(upload.id, upload);
-      Log.info('✅ Upload saved after robust initialization: ${upload.id}',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        '✅ Upload saved after robust initialization: ${upload.id}',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     } catch (e) {
-      Log.error('❌ Failed to save upload after all retries: $e',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        '❌ Failed to save upload after all retries: $e',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
 
       // As a last resort, queue the upload for later
       _queueUploadForLater(upload);
 
       throw Exception(
-          'Unable to save upload: Storage initialization failed after multiple attempts');
+        'Unable to save upload: Storage initialization failed after multiple attempts',
+      );
     }
   }
 
@@ -1195,8 +1471,11 @@ class UploadManager {
 
   /// Queue upload for later save attempt
   void _queueUploadForLater(PendingUpload upload) {
-    Log.warning('Queueing upload ${upload.id} for later save attempt',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.warning(
+      'Queueing upload ${upload.id} for later save attempt',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     _pendingSaveQueue.add(upload);
 
@@ -1209,8 +1488,11 @@ class UploadManager {
   Future<void> _processSaveQueue() async {
     if (_pendingSaveQueue.isEmpty) return;
 
-    Log.info('Processing ${_pendingSaveQueue.length} queued uploads',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      'Processing ${_pendingSaveQueue.length} queued uploads',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     final queue = List<PendingUpload>.from(_pendingSaveQueue);
     _pendingSaveQueue.clear();
@@ -1218,11 +1500,17 @@ class UploadManager {
     for (final upload in queue) {
       try {
         await _saveUpload(upload);
-        Log.info('Successfully saved queued upload: ${upload.id}',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.info(
+          'Successfully saved queued upload: ${upload.id}',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
       } catch (e) {
-        Log.error('Failed to save queued upload ${upload.id}: $e',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.error(
+          'Failed to save queued upload ${upload.id}: $e',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
         // Re-queue for another attempt
         _pendingSaveQueue.add(upload);
       }
@@ -1242,12 +1530,18 @@ class UploadManager {
   }
 
   /// Update upload status (public method for VideoEventPublisher)
-  Future<void> updateUploadStatus(String uploadId, UploadStatus status,
-      {String? nostrEventId}) async {
+  Future<void> updateUploadStatus(
+    String uploadId,
+    UploadStatus status, {
+    String? nostrEventId,
+  }) async {
     final upload = getUpload(uploadId);
     if (upload == null) {
-      Log.warning('Upload not found for status update: $uploadId',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.warning(
+        'Upload not found for status update: $uploadId',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return;
     }
 
@@ -1260,8 +1554,11 @@ class UploadManager {
     );
 
     await _updateUpload(updatedUpload);
-    Log.info('Updated upload status: $uploadId -> $status',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      'Updated upload status: $uploadId -> $status',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
   }
 
   /// Update upload metadata (title, description, hashtags)
@@ -1273,8 +1570,11 @@ class UploadManager {
   }) async {
     final upload = getUpload(uploadId);
     if (upload == null) {
-      Log.warning('Upload not found for metadata update: $uploadId',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.warning(
+        'Upload not found for metadata update: $uploadId',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return;
     }
     final updatedUpload = upload.copyWith(
@@ -1283,8 +1583,11 @@ class UploadManager {
       hashtags: hashtags ?? upload.hashtags,
     );
     await _updateUpload(updatedUpload);
-    Log.info('Updated upload metadata: $uploadId',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      'Updated upload metadata: $uploadId',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
   }
 
   /// Get upload statistics
@@ -1293,14 +1596,18 @@ class UploadManager {
     return {
       'total': uploads.length,
       'pending': uploads.where((u) => u.status == UploadStatus.pending).length,
-      'uploading':
-          uploads.where((u) => u.status == UploadStatus.uploading).length,
-      'processing':
-          uploads.where((u) => u.status == UploadStatus.processing).length,
-      'ready':
-          uploads.where((u) => u.status == UploadStatus.readyToPublish).length,
-      'published':
-          uploads.where((u) => u.status == UploadStatus.published).length,
+      'uploading': uploads
+          .where((u) => u.status == UploadStatus.uploading)
+          .length,
+      'processing': uploads
+          .where((u) => u.status == UploadStatus.processing)
+          .length,
+      'ready': uploads
+          .where((u) => u.status == UploadStatus.readyToPublish)
+          .length,
+      'published': uploads
+          .where((u) => u.status == UploadStatus.published)
+          .length,
       'failed': uploads.where((u) => u.status == UploadStatus.failed).length,
     };
   }
@@ -1316,9 +1623,10 @@ class UploadManager {
       if (upload.status == UploadStatus.readyToPublish &&
           (upload.videoId == null || upload.cdnUrl == null)) {
         Log.error(
-            'Fixing stuck upload: ${upload.id} (missing videoId/cdnUrl) - moving to failed',
-            name: 'UploadManager',
-            category: LogCategory.video);
+          'Fixing stuck upload: ${upload.id} (missing videoId/cdnUrl) - moving to failed',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
         final fixedUpload = upload.copyWith(status: UploadStatus.failed);
         await _updateUpload(fixedUpload);
         fixedCount++;
@@ -1326,8 +1634,11 @@ class UploadManager {
     }
 
     if (fixedCount > 0) {
-      Log.error('Fixed $fixedCount stuck uploads - moved back to failed status',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Fixed $fixedCount stuck uploads - moved back to failed status',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -1341,17 +1652,18 @@ class UploadManager {
       'total_uploads': metrics.length,
       'successful_uploads': successful.length,
       'failed_uploads': failed.length,
-      'success_rate':
-          metrics.isNotEmpty ? (successful.length / metrics.length * 100) : 0,
+      'success_rate': metrics.isNotEmpty
+          ? (successful.length / metrics.length * 100)
+          : 0,
       'average_throughput_mbps': successful.isNotEmpty
           ? successful
-                  .map((m) => m.throughputMBps ?? 0)
-                  .reduce((a, b) => a + b) /
-              successful.length
+                    .map((m) => m.throughputMBps ?? 0)
+                    .reduce((a, b) => a + b) /
+                successful.length
           : 0,
       'average_retry_count': metrics.isNotEmpty
           ? metrics.map((m) => m.retryCount).reduce((a, b) => a + b) /
-              metrics.length
+                metrics.length
           : 0,
       'error_categories': _getErrorCategoriesCount(failed),
       'circuit_breaker_state': _circuitBreaker.state.toString(),
@@ -1397,14 +1709,20 @@ class UploadManager {
   Future<void> retryUploadWithBackoff(String uploadId) async {
     final upload = getUpload(uploadId);
     if (upload == null) {
-      Log.warning('Upload not found for retry: $uploadId',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.warning(
+        'Upload not found for retry: $uploadId',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return;
     }
 
     if (upload.status != UploadStatus.failed) {
-      Log.error('Upload is not in failed state: ${upload.status}',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Upload is not in failed state: ${upload.status}',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return;
     }
 
@@ -1412,8 +1730,11 @@ class UploadManager {
     _retryTimers[uploadId]?.cancel();
     _retryTimers.remove(uploadId);
 
-    Log.warning('Retrying upload with backoff: $uploadId',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.warning(
+      'Retrying upload with backoff: $uploadId',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Reset retry count if it's been more than 1 hour since last attempt
     final now = DateTime.now();
@@ -1449,12 +1770,21 @@ class UploadManager {
       thumbnailUrl = null;
     }
 
-    Log.info('📸 Upload result type: ${result.runtimeType}',
-        name: 'UploadManager', category: LogCategory.system);
-    Log.info('📸 Upload result thumbnail URL: $thumbnailUrl',
-        name: 'UploadManager', category: LogCategory.system);
-    Log.info('📸 Storing thumbnail URL in PendingUpload: $thumbnailUrl',
-        name: 'UploadManager', category: LogCategory.system);
+    Log.info(
+      '📸 Upload result type: ${result.runtimeType}',
+      name: 'UploadManager',
+      category: LogCategory.system,
+    );
+    Log.info(
+      '📸 Upload result thumbnail URL: $thumbnailUrl',
+      name: 'UploadManager',
+      category: LogCategory.system,
+    );
+    Log.info(
+      '📸 Storing thumbnail URL in PendingUpload: $thumbnailUrl',
+      name: 'UploadManager',
+      category: LogCategory.system,
+    );
 
     // Check if video is still processing (Blossom 202 response)
     final isProcessing = result.errorMessage == 'processing';
@@ -1464,33 +1794,48 @@ class UploadManager {
     final skipProcessing = isProcessing && result.cdnUrl != null;
 
     if (skipProcessing) {
-      Log.info('🎬 Skipping processing state - CDN URL already available: ${result.cdnUrl}',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        '🎬 Skipping processing state - CDN URL already available: ${result.cdnUrl}',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     }
 
     return upload.copyWith(
-      status: (isProcessing && !skipProcessing) ? UploadStatus.processing : UploadStatus.readyToPublish,
+      status: (isProcessing && !skipProcessing)
+          ? UploadStatus.processing
+          : UploadStatus.readyToPublish,
       cloudinaryPublicId:
           result.videoId as String?, // Use videoId for existing systems
       videoId:
           result.videoId as String?, // Store videoId for new publishing system
-      cdnUrl: result.cdnUrl as String?, // Store CDN URL directly (fallbackUrl ?? url via getter)
+      cdnUrl:
+          result.cdnUrl
+              as String?, // Store CDN URL directly (fallbackUrl ?? url via getter)
       streamingMp4Url: result.streamingMp4Url, // Store BunnyStream MP4 URL
       streamingHlsUrl: result.streamingHlsUrl, // Store BunnyStream HLS URL
       fallbackUrl: result.fallbackUrl, // Store R2 fallback MP4 URL
       thumbnailPath: thumbnailUrl, // Store thumbnail URL
-      uploadProgress: (isProcessing && !skipProcessing) ? 0.9 : 1.0, // Skip processing = 100% ready
-      completedAt: (isProcessing && !skipProcessing) ? null : DateTime.now(), // Mark as completed if skipping processing
+      uploadProgress: (isProcessing && !skipProcessing)
+          ? 0.9
+          : 1.0, // Skip processing = 100% ready
+      completedAt: (isProcessing && !skipProcessing)
+          ? null
+          : DateTime.now(), // Mark as completed if skipping processing
     );
   }
 
-
   /// Create success metrics with calculated values
   UploadMetrics _createSuccessMetrics(
-      UploadMetrics currentMetrics, DateTime endTime, int retryCount) {
+    UploadMetrics currentMetrics,
+    DateTime endTime,
+    int retryCount,
+  ) {
     final duration = endTime.difference(currentMetrics.startTime);
-    final throughput =
-        _calculateThroughput(currentMetrics.fileSizeMB, duration);
+    final throughput = _calculateThroughput(
+      currentMetrics.fileSizeMB,
+      duration,
+    );
 
     return UploadMetrics(
       uploadId: currentMetrics.uploadId,
@@ -1515,10 +1860,16 @@ class UploadManager {
 
   /// Log upload success with formatted details
   void _logUploadSuccess(dynamic result, UploadMetrics metrics) {
-    Log.info('Direct upload successful: ${result.videoId}',
-        name: 'UploadManager', category: LogCategory.video);
-    Log.debug('🎬 CDN URL: ${result.cdnUrl}',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      'Direct upload successful: ${result.videoId}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
+    Log.debug(
+      '🎬 CDN URL: ${result.cdnUrl}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     final durationStr = metrics.uploadDuration?.inSeconds ?? 0;
     final throughputStr = metrics.throughputMBps?.toStringAsFixed(2) ?? '0.00';
@@ -1556,7 +1907,9 @@ class UploadManager {
         'cdn_url': upload.cdnUrl,
         'upload_progress': upload.uploadProgress,
         'created_at': upload.createdAt.toIso8601String(),
-        'file_exists': kIsWeb ? false : File(upload.localVideoPath).existsSync(),
+        'file_exists': kIsWeb
+            ? false
+            : File(upload.localVideoPath).existsSync(),
         // Network connectivity information
         'network_type': _getNetworkTypeString(connectivity),
         'network_status': connectivity.toString(),
@@ -1590,7 +1943,7 @@ class UploadManager {
       for (final entry in context.entries) {
         await crashReporting.setCustomKey(
           'upload_failure_${entry.key}',
-          entry.value.toString()
+          entry.value.toString(),
         );
       }
 
@@ -1598,8 +1951,11 @@ class UploadManager {
       final stackTrace = StackTrace.current;
 
       // Create detailed error message
-      final fileExists = kIsWeb ? 'N/A (web)' : '${File(upload.localVideoPath).existsSync()}';
-      final detailedError = '''
+      final fileExists = kIsWeb
+          ? 'N/A (web)'
+          : '${File(upload.localVideoPath).existsSync()}';
+      final detailedError =
+          '''
 Upload Failure Report:
 - Upload ID: ${upload.id}
 - Error Category: $errorCategory
@@ -1625,16 +1981,20 @@ ${metrics != null ? '- File Size: ${metrics.fileSizeMB} MB\n- Duration: ${metric
         reason: 'Video upload failure - $errorCategory',
       );
 
-      Log.info('📊 Sent comprehensive upload failure report to Crashlytics',
-          name: 'UploadManager', category: LogCategory.video);
-
+      Log.info(
+        '📊 Sent comprehensive upload failure report to Crashlytics',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     } catch (crashReportingError) {
       // Don't let crash reporting failures break the upload failure handling
-      Log.error('Failed to send crash report for upload failure: $crashReportingError',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Failed to send crash report for upload failure: $crashReportingError',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     }
   }
-
 
   /// Send initialization failure crash report to Crashlytics
   Future<void> _sendInitializationFailureCrashReport(
@@ -1646,12 +2006,22 @@ ${metrics != null ? '- File Size: ${metrics.fileSizeMB} MB\n- Duration: ${metric
 
       // Set context for the crash report
       await crashReporting.setCustomKey('init_failure_error', error.toString());
-      await crashReporting.setCustomKey('init_failure_platform', _getPlatformName());
-      await crashReporting.setCustomKey('init_failure_timestamp', DateTime.now().toIso8601String());
-      await crashReporting.setCustomKey('init_failure_retry_attempts', 'multiple');
+      await crashReporting.setCustomKey(
+        'init_failure_platform',
+        _getPlatformName(),
+      );
+      await crashReporting.setCustomKey(
+        'init_failure_timestamp',
+        DateTime.now().toIso8601String(),
+      );
+      await crashReporting.setCustomKey(
+        'init_failure_retry_attempts',
+        'multiple',
+      );
 
       // Create detailed error message
-      final detailedError = '''
+      final detailedError =
+          '''
 UploadManager Initialization Failure:
 - Error: $error
 - Platform: ${_getPlatformName()}
@@ -1669,13 +2039,18 @@ UploadManager Initialization Failure:
         reason: 'UploadManager initialization failure after retries',
       );
 
-      Log.info('📊 Sent UploadManager initialization failure report to Crashlytics',
-          name: 'UploadManager', category: LogCategory.video);
-
+      Log.info(
+        '📊 Sent UploadManager initialization failure report to Crashlytics',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     } catch (crashReportingError) {
       // Don't let crash reporting failures break the initialization failure handling
-      Log.error('Failed to send initialization crash report: $crashReportingError',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Failed to send initialization crash report: $crashReportingError',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -1692,11 +2067,14 @@ UploadManager Initialization Failure:
         'timeout_upload_id': upload.id,
         'timeout_file_path': upload.localVideoPath,
         'timeout_upload_target': 'blossomServer',
-        'timeout_network_timeout_minutes': _retryConfig.networkTimeout.inMinutes,
+        'timeout_network_timeout_minutes':
+            _retryConfig.networkTimeout.inMinutes,
         'timeout_retry_count': upload.retryCount ?? 0,
         'timeout_upload_status': upload.status.toString(),
         'timeout_platform': _getPlatformName(),
-        'timeout_file_exists': kIsWeb ? false : File(upload.localVideoPath).existsSync(),
+        'timeout_file_exists': kIsWeb
+            ? false
+            : File(upload.localVideoPath).existsSync(),
         'timeout_timestamp': DateTime.now().toIso8601String(),
       };
 
@@ -1706,8 +2084,11 @@ UploadManager Initialization Failure:
       }
 
       // Create detailed error message
-      final fileExists = kIsWeb ? 'N/A (web)' : '${File(upload.localVideoPath).existsSync()}';
-      final detailedError = '''
+      final fileExists = kIsWeb
+          ? 'N/A (web)'
+          : '${File(upload.localVideoPath).existsSync()}';
+      final detailedError =
+          '''
 Upload Timeout Failure:
 - Upload ID: ${upload.id}
 - File: ${upload.localVideoPath}
@@ -1727,16 +2108,22 @@ Upload Timeout Failure:
       await crashReporting.recordError(
         timeoutError,
         StackTrace.current,
-        reason: 'Video upload timeout after ${_retryConfig.networkTimeout.inMinutes} minutes',
+        reason:
+            'Video upload timeout after ${_retryConfig.networkTimeout.inMinutes} minutes',
       );
 
-      Log.info('📊 Sent upload timeout failure report to Crashlytics',
-          name: 'UploadManager', category: LogCategory.video);
-
+      Log.info(
+        '📊 Sent upload timeout failure report to Crashlytics',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     } catch (crashReportingError) {
       // Don't let crash reporting failures break the timeout failure handling
-      Log.error('Failed to send timeout crash report: $crashReportingError',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Failed to send timeout crash report: $crashReportingError',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -1747,8 +2134,11 @@ Upload Timeout Failure:
     required PendingUpload upload,
   }) async {
     try {
-      Log.info('📸 Extracting thumbnail from video: ${videoFile.path}',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        '📸 Extracting thumbnail from video: ${videoFile.path}',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
 
       // Generate thumbnail at optimal timestamp
       final thumbnailPath = await VideoThumbnailService.extractThumbnail(
@@ -1758,20 +2148,29 @@ Upload Timeout Failure:
       );
 
       if (thumbnailPath == null) {
-        Log.warning('❌ Failed to extract thumbnail from video',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.warning(
+          '❌ Failed to extract thumbnail from video',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
         return null;
       }
 
       final thumbnailFile = File(thumbnailPath);
       if (!thumbnailFile.existsSync()) {
-        Log.warning('❌ Thumbnail file not found after extraction',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.warning(
+          '❌ Thumbnail file not found after extraction',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
         return null;
       }
 
-      Log.info('✅ Thumbnail extracted, uploading to Blossom server',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        '✅ Thumbnail extracted, uploading to Blossom server',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
 
       _updateUploadProgress(upload.id, 0.85);
 
@@ -1789,11 +2188,17 @@ Upload Timeout Failure:
       // Clean up local thumbnail file
       try {
         await thumbnailFile.delete();
-        Log.debug('🧹 Cleaned up local thumbnail file',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.debug(
+          '🧹 Cleaned up local thumbnail file',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
       } catch (e) {
-        Log.warning('Failed to clean up thumbnail file: $e',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.warning(
+          'Failed to clean up thumbnail file: $e',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
       }
 
       if (thumbnailResult.success && thumbnailResult.cdnUrl != null) {
@@ -1802,8 +2207,11 @@ Upload Timeout Failure:
 
       return null;
     } catch (e) {
-      Log.error('Error generating/uploading thumbnail: $e',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.error(
+        'Error generating/uploading thumbnail: $e',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
       return null;
     }
   }
@@ -1838,14 +2246,20 @@ Upload Timeout Failure:
     // Clear any pending saves
     _pendingSaveQueue.clear();
 
-    Log.info('UploadManager disposed',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      'UploadManager disposed',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
   }
 
   /// Start polling for processing upload completion
   void _startProcessingPoll(PendingUpload upload) {
-    Log.info('🔄 Starting processing poll for upload: ${upload.id}',
-        name: 'UploadManager', category: LogCategory.video);
+    Log.info(
+      '🔄 Starting processing poll for upload: ${upload.id}',
+      name: 'UploadManager',
+      category: LogCategory.video,
+    );
 
     // Poll every 10 seconds for up to 5 minutes
     Timer.periodic(const Duration(seconds: 10), (timer) async {
@@ -1869,20 +2283,30 @@ Upload Timeout Failure:
           );
           await _updateUpload(readyUpload);
 
-          Log.info('✅ Video processing complete: ${upload.id}',
-              name: 'UploadManager', category: LogCategory.video);
+          Log.info(
+            '✅ Video processing complete: ${upload.id}',
+            name: 'UploadManager',
+            category: LogCategory.video,
+          );
           timer.cancel();
         }
       } catch (e) {
-        Log.warning('Error checking processing status: $e',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.warning(
+          'Error checking processing status: $e',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
       }
 
       // Cancel after 5 minutes to avoid infinite polling
-      if (timer.tick > 30) { // 30 * 10 seconds = 5 minutes
+      if (timer.tick > 30) {
+        // 30 * 10 seconds = 5 minutes
         timer.cancel();
-        Log.warning('Processing poll timeout for upload: ${upload.id}',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.warning(
+          'Processing poll timeout for upload: ${upload.id}',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
       }
     });
   }
@@ -1896,18 +2320,25 @@ Upload Timeout Failure:
     if (serverUrl == null) return false;
 
     try {
-
       // For Cloudflare Stream integration, try status endpoint first
-      final statusResponse = await _dio.get('$serverUrl/status/${upload.videoId}');
+      final statusResponse = await _dio.get(
+        '$serverUrl/status/${upload.videoId}',
+      );
 
       if (statusResponse.statusCode == 200) {
-        Log.info('📹 Video processing complete via status endpoint',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.info(
+          '📹 Video processing complete via status endpoint',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
         return true;
       }
     } catch (statusError) {
-      Log.info('Status endpoint not available, trying blob descriptor: $statusError',
-          name: 'UploadManager', category: LogCategory.video);
+      Log.info(
+        'Status endpoint not available, trying blob descriptor: $statusError',
+        name: 'UploadManager',
+        category: LogCategory.video,
+      );
 
       // Fallback to blob descriptor endpoint
       try {
@@ -1915,27 +2346,39 @@ Upload Timeout Failure:
 
         // If we get 200, the video is ready with full metadata
         if (response.statusCode == 200) {
-          Log.info('📹 Video processing complete, full metadata available',
-              name: 'UploadManager', category: LogCategory.video);
+          Log.info(
+            '📹 Video processing complete, full metadata available',
+            name: 'UploadManager',
+            category: LogCategory.video,
+          );
           return true;
         }
 
         // If still 202, keep polling
         if (response.statusCode == 202) {
-          Log.info('🔄 Video still processing...',
-              name: 'UploadManager', category: LogCategory.video);
+          Log.info(
+            '🔄 Video still processing...',
+            name: 'UploadManager',
+            category: LogCategory.video,
+          );
           return false;
         }
 
         return false;
       } catch (e) {
-        Log.warning('Error checking video status: $e',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.warning(
+          'Error checking video status: $e',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
 
         // For Cloudflare Stream, assume it's ready after a few attempts
         // since CF Stream processes very quickly (usually < 30 seconds)
-        Log.info('⚡ Assuming Cloudflare Stream video is ready due to polling errors',
-            name: 'UploadManager', category: LogCategory.video);
+        Log.info(
+          '⚡ Assuming Cloudflare Stream video is ready due to polling errors',
+          name: 'UploadManager',
+          category: LogCategory.video,
+        );
         return true;
       }
     }

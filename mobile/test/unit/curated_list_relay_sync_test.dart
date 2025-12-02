@@ -15,10 +15,7 @@ import 'package:nostr_sdk/filter.dart';
 
 import 'curated_list_relay_sync_test.mocks.dart';
 
-@GenerateNiceMocks([
-  MockSpec<INostrService>(),
-  MockSpec<AuthService>(),
-])
+@GenerateNiceMocks([MockSpec<INostrService>(), MockSpec<AuthService>()])
 void main() {
   group('CuratedListService Relay Sync Tests', () {
     late MockINostrService mockNostrService;
@@ -48,61 +45,73 @@ void main() {
       reset(mockAuthService);
     });
 
-    test('should handle unauthenticated state gracefully in relay sync',
-        () async {
-      // Setup: User is not authenticated
-      when(mockAuthService.isAuthenticated).thenReturn(false);
+    test(
+      'should handle unauthenticated state gracefully in relay sync',
+      () async {
+        // Setup: User is not authenticated
+        when(mockAuthService.isAuthenticated).thenReturn(false);
 
-      // Test: fetchUserListsFromRelays should return early
-      await curatedListService.fetchUserListsFromRelays();
+        // Test: fetchUserListsFromRelays should return early
+        await curatedListService.fetchUserListsFromRelays();
 
-      // Verify: No relay calls should be made
-      verifyNever(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')));
+        // Verify: No relay calls should be made
+        verifyNever(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        );
 
-      // Verify: Service should handle this gracefully
-      expect(curatedListService.lists.length, 0);
-    });
+        // Verify: Service should handle this gracefully
+        expect(curatedListService.lists.length, 0);
+      },
+    );
 
-    test('should create subscription for Kind 30005 events when authenticated',
-        () async {
-      // Setup: User is authenticated
-      when(mockAuthService.isAuthenticated).thenReturn(true);
-      when(mockAuthService.currentPublicKeyHex).thenReturn(
-          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef');
+    test(
+      'should create subscription for Kind 30005 events when authenticated',
+      () async {
+        // Setup: User is authenticated
+        when(mockAuthService.isAuthenticated).thenReturn(true);
+        when(mockAuthService.currentPublicKeyHex).thenReturn(
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        );
 
-      // Mock subscription stream
-      final streamController = StreamController<Event>();
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => streamController.stream);
+        // Mock subscription stream
+        final streamController = StreamController<Event>();
+        when(
+          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => streamController.stream);
 
-      // Test: fetchUserListsFromRelays should create subscription
-      final future = curatedListService.fetchUserListsFromRelays();
+        // Test: fetchUserListsFromRelays should create subscription
+        final future = curatedListService.fetchUserListsFromRelays();
 
-      // Close stream to complete the subscription
-      streamController.close();
-      await future;
+        // Close stream to complete the subscription
+        streamController.close();
+        await future;
 
-      // Verify: Subscription was created with correct filter
-      final captured = verify(mockNostrService.subscribeToEvents(
-              filters: captureAnyNamed('filters')))
-          .captured;
-      expect(captured.length, 1);
+        // Verify: Subscription was created with correct filter
+        final captured = verify(
+          mockNostrService.subscribeToEvents(
+            filters: captureAnyNamed('filters'),
+          ),
+        ).captured;
+        expect(captured.length, 1);
 
-      final filters = captured[0] as List<Filter>;
-      expect(filters.length, 1);
-      expect(
+        final filters = captured[0] as List<Filter>;
+        expect(filters.length, 1);
+        expect(
           filters[0].authors,
           contains(
-              '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'));
-      expect(filters[0].kinds, contains(30005));
-    });
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          ),
+        );
+        expect(filters[0].kinds, contains(30005));
+      },
+    );
 
     test('should process received Kind 30005 events correctly', () async {
       // Setup: User is authenticated
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentPublicKeyHex).thenReturn(
-          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef');
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
 
       // Create mock event
       final mockEvent = Event(
@@ -117,7 +126,10 @@ void main() {
           ['e', 'video1'],
           ['e', 'video2'],
           ['client', 'diVine'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Test curated list',
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -125,8 +137,9 @@ void main() {
 
       // Mock subscription stream that emits our test event
       final streamController = StreamController<Event>();
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => streamController.stream);
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => streamController.stream);
 
       // Start the sync
       final future = curatedListService.fetchUserListsFromRelays();
@@ -157,7 +170,8 @@ void main() {
       // Setup: User is authenticated
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentPublicKeyHex).thenReturn(
-          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef');
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
 
       // Create two events with same 'd' tag but different timestamps
       final olderEvent = Event(
@@ -166,7 +180,10 @@ void main() {
         [
           ['d', 'same_list_id'],
           ['title', 'Old Title'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Older version',
         createdAt: 1000, // older timestamp
@@ -178,7 +195,10 @@ void main() {
         [
           ['d', 'same_list_id'],
           ['title', 'New Title'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
+          [
+            'expiration',
+            '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+          ],
         ],
         'Newer version',
         createdAt: 2000, // newer timestamp
@@ -186,8 +206,9 @@ void main() {
 
       // Mock subscription stream
       final streamController = StreamController<Event>();
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => streamController.stream);
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => streamController.stream);
 
       // Start the sync
       final future = curatedListService.fetchUserListsFromRelays();
@@ -214,12 +235,14 @@ void main() {
       // Setup: User is authenticated
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentPublicKeyHex).thenReturn(
-          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef');
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      );
 
       // Mock subscription stream
       final streamController = StreamController<Event>();
-      when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .thenAnswer((_) => streamController.stream);
+      when(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).thenAnswer((_) => streamController.stream);
 
       // First sync
       final future1 = curatedListService.fetchUserListsFromRelays();
@@ -230,81 +253,91 @@ void main() {
       await curatedListService.fetchUserListsFromRelays();
 
       // Verify: Subscription was only created once
-      verify(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
-          .called(1);
+      verify(
+        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      ).called(1);
     });
   });
 
   group('CuratedListService Relay Sync Isolation Tests', () {
-    test('should update existing local list if relay version is newer',
-        () async {
-      // Create fresh service instance to avoid sync state conflicts
-      final freshMockNostrService = MockINostrService();
-      final freshMockAuthService = MockAuthService();
-      // Use completely clean prefs to ensure no shared state
-      SharedPreferences.setMockInitialValues({'_test_isolation_key_': 'fresh'});
-      final freshPrefs = await SharedPreferences.getInstance();
-      final freshService = CuratedListService(
-        nostrService: freshMockNostrService,
-        authService: freshMockAuthService,
-        prefs: freshPrefs,
-      );
+    test(
+      'should update existing local list if relay version is newer',
+      () async {
+        // Create fresh service instance to avoid sync state conflicts
+        final freshMockNostrService = MockINostrService();
+        final freshMockAuthService = MockAuthService();
+        // Use completely clean prefs to ensure no shared state
+        SharedPreferences.setMockInitialValues({
+          '_test_isolation_key_': 'fresh',
+        });
+        final freshPrefs = await SharedPreferences.getInstance();
+        final freshService = CuratedListService(
+          nostrService: freshMockNostrService,
+          authService: freshMockAuthService,
+          prefs: freshPrefs,
+        );
 
-      // Setup: User is authenticated and has an existing local list
-      when(freshMockAuthService.isAuthenticated).thenReturn(true);
-      when(freshMockAuthService.currentPublicKeyHex).thenReturn(
-          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef');
+        // Setup: User is authenticated and has an existing local list
+        when(freshMockAuthService.isAuthenticated).thenReturn(true);
+        when(freshMockAuthService.currentPublicKeyHex).thenReturn(
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        );
 
-      // Create local list without initializing (to avoid initial relay sync)
-      final createdList = await freshService.createList(
-        name: 'Local List',
-        description: 'Local description',
-        isPublic: false,
-      );
+        // Create local list without initializing (to avoid initial relay sync)
+        final createdList = await freshService.createList(
+          name: 'Local List',
+          description: 'Local description',
+          isPublic: false,
+        );
 
-      // Get the actual ID from the created list
-      final actualListId = createdList!.id;
+        // Get the actual ID from the created list
+        final actualListId = createdList!.id;
 
-      // Get current timestamp and make relay event newer
-      final currentTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      final futureTimestamp =
-          currentTimestamp + 1000; // 1000 seconds in the future
+        // Get current timestamp and make relay event newer
+        final currentTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        final futureTimestamp =
+            currentTimestamp + 1000; // 1000 seconds in the future
 
-      // Create newer relay event using the actual list ID
-      final relayEvent = Event(
-        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        30005,
-        [
+        // Create newer relay event using the actual list ID
+        final relayEvent = Event(
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          30005,
           [
-            'd',
-            actualListId
-          ], // Use the actual list ID instead of hardcoded 'test_list_id'
-          ['title', 'Relay List'],
-          ['description', 'Relay description'],
-          ['expiration', '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}'],
-        ],
-        'Relay version',
-        createdAt: futureTimestamp, // Ensure this is newer than the local list
-      );
+            [
+              'd',
+              actualListId,
+            ], // Use the actual list ID instead of hardcoded 'test_list_id'
+            ['title', 'Relay List'],
+            ['description', 'Relay description'],
+            [
+              'expiration',
+              '${(DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600}',
+            ],
+          ],
+          'Relay version',
+          createdAt:
+              futureTimestamp, // Ensure this is newer than the local list
+        );
 
-      // Mock subscription
-      final streamController = StreamController<Event>();
-      when(freshMockNostrService.subscribeToEvents(
-              filters: anyNamed('filters')))
-          .thenAnswer((_) => streamController.stream);
+        // Mock subscription
+        final streamController = StreamController<Event>();
+        when(
+          freshMockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((_) => streamController.stream);
 
-      // Sync from relay
-      final future = freshService.fetchUserListsFromRelays();
-      streamController.add(relayEvent);
-      streamController.close();
-      await future;
+        // Sync from relay
+        final future = freshService.fetchUserListsFromRelays();
+        streamController.add(relayEvent);
+        streamController.close();
+        await future;
 
-      // Verify: Local list was updated with relay version
-      final syncedList = freshService.getListById(actualListId);
-      expect(syncedList, isNotNull);
-      expect(syncedList!.name, 'Relay List');
-      expect(syncedList.description, 'Relay description');
-      expect(syncedList.nostrEventId, relayEvent.id);
-    });
+        // Verify: Local list was updated with relay version
+        final syncedList = freshService.getListById(actualListId);
+        expect(syncedList, isNotNull);
+        expect(syncedList!.name, 'Relay List');
+        expect(syncedList.description, 'Relay description');
+        expect(syncedList.nostrEventId, relayEvent.id);
+      },
+    );
   });
 }

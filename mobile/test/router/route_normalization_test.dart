@@ -15,17 +15,18 @@ void main() {
   ];
 
   Widget shell(ProviderContainer c) => UncontrolledProviderScope(
-        container: c,
-        child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
-      );
+    container: c,
+    child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
+  );
 
   String currentLocation(ProviderContainer c) {
     final router = c.read(goRouterProvider);
     return router.routeInformationProvider.value.uri.toString();
   }
 
-  testWidgets('normalizes negative indices: /home/-3 -> /home/0',
-      (tester) async {
+  testWidgets('normalizes negative indices: /home/-3 -> /home/0', (
+    tester,
+  ) async {
     final c = ProviderContainer(overrides: testOverrides);
     addTearDown(c.dispose);
 

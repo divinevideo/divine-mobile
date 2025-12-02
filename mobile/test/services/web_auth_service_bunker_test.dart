@@ -51,44 +51,49 @@ void main() {
         expect(result.errorCode, equals('TEMPORARILY_UNAVAILABLE'));
       });
 
-      test('should handle successful bunker authentication when enabled', () async {
-        // This test will pass once bunker is re-enabled
-        // Arrange
-        const bunkerUri = 'bunker://npub1234@relay.test.com?secret=test123';
-        const expectedPubkey = 'user_pubkey_123abc';
+      test(
+        'should handle successful bunker authentication when enabled',
+        () async {
+          // This test will pass once bunker is re-enabled
+          // Arrange
+          const bunkerUri = 'bunker://npub1234@relay.test.com?secret=test123';
+          const expectedPubkey = 'user_pubkey_123abc';
 
-        // Mock the internal bunker service behavior
-        authService.setBunkerClient(mockBunkerClient);
+          // Mock the internal bunker service behavior
+          authService.setBunkerClient(mockBunkerClient);
 
-        final mockAuthResult = BunkerAuthResult(
-          success: true,
-          config: const BunkerConfig(
-            relayUrl: 'wss://relay.test.com',
-            bunkerPubkey: 'bunker_pubkey_456',
-            secret: 'test123',
-            permissions: ['sign_event', 'nip04_encrypt'],
-          ),
-          userPubkey: expectedPubkey,
-        );
+          final mockAuthResult = BunkerAuthResult(
+            success: true,
+            config: const BunkerConfig(
+              relayUrl: 'wss://relay.test.com',
+              bunkerPubkey: 'bunker_pubkey_456',
+              secret: 'test123',
+              permissions: ['sign_event', 'nip04_encrypt'],
+            ),
+            userPubkey: expectedPubkey,
+          );
 
-        when(() => mockBunkerClient.authenticateFromUri(bunkerUri))
-          .thenAnswer((_) async => mockAuthResult);
-        when(() => mockBunkerClient.connect())
-          .thenAnswer((_) async => true);
-        when(() => mockBunkerClient.isConnected).thenReturn(true);
-        when(() => mockBunkerClient.userPubkey).thenReturn(expectedPubkey);
+          when(
+            () => mockBunkerClient.authenticateFromUri(bunkerUri),
+          ).thenAnswer((_) async => mockAuthResult);
+          when(() => mockBunkerClient.connect()).thenAnswer((_) async => true);
+          when(() => mockBunkerClient.isConnected).thenReturn(true);
+          when(() => mockBunkerClient.userPubkey).thenReturn(expectedPubkey);
 
-        // Act
-        final result = await authService.authenticateWithBunkerEnabled(bunkerUri);
+          // Act
+          final result = await authService.authenticateWithBunkerEnabled(
+            bunkerUri,
+          );
 
-        // Assert
-        expect(result.success, isTrue);
-        expect(result.method, equals(WebAuthMethod.bunker));
-        expect(result.publicKey, equals(expectedPubkey));
-        expect(authService.isAuthenticated, isTrue);
-        expect(authService.currentMethod, equals(WebAuthMethod.bunker));
-        expect(authService.publicKey, equals(expectedPubkey));
-      });
+          // Assert
+          expect(result.success, isTrue);
+          expect(result.method, equals(WebAuthMethod.bunker));
+          expect(result.publicKey, equals(expectedPubkey));
+          expect(authService.isAuthenticated, isTrue);
+          expect(authService.currentMethod, equals(WebAuthMethod.bunker));
+          expect(authService.publicKey, equals(expectedPubkey));
+        },
+      );
 
       test('should handle bunker authentication failure', () async {
         // Arrange
@@ -101,11 +106,14 @@ void main() {
           error: 'Invalid bunker URI format',
         );
 
-        when(() => mockBunkerClient.authenticateFromUri(bunkerUri))
-          .thenAnswer((_) async => mockAuthResult);
+        when(
+          () => mockBunkerClient.authenticateFromUri(bunkerUri),
+        ).thenAnswer((_) async => mockAuthResult);
 
         // Act
-        final result = await authService.authenticateWithBunkerEnabled(bunkerUri);
+        final result = await authService.authenticateWithBunkerEnabled(
+          bunkerUri,
+        );
 
         // Assert
         expect(result.success, isFalse);
@@ -129,13 +137,17 @@ void main() {
           userPubkey: 'user_pubkey_123',
         );
 
-        when(() => mockBunkerClient.authenticateFromUri(bunkerUri))
-          .thenAnswer((_) async => mockAuthResult);
-        when(() => mockBunkerClient.connect())
-          .thenAnswer((_) async => false); // Connection fails
+        when(
+          () => mockBunkerClient.authenticateFromUri(bunkerUri),
+        ).thenAnswer((_) async => mockAuthResult);
+        when(
+          () => mockBunkerClient.connect(),
+        ).thenAnswer((_) async => false); // Connection fails
 
         // Act
-        final result = await authService.authenticateWithBunkerEnabled(bunkerUri);
+        final result = await authService.authenticateWithBunkerEnabled(
+          bunkerUri,
+        );
 
         // Assert
         expect(result.success, isFalse);
@@ -177,8 +189,9 @@ void main() {
           'sig': 'signature_abc123',
         };
 
-        when(() => mockBunkerClient.signEvent(event))
-          .thenAnswer((_) async => signedEvent);
+        when(
+          () => mockBunkerClient.signEvent(event),
+        ).thenAnswer((_) async => signedEvent);
         when(() => mockBunkerClient.isConnected).thenReturn(true);
 
         // Act
@@ -203,8 +216,9 @@ void main() {
           'tags': [],
         };
 
-        when(() => mockBunkerClient.signEvent(event))
-          .thenAnswer((_) async => null);
+        when(
+          () => mockBunkerClient.signEvent(event),
+        ).thenAnswer((_) async => null);
         when(() => mockBunkerClient.isConnected).thenReturn(true);
 
         // Act
@@ -241,7 +255,8 @@ void main() {
     group('Bunker URI Parsing', () {
       test('should parse valid bunker URI', () {
         // Arrange
-        const uri = 'bunker://npub1234567890abcdef@relay.example.com?secret=mysecret&perms=sign_event,nip04_encrypt';
+        const uri =
+            'bunker://npub1234567890abcdef@relay.example.com?secret=mysecret&perms=sign_event,nip04_encrypt';
 
         // Act
         final parsed = authService.parseBunkerUri(uri);
@@ -302,10 +317,10 @@ void main() {
           userPubkey: 'bunker_pubkey_user',
         );
 
-        when(() => mockBunkerClient.authenticateFromUri(bunkerUri))
-          .thenAnswer((_) async => mockAuthResult);
-        when(() => mockBunkerClient.connect())
-          .thenAnswer((_) async => true);
+        when(
+          () => mockBunkerClient.authenticateFromUri(bunkerUri),
+        ).thenAnswer((_) async => mockAuthResult);
+        when(() => mockBunkerClient.connect()).thenAnswer((_) async => true);
         when(() => mockBunkerClient.isConnected).thenReturn(true);
 
         // Act
@@ -324,7 +339,10 @@ void main() {
 
         // Assert
         expect(debugInfo['bunkerInfo'], isNotNull);
-        expect(debugInfo['bunkerInfo']['status'], equals('temporarily_disabled'));
+        expect(
+          debugInfo['bunkerInfo']['status'],
+          equals('temporarily_disabled'),
+        );
       });
 
       test('should show bunker details when authenticated', () {
@@ -357,7 +375,9 @@ void main() {
         await authService.disconnect();
 
         // Assert
-        verify(() => mockBunkerClient.disconnect()).called(2); // Called by WebAuthService and BunkerSignerImpl.dispose()
+        verify(
+          () => mockBunkerClient.disconnect(),
+        ).called(2); // Called by WebAuthService and BunkerSignerImpl.dispose()
         expect(authService.isAuthenticated, isFalse);
         expect(authService.currentMethod, equals(WebAuthMethod.none));
         expect(authService.signer, isNull);
@@ -367,7 +387,9 @@ void main() {
     group('Method Display Names', () {
       test('should return correct display name for bunker method', () {
         // Act
-        final displayName = authService.getMethodDisplayName(WebAuthMethod.bunker);
+        final displayName = authService.getMethodDisplayName(
+          WebAuthMethod.bunker,
+        );
 
         // Assert
         expect(displayName, equals('nsec bunker'));
@@ -401,8 +423,9 @@ void main() {
       };
 
       when(() => mockBunkerClient.isConnected).thenReturn(true);
-      when(() => mockBunkerClient.signEvent(event))
-        .thenAnswer((_) async => signedEvent);
+      when(
+        () => mockBunkerClient.signEvent(event),
+      ).thenAnswer((_) async => signedEvent);
 
       // Act
       final result = await bunkerSigner.signEvent(event);
@@ -414,14 +437,12 @@ void main() {
 
     test('should handle signing errors gracefully', () async {
       // Arrange
-      final event = {
-        'kind': 1,
-        'content': 'Test',
-      };
+      final event = {'kind': 1, 'content': 'Test'};
 
       when(() => mockBunkerClient.isConnected).thenReturn(true);
-      when(() => mockBunkerClient.signEvent(event))
-        .thenThrow(Exception('Signing failed'));
+      when(
+        () => mockBunkerClient.signEvent(event),
+      ).thenThrow(Exception('Signing failed'));
 
       // Act
       final result = await bunkerSigner.signEvent(event);
@@ -454,16 +475,22 @@ class BunkerSigner extends WebSigner {
   @override
   Future<Map<String, dynamic>?> signEvent(Map<String, dynamic> event) async {
     if (!_client.isConnected) {
-      Log.error('Cannot sign: bunker not connected',
-          name: 'BunkerSigner', category: LogCategory.auth);
+      Log.error(
+        'Cannot sign: bunker not connected',
+        name: 'BunkerSigner',
+        category: LogCategory.auth,
+      );
       return null;
     }
 
     try {
       return await _client.signEvent(event);
     } catch (e) {
-      Log.error('Bunker signing error: $e',
-          name: 'BunkerSigner', category: LogCategory.auth);
+      Log.error(
+        'Bunker signing error: $e',
+        name: 'BunkerSigner',
+        category: LogCategory.auth,
+      );
       return null;
     }
   }

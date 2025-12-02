@@ -51,25 +51,25 @@ void main() {
       service.dispose();
     });
 
-    test('Service initializes successfully without Bluetooth permissions', () async {
-      // This test verifies that the service can start even if Bluetooth
-      // permissions are missing (which they will be on iOS after our changes)
+    test(
+      'Service initializes successfully without Bluetooth permissions',
+      () async {
+        // This test verifies that the service can start even if Bluetooth
+        // permissions are missing (which they will be on iOS after our changes)
 
-      final keyManager = NostrKeyManager();
-      final service = NostrServiceFactory.create(keyManager);
+        final keyManager = NostrKeyManager();
+        final service = NostrServiceFactory.create(keyManager);
 
-      // This should NOT throw even without Bluetooth permissions
-      // because P2P initialization is disabled
-      await expectLater(
-        NostrServiceFactory.initialize(service),
-        completes,
-      );
+        // This should NOT throw even without Bluetooth permissions
+        // because P2P initialization is disabled
+        await expectLater(NostrServiceFactory.initialize(service), completes);
 
-      // Verify service is functional
-      expect(service, isNotNull);
+        // Verify service is functional
+        expect(service, isNotNull);
 
-      // Clean up
-      await service.dispose();
-    });
+        // Clean up
+        await service.dispose();
+      },
+    );
   });
 }

@@ -14,14 +14,16 @@ class DebugLoggerConfig {
   static void setupVideoDebugging() {
     LogConfig.videoDebug();
     Log.info(
-        '🎥 Video debugging enabled - logs filtered to VIDEO + SYSTEM only');
+      '🎥 Video debugging enabled - logs filtered to VIDEO + SYSTEM only',
+    );
   }
 
   /// Call this when debugging Nostr relay connection issues
   static void setupRelayDebugging() {
     LogConfig.relayDebug();
     Log.info(
-        '📡 Relay debugging enabled - logs filtered to RELAY + SYSTEM only');
+      '📡 Relay debugging enabled - logs filtered to RELAY + SYSTEM only',
+    );
   }
 
   /// Call this when debugging UI interactions
@@ -33,16 +35,21 @@ class DebugLoggerConfig {
   /// Call this when debugging authentication or key issues
   static void setupAuthDebugging() {
     Log.setLogLevel(LogLevel.debug);
-    Log.enableCategories(
-        {LogCategory.auth, LogCategory.system, LogCategory.storage});
+    Log.enableCategories({
+      LogCategory.auth,
+      LogCategory.system,
+      LogCategory.storage,
+    });
     Log.info(
-        '🔐 Auth debugging enabled - logs filtered to AUTH + SYSTEM + STORAGE');
+      '🔐 Auth debugging enabled - logs filtered to AUTH + SYSTEM + STORAGE',
+    );
   }
 
   /// Call this for full verbose logging (warning: may be overwhelming)
   static void setupFullDebugging() {
     LogConfig.verbose();
     Log.warning(
-        '⚠️ Full debugging enabled - this will generate A LOT of logs!');
+      '⚠️ Full debugging enabled - this will generate A LOT of logs!',
+    );
   }
 }

@@ -16,8 +16,11 @@ void main() {
     });
 
     test('RED: UserListService should exist', () {
-      expect(() => UserListService(prefs: mockPrefs), returnsNormally,
-          reason: 'UserListService class should be defined');
+      expect(
+        () => UserListService(prefs: mockPrefs),
+        returnsNormally,
+        reason: 'UserListService class should be defined',
+      );
     });
 
     test('RED: Should have Divine Team as default list', () async {
@@ -25,18 +28,27 @@ void main() {
       await service.initialize();
 
       final lists = service.lists;
-      expect(lists.isNotEmpty, true,
-          reason: 'Should have at least Divine Team list');
+      expect(
+        lists.isNotEmpty,
+        true,
+        reason: 'Should have at least Divine Team list',
+      );
 
       final divineTeam = lists.firstWhere(
         (list) => list.id == 'divine_team',
         orElse: () => throw Exception('Divine Team list not found'),
       );
 
-      expect(divineTeam.name, 'Divine Team',
-          reason: 'Divine Team list should have correct name');
-      expect(divineTeam.pubkeys, AppConstants.divineTeamPubkeys,
-          reason: 'Divine Team should contain divine team pubkeys');
+      expect(
+        divineTeam.name,
+        'Divine Team',
+        reason: 'Divine Team list should have correct name',
+      );
+      expect(
+        divineTeam.pubkeys,
+        AppConstants.divineTeamPubkeys,
+        reason: 'Divine Team should contain divine team pubkeys',
+      );
     });
 
     test('RED: Divine Team list should be public and non-editable', () async {
@@ -45,8 +57,11 @@ void main() {
 
       final divineTeam = service.getListById('divine_team');
       expect(divineTeam, isNotNull);
-      expect(divineTeam!.isPublic, true,
-          reason: 'Divine Team should be public');
+      expect(
+        divineTeam!.isPublic,
+        true,
+        reason: 'Divine Team should be public',
+      );
       // Note: We'll add isEditable field to prevent users from editing Divine Team
     });
 
@@ -101,10 +116,7 @@ void main() {
       final service = UserListService(prefs: mockPrefs);
       await service.initialize();
 
-      await service.createList(
-        name: 'Persistent List',
-        pubkeys: ['pubkey1'],
-      );
+      await service.createList(name: 'Persistent List', pubkeys: ['pubkey1']);
 
       // Create new service instance to test persistence
       final service2 = UserListService(prefs: mockPrefs);

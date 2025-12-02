@@ -51,9 +51,10 @@ class SecureKeyContainer {
       _finalizer.attach(this, _publicKeyBytes);
 
       Log.info(
-          '📱 SecureKeyContainer created for ${NostrEncoding.maskKey(_npub)}',
-          name: 'SecureKeyContainer',
-          category: LogCategory.system);
+        '📱 SecureKeyContainer created for ${NostrEncoding.maskKey(_npub)}',
+        name: 'SecureKeyContainer',
+        category: LogCategory.system,
+      );
     } catch (e) {
       // Clean up any allocated memory on error
       _secureWipeIfAllocated();
@@ -63,26 +64,33 @@ class SecureKeyContainer {
 
   /// Create a secure container from an nsec (bech32 private key)
   SecureKeyContainer.fromNsec(String nsec)
-      : this.fromPrivateKeyHex(
-          NostrEncoding.decodePrivateKey(nsec),
-        );
+    : this.fromPrivateKeyHex(NostrEncoding.decodePrivateKey(nsec));
 
   /// Generate a new secure container with a random private key
   factory SecureKeyContainer.generate() {
     try {
-      Log.debug('Generating new secure key container...',
-          name: 'SecureKeyContainer', category: LogCategory.system);
+      Log.debug(
+        'Generating new secure key container...',
+        name: 'SecureKeyContainer',
+        category: LogCategory.system,
+      );
 
       // Import the nostr_sdk function for key generation
       // This will be replaced with platform-specific secure generation
       final privateKeyHex = _generateSecurePrivateKey();
 
-      Log.info('Secure key generated successfully',
-          name: 'SecureKeyContainer', category: LogCategory.system);
+      Log.info(
+        'Secure key generated successfully',
+        name: 'SecureKeyContainer',
+        category: LogCategory.system,
+      );
       return SecureKeyContainer.fromPrivateKeyHex(privateKeyHex);
     } catch (e) {
-      Log.error('Secure key generation failed: $e',
-          name: 'SecureKeyContainer', category: LogCategory.system);
+      Log.error(
+        'Secure key generation failed: $e',
+        name: 'SecureKeyContainer',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -117,8 +125,11 @@ class SecureKeyContainer {
       // Convert bytes to hex only for the duration of the operation
       final privateKeyHex = _bytesToHex(_privateKeyBytes);
 
-      Log.debug('📱 Private key temporarily exposed for operation',
-          name: 'SecureKeyContainer', category: LogCategory.system);
+      Log.debug(
+        '📱 Private key temporarily exposed for operation',
+        name: 'SecureKeyContainer',
+        category: LogCategory.system,
+      );
 
       // Execute the operation with the private key
       final result = operation(privateKeyHex);
@@ -129,8 +140,11 @@ class SecureKeyContainer {
 
       return result;
     } catch (e) {
-      Log.error('Error in private key operation: $e',
-          name: 'SecureKeyContainer', category: LogCategory.system);
+      Log.error(
+        'Error in private key operation: $e',
+        name: 'SecureKeyContainer',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -145,15 +159,21 @@ class SecureKeyContainer {
       final privateKeyHex = _bytesToHex(_privateKeyBytes);
       final nsec = NostrEncoding.encodePrivateKey(privateKeyHex);
 
-      Log.warning('NSEC temporarily exposed - ensure secure handling',
-          name: 'SecureKeyContainer', category: LogCategory.system);
+      Log.warning(
+        'NSEC temporarily exposed - ensure secure handling',
+        name: 'SecureKeyContainer',
+        category: LogCategory.system,
+      );
 
       final result = operation(nsec);
 
       return result;
     } catch (e) {
-      Log.error('Error in NSEC operation: $e',
-          name: 'SecureKeyContainer', category: LogCategory.system);
+      Log.error(
+        'Error in NSEC operation: $e',
+        name: 'SecureKeyContainer',
+        category: LogCategory.system,
+      );
       rethrow;
     }
   }
@@ -173,8 +193,11 @@ class SecureKeyContainer {
   void dispose() {
     if (_isDisposed) return;
 
-    Log.debug('📱️ Disposing SecureKeyContainer',
-        name: 'SecureKeyContainer', category: LogCategory.system);
+    Log.debug(
+      '📱️ Disposing SecureKeyContainer',
+      name: 'SecureKeyContainer',
+      category: LogCategory.system,
+    );
 
     // Securely wipe key material
     _secureWipe(_privateKeyBytes);
@@ -182,8 +205,11 @@ class SecureKeyContainer {
 
     _isDisposed = true;
 
-    Log.info('SecureKeyContainer disposed and wiped',
-        name: 'SecureKeyContainer', category: LogCategory.system);
+    Log.info(
+      'SecureKeyContainer disposed and wiped',
+      name: 'SecureKeyContainer',
+      category: LogCategory.system,
+    );
   }
 
   /// Ensure the container hasn't been disposed

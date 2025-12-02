@@ -44,8 +44,10 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
     final nostrService = ref.watch(nostrServiceProvider);
     final externalRelays = nostrService.relays;
 
-    Log.info('Displaying ${externalRelays.length} external relays',
-        name: 'RelaySettingsScreen');
+    Log.info(
+      'Displaying ${externalRelays.length} external relays',
+      name: 'RelaySettingsScreen',
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -71,9 +73,10 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                       child: Text(
                         'Divine is an open system - you control your connections',
                         style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500),
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
@@ -121,15 +124,19 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline,
-                            color: Colors.orange[700], size: 64),
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.orange[700],
+                          size: 64,
+                        ),
                         const SizedBox(height: 16),
                         const Text(
                           'App Not Functional',
                           style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold),
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Padding(
@@ -138,32 +145,41 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                             'Divine requires at least one relay to load videos, post content, and sync data.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                color: Colors.grey[400], fontSize: 14),
+                              color: Colors.grey[400],
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 32),
                         ElevatedButton.icon(
                           onPressed: () => _restoreDefaultRelay(),
-                          icon:
-                              const Icon(Icons.restore, color: Colors.white),
-                          label: const Text('Restore Default Relay',
-                              style: TextStyle(color: Colors.white)),
+                          icon: const Icon(Icons.restore, color: Colors.white),
+                          label: const Text(
+                            'Restore Default Relay',
+                            style: TextStyle(color: Colors.white),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: VineTheme.vineGreen,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 14),
+                              horizontal: 24,
+                              vertical: 14,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
                         ElevatedButton.icon(
                           onPressed: () => _showAddRelayDialog(),
                           icon: const Icon(Icons.add, color: Colors.white),
-                          label: const Text('Add Custom Relay',
-                              style: TextStyle(color: Colors.white)),
+                          label: const Text(
+                            'Add Custom Relay',
+                            style: TextStyle(color: Colors.white),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.grey[700],
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 14),
+                              horizontal: 24,
+                              vertical: 14,
+                            ),
                           ),
                         ),
                       ],
@@ -179,13 +195,20 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () => _showAddRelayDialog(),
-                                icon: const Icon(Icons.add, color: Colors.white),
-                                label: const Text('Add Relay',
-                                    style: TextStyle(color: Colors.white)),
+                                icon: const Icon(
+                                  Icons.add,
+                                  color: Colors.white,
+                                ),
+                                label: const Text(
+                                  'Add Relay',
+                                  style: TextStyle(color: Colors.white),
+                                ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: VineTheme.vineGreen,
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 12),
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
                                 ),
                               ),
                             ),
@@ -193,14 +216,20 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () => _retryConnection(),
-                                icon:
-                                    const Icon(Icons.refresh, color: Colors.white),
-                                label: const Text('Retry',
-                                    style: TextStyle(color: Colors.white)),
+                                icon: const Icon(
+                                  Icons.refresh,
+                                  color: Colors.white,
+                                ),
+                                label: const Text(
+                                  'Retry',
+                                  style: TextStyle(color: Colors.white),
+                                ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.grey[700],
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 12),
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
                                 ),
                               ),
                             ),
@@ -231,8 +260,10 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                                 ),
                               ),
                               trailing: IconButton(
-                                icon:
-                                    const Icon(Icons.delete, color: Colors.red),
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
                                 onPressed: () => _removeRelay(relay),
                               ),
                             );
@@ -321,17 +352,11 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey[400]),
-            ),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text(
-              'Remove',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Remove', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -354,8 +379,10 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         );
       }
 
-      Log.info('Successfully removed relay: $relayUrl',
-          name: 'RelaySettingsScreen');
+      Log.info(
+        'Successfully removed relay: $relayUrl',
+        name: 'RelaySettingsScreen',
+      );
     } catch (e) {
       Log.error('Failed to remove relay: $e', name: 'RelaySettingsScreen');
       _showError('Failed to remove relay: ${e.toString()}');
@@ -365,10 +392,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red[700],
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red[700]),
     );
   }
 
@@ -406,7 +430,8 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         );
       } else {
         _showError(
-            'Failed to connect to relays. Please check your network connection.');
+          'Failed to connect to relays. Please check your network connection.',
+        );
       }
     } catch (e) {
       Log.error('Failed to retry connection: $e', name: 'RelaySettingsScreen');
@@ -421,10 +446,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text(
-          'Add Relay',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Add Relay', style: TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,10 +489,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(null),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey[400]),
-            ),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
           ),
           TextButton(
             onPressed: () {
@@ -517,8 +536,10 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
           );
         }
 
-        Log.info('Successfully added relay: $relayUrl',
-            name: 'RelaySettingsScreen');
+        Log.info(
+          'Successfully added relay: $relayUrl',
+          name: 'RelaySettingsScreen',
+        );
       } else {
         _showError('Failed to add relay. Please check the URL and try again.');
       }
@@ -550,11 +571,14 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         Log.info('Restored default relay', name: 'RelaySettingsScreen');
       } else {
         _showError(
-            'Failed to restore default relay. Please check your network connection.');
+          'Failed to restore default relay. Please check your network connection.',
+        );
       }
     } catch (e) {
-      Log.error('Failed to restore default relay: $e',
-          name: 'RelaySettingsScreen');
+      Log.error(
+        'Failed to restore default relay: $e',
+        name: 'RelaySettingsScreen',
+      );
       _showError('Failed to restore default relay: ${e.toString()}');
     }
   }
@@ -568,8 +592,10 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         _showError('Could not open browser');
       }
     } catch (e) {
-      Log.error('Failed to launch nostr.watch: $e',
-          name: 'RelaySettingsScreen');
+      Log.error(
+        'Failed to launch nostr.watch: $e',
+        name: 'RelaySettingsScreen',
+      );
       _showError('Failed to open link');
     }
   }

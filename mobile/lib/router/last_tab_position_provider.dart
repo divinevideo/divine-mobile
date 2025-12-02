@@ -16,7 +16,8 @@ class LastTabPosition extends Notifier<Map<RouteType, int>> {
       if (ctx == null) return;
 
       // Only track video-based routes
-      if (ctx.type == RouteType.camera || ctx.type == RouteType.settings) return;
+      if (ctx.type == RouteType.camera || ctx.type == RouteType.settings)
+        return;
 
       final index = ctx.videoIndex ?? 0;
       if (state[ctx.type] != index) {
@@ -38,14 +39,17 @@ class LastTabPosition extends Notifier<Map<RouteType, int>> {
   /// For routes that always have an index (home, notifications, profile): defaults to 0
   int? getPosition(RouteType type) {
     // For routes that have grid/feed modes, return null for grid mode by default
-    if (type == RouteType.explore || type == RouteType.search || type == RouteType.hashtag) {
-      return state[type];  // Returns null if not set, indicating grid mode
+    if (type == RouteType.explore ||
+        type == RouteType.search ||
+        type == RouteType.hashtag) {
+      return state[type]; // Returns null if not set, indicating grid mode
     }
     // For routes that always have an index (home, notifications, profile), default to 0
     return state[type] ?? 0;
   }
 }
 
-final lastTabPositionProvider = NotifierProvider<LastTabPosition, Map<RouteType, int>>(() {
-  return LastTabPosition();
-});
+final lastTabPositionProvider =
+    NotifierProvider<LastTabPosition, Map<RouteType, int>>(() {
+      return LastTabPosition();
+    });

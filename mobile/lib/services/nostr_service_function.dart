@@ -29,8 +29,10 @@ import 'package:openvine/utils/unified_logger.dart';
 /// - No connection management
 /// - Better performance and reliability
 class NostrServiceFunction implements INostrService {
-  NostrServiceFunction(this._keyManager,
-      {embedded.EmbeddedNostrRelay? embeddedRelay}) {
+  NostrServiceFunction(
+    this._keyManager, {
+    embedded.EmbeddedNostrRelay? embeddedRelay,
+  }) {
     // Allow injecting an embedded relay for testing
     if (embeddedRelay != null) {
       _embeddedRelay = embeddedRelay;
@@ -59,13 +61,18 @@ class NostrServiceFunction implements INostrService {
   final List<String> _configuredRelays = [];
 
   @override
-  Future<void> initialize(
-      {List<String>? customRelays, bool enableP2P = true}) async {
+  Future<void> initialize({
+    List<String>? customRelays,
+    bool enableP2P = true,
+  }) async {
     if (_isDisposed) throw StateError('NostrService is disposed');
     if (_isInitialized) return;
 
-    Log.info('Starting initialization with function channel relay',
-        name: 'NostrServiceFunction', category: LogCategory.relay);
+    Log.info(
+      'Starting initialization with function channel relay',
+      name: 'NostrServiceFunction',
+      category: LogCategory.relay,
+    );
 
     // Ensure default relay is always included (for external relay connections)
     final defaultRelay = AppConstants.defaultRelayUrl;
@@ -78,19 +85,29 @@ class NostrServiceFunction implements INostrService {
       // Initialize embedded relay with function channel
       _embeddedRelay ??= embedded.EmbeddedNostrRelay();
 
-      Log.info('Initializing embedded relay with function channel...',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
-      CrashReportingService.instance
-          .logInitializationStep('Creating embedded relay with function channel');
-
-      await _embeddedRelay!.initialize(
-        logLevel: logging.Level.INFO, // Temporary: restore INFO to debug startup issue
-        enableGarbageCollection: true,
-        useFunctionChannel: true, // Enable function channel instead of WebSocket
+      Log.info(
+        'Initializing embedded relay with function channel...',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
+      CrashReportingService.instance.logInitializationStep(
+        'Creating embedded relay with function channel',
       );
 
-      Log.info('Embedded relay initialized with function channel',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      await _embeddedRelay!.initialize(
+        logLevel: logging
+            .Level
+            .INFO, // Temporary: restore INFO to debug startup issue
+        enableGarbageCollection: true,
+        useFunctionChannel:
+            true, // Enable function channel instead of WebSocket
+      );
+
+      Log.info(
+        'Embedded relay initialized with function channel',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
 
       // Create function channel session
       _functionSession = _embeddedRelay!.createFunctionSession();
@@ -98,23 +115,35 @@ class NostrServiceFunction implements INostrService {
       // Set up event listener
       _functionSession!.responseStream.listen(_handleRelayResponse);
 
-      Log.info('Function channel session created and connected',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.info(
+        'Function channel session created and connected',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
 
       // MIGRATION: Remove old relay3.openvine.co if present
       const oldRelay = 'wss://relay3.openvine.co';
       final currentRelays = _embeddedRelay!.connectedRelays;
 
       if (currentRelays.contains(oldRelay)) {
-        Log.info('🔄 MIGRATION: Removing old relay $oldRelay',
-            name: 'NostrServiceFunction', category: LogCategory.relay);
+        Log.info(
+          '🔄 MIGRATION: Removing old relay $oldRelay',
+          name: 'NostrServiceFunction',
+          category: LogCategory.relay,
+        );
         try {
           await _embeddedRelay!.removeExternalRelay(oldRelay);
-          Log.info('✅ MIGRATION: Successfully removed old relay',
-              name: 'NostrServiceFunction', category: LogCategory.relay);
+          Log.info(
+            '✅ MIGRATION: Successfully removed old relay',
+            name: 'NostrServiceFunction',
+            category: LogCategory.relay,
+          );
         } catch (e) {
-          Log.error('❌ MIGRATION: Failed to remove old relay: $e',
-              name: 'NostrServiceFunction', category: LogCategory.relay);
+          Log.error(
+            '❌ MIGRATION: Failed to remove old relay: $e',
+            name: 'NostrServiceFunction',
+            category: LogCategory.relay,
+          );
         }
       }
 
@@ -123,11 +152,17 @@ class NostrServiceFunction implements INostrService {
         try {
           await _embeddedRelay!.addExternalRelay(relayUrl);
           _configuredRelays.add(relayUrl);
-          Log.info('Added external relay: $relayUrl',
-              name: 'NostrServiceFunction', category: LogCategory.relay);
+          Log.info(
+            'Added external relay: $relayUrl',
+            name: 'NostrServiceFunction',
+            category: LogCategory.relay,
+          );
         } catch (e) {
-          Log.error('Failed to add relay $relayUrl: $e',
-              name: 'NostrServiceFunction', category: LogCategory.relay);
+          Log.error(
+            'Failed to add relay $relayUrl: $e',
+            name: 'NostrServiceFunction',
+            category: LogCategory.relay,
+          );
         }
       }
 
@@ -139,12 +174,16 @@ class NostrServiceFunction implements INostrService {
 
       _isInitialized = true;
       Log.info(
-          'Initialization complete with function channel and ${_configuredRelays.length} external relays',
-          name: 'NostrServiceFunction',
-          category: LogCategory.relay);
+        'Initialization complete with function channel and ${_configuredRelays.length} external relays',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
     } catch (e) {
-      Log.error('Initialization failed: $e',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.error(
+        'Initialization failed: $e',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
 
       // Add default relay to configured list for retry capability
       if (!_configuredRelays.contains(defaultRelay)) {
@@ -153,9 +192,10 @@ class NostrServiceFunction implements INostrService {
 
       _isInitialized = true; // Allow app to continue
       Log.warning(
-          'NostrService initialized with limited functionality',
-          name: 'NostrServiceFunction',
-          category: LogCategory.relay);
+        'NostrService initialized with limited functionality',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
     }
   }
 
@@ -175,20 +215,32 @@ class NostrServiceFunction implements INostrService {
           final sdkEvent = Event.fromJson(event.toJson());
           controller.add(sdkEvent);
         } catch (e) {
-          Log.error('Error converting event: $e',
-              name: 'NostrServiceFunction', category: LogCategory.relay);
+          Log.error(
+            'Error converting event: $e',
+            name: 'NostrServiceFunction',
+            category: LogCategory.relay,
+          );
         }
       }
     } else if (response is embedded.EoseResponse) {
       // End of stored events - could be used for UI feedback
-      Log.debug('EOSE for subscription: ${response.subscriptionId}',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.debug(
+        'EOSE for subscription: ${response.subscriptionId}',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
     } else if (response is embedded.OkResponse) {
-      Log.debug('OK response: ${response.eventId} - ${response.success}',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.debug(
+        'OK response: ${response.eventId} - ${response.success}',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
     } else if (response is embedded.NoticeResponse) {
-      Log.warning('Notice from relay: ${response.message}',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.warning(
+        'Notice from relay: ${response.message}',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
     }
   }
 
@@ -217,8 +269,11 @@ class NostrServiceFunction implements INostrService {
       throw StateError('NostrService not initialized');
     }
 
-    Log.info('Creating subscription: $subscriptionId',
-        name: 'NostrServiceFunction', category: LogCategory.relay);
+    Log.info(
+      'Creating subscription: $subscriptionId',
+      name: 'NostrServiceFunction',
+      category: LogCategory.relay,
+    );
 
     // Close existing subscription if any
     _closeSubscription(subscriptionId);
@@ -228,20 +283,26 @@ class NostrServiceFunction implements INostrService {
     _subscriptionStreams[subscriptionId] = controller;
 
     // Send REQ message via function channel
-    _functionSession?.sendMessage(embedded.ReqMessage(
-      subscriptionId: subscriptionId,
-      filters: filters
-          .map((f) => embedded.Filter(
+    _functionSession?.sendMessage(
+      embedded.ReqMessage(
+        subscriptionId: subscriptionId,
+        filters: filters
+            .map(
+              (f) => embedded.Filter(
                 authors: f.authors,
                 kinds: f.kinds,
                 ids: f.ids,
-                tags: f.t != null ? {'t': f.t!} : null, // Fixed: Include hashtag tags property (f.t maps to embedded.Filter.tags)
+                tags: f.t != null
+                    ? {'t': f.t!}
+                    : null, // Fixed: Include hashtag tags property (f.t maps to embedded.Filter.tags)
                 since: f.since,
                 until: f.until,
                 limit: f.limit,
-              ))
-          .toList(),
-    ));
+              ),
+            )
+            .toList(),
+      ),
+    );
 
     // Set up event listener if provided
     if (onEvent != null) {
@@ -256,13 +317,16 @@ class NostrServiceFunction implements INostrService {
   }
 
   void _closeSubscription(String subscriptionId) {
-    Log.debug('Closing subscription: $subscriptionId',
-        name: 'NostrServiceFunction', category: LogCategory.relay);
+    Log.debug(
+      'Closing subscription: $subscriptionId',
+      name: 'NostrServiceFunction',
+      category: LogCategory.relay,
+    );
 
     // Send CLOSE message via function channel
-    _functionSession?.sendMessage(embedded.CloseMessage(
-      subscriptionId: subscriptionId,
-    ));
+    _functionSession?.sendMessage(
+      embedded.CloseMessage(subscriptionId: subscriptionId),
+    );
 
     // Clean up stream controller
     final controller = _subscriptionStreams.remove(subscriptionId);
@@ -278,23 +342,32 @@ class NostrServiceFunction implements INostrService {
       throw StateError('NostrService not initialized');
     }
 
-    Log.info('Publishing event: ${event.id}',
-        name: 'NostrServiceFunction', category: LogCategory.relay);
+    Log.info(
+      'Publishing event: ${event.id}',
+      name: 'NostrServiceFunction',
+      category: LogCategory.relay,
+    );
 
     try {
       // Convert SDK event to embedded event
       final embeddedEvent = embedded.NostrEvent.fromJson(event.toJson());
 
       // Send EVENT message via function channel (client-to-relay format)
-      await _functionSession?.sendMessage(embedded.ClientEventMessage(
-        event: embeddedEvent,
-      ));
+      await _functionSession?.sendMessage(
+        embedded.ClientEventMessage(event: embeddedEvent),
+      );
 
-      Log.info('Event published successfully: ${event.id}',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.info(
+        'Event published successfully: ${event.id}',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
     } catch (e) {
-      Log.error('Failed to publish event: $e',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.error(
+        'Failed to publish event: $e',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
       rethrow;
     }
   }
@@ -309,29 +382,37 @@ class NostrServiceFunction implements INostrService {
 
     // Use embedded relay's direct query method
     final embeddedFilters = filters
-        .map((f) => embedded.Filter(
-              authors: f.authors,
-              kinds: f.kinds,
-              ids: f.ids,
-              tags: f.t != null ? {'t': f.t!} : null,
-              since: f.since, // f.since is already int? (seconds since epoch)
-              until: f.until, // f.until is already int? (seconds since epoch)
-              limit: f.limit,
-            ))
+        .map(
+          (f) => embedded.Filter(
+            authors: f.authors,
+            kinds: f.kinds,
+            ids: f.ids,
+            tags: f.t != null ? {'t': f.t!} : null,
+            since: f.since, // f.since is already int? (seconds since epoch)
+            until: f.until, // f.until is already int? (seconds since epoch)
+            limit: f.limit,
+          ),
+        )
         .toList();
 
     final embeddedEvents = await _embeddedRelay!.queryEvents(embeddedFilters);
 
     // Convert to SDK events
-    return embeddedEvents.map((e) {
-      try {
-        return Event.fromJson(e.toJson());
-      } catch (err) {
-        Log.error('Error converting event: $err',
-            name: 'NostrServiceFunction', category: LogCategory.relay);
-        return null;
-      }
-    }).whereType<Event>().toList();
+    return embeddedEvents
+        .map((e) {
+          try {
+            return Event.fromJson(e.toJson());
+          } catch (err) {
+            Log.error(
+              'Error converting event: $err',
+              name: 'NostrServiceFunction',
+              category: LogCategory.relay,
+            );
+            return null;
+          }
+        })
+        .whereType<Event>()
+        .toList();
   }
 
   @override
@@ -384,8 +465,11 @@ class NostrServiceFunction implements INostrService {
 
   Future<void> sendAuth(String relayUrl, Event authEvent) async {
     // Not needed with function channel
-    Log.debug('Auth not required for function channel',
-        name: 'NostrServiceFunction', category: LogCategory.relay);
+    Log.debug(
+      'Auth not required for function channel',
+      name: 'NostrServiceFunction',
+      category: LogCategory.relay,
+    );
   }
 
   @override
@@ -395,20 +479,29 @@ class NostrServiceFunction implements INostrService {
     }
 
     if (_configuredRelays.contains(url)) {
-      Log.info('Relay already configured: $url',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.info(
+        'Relay already configured: $url',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
       return true;
     }
 
     try {
       await _embeddedRelay!.addExternalRelay(url);
       _configuredRelays.add(url);
-      Log.info('Added relay: $url',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.info(
+        'Added relay: $url',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
       return true;
     } catch (e) {
-      Log.error('Failed to add relay $url: $e',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.error(
+        'Failed to add relay $url: $e',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
       rethrow;
     }
   }
@@ -420,19 +513,28 @@ class NostrServiceFunction implements INostrService {
     }
 
     if (!_configuredRelays.contains(url)) {
-      Log.info('Relay not configured: $url',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.info(
+        'Relay not configured: $url',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
       return;
     }
 
     try {
       await _embeddedRelay!.removeExternalRelay(url);
       _configuredRelays.remove(url);
-      Log.info('Removed relay: $url',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.info(
+        'Removed relay: $url',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
     } catch (e) {
-      Log.error('Failed to remove relay $url: $e',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.error(
+        'Failed to remove relay $url: $e',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
       rethrow;
     }
   }
@@ -451,8 +553,11 @@ class NostrServiceFunction implements INostrService {
   Future<void> dispose() async {
     if (_isDisposed) return;
 
-    Log.info('Disposing NostrService',
-        name: 'NostrServiceFunction', category: LogCategory.relay);
+    Log.info(
+      'Disposing NostrService',
+      name: 'NostrServiceFunction',
+      category: LogCategory.relay,
+    );
 
     // Close all subscriptions
     for (final subId in _subscriptions.keys.toList()) {
@@ -476,26 +581,31 @@ class NostrServiceFunction implements INostrService {
     _isDisposed = true;
     _isInitialized = false;
 
-    Log.info('NostrService disposed',
-        name: 'NostrServiceFunction', category: LogCategory.relay);
+    Log.info(
+      'NostrService disposed',
+      name: 'NostrServiceFunction',
+      category: LogCategory.relay,
+    );
   }
 
   Future<Event?> fetchEventById(String eventId, {String? relayUrl}) async {
     final filters = [
-      nostr.Filter(ids: [eventId])
+      nostr.Filter(ids: [eventId]),
     ];
     final events = await queryEvents(filters: filters, relayUrl: relayUrl);
     return events.isEmpty ? null : events.first;
   }
 
-  Future<Map<String, dynamic>?> fetchUserProfile(String pubkey,
-      {String? relayUrl}) async {
+  Future<Map<String, dynamic>?> fetchUserProfile(
+    String pubkey, {
+    String? relayUrl,
+  }) async {
     final filters = [
       nostr.Filter(
         authors: [pubkey],
         kinds: [0], // Kind 0 is user metadata
         limit: 1,
-      )
+      ),
     ];
 
     final events = await queryEvents(filters: filters, relayUrl: relayUrl);
@@ -504,20 +614,25 @@ class NostrServiceFunction implements INostrService {
     try {
       return jsonDecode(events.first.content);
     } catch (e) {
-      Log.error('Error parsing user profile: $e',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.error(
+        'Error parsing user profile: $e',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
       return null;
     }
   }
 
-  Future<List<String>> fetchUserRelays(String pubkey,
-      {String? relayUrl}) async {
+  Future<List<String>> fetchUserRelays(
+    String pubkey, {
+    String? relayUrl,
+  }) async {
     final filters = [
       nostr.Filter(
         authors: [pubkey],
         kinds: [10002], // NIP-65 relay list
         limit: 1,
-      )
+      ),
     ];
 
     final events = await queryEvents(filters: filters, relayUrl: relayUrl);
@@ -536,8 +651,11 @@ class NostrServiceFunction implements INostrService {
   // P2P methods
   Future<void> startP2PDiscovery() async {
     if (!_p2pEnabled) {
-      Log.warning('P2P not enabled',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.warning(
+        'P2P not enabled',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
       return;
     }
 
@@ -554,13 +672,17 @@ class NostrServiceFunction implements INostrService {
 
   Future<void> startVideoSync(String peerId) async {
     if (!_p2pEnabled) {
-      Log.warning('P2P not enabled',
-          name: 'NostrServiceFunction', category: LogCategory.relay);
+      Log.warning(
+        'P2P not enabled',
+        name: 'NostrServiceFunction',
+        category: LogCategory.relay,
+      );
       return;
     }
 
     _videoSyncService ??= P2PVideoSyncService(_embeddedRelay!, _p2pService!);
-    await _videoSyncService!.syncWithAllPeers(); // P2P sync with all connected peers
+    await _videoSyncService!
+        .syncWithAllPeers(); // P2P sync with all connected peers
   }
 
   Future<void> stopVideoSync() async {
@@ -570,7 +692,8 @@ class NostrServiceFunction implements INostrService {
   // Required methods from INostrService interface (implemented above)
 
   @override
-  bool isRelayAuthenticated(String relayUrl) => _relayAuthStates[relayUrl] ?? false;
+  bool isRelayAuthenticated(String relayUrl) =>
+      _relayAuthStates[relayUrl] ?? false;
 
   @override
   bool get isVineRelayAuthenticated =>
@@ -580,7 +703,6 @@ class NostrServiceFunction implements INostrService {
   void setAuthTimeout(Duration timeout) {
     // TODO: Implement auth timeout if needed
   }
-
 
   @override
   Future<NostrBroadcastResult> broadcastEvent(Event event) async {
@@ -619,7 +741,6 @@ class NostrServiceFunction implements INostrService {
 
     return broadcastEvent(event);
   }
-
 
   @override
   Map<String, bool> getRelayStatus() => Map.from(_relayAuthStates);
@@ -660,7 +781,8 @@ class NostrServiceFunction implements INostrService {
   }) {
     // Create search filter for NIP-50
     final filter = nostr.Filter()
-      ..kinds = [NIP71VideoKinds.addressableShortVideo] // Kind 34236 only
+      ..kinds =
+          [NIP71VideoKinds.addressableShortVideo] // Kind 34236 only
       ..search = query;
 
     if (authors != null) {

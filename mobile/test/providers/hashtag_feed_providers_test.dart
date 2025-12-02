@@ -24,7 +24,9 @@ class FakeVideoEventService extends ChangeNotifier
   @override
   List<VideoEvent> hashtagVideos(String tag) {
     final videos = _hashtagBuckets[tag] ?? [];
-    print('DEBUG: hashtagVideos($tag) returning ${videos.length} videos. Buckets: ${_hashtagBuckets.keys.toList()}');
+    print(
+      'DEBUG: hashtagVideos($tag) returning ${videos.length} videos. Buckets: ${_hashtagBuckets.keys.toList()}',
+    );
     return videos;
   }
 
@@ -33,8 +35,10 @@ class FakeVideoEventService extends ChangeNotifier
       _authorBuckets[pubkeyHex] ?? [];
 
   @override
-  Future<void> subscribeToHashtagVideos(List<String> hashtags,
-      {int limit = 100}) async {
+  Future<void> subscribeToHashtagVideos(
+    List<String> hashtags, {
+    int limit = 100,
+  }) async {
     subscribedHashtags.add(hashtags);
   }
 
@@ -98,10 +102,9 @@ void main() {
         overrides: [
           videoEventServiceProvider.overrideWithValue(fakeService),
           pageContextProvider.overrideWith((ref) {
-            return Stream.value(const RouteContext(
-              type: RouteType.hashtag,
-              hashtag: '',
-            ));
+            return Stream.value(
+              const RouteContext(type: RouteType.hashtag, hashtag: ''),
+            );
           }),
         ],
       );
@@ -131,11 +134,13 @@ void main() {
         overrides: [
           videoEventServiceProvider.overrideWithValue(fakeService),
           pageContextProvider.overrideWith((ref) {
-            return Stream.value(const RouteContext(
-              type: RouteType.hashtag,
-              hashtag: 'bitcoin',
-              videoIndex: 0,
-            ));
+            return Stream.value(
+              const RouteContext(
+                type: RouteType.hashtag,
+                hashtag: 'bitcoin',
+                videoIndex: 0,
+              ),
+            );
           }),
         ],
       );
@@ -173,11 +178,13 @@ void main() {
         overrides: [
           videoEventServiceProvider.overrideWithValue(fakeService),
           pageContextProvider.overrideWith((ref) {
-            return Stream.value(const RouteContext(
-              type: RouteType.hashtag,
-              hashtag: 'nostr',
-              videoIndex: 0,
-            ));
+            return Stream.value(
+              const RouteContext(
+                type: RouteType.hashtag,
+                hashtag: 'nostr',
+                videoIndex: 0,
+              ),
+            );
           }),
         ],
       );
@@ -219,11 +226,13 @@ void main() {
         overrides: [
           videoEventServiceProvider.overrideWithValue(fakeService),
           pageContextProvider.overrideWith((ref) {
-            return Stream.value(const RouteContext(
-              type: RouteType.hashtag,
-              hashtag: 'nostr',
-              videoIndex: 0,
-            ));
+            return Stream.value(
+              const RouteContext(
+                type: RouteType.hashtag,
+                hashtag: 'nostr',
+                videoIndex: 0,
+              ),
+            );
           }),
         ],
       );

@@ -90,18 +90,22 @@ Random text here
       expect(variants, isEmpty);
     });
 
-    test('end-to-end: resolves m3u8 URL to MP4 URL', () async {
-      const m3u8Url = 'https://stream.divine.video/abc123/playlist.m3u8';
+    test(
+      'end-to-end: resolves m3u8 URL to MP4 URL',
+      () async {
+        const m3u8Url = 'https://stream.divine.video/abc123/playlist.m3u8';
 
-      // This test will use real HTTP requests
-      // Skip in CI if network is unavailable
-      final resolvedUrl = await service.resolveM3u8ToMp4(m3u8Url);
+        // This test will use real HTTP requests
+        // Skip in CI if network is unavailable
+        final resolvedUrl = await service.resolveM3u8ToMp4(m3u8Url);
 
-      // We expect either a resolved URL or null (if network/server issues)
-      if (resolvedUrl != null) {
-        expect(resolvedUrl, contains('.mp4'));
-        expect(resolvedUrl, isNot(contains('.m3u8')));
-      }
-    }, skip: 'Network test - run manually');
+        // We expect either a resolved URL or null (if network/server issues)
+        if (resolvedUrl != null) {
+          expect(resolvedUrl, contains('.mp4'));
+          expect(resolvedUrl, isNot(contains('.m3u8')));
+        }
+      },
+      skip: 'Network test - run manually',
+    );
   });
 }

@@ -20,7 +20,9 @@ void main() {
     setUp(() {
       mockAuthService = MockAuthService();
       when(mockAuthService.isAuthenticated).thenReturn(true);
-      when(mockAuthService.currentPublicKeyHex).thenReturn('test_pubkey_' + '0' * 54);
+      when(
+        mockAuthService.currentPublicKeyHex,
+      ).thenReturn('test_pubkey_' + '0' * 54);
     });
 
     testWidgets('displays Divine logo image in header', (tester) async {
@@ -114,7 +116,8 @@ void main() {
       expect(
         find.byIcon(Icons.video_library),
         findsNothing,
-        reason: 'Generic video_library icon should not be used, use wordmark instead',
+        reason:
+            'Generic video_library icon should not be used, use wordmark instead',
       );
     });
   });

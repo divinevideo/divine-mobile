@@ -48,33 +48,38 @@ void main() {
     });
 
     test(
-        'shouldFilterAdultContent returns true when service says hide adult content',
-        () {
-      // Arrange
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(true);
-      videoEventService.setAgeVerificationService(mockAgeVerificationService);
+      'shouldFilterAdultContent returns true when service says hide adult content',
+      () {
+        // Arrange
+        when(
+          () => mockAgeVerificationService.shouldHideAdultContent,
+        ).thenReturn(true);
+        videoEventService.setAgeVerificationService(mockAgeVerificationService);
 
-      // Assert
-      expect(videoEventService.shouldFilterAdultContent, isTrue);
-    });
+        // Assert
+        expect(videoEventService.shouldFilterAdultContent, isTrue);
+      },
+    );
 
     test(
-        'shouldFilterAdultContent returns false when service says dont hide adult content',
-        () {
-      // Arrange
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(false);
-      videoEventService.setAgeVerificationService(mockAgeVerificationService);
+      'shouldFilterAdultContent returns false when service says dont hide adult content',
+      () {
+        // Arrange
+        when(
+          () => mockAgeVerificationService.shouldHideAdultContent,
+        ).thenReturn(false);
+        videoEventService.setAgeVerificationService(mockAgeVerificationService);
 
-      // Assert
-      expect(videoEventService.shouldFilterAdultContent, isFalse);
-    });
+        // Assert
+        expect(videoEventService.shouldFilterAdultContent, isFalse);
+      },
+    );
 
     test('shouldFilterEvent returns true for flagged content when hiding', () {
       // Arrange
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(true);
+      when(
+        () => mockAgeVerificationService.shouldHideAdultContent,
+      ).thenReturn(true);
       videoEventService.setAgeVerificationService(mockAgeVerificationService);
 
       // Create a mock event with content-warning tag
@@ -93,45 +98,39 @@ void main() {
       expect(videoEventService.shouldFilterEvent(event), isTrue);
     });
 
-    test('shouldFilterEvent returns false for non-flagged content when hiding',
-        () {
-      // Arrange
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(true);
-      videoEventService.setAgeVerificationService(mockAgeVerificationService);
+    test(
+      'shouldFilterEvent returns false for non-flagged content when hiding',
+      () {
+        // Arrange
+        when(
+          () => mockAgeVerificationService.shouldHideAdultContent,
+        ).thenReturn(true);
+        videoEventService.setAgeVerificationService(mockAgeVerificationService);
 
-      // Create a mock event without content-warning tag
-      final event = Event(
-        '1' * 64,
-        34236,
-        [
+        // Create a mock event without content-warning tag
+        final event = Event('1' * 64, 34236, [
           ['d', 'test-video-id-2'],
           ['url', 'https://example.com/video2.mp4'],
-        ],
-        '',
-      );
+        ], '');
 
-      // Assert
-      expect(videoEventService.shouldFilterEvent(event), isFalse);
-    });
+        // Assert
+        expect(videoEventService.shouldFilterEvent(event), isFalse);
+      },
+    );
 
     test('shouldFilterEvent returns false when not hiding adult content', () {
       // Arrange
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(false);
+      when(
+        () => mockAgeVerificationService.shouldHideAdultContent,
+      ).thenReturn(false);
       videoEventService.setAgeVerificationService(mockAgeVerificationService);
 
       // Create event with content-warning tag
-      final event = Event(
-        '2' * 64,
-        34236,
-        [
-          ['d', 'test-video-id-3'],
-          ['url', 'https://example.com/video3.mp4'],
-          ['content-warning', 'adult content'],
-        ],
-        '',
-      );
+      final event = Event('2' * 64, 34236, [
+        ['d', 'test-video-id-3'],
+        ['url', 'https://example.com/video3.mp4'],
+        ['content-warning', 'adult content'],
+      ], '');
 
       // Assert - should NOT filter because user wants to see adult content
       expect(videoEventService.shouldFilterEvent(event), isFalse);
@@ -139,21 +138,17 @@ void main() {
 
     test('shouldFilterEvent handles NSFW hashtag as adult content', () {
       // Arrange
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(true);
+      when(
+        () => mockAgeVerificationService.shouldHideAdultContent,
+      ).thenReturn(true);
       videoEventService.setAgeVerificationService(mockAgeVerificationService);
 
       // Create event with NSFW hashtag
-      final event = Event(
-        '3' * 64,
-        34236,
-        [
-          ['d', 'test-video-id-4'],
-          ['url', 'https://example.com/video4.mp4'],
-          ['t', 'NSFW'],
-        ],
-        '',
-      );
+      final event = Event('3' * 64, 34236, [
+        ['d', 'test-video-id-4'],
+        ['url', 'https://example.com/video4.mp4'],
+        ['t', 'NSFW'],
+      ], '');
 
       // Assert
       expect(videoEventService.shouldFilterEvent(event), isTrue);
@@ -161,57 +156,57 @@ void main() {
 
     test('shouldFilterEvent handles adult hashtag as adult content', () {
       // Arrange
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(true);
+      when(
+        () => mockAgeVerificationService.shouldHideAdultContent,
+      ).thenReturn(true);
       videoEventService.setAgeVerificationService(mockAgeVerificationService);
 
       // Create event with adult hashtag
-      final event = Event(
-        '4' * 64,
-        34236,
-        [
-          ['d', 'test-video-id-5'],
-          ['url', 'https://example.com/video5.mp4'],
-          ['t', 'adult'],
-        ],
-        '',
-      );
+      final event = Event('4' * 64, 34236, [
+        ['d', 'test-video-id-5'],
+        ['url', 'https://example.com/video5.mp4'],
+        ['t', 'adult'],
+      ], '');
 
       // Assert
       expect(videoEventService.shouldFilterEvent(event), isTrue);
     });
 
     test(
-        'filterAdultContentFromExistingVideos removes flagged videos from all lists',
-        () {
-      // Arrange
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(true);
-      videoEventService.setAgeVerificationService(mockAgeVerificationService);
+      'filterAdultContentFromExistingVideos removes flagged videos from all lists',
+      () {
+        // Arrange
+        when(
+          () => mockAgeVerificationService.shouldHideAdultContent,
+        ).thenReturn(true);
+        videoEventService.setAgeVerificationService(mockAgeVerificationService);
 
-      // Act - method should exist and not throw
-      final removedCount =
-          videoEventService.filterAdultContentFromExistingVideos();
+        // Act - method should exist and not throw
+        final removedCount = videoEventService
+            .filterAdultContentFromExistingVideos();
 
-      // Assert - returns count of removed videos (0 when empty)
-      expect(removedCount, isA<int>());
-      expect(removedCount, greaterThanOrEqualTo(0));
-    });
+        // Assert - returns count of removed videos (0 when empty)
+        expect(removedCount, isA<int>());
+        expect(removedCount, greaterThanOrEqualTo(0));
+      },
+    );
 
     test(
-        'filterAdultContentFromExistingVideos does nothing when not hiding adult content',
-        () {
-      // Arrange
-      when(() => mockAgeVerificationService.shouldHideAdultContent)
-          .thenReturn(false);
-      videoEventService.setAgeVerificationService(mockAgeVerificationService);
+      'filterAdultContentFromExistingVideos does nothing when not hiding adult content',
+      () {
+        // Arrange
+        when(
+          () => mockAgeVerificationService.shouldHideAdultContent,
+        ).thenReturn(false);
+        videoEventService.setAgeVerificationService(mockAgeVerificationService);
 
-      // Act
-      final removedCount =
-          videoEventService.filterAdultContentFromExistingVideos();
+        // Act
+        final removedCount = videoEventService
+            .filterAdultContentFromExistingVideos();
 
-      // Assert - should not remove any videos
-      expect(removedCount, equals(0));
-    });
+        // Assert - should not remove any videos
+        expect(removedCount, equals(0));
+      },
+    );
   });
 }

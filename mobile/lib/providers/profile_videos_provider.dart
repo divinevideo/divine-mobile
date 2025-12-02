@@ -37,15 +37,14 @@ class ProfileVideosState {
     bool? hasMore,
     String? error,
     int? lastTimestamp,
-  }) =>
-      ProfileVideosState(
-        videos: videos ?? this.videos,
-        isLoading: isLoading ?? this.isLoading,
-        isLoadingMore: isLoadingMore ?? this.isLoadingMore,
-        hasMore: hasMore ?? this.hasMore,
-        error: error,
-        lastTimestamp: lastTimestamp ?? this.lastTimestamp,
-      );
+  }) => ProfileVideosState(
+    videos: videos ?? this.videos,
+    isLoading: isLoading ?? this.isLoading,
+    isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    hasMore: hasMore ?? this.hasMore,
+    error: error,
+    lastTimestamp: lastTimestamp ?? this.lastTimestamp,
+  );
 
   static const initial = ProfileVideosState(
     videos: [],
@@ -79,15 +78,17 @@ List<VideoEvent>? _getCachedProfileVideos(String pubkey) {
     final age = DateTime.now().difference(timestamp);
     if (age < _profileVideosCacheExpiry) {
       Log.debug(
-          '📱 Using cached videos for ${pubkey} (age: ${age.inMinutes}min)',
-          name: 'ProfileVideosProvider',
-          category: LogCategory.ui);
+        '📱 Using cached videos for ${pubkey} (age: ${age.inMinutes}min)',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui,
+      );
       return videos;
     } else {
       Log.debug(
-          '⏰ Video cache expired for ${pubkey} (age: ${age.inMinutes}min)',
-          name: 'ProfileVideosProvider',
-          category: LogCategory.ui);
+        '⏰ Video cache expired for ${pubkey} (age: ${age.inMinutes}min)',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui,
+      );
       _clearProfileVideosCache(pubkey);
     }
   }
@@ -100,8 +101,11 @@ void _cacheProfileVideos(String pubkey, List<VideoEvent> videos, bool hasMore) {
   _profileVideosCache[pubkey] = videos;
   _profileVideosCacheTimestamps[pubkey] = DateTime.now();
   _profileVideosHasMoreCache[pubkey] = hasMore;
-  Log.debug('📱 Cached ${videos.length} videos for ${pubkey}',
-      name: 'ProfileVideosProvider', category: LogCategory.ui);
+  Log.debug(
+    '📱 Cached ${videos.length} videos for ${pubkey}',
+    name: 'ProfileVideosProvider',
+    category: LogCategory.ui,
+  );
 }
 
 /// Clear cache for a specific user
@@ -116,8 +120,11 @@ void clearAllProfileVideosCache() {
   _profileVideosCache.clear();
   _profileVideosCacheTimestamps.clear();
   _profileVideosHasMoreCache.clear();
-  Log.debug('📱 Cleared all profile videos cache',
-      name: 'ProfileVideosProvider', category: LogCategory.ui);
+  Log.debug(
+    '📱 Cleared all profile videos cache',
+    name: 'ProfileVideosProvider',
+    category: LogCategory.ui,
+  );
 }
 
 /// Notifier for managing profile videos state
@@ -135,17 +142,19 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
   /// Load videos for a specific user with real-time streaming
   Future<void> loadVideosForUser(String pubkey) async {
     Log.debug(
-        '🔍 loadVideosForUser called for ${pubkey} | _currentPubkey=${_currentPubkey} | hasVideos=${state.hasVideos} | hasError=${state.hasError} | videos.length=${state.videos.length}',
-        name: 'ProfileVideosProvider',
-        category: LogCategory.ui);
+      '🔍 loadVideosForUser called for ${pubkey} | _currentPubkey=${_currentPubkey} | hasVideos=${state.hasVideos} | hasError=${state.hasError} | videos.length=${state.videos.length}',
+      name: 'ProfileVideosProvider',
+      category: LogCategory.ui,
+    );
 
     // Prevent concurrent loads for the same user
     // This is the ONLY early return - allows reload when returning to profile after publishing
     if (_loadingCompleter != null && _currentPubkey == pubkey) {
       Log.debug(
-          '⏭️ Early return: already loading for ${pubkey}',
-          name: 'ProfileVideosProvider',
-          category: LogCategory.ui);
+        '⏭️ Early return: already loading for ${pubkey}',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui,
+      );
       return _loadingCompleter!.future;
     }
 
@@ -155,15 +164,17 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     // Check cache first
     final cached = _getCachedProfileVideos(pubkey);
     Log.debug(
-        '💾 Cache check for ${pubkey}: ${cached?.length ?? 0} videos',
-        name: 'ProfileVideosProvider',
-        category: LogCategory.ui);
+      '💾 Cache check for ${pubkey}: ${cached?.length ?? 0} videos',
+      name: 'ProfileVideosProvider',
+      category: LogCategory.ui,
+    );
 
     if (cached != null) {
       Log.debug(
-          '✅ Using cache: returning ${cached.length} videos for ${pubkey}',
-          name: 'ProfileVideosProvider',
-          category: LogCategory.ui);
+        '✅ Using cache: returning ${cached.length} videos for ${pubkey}',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui,
+      );
       // Defer state modification to avoid modifying provider during build
       await Future.microtask(() {
         state = state.copyWith(
@@ -179,9 +190,10 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     }
 
     Log.debug(
-        '🌐 No cache found, starting streaming load for ${pubkey}',
-        name: 'ProfileVideosProvider',
-        category: LogCategory.ui);
+      '🌐 No cache found, starting streaming load for ${pubkey}',
+      name: 'ProfileVideosProvider',
+      category: LogCategory.ui,
+    );
 
     // Defer state modification to avoid modifying provider during build
     await Future.microtask(() {
@@ -199,10 +211,7 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
       await _loadVideosStreaming(pubkey);
       _loadingCompleter!.complete();
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
       _loadingCompleter!.completeError(e);
     } finally {
       _loadingCompleter = null;
@@ -218,9 +227,10 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     final cachedVideos = videoEventService.getVideosByAuthor(pubkey);
     if (cachedVideos.isNotEmpty) {
       Log.info(
-          '📱 Found ${cachedVideos.length} cached videos for ${pubkey} in VideoEventService',
-          name: 'ProfileVideosProvider',
-          category: LogCategory.ui);
+        '📱 Found ${cachedVideos.length} cached videos for ${pubkey} in VideoEventService',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui,
+      );
 
       // Filter for platform support (WebM not supported on iOS/macOS)
       // and sort cached videos
@@ -231,15 +241,18 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
 
       state = state.copyWith(
         videos: sortedCached,
-        isLoading: false, // Mark as not loading since we're showing cached content
-        lastTimestamp:
-            sortedCached.isNotEmpty ? sortedCached.last.createdAt : null,
+        isLoading:
+            false, // Mark as not loading since we're showing cached content
+        lastTimestamp: sortedCached.isNotEmpty
+            ? sortedCached.last.createdAt
+            : null,
       );
 
       Log.info(
-          '✅ Displaying ${cachedVideos.length} cached videos immediately for ${pubkey}',
-          name: 'ProfileVideosProvider',
-          category: LogCategory.ui);
+        '✅ Displaying ${cachedVideos.length} cached videos immediately for ${pubkey}',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui,
+      );
       // Continue to relay query to supplement with any missing/new videos
     }
 
@@ -253,9 +266,10 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     );
 
     Log.info(
-        '📱 Starting streaming query for videos: authors=[$pubkey], kinds=${[...NIP71VideoKinds.getAllVideoKinds(), NIP71VideoKinds.repost]}, limit=$_profileVideosPageSize',
-        name: 'ProfileVideosProvider',
-        category: LogCategory.ui);
+      '📱 Starting streaming query for videos: authors=[$pubkey], kinds=${[...NIP71VideoKinds.getAllVideoKinds(), NIP71VideoKinds.repost]}, limit=$_profileVideosPageSize',
+      name: 'ProfileVideosProvider',
+      category: LogCategory.ui,
+    );
 
     final completer = Completer<void>();
     // Start with cached videos
@@ -266,9 +280,10 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
       filters: [filter],
       onEose: () {
         Log.info(
-            '📱 Streaming EOSE: received ${receivedVideos.length} events for ${pubkey}',
-            name: 'ProfileVideosProvider',
-            category: LogCategory.ui);
+          '📱 Streaming EOSE: received ${receivedVideos.length} events for ${pubkey}',
+          name: 'ProfileVideosProvider',
+          category: LogCategory.ui,
+        );
         if (!completer.isCompleted) {
           _finalizeStreamingLoad(pubkey, receivedVideos);
           completer.complete();
@@ -287,26 +302,34 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
             seenIds.add(videoEvent.id);
 
             Log.debug(
-                '📱 Streaming: received new video event ${videoEvent.id} for ${pubkey}',
-                name: 'ProfileVideosProvider',
-                category: LogCategory.ui);
+              '📱 Streaming: received new video event ${videoEvent.id} for ${pubkey}',
+              name: 'ProfileVideosProvider',
+              category: LogCategory.ui,
+            );
 
             // Update UI state immediately with new video
             _updateUIWithStreamingVideo(videoEvent, receivedVideos);
           } else {
             Log.debug(
-                '📱 Streaming: skipping duplicate video event ${videoEvent.id}',
-                name: 'ProfileVideosProvider',
-                category: LogCategory.ui);
+              '📱 Streaming: skipping duplicate video event ${videoEvent.id}',
+              name: 'ProfileVideosProvider',
+              category: LogCategory.ui,
+            );
           }
         } catch (e) {
-          Log.warning('Failed to parse streaming video event: $e',
-              name: 'ProfileVideosProvider', category: LogCategory.ui);
+          Log.warning(
+            'Failed to parse streaming video event: $e',
+            name: 'ProfileVideosProvider',
+            category: LogCategory.ui,
+          );
         }
       },
       onError: (error) {
-        Log.error('Error streaming profile videos: $error',
-            name: 'ProfileVideosProvider', category: LogCategory.ui);
+        Log.error(
+          'Error streaming profile videos: $error',
+          name: 'ProfileVideosProvider',
+          category: LogCategory.ui,
+        );
         if (!completer.isCompleted) {
           _finalizeStreamingLoad(pubkey, receivedVideos);
           completer.complete();
@@ -314,9 +337,10 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
       },
       onDone: () {
         Log.info(
-            '📱 Streaming query completed: received ${receivedVideos.length} events for ${pubkey}',
-            name: 'ProfileVideosProvider',
-            category: LogCategory.ui);
+          '📱 Streaming query completed: received ${receivedVideos.length} events for ${pubkey}',
+          name: 'ProfileVideosProvider',
+          category: LogCategory.ui,
+        );
 
         if (!completer.isCompleted) {
           _finalizeStreamingLoad(pubkey, receivedVideos);
@@ -333,9 +357,10 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
         const Duration(seconds: 30),
         onTimeout: () {
           Log.warning(
-              '⏱️ Streaming load timed out after 30s for ${pubkey} with ${receivedVideos.length} videos',
-              name: 'ProfileVideosProvider',
-              category: LogCategory.ui);
+            '⏱️ Streaming load timed out after 30s for ${pubkey} with ${receivedVideos.length} videos',
+            name: 'ProfileVideosProvider',
+            category: LogCategory.ui,
+          );
           if (!completer.isCompleted) {
             _finalizeStreamingLoad(pubkey, receivedVideos);
             completer.complete();
@@ -343,8 +368,11 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
         },
       );
     } catch (e) {
-      Log.error('Error during streaming load: $e',
-          name: 'ProfileVideosProvider', category: LogCategory.ui);
+      Log.error(
+        'Error during streaming load: $e',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui,
+      );
       if (!completer.isCompleted) {
         _finalizeStreamingLoad(pubkey, receivedVideos);
         completer.complete();
@@ -354,7 +382,9 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
 
   /// Update UI state immediately when each video arrives during streaming
   void _updateUIWithStreamingVideo(
-      VideoEvent newVideo, List<VideoEvent> allReceived) {
+    VideoEvent newVideo,
+    List<VideoEvent> allReceived,
+  ) {
     // Check if provider is still mounted after async gap
     if (!ref.mounted) {
       return;
@@ -370,14 +400,16 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     // Update state with progressive loading
     state = state.copyWith(
       videos: currentVideos,
-      lastTimestamp:
-          currentVideos.isNotEmpty ? currentVideos.last.createdAt : null,
+      lastTimestamp: currentVideos.isNotEmpty
+          ? currentVideos.last.createdAt
+          : null,
     );
 
     Log.debug(
-        '📱 Streaming UI update: now showing ${currentVideos.length} videos',
-        name: 'ProfileVideosProvider',
-        category: LogCategory.ui);
+      '📱 Streaming UI update: now showing ${currentVideos.length} videos',
+      name: 'ProfileVideosProvider',
+      category: LogCategory.ui,
+    );
   }
 
   /// Finalize the streaming load and update cache
@@ -385,9 +417,10 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     // Check if provider is still mounted after async gap
     if (!ref.mounted) {
       Log.debug(
-          '📱 Streaming finalized skipped - provider disposed for ${pubkey}',
-          name: 'ProfileVideosProvider',
-          category: LogCategory.ui);
+        '📱 Streaming finalized skipped - provider disposed for ${pubkey}',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui,
+      );
       return;
     }
 
@@ -408,12 +441,16 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
 
     // Cache the results
     _cacheProfileVideos(
-        pubkey, supportedVideos, supportedVideos.length >= _profileVideosPageSize);
+      pubkey,
+      supportedVideos,
+      supportedVideos.length >= _profileVideosPageSize,
+    );
 
     Log.info(
-        '📱 Streaming finalized: loaded ${supportedVideos.length} videos for ${pubkey} (filtered from ${allVideos.length})',
-        name: 'ProfileVideosProvider',
-        category: LogCategory.ui);
+      '📱 Streaming finalized: loaded ${supportedVideos.length} videos for ${pubkey} (filtered from ${allVideos.length})',
+      name: 'ProfileVideosProvider',
+      category: LogCategory.ui,
+    );
   }
 
   /// Load more videos (pagination) with streaming updates
@@ -433,12 +470,12 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     try {
       await _loadMoreVideosStreaming();
     } catch (e) {
-      state = state.copyWith(
-        isLoadingMore: false,
-        error: e.toString(),
+      state = state.copyWith(isLoadingMore: false, error: e.toString());
+      Log.error(
+        'Error loading more videos: $e',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui,
       );
-      Log.error('Error loading more videos: $e',
-          name: 'ProfileVideosProvider', category: LogCategory.ui);
     }
   }
 
@@ -457,9 +494,10 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     );
 
     Log.info(
-        '📱 Starting streaming load more query for ${_currentPubkey!}: until=${state.lastTimestamp! - 1}, limit=$_profileVideosPageSize',
-        name: 'ProfileVideosProvider',
-        category: LogCategory.ui);
+      '📱 Starting streaming load more query for ${_currentPubkey!}: until=${state.lastTimestamp! - 1}, limit=$_profileVideosPageSize',
+      name: 'ProfileVideosProvider',
+      category: LogCategory.ui,
+    );
 
     final completer = Completer<void>();
     final newVideos = <VideoEvent>[];
@@ -468,9 +506,10 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
       filters: [filter],
       onEose: () {
         Log.info(
-            '📱 Load more EOSE: received ${newVideos.length} additional events for ${_currentPubkey!}',
-            name: 'ProfileVideosProvider',
-            category: LogCategory.ui);
+          '📱 Load more EOSE: received ${newVideos.length} additional events for ${_currentPubkey!}',
+          name: 'ProfileVideosProvider',
+          category: LogCategory.ui,
+        );
         if (!completer.isCompleted) {
           _finalizeLoadMoreStreaming(newVideos);
           completer.complete();
@@ -486,20 +525,27 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
           newVideos.add(videoEvent);
 
           Log.debug(
-              '📱 Load more streaming: received video event ${videoEvent.id} for ${_currentPubkey!}',
-              name: 'ProfileVideosProvider',
-              category: LogCategory.ui);
+            '📱 Load more streaming: received video event ${videoEvent.id} for ${_currentPubkey!}',
+            name: 'ProfileVideosProvider',
+            category: LogCategory.ui,
+          );
 
           // Update UI state immediately with new video
           _updateUIWithAdditionalVideo(videoEvent);
         } catch (e) {
-          Log.warning('Failed to parse additional streaming video event: $e',
-              name: 'ProfileVideosProvider', category: LogCategory.ui);
+          Log.warning(
+            'Failed to parse additional streaming video event: $e',
+            name: 'ProfileVideosProvider',
+            category: LogCategory.ui,
+          );
         }
       },
       onError: (error) {
-        Log.error('Error streaming additional videos: $error',
-            name: 'ProfileVideosProvider', category: LogCategory.ui);
+        Log.error(
+          'Error streaming additional videos: $error',
+          name: 'ProfileVideosProvider',
+          category: LogCategory.ui,
+        );
         if (!completer.isCompleted) {
           _finalizeLoadMoreStreaming(newVideos);
           completer.complete();
@@ -507,9 +553,10 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
       },
       onDone: () {
         Log.info(
-            '📱 Load more streaming completed: received ${newVideos.length} additional events for ${_currentPubkey!}',
-            name: 'ProfileVideosProvider',
-            category: LogCategory.ui);
+          '📱 Load more streaming completed: received ${newVideos.length} additional events for ${_currentPubkey!}',
+          name: 'ProfileVideosProvider',
+          category: LogCategory.ui,
+        );
 
         if (!completer.isCompleted) {
           _finalizeLoadMoreStreaming(newVideos);
@@ -524,9 +571,10 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
         const Duration(seconds: 30),
         onTimeout: () {
           Log.warning(
-              '⏱️ Load more timed out after 30s for ${_currentPubkey!} with ${newVideos.length} new videos',
-              name: 'ProfileVideosProvider',
-              category: LogCategory.ui);
+            '⏱️ Load more timed out after 30s for ${_currentPubkey!} with ${newVideos.length} new videos',
+            name: 'ProfileVideosProvider',
+            category: LogCategory.ui,
+          );
           if (!completer.isCompleted) {
             _finalizeLoadMoreStreaming(newVideos);
             completer.complete();
@@ -534,8 +582,11 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
         },
       );
     } catch (e) {
-      Log.error('Error during load more: $e',
-          name: 'ProfileVideosProvider', category: LogCategory.ui);
+      Log.error(
+        'Error during load more: $e',
+        name: 'ProfileVideosProvider',
+        category: LogCategory.ui,
+      );
       if (!completer.isCompleted) {
         _finalizeLoadMoreStreaming(newVideos);
         completer.complete();
@@ -560,14 +611,16 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     // Update state with progressive loading
     state = state.copyWith(
       videos: currentVideos,
-      lastTimestamp:
-          currentVideos.isNotEmpty ? currentVideos.last.createdAt : null,
+      lastTimestamp: currentVideos.isNotEmpty
+          ? currentVideos.last.createdAt
+          : null,
     );
 
     Log.debug(
-        '📱 Load more streaming UI update: now showing ${currentVideos.length} videos',
-        name: 'ProfileVideosProvider',
-        category: LogCategory.ui);
+      '📱 Load more streaming UI update: now showing ${currentVideos.length} videos',
+      name: 'ProfileVideosProvider',
+      category: LogCategory.ui,
+    );
   }
 
   /// Finalize the load more streaming and update cache
@@ -580,18 +633,16 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     final hasMore = newVideos.length >= _profileVideosPageSize;
 
     // Update final state
-    state = state.copyWith(
-      isLoadingMore: false,
-      hasMore: hasMore,
-    );
+    state = state.copyWith(isLoadingMore: false, hasMore: hasMore);
 
     // Update cache with current videos
     _cacheProfileVideos(_currentPubkey!, state.videos, hasMore);
 
     Log.info(
-        '📱 Load more streaming finalized: added ${newVideos.length} videos (total: ${state.videos.length})',
-        name: 'ProfileVideosProvider',
-        category: LogCategory.ui);
+      '📱 Load more streaming finalized: added ${newVideos.length} videos (total: ${state.videos.length})',
+      name: 'ProfileVideosProvider',
+      category: LogCategory.ui,
+    );
   }
 
   /// Refresh videos by clearing cache and reloading

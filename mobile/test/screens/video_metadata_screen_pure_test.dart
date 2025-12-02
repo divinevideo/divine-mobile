@@ -67,7 +67,9 @@ void main() {
       }
     });
 
-    testWidgets('initState() starts background upload immediately', (tester) async {
+    testWidgets('initState() starts background upload immediately', (
+      tester,
+    ) async {
       // Arrange: Create mock upload that will be returned by startUpload()
       final mockUpload = PendingUpload.create(
         localVideoPath: testVideoFile.path,
@@ -77,18 +79,20 @@ void main() {
         hashtags: testDraft.hashtags,
       );
 
-      when(mockUploadManager.startUpload(
-        videoFile: anyNamed('videoFile'),
-        nostrPubkey: anyNamed('nostrPubkey'),
-        title: anyNamed('title'),
-        description: anyNamed('description'),
-        hashtags: anyNamed('hashtags'),
-        videoDuration: anyNamed('videoDuration'),
-        thumbnailPath: anyNamed('thumbnailPath'),
-        videoWidth: anyNamed('videoWidth'),
-        videoHeight: anyNamed('videoHeight'),
-        proofManifest: anyNamed('proofManifest'),
-      )).thenAnswer((_) async => mockUpload);
+      when(
+        mockUploadManager.startUpload(
+          videoFile: anyNamed('videoFile'),
+          nostrPubkey: anyNamed('nostrPubkey'),
+          title: anyNamed('title'),
+          description: anyNamed('description'),
+          hashtags: anyNamed('hashtags'),
+          videoDuration: anyNamed('videoDuration'),
+          thumbnailPath: anyNamed('thumbnailPath'),
+          videoWidth: anyNamed('videoWidth'),
+          videoHeight: anyNamed('videoHeight'),
+          proofManifest: anyNamed('proofManifest'),
+        ),
+      ).thenAnswer((_) async => mockUpload);
 
       // Act: Build the widget (which calls initState())
       await tester.pumpWidget(
@@ -108,21 +112,25 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       // Assert: Verify startUpload was called
-      verify(mockUploadManager.startUpload(
-        videoFile: anyNamed('videoFile'),
-        nostrPubkey: anyNamed('nostrPubkey'),
-        title: anyNamed('title'),
-        description: anyNamed('description'),
-        hashtags: anyNamed('hashtags'),
-        videoDuration: anyNamed('videoDuration'),
-        thumbnailPath: anyNamed('thumbnailPath'),
-        videoWidth: anyNamed('videoWidth'),
-        videoHeight: anyNamed('videoHeight'),
-        proofManifest: anyNamed('proofManifest'),
-      )).called(1);
+      verify(
+        mockUploadManager.startUpload(
+          videoFile: anyNamed('videoFile'),
+          nostrPubkey: anyNamed('nostrPubkey'),
+          title: anyNamed('title'),
+          description: anyNamed('description'),
+          hashtags: anyNamed('hashtags'),
+          videoDuration: anyNamed('videoDuration'),
+          thumbnailPath: anyNamed('thumbnailPath'),
+          videoWidth: anyNamed('videoWidth'),
+          videoHeight: anyNamed('videoHeight'),
+          proofManifest: anyNamed('proofManifest'),
+        ),
+      ).called(1);
     });
 
-    testWidgets('dispose() does not cancel if upload already complete', (tester) async {
+    testWidgets('dispose() does not cancel if upload already complete', (
+      tester,
+    ) async {
       // Arrange: Create mock upload in "readyToPublish" state (complete)
       final mockUpload = PendingUpload.create(
         localVideoPath: testVideoFile.path,
@@ -130,18 +138,20 @@ void main() {
         title: testDraft.title,
       ).copyWith(status: UploadStatus.readyToPublish);
 
-      when(mockUploadManager.startUpload(
-        videoFile: anyNamed('videoFile'),
-        nostrPubkey: anyNamed('nostrPubkey'),
-        title: anyNamed('title'),
-        description: anyNamed('description'),
-        hashtags: anyNamed('hashtags'),
-        videoDuration: anyNamed('videoDuration'),
-        thumbnailPath: anyNamed('thumbnailPath'),
-        videoWidth: anyNamed('videoWidth'),
-        videoHeight: anyNamed('videoHeight'),
-        proofManifest: anyNamed('proofManifest'),
-      )).thenAnswer((_) async => mockUpload);
+      when(
+        mockUploadManager.startUpload(
+          videoFile: anyNamed('videoFile'),
+          nostrPubkey: anyNamed('nostrPubkey'),
+          title: anyNamed('title'),
+          description: anyNamed('description'),
+          hashtags: anyNamed('hashtags'),
+          videoDuration: anyNamed('videoDuration'),
+          thumbnailPath: anyNamed('thumbnailPath'),
+          videoWidth: anyNamed('videoWidth'),
+          videoHeight: anyNamed('videoHeight'),
+          proofManifest: anyNamed('proofManifest'),
+        ),
+      ).thenAnswer((_) async => mockUpload);
 
       when(mockUploadManager.getUpload(mockUpload.id)).thenReturn(mockUpload);
 
@@ -167,9 +177,7 @@ void main() {
             uploadManagerProvider.overrideWithValue(mockUploadManager),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
-          child: const MaterialApp(
-            home: Scaffold(body: Text('Other Screen')),
-          ),
+          child: const MaterialApp(home: Scaffold(body: Text('Other Screen'))),
         ),
       );
 
@@ -187,18 +195,20 @@ void main() {
         title: testDraft.title,
       );
 
-      when(mockUploadManager.startUpload(
-        videoFile: anyNamed('videoFile'),
-        nostrPubkey: anyNamed('nostrPubkey'),
-        title: anyNamed('title'),
-        description: anyNamed('description'),
-        hashtags: anyNamed('hashtags'),
-        videoDuration: anyNamed('videoDuration'),
-        thumbnailPath: anyNamed('thumbnailPath'),
-        videoWidth: anyNamed('videoWidth'),
-        videoHeight: anyNamed('videoHeight'),
-        proofManifest: anyNamed('proofManifest'),
-      )).thenAnswer((_) async => mockUpload);
+      when(
+        mockUploadManager.startUpload(
+          videoFile: anyNamed('videoFile'),
+          nostrPubkey: anyNamed('nostrPubkey'),
+          title: anyNamed('title'),
+          description: anyNamed('description'),
+          hashtags: anyNamed('hashtags'),
+          videoDuration: anyNamed('videoDuration'),
+          thumbnailPath: anyNamed('thumbnailPath'),
+          videoWidth: anyNamed('videoWidth'),
+          videoHeight: anyNamed('videoHeight'),
+          proofManifest: anyNamed('proofManifest'),
+        ),
+      ).thenAnswer((_) async => mockUpload);
 
       when(mockUploadManager.getUpload(mockUpload.id)).thenReturn(mockUpload);
 
@@ -224,9 +234,7 @@ void main() {
             uploadManagerProvider.overrideWithValue(mockUploadManager),
             authServiceProvider.overrideWithValue(mockAuthService),
           ],
-          child: const MaterialApp(
-            home: Scaffold(body: Text('Other Screen')),
-          ),
+          child: const MaterialApp(home: Scaffold(body: Text('Other Screen'))),
         ),
       );
 
@@ -234,8 +242,9 @@ void main() {
 
       // If upload is still in progress, cancelUpload should be called with the correct upload ID
       // Since we're testing state variable storage, we verify the ID is used correctly
-      when(mockUploadManager.getUpload(mockUpload.id))
-          .thenReturn(mockUpload.copyWith(status: UploadStatus.uploading));
+      when(
+        mockUploadManager.getUpload(mockUpload.id),
+      ).thenReturn(mockUpload.copyWith(status: UploadStatus.uploading));
     });
   });
 }

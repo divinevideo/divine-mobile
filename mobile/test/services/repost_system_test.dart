@@ -31,8 +31,10 @@ void main() {
         expect(repostEvent.isRepost, isTrue);
         expect(repostEvent.reposterId, equals('repost789'));
         expect(repostEvent.reposterPubkey, equals('reposter101'));
-        expect(repostEvent.repostedAt,
-            equals(DateTime.fromMillisecondsSinceEpoch(2000000)));
+        expect(
+          repostEvent.repostedAt,
+          equals(DateTime.fromMillisecondsSinceEpoch(2000000)),
+        );
 
         // Verify original content is preserved
         expect(repostEvent.id, equals('original123'));
@@ -76,8 +78,10 @@ void main() {
         expect(modifiedEvent.isRepost, isTrue);
         expect(modifiedEvent.reposterId, equals('repost789'));
         expect(modifiedEvent.reposterPubkey, equals('reposter101'));
-        expect(modifiedEvent.title,
-            equals('Original Title')); // Original data preserved
+        expect(
+          modifiedEvent.title,
+          equals('Original Title'),
+        ); // Original data preserved
       });
 
       test('should handle null repost fields gracefully', () {
@@ -146,7 +150,9 @@ void main() {
         expect(repostEvent.title, equals('Test Video'));
         expect(repostEvent.videoUrl, equals('https://example.com/video.mp4'));
         expect(
-            repostEvent.thumbnailUrl, equals('https://example.com/thumb.jpg'));
+          repostEvent.thumbnailUrl,
+          equals('https://example.com/thumb.jpg'),
+        );
         expect(repostEvent.duration, equals(30));
         expect(repostEvent.hashtags, equals(['test', 'video']));
         expect(repostEvent.content, equals('Original content'));

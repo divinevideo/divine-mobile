@@ -8,7 +8,6 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
-import 'package:openvine/services/upload_initialization_helper.dart';
 import 'package:openvine/services/upload_manager.dart';
 import '../../helpers/real_integration_test_helper.dart';
 import '../../helpers/test_helpers.dart';
@@ -73,7 +72,9 @@ void main() {
       // Manager or box might already be disposed/closed
     }
     reset(mockUploadService);
-  };
+  }
+
+  ;
 
   group('UploadManager.getUploadByFilePath', () {
     test('should return upload with matching file path', () async {
@@ -132,8 +133,9 @@ void main() {
       );
 
       // Act
-      final result =
-          uploadManager.getUploadByFilePath('/path/to/nonexistent.mp4');
+      final result = uploadManager.getUploadByFilePath(
+        '/path/to/nonexistent.mp4',
+      );
 
       // Assert
       expect(result, isNull);
@@ -161,8 +163,9 @@ void main() {
       );
 
       // Act
-      final result =
-          uploadManager.getUploadByFilePath('/path with spaces/my video.mp4');
+      final result = uploadManager.getUploadByFilePath(
+        '/path with spaces/my video.mp4',
+      );
 
       // Assert
       expect(result, isNotNull);
@@ -183,54 +186,61 @@ void main() {
       );
 
       // Act
-      final result =
-          uploadManager.getUploadByFilePath(r'/path/to/video@#$%^&()_+.mp4');
+      final result = uploadManager.getUploadByFilePath(
+        r'/path/to/video@#$%^&()_+.mp4',
+      );
 
       // Assert
       expect(result, isNotNull);
       expect(result?.localVideoPath, equals(r'/path/to/video@#$%^&()_+.mp4'));
     });
 
-    test('should return first match when multiple uploads have same path',
-        () async {
-      // This shouldn't normally happen, but let's test the edge case
-      // We'll create uploads with different timestamps
-      final mockFile = MockFile();
-      when(() => mockFile.path).thenReturn('/path/to/duplicate.mp4');
-      when(mockFile.exists).thenAnswer((_) async => true);
-      when(mockFile.existsSync).thenReturn(true);
-      when(mockFile.lengthSync).thenReturn(1000000);
+    test(
+      'should return first match when multiple uploads have same path',
+      () async {
+        // This shouldn't normally happen, but let's test the edge case
+        // We'll create uploads with different timestamps
+        final mockFile = MockFile();
+        when(() => mockFile.path).thenReturn('/path/to/duplicate.mp4');
+        when(mockFile.exists).thenAnswer((_) async => true);
+        when(mockFile.existsSync).thenReturn(true);
+        when(mockFile.lengthSync).thenReturn(1000000);
 
-      await uploadManager.startUpload(
-        videoFile: mockFile,
-        nostrPubkey: 'pubkey1',
-      );
+        await uploadManager.startUpload(
+          videoFile: mockFile,
+          nostrPubkey: 'pubkey1',
+        );
 
-      // Use proper async coordination to ensure different timestamps
-      // Check that first upload is tracked before creating second
-      expect(uploadManager.pendingUploads.length, equals(1));
+        // Use proper async coordination to ensure different timestamps
+        // Check that first upload is tracked before creating second
+        expect(uploadManager.pendingUploads.length, equals(1));
 
-      await uploadManager.startUpload(
-        videoFile: mockFile,
-        nostrPubkey: 'pubkey2',
-      );
+        await uploadManager.startUpload(
+          videoFile: mockFile,
+          nostrPubkey: 'pubkey2',
+        );
 
-      // Act
-      final result =
-          uploadManager.getUploadByFilePath('/path/to/duplicate.mp4');
-      final allUploads = uploadManager.pendingUploads;
+        // Act
+        final result = uploadManager.getUploadByFilePath(
+          '/path/to/duplicate.mp4',
+        );
+        final allUploads = uploadManager.pendingUploads;
 
-      // Assert
-      expect(result, isNotNull);
-      expect(
+        // Assert
+        expect(result, isNotNull);
+        expect(
           allUploads
               .where((u) => u.localVideoPath == '/path/to/duplicate.mp4')
               .length,
-          equals(2));
-      // The method returns the first match from the sorted list (newest first)
-      expect(result?.nostrPubkey,
-          equals('pubkey2')); // The second upload should be newer
-    });
+          equals(2),
+        );
+        // The method returns the first match from the sorted list (newest first)
+        expect(
+          result?.nostrPubkey,
+          equals('pubkey2'),
+        ); // The second upload should be newer
+      },
+    );
 
     test('should be case sensitive', () async {
       // Arrange
@@ -246,10 +256,12 @@ void main() {
       );
 
       // Act
-      final resultLowerCase =
-          uploadManager.getUploadByFilePath('/path/to/video.mp4');
-      final resultCorrectCase =
-          uploadManager.getUploadByFilePath('/Path/To/Video.mp4');
+      final resultLowerCase = uploadManager.getUploadByFilePath(
+        '/path/to/video.mp4',
+      );
+      final resultCorrectCase = uploadManager.getUploadByFilePath(
+        '/Path/To/Video.mp4',
+      );
 
       // Assert
       expect(resultLowerCase, isNull);

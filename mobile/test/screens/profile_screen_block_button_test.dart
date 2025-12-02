@@ -33,14 +33,18 @@ void main() {
 
       return ProviderScope(
         overrides: [
-          contentBlocklistServiceProvider.overrideWithValue(mockBlocklistService),
+          contentBlocklistServiceProvider.overrideWithValue(
+            mockBlocklistService,
+          ),
         ],
         child: MaterialApp(
           home: Scaffold(
             body: Center(
               child: Consumer(
                 builder: (context, ref, _) {
-                  final blocklistService = ref.watch(contentBlocklistServiceProvider);
+                  final blocklistService = ref.watch(
+                    contentBlocklistServiceProvider,
+                  );
                   final isUserBlocked = blocklistService.isBlocked(userPubkey);
                   return OutlinedButton(
                     onPressed: () {
@@ -53,7 +57,10 @@ void main() {
                       side: BorderSide(
                         color: isUserBlocked ? Colors.grey : Colors.red,
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -73,10 +80,7 @@ void main() {
       const testPubkey = 'test_pubkey_123';
 
       await tester.pumpWidget(
-        createBlockButtonTest(
-          userPubkey: testPubkey,
-          isBlocked: false,
-        ),
+        createBlockButtonTest(userPubkey: testPubkey, isBlocked: false),
       );
 
       // RED: Expect to find "Block User" text
@@ -92,10 +96,7 @@ void main() {
       const testPubkey = 'test_pubkey_456';
 
       await tester.pumpWidget(
-        createBlockButtonTest(
-          userPubkey: testPubkey,
-          isBlocked: false,
-        ),
+        createBlockButtonTest(userPubkey: testPubkey, isBlocked: false),
       );
 
       final blockButton = find.text('Block User');
@@ -103,10 +104,7 @@ void main() {
 
       // RED: Check button style has red border and text
       final button = tester.widget<OutlinedButton>(
-        find.ancestor(
-          of: blockButton,
-          matching: find.byType(OutlinedButton),
-        ),
+        find.ancestor(of: blockButton, matching: find.byType(OutlinedButton)),
       );
 
       final buttonStyle = button.style!;
@@ -118,15 +116,13 @@ void main() {
         Colors.red,
         reason: 'Block button border should be red',
       );
-      expect(
-        textColor,
-        Colors.red,
-        reason: 'Block button text should be red',
-      );
+      expect(textColor, Colors.red, reason: 'Block button text should be red');
     });
 
     // RED TEST 3: Button shows "Unblock" when user is already blocked
-    testWidgets('shows Unblock button when user is already blocked', (tester) async {
+    testWidgets('shows Unblock button when user is already blocked', (
+      tester,
+    ) async {
       const testPubkey = 'test_pubkey_789';
 
       await tester.pumpWidget(

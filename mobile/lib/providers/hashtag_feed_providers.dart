@@ -50,8 +50,11 @@ class HashtagFeed extends _$HashtagFeed {
       );
     }
 
-    Log.info('HashtagFeed: Loading #$tag (build #$buildId)',
-        name: 'HashtagFeedProvider', category: LogCategory.video);
+    Log.info(
+      'HashtagFeed: Loading #$tag (build #$buildId)',
+      name: 'HashtagFeedProvider',
+      category: LogCategory.video,
+    );
 
     // Get video event service and subscribe to hashtag
     final videoEventService = ref.watch(videoEventServiceProvider);
@@ -71,16 +74,19 @@ class HashtagFeed extends _$HashtagFeed {
         _rebuildDebounceTimer = Timer(const Duration(milliseconds: 500), () {
           if (ref.mounted) {
             // Update state directly instead of invalidating to prevent rebuild loop
-            final videos = List<VideoEvent>.from(videoEventService.hashtagVideos(tag))
-              ..sort(VideoEvent.compareByLoopsThenTime);
+            final videos = List<VideoEvent>.from(
+              videoEventService.hashtagVideos(tag),
+            )..sort(VideoEvent.compareByLoopsThenTime);
 
-            state = AsyncData(VideoFeedState(
-              videos: videos,
-              hasMoreContent: videos.length >= 10,
-              isLoadingMore: false,
-              error: null,
-              lastUpdated: DateTime.now(),
-            ));
+            state = AsyncData(
+              VideoFeedState(
+                videos: videos,
+                hasMoreContent: videos.length >= 10,
+                isLoadingMore: false,
+                error: null,
+                lastUpdated: DateTime.now(),
+              ),
+            );
           }
         });
       }
@@ -119,9 +125,10 @@ class HashtagFeed extends _$HashtagFeed {
     Timer(const Duration(seconds: 3), () {
       if (!completer.isCompleted) {
         Log.warning(
-            '🏷️⏰ HashtagFeed: Timeout reached (3s) with $stableCount videos',
-            name: 'HashtagFeedProvider',
-            category: LogCategory.video);
+          '🏷️⏰ HashtagFeed: Timeout reached (3s) with $stableCount videos',
+          name: 'HashtagFeedProvider',
+          category: LogCategory.video,
+        );
         completer.complete();
       }
     });
@@ -145,8 +152,11 @@ class HashtagFeed extends _$HashtagFeed {
     final videos = List<VideoEvent>.from(videoEventService.hashtagVideos(tag))
       ..sort(VideoEvent.compareByLoopsThenTime);
 
-    Log.info('HashtagFeed: Loaded ${videos.length} videos for #$tag',
-        name: 'HashtagFeedProvider', category: LogCategory.video);
+    Log.info(
+      'HashtagFeed: Loaded ${videos.length} videos for #$tag',
+      name: 'HashtagFeedProvider',
+      category: LogCategory.video,
+    );
 
     return VideoFeedState(
       videos: videos,
@@ -173,26 +183,32 @@ class HashtagFeed extends _$HashtagFeed {
     try {
       final videoEventService = ref.read(videoEventServiceProvider);
 
-      final eventCountBefore =
-          videoEventService.getEventCount(SubscriptionType.hashtag);
+      final eventCountBefore = videoEventService.getEventCount(
+        SubscriptionType.hashtag,
+      );
 
       // Load more events for hashtag subscription
-      await videoEventService.loadMoreEvents(SubscriptionType.hashtag,
-          limit: 50);
+      await videoEventService.loadMoreEvents(
+        SubscriptionType.hashtag,
+        limit: 50,
+      );
 
       if (!ref.mounted) return;
 
-      final eventCountAfter =
-          videoEventService.getEventCount(SubscriptionType.hashtag);
+      final eventCountAfter = videoEventService.getEventCount(
+        SubscriptionType.hashtag,
+      );
       final newEventsLoaded = eventCountAfter - eventCountBefore;
 
       // Reset loading state
       final newState = await future;
       if (!ref.mounted) return;
-      state = AsyncData(newState.copyWith(
-        isLoadingMore: false,
-        hasMoreContent: newEventsLoaded > 0,
-      ));
+      state = AsyncData(
+        newState.copyWith(
+          isLoadingMore: false,
+          hasMoreContent: newEventsLoaded > 0,
+        ),
+      );
     } catch (e) {
       Log.error(
         'HashtagFeed: Error loading more: $e',
@@ -204,10 +220,7 @@ class HashtagFeed extends _$HashtagFeed {
       final currentState = await future;
       if (!ref.mounted) return;
       state = AsyncData(
-        currentState.copyWith(
-          isLoadingMore: false,
-          error: e.toString(),
-        ),
+        currentState.copyWith(isLoadingMore: false, error: e.toString()),
       );
     }
   }

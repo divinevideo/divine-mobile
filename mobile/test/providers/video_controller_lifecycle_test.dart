@@ -135,56 +135,64 @@ void main() {
       subscription2.close();
     });
 
-    test('controller should dispose after cache timeout', () async {
-      // Arrange
-      final params = VideoControllerParams(
-        videoId: 'test5',
-        videoUrl: 'https://example.com/test5.mp4',
-      );
+    test(
+      'controller should dispose after cache timeout',
+      () async {
+        // Arrange
+        final params = VideoControllerParams(
+          videoId: 'test5',
+          videoUrl: 'https://example.com/test5.mp4',
+        );
 
-      // Act - create then remove listener
-      final subscription = container.listen(
-        individualVideoControllerProvider(params),
-        (_, __) {},
-      );
+        // Act - create then remove listener
+        final subscription = container.listen(
+          individualVideoControllerProvider(params),
+          (_, __) {},
+        );
 
-      await Future.delayed(Duration(milliseconds: 50));
-      subscription.close(); // Triggers onCancel with 30s timer
+        await Future.delayed(Duration(milliseconds: 50));
+        subscription.close(); // Triggers onCancel with 30s timer
 
-      // We can't wait 30s in a test, so we'll verify the controller exists now
-      // and document that it SHOULD dispose after 30s
+        // We can't wait 30s in a test, so we'll verify the controller exists now
+        // and document that it SHOULD dispose after 30s
 
-      // Assert - controller still exists (timer hasn't fired)
-      expect(
-        () => container.read(individualVideoControllerProvider(params)),
-        returnsNormally,
-      );
+        // Assert - controller still exists (timer hasn't fired)
+        expect(
+          () => container.read(individualVideoControllerProvider(params)),
+          returnsNormally,
+        );
 
-      // NOTE: In real usage, after 30s the link.close() would be called
-      // and the provider would autodispose. We can't test this without
-      // either mocking Timer or waiting 30s, which is impractical.
-      // The actual timeout behavior is verified through manual testing.
-    }, skip: 'Cannot test 30s timeout without mocking or waiting - verify manually');
+        // NOTE: In real usage, after 30s the link.close() would be called
+        // and the provider would autodispose. We can't test this without
+        // either mocking Timer or waiting 30s, which is impractical.
+        // The actual timeout behavior is verified through manual testing.
+      },
+      skip:
+          'Cannot test 30s timeout without mocking or waiting - verify manually',
+    );
 
-    test('reading provider without listener should not prevent disposal', () async {
-      // Arrange
-      final params = VideoControllerParams(
-        videoId: 'test6',
-        videoUrl: 'https://example.com/test6.mp4',
-      );
+    test(
+      'reading provider without listener should not prevent disposal',
+      () async {
+        // Arrange
+        final params = VideoControllerParams(
+          videoId: 'test6',
+          videoUrl: 'https://example.com/test6.mp4',
+        );
 
-      // Act - just read (like prewarming does)
-      container.read(individualVideoControllerProvider(params));
+        // Act - just read (like prewarming does)
+        container.read(individualVideoControllerProvider(params));
 
-      await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(Duration(milliseconds: 100));
 
-      // Assert - controller exists but is not kept alive by read()
-      // The provider should immediately be eligible for disposal
-      // (though it won't actually dispose until garbage collected)
-      expect(
-        () => container.read(individualVideoControllerProvider(params)),
-        returnsNormally,
-      );
-    });
+        // Assert - controller exists but is not kept alive by read()
+        // The provider should immediately be eligible for disposal
+        // (though it won't actually dispose until garbage collected)
+        expect(
+          () => container.read(individualVideoControllerProvider(params)),
+          returnsNormally,
+        );
+      },
+    );
   });
 }

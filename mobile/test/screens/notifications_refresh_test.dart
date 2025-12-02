@@ -16,13 +16,9 @@ import 'notifications_refresh_test.mocks.dart';
 @GenerateMocks([NotificationServiceEnhanced])
 void main() {
   Widget shell(ProviderContainer c) => UncontrolledProviderScope(
-        container: c,
-        child: const MaterialApp(
-          home: Scaffold(
-            body: NotificationsScreen(),
-          ),
-        ),
-      );
+    container: c,
+    child: const MaterialApp(home: Scaffold(body: NotificationsScreen())),
+  );
 
   group('NotificationsScreen Refresh', () {
     late MockNotificationServiceEnhanced mockNotificationService;
@@ -43,22 +39,25 @@ void main() {
       ];
 
       when(mockNotificationService.notifications).thenReturn(testNotifications);
-      when(mockNotificationService.getNotificationsByType(any))
-          .thenReturn([]);
-      when(mockNotificationService.markAsRead(any))
-          .thenAnswer((_) async {});
+      when(mockNotificationService.getNotificationsByType(any)).thenReturn([]);
+      when(mockNotificationService.markAsRead(any)).thenAnswer((_) async {});
     });
 
-    testWidgets('pull-to-refresh calls refreshNotifications on service',
-        (WidgetTester tester) async {
+    testWidgets('pull-to-refresh calls refreshNotifications on service', (
+      WidgetTester tester,
+    ) async {
       // Arrange
-      when(mockNotificationService.refreshNotifications())
-          .thenAnswer((_) async {});
+      when(
+        mockNotificationService.refreshNotifications(),
+      ).thenAnswer((_) async {});
 
-      final c = ProviderContainer(overrides: [
-        notificationServiceEnhancedProvider
-            .overrideWith((ref) => mockNotificationService),
-      ]);
+      final c = ProviderContainer(
+        overrides: [
+          notificationServiceEnhancedProvider.overrideWith(
+            (ref) => mockNotificationService,
+          ),
+        ],
+      );
       addTearDown(c.dispose);
 
       await tester.pumpWidget(shell(c));
@@ -77,16 +76,21 @@ void main() {
       verify(mockNotificationService.refreshNotifications()).called(1);
     });
 
-    testWidgets('refresh indicator is present when there are notifications',
-        (WidgetTester tester) async {
+    testWidgets('refresh indicator is present when there are notifications', (
+      WidgetTester tester,
+    ) async {
       // Arrange
-      when(mockNotificationService.refreshNotifications())
-          .thenAnswer((_) async {});
+      when(
+        mockNotificationService.refreshNotifications(),
+      ).thenAnswer((_) async {});
 
-      final c = ProviderContainer(overrides: [
-        notificationServiceEnhancedProvider
-            .overrideWith((ref) => mockNotificationService),
-      ]);
+      final c = ProviderContainer(
+        overrides: [
+          notificationServiceEnhancedProvider.overrideWith(
+            (ref) => mockNotificationService,
+          ),
+        ],
+      );
       addTearDown(c.dispose);
 
       await tester.pumpWidget(shell(c));

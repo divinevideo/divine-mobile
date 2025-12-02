@@ -205,9 +205,7 @@ void main() {
 
     testWidgets('empty state shown when no videos', (tester) async {
       final container = ProviderContainer(
-        overrides: [
-          homeFeedProvider.overrideWith(() => HomeFeedMock([])),
-        ],
+        overrides: [homeFeedProvider.overrideWith(() => HomeFeedMock([]))],
       );
 
       await tester.pumpWidget(
@@ -228,7 +226,10 @@ void main() {
 
       // Verify empty state is shown (inline widget, no specific type)
       expect(find.text('No videos available'), findsOneWidget);
-      expect(find.text('Follow some creators to see their videos here'), findsOneWidget);
+      expect(
+        find.text('Follow some creators to see their videos here'),
+        findsOneWidget,
+      );
 
       container.dispose();
     });
@@ -340,7 +341,10 @@ void main() {
 
       // Should prefetch profiles for index 0 and 2 (±1 from current)
       expect(prefetchedPubkeys, containsAll(['pubkey-1', 'pubkey-3']));
-      expect(prefetchedPubkeys, isNot(contains('pubkey-2'))); // current, not prefetch
+      expect(
+        prefetchedPubkeys,
+        isNot(contains('pubkey-2')),
+      ); // current, not prefetch
 
       container.dispose();
     });

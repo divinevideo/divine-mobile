@@ -153,8 +153,11 @@ ProfileCacheService profileCacheService(Ref ref) {
   final service = ProfileCacheService();
   // Initialize asynchronously to avoid blocking UI
   service.initialize().catchError((e) {
-    Log.error('Failed to initialize ProfileCacheService',
-        name: 'AppProviders', error: e);
+    Log.error(
+      'Failed to initialize ProfileCacheService',
+      name: 'AppProviders',
+      error: e,
+    );
   });
   return service;
 }
@@ -165,8 +168,11 @@ HashtagCacheService hashtagCacheService(Ref ref) {
   final service = HashtagCacheService();
   // Initialize asynchronously to avoid blocking UI
   service.initialize().catchError((e) {
-    Log.error('Failed to initialize HashtagCacheService',
-        name: 'AppProviders', error: e);
+    Log.error(
+      'Failed to initialize HashtagCacheService',
+      name: 'AppProviders',
+      error: e,
+    );
   });
   return service;
 }
@@ -180,8 +186,11 @@ PersonalEventCacheService personalEventCacheService(Ref ref) {
   // Initialize with current user's pubkey when authenticated
   if (authService.isAuthenticated && authService.currentPublicKeyHex != null) {
     service.initialize(authService.currentPublicKeyHex!).catchError((e) {
-      Log.error('Failed to initialize PersonalEventCacheService',
-          name: 'AppProviders', error: e);
+      Log.error(
+        'Failed to initialize PersonalEventCacheService',
+        name: 'AppProviders',
+        error: e,
+      );
     });
   }
 
@@ -239,7 +248,6 @@ Stream<AuthState> authStateStream(Ref ref) async* {
   yield* authService.authStateStream;
 }
 
-
 /// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities
 @Riverpod(keepAlive: true)
 INostrService nostrService(Ref ref) {
@@ -265,7 +273,9 @@ INostrService nostrService(Ref ref) {
     } else {
       // In debug mode, just close subscriptions but keep the relay alive
       service.closeAllSubscriptions().catchError((e) {
-        UnifiedLogger.warning('Error closing subscriptions during hot reload: $e');
+        UnifiedLogger.warning(
+          'Error closing subscriptions during hot reload: $e',
+        );
       });
     }
   });
@@ -326,9 +336,7 @@ UserProfileService userProfileService(Ref ref) {
   service.setPersistentCache(profileCache);
 
   // Inject profile cache lookup into SubscriptionManager to avoid redundant relay requests
-  subscriptionManager.setCacheLookup(
-    hasProfileCached: service.hasProfile,
-  );
+  subscriptionManager.setCacheLookup(hasProfileCached: service.hasProfile);
 
   // Ensure cleanup on disposal
   ref.onDispose(() {
@@ -382,8 +390,11 @@ NotificationServiceEnhanced notificationServiceEnhanced(Ref ref) {
         }
 
         if (!nostrService.hasKeys) {
-          Log.warning('Notification service initialization skipped - no Nostr keys available after 15s',
-              name: 'AppProviders', category: LogCategory.system);
+          Log.warning(
+            'Notification service initialization skipped - no Nostr keys available after 15s',
+            name: 'AppProviders',
+            category: LogCategory.system,
+          );
           return;
         }
 
@@ -393,8 +404,11 @@ NotificationServiceEnhanced notificationServiceEnhanced(Ref ref) {
           videoService: videoService,
         );
       } catch (e) {
-        Log.error('Failed to initialize enhanced notification service: $e',
-            name: 'AppProviders', category: LogCategory.system);
+        Log.error(
+          'Failed to initialize enhanced notification service: $e',
+          name: 'AppProviders',
+          category: LogCategory.system,
+        );
       }
     });
   } else {
@@ -411,8 +425,11 @@ NotificationServiceEnhanced notificationServiceEnhanced(Ref ref) {
           videoService: videoService,
         );
       } catch (e) {
-        Log.error('Failed to initialize enhanced notification service: $e',
-            name: 'AppProviders', category: LogCategory.system);
+        Log.error(
+          'Failed to initialize enhanced notification service: $e',
+          name: 'AppProviders',
+          category: LogCategory.system,
+        );
       }
     });
   }
@@ -453,16 +470,17 @@ MediaAuthInterceptor mediaAuthInterceptor(Ref ref) {
 BlossomUploadService blossomUploadService(Ref ref) {
   final authService = ref.watch(authServiceProvider);
   final nostrService = ref.watch(nostrServiceProvider);
-  return BlossomUploadService(authService: authService, nostrService: nostrService);
+  return BlossomUploadService(
+    authService: authService,
+    nostrService: nostrService,
+  );
 }
 
 /// Upload manager uses only Blossom upload service
 @Riverpod(keepAlive: true)
 UploadManager uploadManager(Ref ref) {
   final blossomService = ref.watch(blossomUploadServiceProvider);
-  return UploadManager(
-    blossomService: blossomService,
-  );
+  return UploadManager(blossomService: blossomService);
 }
 
 /// API service depends on auth service

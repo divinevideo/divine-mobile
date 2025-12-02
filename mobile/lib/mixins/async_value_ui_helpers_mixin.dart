@@ -53,9 +53,7 @@ mixin AsyncValueUIHelpersMixin {
   /// Default loading widget - centered spinner with vine green color
   Widget _buildDefaultLoading() {
     return const Center(
-      child: CircularProgressIndicator(
-        color: VineTheme.vineGreen,
-      ),
+      child: CircularProgressIndicator(color: VineTheme.vineGreen),
     );
   }
 
@@ -65,11 +63,7 @@ mixin AsyncValueUIHelpersMixin {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.error_outline,
-            color: Colors.red,
-            size: 48,
-          ),
+          const Icon(Icons.error_outline, color: Colors.red, size: 48),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),

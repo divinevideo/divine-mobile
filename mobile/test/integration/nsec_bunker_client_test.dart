@@ -13,8 +13,11 @@ void main() {
     const testEndpoint = 'https://bunker.example.com/auth';
 
     setUp(() {
-      Log.info('Setting up bunker client test',
-          name: 'Test', category: LogCategory.system);
+      Log.info(
+        'Setting up bunker client test',
+        name: 'Test',
+        category: LogCategory.system,
+      );
 
       bunkerClient = NsecBunkerClient(authEndpoint: testEndpoint);
     });

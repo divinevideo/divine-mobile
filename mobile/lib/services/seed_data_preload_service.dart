@@ -18,13 +18,19 @@ class SeedDataPreloadService {
       // Check if database already has events
       final count = await db.nostrEventsDao.getEventCount();
       if (count > 0) {
-        Log.info('[SEED] Database has $count events, skipping seed load',
-            name: 'SeedDataPreload', category: LogCategory.system);
+        Log.info(
+          '[SEED] Database has $count events, skipping seed load',
+          name: 'SeedDataPreload',
+          category: LogCategory.system,
+        );
         return;
       }
 
-      Log.info('[SEED] Database empty, loading seed data...',
-          name: 'SeedDataPreload', category: LogCategory.system);
+      Log.info(
+        '[SEED] Database empty, loading seed data...',
+        name: 'SeedDataPreload',
+        category: LogCategory.system,
+      );
 
       // Load SQL file from assets
       final sql = await rootBundle.loadString(
@@ -45,14 +51,23 @@ class SeedDataPreloadService {
 
       // Log success
       final finalCount = await db.nostrEventsDao.getEventCount();
-      Log.info('[SEED] ✅ Loaded seed data: $finalCount events',
-          name: 'SeedDataPreload', category: LogCategory.system);
+      Log.info(
+        '[SEED] ✅ Loaded seed data: $finalCount events',
+        name: 'SeedDataPreload',
+        category: LogCategory.system,
+      );
     } catch (e, stack) {
       // Non-critical failure: user will fetch from relay normally
-      Log.error('[SEED] ❌ Failed to load seed data (non-critical): $e',
-          name: 'SeedDataPreload', category: LogCategory.system);
-      Log.verbose('[SEED] Stack trace: $stack',
-          name: 'SeedDataPreload', category: LogCategory.system);
+      Log.error(
+        '[SEED] ❌ Failed to load seed data (non-critical): $e',
+        name: 'SeedDataPreload',
+        category: LogCategory.system,
+      );
+      Log.verbose(
+        '[SEED] Stack trace: $stack',
+        name: 'SeedDataPreload',
+        category: LogCategory.system,
+      );
     }
   }
 }

@@ -37,8 +37,9 @@ void main() {
           maxLimit: 200,
         );
 
-        when(mockCapabilityService.getRelayCapabilities(testRelayUrl))
-            .thenAnswer((_) async => divineCapabilities);
+        when(
+          mockCapabilityService.getRelayCapabilities(testRelayUrl),
+        ).thenAnswer((_) async => divineCapabilities);
       });
 
       test('builds trending filter with server-side sorting', () async {
@@ -173,8 +174,9 @@ void main() {
           hasDivineExtensions: false,
         );
 
-        when(mockCapabilityService.getRelayCapabilities(testRelayUrl))
-            .thenAnswer((_) async => standardCapabilities);
+        when(
+          mockCapabilityService.getRelayCapabilities(testRelayUrl),
+        ).thenAnswer((_) async => standardCapabilities);
       });
 
       test('falls back to standard filter for trending', () async {
@@ -237,8 +239,9 @@ void main() {
           intFilterFields: ['loop_count', 'likes'],
         );
 
-        when(mockCapabilityService.getRelayCapabilities(testRelayUrl))
-            .thenAnswer((_) async => partialCapabilities);
+        when(
+          mockCapabilityService.getRelayCapabilities(testRelayUrl),
+        ).thenAnswer((_) async => partialCapabilities);
 
         final baseFilter = Filter(kinds: [34236]);
 
@@ -249,8 +252,11 @@ void main() {
         );
 
         final json = result.toJson();
-        expect(json.containsKey('sort'), false,
-            reason: 'Should fall back when sort field not supported');
+        expect(
+          json.containsKey('sort'),
+          false,
+          reason: 'Should fall back when sort field not supported',
+        );
       });
 
       test('falls back when requested int filter not supported', () async {
@@ -263,8 +269,9 @@ void main() {
           intFilterFields: ['loop_count'], // No 'views'
         );
 
-        when(mockCapabilityService.getRelayCapabilities(testRelayUrl))
-            .thenAnswer((_) async => partialCapabilities);
+        when(
+          mockCapabilityService.getRelayCapabilities(testRelayUrl),
+        ).thenAnswer((_) async => partialCapabilities);
 
         final baseFilter = Filter(kinds: [34236]);
 
@@ -278,37 +285,44 @@ void main() {
         );
 
         final json = result.toJson();
-        expect(json.containsKey('sort'), false,
-            reason: 'Should fall back when int filter not supported');
+        expect(
+          json.containsKey('sort'),
+          false,
+          reason: 'Should fall back when int filter not supported',
+        );
       });
     });
 
     group('Error Handling', () {
-      test('falls back to standard filter when capability check fails',
-          () async {
-        when(mockCapabilityService.getRelayCapabilities(testRelayUrl))
-            .thenThrow(RelayCapabilityException(
-          'Network error',
-          testRelayUrl,
-        ));
+      test(
+        'falls back to standard filter when capability check fails',
+        () async {
+          when(
+            mockCapabilityService.getRelayCapabilities(testRelayUrl),
+          ).thenThrow(RelayCapabilityException('Network error', testRelayUrl));
 
-        final baseFilter = Filter(kinds: [34236], limit: 50);
+          final baseFilter = Filter(kinds: [34236], limit: 50);
 
-        final result = await builder.buildTrendingFilter(
-          baseFilter: baseFilter,
-          relayUrl: testRelayUrl,
-        );
+          final result = await builder.buildTrendingFilter(
+            baseFilter: baseFilter,
+            relayUrl: testRelayUrl,
+          );
 
-        final json = result.toJson();
-        expect(json.containsKey('sort'), false,
-            reason: 'Should fall back on error');
-        expect(json['kinds'], [34236]);
-        expect(json['limit'], 50);
-      });
+          final json = result.toJson();
+          expect(
+            json.containsKey('sort'),
+            false,
+            reason: 'Should fall back on error',
+          );
+          expect(json['kinds'], [34236]);
+          expect(json['limit'], 50);
+        },
+      );
 
       test('falls back gracefully when capability service throws', () async {
-        when(mockCapabilityService.getRelayCapabilities(testRelayUrl))
-            .thenThrow(Exception('Unexpected error'));
+        when(
+          mockCapabilityService.getRelayCapabilities(testRelayUrl),
+        ).thenThrow(Exception('Unexpected error'));
 
         final baseFilter = Filter(kinds: [34236]);
 
@@ -335,8 +349,9 @@ void main() {
           intFilterFields: ['loop_count'],
         );
 
-        when(mockCapabilityService.getRelayCapabilities(testRelayUrl))
-            .thenAnswer((_) async => divineCapabilities);
+        when(
+          mockCapabilityService.getRelayCapabilities(testRelayUrl),
+        ).thenAnswer((_) async => divineCapabilities);
 
         final baseFilter = Filter(kinds: [34236], limit: 50);
 

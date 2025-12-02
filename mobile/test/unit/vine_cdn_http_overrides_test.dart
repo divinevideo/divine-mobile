@@ -16,4 +16,3 @@ void main() {
     expect(result2.first.address, equals('151.101.244.157'));
   });
 }
-

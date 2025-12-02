@@ -41,11 +41,11 @@ class FakeFirebaseApp extends Fake implements FirebaseAppPlatform {
 
   @override
   FirebaseOptions get options => const FirebaseOptions(
-        apiKey: 'fake-api-key',
-        appId: 'fake-app-id',
-        messagingSenderId: 'fake-sender-id',
-        projectId: 'fake-project-id',
-      );
+    apiKey: 'fake-api-key',
+    appId: 'fake-app-id',
+    messagingSenderId: 'fake-sender-id',
+    projectId: 'fake-project-id',
+  );
 }
 
 void setupFirebaseCoreMocks() {
@@ -66,15 +66,15 @@ void main() async {
   setupFirebaseCoreMocks();
 
   // Mock Firebase Analytics method channel
-  const MethodChannel analyticsChannel =
-      MethodChannel('plugins.flutter.io/firebase_analytics');
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(
-    analyticsChannel,
-    (MethodCall methodCall) async {
-      return null; // Analytics methods don't need return values in tests
-    },
+  const MethodChannel analyticsChannel = MethodChannel(
+    'plugins.flutter.io/firebase_analytics',
   );
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(analyticsChannel, (
+        MethodCall methodCall,
+      ) async {
+        return null; // Analytics methods don't need return values in tests
+      });
 
   // Initialize Firebase for tests
   await Firebase.initializeApp();
@@ -93,191 +93,221 @@ void main() async {
     });
 
     group('GREEN Phase: Tests for working methods', () {
-      testWidgets('ExploreScreen should have onScreenHidden method that works correctly', (tester) async {
-        final testContainer = ProviderContainer(
-          overrides: [
-          ...getStandardTestOverrides(),
-            videoEventsProvider.overrideWith(() => VideoEventsMock()),
-          ],
-        );
+      testWidgets(
+        'ExploreScreen should have onScreenHidden method that works correctly',
+        (tester) async {
+          final testContainer = ProviderContainer(
+            overrides: [
+              ...getStandardTestOverrides(),
+              videoEventsProvider.overrideWith(() => VideoEventsMock()),
+            ],
+          );
 
-        final key = GlobalKey();
+          final key = GlobalKey();
 
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: testContainer,
-            child: MaterialApp(
-              home: ExploreScreen(key: key),
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: testContainer,
+              child: MaterialApp(home: ExploreScreen(key: key)),
             ),
-          ),
-        );
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        // Test that onScreenHidden method exists and can be called successfully
-        final state = key.currentState;
-        expect(state, isNotNull, reason: 'ExploreScreen state should be created');
-        expect(() {
-          (state! as dynamic).onScreenHidden();
-        }, returnsNormally);
+          // Test that onScreenHidden method exists and can be called successfully
+          final state = key.currentState;
+          expect(
+            state,
+            isNotNull,
+            reason: 'ExploreScreen state should be created',
+          );
+          expect(() {
+            (state! as dynamic).onScreenHidden();
+          }, returnsNormally);
 
-        testContainer.dispose();
-      });
+          testContainer.dispose();
+        },
+      );
 
-      testWidgets('ExploreScreen should have onScreenVisible method that works correctly', (tester) async {
-        final testContainer = ProviderContainer(
-          overrides: [
-          ...getStandardTestOverrides(),
-            videoEventsProvider.overrideWith(() => VideoEventsMock()),
-          ],
-        );
+      testWidgets(
+        'ExploreScreen should have onScreenVisible method that works correctly',
+        (tester) async {
+          final testContainer = ProviderContainer(
+            overrides: [
+              ...getStandardTestOverrides(),
+              videoEventsProvider.overrideWith(() => VideoEventsMock()),
+            ],
+          );
 
-        final key = GlobalKey();
+          final key = GlobalKey();
 
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: testContainer,
-            child: MaterialApp(
-              home: ExploreScreen(key: key),
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: testContainer,
+              child: MaterialApp(home: ExploreScreen(key: key)),
             ),
-          ),
-        );
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        // Test that onScreenVisible method exists and can be called successfully
-        final state = key.currentState;
-        expect(state, isNotNull, reason: 'ExploreScreen state should be created');
-        expect(() {
-          (state! as dynamic).onScreenVisible();
-        }, returnsNormally);
+          // Test that onScreenVisible method exists and can be called successfully
+          final state = key.currentState;
+          expect(
+            state,
+            isNotNull,
+            reason: 'ExploreScreen state should be created',
+          );
+          expect(() {
+            (state! as dynamic).onScreenVisible();
+          }, returnsNormally);
 
-        testContainer.dispose();
-      });
+          testContainer.dispose();
+        },
+      );
 
-      testWidgets('ExploreScreen should have exitFeedMode method that works correctly', (tester) async {
-        final testContainer = ProviderContainer(
-          overrides: [
-          ...getStandardTestOverrides(),
-            videoEventsProvider.overrideWith(() => VideoEventsMock()),
-          ],
-        );
+      testWidgets(
+        'ExploreScreen should have exitFeedMode method that works correctly',
+        (tester) async {
+          final testContainer = ProviderContainer(
+            overrides: [
+              ...getStandardTestOverrides(),
+              videoEventsProvider.overrideWith(() => VideoEventsMock()),
+            ],
+          );
 
-        final key = GlobalKey();
+          final key = GlobalKey();
 
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: testContainer,
-            child: MaterialApp(
-              home: ExploreScreen(key: key),
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: testContainer,
+              child: MaterialApp(home: ExploreScreen(key: key)),
             ),
-          ),
-        );
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        // Test that exitFeedMode method exists and can be called successfully
-        final state = key.currentState;
-        expect(state, isNotNull, reason: 'ExploreScreen state should be created');
-        expect(() {
-          (state! as dynamic).exitFeedMode();
-        }, returnsNormally);
+          // Test that exitFeedMode method exists and can be called successfully
+          final state = key.currentState;
+          expect(
+            state,
+            isNotNull,
+            reason: 'ExploreScreen state should be created',
+          );
+          expect(() {
+            (state! as dynamic).exitFeedMode();
+          }, returnsNormally);
 
-        testContainer.dispose();
-      });
+          testContainer.dispose();
+        },
+      );
 
-      testWidgets('ExploreScreen should have showHashtagVideos method that works correctly', (tester) async {
-        final testContainer = ProviderContainer(
-          overrides: [
-          ...getStandardTestOverrides(),
-            videoEventsProvider.overrideWith(() => VideoEventsMock()),
-          ],
-        );
+      testWidgets(
+        'ExploreScreen should have showHashtagVideos method that works correctly',
+        (tester) async {
+          final testContainer = ProviderContainer(
+            overrides: [
+              ...getStandardTestOverrides(),
+              videoEventsProvider.overrideWith(() => VideoEventsMock()),
+            ],
+          );
 
-        final key = GlobalKey();
+          final key = GlobalKey();
 
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: testContainer,
-            child: MaterialApp(
-              home: ExploreScreen(key: key),
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: testContainer,
+              child: MaterialApp(home: ExploreScreen(key: key)),
             ),
-          ),
-        );
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        // Test that showHashtagVideos method exists and can be called successfully
-        final state = key.currentState;
-        expect(state, isNotNull, reason: 'ExploreScreen state should be created');
-        expect(() {
-          (state! as dynamic).showHashtagVideos('test');
-        }, returnsNormally);
+          // Test that showHashtagVideos method exists and can be called successfully
+          final state = key.currentState;
+          expect(
+            state,
+            isNotNull,
+            reason: 'ExploreScreen state should be created',
+          );
+          expect(() {
+            (state! as dynamic).showHashtagVideos('test');
+          }, returnsNormally);
 
-        testContainer.dispose();
-      });
+          testContainer.dispose();
+        },
+      );
 
-      testWidgets('ExploreScreen should have isInFeedMode getter that works correctly', (tester) async {
-        final testContainer = ProviderContainer(
-          overrides: [
-          ...getStandardTestOverrides(),
-            videoEventsProvider.overrideWith(() => VideoEventsMock()),
-          ],
-        );
+      testWidgets(
+        'ExploreScreen should have isInFeedMode getter that works correctly',
+        (tester) async {
+          final testContainer = ProviderContainer(
+            overrides: [
+              ...getStandardTestOverrides(),
+              videoEventsProvider.overrideWith(() => VideoEventsMock()),
+            ],
+          );
 
-        final key = GlobalKey();
+          final key = GlobalKey();
 
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: testContainer,
-            child: MaterialApp(
-              home: ExploreScreen(key: key),
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: testContainer,
+              child: MaterialApp(home: ExploreScreen(key: key)),
             ),
-          ),
-        );
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        // Test that isInFeedMode getter exists and returns correct boolean value
-        final state = key.currentState;
-        expect(state, isNotNull, reason: 'ExploreScreen state should be created');
-        final isInFeedMode = (state! as dynamic).isInFeedMode;
-        expect(isInFeedMode, isA<bool>());
-        expect(isInFeedMode, false); // Should start as false
+          // Test that isInFeedMode getter exists and returns correct boolean value
+          final state = key.currentState;
+          expect(
+            state,
+            isNotNull,
+            reason: 'ExploreScreen state should be created',
+          );
+          final isInFeedMode = (state! as dynamic).isInFeedMode;
+          expect(isInFeedMode, isA<bool>());
+          expect(isInFeedMode, false); // Should start as false
 
-        testContainer.dispose();
-      });
+          testContainer.dispose();
+        },
+      );
 
-      testWidgets('ExploreScreen should have playSpecificVideo method with correct signature', (tester) async {
-        final testContainer = ProviderContainer(
-          overrides: [
-          ...getStandardTestOverrides(),
-            videoEventsProvider.overrideWith(() => VideoEventsMock()),
-          ],
-        );
+      testWidgets(
+        'ExploreScreen should have playSpecificVideo method with correct signature',
+        (tester) async {
+          final testContainer = ProviderContainer(
+            overrides: [
+              ...getStandardTestOverrides(),
+              videoEventsProvider.overrideWith(() => VideoEventsMock()),
+            ],
+          );
 
-        final key = GlobalKey();
+          final key = GlobalKey();
 
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: testContainer,
-            child: MaterialApp(
-              home: ExploreScreen(key: key),
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: testContainer,
+              child: MaterialApp(home: ExploreScreen(key: key)),
             ),
-          ),
-        );
+          );
 
-        await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
 
-        // Test that playSpecificVideo method exists with the signature main.dart expects
-        final state = key.currentState;
-        expect(state, isNotNull, reason: 'ExploreScreen state should be created');
-        expect(() {
-          (state! as dynamic).playSpecificVideo(mockVideos[0], mockVideos, 0);
-        }, returnsNormally);
+          // Test that playSpecificVideo method exists with the signature main.dart expects
+          final state = key.currentState;
+          expect(
+            state,
+            isNotNull,
+            reason: 'ExploreScreen state should be created',
+          );
+          expect(() {
+            (state! as dynamic).playSpecificVideo(mockVideos[0], mockVideos, 0);
+          }, returnsNormally);
 
-        testContainer.dispose();
-      });
+          testContainer.dispose();
+        },
+      );
     });
   });
 }

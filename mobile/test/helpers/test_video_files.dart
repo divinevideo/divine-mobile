@@ -124,7 +124,12 @@ class TestVideoFiles {
   }
 
   static TestColor _generateAnimatedColor(
-      int x, int y, int width, int height, int frameIndex) {
+    int x,
+    int y,
+    int width,
+    int height,
+    int frameIndex,
+  ) {
     final time = frameIndex / 30.0; // Assuming 30 FPS
     final centerX = width / 2;
     final centerY = height / 2;
@@ -153,130 +158,129 @@ class TestVideoFiles {
     double? framerate,
     String? codec,
     int? bitrate,
-  }) =>
-      {
-        'format': format ?? 'mp4',
-        'duration': (duration ?? const Duration(seconds: 6)).inMilliseconds,
-        'framerate': framerate ?? 30.0,
-        'codec': codec ?? 'h264',
-        'bitrate': bitrate ?? 2000000, // 2 Mbps
-        'created_at': DateTime.now().toIso8601String(),
-      };
+  }) => {
+    'format': format ?? 'mp4',
+    'duration': (duration ?? const Duration(seconds: 6)).inMilliseconds,
+    'framerate': framerate ?? 30.0,
+    'codec': codec ?? 'h264',
+    'bitrate': bitrate ?? 2000000, // 2 Mbps
+    'created_at': DateTime.now().toIso8601String(),
+  };
 
   /// Create test scenarios for error conditions
   static List<TestVideoScenario> getErrorScenarios() => [
-        const TestVideoScenario(
-          name: 'Empty frames list',
-          frames: [],
-          expectedError: 'ArgumentError',
-          description: 'Should handle empty frame list gracefully',
+    const TestVideoScenario(
+      name: 'Empty frames list',
+      frames: [],
+      expectedError: 'ArgumentError',
+      description: 'Should handle empty frame list gracefully',
+    ),
+    TestVideoScenario(
+      name: 'Invalid dimensions',
+      frames: createVideoFrames(width: 0, height: 0),
+      expectedError: 'ArgumentError',
+      description: 'Should validate frame dimensions',
+    ),
+    TestVideoScenario(
+      name: 'Mismatched frame sizes',
+      frames: [
+        _createSingleFrame(
+          width: 640,
+          height: 480,
+          frameIndex: 0,
+          format: VideoTestFormat.rgb,
+          pattern: VideoTestPattern.solid,
         ),
-        TestVideoScenario(
-          name: 'Invalid dimensions',
-          frames: createVideoFrames(width: 0, height: 0),
-          expectedError: 'ArgumentError',
-          description: 'Should validate frame dimensions',
+        _createSingleFrame(
+          width: 320,
+          height: 240,
+          frameIndex: 1,
+          format: VideoTestFormat.rgb,
+          pattern: VideoTestPattern.solid,
         ),
-        TestVideoScenario(
-          name: 'Mismatched frame sizes',
-          frames: [
-            _createSingleFrame(
-              width: 640,
-              height: 480,
-              frameIndex: 0,
-              format: VideoTestFormat.rgb,
-              pattern: VideoTestPattern.solid,
-            ),
-            _createSingleFrame(
-              width: 320,
-              height: 240,
-              frameIndex: 1,
-              format: VideoTestFormat.rgb,
-              pattern: VideoTestPattern.solid,
-            ),
-          ],
-          expectedError: 'ArgumentError',
-          description: 'Should handle inconsistent frame sizes',
-        ),
-        TestVideoScenario(
-          name: 'Corrupted frame data',
-          frames: [Uint8List(100)], // Too small for declared dimensions
-          expectedError: 'ProcessingException',
-          description: 'Should handle corrupted frame data',
-        ),
-      ];
+      ],
+      expectedError: 'ArgumentError',
+      description: 'Should handle inconsistent frame sizes',
+    ),
+    TestVideoScenario(
+      name: 'Corrupted frame data',
+      frames: [Uint8List(100)], // Too small for declared dimensions
+      expectedError: 'ProcessingException',
+      description: 'Should handle corrupted frame data',
+    ),
+  ];
 
   /// Create test scenarios for performance testing
   static List<TestVideoScenario> getPerformanceScenarios() => [
-        TestVideoScenario(
-          name: 'Short vine (6 seconds, 30 frames)',
-          frames: createVideoFrames(frameCount: 30),
-          description: 'Standard vine recording',
-          expectedProcessingTime: const Duration(milliseconds: 500),
-        ),
-        TestVideoScenario(
-          name: 'Long video (30 seconds, 150 frames)',
-          frames: createVideoFrames(frameCount: 150),
-          description: 'Extended video processing',
-          expectedProcessingTime: const Duration(seconds: 2),
-        ),
-        TestVideoScenario(
-          name: 'High resolution (1080p, 30 frames)',
-          frames: createVideoFrames(
-            frameCount: 30,
-            width: largeWidth,
-            height: largeHeight,
-          ),
-          description: 'High resolution processing test',
-          expectedProcessingTime: const Duration(seconds: 1),
-        ),
-        TestVideoScenario(
-          name: 'Low resolution (240p, 30 frames)',
-          frames: createVideoFrames(
-            frameCount: 30,
-            width: smallWidth,
-            height: smallHeight,
-          ),
-          description: 'Low resolution optimization test',
-          expectedProcessingTime: const Duration(milliseconds: 200),
-        ),
-      ];
+    TestVideoScenario(
+      name: 'Short vine (6 seconds, 30 frames)',
+      frames: createVideoFrames(frameCount: 30),
+      description: 'Standard vine recording',
+      expectedProcessingTime: const Duration(milliseconds: 500),
+    ),
+    TestVideoScenario(
+      name: 'Long video (30 seconds, 150 frames)',
+      frames: createVideoFrames(frameCount: 150),
+      description: 'Extended video processing',
+      expectedProcessingTime: const Duration(seconds: 2),
+    ),
+    TestVideoScenario(
+      name: 'High resolution (1080p, 30 frames)',
+      frames: createVideoFrames(
+        frameCount: 30,
+        width: largeWidth,
+        height: largeHeight,
+      ),
+      description: 'High resolution processing test',
+      expectedProcessingTime: const Duration(seconds: 1),
+    ),
+    TestVideoScenario(
+      name: 'Low resolution (240p, 30 frames)',
+      frames: createVideoFrames(
+        frameCount: 30,
+        width: smallWidth,
+        height: smallHeight,
+      ),
+      description: 'Low resolution optimization test',
+      expectedProcessingTime: const Duration(milliseconds: 200),
+    ),
+  ];
 
   /// Create test scenarios for different video formats
   static List<TestVideoScenario> getFormatScenarios() => [
-        TestVideoScenario(
-          name: 'RGB format',
-          frames: createVideoFrames(format: VideoTestFormat.rgb),
-          description: 'Standard RGB color format',
-        ),
-        TestVideoScenario(
-          name: 'RGBA format with transparency',
-          frames: createVideoFrames(format: VideoTestFormat.rgba),
-          description: 'RGBA format with alpha channel',
-        ),
-        TestVideoScenario(
-          name: 'Animated pattern',
-          frames: createVideoFrames(pattern: VideoTestPattern.animated),
-          description: 'Complex animated content',
-        ),
-        TestVideoScenario(
-          name: 'High contrast checkerboard',
-          frames: createVideoFrames(pattern: VideoTestPattern.checkerboard),
-          description: 'High contrast pattern for compression testing',
-        ),
-        TestVideoScenario(
-          name: 'Random noise pattern',
-          frames: createVideoFrames(pattern: VideoTestPattern.noise),
-          description: 'Random noise for worst-case compression',
-        ),
-      ];
+    TestVideoScenario(
+      name: 'RGB format',
+      frames: createVideoFrames(format: VideoTestFormat.rgb),
+      description: 'Standard RGB color format',
+    ),
+    TestVideoScenario(
+      name: 'RGBA format with transparency',
+      frames: createVideoFrames(format: VideoTestFormat.rgba),
+      description: 'RGBA format with alpha channel',
+    ),
+    TestVideoScenario(
+      name: 'Animated pattern',
+      frames: createVideoFrames(pattern: VideoTestPattern.animated),
+      description: 'Complex animated content',
+    ),
+    TestVideoScenario(
+      name: 'High contrast checkerboard',
+      frames: createVideoFrames(pattern: VideoTestPattern.checkerboard),
+      description: 'High contrast pattern for compression testing',
+    ),
+    TestVideoScenario(
+      name: 'Random noise pattern',
+      frames: createVideoFrames(pattern: VideoTestPattern.noise),
+      description: 'Random noise for worst-case compression',
+    ),
+  ];
 
   /// Create comprehensive test suite combining all scenarios
   static List<TestVideoScenario> getAllTestScenarios() => [
-        ...getPerformanceScenarios(),
-        ...getFormatScenarios(),
-        ...getErrorScenarios(),
-      ];
+    ...getPerformanceScenarios(),
+    ...getFormatScenarios(),
+    ...getErrorScenarios(),
+  ];
 }
 
 /// Video test format enumeration

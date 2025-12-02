@@ -24,46 +24,49 @@ class ServiceInitHelper {
     // Mock SharedPreferences for tests
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-            const MethodChannel('plugins.flutter.io/shared_preferences'),
-            (MethodCall methodCall) async {
-      if (methodCall.method == 'getAll') {
-        return <String, Object>{}; // Return empty preferences
-      }
-      return null;
-    });
+          const MethodChannel('plugins.flutter.io/shared_preferences'),
+          (MethodCall methodCall) async {
+            if (methodCall.method == 'getAll') {
+              return <String, Object>{}; // Return empty preferences
+            }
+            return null;
+          },
+        );
 
     // Mock connectivity plugin
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-            const MethodChannel('dev.fluttercommunity.plus/connectivity'),
-            (MethodCall methodCall) async {
-      if (methodCall.method == 'check') {
-        return 'wifi'; // Always return connected
-      }
-      return null;
-    });
+          const MethodChannel('dev.fluttercommunity.plus/connectivity'),
+          (MethodCall methodCall) async {
+            if (methodCall.method == 'check') {
+              return 'wifi'; // Always return connected
+            }
+            return null;
+          },
+        );
 
     // Mock flutter_secure_storage plugin
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-            const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
-            (MethodCall methodCall) async {
-      // Simple in-memory store for test data
-      switch (methodCall.method) {
-        case 'read':
-          return null; // No stored data by default
-        case 'write':
-        case 'containsKey':
-          return false; // Keys don't exist by default
-        case 'delete':
-        case 'deleteAll':
-          return null; // Delete operations succeed silently
-        case 'readAll':
-          return <String, String>{}; // Return empty map
-        default:
-          return null;
-      }
-    });
+          const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+          (MethodCall methodCall) async {
+            // Simple in-memory store for test data
+            switch (methodCall.method) {
+              case 'read':
+                return null; // No stored data by default
+              case 'write':
+              case 'containsKey':
+                return false; // Keys don't exist by default
+              case 'delete':
+              case 'deleteAll':
+                return null; // Delete operations succeed silently
+              case 'readAll':
+                return <String, String>{}; // Return empty map
+              default:
+                return null;
+            }
+          },
+        );
 
     // Initialize logging for tests
     Log.setLogLevel(LogLevel.error); // Reduce noise in tests
@@ -84,8 +87,10 @@ class ServiceInitHelper {
 
       final nostrService = NostrService(keyManager);
       final subscriptionManager = SubscriptionManager(nostrService);
-      final videoEventService = VideoEventService(nostrService,
-          subscriptionManager: subscriptionManager);
+      final videoEventService = VideoEventService(
+        nostrService,
+        subscriptionManager: subscriptionManager,
+      );
 
       return ServiceBundle(
         keyManager: keyManager,
@@ -107,8 +112,10 @@ class ServiceInitHelper {
     testNostrService.setCurrentUserPubkey('test-pubkey-123');
 
     final subscriptionManager = SubscriptionManager(testNostrService);
-    final videoEventService = VideoEventService(testNostrService,
-        subscriptionManager: subscriptionManager);
+    final videoEventService = VideoEventService(
+      testNostrService,
+      subscriptionManager: subscriptionManager,
+    );
 
     return ServiceBundle(
       keyManager: null, // Not needed for test service
@@ -135,8 +142,7 @@ class ServiceInitHelper {
   }
 
   /// Create a test-ready ProviderContainer with proper overrides
-  static ProviderContainer createTestContainer(
-      {List? additionalOverrides}) {
+  static ProviderContainer createTestContainer({List? additionalOverrides}) {
     final baseOverrides = createProviderOverrides();
     final extraOverrides = additionalOverrides ?? [];
 

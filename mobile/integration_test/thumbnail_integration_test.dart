@@ -35,12 +35,15 @@ void main() {
         final cameraButtonFinder = find.byIcon(Icons.videocam);
         final fabFinder = find.byType(FloatingActionButton);
 
-        if (!tester.binding.defaultBinaryMessenger
-            .checkMockMessageHandler('flutter/platform', null)) {
+        if (!tester.binding.defaultBinaryMessenger.checkMockMessageHandler(
+          'flutter/platform',
+          null,
+        )) {
           Log.debug('⚠️ Running on real device - camera should be available');
         } else {
           Log.debug(
-              'ℹ️ Running in test environment - will simulate camera operations');
+            'ℹ️ Running in test environment - will simulate camera operations',
+          );
         }
 
         // Try to find and tap camera-related UI elements
@@ -79,7 +82,8 @@ void main() {
           Log.debug('✅ Recording stopped');
 
           // Finish recording to get the video file
-          final (videoFile, proofManifest) = await recordingController.finishRecording();
+          final (videoFile, proofManifest) = await recordingController
+              .finishRecording();
           if (videoFile == null) {
             throw Exception('No video file produced');
           }
@@ -93,10 +97,10 @@ void main() {
 
           final thumbnailBytes =
               await VideoThumbnailService.extractThumbnailBytes(
-            videoPath: videoFile.path,
-            timeMs: 500,
-            quality: 80,
-          );
+                videoPath: videoFile.path,
+                timeMs: 500,
+                quality: 80,
+              );
 
           if (thumbnailBytes != null) {
             Log.debug('✅ Thumbnail generated successfully!');
@@ -139,37 +143,44 @@ void main() {
         } catch (e) {
           Log.debug('❌ Camera test failed: $e');
           Log.debug(
-              'ℹ️ This is expected on simulator or headless test environment');
+            'ℹ️ This is expected on simulator or headless test environment',
+          );
 
           // Test the structure without real recording
           Log.debug(
-              '\n🧪 Testing thumbnail service structure without real video...');
+            '\n🧪 Testing thumbnail service structure without real video...',
+          );
 
           // Create a dummy file for structure testing
-          final tempDir =
-              await Directory.systemTemp.createTemp('structure_test');
+          final tempDir = await Directory.systemTemp.createTemp(
+            'structure_test',
+          );
           final dummyVideo = File('${tempDir.path}/dummy.mp4');
           await dummyVideo.writeAsBytes([1, 2, 3, 4]); // Minimal content
 
           final thumbnailResult =
               await VideoThumbnailService.extractThumbnailBytes(
-            videoPath: dummyVideo.path,
-          );
+                videoPath: dummyVideo.path,
+              );
 
           if (thumbnailResult == null) {
             Log.debug(
-                '✅ Thumbnail service correctly handles invalid video files');
+              '✅ Thumbnail service correctly handles invalid video files',
+            );
           }
 
           // Test optimal timestamp calculation
           final timestamp1 = VideoThumbnailService.getOptimalTimestamp(
-              const Duration(seconds: 6, milliseconds: 300));
+            const Duration(seconds: 6, milliseconds: 300),
+          );
           final timestamp2 = VideoThumbnailService.getOptimalTimestamp(
-              const Duration(seconds: 30));
+            const Duration(seconds: 30),
+          );
 
           Log.debug('✅ Optimal timestamp for vine (6.3s): ${timestamp1}ms');
           Log.debug(
-              '✅ Optimal timestamp for long video (30s): ${timestamp2}ms');
+            '✅ Optimal timestamp for long video (30s): ${timestamp2}ms',
+          );
 
           expect(timestamp1, equals(630)); // 10% of 6300ms
           expect(timestamp2, equals(1000)); // Capped at 1000ms
@@ -207,7 +218,8 @@ void main() {
       };
 
       Log.debug(
-          '✅ Upload metadata structure supports thumbnails: $testMetadata');
+        '✅ Upload metadata structure supports thumbnails: $testMetadata',
+      );
 
       // Test the upload result processing
       final mockUploadResult = BlossomUploadResult(
@@ -221,8 +233,7 @@ void main() {
       expect(mockUploadResult.cdnUrl, contains('integration_test.mp4'));
 
       Log.debug('✅ BlossomUploadResult correctly handles video uploads');
-      Log.debug(
-          '📸 CDN URL format verified: ${mockUploadResult.cdnUrl}');
+      Log.debug('📸 CDN URL format verified: ${mockUploadResult.cdnUrl}');
 
       Log.debug('🎉 UploadManager thumbnail integration test passed!');
     });

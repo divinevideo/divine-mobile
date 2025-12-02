@@ -26,9 +26,7 @@ void main() {
 
       // Create container with test database override
       container = ProviderContainer(
-        overrides: [
-          databaseProvider.overrideWithValue(testDb),
-        ],
+        overrides: [databaseProvider.overrideWithValue(testDb)],
       );
     });
 
@@ -100,14 +98,14 @@ void main() {
       final updates = <UserProfile?>[];
 
       // Listen to provider
-      final listener = container.listen(
-        userProfileProvider(pubkey),
-        (prev, next) {
-          if (next is AsyncData<UserProfile?>) {
-            updates.add(next.value);
-          }
-        },
-      );
+      final listener = container.listen(userProfileProvider(pubkey), (
+        prev,
+        next,
+      ) {
+        if (next is AsyncData<UserProfile?>) {
+          updates.add(next.value);
+        }
+      });
 
       // Wait for initial null
       await Future.delayed(Duration(milliseconds: 100));

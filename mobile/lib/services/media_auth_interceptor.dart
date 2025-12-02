@@ -11,8 +11,8 @@ class MediaAuthInterceptor {
   MediaAuthInterceptor({
     required AgeVerificationService ageVerificationService,
     required BlossomAuthService blossomAuthService,
-  })  : _ageVerificationService = ageVerificationService,
-        _blossomAuthService = blossomAuthService;
+  }) : _ageVerificationService = ageVerificationService,
+       _blossomAuthService = blossomAuthService;
 
   final AgeVerificationService _ageVerificationService;
   final BlossomAuthService _blossomAuthService;
@@ -27,21 +27,28 @@ class MediaAuthInterceptor {
   }) async {
     try {
       Log.debug(
-          '🔐 Handling unauthorized media request for category: ${category ?? "unknown"}',
-          name: 'MediaAuthInterceptor',
-          category: LogCategory.system);
+        '🔐 Handling unauthorized media request for category: ${category ?? "unknown"}',
+        name: 'MediaAuthInterceptor',
+        category: LogCategory.system,
+      );
 
       // Check if user has chosen to never show adult content
       if (_ageVerificationService.shouldHideAdultContent) {
-        Log.debug('🚫 User preference is to never show adult content',
-            name: 'MediaAuthInterceptor', category: LogCategory.system);
+        Log.debug(
+          '🚫 User preference is to never show adult content',
+          name: 'MediaAuthInterceptor',
+          category: LogCategory.system,
+        );
         return null;
       }
 
       // Check if user has chosen to always show (and is verified)
       if (_ageVerificationService.shouldAutoShowAdultContent) {
-        Log.debug('✅ Auto-showing adult content (user preference: always show)',
-            name: 'MediaAuthInterceptor', category: LogCategory.system);
+        Log.debug(
+          '✅ Auto-showing adult content (user preference: always show)',
+          name: 'MediaAuthInterceptor',
+          category: LogCategory.system,
+        );
         return await _blossomAuthService.createGetAuthHeader(
           sha256Hash: sha256Hash,
           serverUrl: serverUrl,
@@ -49,26 +56,39 @@ class MediaAuthInterceptor {
       }
 
       // Default: ask each time - show verification dialog
-      Log.debug('❓ Requesting adult content verification from user',
-          name: 'MediaAuthInterceptor', category: LogCategory.system);
+      Log.debug(
+        '❓ Requesting adult content verification from user',
+        name: 'MediaAuthInterceptor',
+        category: LogCategory.system,
+      );
 
       if (!context.mounted) {
-        Log.warning('Context not mounted, cannot show verification dialog',
-            name: 'MediaAuthInterceptor', category: LogCategory.system);
+        Log.warning(
+          'Context not mounted, cannot show verification dialog',
+          name: 'MediaAuthInterceptor',
+          category: LogCategory.system,
+        );
         return null;
       }
 
-      final verified =
-          await _ageVerificationService.verifyAdultContentAccess(context);
+      final verified = await _ageVerificationService.verifyAdultContentAccess(
+        context,
+      );
 
       if (!verified) {
-        Log.info('❌ User declined adult content verification',
-            name: 'MediaAuthInterceptor', category: LogCategory.system);
+        Log.info(
+          '❌ User declined adult content verification',
+          name: 'MediaAuthInterceptor',
+          category: LogCategory.system,
+        );
         return null;
       }
 
-      Log.info('✅ User verified adult content access',
-          name: 'MediaAuthInterceptor', category: LogCategory.system);
+      Log.info(
+        '✅ User verified adult content access',
+        name: 'MediaAuthInterceptor',
+        category: LogCategory.system,
+      );
 
       // Create auth header after verification
       return await _blossomAuthService.createGetAuthHeader(
@@ -76,8 +96,11 @@ class MediaAuthInterceptor {
         serverUrl: serverUrl,
       );
     } catch (e) {
-      Log.error('Failed to handle unauthorized media: $e',
-          name: 'MediaAuthInterceptor', category: LogCategory.system);
+      Log.error(
+        'Failed to handle unauthorized media: $e',
+        name: 'MediaAuthInterceptor',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -89,5 +112,6 @@ class MediaAuthInterceptor {
   String? get currentUserPubkey => _blossomAuthService.currentUserPubkey;
 
   /// Returns true if adult content should be filtered from feeds entirely
-  bool get shouldFilterContent => _ageVerificationService.shouldHideAdultContent;
+  bool get shouldFilterContent =>
+      _ageVerificationService.shouldHideAdultContent;
 }

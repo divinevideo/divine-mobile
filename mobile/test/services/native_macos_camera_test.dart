@@ -17,46 +17,46 @@ void main() {
       // Set up method channel mock
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        (MethodCall methodCall) async {
-          methodCalls.add(methodCall);
+            const MethodChannel('openvine/native_camera'),
+            (MethodCall methodCall) async {
+              methodCalls.add(methodCall);
 
-          switch (methodCall.method) {
-            case 'initialize':
-              return true;
-            case 'startPreview':
-              return true;
-            case 'stopPreview':
-              return true;
-            case 'startRecording':
-              return true;
-            case 'stopRecording':
-              // Simulate successful recording with file path
-              return '/tmp/openvine_test_recording.mov';
-            case 'getAvailableCameras':
-              // Return as List<dynamic> which will be cast properly
-              return [
-                {'id': '0', 'name': 'FaceTime HD Camera'},
-              ];
-            case 'switchCamera':
-              return true;
-            case 'hasPermission':
-              return true;
-            case 'requestPermission':
-              return true;
-            default:
-              return null;
-          }
-        },
-      );
+              switch (methodCall.method) {
+                case 'initialize':
+                  return true;
+                case 'startPreview':
+                  return true;
+                case 'stopPreview':
+                  return true;
+                case 'startRecording':
+                  return true;
+                case 'stopRecording':
+                  // Simulate successful recording with file path
+                  return '/tmp/openvine_test_recording.mov';
+                case 'getAvailableCameras':
+                  // Return as List<dynamic> which will be cast properly
+                  return [
+                    {'id': '0', 'name': 'FaceTime HD Camera'},
+                  ];
+                case 'switchCamera':
+                  return true;
+                case 'hasPermission':
+                  return true;
+                case 'requestPermission':
+                  return true;
+                default:
+                  return null;
+              }
+            },
+          );
     });
 
     tearDown(() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        null,
-      );
+            const MethodChannel('openvine/native_camera'),
+            null,
+          );
     });
 
     test('should initialize camera successfully', () async {
@@ -82,7 +82,9 @@ void main() {
 
       expect(result, isTrue);
       expect(
-          methodCalls.any((call) => call.method == 'startRecording'), isTrue);
+        methodCalls.any((call) => call.method == 'startRecording'),
+        isTrue,
+      );
     });
 
     test('should stop recording and return file path', () async {
@@ -101,16 +103,16 @@ void main() {
       // Override the mock to simulate timeout
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        (MethodCall methodCall) async {
-          if (methodCall.method == 'stopRecording') {
-            // Simulate timeout by delaying beyond the 3-second timeout
-            await Future.delayed(const Duration(seconds: 4));
-            return null;
-          }
-          return true;
-        },
-      );
+            const MethodChannel('openvine/native_camera'),
+            (MethodCall methodCall) async {
+              if (methodCall.method == 'stopRecording') {
+                // Simulate timeout by delaying beyond the 3-second timeout
+                await Future.delayed(const Duration(seconds: 4));
+                return null;
+              }
+              return true;
+            },
+          );
 
       await NativeMacOSCamera.initialize();
       await NativeMacOSCamera.startPreview();
@@ -136,10 +138,13 @@ void main() {
 
       expect(result, isTrue);
       expect(
-          methodCalls.any((call) =>
+        methodCalls.any(
+          (call) =>
               call.method == 'switchCamera' &&
-              call.arguments['cameraIndex'] == 0),
-          isTrue);
+              call.arguments['cameraIndex'] == 0,
+        ),
+        isTrue,
+      );
     });
 
     test('should check camera permission', () async {
@@ -153,8 +158,10 @@ void main() {
       final granted = await NativeMacOSCamera.requestPermission();
 
       expect(granted, isTrue);
-      expect(methodCalls.any((call) => call.method == 'requestPermission'),
-          isTrue);
+      expect(
+        methodCalls.any((call) => call.method == 'requestPermission'),
+        isTrue,
+      );
     });
 
     test('should stop preview successfully', () async {
@@ -170,17 +177,17 @@ void main() {
       // Override mock to simulate error
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('openvine/native_camera'),
-        (MethodCall methodCall) async {
-          if (methodCall.method == 'initialize') {
-            throw PlatformException(
-              code: 'PERMISSION_DENIED',
-              message: 'Camera permission denied',
-            );
-          }
-          return null;
-        },
-      );
+            const MethodChannel('openvine/native_camera'),
+            (MethodCall methodCall) async {
+              if (methodCall.method == 'initialize') {
+                throw PlatformException(
+                  code: 'PERMISSION_DENIED',
+                  message: 'Camera permission denied',
+                );
+              }
+              return null;
+            },
+          );
 
       final result = await NativeMacOSCamera.initialize();
 

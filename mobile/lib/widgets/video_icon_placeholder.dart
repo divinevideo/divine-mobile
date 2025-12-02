@@ -40,14 +40,8 @@ class _VideoIconPlaceholderState extends State<VideoIconPlaceholder>
       duration: const Duration(seconds: 2),
       vsync: this,
     );
-    _pulseAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
     if (widget.showLoading) {
@@ -79,7 +73,8 @@ class _VideoIconPlaceholderState extends State<VideoIconPlaceholder>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final bgColor = widget.backgroundColor ??
+    final bgColor =
+        widget.backgroundColor ??
         (isDark ? Colors.grey[800] : Colors.grey[200]);
     final iconColorValue =
         widget.iconColor ?? (isDark ? Colors.grey[400] : Colors.grey[600]);
@@ -108,35 +103,31 @@ class _VideoIconPlaceholderState extends State<VideoIconPlaceholder>
   }
 
   Widget _buildIcon(Color? iconColor) => Center(
-        child: widget.showPlayIcon
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.play_circle_outline,
-                    size: 48,
-                    color: iconColor,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Video',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: iconColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              )
-            : Text(
+    child: widget.showPlayIcon
+        ? Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.play_circle_outline, size: 48, color: iconColor),
+              const SizedBox(height: 8),
+              Text(
                 'Video',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   color: iconColor,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-      );
+            ],
+          )
+        : Text(
+            'Video',
+            style: TextStyle(
+              fontSize: 14,
+              color: iconColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+  );
 }
 
 /// Compact version for smaller spaces
@@ -168,11 +159,7 @@ class VideoIconPlaceholderCompact extends StatelessWidget {
         color: bgColor,
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Icon(
-        Icons.videocam,
-        size: size * 0.6,
-        color: iconColorValue,
-      ),
+      child: Icon(Icons.videocam, size: size * 0.6, color: iconColorValue),
     );
   }
 }

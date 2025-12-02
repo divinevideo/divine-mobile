@@ -8,10 +8,7 @@ class VineRecordingResult {
   final File videoFile;
   final Duration duration;
 
-  VineRecordingResult({
-    required this.videoFile,
-    required this.duration,
-  });
+  VineRecordingResult({required this.videoFile, required this.duration});
 }
 
 /// Abstract camera service interface for backward compatibility

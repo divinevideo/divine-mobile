@@ -55,15 +55,14 @@ class CommentsState {
     String? error,
     int? totalCommentCount,
     Map<String, Comment>? commentCache,
-  }) =>
-      CommentsState(
-        rootEventId: rootEventId,
-        topLevelComments: topLevelComments ?? this.topLevelComments,
-        isLoading: isLoading ?? this.isLoading,
-        error: error,
-        totalCommentCount: totalCommentCount ?? this.totalCommentCount,
-        commentCache: commentCache ?? this.commentCache,
-      );
+  }) => CommentsState(
+    rootEventId: rootEventId,
+    topLevelComments: topLevelComments ?? this.topLevelComments,
+    isLoading: isLoading ?? this.isLoading,
+    error: error,
+    totalCommentCount: totalCommentCount ?? this.totalCommentCount,
+    commentCache: commentCache ?? this.commentCache,
+  );
 }
 
 /// Notifier for managing comments for a specific video
@@ -169,8 +168,11 @@ class CommentsNotifier extends _$CommentsNotifier {
           }
         },
         onError: (e) {
-          Log.error('Error in comment stream: $e',
-              name: 'CommentsNotifier', category: LogCategory.ui);
+          Log.error(
+            'Error in comment stream: $e',
+            name: 'CommentsNotifier',
+            category: LogCategory.ui,
+          );
           if (!hasReceivedFirstEvent) {
             state = state.copyWith(
               isLoading: false,
@@ -183,8 +185,11 @@ class CommentsNotifier extends _$CommentsNotifier {
         },
         onDone: () {
           // Stream completed (timeout, error, or cancellation)
-          Log.debug('Comment stream completed for $_rootEventId',
-              name: 'CommentsNotifier', category: LogCategory.ui);
+          Log.debug(
+            'Comment stream completed for $_rootEventId',
+            name: 'CommentsNotifier',
+            category: LogCategory.ui,
+          );
           if (!completer.isCompleted) {
             completer.complete();
           }
@@ -227,8 +232,11 @@ class CommentsNotifier extends _$CommentsNotifier {
 
       await completer.future;
     } catch (e) {
-      Log.error('Error loading comments: $e',
-          name: 'CommentsNotifier', category: LogCategory.ui);
+      Log.error(
+        'Error loading comments: $e',
+        name: 'CommentsNotifier',
+        category: LogCategory.ui,
+      );
       state = state.copyWith(
         isLoading: false,
         error: 'Failed to load comments',
@@ -279,8 +287,11 @@ class CommentsNotifier extends _$CommentsNotifier {
         replyToAuthorPubkey: replyToAuthorPubkey,
       );
     } catch (e) {
-      Log.error('Error parsing comment event: $e',
-          name: 'CommentsNotifier', category: LogCategory.ui);
+      Log.error(
+        'Error parsing comment event: $e',
+        name: 'CommentsNotifier',
+        category: LogCategory.ui,
+      );
       return null;
     }
   }
@@ -318,8 +329,9 @@ class CommentsNotifier extends _$CommentsNotifier {
 
     // Sort replies recursively
     void sortReplies(CommentNode node) {
-      node.replies
-          .sort((a, b) => a.comment.createdAt.compareTo(b.comment.createdAt));
+      node.replies.sort(
+        (a, b) => a.comment.createdAt.compareTo(b.comment.createdAt),
+      );
       for (final reply in node.replies) {
         sortReplies(reply);
       }
@@ -415,8 +427,11 @@ class CommentsNotifier extends _$CommentsNotifier {
       // Reload comments to get the real event ID
       await _loadComments();
     } catch (e) {
-      Log.error('Error posting comment: $e',
-          name: 'CommentsNotifier', category: LogCategory.ui);
+      Log.error(
+        'Error posting comment: $e',
+        name: 'CommentsNotifier',
+        category: LogCategory.ui,
+      );
       state = state.copyWith(error: 'Failed to post comment');
 
       // Remove optimistic comment on error
@@ -429,28 +444,27 @@ class CommentsNotifier extends _$CommentsNotifier {
     List<CommentNode> nodes,
     Comment reply,
     String parentId,
-  ) =>
-      nodes.map((node) {
-        if (node.comment.id == parentId) {
-          // Found parent, add reply
-          return CommentNode(
-            comment: node.comment,
-            replies: [
-              CommentNode(comment: reply),
-              ...node.replies,
-            ],
-            isExpanded: node.isExpanded,
-          );
-        } else if (node.replies.isNotEmpty) {
-          // Recursively search in replies
-          return CommentNode(
-            comment: node.comment,
-            replies: _addReplyToTree(node.replies, reply, parentId),
-            isExpanded: node.isExpanded,
-          );
-        }
-        return node;
-      }).toList();
+  ) => nodes.map((node) {
+    if (node.comment.id == parentId) {
+      // Found parent, add reply
+      return CommentNode(
+        comment: node.comment,
+        replies: [
+          CommentNode(comment: reply),
+          ...node.replies,
+        ],
+        isExpanded: node.isExpanded,
+      );
+    } else if (node.replies.isNotEmpty) {
+      // Recursively search in replies
+      return CommentNode(
+        comment: node.comment,
+        replies: _addReplyToTree(node.replies, reply, parentId),
+        isExpanded: node.isExpanded,
+      );
+    }
+    return node;
+  }).toList();
 
   /// Toggle expansion state of a comment node
   void toggleCommentExpansion(String commentId) {

@@ -24,7 +24,9 @@ void main() {
             id: 'video1',
             pubkey: 'author1',
             content: 'Test video 1',
-            createdAt: now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch ~/ 1000,
+            createdAt:
+                now.subtract(const Duration(hours: 1)).millisecondsSinceEpoch ~/
+                1000,
             timestamp: now.subtract(const Duration(hours: 1)),
             vineId: 'd1',
             videoUrl: 'https://example.com/video1.mp4',
@@ -34,7 +36,9 @@ void main() {
             id: 'video2',
             pubkey: 'author2',
             content: 'Test video 2',
-            createdAt: now.subtract(const Duration(hours: 2)).millisecondsSinceEpoch ~/ 1000,
+            createdAt:
+                now.subtract(const Duration(hours: 2)).millisecondsSinceEpoch ~/
+                1000,
             timestamp: now.subtract(const Duration(hours: 2)),
             vineId: 'd2',
             videoUrl: 'https://example.com/video2.mp4',
@@ -45,24 +49,30 @@ void main() {
         // Create a container with mocked providers
         final container = ProviderContainer(
           overrides: [
-          ...getStandardTestOverrides(),
+            ...getStandardTestOverrides(),
             // Mock social provider with following list
             social.socialProvider.overrideWith(() {
-              return _TestSocialNotifier(SocialState(
-                followingPubkeys: ['author1', 'author2'],
-                isInitialized: true,
-                isLoading: false,
-              ));
+              return _TestSocialNotifier(
+                SocialState(
+                  followingPubkeys: ['author1', 'author2'],
+                  isInitialized: true,
+                  isLoading: false,
+                ),
+              );
             }),
             // Mock home feed provider with videos
             homeFeedProvider.overrideWith(() {
-              return _TestHomeFeedNotifier(AsyncData(VideoFeedState(
-                videos: testVideos,
-                hasMoreContent: false,
-                isLoadingMore: false,
-                error: null,
-                lastUpdated: DateTime.now(),
-              )));
+              return _TestHomeFeedNotifier(
+                AsyncData(
+                  VideoFeedState(
+                    videos: testVideos,
+                    hasMoreContent: false,
+                    isLoadingMore: false,
+                    error: null,
+                    lastUpdated: DateTime.now(),
+                  ),
+                ),
+              );
             }),
           ],
         );
@@ -71,9 +81,7 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: container,
-            child: const MaterialApp(
-              home: VideoFeedScreen(),
-            ),
+            child: const MaterialApp(home: VideoFeedScreen()),
           ),
         );
 
@@ -85,7 +93,9 @@ void main() {
         final emptyStateText = find.text('Your Feed, Your Choice');
         final videoWidgets = find.byType(PageView);
 
-        debugPrint('Empty state found: ${emptyStateText.evaluate().isNotEmpty}');
+        debugPrint(
+          'Empty state found: ${emptyStateText.evaluate().isNotEmpty}',
+        );
         debugPrint('PageView found: ${videoWidgets.evaluate().isNotEmpty}');
 
         // ASSERTION: Should show videos, NOT empty state
@@ -104,49 +114,52 @@ void main() {
       },
     );
 
-    testWidgets(
-      'should show empty state when user is not following anyone',
-      (tester) async {
-        final container = ProviderContainer(
-          overrides: [
+    testWidgets('should show empty state when user is not following anyone', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
           ...getStandardTestOverrides(),
-            // Mock social provider with NO following list
-            social.socialProvider.overrideWith(() {
-              return _TestSocialNotifier(const SocialState(
+          // Mock social provider with NO following list
+          social.socialProvider.overrideWith(() {
+            return _TestSocialNotifier(
+              const SocialState(
                 followingPubkeys: [], // Empty following list
                 isInitialized: true,
                 isLoading: false,
-              ));
-            }),
-            // Mock home feed provider with no videos
-            homeFeedProvider.overrideWith(() {
-              return _TestHomeFeedNotifier(AsyncData(VideoFeedState(
-                videos: const [],
-                hasMoreContent: false,
-                isLoadingMore: false,
-                error: null,
-                lastUpdated: DateTime.now(),
-              )));
-            }),
-          ],
-        );
+              ),
+            );
+          }),
+          // Mock home feed provider with no videos
+          homeFeedProvider.overrideWith(() {
+            return _TestHomeFeedNotifier(
+              AsyncData(
+                VideoFeedState(
+                  videos: const [],
+                  hasMoreContent: false,
+                  isLoadingMore: false,
+                  error: null,
+                  lastUpdated: DateTime.now(),
+                ),
+              ),
+            );
+          }),
+        ],
+      );
 
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: container,
-            child: const MaterialApp(
-              home: VideoFeedScreen(),
-            ),
-          ),
-        );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: VideoFeedScreen()),
+        ),
+      );
 
-        await tester.pump();
+      await tester.pump();
 
-        // SHOULD show empty state when not following anyone
-        expect(find.text('Your Feed, Your Choice'), findsOneWidget);
-        expect(find.text('Explore Vines'), findsOneWidget);
-      },
-    );
+      // SHOULD show empty state when not following anyone
+      expect(find.text('Your Feed, Your Choice'), findsOneWidget);
+      expect(find.text('Explore Vines'), findsOneWidget);
+    });
   });
 }
 

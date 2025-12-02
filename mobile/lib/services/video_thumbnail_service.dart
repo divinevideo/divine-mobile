@@ -23,8 +23,11 @@ class VideoThumbnailService {
     int timeMs = 100,
   }) async {
     try {
-      Log.debug('Using FFmpeg to extract thumbnail',
-          name: 'VideoThumbnailService', category: LogCategory.video);
+      Log.debug(
+        'Using FFmpeg to extract thumbnail',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
 
       // Convert milliseconds to seconds for FFmpeg
       final timeSeconds = (timeMs / 1000).toStringAsFixed(3);
@@ -35,12 +38,16 @@ class VideoThumbnailService {
       // -vframes 1: extract 1 frame
       // -vf scale: resize maintaining aspect ratio
       // -q:v: quality (2-5 is good, lower = better)
-      final command = '-ss $timeSeconds -i "$videoPath" -vframes 1 '
+      final command =
+          '-ss $timeSeconds -i "$videoPath" -vframes 1 '
           '-vf "scale=$_maxWidth:$_maxHeight:force_original_aspect_ratio=decrease" '
           '-q:v 2 "$destPath"';
 
-      Log.debug('FFmpeg command: ffmpeg $command',
-          name: 'VideoThumbnailService', category: LogCategory.video);
+      Log.debug(
+        'FFmpeg command: ffmpeg $command',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
 
       final session = await FFmpegKit.execute(command);
       final returnCode = await session.getReturnCode();
@@ -49,19 +56,28 @@ class VideoThumbnailService {
         final file = File(destPath);
         if (file.existsSync()) {
           final size = await file.length();
-          Log.info('FFmpeg thumbnail generated: ${(size / 1024).toStringAsFixed(2)}KB',
-              name: 'VideoThumbnailService', category: LogCategory.video);
+          Log.info(
+            'FFmpeg thumbnail generated: ${(size / 1024).toStringAsFixed(2)}KB',
+            name: 'VideoThumbnailService',
+            category: LogCategory.video,
+          );
           return destPath;
         }
       }
 
       final output = await session.getOutput();
-      Log.error('FFmpeg failed: $output',
-          name: 'VideoThumbnailService', category: LogCategory.video);
+      Log.error(
+        'FFmpeg failed: $output',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
       return null;
     } catch (e) {
-      Log.error('FFmpeg extraction error: $e',
-          name: 'VideoThumbnailService', category: LogCategory.video);
+      Log.error(
+        'FFmpeg extraction error: $e',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
       return null;
     }
   }
@@ -79,25 +95,38 @@ class VideoThumbnailService {
     int quality = _thumbnailQuality,
   }) async {
     try {
-      Log.debug('Extracting thumbnail from video: $videoPath',
-          name: 'VideoThumbnailService', category: LogCategory.video);
-      Log.debug('⏱️ Timestamp: ${timeMs}ms, Quality: $quality%',
-          name: 'VideoThumbnailService', category: LogCategory.video);
+      Log.debug(
+        'Extracting thumbnail from video: $videoPath',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
+      Log.debug(
+        '⏱️ Timestamp: ${timeMs}ms, Quality: $quality%',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
 
       // Verify video file exists
       final videoFile = File(videoPath);
       if (!videoFile.existsSync()) {
-        Log.error('Video file not found: $videoPath',
-            name: 'VideoThumbnailService', category: LogCategory.video);
+        Log.error(
+          'Video file not found: $videoPath',
+          name: 'VideoThumbnailService',
+          category: LogCategory.video,
+        );
         return null;
       }
 
-      final destPath = '${(await getTemporaryDirectory()).path}/thumbnail_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final destPath =
+          '${(await getTemporaryDirectory()).path}/thumbnail_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
       // Try fc_native_video_thumbnail first (faster, native performance)
       try {
-        Log.debug('Trying fc_native_video_thumbnail plugin',
-            name: 'VideoThumbnailService', category: LogCategory.video);
+        Log.debug(
+          'Trying fc_native_video_thumbnail plugin',
+          name: 'VideoThumbnailService',
+          category: LogCategory.video,
+        );
 
         final plugin = FcNativeVideoThumbnail();
         final thumbnailGenerated = await plugin.getVideoThumbnail(
@@ -111,22 +140,37 @@ class VideoThumbnailService {
 
         if (thumbnailGenerated && File(destPath).existsSync()) {
           final thumbnailSize = await File(destPath).length();
-          Log.info('Thumbnail generated with fc_native_video_thumbnail:',
-              name: 'VideoThumbnailService', category: LogCategory.video);
-          Log.debug('  📸 Path: $destPath',
-              name: 'VideoThumbnailService', category: LogCategory.video);
-          Log.debug('  📦 Size: ${(thumbnailSize / 1024).toStringAsFixed(2)}KB',
-              name: 'VideoThumbnailService', category: LogCategory.video);
+          Log.info(
+            'Thumbnail generated with fc_native_video_thumbnail:',
+            name: 'VideoThumbnailService',
+            category: LogCategory.video,
+          );
+          Log.debug(
+            '  📸 Path: $destPath',
+            name: 'VideoThumbnailService',
+            category: LogCategory.video,
+          );
+          Log.debug(
+            '  📦 Size: ${(thumbnailSize / 1024).toStringAsFixed(2)}KB',
+            name: 'VideoThumbnailService',
+            category: LogCategory.video,
+          );
           return destPath;
         }
       } catch (pluginError) {
-        Log.warning('fc_native_video_thumbnail failed, falling back to FFmpeg: $pluginError',
-            name: 'VideoThumbnailService', category: LogCategory.video);
+        Log.warning(
+          'fc_native_video_thumbnail failed, falling back to FFmpeg: $pluginError',
+          name: 'VideoThumbnailService',
+          category: LogCategory.video,
+        );
       }
 
       // Fallback to FFmpeg (works on ALL platforms)
-      Log.debug('Falling back to FFmpeg for thumbnail extraction',
-          name: 'VideoThumbnailService', category: LogCategory.video);
+      Log.debug(
+        'Falling back to FFmpeg for thumbnail extraction',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
 
       final thumbnailPath = await _extractThumbnailWithFFmpeg(
         videoPath: videoPath,
@@ -136,23 +180,41 @@ class VideoThumbnailService {
 
       if (thumbnailPath != null && File(thumbnailPath).existsSync()) {
         final thumbnailSize = await File(thumbnailPath).length();
-        Log.info('Thumbnail generated successfully with FFmpeg:',
-            name: 'VideoThumbnailService', category: LogCategory.video);
-        Log.debug('  📸 Path: $thumbnailPath',
-            name: 'VideoThumbnailService', category: LogCategory.video);
-        Log.debug('  📦 Size: ${(thumbnailSize / 1024).toStringAsFixed(2)}KB',
-            name: 'VideoThumbnailService', category: LogCategory.video);
+        Log.info(
+          'Thumbnail generated successfully with FFmpeg:',
+          name: 'VideoThumbnailService',
+          category: LogCategory.video,
+        );
+        Log.debug(
+          '  📸 Path: $thumbnailPath',
+          name: 'VideoThumbnailService',
+          category: LogCategory.video,
+        );
+        Log.debug(
+          '  📦 Size: ${(thumbnailSize / 1024).toStringAsFixed(2)}KB',
+          name: 'VideoThumbnailService',
+          category: LogCategory.video,
+        );
         return thumbnailPath;
       }
 
-      Log.error('Both fc_native_video_thumbnail and FFmpeg failed to generate thumbnail',
-          name: 'VideoThumbnailService', category: LogCategory.video);
+      Log.error(
+        'Both fc_native_video_thumbnail and FFmpeg failed to generate thumbnail',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
       return null;
     } catch (e, stackTrace) {
-      Log.error('Thumbnail extraction error: $e',
-          name: 'VideoThumbnailService', category: LogCategory.video);
-      Log.verbose('📱 Stack trace: $stackTrace',
-          name: 'VideoThumbnailService', category: LogCategory.video);
+      Log.error(
+        'Thumbnail extraction error: $e',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
+      Log.verbose(
+        '📱 Stack trace: $stackTrace',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
       return null;
     }
   }
@@ -164,8 +226,11 @@ class VideoThumbnailService {
     int quality = _thumbnailQuality,
   }) async {
     try {
-      Log.debug('Extracting thumbnail bytes from video: $videoPath',
-          name: 'VideoThumbnailService', category: LogCategory.video);
+      Log.debug(
+        'Extracting thumbnail bytes from video: $videoPath',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
 
       // Generate thumbnail file first
       final thumbnailPath = await extractThumbnail(
@@ -175,8 +240,11 @@ class VideoThumbnailService {
       );
 
       if (thumbnailPath == null) {
-        Log.error('Failed to generate thumbnail file',
-            name: 'VideoThumbnailService', category: LogCategory.video);
+        Log.error(
+          'Failed to generate thumbnail file',
+          name: 'VideoThumbnailService',
+          category: LogCategory.video,
+        );
         return null;
       }
 
@@ -188,13 +256,17 @@ class VideoThumbnailService {
       await file.delete();
 
       Log.info(
-          'Thumbnail bytes generated: ${(uint8list.length / 1024).toStringAsFixed(2)}KB',
-          name: 'VideoThumbnailService',
-          category: LogCategory.video);
+        'Thumbnail bytes generated: ${(uint8list.length / 1024).toStringAsFixed(2)}KB',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
       return uint8list;
     } catch (e) {
-      Log.error('Thumbnail bytes extraction error: $e',
-          name: 'VideoThumbnailService', category: LogCategory.video);
+      Log.error(
+        'Thumbnail bytes extraction error: $e',
+        name: 'VideoThumbnailService',
+        category: LogCategory.video,
+      );
       return null;
     }
   }
@@ -222,8 +294,11 @@ class VideoThumbnailService {
       }
     }
 
-    Log.debug('📱 Generated ${thumbnails.length} thumbnails',
-        name: 'VideoThumbnailService', category: LogCategory.video);
+    Log.debug(
+      '📱 Generated ${thumbnails.length} thumbnails',
+      name: 'VideoThumbnailService',
+      category: LogCategory.video,
+    );
     return thumbnails;
   }
 
@@ -234,12 +309,18 @@ class VideoThumbnailService {
         final file = File(path);
         if (file.existsSync()) {
           await file.delete();
-          Log.debug('📱️ Deleted thumbnail: $path',
-              name: 'VideoThumbnailService', category: LogCategory.video);
+          Log.debug(
+            '📱️ Deleted thumbnail: $path',
+            name: 'VideoThumbnailService',
+            category: LogCategory.video,
+          );
         }
       } catch (e) {
-        Log.error('Failed to delete thumbnail: $e',
-            name: 'VideoThumbnailService', category: LogCategory.video);
+        Log.error(
+          'Failed to delete thumbnail: $e',
+          name: 'VideoThumbnailService',
+          category: LogCategory.video,
+        );
       }
     }
   }

@@ -42,9 +42,8 @@ class ComposableVideoGrid extends ConsumerWidget {
     final brokenTrackerAsync = ref.watch(brokenVideoTrackerProvider);
 
     return brokenTrackerAsync.when(
-      loading: () => Center(
-        child: CircularProgressIndicator(color: VineTheme.vineGreen),
-      ),
+      loading: () =>
+          Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
       error: (error, stack) {
         // Fallback: show all videos if tracker fails
         return _buildGrid(context, ref, videos);
@@ -64,7 +63,11 @@ class ComposableVideoGrid extends ConsumerWidget {
     );
   }
 
-  Widget _buildGrid(BuildContext context, WidgetRef ref, List<VideoEvent> videosToShow) {
+  Widget _buildGrid(
+    BuildContext context,
+    WidgetRef ref,
+    List<VideoEvent> videosToShow,
+  ) {
     if (videosToShow.isEmpty && emptyBuilder != null) {
       return emptyBuilder!();
     }
@@ -196,7 +199,10 @@ class ComposableVideoGrid extends ConsumerWidget {
               // Video info - wrapped in Expanded to fill remaining space
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -222,8 +228,10 @@ class ComposableVideoGrid extends ConsumerWidget {
                       Consumer(
                         builder: (context, ref, _) {
                           final socialState = ref.watch(socialProvider);
-                          final newLikeCount = socialState.likeCounts[video.id] ?? 0;
-                          final totalLikes = newLikeCount + (video.originalLikes ?? 0);
+                          final newLikeCount =
+                              socialState.likeCounts[video.id] ?? 0;
+                          final totalLikes =
+                              newLikeCount + (video.originalLikes ?? 0);
 
                           return Row(
                             children: [
@@ -249,7 +257,9 @@ class ComposableVideoGrid extends ConsumerWidget {
                                 ),
                                 const SizedBox(width: 2),
                                 Text(
-                                  StringUtils.formatCompactNumber(video.originalLoops!),
+                                  StringUtils.formatCompactNumber(
+                                    video.originalLoops!,
+                                  ),
                                   style: TextStyle(
                                     color: VineTheme.secondaryText,
                                     fontSize: 9,
@@ -289,7 +299,11 @@ class ComposableVideoGrid extends ConsumerWidget {
   }
 
   /// Show context menu for long press on video tiles
-  void _showVideoContextMenu(BuildContext context, WidgetRef ref, VideoEvent video) {
+  void _showVideoContextMenu(
+    BuildContext context,
+    WidgetRef ref,
+    VideoEvent video,
+  ) {
     // Check if user owns this video
     final nostrService = ref.read(nostrServiceProvider);
     final userPubkey = nostrService.publicKey;
@@ -352,10 +366,7 @@ class ComposableVideoGrid extends ConsumerWidget {
               ),
               subtitle: Text(
                 'Update title, description, and hashtags',
-                style: TextStyle(
-                  color: VineTheme.secondaryText,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
               ),
               onTap: () {
                 Navigator.of(context).pop();
@@ -383,10 +394,7 @@ class ComposableVideoGrid extends ConsumerWidget {
               ),
               subtitle: Text(
                 'Permanently remove this content',
-                style: TextStyle(
-                  color: VineTheme.secondaryText,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
               ),
               onTap: () {
                 Navigator.of(context).pop();
@@ -411,7 +419,10 @@ class ComposableVideoGrid extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: VineTheme.cardBackground,
-        title: Text('Delete Video', style: TextStyle(color: VineTheme.whiteText)),
+        title: Text(
+          'Delete Video',
+          style: TextStyle(color: VineTheme.whiteText),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,10 +434,7 @@ class ComposableVideoGrid extends ConsumerWidget {
             SizedBox(height: 12),
             Text(
               'This will send a delete request (NIP-09) to all relays. Some relays may still retain the content.',
-              style: TextStyle(
-                color: VineTheme.secondaryText,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
             ),
           ],
         ),
@@ -456,7 +464,9 @@ class ComposableVideoGrid extends ConsumerWidget {
     VideoEvent video,
   ) async {
     try {
-      final deletionService = await ref.read(contentDeletionServiceProvider.future);
+      final deletionService = await ref.read(
+        contentDeletionServiceProvider.future,
+      );
 
       // Show loading snackbar
       if (context.mounted) {

@@ -15,12 +15,15 @@ class VineTheme {
   static const Color darkOverlay = Color(0x88000000);
 
   // Text colors (dark theme optimized)
-  static const Color primaryText =
-      Color(0xFFFFFFFF); // White for dark backgrounds
-  static const Color secondaryText =
-      Color(0xFFBBBBBB); // Light gray for secondary text
-  static const Color lightText =
-      Color(0xFF888888); // Medium gray for tertiary text
+  static const Color primaryText = Color(
+    0xFFFFFFFF,
+  ); // White for dark backgrounds
+  static const Color secondaryText = Color(
+    0xFFBBBBBB,
+  ); // Light gray for secondary text
+  static const Color lightText = Color(
+    0xFF888888,
+  ); // Medium gray for tertiary text
   static const Color whiteText = Colors.white;
 
   // Accent colors
@@ -28,74 +31,72 @@ class VineTheme {
   static const Color commentBlue = Color(0xFF3182CE);
 
   static ThemeData get theme => ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: _createMaterialColor(vineGreen),
-        primaryColor: vineGreen,
-        scaffoldBackgroundColor: backgroundColor,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: vineGreen,
-          foregroundColor: whiteText,
-          elevation: 1,
-          centerTitle: true,
-          titleTextStyle: TextStyle(
-            color: whiteText,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'System',
-          ),
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: vineGreen,
-          selectedItemColor: whiteText,
-          unselectedItemColor: Color(0xAAFFFFFF),
-          type: BottomNavigationBarType.fixed,
-          elevation: 8,
-        ),
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(
-            color: primaryText,
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-          ),
-          titleLarge: TextStyle(
-            color: primaryText,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-          bodyLarge: TextStyle(
-            color: primaryText,
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
-          ),
-          bodyMedium: TextStyle(
-            color: secondaryText,
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-          ),
-          bodySmall: TextStyle(
-            color: lightText,
-            fontSize: 12,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: vineGreen,
-            foregroundColor: whiteText,
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        cardTheme: const CardThemeData(
-          color: cardBackground,
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-          ),
-        ),
-      );
+    brightness: Brightness.dark,
+    primarySwatch: _createMaterialColor(vineGreen),
+    primaryColor: vineGreen,
+    scaffoldBackgroundColor: backgroundColor,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: vineGreen,
+      foregroundColor: whiteText,
+      elevation: 1,
+      centerTitle: true,
+      titleTextStyle: TextStyle(
+        color: whiteText,
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        fontFamily: 'System',
+      ),
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: vineGreen,
+      selectedItemColor: whiteText,
+      unselectedItemColor: Color(0xAAFFFFFF),
+      type: BottomNavigationBarType.fixed,
+      elevation: 8,
+    ),
+    textTheme: const TextTheme(
+      displayLarge: TextStyle(
+        color: primaryText,
+        fontSize: 24,
+        fontWeight: FontWeight.w600,
+      ),
+      titleLarge: TextStyle(
+        color: primaryText,
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+      ),
+      bodyLarge: TextStyle(
+        color: primaryText,
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+      ),
+      bodyMedium: TextStyle(
+        color: secondaryText,
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+      ),
+      bodySmall: TextStyle(
+        color: lightText,
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: vineGreen,
+        foregroundColor: whiteText,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    ),
+    cardTheme: const CardThemeData(
+      color: cardBackground,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(8)),
+      ),
+    ),
+  );
 
   static MaterialColor _createMaterialColor(Color color) {
     final List strengths = <double>[.05];

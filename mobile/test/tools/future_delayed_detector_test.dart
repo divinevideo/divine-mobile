@@ -43,11 +43,11 @@ class TestClass {
 ''');
 
       // Run the detection tool
-      final result = Process.runSync(
-        'dart',
-        ['run', 'tools/detect_future_delayed.dart', 'test/temp'],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/detect_future_delayed.dart',
+        'test/temp',
+      ], workingDirectory: Directory.current.path);
 
       expect(
         result.exitCode,
@@ -86,11 +86,11 @@ void delayedOperation() {
 }
 ''');
 
-      final result = Process.runSync(
-        'dart',
-        ['run', 'tools/detect_future_delayed.dart', 'test/temp'],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/detect_future_delayed.dart',
+        'test/temp',
+      ], workingDirectory: Directory.current.path);
 
       expect(result.exitCode, equals(1));
       expect(result.stdout.toString(), contains('test_const_duration.dart'));
@@ -108,11 +108,11 @@ Future<void> waitAndReturn() =>
     Future.delayed(Duration(seconds: 1)).then((_) => Log.info('Done'));
 ''');
 
-      final result = Process.runSync(
-        'dart',
-        ['run', 'tools/detect_future_delayed.dart', 'test/temp'],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/detect_future_delayed.dart',
+        'test/temp',
+      ], workingDirectory: Directory.current.path);
 
       expect(result.exitCode, equals(1));
       expect(result.stdout.toString(), contains('test_expression.dart'));
@@ -136,11 +136,11 @@ import 'dart:async';
 void test2() => Future.delayed(Duration(milliseconds: 100));
 ''');
 
-      final result = Process.runSync(
-        'dart',
-        ['run', 'tools/detect_future_delayed.dart', 'test/temp'],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/detect_future_delayed.dart',
+        'test/temp',
+      ], workingDirectory: Directory.current.path);
 
       expect(
         result.stdout.toString(),
@@ -193,11 +193,12 @@ Future<T> retryOperation<T>(Future<T> Function() operation) async {
 }
 ''');
 
-      final result = Process.runSync(
-        'dart',
-        ['run', 'tools/detect_future_delayed.dart', '--suggest', 'test/temp'],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/detect_future_delayed.dart',
+        '--suggest',
+        'test/temp',
+      ], workingDirectory: Directory.current.path);
 
       expect(
         result.stdout.toString(),
@@ -225,16 +226,12 @@ import 'dart:async';
 void test() => Future.delayed(Duration(seconds: 1));
 ''');
 
-      final result = Process.runSync(
-        'dart',
-        [
-          'run',
-          'tools/detect_future_delayed.dart',
-          '--format=json',
-          'test/temp'
-        ],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/detect_future_delayed.dart',
+        '--format=json',
+        'test/temp',
+      ], workingDirectory: Directory.current.path);
 
       expect(
         result.stdout.toString(),
@@ -274,11 +271,11 @@ void main() {
 }
 ''');
 
-      final result = Process.runSync(
-        'dart',
-        ['run', 'tools/detect_future_delayed.dart', 'test/temp'],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/detect_future_delayed.dart',
+        'test/temp',
+      ], workingDirectory: Directory.current.path);
 
       expect(
         result.exitCode,
@@ -303,16 +300,12 @@ void main() {
 }
 ''');
 
-      final result = Process.runSync(
-        'dart',
-        [
-          'run',
-          'tools/detect_future_delayed.dart',
-          '--include-tests',
-          'test/temp'
-        ],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/detect_future_delayed.dart',
+        '--include-tests',
+        'test/temp',
+      ], workingDirectory: Directory.current.path);
 
       expect(
         result.exitCode,
@@ -341,17 +334,14 @@ void waitForInit() async {
 ''');
 
       // Run with --fix option
-      final result = Process.runSync(
-        'dart',
-        ['run', 'tools/detect_future_delayed.dart', '--fix', 'test/temp'],
-        workingDirectory: Directory.current.path,
-      );
+      final result = Process.runSync('dart', [
+        'run',
+        'tools/detect_future_delayed.dart',
+        '--fix',
+        'test/temp',
+      ], workingDirectory: Directory.current.path);
 
-      expect(
-        result.exitCode,
-        equals(0),
-        reason: 'Should succeed when fixing',
-      );
+      expect(result.exitCode, equals(0), reason: 'Should succeed when fixing');
       expect(
         result.stdout.toString(),
         contains('Fixed 1 occurrence'),

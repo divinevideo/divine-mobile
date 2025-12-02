@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
-import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/page_context_provider.dart';
@@ -28,12 +27,15 @@ void main() {
 
       // Setup default mock behavior
       when(mockNostrService.isInitialized).thenReturn(true);
-      when(mockVideoEventService.searchVideos(any, limit: anyNamed('limit')))
-          .thenAnswer((_) async {});
+      when(
+        mockVideoEventService.searchVideos(any, limit: anyNamed('limit')),
+      ).thenAnswer((_) async {});
       when(mockVideoEventService.searchResults).thenReturn([]);
     });
 
-    testWidgets('reads search term from URL and populates text field', (tester) async {
+    testWidgets('reads search term from URL and populates text field', (
+      tester,
+    ) async {
       final container = ProviderContainer(
         overrides: [
           nostrServiceProvider.overrideWithValue(mockNostrService),
@@ -55,9 +57,13 @@ void main() {
       container.read(goRouterProvider).go('/search/nostr');
       await tester.pump(); // Trigger initial navigation
       await tester.pump(); // Render the screen
-      await tester.pump(const Duration(milliseconds: 100)); // Allow postFrameCallback to run
+      await tester.pump(
+        const Duration(milliseconds: 100),
+      ); // Allow postFrameCallback to run
       await tester.pump(); // Process search initiation
-      await tester.pump(const Duration(milliseconds: 800)); // Complete the Future.delayed in _performSearch
+      await tester.pump(
+        const Duration(milliseconds: 800),
+      ); // Complete the Future.delayed in _performSearch
 
       // Assert: Search text field should contain 'nostr'
       final textField = tester.widget<TextField>(find.byType(TextField));
@@ -71,7 +77,9 @@ void main() {
       container.dispose();
     });
 
-    testWidgets('automatically triggers search when search term is in URL', (tester) async {
+    testWidgets('automatically triggers search when search term is in URL', (
+      tester,
+    ) async {
       final container = ProviderContainer(
         overrides: [
           nostrServiceProvider.overrideWithValue(mockNostrService),
@@ -93,12 +101,18 @@ void main() {
       container.read(goRouterProvider).go('/search/bitcoin');
       await tester.pump(); // Trigger initial navigation
       await tester.pump(); // Render the screen
-      await tester.pump(const Duration(milliseconds: 100)); // Allow postFrameCallback to run
+      await tester.pump(
+        const Duration(milliseconds: 100),
+      ); // Allow postFrameCallback to run
       await tester.pump(); // Process search initiation
-      await tester.pump(const Duration(milliseconds: 800)); // Complete the Future.delayed in _performSearch
+      await tester.pump(
+        const Duration(milliseconds: 800),
+      ); // Complete the Future.delayed in _performSearch
 
       // Assert: Search should be triggered with 'bitcoin'
-      verify(mockVideoEventService.searchVideos('bitcoin', limit: anyNamed('limit'))).called(greaterThan(0));
+      verify(
+        mockVideoEventService.searchVideos('bitcoin', limit: anyNamed('limit')),
+      ).called(greaterThan(0));
 
       container.dispose();
     });
@@ -127,10 +141,15 @@ void main() {
 
       // Assert: Empty state UI should be shown
       expect(find.text('Search for videos'), findsOneWidget);
-      expect(find.text('Enter keywords, hashtags, or user names'), findsOneWidget);
+      expect(
+        find.text('Enter keywords, hashtags, or user names'),
+        findsOneWidget,
+      );
 
       // Assert: Search should NOT be triggered
-      verifyNever(mockVideoEventService.searchVideos(any, limit: anyNamed('limit')));
+      verifyNever(
+        mockVideoEventService.searchVideos(any, limit: anyNamed('limit')),
+      );
 
       container.dispose();
     });
@@ -162,12 +181,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 800));
 
       // Verify initial search
-      verify(mockVideoEventService.searchVideos('nostr', limit: anyNamed('limit'))).called(greaterThan(0));
+      verify(
+        mockVideoEventService.searchVideos('nostr', limit: anyNamed('limit')),
+      ).called(greaterThan(0));
 
       // Reset mock to clear call history
       reset(mockVideoEventService);
-      when(mockVideoEventService.searchVideos(any, limit: anyNamed('limit')))
-          .thenAnswer((_) async {});
+      when(
+        mockVideoEventService.searchVideos(any, limit: anyNamed('limit')),
+      ).thenAnswer((_) async {});
       when(mockVideoEventService.searchResults).thenReturn([]);
 
       // Act: Navigate to search with term 'bitcoin'
@@ -183,7 +205,9 @@ void main() {
       expect(textField.controller?.text, equals('bitcoin'));
 
       // Assert: New search should be triggered with 'bitcoin'
-      verify(mockVideoEventService.searchVideos('bitcoin', limit: anyNamed('limit'))).called(greaterThan(0));
+      verify(
+        mockVideoEventService.searchVideos('bitcoin', limit: anyNamed('limit')),
+      ).called(greaterThan(0));
 
       container.dispose();
     });

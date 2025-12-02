@@ -42,18 +42,20 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
       final lists = await service.fetchPublicListsFromRelays(limit: 50);
 
       // Filter out empty lists and sort by video count (popularity)
-      final nonEmptyLists = lists
-          .where((list) => list.videoEventIds.isNotEmpty)
-          .toList()
-        ..sort((a, b) => b.videoEventIds.length.compareTo(a.videoEventIds.length));
+      final nonEmptyLists =
+          lists.where((list) => list.videoEventIds.isNotEmpty).toList()..sort(
+            (a, b) => b.videoEventIds.length.compareTo(a.videoEventIds.length),
+          );
 
       if (mounted) {
         setState(() {
           _discoveredLists = nonEmptyLists;
           _isLoading = false;
         });
-        Log.info('Discovered ${nonEmptyLists.length} non-empty public lists (filtered from ${lists.length} total)',
-            category: LogCategory.ui);
+        Log.info(
+          'Discovered ${nonEmptyLists.length} non-empty public lists (filtered from ${lists.length} total)',
+          category: LogCategory.ui,
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -61,8 +63,10 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
           _errorMessage = 'Failed to load lists: $e';
           _isLoading = false;
         });
-        Log.error('Failed to discover public lists: $e',
-            category: LogCategory.ui);
+        Log.error(
+          'Failed to discover public lists: $e',
+          category: LogCategory.ui,
+        );
       }
     }
   }
@@ -74,8 +78,10 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
 
       if (isSubscribed) {
         await service.unsubscribeFromList(list.id);
-        Log.info('Unsubscribed from list: ${list.name}',
-            category: LogCategory.ui);
+        Log.info(
+          'Unsubscribed from list: ${list.name}',
+          category: LogCategory.ui,
+        );
       } else {
         await service.subscribeToList(list.id, list);
         Log.info('Subscribed to list: ${list.name}', category: LogCategory.ui);
@@ -132,10 +138,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
             const SizedBox(height: 16),
             Text(
               'Discovering public lists...',
-              style: TextStyle(
-                color: VineTheme.secondaryText,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
             ),
           ],
         ),
@@ -162,10 +165,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
                 _errorMessage!,
-                style: TextStyle(
-                  color: VineTheme.secondaryText,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -202,10 +202,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
             const SizedBox(height: 8),
             Text(
               'Check back later for new lists',
-              style: TextStyle(
-                color: VineTheme.secondaryText,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
             ),
           ],
         ),
@@ -238,8 +235,10 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: InkWell(
             onTap: () {
-              Log.info('Tapped discovered list: ${list.name}',
-                  category: LogCategory.ui);
+              Log.info(
+                'Tapped discovered list: ${list.name}',
+                category: LogCategory.ui,
+              );
               // Stop any playing videos before navigating
               disposeAllVideoControllers(ref);
               Navigator.of(context).push(
@@ -312,8 +311,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
                               ? VineTheme.vineGreen
                               : VineTheme.backgroundColor,
                           side: isSubscribed
-                              ? BorderSide(
-                                  color: VineTheme.vineGreen, width: 1)
+                              ? BorderSide(color: VineTheme.vineGreen, width: 1)
                               : null,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -365,14 +363,8 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
           ),
         );
       },
-      loading: () => CuratedListCard(
-        curatedList: list,
-        onTap: () {},
-      ),
-      error: (_, __) => CuratedListCard(
-        curatedList: list,
-        onTap: () {},
-      ),
+      loading: () => CuratedListCard(curatedList: list, onTap: () {}),
+      error: (_, __) => CuratedListCard(curatedList: list, onTap: () {}),
     );
   }
 }

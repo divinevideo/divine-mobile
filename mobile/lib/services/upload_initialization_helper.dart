@@ -15,7 +15,8 @@ import 'package:path/path.dart' as p;
 /// Robust initialization helper for UploadManager
 class UploadInitializationHelper {
   static const String _uploadsBoxName = 'pending_uploads';
-  static const int _maxRetries = 3; // Reduced from 5 since we fail fast on permanent errors
+  static const int _maxRetries =
+      3; // Reduced from 5 since we fail fast on permanent errors
   static const Duration _baseDelay = Duration(milliseconds: 250);
   static const Duration _maxDelay = Duration(seconds: 5); // Reduced from 30s
 
@@ -67,15 +68,21 @@ class UploadInitializationHelper {
   }) async {
     // Return cached box if available and not forcing reinit
     if (_cachedBox != null && _cachedBox!.isOpen && !forceReinit) {
-      Log.debug('Using cached uploads box',
-          name: 'UploadInitHelper', category: LogCategory.video);
+      Log.debug(
+        'Using cached uploads box',
+        name: 'UploadInitHelper',
+        category: LogCategory.video,
+      );
       return _cachedBox!;
     }
 
     // Prevent concurrent initialization attempts
     if (_isInitializing) {
-      Log.info('Waiting for ongoing initialization...',
-          name: 'UploadInitHelper', category: LogCategory.video);
+      Log.info(
+        'Waiting for ongoing initialization...',
+        name: 'UploadInitHelper',
+        category: LogCategory.video,
+      );
       return _waitForInitialization();
     }
 
@@ -95,16 +102,22 @@ class UploadInitializationHelper {
       _lastFailureTime = null;
       _cachedBox = box;
 
-      Log.info('✅ Uploads box initialized successfully',
-          name: 'UploadInitHelper', category: LogCategory.video);
+      Log.info(
+        '✅ Uploads box initialized successfully',
+        name: 'UploadInitHelper',
+        category: LogCategory.video,
+      );
 
       return box;
     } catch (e) {
       _failureCount++;
       _lastFailureTime = DateTime.now();
 
-      Log.error('❌ Failed to initialize uploads box after all retries: $e',
-          name: 'UploadInitHelper', category: LogCategory.video);
+      Log.error(
+        '❌ Failed to initialize uploads box after all retries: $e',
+        name: 'UploadInitHelper',
+        category: LogCategory.video,
+      );
 
       // Try recovery strategies
       final recoveredBox = await _attemptRecovery();
@@ -130,23 +143,35 @@ class UploadInitializationHelper {
         final storageDir = await _getAppStorageDir();
         if (storageDir != null) {
           Hive.init(storageDir.path);
-          Log.info('Hive initialized with app storage: ${storageDir.path}',
-              name: 'UploadInitHelper', category: LogCategory.video);
+          Log.info(
+            'Hive initialized with app storage: ${storageDir.path}',
+            name: 'UploadInitHelper',
+            category: LogCategory.video,
+          );
         }
       } catch (e) {
-        Log.error('Failed to get app storage directory: $e',
-            name: 'UploadInitHelper', category: LogCategory.video);
+        Log.error(
+          'Failed to get app storage directory: $e',
+          name: 'UploadInitHelper',
+          category: LogCategory.video,
+        );
         throw Exception('Cannot access app storage directory: $e');
       }
     } else {
-      Log.info('Web platform detected - using IndexedDB for storage',
-          name: 'UploadInitHelper', category: LogCategory.video);
+      Log.info(
+        'Web platform detected - using IndexedDB for storage',
+        name: 'UploadInitHelper',
+        category: LogCategory.video,
+      );
     }
 
     for (int attempt = 0; attempt <= _maxRetries; attempt++) {
       try {
-        Log.info('Initialization attempt ${attempt + 1}/${_maxRetries + 1}',
-            name: 'UploadInitHelper', category: LogCategory.video);
+        Log.info(
+          'Initialization attempt ${attempt + 1}/${_maxRetries + 1}',
+          name: 'UploadInitHelper',
+          category: LogCategory.video,
+        );
 
         // Register adapters if needed
         if (!Hive.isAdapterRegistered(1)) {
@@ -161,19 +186,28 @@ class UploadInitializationHelper {
 
         // First try: normal open
         try {
-          box = await Hive.openBox<PendingUpload>(_uploadsBoxName)
-              .timeout(const Duration(seconds: 10));
+          box = await Hive.openBox<PendingUpload>(
+            _uploadsBoxName,
+          ).timeout(const Duration(seconds: 10));
         } catch (e) {
           // Check for permanent permission errors FIRST
           if (_isPermanentPermissionError(e)) {
-            Log.error('❌ Permanent permission error - cannot retry: $e',
-                name: 'UploadInitHelper', category: LogCategory.video);
-            throw Exception('Permission denied: Cannot access storage. '
-                'This is a permanent error that cannot be fixed by retrying.');
+            Log.error(
+              '❌ Permanent permission error - cannot retry: $e',
+              name: 'UploadInitHelper',
+              category: LogCategory.video,
+            );
+            throw Exception(
+              'Permission denied: Cannot access storage. '
+              'This is a permanent error that cannot be fixed by retrying.',
+            );
           }
 
-          Log.warning('Normal open failed: $e, trying recovery...',
-              name: 'UploadInitHelper', category: LogCategory.video);
+          Log.warning(
+            'Normal open failed: $e, trying recovery...',
+            name: 'UploadInitHelper',
+            category: LogCategory.video,
+          );
 
           // Second try: delete and recreate if corrupted
           if (e.toString().contains('corrupted') ||
@@ -197,8 +231,11 @@ class UploadInitializationHelper {
       } catch (e) {
         // Check for permanent errors - don't retry these
         if (_isPermanentPermissionError(e)) {
-          Log.error('❌ Permanent permission error detected - failing immediately',
-              name: 'UploadInitHelper', category: LogCategory.video);
+          Log.error(
+            '❌ Permanent permission error detected - failing immediately',
+            name: 'UploadInitHelper',
+            category: LogCategory.video,
+          );
           throw Exception('Permanent permission error: $e');
         }
 
@@ -243,7 +280,8 @@ class UploadInitializationHelper {
   static Future<Box<PendingUpload>> _waitForInitialization() async {
     // Use proper async waiting instead of polling with Future.delayed
     final success = await AsyncUtils.waitForCondition(
-      condition: () => !_isInitializing && _cachedBox != null && _cachedBox!.isOpen,
+      condition: () =>
+          !_isInitializing && _cachedBox != null && _cachedBox!.isOpen,
       timeout: const Duration(seconds: 30),
       checkInterval: const Duration(milliseconds: 100),
       debugName: 'upload_box_initialization',
@@ -258,22 +296,31 @@ class UploadInitializationHelper {
 
   /// Attempt recovery strategies
   static Future<Box<PendingUpload>?> _attemptRecovery() async {
-    Log.warning('Attempting recovery strategies...',
-        name: 'UploadInitHelper', category: LogCategory.video);
+    Log.warning(
+      'Attempting recovery strategies...',
+      name: 'UploadInitHelper',
+      category: LogCategory.video,
+    );
 
     // Strategy 1: Try to use existing box if it's somehow still open
     try {
       if (Hive.isBoxOpen(_uploadsBoxName)) {
         final box = Hive.box<PendingUpload>(_uploadsBoxName);
         if (await _verifyBoxFunctionality(box)) {
-          Log.info('Recovery successful - using existing open box',
-              name: 'UploadInitHelper', category: LogCategory.video);
+          Log.info(
+            'Recovery successful - using existing open box',
+            name: 'UploadInitHelper',
+            category: LogCategory.video,
+          );
           return box;
         }
       }
     } catch (e) {
-      Log.debug('Existing box recovery failed: $e',
-          name: 'UploadInitHelper', category: LogCategory.video);
+      Log.debug(
+        'Existing box recovery failed: $e',
+        name: 'UploadInitHelper',
+        category: LogCategory.video,
+      );
     }
 
     // Strategy 2: Delete corrupted box and start fresh
@@ -282,26 +329,38 @@ class UploadInitializationHelper {
       final box = await Hive.openBox<PendingUpload>(_uploadsBoxName);
 
       if (await _verifyBoxFunctionality(box)) {
-        Log.info('Recovery successful - created fresh box',
-            name: 'UploadInitHelper', category: LogCategory.video);
+        Log.info(
+          'Recovery successful - created fresh box',
+          name: 'UploadInitHelper',
+          category: LogCategory.video,
+        );
         return box;
       }
     } catch (e) {
-      Log.error('Fresh box recovery failed: $e',
-          name: 'UploadInitHelper', category: LogCategory.video);
+      Log.error(
+        'Fresh box recovery failed: $e',
+        name: 'UploadInitHelper',
+        category: LogCategory.video,
+      );
     }
 
     // Strategy 3: Use in-memory box as last resort
     try {
-      Log.warning('Using in-memory box as last resort',
-          name: 'UploadInitHelper', category: LogCategory.video);
+      Log.warning(
+        'Using in-memory box as last resort',
+        name: 'UploadInitHelper',
+        category: LogCategory.video,
+      );
 
       // Note: This would need a custom in-memory box implementation
       // For now, we'll return null to indicate failure
       return null;
     } catch (e) {
-      Log.error('In-memory box creation failed: $e',
-          name: 'UploadInitHelper', category: LogCategory.video);
+      Log.error(
+        'In-memory box creation failed: $e',
+        name: 'UploadInitHelper',
+        category: LogCategory.video,
+      );
     }
 
     return null;
@@ -311,11 +370,17 @@ class UploadInitializationHelper {
   static Future<void> _deleteCorruptedBox() async {
     try {
       await Hive.deleteBoxFromDisk(_uploadsBoxName);
-      Log.warning('Deleted corrupted uploads box',
-          name: 'UploadInitHelper', category: LogCategory.video);
+      Log.warning(
+        'Deleted corrupted uploads box',
+        name: 'UploadInitHelper',
+        category: LogCategory.video,
+      );
     } catch (e) {
-      Log.error('Failed to delete corrupted box: $e',
-          name: 'UploadInitHelper', category: LogCategory.video);
+      Log.error(
+        'Failed to delete corrupted box: $e',
+        name: 'UploadInitHelper',
+        category: LogCategory.video,
+      );
     }
   }
 
@@ -341,8 +406,11 @@ class UploadInitializationHelper {
 
       return retrieved != null;
     } catch (e) {
-      Log.error('Box functionality verification failed: $e',
-          name: 'UploadInitHelper', category: LogCategory.video);
+      Log.error(
+        'Box functionality verification failed: $e',
+        name: 'UploadInitHelper',
+        category: LogCategory.video,
+      );
       return false;
     }
   }

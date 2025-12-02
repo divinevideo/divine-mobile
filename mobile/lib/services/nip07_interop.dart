@@ -111,16 +111,20 @@ class NostrEvent {
 
 /// Convert Dart Map to NostrEvent
 NostrEvent dartEventToJs(Map<String, dynamic> dartEvent) {
-  final tags = (dartEvent['tags'] as List<dynamic>?)
-      ?.map((tag) => (tag as List<dynamic>)
-          .map((item) => item.toString())
-          .toList())
-      .toList() ?? <List<String>>[];
+  final tags =
+      (dartEvent['tags'] as List<dynamic>?)
+          ?.map(
+            (tag) =>
+                (tag as List<dynamic>).map((item) => item.toString()).toList(),
+          )
+          .toList() ??
+      <List<String>>[];
 
   return NostrEvent.create(
     id: dartEvent['id'] as String?,
     pubkey: (dartEvent['pubkey'] ?? '').toString(),
-    created_at: dartEvent['created_at'] ??
+    created_at:
+        dartEvent['created_at'] ??
         DateTime.now().millisecondsSinceEpoch ~/ 1000,
     kind: dartEvent['kind'] ?? 1,
     tags: tags,
@@ -184,4 +188,3 @@ Future<T> safeNip07Call<T>(
     }
   }
 }
-

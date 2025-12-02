@@ -90,7 +90,9 @@ void main() {
     });
 
     test('detects changes via content hash', () async {
-      final set = await bookmarkService.createBookmarkSet(name: 'Original Name');
+      final set = await bookmarkService.createBookmarkSet(
+        name: 'Original Name',
+      );
       expect(set, isNotNull);
 
       // Sync to establish baseline
@@ -177,7 +179,9 @@ void main() {
     });
 
     test('persists sync state across restarts', () async {
-      final set = await bookmarkService.createBookmarkSet(name: 'Persistent Set');
+      final set = await bookmarkService.createBookmarkSet(
+        name: 'Persistent Set',
+      );
       expect(set, isNotNull);
 
       syncWorker.markDirty(set!.id);

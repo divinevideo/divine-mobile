@@ -44,8 +44,11 @@ void main() {
         'Retry publish operation',
       ];
 
-      expect(recoverySteps.length, 5,
-        reason: 'All recovery steps are documented');
+      expect(
+        recoverySteps.length,
+        5,
+        reason: 'All recovery steps are documented',
+      );
     });
   });
 }

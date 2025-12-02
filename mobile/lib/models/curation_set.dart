@@ -23,7 +23,8 @@ class CurationSet {
   factory CurationSet.fromNostrEvent(Event event) {
     if (event.kind != 30005) {
       throw ArgumentError(
-          'Invalid event kind for video curation set: ${event.kind}');
+        'Invalid event kind for video curation set: ${event.kind}',
+      );
     }
 
     String? setId;
@@ -132,9 +133,15 @@ class CurationSet {
 /// Predefined curation set types for divine
 enum CurationSetType {
   editorsPicks(
-      'editors_picks', "Editor's Picks", 'Curated collection from divine'),
-  trending('trending', 'Trending',
-      'Videos getting the most likes and shares right now');
+    'editors_picks',
+    "Editor's Picks",
+    'Curated collection from divine',
+  ),
+  trending(
+    'trending',
+    'Trending',
+    'Videos getting the most likes and shares right now',
+  );
 
   const CurationSetType(this.id, this.displayName, this.description);
 

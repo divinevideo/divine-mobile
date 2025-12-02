@@ -24,16 +24,13 @@ class DeleteResult {
   final DateTime timestamp;
 
   static DeleteResult createSuccess(String deleteEventId) => DeleteResult(
-        success: true,
-        deleteEventId: deleteEventId,
-        timestamp: DateTime.now(),
-      );
+    success: true,
+    deleteEventId: deleteEventId,
+    timestamp: DateTime.now(),
+  );
 
-  static DeleteResult failure(String error) => DeleteResult(
-        success: false,
-        error: error,
-        timestamp: DateTime.now(),
-      );
+  static DeleteResult failure(String error) =>
+      DeleteResult(success: false, error: error, timestamp: DateTime.now());
 }
 
 /// Content deletion record for tracking
@@ -53,20 +50,20 @@ class ContentDeletion {
   final String? additionalContext;
 
   Map<String, dynamic> toJson() => {
-        'deleteEventId': deleteEventId,
-        'originalEventId': originalEventId,
-        'reason': reason,
-        'deletedAt': deletedAt.toIso8601String(),
-        'additionalContext': additionalContext,
-      };
+    'deleteEventId': deleteEventId,
+    'originalEventId': originalEventId,
+    'reason': reason,
+    'deletedAt': deletedAt.toIso8601String(),
+    'additionalContext': additionalContext,
+  };
 
   static ContentDeletion fromJson(Map<String, dynamic> json) => ContentDeletion(
-        deleteEventId: json['deleteEventId'],
-        originalEventId: json['originalEventId'],
-        reason: json['reason'],
-        deletedAt: DateTime.parse(json['deletedAt']),
-        additionalContext: json['additionalContext'],
-      );
+    deleteEventId: json['deleteEventId'],
+    originalEventId: json['originalEventId'],
+    reason: json['reason'],
+    deletedAt: DateTime.parse(json['deletedAt']),
+    additionalContext: json['additionalContext'],
+  );
 }
 
 /// Service for deleting user's own content via NIP-09
@@ -75,8 +72,8 @@ class ContentDeletionService {
   ContentDeletionService({
     required INostrService nostrService,
     required SharedPreferences prefs,
-  })  : _nostrService = nostrService,
-        _prefs = prefs {
+  }) : _nostrService = nostrService,
+       _prefs = prefs {
     _loadDeletionHistory();
   }
   final INostrService _nostrService;
@@ -97,18 +94,25 @@ class ContentDeletionService {
     try {
       if (!_nostrService.isInitialized) {
         Log.warning(
-            'Nostr service not initialized, cannot setup content deletion',
-            name: 'ContentDeletionService',
-            category: LogCategory.system);
+          'Nostr service not initialized, cannot setup content deletion',
+          name: 'ContentDeletionService',
+          category: LogCategory.system,
+        );
         return;
       }
 
       _isInitialized = true;
-      Log.info('Content deletion service initialized',
-          name: 'ContentDeletionService', category: LogCategory.system);
+      Log.info(
+        'Content deletion service initialized',
+        name: 'ContentDeletionService',
+        category: LogCategory.system,
+      );
     } catch (e) {
-      Log.error('Failed to initialize content deletion: $e',
-          name: 'ContentDeletionService', category: LogCategory.system);
+      Log.error(
+        'Failed to initialize content deletion: $e',
+        name: 'ContentDeletionService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -138,14 +142,18 @@ class ContentDeletionService {
       if (deleteEvent != null) {
         final broadcastResult = await _nostrService.broadcastEvent(deleteEvent);
         if (broadcastResult.successCount == 0) {
-          Log.error('Failed to broadcast delete request to relays',
-              name: 'ContentDeletionService', category: LogCategory.system);
+          Log.error(
+            'Failed to broadcast delete request to relays',
+            name: 'ContentDeletionService',
+            category: LogCategory.system,
+          );
           // Still save locally even if broadcast fails
         } else {
           Log.info(
-              'Delete request broadcast to ${broadcastResult.successCount} relays',
-              name: 'ContentDeletionService',
-              category: LogCategory.system);
+            'Delete request broadcast to ${broadcastResult.successCount} relays',
+            name: 'ContentDeletionService',
+            category: LogCategory.system,
+          );
         }
 
         // Save deletion to local history
@@ -160,15 +168,21 @@ class ContentDeletionService {
         _deletionHistory.add(deletion);
         await _saveDeletionHistory();
 
-        Log.debug('📱️ Content deletion request submitted: ${deleteEvent.id}',
-            name: 'ContentDeletionService', category: LogCategory.system);
+        Log.debug(
+          '📱️ Content deletion request submitted: ${deleteEvent.id}',
+          name: 'ContentDeletionService',
+          category: LogCategory.system,
+        );
         return DeleteResult.createSuccess(deleteEvent.id);
       } else {
         return DeleteResult.failure('Failed to create delete event');
       }
     } catch (e) {
-      Log.error('Failed to delete content: $e',
-          name: 'ContentDeletionService', category: LogCategory.system);
+      Log.error(
+        'Failed to delete content: $e',
+        name: 'ContentDeletionService',
+        category: LogCategory.system,
+      );
       return DeleteResult.failure('Failed to delete content: $e');
     }
   }
@@ -203,20 +217,25 @@ class ContentDeletionService {
   }
 
   /// Clear old deletion records (privacy cleanup)
-  Future<void> clearOldDeletions(
-      {Duration maxAge = const Duration(days: 90)}) async {
+  Future<void> clearOldDeletions({
+    Duration maxAge = const Duration(days: 90),
+  }) async {
     final cutoffDate = DateTime.now().subtract(maxAge);
     final initialCount = _deletionHistory.length;
 
-    _deletionHistory
-        .removeWhere((deletion) => deletion.deletedAt.isBefore(cutoffDate));
+    _deletionHistory.removeWhere(
+      (deletion) => deletion.deletedAt.isBefore(cutoffDate),
+    );
 
     if (_deletionHistory.length != initialCount) {
       await _saveDeletionHistory();
 
       final removedCount = initialCount - _deletionHistory.length;
-      Log.debug('🧹 Cleared $removedCount old deletion records',
-          name: 'ContentDeletionService', category: LogCategory.system);
+      Log.debug(
+        '🧹 Cleared $removedCount old deletion records',
+        name: 'ContentDeletionService',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -228,8 +247,11 @@ class ContentDeletionService {
   }) async {
     try {
       if (!_nostrService.hasKeys) {
-        Log.error('Cannot create delete event: no keys available',
-            name: 'ContentDeletionService', category: LogCategory.system);
+        Log.error(
+          'Cannot create delete event: no keys available',
+          name: 'ContentDeletionService',
+          category: LogCategory.system,
+        );
         return null;
       }
 
@@ -245,8 +267,10 @@ class ContentDeletionService {
       }
 
       // Create NIP-09 compliant content
-      final deleteContent =
-          _formatNip09DeleteContent(reason, additionalContext);
+      final deleteContent = _formatNip09DeleteContent(
+        reason,
+        additionalContext,
+      );
 
       // Create kind 5 event using nostr_sdk (same pattern as other events)
       final createdAt = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -261,15 +285,24 @@ class ContentDeletionService {
       // Sign the event
       event.sign(_nostrService.keyManager.keyPair!.private);
 
-      Log.info('📱️ Created NIP-09 delete event (kind 5): ${event.id}',
-          name: 'ContentDeletionService', category: LogCategory.system);
-      Log.debug('Deleting: $originalEventId for reason: $reason',
-          name: 'ContentDeletionService', category: LogCategory.system);
+      Log.info(
+        '📱️ Created NIP-09 delete event (kind 5): ${event.id}',
+        name: 'ContentDeletionService',
+        category: LogCategory.system,
+      );
+      Log.debug(
+        'Deleting: $originalEventId for reason: $reason',
+        name: 'ContentDeletionService',
+        category: LogCategory.system,
+      );
 
       return event;
     } catch (e) {
-      Log.error('Failed to create NIP-09 delete event: $e',
-          name: 'ContentDeletionService', category: LogCategory.system);
+      Log.error(
+        'Failed to create NIP-09 delete event: $e',
+        name: 'ContentDeletionService',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -285,7 +318,8 @@ class ContentDeletionService {
     }
 
     buffer.writeln(
-        'Content deleted by author via divine for Apple App Store compliance');
+      'Content deleted by author via divine for Apple App Store compliance',
+    );
     return buffer.toString();
   }
 
@@ -324,13 +358,20 @@ class ContentDeletionService {
         _deletionHistory.clear();
         _deletionHistory.addAll(
           deletionsJson.map(
-              (json) => ContentDeletion.fromJson(json as Map<String, dynamic>)),
+            (json) => ContentDeletion.fromJson(json as Map<String, dynamic>),
+          ),
         );
-        Log.debug('📱 Loaded ${_deletionHistory.length} deletions from history',
-            name: 'ContentDeletionService', category: LogCategory.system);
+        Log.debug(
+          '📱 Loaded ${_deletionHistory.length} deletions from history',
+          name: 'ContentDeletionService',
+          category: LogCategory.system,
+        );
       } catch (e) {
-        Log.error('Failed to load deletion history: $e',
-            name: 'ContentDeletionService', category: LogCategory.system);
+        Log.error(
+          'Failed to load deletion history: $e',
+          name: 'ContentDeletionService',
+          category: LogCategory.system,
+        );
       }
     }
   }
@@ -338,12 +379,16 @@ class ContentDeletionService {
   /// Save deletion history to storage
   Future<void> _saveDeletionHistory() async {
     try {
-      final deletionsJson =
-          _deletionHistory.map((deletion) => deletion.toJson()).toList();
+      final deletionsJson = _deletionHistory
+          .map((deletion) => deletion.toJson())
+          .toList();
       await _prefs.setString(deletionsStorageKey, jsonEncode(deletionsJson));
     } catch (e) {
-      Log.error('Failed to save deletion history: $e',
-          name: 'ContentDeletionService', category: LogCategory.system);
+      Log.error(
+        'Failed to save deletion history: $e',
+        name: 'ContentDeletionService',
+        category: LogCategory.system,
+      );
     }
   }
 

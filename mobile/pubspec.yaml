@@ -2,7 +2,7 @@ name: openvine
 description: "divine - A decentralized vine-like video sharing app powered by Nostr."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.2+126
 
 environment:
-  sdk: '>=3.8.0 <4.0.0'
+  sdk: ">=3.8.0 <4.0.0"
 
 workspace:
   - packages/nostr_sdk
@@ -37,13 +37,13 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  
+
   # State management
   flutter_riverpod: ^3.0.0
   riverpod_annotation: ^3.0.0
   freezed_annotation: ^3.0.0
   json_annotation: ^4.9.0
-  
+
   # Networking
   http: ^1.5.0
   http_parser: ^4.0.2
@@ -53,30 +53,30 @@ dependencies:
   url_launcher: ^6.3.2
   dio: ^5.8.0
 
-  permission_handler: ^12.0.1  # Handle runtime permissions
+  permission_handler: ^12.0.1 # Handle runtime permissions
 
   # Camera and media
   camera: ^0.11.2
-  camera_macos: ^0.0.9  # macOS camera support
-  video_player: ^2.9.1  # Uses native AVPlayer (iOS/macOS) and ExoPlayer (Android)
-  visibility_detector: ^0.4.0+2  # Detect widget visibility for proper video control
-  image: ^4.1.7  # Image processing for GIF generation
-  video_thumbnail: ^0.5.3  # Extract thumbnails from videos
-  image_picker: ^1.2.0  # For selecting images from gallery or camera
-  file_selector: ^1.0.4  # For desktop file selection (macOS, Windows, Linux)
-  
+  camera_macos: ^0.0.9 # macOS camera support
+  video_player: ^2.9.1 # Uses native AVPlayer (iOS/macOS) and ExoPlayer (Android)
+  visibility_detector: ^0.4.0+2 # Detect widget visibility for proper video control
+  image: ^4.1.7 # Image processing for GIF generation
+  video_thumbnail: ^0.5.3 # Extract thumbnails from videos
+  image_picker: ^1.2.0 # For selecting images from gallery or camera
+  file_selector: ^1.0.4 # For desktop file selection (macOS, Windows, Linux)
+
   # Cloud services (removed cloudinary_public - using Blossom instead)
-  
+
   # Local persistence
   hive_ce: ^2.6.0
   hive_ce_flutter: ^2.1.0
-  
+
   # Storage
   shared_preferences: ^2.2.3
   sqflite: ^2.3.3+1
   path_provider: ^2.1.4
   flutter_secure_storage: ^9.0.0
-  
+
   # Crypto (needed for Nostr)
   crypto: ^3.0.7
   bech32: ^0.2.2
@@ -84,9 +84,9 @@ dependencies:
   # UI/UX
   cached_network_image: ^3.3.1
   flutter_cache_manager: ^3.3.1
-  share_plus: ^12.0.0  # Cross-platform sharing
-  google_fonts: ^6.3.2  # For using Google Fonts including Pacifico
-  blurhash_dart: ^1.2.1  # Generate blurhash for progressive image loading
+  share_plus: ^12.0.0 # Cross-platform sharing
+  google_fonts: ^6.3.2 # For using Google Fonts including Pacifico
+  blurhash_dart: ^1.2.1 # Generate blurhash for progressive image loading
   # Nostr SDK - Local package for comprehensive Nostr support
   nostr_sdk:
     path: packages/nostr_sdk
@@ -96,13 +96,13 @@ dependencies:
     git:
       url: git@github.com:rabble/flutter_embedded_nostr_relay.git
       path: flutter_embedded_nostr_relay
-  
+
   # Logging
   logging: ^1.2.0
-  
+
   # Missing dependencies required by nostr_sdk
   equatable: ^2.0.5
-  
+
   # Desktop window management for proper window sizing
   window_manager: ^0.5.1
   firebase_core: ^4.1.1
@@ -168,13 +168,11 @@ dev_dependencies:
   async: ^2.13.0
   drift_dev: ^2.29.0
 
-
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

@@ -60,7 +60,10 @@ void main() {
         final saved = testBox.get('notif1') as Map<String, dynamic>;
         expect(saved, isNotNull);
         expect(saved['id'], 'notif1');
-        expect(saved['type'], NotificationType.like.index); // Enum stored as index
+        expect(
+          saved['type'],
+          NotificationType.like.index,
+        ); // Enum stored as index
       });
 
       test('overwrites existing notification with same ID', () async {
@@ -151,17 +154,24 @@ void main() {
         expect(notifications.first.id, 'valid');
       });
 
-      test('returns corrupted count when notifications fail to parse', () async {
-        // Arrange
-        await testBox.put('corrupted1', <String, dynamic>{'invalid': 'data1'});
-        await testBox.put('corrupted2', <String, dynamic>{'invalid': 'data2'});
+      test(
+        'returns corrupted count when notifications fail to parse',
+        () async {
+          // Arrange
+          await testBox.put('corrupted1', <String, dynamic>{
+            'invalid': 'data1',
+          });
+          await testBox.put('corrupted2', <String, dynamic>{
+            'invalid': 'data2',
+          });
 
-        // Act
-        final notifications = await persistence.loadAllNotifications();
+          // Act
+          final notifications = await persistence.loadAllNotifications();
 
-        // Assert
-        expect(notifications, isEmpty);
-      });
+          // Assert
+          expect(notifications, isEmpty);
+        },
+      );
     });
 
     group('clearAll', () {

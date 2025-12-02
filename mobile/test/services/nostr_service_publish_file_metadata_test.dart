@@ -21,26 +21,28 @@ void main() {
     });
 
     group('Validation Tests', () {
-      test('should throw NIP94ValidationException for invalid metadata',
-          () async {
-        // Arrange - Create invalid metadata (empty sha256Hash)
-        final invalidMetadata = NIP94Metadata(
-          url: 'https://example.com/video.mp4',
-          mimeType: 'video/mp4',
-          sha256Hash: '', // Invalid - empty hash
-          sizeBytes: 1024,
-          dimensions: '640x480',
-        );
+      test(
+        'should throw NIP94ValidationException for invalid metadata',
+        () async {
+          // Arrange - Create invalid metadata (empty sha256Hash)
+          final invalidMetadata = NIP94Metadata(
+            url: 'https://example.com/video.mp4',
+            mimeType: 'video/mp4',
+            sha256Hash: '', // Invalid - empty hash
+            sizeBytes: 1024,
+            dimensions: '640x480',
+          );
 
-        // Act & Assert
-        expect(
-          () => nostrService.publishFileMetadata(
-            metadata: invalidMetadata,
-            content: 'Test video',
-          ),
-          throwsA(isA<NIP94ValidationException>()),
-        );
-      });
+          // Act & Assert
+          expect(
+            () => nostrService.publishFileMetadata(
+              metadata: invalidMetadata,
+              content: 'Test video',
+            ),
+            throwsA(isA<NIP94ValidationException>()),
+          );
+        },
+      );
 
       test('should throw StateError when no keys available', () async {
         // Arrange - Valid metadata but no keys
@@ -68,60 +70,61 @@ void main() {
     });
 
     group('Event Creation Tests', () {
-      test('should create NIP-94 event (kind 1063) with valid metadata',
-          () async {
-        // Arrange - Set a test pubkey
-        final privateKey = generatePrivateKey();
-        final publicKey = getPublicKey(privateKey);
-        nostrService.setCurrentUserPubkey(publicKey);
+      test(
+        'should create NIP-94 event (kind 1063) with valid metadata',
+        () async {
+          // Arrange - Set a test pubkey
+          final privateKey = generatePrivateKey();
+          final publicKey = getPublicKey(privateKey);
+          nostrService.setCurrentUserPubkey(publicKey);
 
-        final metadata = NIP94Metadata(
-          url: 'https://example.com/video.mp4',
-          mimeType: 'video/mp4',
-          sha256Hash:
-              'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-          sizeBytes: 1048576,
-          dimensions: '1920x1080',
-          blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
-          altText: 'Test video alt text',
-          durationMs: 30000,
-        );
+          final metadata = NIP94Metadata(
+            url: 'https://example.com/video.mp4',
+            mimeType: 'video/mp4',
+            sha256Hash:
+                'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+            sizeBytes: 1048576,
+            dimensions: '1920x1080',
+            blurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
+            altText: 'Test video alt text',
+            durationMs: 30000,
+          );
 
-        // Act
-        final result = await nostrService.publishFileMetadata(
-          metadata: metadata,
-          content: 'Test video description',
-          hashtags: ['test', 'video'],
-        );
+          // Act
+          final result = await nostrService.publishFileMetadata(
+            metadata: metadata,
+            content: 'Test video description',
+            hashtags: ['test', 'video'],
+          );
 
-        // Assert
-        expect(result, isA<NostrBroadcastResult>());
-        expect(result.event.kind, equals(1063)); // NIP-94 kind
+          // Assert
+          expect(result, isA<NostrBroadcastResult>());
+          expect(result.event.kind, equals(1063)); // NIP-94 kind
 
-        // Verify required tags are present
-        final tags = result.event.tags;
-        expect(tags.any((tag) => tag[0] == 'url'), isTrue);
-        expect(tags.any((tag) => tag[0] == 'm'), isTrue); // mimeType
-        expect(tags.any((tag) => tag[0] == 'x'), isTrue); // sha256Hash
-        expect(tags.any((tag) => tag[0] == 'size'), isTrue);
-        expect(tags.any((tag) => tag[0] == 'dim'), isTrue);
+          // Verify required tags are present
+          final tags = result.event.tags;
+          expect(tags.any((tag) => tag[0] == 'url'), isTrue);
+          expect(tags.any((tag) => tag[0] == 'm'), isTrue); // mimeType
+          expect(tags.any((tag) => tag[0] == 'x'), isTrue); // sha256Hash
+          expect(tags.any((tag) => tag[0] == 'size'), isTrue);
+          expect(tags.any((tag) => tag[0] == 'dim'), isTrue);
 
-        // Verify optional tags
-        expect(tags.any((tag) => tag[0] == 'blurhash'), isTrue);
-        expect(tags.any((tag) => tag[0] == 'alt'), isTrue);
-        expect(tags.any((tag) => tag[0] == 'duration'), isTrue);
+          // Verify optional tags
+          expect(tags.any((tag) => tag[0] == 'blurhash'), isTrue);
+          expect(tags.any((tag) => tag[0] == 'alt'), isTrue);
+          expect(tags.any((tag) => tag[0] == 'duration'), isTrue);
 
-        // Verify hashtags
-        expect(tags.any((tag) => tag[0] == 't' && tag[1] == 'test'), isTrue);
-        expect(tags.any((tag) => tag[0] == 't' && tag[1] == 'video'), isTrue);
+          // Verify hashtags
+          expect(tags.any((tag) => tag[0] == 't' && tag[1] == 'test'), isTrue);
+          expect(tags.any((tag) => tag[0] == 't' && tag[1] == 'video'), isTrue);
 
-        // Verify event pubkey and content
-        expect(result.event.pubkey, equals(publicKey));
-        expect(result.event.content, equals('Test video description'));
-      });
+          // Verify event pubkey and content
+          expect(result.event.pubkey, equals(publicKey));
+          expect(result.event.content, equals('Test video description'));
+        },
+      );
 
-      test('should include all optional metadata fields when provided',
-          () async {
+      test('should include all optional metadata fields when provided', () async {
         // Arrange
         final privateKey = generatePrivateKey();
         final publicKey = getPublicKey(privateKey);
@@ -142,9 +145,7 @@ void main() {
           thumbnailUrl: 'https://example.com/thumb.jpg',
           originalHash:
               'a3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-          additionalTags: {
-            'custom': 'value',
-          },
+          additionalTags: {'custom': 'value'},
         );
 
         // Act
@@ -162,8 +163,10 @@ void main() {
         expect(tags.any((tag) => tag[0] == 'fps'), isTrue);
         expect(tags.any((tag) => tag[0] == 'thumb'), isTrue);
         expect(tags.any((tag) => tag[0] == 'ox'), isTrue); // original hash
-        expect(tags.any((tag) => tag[0] == 'custom' && tag[1] == 'value'),
-            isTrue);
+        expect(
+          tags.any((tag) => tag[0] == 'custom' && tag[1] == 'value'),
+          isTrue,
+        );
       });
     });
 
@@ -226,8 +229,7 @@ void main() {
     });
 
     group('Edge Cases', () {
-      test('should handle metadata with minimal required fields only',
-          () async {
+      test('should handle metadata with minimal required fields only', () async {
         // Arrange
         final privateKey = generatePrivateKey();
         final publicKey = getPublicKey(privateKey);

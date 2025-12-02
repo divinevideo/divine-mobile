@@ -16,12 +16,13 @@ class SubscriptionManager {
     this._nostrService, {
     Event? Function(String)? getCachedEvent,
     bool Function(String)? hasProfileCached,
-  })  : _getCachedEvent = getCachedEvent,
-        _hasProfileCached = hasProfileCached;
+  }) : _getCachedEvent = getCachedEvent,
+       _hasProfileCached = hasProfileCached;
 
   final INostrService _nostrService;
   Event? Function(String)? _getCachedEvent; // Returns cached Event for event ID
-  bool Function(String)? _hasProfileCached; // Checks if profile cached for pubkey
+  bool Function(String)?
+  _hasProfileCached; // Checks if profile cached for pubkey
   final Map<String, StreamSubscription<Event>> _activeSubscriptions = {};
   final Map<String, StreamController<Event>> _controllers = {};
 
@@ -86,7 +87,9 @@ class SubscriptionManager {
     }
 
     // Create event stream from NostrService with filtered filters
-    final eventStream = _nostrService.subscribeToEvents(filters: filteredFilters);
+    final eventStream = _nostrService.subscribeToEvents(
+      filters: filteredFilters,
+    );
 
     // Set up subscription
     final subscription = eventStream.listen(
@@ -115,14 +118,18 @@ class SubscriptionManager {
   /// Handles both event ID filtering and profile author filtering
   /// Optimizes limits to ≤100 for better relay performance
   List<Filter> _filterCachedData(
-      List<Filter> filters, Function(Event) onEvent) {
+    List<Filter> filters,
+    Function(Event) onEvent,
+  ) {
     final filteredFilters = <Filter>[];
 
     for (final filter in filters) {
       Filter? modifiedFilter;
 
       // 1. Filter event IDs if we have event cache
-      if (_getCachedEvent != null && filter.ids != null && filter.ids!.isNotEmpty) {
+      if (_getCachedEvent != null &&
+          filter.ids != null &&
+          filter.ids!.isNotEmpty) {
         final cachedIds = <String>[];
         final missingIds = <String>[];
 
@@ -150,7 +157,9 @@ class SubscriptionManager {
         }
 
         // Optimize limit to ≤100 for better relay performance
-        final optimizedLimit = filter.limit != null && filter.limit! > 100 ? 100 : filter.limit;
+        final optimizedLimit = filter.limit != null && filter.limit! > 100
+            ? 100
+            : filter.limit;
 
         modifiedFilter = Filter(
           ids: missingIds,
@@ -198,7 +207,9 @@ class SubscriptionManager {
         }
 
         // Optimize limit to ≤100 for better relay performance
-        final optimizedLimit = filter.limit != null && filter.limit! > 100 ? 100 : filter.limit;
+        final optimizedLimit = filter.limit != null && filter.limit! > 100
+            ? 100
+            : filter.limit;
 
         modifiedFilter = Filter(
           ids: modifiedFilter?.ids,
@@ -216,7 +227,9 @@ class SubscriptionManager {
       }
 
       // If no modifications were made, optimize the limit on the original filter
-      if (modifiedFilter == null && filter.limit != null && filter.limit! > 100) {
+      if (modifiedFilter == null &&
+          filter.limit != null &&
+          filter.limit! > 100) {
         modifiedFilter = Filter(
           ids: filter.ids,
           kinds: filter.kinds,

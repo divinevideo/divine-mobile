@@ -6,7 +6,8 @@ import 'package:openvine/utils/unified_logger.dart';
 
 /// Service for tracking feed performance and user engagement
 class FeedPerformanceTracker {
-  static final FeedPerformanceTracker _instance = FeedPerformanceTracker._internal();
+  static final FeedPerformanceTracker _instance =
+      FeedPerformanceTracker._internal();
   factory FeedPerformanceTracker() => _instance;
   FeedPerformanceTracker._internal();
 
@@ -106,7 +107,8 @@ class FeedPerformanceTracker {
   }
 
   /// Track pagination load more
-  void trackLoadMore(String feedType, {
+  void trackLoadMore(
+    String feedType, {
     required int currentCount,
     required int newCount,
     required int loadTimeMs,
@@ -128,7 +130,8 @@ class FeedPerformanceTracker {
   }
 
   /// Track scroll depth in feed
-  void trackScrollDepth(String feedType, {
+  void trackScrollDepth(
+    String feedType, {
     required int videosViewed,
     required int totalVideos,
     required double scrollPercentage,
@@ -145,7 +148,8 @@ class FeedPerformanceTracker {
   }
 
   /// Track video engagement in feed
-  void trackVideoEngagement(String feedType, {
+  void trackVideoEngagement(
+    String feedType, {
     required String videoId,
     required String engagementType, // 'viewed', 'liked', 'shared', 'skipped'
     required int positionInFeed,
@@ -167,10 +171,7 @@ class FeedPerformanceTracker {
   void trackEmptyFeed(String feedType, {String? reason}) {
     _analytics.logEvent(
       name: 'feed_empty',
-      parameters: {
-        'feed_type': feedType,
-        if (reason != null) 'reason': reason,
-      },
+      parameters: {'feed_type': feedType, if (reason != null) 'reason': reason},
     );
 
     UnifiedLogger.warning(
@@ -180,7 +181,8 @@ class FeedPerformanceTracker {
   }
 
   /// Track feed error
-  void trackFeedError(String feedType, {
+  void trackFeedError(
+    String feedType, {
     required String errorType,
     required String errorMessage,
   }) {
@@ -189,7 +191,10 @@ class FeedPerformanceTracker {
       parameters: {
         'feed_type': feedType,
         'error_type': errorType,
-        'error_message': errorMessage.substring(0, errorMessage.length > 100 ? 100 : errorMessage.length),
+        'error_message': errorMessage.substring(
+          0,
+          errorMessage.length > 100 ? 100 : errorMessage.length,
+        ),
       },
     );
 
@@ -200,7 +205,8 @@ class FeedPerformanceTracker {
   }
 
   /// Track feed filtering/sorting
-  void trackFeedFilter(String feedType, {
+  void trackFeedFilter(
+    String feedType, {
     required String filterType,
     required int resultCount,
   }) {
@@ -217,7 +223,8 @@ class FeedPerformanceTracker {
   /// Track video discovery source
   void trackVideoDiscovery({
     required String videoId,
-    required String discoverySource, // 'home_feed', 'explore', 'hashtag', 'profile', 'search'
+    required String
+    discoverySource, // 'home_feed', 'explore', 'hashtag', 'profile', 'search'
     int? positionInList,
   }) {
     _analytics.logEvent(

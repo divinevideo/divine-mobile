@@ -22,10 +22,12 @@ class BlossomAuthException implements Exception {
 /// Uses kind 24242 events with `t: get` and `x: sha256hash` tags
 class BlossomAuthService {
   BlossomAuthService({required AuthService authService})
-      : _authService = authService {
+    : _authService = authService {
     // Start periodic cache cleanup
-    _cleanupTimer =
-        Timer.periodic(_cacheCleanupInterval, (_) => _cleanupExpiredCache());
+    _cleanupTimer = Timer.periodic(
+      _cacheCleanupInterval,
+      (_) => _cleanupExpiredCache(),
+    );
   }
 
   final AuthService _authService;
@@ -44,14 +46,19 @@ class BlossomAuthService {
     String? serverUrl,
   }) async {
     if (!_authService.isAuthenticated) {
-      Log.error('Cannot create Blossom auth header - user not authenticated',
-          name: 'BlossomAuthService', category: LogCategory.system);
+      Log.error(
+        'Cannot create Blossom auth header - user not authenticated',
+        name: 'BlossomAuthService',
+        category: LogCategory.system,
+      );
       return null;
     }
 
     try {
       // Create preview of hash for logging (handle short test hashes)
-      final hashPreview = sha256Hash.length > 8 ? '${sha256Hash.substring(0, 8)}...' : sha256Hash;
+      final hashPreview = sha256Hash.length > 8
+          ? '${sha256Hash.substring(0, 8)}...'
+          : sha256Hash;
 
       // Create cache key
       final cacheKey = _createCacheKey(sha256Hash, serverUrl);
@@ -59,17 +66,24 @@ class BlossomAuthService {
       // Check cache first
       final cached = _cache[cacheKey];
       if (cached != null && !cached.isExpired) {
-        Log.debug('Using cached Blossom auth header for hash: $hashPreview',
-            name: 'BlossomAuthService', category: LogCategory.system);
+        Log.debug(
+          'Using cached Blossom auth header for hash: $hashPreview',
+          name: 'BlossomAuthService',
+          category: LogCategory.system,
+        );
         return cached.header;
       }
 
-      Log.debug('📱 Creating Blossom auth header for blob: $hashPreview',
-          name: 'BlossomAuthService', category: LogCategory.system);
+      Log.debug(
+        '📱 Creating Blossom auth header for blob: $hashPreview',
+        name: 'BlossomAuthService',
+        category: LogCategory.system,
+      );
 
       // Calculate expiration (1 hour from now)
       final now = DateTime.now();
-      final expirationTimestamp = (now.millisecondsSinceEpoch / 1000).round() + 3600;
+      final expirationTimestamp =
+          (now.millisecondsSinceEpoch / 1000).round() + 3600;
 
       // Create tags for Blossom BUD-01
       final tags = <List<String>>[
@@ -91,7 +105,9 @@ class BlossomAuthService {
       );
 
       if (authEvent == null) {
-        throw const BlossomAuthException('Failed to create authentication event');
+        throw const BlossomAuthException(
+          'Failed to create authentication event',
+        );
       }
 
       // Encode the event as base64 for the header
@@ -103,18 +119,29 @@ class BlossomAuthService {
       _cache[cacheKey] = _CachedAuthHeader(
         header: header,
         createdAt: now,
-        expiresAt: DateTime.fromMillisecondsSinceEpoch(expirationTimestamp * 1000),
+        expiresAt: DateTime.fromMillisecondsSinceEpoch(
+          expirationTimestamp * 1000,
+        ),
       );
 
-      Log.info('Created Blossom auth header for $hashPreview (expires: ${_cache[cacheKey]!.expiresAt})',
-          name: 'BlossomAuthService', category: LogCategory.system);
-      Log.debug('📱 Event ID: ${authEvent.id}',
-          name: 'BlossomAuthService', category: LogCategory.system);
+      Log.info(
+        'Created Blossom auth header for $hashPreview (expires: ${_cache[cacheKey]!.expiresAt})',
+        name: 'BlossomAuthService',
+        category: LogCategory.system,
+      );
+      Log.debug(
+        '📱 Event ID: ${authEvent.id}',
+        name: 'BlossomAuthService',
+        category: LogCategory.system,
+      );
 
       return header;
     } catch (e) {
-      Log.error('Failed to create Blossom auth header: $e',
-          name: 'BlossomAuthService', category: LogCategory.system);
+      Log.error(
+        'Failed to create Blossom auth header: $e',
+        name: 'BlossomAuthService',
+        category: LogCategory.system,
+      );
       return null;
     }
   }
@@ -139,24 +166,32 @@ class BlossomAuthService {
     }
 
     if (expiredKeys.isNotEmpty) {
-      Log.debug('🧹 Cleaned up ${expiredKeys.length} expired Blossom auth headers',
-          name: 'BlossomAuthService', category: LogCategory.system);
+      Log.debug(
+        '🧹 Cleaned up ${expiredKeys.length} expired Blossom auth headers',
+        name: 'BlossomAuthService',
+        category: LogCategory.system,
+      );
     }
   }
 
   /// Clear all cached auth headers
   void clearCache() {
     _cache.clear();
-    Log.debug('🧹 Cleared all Blossom auth cache',
-        name: 'BlossomAuthService', category: LogCategory.system);
+    Log.debug(
+      '🧹 Cleared all Blossom auth cache',
+      name: 'BlossomAuthService',
+      category: LogCategory.system,
+    );
   }
 
   /// Get cache statistics
   Map<String, dynamic> get cacheStats {
-    final validHeaders =
-        _cache.values.where((entry) => !entry.isExpired).length;
-    final expiredHeaders =
-        _cache.values.where((entry) => entry.isExpired).length;
+    final validHeaders = _cache.values
+        .where((entry) => !entry.isExpired)
+        .length;
+    final expiredHeaders = _cache.values
+        .where((entry) => entry.isExpired)
+        .length;
 
     return {
       'total_cached': _cache.length,
@@ -175,8 +210,11 @@ class BlossomAuthService {
   String? get currentUserPubkey => _authService.currentNpub;
 
   void dispose() {
-    Log.debug('📱 Disposing BlossomAuthService',
-        name: 'BlossomAuthService', category: LogCategory.system);
+    Log.debug(
+      '📱 Disposing BlossomAuthService',
+      name: 'BlossomAuthService',
+      category: LogCategory.system,
+    );
 
     _cleanupTimer?.cancel();
     _cache.clear();

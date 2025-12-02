@@ -32,7 +32,9 @@ void main() {
     });
 
     group('Widget Structure and Visibility', () {
-      testWidgets('shows controls overlay for enhanced mobile camera interface', (tester) async {
+      testWidgets('shows controls overlay for enhanced mobile camera interface', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -58,7 +60,9 @@ void main() {
         expect(gestureDetector, findsOneWidget);
       });
 
-      testWidgets('hides overlay for non-enhanced camera interface', (tester) async {
+      testWidgets('hides overlay for non-enhanced camera interface', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -101,7 +105,9 @@ void main() {
     });
 
     group('Flash Control Functionality', () {
-      testWidgets('flash toggle button calls toggleFlash on camera interface', (tester) async {
+      testWidgets('flash toggle button calls toggleFlash on camera interface', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -124,7 +130,9 @@ void main() {
         verify(mockEnhancedCamera.toggleFlash()).called(1);
       });
 
-      testWidgets('flash toggle button has proper styling and accessibility', (tester) async {
+      testWidgets('flash toggle button has proper styling and accessibility', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -142,10 +150,12 @@ void main() {
         // Verify button has Material ancestor for proper theming (find the specific one)
         final materialFinder = find.ancestor(
           of: flashButton,
-          matching: find.byWidgetPredicate((widget) =>
-              widget is Material &&
-              widget.color == Colors.black54 &&
-              widget.shape is CircleBorder),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Material &&
+                widget.color == Colors.black54 &&
+                widget.shape is CircleBorder,
+          ),
         );
         expect(materialFinder, findsOneWidget);
 
@@ -186,7 +196,9 @@ void main() {
         expect(gestureDetector, findsOneWidget);
       });
 
-      testWidgets('zoom slider updates zoom level and calls camera interface', (tester) async {
+      testWidgets('zoom slider updates zoom level and calls camera interface', (
+        tester,
+      ) async {
         // Create a stateful test widget to control zoom slider visibility
         bool showZoomSlider = true;
         double currentZoom = 0.5;
@@ -209,7 +221,10 @@ void main() {
                           left: 20,
                           right: 20,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
                             child: Slider(
                               value: currentZoom,
                               onChanged: (value) {
@@ -240,7 +255,9 @@ void main() {
         verify(mockEnhancedCamera.setZoom(any)).called(greaterThan(0));
       });
 
-      testWidgets('zoom level indicator displays correct values', (tester) async {
+      testWidgets('zoom level indicator displays correct values', (
+        tester,
+      ) async {
         // Test the zoom level calculation logic
         const testZoom = 0.3; // Should display as "4.0x" (0.3 * 10 + 1 = 4.0)
 
@@ -266,7 +283,9 @@ void main() {
     });
 
     group('Recording State Interactions', () {
-      testWidgets('disables controls when recording state is active', (tester) async {
+      testWidgets('disables controls when recording state is active', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -302,8 +321,11 @@ void main() {
           );
 
           // Controls should be available when not actively recording
-          expect(find.byIcon(Icons.flash_auto), findsOneWidget,
-              reason: 'Flash control should be visible for state: $state');
+          expect(
+            find.byIcon(Icons.flash_auto),
+            findsOneWidget,
+            reason: 'Flash control should be visible for state: $state',
+          );
 
           await tester.pump();
         }
@@ -311,13 +333,11 @@ void main() {
     });
 
     group('Camera Features Info Widget', () {
-      testWidgets('displays camera features information correctly', (tester) async {
+      testWidgets('displays camera features information correctly', (
+        tester,
+      ) async {
         await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: CameraFeaturesInfo(),
-            ),
-          ),
+          const MaterialApp(home: Scaffold(body: CameraFeaturesInfo())),
         );
 
         expect(find.byType(CameraFeaturesInfo), findsOneWidget);
@@ -340,11 +360,7 @@ void main() {
 
       testWidgets('has proper styling and layout', (tester) async {
         await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: CameraFeaturesInfo(),
-            ),
-          ),
+          const MaterialApp(home: Scaffold(body: CameraFeaturesInfo())),
         );
 
         // Verify container styling
@@ -361,7 +377,9 @@ void main() {
     });
 
     group('Accessibility and User Experience', () {
-      testWidgets('provides semantic labels for screen readers', (tester) async {
+      testWidgets('provides semantic labels for screen readers', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -406,7 +424,9 @@ void main() {
     });
 
     group('Platform Integration', () {
-      testWidgets('properly integrates with Enhanced Mobile Camera Interface', (tester) async {
+      testWidgets('properly integrates with Enhanced Mobile Camera Interface', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
@@ -429,13 +449,15 @@ void main() {
         verify(mockEnhancedCamera.toggleFlash()).called(1);
       });
 
-      testWidgets('gracefully handles missing camera permissions', (tester) async {
+      testWidgets('gracefully handles missing camera permissions', (
+        tester,
+      ) async {
         // Create separate mock for this test to avoid interference
         final mockCameraWithError = MockEnhancedMobileCameraInterface();
         when(mockCameraWithError.setZoom(any)).thenAnswer((_) async {});
-        when(mockCameraWithError.toggleFlash()).thenThrow(
-          Exception('Camera permission denied')
-        );
+        when(
+          mockCameraWithError.toggleFlash(),
+        ).thenThrow(Exception('Camera permission denied'));
 
         await tester.pumpWidget(
           MaterialApp(

@@ -8,40 +8,43 @@ import 'package:openvine/router/app_router.dart';
 
 void main() {
   group('Hashtag Navigation Crash Test', () {
-    testWidgets('rapidly switching hashtags does not crash with ref-after-unmount',
-        (tester) async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+    testWidgets(
+      'rapidly switching hashtags does not crash with ref-after-unmount',
+      (tester) async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(
-            routerConfig: container.read(goRouterProvider),
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(
+              routerConfig: container.read(goRouterProvider),
+            ),
           ),
-        ),
-      );
+        );
 
-      // Navigate to first hashtag
-      container.read(goRouterProvider).go('/hashtag/comedy/0');
-      await tester.pump(); // Start navigation
-      await tester.pump(const Duration(milliseconds: 100)); // Partial settle
+        // Navigate to first hashtag
+        container.read(goRouterProvider).go('/hashtag/comedy/0');
+        await tester.pump(); // Start navigation
+        await tester.pump(const Duration(milliseconds: 100)); // Partial settle
 
-      // Rapidly switch to second hashtag (triggers widget disposal)
-      container.read(goRouterProvider).go('/hashtag/lol/0');
-      await tester.pump(); // Start navigation
-      await tester.pump(const Duration(milliseconds: 100)); // Partial settle
+        // Rapidly switch to second hashtag (triggers widget disposal)
+        container.read(goRouterProvider).go('/hashtag/lol/0');
+        await tester.pump(); // Start navigation
+        await tester.pump(const Duration(milliseconds: 100)); // Partial settle
 
-      // Switch again to ensure postFrameCallbacks don't crash
-      container.read(goRouterProvider).go('/hashtag/nostr/0');
-      await tester.pumpAndSettle();
+        // Switch again to ensure postFrameCallbacks don't crash
+        container.read(goRouterProvider).go('/hashtag/nostr/0');
+        await tester.pumpAndSettle();
 
-      // Should complete without "ref after unmount" crash
-      expect(tester.takeException(), isNull);
-    });
+        // Should complete without "ref after unmount" crash
+        expect(tester.takeException(), isNull);
+      },
+    );
 
-    testWidgets('navigating from hashtag grid to feed mode works',
-        (tester) async {
+    testWidgets('navigating from hashtag grid to feed mode works', (
+      tester,
+    ) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -66,8 +69,9 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('navigating away from hashtag to explore does not crash',
-        (tester) async {
+    testWidgets('navigating away from hashtag to explore does not crash', (
+      tester,
+    ) async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

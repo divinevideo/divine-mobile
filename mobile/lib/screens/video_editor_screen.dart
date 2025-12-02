@@ -8,10 +8,7 @@ import 'package:openvine/models/video_event.dart';
 /// Video editor screen - V1 placeholder implementation
 /// Future versions will support editing video metadata and trimming
 class VideoEditorScreen extends ConsumerWidget {
-  const VideoEditorScreen({
-    super.key,
-    required this.video,
-  });
+  const VideoEditorScreen({super.key, required this.video});
 
   final VideoEvent video;
 
@@ -31,35 +28,22 @@ class VideoEditorScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.video_library,
-                size: 80,
-                color: Colors.grey,
-              ),
+              const Icon(Icons.video_library, size: 80, color: Colors.grey),
               const SizedBox(height: 24),
               const Text(
                 'Video Editor',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               const Text(
                 'Video editing functionality coming soon!',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
                 'Editing: ${video.title ?? video.content.substring(0, 30)}...',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),

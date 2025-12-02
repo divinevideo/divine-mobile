@@ -13,79 +13,35 @@ void main() {
       await loadAppFonts();
     });
 
-    testGoldens('UserAvatar renders correctly with different states', (tester) async {
-      final builder = GoldenBuilder.grid(
-        columns: 3,
-        widthToHeightRatio: 1,
-      )
+    testGoldens('UserAvatar renders correctly with different states', (
+      tester,
+    ) async {
+      final builder = GoldenBuilder.grid(columns: 3, widthToHeightRatio: 1)
         ..addScenario(
           'With Name Only',
-          const UserAvatar(
-            name: 'John Doe',
-            size: 60,
-          ),
+          const UserAvatar(name: 'John Doe', size: 60),
         )
-        ..addScenario(
-          'With Empty Name',
-          const UserAvatar(
-            name: '',
-            size: 60,
-          ),
-        )
-        ..addScenario(
-          'No Name or Image',
-          const UserAvatar(
-            size: 60,
-          ),
-        )
-        ..addScenario(
-          'Small Size',
-          const UserAvatar(
-            name: 'Alice',
-            size: 30,
-          ),
-        )
-        ..addScenario(
-          'Medium Size',
-          const UserAvatar(
-            name: 'Bob',
-            size: 50,
-          ),
-        )
-        ..addScenario(
-          'Large Size',
-          const UserAvatar(
-            name: 'Charlie',
-            size: 80,
-          ),
-        )
+        ..addScenario('With Empty Name', const UserAvatar(name: '', size: 60))
+        ..addScenario('No Name or Image', const UserAvatar(size: 60))
+        ..addScenario('Small Size', const UserAvatar(name: 'Alice', size: 30))
+        ..addScenario('Medium Size', const UserAvatar(name: 'Bob', size: 50))
+        ..addScenario('Large Size', const UserAvatar(name: 'Charlie', size: 80))
         ..addScenario(
           'Different Initial A',
-          const UserAvatar(
-            name: 'Alice Anderson',
-            size: 60,
-          ),
+          const UserAvatar(name: 'Alice Anderson', size: 60),
         )
         ..addScenario(
           'Different Initial Z',
-          const UserAvatar(
-            name: 'Zack Zimmerman',
-            size: 60,
-          ),
+          const UserAvatar(name: 'Zack Zimmerman', size: 60),
         )
         ..addScenario(
           'Single Letter Name',
-          const UserAvatar(
-            name: 'X',
-            size: 60,
-          ),
+          const UserAvatar(name: 'X', size: 60),
         );
 
       await tester.pumpWidgetBuilder(
         builder.build(),
-        wrapper: materialAppWrapper(
-          theme: ThemeData.light(),
-        ),
+        wrapper: materialAppWrapper(theme: ThemeData.light()),
       );
 
       await screenMatchesGolden(tester, 'user_avatar_states');
@@ -96,29 +52,18 @@ void main() {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            UserAvatar(
-              name: 'Sample User',
-              size: 40,
-            ),
+            UserAvatar(name: 'Sample User', size: 40),
             SizedBox(height: 20),
-            UserAvatar(
-              name: 'Another User',
-              size: 60,
-            ),
+            UserAvatar(name: 'Another User', size: 60),
             SizedBox(height: 20),
-            UserAvatar(
-              name: 'Test User',
-              size: 80,
-            ),
+            UserAvatar(name: 'Test User', size: 80),
           ],
         ),
       );
 
       await tester.pumpWidgetBuilder(
         widget,
-        wrapper: materialAppWrapper(
-          theme: ThemeData.light(),
-        ),
+        wrapper: materialAppWrapper(theme: ThemeData.light()),
       );
 
       await multiScreenGolden(
@@ -128,7 +73,9 @@ void main() {
       );
     });
 
-    testGoldens('UserAvatar with tap interaction visual feedback', (tester) async {
+    testGoldens('UserAvatar with tap interaction visual feedback', (
+      tester,
+    ) async {
       bool tapped = false;
 
       final widget = StatefulBuilder(
@@ -156,9 +103,7 @@ void main() {
 
       await tester.pumpWidgetBuilder(
         widget,
-        wrapper: materialAppWrapper(
-          theme: ThemeData.light(),
-        ),
+        wrapper: materialAppWrapper(theme: ThemeData.light()),
       );
 
       // Capture before tap
@@ -180,19 +125,14 @@ void main() {
           spacing: 10,
           runSpacing: 10,
           children: sizes.map((size) {
-            return UserAvatar(
-              name: 'User',
-              size: size,
-            );
+            return UserAvatar(name: 'User', size: size);
           }).toList(),
         ),
       );
 
       await tester.pumpWidgetBuilder(
         widget,
-        wrapper: materialAppWrapper(
-          theme: ThemeData.light(),
-        ),
+        wrapper: materialAppWrapper(theme: ThemeData.light()),
         surfaceSize: const Size(400, 400),
       );
 
@@ -208,10 +148,7 @@ void main() {
             child: Container(
               padding: const EdgeInsets.all(20),
               color: Colors.white,
-              child: const UserAvatar(
-                name: 'Theme User',
-                size: 60,
-              ),
+              child: const UserAvatar(name: 'Theme User', size: 60),
             ),
           ),
         )
@@ -222,10 +159,7 @@ void main() {
             child: Container(
               padding: const EdgeInsets.all(20),
               color: Colors.black,
-              child: const UserAvatar(
-                name: 'Theme User',
-                size: 60,
-              ),
+              child: const UserAvatar(name: 'Theme User', size: 60),
             ),
           ),
         );

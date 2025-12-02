@@ -45,9 +45,7 @@ void main() {
     });
 
     test('should handle copyWith for multiple flags', () {
-      final state1 = FeatureFlagState({
-        FeatureFlag.newCameraUI: false,
-      });
+      final state1 = FeatureFlagState({FeatureFlag.newCameraUI: false});
 
       final state2 = state1.copyWith(FeatureFlag.newCameraUI, true);
       final state3 = state2.copyWith(FeatureFlag.enhancedVideoPlayer, true);

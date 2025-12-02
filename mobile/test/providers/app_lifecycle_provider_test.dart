@@ -44,16 +44,20 @@ void main() {
 
         // URL context: home index 1
         pageContextProvider.overrideWithValue(
-          const AsyncValue.data(RouteContext(type: RouteType.home, videoIndex: 1)),
+          const AsyncValue.data(
+            RouteContext(type: RouteType.home, videoIndex: 1),
+          ),
         ),
 
         // Feed (two items)
         videosForHomeRouteProvider.overrideWith((ref) {
-          return AsyncValue.data(VideoFeedState(
-            videos: mockVideos,
-            hasMoreContent: false,
-            isLoadingMore: false,
-          ));
+          return AsyncValue.data(
+            VideoFeedState(
+              videos: mockVideos,
+              hasMoreContent: false,
+              isLoadingMore: false,
+            ),
+          );
         }),
       ],
     );
@@ -87,16 +91,20 @@ void main() {
 
         // URL context: home index 0
         pageContextProvider.overrideWithValue(
-          const AsyncValue.data(RouteContext(type: RouteType.home, videoIndex: 0)),
+          const AsyncValue.data(
+            RouteContext(type: RouteType.home, videoIndex: 0),
+          ),
         ),
 
         // Feed (one item)
         videosForHomeRouteProvider.overrideWith((ref) {
-          return AsyncValue.data(VideoFeedState(
-            videos: mockVideos,
-            hasMoreContent: false,
-            isLoadingMore: false,
-          ));
+          return AsyncValue.data(
+            VideoFeedState(
+              videos: mockVideos,
+              hasMoreContent: false,
+              isLoadingMore: false,
+            ),
+          );
         }),
       ],
     );

@@ -185,8 +185,9 @@ void main() {
         pubkey: 'old_pubkey',
         name: 'Old User',
         rawData: {},
-        createdAt:
-            DateTime.now().subtract(const Duration(days: 8)), // 8 days old
+        createdAt: DateTime.now().subtract(
+          const Duration(days: 8),
+        ), // 8 days old
         eventId: 'old_event_id',
       );
 

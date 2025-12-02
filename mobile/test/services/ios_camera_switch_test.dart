@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:camera/camera.dart';
 import 'package:openvine/services/vine_recording_controller.dart';
 
 void main() {

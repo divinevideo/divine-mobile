@@ -24,8 +24,10 @@ void main() {
     test('service has correct initial state', () {
       expect(embeddedRelayService.isInitialized, isFalse);
       expect(embeddedRelayService.isDisposed, isFalse);
-      expect(embeddedRelayService.relayCount,
-          equals(1)); // Should include embedded relay
+      expect(
+        embeddedRelayService.relayCount,
+        equals(1),
+      ); // Should include embedded relay
       expect(embeddedRelayService.connectedRelayCount, equals(1));
       expect(embeddedRelayService.relays, contains('ws://localhost:7447'));
       expect(embeddedRelayService.primaryRelay, equals('ws://localhost:7447'));
@@ -61,14 +63,16 @@ void main() {
       final initialCount = embeddedRelayService.relayCount;
 
       // Adding embedded relay URL should return false (already present)
-      final addedSame =
-          await embeddedRelayService.addRelay('ws://localhost:7447');
+      final addedSame = await embeddedRelayService.addRelay(
+        'ws://localhost:7447',
+      );
       expect(addedSame, isFalse);
       expect(embeddedRelayService.relayCount, equals(initialCount));
 
       // Adding external relay should work (though may not fully connect in unit test)
-      final addedExternal =
-          await embeddedRelayService.addRelay('wss://localhost:8081');
+      final addedExternal = await embeddedRelayService.addRelay(
+        'wss://localhost:8081',
+      );
       expect(addedExternal, isA<bool>());
     });
 
@@ -87,14 +91,18 @@ void main() {
       expect(status, isA<Map<String, bool>>());
       expect(status['ws://localhost:7447'], isTrue);
 
-      expect(embeddedRelayService.isRelayAuthenticated('ws://localhost:7447'),
-          isA<bool>());
+      expect(
+        embeddedRelayService.isRelayAuthenticated('ws://localhost:7447'),
+        isA<bool>(),
+      );
     });
 
     test('service can handle auth timeout setting', () {
       // Should not throw - method is no-op for embedded relay
-      expect(() => embeddedRelayService.setAuthTimeout(Duration(seconds: 30)),
-          returnsNormally);
+      expect(
+        () => embeddedRelayService.setAuthTimeout(Duration(seconds: 30)),
+        returnsNormally,
+      );
     });
 
     test('service can be disposed', () {
@@ -111,12 +119,16 @@ void main() {
       embeddedRelayService.dispose();
 
       // Operations on disposed service should throw
-      expect(() => embeddedRelayService.subscribeToEvents(filters: []),
-          throwsStateError);
+      expect(
+        () => embeddedRelayService.subscribeToEvents(filters: []),
+        throwsStateError,
+      );
 
       // broadcastEvent with null should throw (either StateError or TypeError)
-      expect(() => embeddedRelayService.broadcastEvent(null as dynamic),
-          throwsA(isA<Error>()));
+      expect(
+        () => embeddedRelayService.broadcastEvent(null as dynamic),
+        throwsA(isA<Error>()),
+      );
     });
 
     test('service provides P2P functionality interface', () async {

@@ -376,7 +376,9 @@ void main() {
         // Assert
         expect(comment.createdAt, equals(futureTime));
         expect(
-            comment.relativeTime, equals('now')); // Future times show as "now"
+          comment.relativeTime,
+          equals('now'),
+        ); // Future times show as "now"
       });
     });
   });

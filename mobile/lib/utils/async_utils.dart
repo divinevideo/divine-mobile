@@ -49,8 +49,11 @@ class AsyncUtils {
       if (!completer.isCompleted) {
         cleanup();
         if (debugName != null) {
-          Log.debug('⏰ AsyncUtils.waitForCondition timeout: $debugName',
-              name: 'AsyncUtils', category: LogCategory.system);
+          Log.debug(
+            '⏰ AsyncUtils.waitForCondition timeout: $debugName',
+            name: 'AsyncUtils',
+            category: LogCategory.system,
+          );
         }
         completer.complete(false);
       }
@@ -63,8 +66,11 @@ class AsyncUtils {
           if (!completer.isCompleted) {
             cleanup();
             if (debugName != null) {
-              Log.info('AsyncUtils.waitForCondition success: $debugName',
-                  name: 'AsyncUtils', category: LogCategory.system);
+              Log.info(
+                'AsyncUtils.waitForCondition success: $debugName',
+                name: 'AsyncUtils',
+                category: LogCategory.system,
+              );
             }
             completer.complete(true);
           }
@@ -73,8 +79,11 @@ class AsyncUtils {
         if (!completer.isCompleted) {
           cleanup();
           if (debugName != null) {
-            Log.error('AsyncUtils.waitForCondition error: $debugName - $e',
-                name: 'AsyncUtils', category: LogCategory.system);
+            Log.error(
+              'AsyncUtils.waitForCondition error: $debugName - $e',
+              name: 'AsyncUtils',
+              category: LogCategory.system,
+            );
           }
           completer.completeError(e);
         }
@@ -141,9 +150,10 @@ class AsyncUtils {
         final result = await operation();
         if (debugName != null && attempts > 0) {
           Log.warning(
-              'AsyncUtils.retryWithBackoff succeeded after $attempts retries: $debugName',
-              name: 'AsyncUtils',
-              category: LogCategory.system);
+            'AsyncUtils.retryWithBackoff succeeded after $attempts retries: $debugName',
+            name: 'AsyncUtils',
+            category: LogCategory.system,
+          );
         }
         return result;
       } catch (error) {
@@ -153,9 +163,10 @@ class AsyncUtils {
         if (retryWhen != null && !retryWhen(error)) {
           if (debugName != null) {
             Log.error(
-                'AsyncUtils.retryWithBackoff not retrying error: $debugName - $error',
-                name: 'AsyncUtils',
-                category: LogCategory.system);
+              'AsyncUtils.retryWithBackoff not retrying error: $debugName - $error',
+              name: 'AsyncUtils',
+              category: LogCategory.system,
+            );
           }
           rethrow;
         }
@@ -164,9 +175,10 @@ class AsyncUtils {
         if (attempts > maxRetries) {
           if (debugName != null) {
             Log.error(
-                'AsyncUtils.retryWithBackoff max retries exceeded: $debugName - $error',
-                name: 'AsyncUtils',
-                category: LogCategory.system);
+              'AsyncUtils.retryWithBackoff max retries exceeded: $debugName - $error',
+              name: 'AsyncUtils',
+              category: LogCategory.system,
+            );
           }
           rethrow;
         }
@@ -183,9 +195,10 @@ class AsyncUtils {
 
         if (debugName != null) {
           Log.error(
-              'AsyncUtils.retryWithBackoff attempt $attempts failed, retrying in ${delay.inMilliseconds}ms: $debugName',
-              name: 'AsyncUtils',
-              category: LogCategory.system);
+            'AsyncUtils.retryWithBackoff attempt $attempts failed, retrying in ${delay.inMilliseconds}ms: $debugName',
+            name: 'AsyncUtils',
+            category: LogCategory.system,
+          );
         }
 
         // Use Timer-based delay instead of Future.delayed
@@ -234,11 +247,15 @@ class AsyncUtils {
       if (!completer.isCompleted) {
         cleanup();
         if (debugName != null) {
-          Log.debug('⏰ AsyncUtils.waitForStreamValue timeout: $debugName',
-              name: 'AsyncUtils', category: LogCategory.system);
+          Log.debug(
+            '⏰ AsyncUtils.waitForStreamValue timeout: $debugName',
+            name: 'AsyncUtils',
+            category: LogCategory.system,
+          );
         }
-        completer
-            .completeError(TimeoutException('Stream value timeout', timeout));
+        completer.completeError(
+          TimeoutException('Stream value timeout', timeout),
+        );
       }
     });
 
@@ -249,8 +266,11 @@ class AsyncUtils {
           if (predicate(value) && !completer.isCompleted) {
             cleanup();
             if (debugName != null) {
-              Log.info('AsyncUtils.waitForStreamValue success: $debugName',
-                  name: 'AsyncUtils', category: LogCategory.system);
+              Log.info(
+                'AsyncUtils.waitForStreamValue success: $debugName',
+                name: 'AsyncUtils',
+                category: LogCategory.system,
+              );
             }
             completer.complete(value);
           }
@@ -259,9 +279,10 @@ class AsyncUtils {
             cleanup();
             if (debugName != null) {
               Log.error(
-                  'AsyncUtils.waitForStreamValue predicate error: $debugName - $e',
-                  name: 'AsyncUtils',
-                  category: LogCategory.system);
+                'AsyncUtils.waitForStreamValue predicate error: $debugName - $e',
+                name: 'AsyncUtils',
+                category: LogCategory.system,
+              );
             }
             completer.completeError(e);
           }
@@ -272,9 +293,10 @@ class AsyncUtils {
           cleanup();
           if (debugName != null) {
             Log.error(
-                'AsyncUtils.waitForStreamValue stream error: $debugName - $error',
-                name: 'AsyncUtils',
-                category: LogCategory.system);
+              'AsyncUtils.waitForStreamValue stream error: $debugName - $error',
+              name: 'AsyncUtils',
+              category: LogCategory.system,
+            );
           }
           completer.completeError(error);
         }
