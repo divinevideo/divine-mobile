@@ -1821,8 +1821,10 @@ class VineRecordingController {
           '${tempDir.path}/vine_final_${DateTime.now().millisecondsSinceEpoch}.mp4';
 
       final cropFilter = _buildCropFilter(_aspectRatio);
+
+      final audioEncodeFlag = Platform.isAndroid ? '-c:a aac' : '-c:a copy';
       final command =
-          '-y -i "$inputPath" -vf "$cropFilter" -c:a copy "$outputPath"';
+          '-y -i "$inputPath" -vf "$cropFilter" $audioEncodeFlag "$outputPath"';
 
       Log.info(
         '📹 Executing FFmpeg square crop command: $command',
@@ -2107,7 +2109,9 @@ class VineRecordingController {
         '${tempDir.path}/vine_final_${DateTime.now().millisecondsSinceEpoch}.mp4';
 
     final cropFilter = _buildCropFilter(_aspectRatio);
-    final command = '-i "$inputPath" -vf "$cropFilter" -c:a copy "$outputPath"';
+    final audioEncodeFlag = Platform.isAndroid ? '-c:a aac' : '-c:a copy';
+    final encoderFlag = Platform.isAndroid ? ' -c:v libx264' : '';
+    final command = '-i "$inputPath" -vf "$cropFilter" $audioEncodeFlag$encoderFlag "$outputPath"';
 
     Log.info(
       '📹 Executing FFmpeg crop command: $command',
