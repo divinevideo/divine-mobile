@@ -1008,12 +1008,25 @@ class CuratedListService {
 
   /// Create the default "My List" for quick access
   Future<void> _createDefaultList() async {
-    await createList(
+    final list = await createList(
       name: 'My List',
       description: 'My favorite vines and videos',
       isPublic: true,
       listId: defaultListId,
     );
+
+    if (list != null) {
+      final index = _lists.indexWhere((l) => l.id == list.id);
+
+      if (index != -1) {
+        // Update the list ID to the default ID, save to local storage and
+        // publish to Nostr
+        final update = list.copyWith(id: defaultListId);
+        _lists[index] = update;
+        await _saveLists();
+        await _publishListToNostr(update);
+      }
+    }
   }
 
   /// Publish list to Nostr as NIP-51 kind 30005 event

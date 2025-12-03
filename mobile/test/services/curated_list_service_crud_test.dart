@@ -123,8 +123,6 @@ void main() {
       });
 
       test('does not create duplicate default list after relaunch', () async {
-        // reset(mockNostr);
-
         // Collect lists saved to the relay
         final lists = <CuratedList>[];
 
