@@ -12,6 +12,8 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/utils/curated_list_ext.dart';
+import 'package:openvine/utils/nostr_event_ext.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'curated_list_service_crud_test.mocks.dart';
@@ -162,11 +164,7 @@ void main() {
 
         when(mockNostr.broadcastEvent(any)).thenAnswer((invocation) {
           final event = invocation.positionalArguments[0] as Event;
-          final dTag = event.tags.firstWhere((t) {
-            return t.isNotEmpty && t[0] == 'd' && t.length > 1;
-          });
-
-          lists.add(CuratedList.fromEvent(dTag[1], event));
+          lists.add(event.toCuratedList());
 
           return Future.value(
             NostrBroadcastResult(

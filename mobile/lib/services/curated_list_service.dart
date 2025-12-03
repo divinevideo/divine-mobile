@@ -8,6 +8,8 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/utils/curated_list_ext.dart';
+import 'package:openvine/utils/nostr_event_ext.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -152,125 +154,6 @@ class CuratedList {
       json['playOrder'] ?? 'chronological',
     ),
   );
-
-  static CuratedList fromEvent(String dTag, Event event) {
-    // Extract list metadata from tags
-    String? title;
-    String? description;
-    String? imageUrl;
-    String? thumbnailEventId;
-    String? playOrderStr;
-    final tags = <String>[];
-    final videoEventIds = <String>[];
-    bool isCollaborative = false;
-    final allowedCollaborators = <String>[];
-
-    for (final tag in event.tags) {
-      if (tag.isEmpty) continue;
-
-      switch (tag[0]) {
-        case 'title':
-          if (tag.length > 1) title = tag[1];
-          break;
-        case 'description':
-          if (tag.length > 1) description = tag[1];
-          break;
-        case 'image':
-          if (tag.length > 1) imageUrl = tag[1];
-          break;
-        case 'thumbnail':
-          if (tag.length > 1) thumbnailEventId = tag[1];
-          break;
-        case 'playorder':
-          if (tag.length > 1) playOrderStr = tag[1];
-          break;
-        case 't':
-          if (tag.length > 1) tags.add(tag[1]);
-          break;
-        case 'e':
-          if (tag.length > 1) videoEventIds.add(tag[1]);
-          break;
-        case 'collaborative':
-          if (tag.length > 1 && tag[1] == 'true') isCollaborative = true;
-          break;
-        case 'collaborator':
-          if (tag.length > 1) allowedCollaborators.add(tag[1]);
-          break;
-      }
-    }
-
-    // Use title or fall back to content or default
-    final contentFirstLine = event.content.split('\n').first;
-    final name =
-        title ??
-        (contentFirstLine.isNotEmpty ? contentFirstLine : 'Untitled List');
-
-    return CuratedList(
-      id: dTag,
-      name: name,
-      description: description ?? event.content,
-      imageUrl: imageUrl,
-      videoEventIds: videoEventIds,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
-      isPublic: true, // Lists from relays are public
-      nostrEventId: event.id,
-      tags: tags,
-      isCollaborative: isCollaborative,
-      allowedCollaborators: allowedCollaborators,
-      thumbnailEventId: thumbnailEventId,
-      playOrder: playOrderStr != null
-          ? PlayOrderExtension.fromString(playOrderStr)
-          : PlayOrder.chronological,
-    );
-  }
-
-  List<List<String>> getEventTags() {
-    // Create NIP-51 kind 30005 tags
-    final tags = <List<String>>[
-      ['d', id], // Identifier for replaceable event
-      ['title', name],
-      ['client', 'diVine'],
-    ];
-
-    // Add description if present
-    if (description != null && description!.isNotEmpty) {
-      tags.add(['description', description!]);
-    }
-
-    // Add image if present
-    if (imageUrl != null && imageUrl!.isNotEmpty) {
-      tags.add(['image', imageUrl!]);
-    }
-
-    // Add tags for categorization
-    for (final tag in this.tags) {
-      tags.add(['t', tag]);
-    }
-
-    // Add collaboration settings
-    if (isCollaborative) {
-      tags.add(['collaborative', 'true']);
-      for (final collaborator in allowedCollaborators) {
-        tags.add(['collaborator', collaborator]);
-      }
-    }
-
-    // Add thumbnail if present
-    if (thumbnailEventId != null) {
-      tags.add(['thumbnail', thumbnailEventId!]);
-    }
-
-    // Add play order setting
-    tags.add(['playorder', playOrder.value]);
-
-    // Add video events as 'e' tags
-    for (final videoEventId in videoEventIds) {
-      tags.add(['e', videoEventId]);
-    }
-
-    return tags;
-  }
 }
 
 /// Service for managing NIP-51 curated lists
@@ -1704,7 +1587,7 @@ class CuratedListService {
         return;
       }
 
-      final curatedList = CuratedList.fromEvent(dTag, event);
+      final curatedList = event.toCuratedList();
 
       // Check if we already have this list locally
       final existingListIndex = _lists.indexWhere((list) => list.id == dTag);
