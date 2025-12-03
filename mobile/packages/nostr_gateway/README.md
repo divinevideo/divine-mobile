@@ -147,7 +147,7 @@ final config = NostrClientConfig(
   publicKey: publicKey,
   enableGateway: true,
 );
-final client = NostrClient.create(config);
+final client = NostrClient(config);
 ```
 
 [mason_link]: https://github.com/felangel/mason

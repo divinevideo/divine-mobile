@@ -1,5 +1,5 @@
 name: nostr_client
-description: Nostr client
+description: Nostr client abstraction layer for repositories
 version: 0.1.0+1
 publish_to: none
 
@@ -7,6 +7,13 @@ environment:
   sdk: ^3.9.0
 
 resolution: workspace
+
+dependencies:
+  crypto: ^3.0.7
+  nostr_gateway:
+    path: ../nostr_gateway
+  nostr_sdk:
+    path: ../nostr_sdk
 
 dev_dependencies:
   mocktail: ^1.0.4

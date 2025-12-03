@@ -4,5 +4,6 @@
 /// profile lookups, and event fetching.
 library;
 
+export 'src/exceptions/exceptions.dart';
 export 'src/gateway_client.dart';
-
+export 'src/models/models.dart';
