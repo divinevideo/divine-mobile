@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:models/models.dart';
 import 'package:openvine/widgets/upload_progress_dialog.dart';
 
 // Simple mock that only implements getUpload

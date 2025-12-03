@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:nostr_sdk/nip04/nip04.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 import 'package:pointycastle/export.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 

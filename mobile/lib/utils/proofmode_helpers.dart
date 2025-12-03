@@ -1,7 +1,7 @@
 // ABOUTME: ProofMode helper utilities for converting video event data to verification levels
 // ABOUTME: Maps raw Nostr event tags to UI-friendly verification badge levels
 
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 import 'package:openvine/widgets/proofmode_badge.dart';
 
 /// Extension to get verification level from VideoEvent

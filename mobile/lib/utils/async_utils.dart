@@ -3,7 +3,9 @@
 
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
+import 'package:models/models.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Utilities for proper asynchronous programming patterns

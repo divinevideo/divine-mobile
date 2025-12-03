@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:camera_macos/camera_macos.dart';
 import 'package:flutter/material.dart'; // For Offset
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 import 'camera_service.dart';
 
 /// Concrete implementation of CameraService with macOS support

@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Background activity manager to control network and battery usage
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod

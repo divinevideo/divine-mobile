@@ -2,7 +2,7 @@
 // ABOUTME: Shows context-appropriate information based on video metadata
 
 import 'package:flutter/material.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Modal dialog explaining the origin and authenticity of video content

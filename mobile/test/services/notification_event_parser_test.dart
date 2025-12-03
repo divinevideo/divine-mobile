@@ -3,9 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/models/notification_model.dart';
-import 'package:openvine/models/user_profile.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/notification_event_parser.dart';
 
 void main() {

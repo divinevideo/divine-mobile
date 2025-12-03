@@ -5,20 +5,17 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-
+import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blurhash_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/utils/unified_logger.dart';
+import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/proofmode_publishing_helpers.dart';
-import 'package:openvine/constants/nip71_migration.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 /// Service for publishing processed videos to Nostr relays
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod

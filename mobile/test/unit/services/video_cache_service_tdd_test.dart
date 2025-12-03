@@ -3,7 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/constants/app_constants.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 import '../../helpers/test_helpers.dart';
 

@@ -8,6 +8,7 @@ import 'package:openvine/services/content_moderation_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Report submission result

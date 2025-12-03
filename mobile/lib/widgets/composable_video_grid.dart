@@ -3,14 +3,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
+import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/string_utils.dart';
-import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/share_video_menu.dart';
-import 'package:openvine/services/content_deletion_service.dart';
+import 'package:openvine/widgets/video_thumbnail_widget.dart';
 
 /// Composable video grid that automatically filters broken videos
 /// and provides consistent styling across Explore, Hashtag, and Search screens

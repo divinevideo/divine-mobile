@@ -4,6 +4,7 @@
 import 'package:openvine/database/app_database.dart';
 import 'package:openvine/database/hive_to_drift_migrator.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Service that runs migrations on app startup
 class MigrationService {

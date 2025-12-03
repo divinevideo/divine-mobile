@@ -2,6 +2,7 @@
 // ABOUTME: Prevents duplicate loadMore() calls with configurable threshold and throttle
 
 import 'package:flutter/widgets.dart';
+import 'package:models/models.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Mixin that provides pagination logic with throttling for scrollable lists

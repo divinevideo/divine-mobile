@@ -2,8 +2,7 @@
 // ABOUTME: Maintains a ring buffer of recent logs without file I/O overhead
 
 import 'dart:collection';
-import 'package:openvine/models/log_entry.dart';
-import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Service for capturing and storing log entries in memory for bug reports
 class LogCaptureService {

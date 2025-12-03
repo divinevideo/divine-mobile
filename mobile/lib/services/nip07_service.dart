@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:openvine/services/nip07_interop.dart' as nip07;
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Authentication result from NIP-07 extension
 class Nip07AuthResult {

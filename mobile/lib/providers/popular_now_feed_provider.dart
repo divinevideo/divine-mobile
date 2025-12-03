@@ -1,8 +1,8 @@
 // ABOUTME: PopularNow feed provider showing newest videos using VideoFeedBuilder helper
 // ABOUTME: Subscribes to SubscriptionType.popularNow and sorts by timestamp (newest first)
 
+import 'package:models/models.dart';
 import 'package:openvine/helpers/video_feed_builder.dart';
-import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -10,6 +10,8 @@ import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/state/video_feed_state.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../utils/extensions/extensions.dart';
 
 part 'popular_now_feed_provider.g.dart';
 

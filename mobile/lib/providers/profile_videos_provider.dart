@@ -3,12 +3,13 @@
 
 import 'dart:async';
 
+import 'package:models/models.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:openvine/constants/nip71_migration.dart';
+
+import '../utils/extensions/extensions.dart';
 
 part 'profile_videos_provider.g.dart';
 

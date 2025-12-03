@@ -2,9 +2,11 @@
 // ABOUTME: Provides progressive image loading experience for video thumbnails
 
 import 'dart:async';
-import 'dart:ui' as ui;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/blurhash_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 

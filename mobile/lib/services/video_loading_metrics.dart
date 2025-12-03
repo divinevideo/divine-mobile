@@ -3,7 +3,7 @@
 
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Tracks different stages of video loading for performance analysis

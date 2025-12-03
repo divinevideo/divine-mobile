@@ -4,7 +4,7 @@
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:models/models.dart';
 
 /// Helper class to test imeta tag generation logic
 class ImetaTagGenerator {

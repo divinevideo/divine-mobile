@@ -3,7 +3,7 @@
 
 import 'dart:async';
 
-import 'package:openvine/models/user_profile.dart';
+import 'package:models/models.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/state/user_profile_state.dart';
 import 'package:openvine/utils/unified_logger.dart';

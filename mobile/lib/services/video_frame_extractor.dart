@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 import 'package:path_provider/path_provider.dart';
 
 // Conditional imports for FFmpeg - disabled due to macOS compatibility issues

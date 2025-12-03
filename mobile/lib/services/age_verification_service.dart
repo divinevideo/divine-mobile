@@ -2,6 +2,7 @@
 // ABOUTME: Stores verification status using SharedPreferences for persistence
 
 import 'package:flutter/material.dart';
+import 'package:models/models.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/age_verification_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';

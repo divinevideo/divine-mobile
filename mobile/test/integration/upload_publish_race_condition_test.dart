@@ -2,7 +2,7 @@
 // ABOUTME: Ensures videoId and cdnUrl are populated when publishDirectUpload is called
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:models/models.dart';
 
 void main() {
   group('Upload → Publish Race Condition Fix', () {

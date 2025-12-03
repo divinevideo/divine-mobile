@@ -3,10 +3,11 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/services/image_cache_manager.dart';
 import 'package:openvine/services/thumbnail_api_service.dart'
     show ThumbnailSize;
+import 'package:openvine/utils/extensions/extensions.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/blurhash_display.dart';
 import 'package:openvine/widgets/video_icon_placeholder.dart';

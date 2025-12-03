@@ -1,7 +1,7 @@
 // ABOUTME: Test data builder for creating VideoEvent instances for testing
 // ABOUTME: Provides flexible factory methods with sensible defaults
 
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 /// Builder class for creating test VideoEvent instances
 class VideoEventBuilder {

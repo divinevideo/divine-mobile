@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 class VideoStopNavigatorObserver extends NavigatorObserver {
   @override

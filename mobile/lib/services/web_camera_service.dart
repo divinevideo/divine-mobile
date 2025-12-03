@@ -10,6 +10,7 @@ import 'dart:ui_web' as ui_web;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Web camera service that uses getUserMedia and MediaRecorder
 class WebCameraService {

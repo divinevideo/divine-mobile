@@ -1,4 +1,4 @@
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 /// Creates a test VideoEvent with customizable properties
 VideoEvent createTestVideoEvent({

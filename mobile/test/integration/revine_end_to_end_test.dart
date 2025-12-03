@@ -3,7 +3,7 @@ import 'package:openvine/utils/unified_logger.dart';
 // ABOUTME: Tests from revining a video to seeing it appear in the user's profile
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 void main() {
   group('Revine End-to-End Integration Test', () {

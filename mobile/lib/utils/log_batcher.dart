@@ -2,6 +2,8 @@
 // ABOUTME: Groups similar messages and outputs summaries instead of individual lines
 
 import 'dart:async';
+
+import 'package:models/models.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Batches repetitive log messages and outputs summaries

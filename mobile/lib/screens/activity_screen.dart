@@ -2,9 +2,8 @@
 // ABOUTME: Displays notifications feed similar to original Vine's activity tab
 
 import 'package:flutter/material.dart';
-import 'package:openvine/models/notification_model.dart';
-import 'package:openvine/models/user_profile.dart' as models;
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
+import 'package:models/models.dart' as models;
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/comments_screen.dart';
 import 'package:openvine/screens/pure/explore_video_screen_pure.dart';

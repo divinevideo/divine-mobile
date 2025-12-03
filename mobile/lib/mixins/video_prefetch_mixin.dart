@@ -2,8 +2,8 @@
 // ABOUTME: Automatically prefetches videos around current index for instant playback
 
 import 'package:flutter/foundation.dart';
+import 'package:models/models.dart';
 import 'package:openvine/constants/app_constants.dart';
-import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/video_cache_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
 

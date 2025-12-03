@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/config/zendesk_config.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Service for interacting with Zendesk Support SDK
 class ZendeskSupportService {

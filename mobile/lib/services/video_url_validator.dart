@@ -2,6 +2,7 @@
 // ABOUTME: Tracks failed URLs and provides fallback strategies to avoid repeated loading failures
 
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 class VideoUrlValidator {
   static final VideoUrlValidator _instance = VideoUrlValidator._internal();

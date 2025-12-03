@@ -3,12 +3,14 @@
 
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:video_player/video_player.dart';
-import 'package:openvine/utils/unified_logger.dart';
-import 'package:openvine/providers/individual_video_providers.dart';
+import 'package:models/models.dart';
 import 'package:openvine/providers/active_video_provider.dart';
+import 'package:openvine/providers/individual_video_providers.dart';
+import 'package:openvine/utils/unified_logger.dart';
+import 'package:video_player/video_player.dart';
 
 /// Creates a video controller with fallback logic for CDN compatibility
 class VideoControllerWithFallback {

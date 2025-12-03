@@ -8,6 +8,7 @@ import 'package:crypto/crypto.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Exception thrown by NIP-98 authentication operations
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod

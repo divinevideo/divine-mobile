@@ -4,7 +4,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
-import 'package:openvine/models/vine_draft.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import '../helpers/test_helpers.dart';

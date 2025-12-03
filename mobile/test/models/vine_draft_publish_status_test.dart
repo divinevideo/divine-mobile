@@ -3,8 +3,7 @@
 
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/vine_draft.dart';
-import 'package:openvine/models/aspect_ratio.dart';
+import 'package:models/models.dart';
 
 void main() {
   group('VineDraft PublishStatus', () {

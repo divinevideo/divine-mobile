@@ -2,7 +2,7 @@
 // ABOUTME: Tests scroll detection, rate limiting, and provider integration
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 void main() {
   group('ExploreScreen Pagination Tests', () {

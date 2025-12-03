@@ -2,7 +2,7 @@
 // ABOUTME: New vines (no loops) chronologically, then original vines by loop count
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 void main() {
   group('Search results sorting', () {

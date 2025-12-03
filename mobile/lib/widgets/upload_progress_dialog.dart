@@ -3,7 +3,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:models/models.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
 /// Dialog that shows upload progress and blocks user interaction until complete

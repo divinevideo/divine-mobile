@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Engagement metrics for a seen video

@@ -2,8 +2,7 @@
 // ABOUTME: Comprehensive test suite for TDD-driven video state management
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
-import 'package:openvine/models/video_state.dart';
+import 'package:models/models.dart';
 
 void main() {
   group('VideoState', () {

@@ -2,7 +2,7 @@
 // ABOUTME: Represents the current state of a video list with basic metadata
 
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 part 'video_feed_state.freezed.dart';
 

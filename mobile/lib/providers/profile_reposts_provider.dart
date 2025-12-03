@@ -1,7 +1,7 @@
 // ABOUTME: Provider for fetching videos that a user has reposted
 // ABOUTME: Filters profile feed events to show only reposts by the specified user
 
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 import 'package:openvine/providers/profile_feed_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

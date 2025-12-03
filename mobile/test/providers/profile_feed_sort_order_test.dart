@@ -2,7 +2,7 @@
 // ABOUTME: Ensures that when viewing a user's profile, their videos appear with newest at the top
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 void main() {
   group('VideoEvent Sorting', () {

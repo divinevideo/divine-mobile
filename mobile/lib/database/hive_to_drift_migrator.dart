@@ -2,8 +2,8 @@
 // ABOUTME: One-time migration with idempotent execution and rollback support
 
 import 'package:hive_ce/hive.dart';
+import 'package:models/models.dart';
 import 'package:openvine/database/app_database.dart';
-import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

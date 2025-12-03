@@ -2,10 +2,10 @@
 // ABOUTME: Provides upsert operations for denormalized video metrics (loop_count, likes, views, etc.)
 
 import 'package:drift/drift.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/database/app_database.dart';
 import 'package:openvine/database/tables.dart';
-import 'package:openvine/models/video_event.dart';
 
 part 'video_metrics_dao.g.dart';
 

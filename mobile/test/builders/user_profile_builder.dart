@@ -1,7 +1,7 @@
 // ABOUTME: Test data builder for creating UserProfile instances for testing
 // ABOUTME: Provides flexible factory methods for various user profile scenarios
 
-import 'package:openvine/models/user_profile.dart';
+import 'package:models/models.dart';
 
 /// Builder class for creating test UserProfile instances
 class UserProfileBuilder {

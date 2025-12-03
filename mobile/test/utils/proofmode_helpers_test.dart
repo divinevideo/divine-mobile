@@ -2,7 +2,7 @@
 // ABOUTME: Validates VideoEvent extension methods for extracting verification levels from Nostr tags
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 import 'package:openvine/widgets/proofmode_badge.dart';
 import 'package:openvine/utils/proofmode_helpers.dart';
 

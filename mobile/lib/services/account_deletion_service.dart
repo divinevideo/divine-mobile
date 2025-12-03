@@ -1,6 +1,7 @@
 // ABOUTME: Account deletion service implementing NIP-62 Request to Vanish
 // ABOUTME: Handles network-wide account deletion by publishing kind 62 events to all relays
 
+import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';

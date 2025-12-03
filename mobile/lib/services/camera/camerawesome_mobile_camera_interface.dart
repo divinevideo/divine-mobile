@@ -6,8 +6,9 @@ import 'dart:async';
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:openvine/services/vine_recording_controller.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/camera/camera_zoom_detector.dart';
+import 'package:openvine/services/vine_recording_controller.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// CamerAwesome-based camera implementation with physical sensor switching

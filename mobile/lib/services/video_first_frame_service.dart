@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 import 'package:video_player/video_player.dart';
 
 /// Service for extracting first frames from videos to use as thumbnails

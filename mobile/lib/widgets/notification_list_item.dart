@@ -4,7 +4,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:openvine/services/image_cache_manager.dart';
-import 'package:openvine/models/notification_model.dart';
+import 'package:models/models.dart';
 import 'package:openvine/theme/app_theme.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';

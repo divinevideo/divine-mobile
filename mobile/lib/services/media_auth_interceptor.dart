@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/blossom_auth_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Service for intercepting unauthorized media requests and handling authentication flow
 class MediaAuthInterceptor {

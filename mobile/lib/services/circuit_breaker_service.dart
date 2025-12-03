@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Circuit breaker states
 enum CircuitBreakerState {

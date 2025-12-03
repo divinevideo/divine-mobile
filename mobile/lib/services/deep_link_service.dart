@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 import 'package:app_links/app_links.dart';
 
 /// Types of deep links supported by the app

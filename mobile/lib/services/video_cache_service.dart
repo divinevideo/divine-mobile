@@ -4,7 +4,7 @@
 import 'dart:math';
 
 import 'package:openvine/constants/app_constants.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Service responsible for caching and managing video events in memory

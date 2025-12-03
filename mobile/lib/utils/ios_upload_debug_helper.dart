@@ -4,7 +4,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:models/models.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
 class IOSUploadDebugHelper {

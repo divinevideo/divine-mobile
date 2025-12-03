@@ -8,7 +8,7 @@ import 'dart:async' as _i7;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i11;
 import 'package:nostr_sdk/event.dart' as _i9;
-import 'package:openvine/models/video_event.dart' as _i8;
+import 'package:models/models.dart' as _i8;
 import 'package:openvine/services/auth_service.dart' as _i4;
 import 'package:openvine/services/content_deletion_service.dart' as _i2;
 import 'package:openvine/services/content_moderation_service.dart' as _i5;

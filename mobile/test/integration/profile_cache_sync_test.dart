@@ -3,7 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/models/user_profile.dart' as model;
+import 'package:models/models.dart' as model;
 import 'package:openvine/providers/app_providers.dart';
 
 void main() {

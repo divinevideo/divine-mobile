@@ -2,9 +2,10 @@
 // ABOUTME: Provides memory-safe key handling to prevent exposure through memory dumps or debugging
 
 import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Exception thrown by secure key operations

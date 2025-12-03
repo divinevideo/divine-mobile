@@ -2,7 +2,7 @@
 // ABOUTME: Shows upload progress, processing state, and error handling UI
 
 import 'package:flutter/material.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:models/models.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
 /// Widget that displays upload progress for a video

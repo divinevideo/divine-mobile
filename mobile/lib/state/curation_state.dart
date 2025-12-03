@@ -2,8 +2,7 @@
 // ABOUTME: Manages only editor picks - trending/popular handled by infinite feeds
 
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:openvine/models/curation_set.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 part 'curation_state.freezed.dart';
 

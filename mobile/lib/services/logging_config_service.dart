@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service for managing logging configuration

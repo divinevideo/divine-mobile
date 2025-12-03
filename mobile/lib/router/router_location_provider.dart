@@ -2,8 +2,9 @@
 // ABOUTME: Core primitive for router-driven state architecture
 
 import 'dart:async';
-import 'package:riverpod/riverpod.dart';
+
 import 'package:openvine/router/app_router.dart';
+import 'package:riverpod/riverpod.dart';
 
 /// Provider that exposes the raw router location stream
 ///

@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Service for generating cryptographic proof using native ProofMode libraries
 ///

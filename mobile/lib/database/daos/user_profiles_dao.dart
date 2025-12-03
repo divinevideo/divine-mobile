@@ -2,10 +2,11 @@
 // ABOUTME: Provides CRUD operations and Stream-based reactivity for UserProfile caching
 
 import 'dart:convert';
+
 import 'package:drift/drift.dart';
+import 'package:models/models.dart';
 import 'package:openvine/database/app_database.dart';
 import 'package:openvine/database/tables.dart';
-import 'package:openvine/models/user_profile.dart';
 
 part 'user_profiles_dao.g.dart';
 

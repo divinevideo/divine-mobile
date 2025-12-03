@@ -6,7 +6,7 @@
 import 'dart:async' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:openvine/models/notification_model.dart' as _i3;
+import 'package:models/models.dart' as _i3;
 import 'package:openvine/services/nostr_service_interface.dart' as _i5;
 import 'package:openvine/services/notification_service_enhanced.dart' as _i2;
 import 'package:openvine/services/user_profile_service.dart' as _i6;

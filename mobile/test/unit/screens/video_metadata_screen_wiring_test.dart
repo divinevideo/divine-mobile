@@ -11,7 +11,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
-import 'package:openvine/models/vine_draft.dart';
+import 'package:models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 

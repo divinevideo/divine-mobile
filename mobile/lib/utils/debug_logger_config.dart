@@ -1,6 +1,7 @@
 // ABOUTME: Quick debug configuration helpers for switching between logging modes
 // ABOUTME: Import this to quickly enable specific logging categories during debugging
 
+import 'package:models/models.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Quick debugging configurations for common scenarios

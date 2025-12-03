@@ -2,7 +2,7 @@
 // ABOUTME: Defines search states, query management, and result handling for UI
 
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 part 'search_state.freezed.dart';
 

@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 /// Video editor screen - V1 placeholder implementation
 /// Future versions will support editing video metadata and trimming

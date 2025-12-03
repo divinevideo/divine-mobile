@@ -2,7 +2,7 @@
 // ABOUTME: Displays active uploads as a small overlay that can be tapped for details
 
 import 'package:flutter/material.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/upload_progress_indicator.dart';

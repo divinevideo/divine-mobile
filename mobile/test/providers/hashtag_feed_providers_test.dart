@@ -4,7 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 import 'package:openvine/providers/hashtag_feed_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/page_context_provider.dart';

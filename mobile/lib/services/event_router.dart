@@ -4,7 +4,7 @@
 import 'dart:async';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/database/app_database.dart';
-import 'package:openvine/models/user_profile.dart';
+import 'package:models/models.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Routes incoming Nostr events to appropriate database tables

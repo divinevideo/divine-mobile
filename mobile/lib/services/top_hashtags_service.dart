@@ -4,6 +4,7 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 class HashtagData {
   HashtagData({

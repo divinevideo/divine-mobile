@@ -2,9 +2,11 @@
 // ABOUTME: iOS: Queries AVCaptureDevice for exact zoom values. Android: Uses CamerAwesome API
 
 import 'dart:io';
-import 'package:flutter/services.dart';
-import 'package:camerawesome/camerawesome_plugin.dart';
+
 import 'package:camera/camera.dart' as camera_pkg;
+import 'package:camerawesome/camerawesome_plugin.dart';
+import 'package:flutter/services.dart';
+import 'package:models/models.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Information about a physical camera sensor

@@ -2,7 +2,7 @@
 // ABOUTME: Handles navigation from explore screen to feed with specific starting points and filters
 
 import 'package:flutter/material.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 import 'package:openvine/screens/video_feed_screen.dart';
 
 class FeedNavigation {

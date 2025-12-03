@@ -4,6 +4,7 @@
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as nostr;
 
 // Import Event from nostr_sdk

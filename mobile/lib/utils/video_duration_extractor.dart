@@ -2,8 +2,10 @@
 // ABOUTME: Provides fallback when VideoPlayerController hasn't loaded metadata
 
 import 'dart:io';
-import 'package:video_player/video_player.dart';
+
+import 'package:models/models.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:video_player/video_player.dart';
 
 /// Extract video duration from a video file
 ///

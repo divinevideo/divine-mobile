@@ -4,7 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
-import 'package:openvine/models/notification_model.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/user_profile_service.dart';

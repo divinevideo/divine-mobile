@@ -2,7 +2,7 @@
 // ABOUTME: Abstracts all Hive operations for notifications from service layer
 
 import 'package:hive_ce_flutter/hive_flutter.dart';
-import 'package:openvine/models/notification_model.dart';
+import 'package:models/models.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Handles persistence of notifications to Hive storage

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:blurhash_dart/blurhash_dart.dart' as blurhash_dart;
 import 'package:image/image.dart' as img;
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Service for generating and decoding Blurhash placeholders
 class BlurhashService {

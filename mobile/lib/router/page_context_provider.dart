@@ -1,10 +1,11 @@
 // ABOUTME: Derived provider that parses router location into structured context
 // ABOUTME: Single source of truth for "what page are we on?"
 
-import 'package:riverpod/riverpod.dart';
-import 'package:openvine/router/router_location_provider.dart';
+import 'package:models/models.dart';
 import 'package:openvine/router/route_utils.dart';
+import 'package:openvine/router/router_location_provider.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:riverpod/riverpod.dart';
 
 /// StreamProvider that derives structured page context from router location
 ///

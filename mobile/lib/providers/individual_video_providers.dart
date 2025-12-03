@@ -2,15 +2,17 @@
 // ABOUTME: Each video gets its own controller with automatic lifecycle management via autoDispose
 
 import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:video_player/video_player.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:openvine/utils/unified_logger.dart';
-import 'package:openvine/services/video_cache_manager.dart';
+import 'package:models/models.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/broken_video_tracker.dart'
     show BrokenVideoTracker;
-import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/services/video_cache_manager.dart';
+import 'package:openvine/utils/unified_logger.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:video_player/video_player.dart';
 
 part 'individual_video_providers.g.dart';
 

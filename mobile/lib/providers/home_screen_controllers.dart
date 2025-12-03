@@ -2,6 +2,7 @@
 // ABOUTME: Pagination and refresh logic separated from UI lifecycle
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:models/models.dart';
 import 'package:openvine/providers/home_feed_provider.dart';
 import 'package:openvine/utils/unified_logger.dart';
 

@@ -2,7 +2,7 @@
 // ABOUTME: Verifies bech32 npub encoding works correctly for user profiles
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/user_profile.dart';
+import 'package:models/models.dart';
 import 'package:openvine/utils/nostr_encoding.dart';
 
 void main() {

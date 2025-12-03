@@ -2,7 +2,7 @@
 // ABOUTME: Extracted from NotificationServiceEnhanced to reduce duplication and improve testability
 
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/models/user_profile.dart';
+import 'package:models/models.dart';
 
 /// Extracts the video event ID from the first 'e' tag in a Nostr event
 /// Returns null if no 'e' tag exists or if the tag has no value

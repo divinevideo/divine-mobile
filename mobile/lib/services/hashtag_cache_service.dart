@@ -3,6 +3,7 @@
 
 import 'package:hive_ce/hive.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Service for persistent caching of hashtag statistics
 class HashtagCacheService {

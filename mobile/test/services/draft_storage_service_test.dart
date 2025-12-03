@@ -4,8 +4,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/aspect_ratio.dart';
-import 'package:openvine/models/vine_draft.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

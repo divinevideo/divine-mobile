@@ -4,11 +4,11 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/secure_key_storage_service.dart';
 import 'package:openvine/services/user_profile_service.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

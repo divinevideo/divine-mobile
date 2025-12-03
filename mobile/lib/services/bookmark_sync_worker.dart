@@ -8,6 +8,7 @@ import 'package:crypto/crypto.dart';
 import 'package:openvine/services/bookmark_service.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Background sync worker for bookmark sets

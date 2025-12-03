@@ -3,7 +3,7 @@ import 'package:openvine/utils/unified_logger.dart';
 // ABOUTME: Tests that revined videos appear correctly in the user's profile revine tab
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 void main() {
   group('Revine Profile Display Tests', () {

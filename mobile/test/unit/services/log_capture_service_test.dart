@@ -2,7 +2,7 @@
 // ABOUTME: Tests in-memory buffer storage, max size enforcement, chronological ordering, and thread safety
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/log_entry.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/log_capture_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 

@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/models/user_profile.dart' as models;
+import 'package:models/models.dart' as models;
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/nostr_service_interface.dart';

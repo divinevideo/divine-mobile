@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:openvine/services/api_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Configuration for rate limiting
 class RateLimitConfig {

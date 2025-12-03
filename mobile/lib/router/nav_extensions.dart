@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
+
 import 'route_utils.dart';
 
 extension NavX on BuildContext {

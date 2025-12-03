@@ -2,6 +2,7 @@
 // ABOUTME: ProofMode is always enabled - provides configuration for attestation and verification
 
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// ProofMode configuration management
 /// ProofMode is always enabled by default for all video recordings

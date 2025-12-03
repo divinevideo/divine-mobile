@@ -5,9 +5,9 @@ import 'dart:async';
 import 'dart:io' if (dart.library.html) 'stubs/platform_stub.dart';
 
 import 'package:flutter/foundation.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/nsec_bunker_client.dart';
 import 'package:openvine/services/platform_secure_storage.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
 import 'package:openvine/utils/secure_key_container.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';

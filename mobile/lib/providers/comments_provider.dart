@@ -4,7 +4,7 @@
 import 'dart:async';
 
 import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:openvine/models/comment.dart';
+import 'package:models/models.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';

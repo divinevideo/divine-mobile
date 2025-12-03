@@ -7,9 +7,9 @@ import 'dart:async' as _i4;
 import 'dart:io' as _i6;
 
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:openvine/models/native_proof_data.dart' as _i7;
-import 'package:openvine/models/pending_upload.dart' as _i2;
-import 'package:openvine/models/vine_draft.dart' as _i5;
+import 'package:models/models.dart' as _i7;
+import 'package:models/models.dart' as _i2;
+import 'package:models/models.dart' as _i5;
 import 'package:openvine/services/upload_manager.dart' as _i3;
 
 // ignore_for_file: type=lint

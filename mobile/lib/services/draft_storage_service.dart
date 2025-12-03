@@ -3,7 +3,7 @@
 
 import 'dart:convert';
 
-import 'package:openvine/models/vine_draft.dart';
+import 'package:models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DraftStorageService {

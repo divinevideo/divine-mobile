@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Represents a user list (NIP-51 kind 30000) containing pubkeys

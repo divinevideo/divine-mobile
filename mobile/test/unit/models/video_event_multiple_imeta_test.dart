@@ -2,7 +2,7 @@
 // ABOUTME: Ensures best video URL is selected from events with multiple imeta tags
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
 void main() {

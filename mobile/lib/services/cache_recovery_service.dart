@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:hive_ce/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Service to recover from corrupted app data and caches
 class CacheRecoveryService {

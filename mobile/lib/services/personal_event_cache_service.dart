@@ -4,6 +4,7 @@
 import 'package:hive_ce/hive.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Service for aggressively caching ALL of the current user's own events
 /// This ensures the user's own data is always instantly available

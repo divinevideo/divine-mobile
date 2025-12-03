@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:openvine/services/nip07_service.dart';
 import 'package:openvine/services/nsec_bunker_client.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Available authentication methods for web
 enum WebAuthMethod {

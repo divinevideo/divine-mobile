@@ -2,7 +2,9 @@
 // ABOUTME: Communicates with Swift AVFoundation implementation for real camera access
 
 import 'dart:async';
+
 import 'package:flutter/services.dart';
+import 'package:models/models.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Native macOS camera interface using platform channels

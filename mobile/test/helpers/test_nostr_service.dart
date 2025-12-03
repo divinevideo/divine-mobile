@@ -4,7 +4,7 @@
 import 'dart:async';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/models/nip94_metadata.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/utils/nostr_timestamp.dart';

@@ -1,7 +1,7 @@
 // ABOUTME: Configuration for bug report system including support pubkey and limits
 // ABOUTME: Defines sensitive data patterns for sanitization and report size constraints
 
-import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Configuration for bug report system
 class BugReportConfig {

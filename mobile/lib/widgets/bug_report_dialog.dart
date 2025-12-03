@@ -2,7 +2,9 @@
 // ABOUTME: Collects user description, gathers diagnostics, and opens pre-filled email
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:models/models.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';

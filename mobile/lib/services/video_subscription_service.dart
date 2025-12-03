@@ -10,6 +10,7 @@ import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Service responsible for managing video feed subscriptions
 class VideoSubscriptionService {

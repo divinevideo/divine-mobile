@@ -2,7 +2,7 @@
 // ABOUTME: Verifies support for divine.video schema and open protocol URL validation
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
 
 void main() {

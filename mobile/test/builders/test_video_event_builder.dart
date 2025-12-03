@@ -1,7 +1,7 @@
 // ABOUTME: Test builder for creating VideoEvent instances in tests
 // ABOUTME: Replaces the removed DefaultContentService with a clean builder pattern
 
-import 'package:openvine/models/video_event.dart';
+import 'package:models/models.dart';
 
 /// Builder for creating test VideoEvent instances
 class TestVideoEventBuilder {

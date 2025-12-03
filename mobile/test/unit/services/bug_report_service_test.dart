@@ -4,7 +4,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/bug_report_service.dart';
-import 'package:openvine/models/bug_report_data.dart';
+import 'package:models/models.dart';
 import 'package:openvine/config/bug_report_config.dart';
 
 void main() {

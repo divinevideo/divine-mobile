@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:models/models.dart';
 
 /// Visibility info for a video widget
 class VideoVisibilityInfo {
