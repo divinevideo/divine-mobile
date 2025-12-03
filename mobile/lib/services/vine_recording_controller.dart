@@ -24,7 +24,6 @@ import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/macos_camera_preview.dart';
-import 'package:crypto/crypto.dart';
 
 /// Represents a single recording segment in the Vine-style recording
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
@@ -2019,13 +2018,6 @@ class VineRecordingController {
     }
   }
 
-  /// Calculate SHA256 hash of a video file
-  Future<String> _calculateSHA256(File file) async {
-    final bytes = await file.readAsBytes();
-    final digest = sha256.convert(bytes);
-    return digest.toString();
-  }
-
   /// Get the recorded video path from macOS single recording mode.
   ///
   /// Refactored helper method that consolidates path discovery logic.
@@ -2109,9 +2101,7 @@ class VineRecordingController {
         '${tempDir.path}/vine_final_${DateTime.now().millisecondsSinceEpoch}.mp4';
 
     final cropFilter = _buildCropFilter(_aspectRatio);
-    final audioEncodeFlag = Platform.isAndroid ? '-c:a aac' : '-c:a copy';
-    final encoderFlag = Platform.isAndroid ? ' -c:v libx264' : '';
-    final command = '-i "$inputPath" -vf "$cropFilter" $audioEncodeFlag$encoderFlag "$outputPath"';
+    final command = '-i "$inputPath" -vf "$cropFilter" -c:v libx264 -preset ultrafast -r 30 -vsync cfr -c:a aac -b:a 128k -async 1 "$outputPath"';
 
     Log.info(
       '📹 Executing FFmpeg crop command: $command',
