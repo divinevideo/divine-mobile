@@ -1201,9 +1201,23 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
           ),
         );
 
-        // Close the share menu if deletion was successful
-        if (result.success && widget.onDismiss != null) {
-          widget.onDismiss!();
+        // Remove video from local feeds after successful deletion
+        if (result.success) {
+          final videoEventService = ref.read(videoEventServiceProvider);
+          videoEventService.removeVideoFromAuthorList(
+            widget.video.pubkey,
+            widget.video.id,
+          );
+          Log.info(
+            'Video removed from local feeds after deletion: ${widget.video.id}',
+            name: 'ShareVideoMenu',
+            category: LogCategory.ui,
+          );
+
+          // Close the share menu
+          if (widget.onDismiss != null) {
+            widget.onDismiss!();
+          }
         }
       }
     } catch (e) {
