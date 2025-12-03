@@ -90,7 +90,7 @@ void main() {
           thumbnailPath: anyNamed('thumbnailPath'),
           videoWidth: anyNamed('videoWidth'),
           videoHeight: anyNamed('videoHeight'),
-          proofManifest: anyNamed('proofManifest'),
+          nativeProof: anyNamed('nativeProof'),
         ),
       ).thenAnswer((_) async => mockUpload);
 
@@ -123,7 +123,7 @@ void main() {
           thumbnailPath: anyNamed('thumbnailPath'),
           videoWidth: anyNamed('videoWidth'),
           videoHeight: anyNamed('videoHeight'),
-          proofManifest: anyNamed('proofManifest'),
+          nativeProof: anyNamed('nativeProof'),
         ),
       ).called(1);
     });
@@ -149,7 +149,7 @@ void main() {
           thumbnailPath: anyNamed('thumbnailPath'),
           videoWidth: anyNamed('videoWidth'),
           videoHeight: anyNamed('videoHeight'),
-          proofManifest: anyNamed('proofManifest'),
+          nativeProof: anyNamed('nativeProof'),
         ),
       ).thenAnswer((_) async => mockUpload);
 
@@ -206,7 +206,7 @@ void main() {
           thumbnailPath: anyNamed('thumbnailPath'),
           videoWidth: anyNamed('videoWidth'),
           videoHeight: anyNamed('videoHeight'),
-          proofManifest: anyNamed('proofManifest'),
+          nativeProof: anyNamed('nativeProof'),
         ),
       ).thenAnswer((_) async => mockUpload);
 
