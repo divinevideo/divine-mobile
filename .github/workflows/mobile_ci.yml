@@ -10,6 +10,9 @@ jobs:
   build:
     name: Mobile CI
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/
 
     steps:
       - uses: actions/checkout@v4
@@ -17,21 +20,15 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.7'
-          channel: 'stable'
+          flutter-version: "3.38.3"
+          channel: "stable"
           cache: true
 
       - name: Install dependencies
-        run: |
-          cd mobile
-          flutter pub get
+        run: flutter pub get
 
       - name: Check formatting (lib/ only)
-        run: |
-          cd mobile
-          dart format --output=none --set-exit-if-changed lib/
+        run: dart format --output=none --set-exit-if-changed lib/
 
       - name: Analyze code (lib/ only)
-        run: |
-          cd mobile
-          flutter analyze --no-fatal-warnings --no-fatal-infos lib/
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos lib/
