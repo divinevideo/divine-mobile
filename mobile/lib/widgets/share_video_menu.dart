@@ -1489,43 +1489,52 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
       // Try to normalize the query as a public identifier (npub/nprofile/hex)
       // If it's not a valid public identifier, use the query as is (it's likely
       // a username or display name)
-      final pubkeyToSearch = normalizeToHex(query) ?? query;
+      final pubKey = normalizeToHex(query);
 
       Log.debug(
-        'Normalized query to pubkey: $pubkeyToSearch',
+        'Normalized query to pubkey: $pubKey',
         name: 'ShareVideoMenu',
         category: LogCategory.ui,
       );
 
-      // If we have a specific pubkey to search for
-      if (pubkeyToSearch != null) {
-        try {
-          // Fetch profile if not cached - this returns a Future we should await
-          if (!userProfileService.hasProfile(pubkeyToSearch)) {
-            await userProfileService.fetchProfile(pubkeyToSearch);
+      if (pubKey != null) {
+        if (!userProfileService.hasProfile(pubKey)) {
+          try {
+            await userProfileService.fetchProfile(pubKey);
+          } catch (e) {
+            Log.error(
+              'Error fetching profile $pubKey: $e',
+              name: 'ShareVideoMenu',
+              category: LogCategory.ui,
+            );
           }
+        }
 
-          final profile = userProfileService.getCachedProfile(pubkeyToSearch);
-          searchResults.add(
-            ShareableUser(
-              pubkey: pubkeyToSearch,
-              displayName: profile?.bestDisplayName,
-              picture: profile?.picture,
+        final profile = userProfileService.getCachedProfile(pubKey);
+        searchResults.add(
+          ShareableUser(
+            pubkey: pubKey,
+            displayName: profile?.bestDisplayName,
+            picture: profile?.picture,
+          ),
+        );
+      } else {
+        try {
+          final users = await userProfileService.searchUsers(query);
+          searchResults.addAll(
+            users.map(
+              (user) => ShareableUser(
+                pubkey: user.pubkey,
+                displayName: user.bestDisplayName,
+                picture: user.picture,
+              ),
             ),
           );
         } catch (e) {
           Log.error(
-            'Error searching for user $pubkeyToSearch: $e',
+            'Error searching users: $e',
             name: 'ShareVideoMenu',
             category: LogCategory.ui,
-          );
-          // Still add the user without profile data
-          searchResults.add(
-            ShareableUser(
-              pubkey: pubkeyToSearch,
-              displayName: null,
-              picture: null,
-            ),
           );
         }
       }
