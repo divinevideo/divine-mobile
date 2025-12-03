@@ -256,14 +256,13 @@ class CuratedListService {
     List<String> allowedCollaborators = const [],
     String? thumbnailEventId,
     PlayOrder playOrder = PlayOrder.chronological,
-    String? listId,
   }) async {
     try {
       final now = DateTime.now();
-      listId ??= 'list_${now.millisecondsSinceEpoch}';
+      final id = 'list_${now.millisecondsSinceEpoch}';
 
       final newList = CuratedList(
-        id: listId,
+        id: id,
         name: name,
         description: description,
         imageUrl: imageUrl,
@@ -287,7 +286,7 @@ class CuratedListService {
       }
 
       Log.info(
-        'Created new curated list: $name ($listId)',
+        'Created new curated list: $name ($id)',
         name: 'CuratedListService',
         category: LogCategory.system,
       );
@@ -895,7 +894,6 @@ class CuratedListService {
       name: 'My List',
       description: 'My favorite vines and videos',
       isPublic: true,
-      listId: defaultListId,
     );
 
     if (list != null) {
