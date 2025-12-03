@@ -811,6 +811,85 @@ class UserProfileService extends ChangeNotifier {
     }
   }
 
+  /// Search for users using NIP-0 search capability
+  Future<void> searchUsers(String query, {int? limit}) async {
+    if (query.trim().isEmpty) {
+      throw ArgumentError('Search query cannot be empty');
+    }
+
+    try {
+      Log.info(
+        '🔍 Starting users search for: "$query"',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
+
+      // Create completer to track search completion
+      final searchCompleter = Completer<void>();
+
+      // Use the NostrService searchUsers method
+      final searchStream = _nostrService.searchUsers(query, limit: limit ?? 50);
+
+      final foundUsers = <UserProfile>{};
+
+      late final StreamSubscription<Event> subscription;
+
+      // Subscribe to search results
+      subscription = searchStream.listen(
+        (event) {
+          // Parse user event
+          final userEvent = UserProfile.fromNostrEvent(event);
+          _profileCache[event.pubkey] = userEvent;
+          foundUsers.add(userEvent);
+        },
+        onError: (error) {
+          Log.error(
+            'Search error: $error',
+            name: 'UserProfileService',
+            category: LogCategory.system,
+          );
+          // Search subscriptions can fail without affecting main feeds
+          if (!searchCompleter.isCompleted) {
+            searchCompleter.completeError(error);
+          }
+        },
+        onDone: () {
+          // Search completed naturally - this is expected behavior
+          Log.info(
+            'Search completed. Found ${foundUsers.length} results',
+            name: 'UserProfileService',
+            category: LogCategory.system,
+          );
+          // Search subscription clean up - remove from tracking
+          subscription.cancel();
+          if (!searchCompleter.isCompleted) {
+            searchCompleter.complete();
+          }
+        },
+      );
+
+      // Wait for search to complete with timeout
+      await searchCompleter.future.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          Log.warning(
+            'Search timed out after 10 seconds',
+            name: 'UserProfileService',
+            category: LogCategory.system,
+          );
+          // Don't throw - return partial results
+        },
+      );
+    } catch (e) {
+      Log.error(
+        'Failed to start search: $e',
+        name: 'UserProfileService',
+        category: LogCategory.system,
+      );
+      rethrow;
+    }
+  }
+
   /// Get cache statistics
   Map<String, dynamic> getCacheStats() => {
     'cachedProfiles': _profileCache.length,

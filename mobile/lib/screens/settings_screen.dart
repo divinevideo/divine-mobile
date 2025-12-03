@@ -333,17 +333,8 @@ class SettingsScreen extends ConsumerWidget {
     if (confirmed != true || !context.mounted) return;
 
     // Sign out (keeps keys for re-login)
+    // Router will automatically redirect to /welcome when auth state becomes unauthenticated
     await authService.signOut(deleteKeys: false);
-
-    // Navigate to home/login screen
-    if (context.mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const ProfileSetupScreen(isNewUser: true),
-        ),
-        (route) => false,
-      );
-    }
   }
 
   /// Handle removing keys from device only (no relay broadcast)
@@ -373,6 +364,7 @@ class SettingsScreen extends ConsumerWidget {
           Navigator.of(context).pop();
 
           // Show success message
+          // Router will automatically redirect to /welcome when auth state becomes unauthenticated
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -382,15 +374,6 @@ class SettingsScreen extends ConsumerWidget {
               ),
               backgroundColor: VineTheme.vineGreen,
             ),
-          );
-
-          // Navigate to profile setup
-          if (!context.mounted) return;
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => const ProfileSetupScreen(isNewUser: true),
-            ),
-            (route) => false,
           );
         } catch (e) {
           // Close loading indicator
@@ -444,21 +427,14 @@ class SettingsScreen extends ConsumerWidget {
 
         if (result.success) {
           // Sign out and delete keys
+          // Router will automatically redirect to /welcome when auth state becomes unauthenticated
           await authService.signOut(deleteKeys: true);
 
           // Show completion dialog
           if (!context.mounted) return;
           await showDeleteAccountCompletionDialog(
             context: context,
-            onCreateNewAccount: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (context) =>
-                      const ProfileSetupScreen(isNewUser: true),
-                ),
-                (route) => false,
-              );
-            },
+            onCreateNewAccount: () => Navigator.of(context).pop(),
           );
         } else {
           // Show error

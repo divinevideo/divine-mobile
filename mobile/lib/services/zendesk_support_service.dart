@@ -280,8 +280,10 @@ class ZendeskSupportService {
     }
 
     try {
-      Log.info('Creating Zendesk ticket via REST API: $subject',
-          category: LogCategory.system);
+      Log.info(
+        'Creating Zendesk ticket via REST API: $subject',
+        category: LogCategory.system,
+      );
 
       // Build the request body
       // Using the Requests API which requires a requester email
@@ -292,13 +294,8 @@ class ZendeskSupportService {
       final requestBody = {
         'request': {
           'subject': subject,
-          'comment': {
-            'body': description,
-          },
-          'requester': {
-            'name': effectiveName,
-            'email': effectiveEmail,
-          },
+          'comment': {'body': description},
+          'requester': {'name': effectiveName, 'email': effectiveEmail},
           if (tags != null && tags.isNotEmpty) 'tags': tags,
         },
       };

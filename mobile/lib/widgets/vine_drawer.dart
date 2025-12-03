@@ -240,7 +240,9 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
 
                       // CRITICAL: Capture provider values BEFORE closing drawer
                       // to avoid "ref unmounted" error when dialog buttons are tapped
-                      final bugReportService = ref.read(bugReportServiceProvider);
+                      final bugReportService = ref.read(
+                        bugReportServiceProvider,
+                      );
                       final userPubkey = authService.currentPublicKeyHex;
 
                       // Get navigator context before closing drawer

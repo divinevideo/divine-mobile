@@ -14,6 +14,7 @@ enum RouteType {
   settings,
   editProfile, // Profile editing screen
   drafts, // Video drafts screen
+  welcome, // Welcome/onboarding screen
 }
 
 /// Structured representation of a route
@@ -146,6 +147,9 @@ RouteContext parseRoute(String path) {
     case 'import-key':
       return const RouteContext(type: RouteType.importKey);
 
+    case 'welcome':
+      return const RouteContext(type: RouteType.welcome);
+
     default:
       return const RouteContext(type: RouteType.home, videoIndex: 0);
   }
@@ -231,5 +235,8 @@ String buildRoute(RouteContext context) {
 
     case RouteType.drafts:
       return '/drafts';
+
+    case RouteType.welcome:
+      return '/welcome';
   }
 }

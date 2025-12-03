@@ -1,94 +1,142 @@
+// ABOUTME: Base relay implementation using WebSocketConnectionManager.
+// ABOUTME: Handles Nostr message parsing and delegates connection management.
+
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-
-// Conditional imports for platform-specific code
-import 'relay_base_io.dart' if (dart.library.html) 'relay_base_web.dart';
 
 import 'client_connected.dart';
+import 'platform_websocket_factory.dart';
 import 'relay.dart';
+import 'web_socket_connection_manager.dart';
 
 class RelayBase extends Relay {
-  RelayBase(super.url, super.relayStatus);
+  WebSocketConnectionManager? _connectionManager;
+  StreamSubscription<ConnectionState>? _stateSubscription;
+  StreamSubscription<String>? _messageSubscription;
+  StreamSubscription<String>? _errorSubscription;
 
-  WebSocketChannel? _wsChannel;
+  RelayBase(super.url, super.relayStatus);
 
   @override
   Future<bool> doConnect() async {
-    if (_wsChannel != null && _wsChannel!.closeCode == null) {
-      print("connect break: $url");
+    // If already connected, return true
+    if (_connectionManager != null && _connectionManager!.isConnected) {
+      log("connect break: $url - already connected");
       return true;
     }
 
     try {
-      relayStatus.connected = ClientConneccted.CONNECTING;
       getRelayInfo(url);
-
-      final wsUrl = Uri.parse(url);
       log("Connect begin: $url");
-      
-      // Create WebSocket using platform-specific implementation
-      if (wsUrl.scheme == 'wss' && !kIsWeb) {
-        // Use custom SSL handling only on non-web platforms
-        _wsChannel = createSecureWebSocketChannel(wsUrl);
-        log("Created secure WebSocket with custom SSL handling for $url");
-      } else {
-        // Use standard WebSocket for ws:// or web platform
-        _wsChannel = createWebSocketChannel(wsUrl);
-        log("Created WebSocket for $url");
+
+      // Create connection manager if needed
+      _connectionManager ??= WebSocketConnectionManager(
+        url: url,
+        channelFactory: const PlatformWebSocketChannelFactory(),
+        logger: (msg) => log("[$url] $msg"),
+      );
+
+      // Set up stream listeners
+      _setupStreamListeners();
+
+      // Connect
+      final result = await _connectionManager!.connect();
+
+      if (result) {
+        log("Connect complete: $url");
       }
-      // await _wsChannel!.ready;
-      log("Connect complete: $url");
-      _wsChannel!.stream.listen((message) {
-        if (onMessage != null) {
-          final List<dynamic> json = jsonDecode(message);
-          
-          // Log AUTH-related messages for debugging
-          if (json.length > 0 && json[0] == 'AUTH') {
-            print("📡 Raw message from $url: $json");
+
+      return result;
+    } catch (e) {
+      log("Connect error: $e");
+      onError(e.toString(), reconnect: true);
+      return false;
+    }
+  }
+
+  void _setupStreamListeners() {
+    // Cancel existing subscriptions
+    _stateSubscription?.cancel();
+    _messageSubscription?.cancel();
+    _errorSubscription?.cancel();
+
+    // Listen for state changes
+    _stateSubscription = _connectionManager!.stateStream.listen((state) {
+      final wasDisconnected =
+          relayStatus.connected != ClientConnected.CONNECTED;
+
+      switch (state) {
+        case ConnectionState.connected:
+          relayStatus.connected = ClientConnected.CONNECTED;
+          // Flush pending messages on reconnection
+          if (wasDisconnected) {
+            onConnected();
           }
-          
-          onMessage!(this, json);
-        }
-      }, onError: (error) async {
-        print(error);
-        onError("Websocket error $url", reconnect: true);
-      }, onDone: () {
-        onError("Websocket stream closed by remote: $url", reconnect: true);
-      });
-      relayStatus.connected = ClientConneccted.CONNECTED;
+        case ConnectionState.connecting:
+          relayStatus.connected = ClientConnected.CONNECTING;
+        case ConnectionState.disconnected:
+          relayStatus.connected = ClientConnected.DISCONNECT;
+      }
       if (relayStatusCallback != null) {
         relayStatusCallback!();
       }
-      return true;
-    } catch (e) {
-      onError(e.toString(), reconnect: true);
-    }
-    return false;
+    });
+
+    // Listen for messages
+    _messageSubscription = _connectionManager!.messageStream.listen((message) {
+      if (onMessage != null) {
+        try {
+          final List<dynamic> json = jsonDecode(message);
+
+          // Log AUTH-related messages for debugging
+          if (json.isNotEmpty && json[0] == 'AUTH') {
+            print("📡 Raw message from $url: $json");
+          }
+
+          onMessage!(this, json);
+        } catch (e) {
+          log("Message parse error: $e");
+        }
+      }
+    });
+
+    // Listen for errors
+    _errorSubscription = _connectionManager!.errorStream.listen((error) {
+      log("Connection error: $error");
+      relayStatus.onError();
+    });
   }
 
   @override
-  bool send(List<dynamic> message, {bool? forceSend}) {
-    if (forceSend == true ||
-        (_wsChannel != null &&
-            relayStatus.connected == ClientConneccted.CONNECTED)) {
+  bool send(
+    List<dynamic> message, {
+    bool? forceSend,
+    bool queueIfFailed = true,
+  }) {
+    if (_connectionManager == null) {
+      return false;
+    }
+
+    if (forceSend == true || _connectionManager!.isConnected) {
       try {
         // Log AUTH-related messages for debugging
-        if (message.length > 0 && message[0] == 'AUTH') {
+        if (message.isNotEmpty && message[0] == 'AUTH') {
           print("🔐 AUTH response sent, waiting for relay confirmation...");
         }
-        
+
         // Defensive serialization: Ensure all data is JSON-serializable
         final sanitizedMessage = sanitizeForJson(message);
-        final encoded = jsonEncode(sanitizedMessage);
-        _wsChannel!.sink.add(encoded);
-        return true;
+        return _connectionManager!.sendJson(sanitizedMessage);
       } catch (e) {
         onError(e.toString(), reconnect: true);
       }
+    } else if (queueIfFailed) {
+      pendingMessages.add(message);
     }
+
     return false;
   }
 
@@ -113,13 +161,14 @@ class RelayBase extends Relay {
       // For any other type, try to convert to JSON-compatible format
       try {
         // If it has a toJson method, use it
-        if (data is dynamic && data.toJson != null) {
-          return sanitizeForJson(data.toJson());
+        final toJsonResult = data.toJson();
+        if (toJsonResult != null) {
+          return sanitizeForJson(toJsonResult);
         }
       } catch (e) {
         // Ignore toJson errors and fall through
       }
-      
+
       // As last resort, convert to string
       return data.toString();
     }
@@ -127,13 +176,17 @@ class RelayBase extends Relay {
 
   @override
   Future<void> disconnect() async {
-    try {
-      relayStatus.connected = ClientConneccted.UN_CONNECT;
-      if (_wsChannel != null) {
-        await _wsChannel!.sink.close();
-      }
-    } finally {
-      _wsChannel = null;
-    }
+    relayStatus.connected = ClientConnected.DISCONNECT;
+    await _connectionManager?.disconnect();
+  }
+
+  @override
+  void dispose() {
+    _stateSubscription?.cancel();
+    _messageSubscription?.cancel();
+    _errorSubscription?.cancel();
+    _connectionManager?.dispose();
+    _connectionManager = null;
+    super.dispose();
   }
 }

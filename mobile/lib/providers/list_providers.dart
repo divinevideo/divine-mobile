@@ -1,6 +1,8 @@
 // ABOUTME: Riverpod providers for user lists (kind 30000) and curated video lists (kind 30005)
 // ABOUTME: Manages list state and provides reactive updates for the Lists tab
 
+import 'dart:async';
+
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/video_events_providers.dart';
@@ -90,11 +92,15 @@ Stream<List<CuratedList>> publicListsContainingVideo(
   String videoId,
 ) async* {
   final service = await ref.watch(curatedListServiceProvider.future);
+  final curatedListStream = service.streamPublicListsContainingVideo(videoId);
   final accumulated = <CuratedList>[];
   final seenIds = <String>{};
 
+  // Yield an initial value to avoid hanging if the stream is empty
+  yield const <CuratedList>[];
+
   // Stream events from Nostr relays, accumulating as they arrive
-  await for (final list in service.streamPublicListsContainingVideo(videoId)) {
+  await for (final list in curatedListStream) {
     if (!seenIds.contains(list.id)) {
       seenIds.add(list.id);
       accumulated.add(list);

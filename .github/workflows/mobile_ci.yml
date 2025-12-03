@@ -1,0 +1,34 @@
+name: Mobile CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Mobile CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.3"
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Check formatting (lib/ only)
+        run: dart format --output=none --set-exit-if-changed lib/
+
+      - name: Analyze code (lib/ only)
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos lib/

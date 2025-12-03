@@ -13,16 +13,17 @@ class RelayLocal extends Relay with RelayLocalMixin {
   RelayDB relayDB;
 
   RelayLocal(super.url, super.relayStatus, this.relayDB) {
-    super.relayStatus.connected = ClientConneccted.CONNECTED;
+    super.relayStatus.connected = ClientConnected.CONNECTED;
 
     info = RelayInfo(
-        "Local Relay",
-        "This is a local relay. It will cache some event.",
-        "29320975df855fe34a7b45ada2421e2c741c37c0136901fe477133a91eb18b07",
-        "29320975df855fe34a7b45ada2421e2c741c37c0136901fe477133a91eb18b07",
-        ["1", "11", "12", "16", "33", "42", "45", "50", "95"],
-        "Nostrmo",
-        "0.1.0");
+      "Local Relay",
+      "This is a local relay. It will cache some event.",
+      "29320975df855fe34a7b45ada2421e2c741c37c0136901fe477133a91eb18b07",
+      "29320975df855fe34a7b45ada2421e2c741c37c0136901fe477133a91eb18b07",
+      ["1", "11", "12", "16", "33", "42", "45", "50", "95"],
+      "Nostrmo",
+      "0.1.0",
+    );
   }
 
   void broadcaseToLocal(Map<String, dynamic> event) {

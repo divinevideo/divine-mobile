@@ -31,7 +31,7 @@ class RelayIsolate extends Relay {
   @override
   Future<bool> doConnect() async {
     if (subToMainReceivePort == null) {
-      relayStatus.connected = ClientConneccted.CONNECTING;
+      relayStatus.connected = ClientConnected.CONNECTING;
       getRelayInfo(url);
 
       // never run isolate, begin to run
@@ -52,7 +52,7 @@ class RelayIsolate extends Relay {
       return await relayConnectResultComplete!.future;
     } else {
       // the isolate had bean run
-      if (relayStatus.connected == ClientConneccted.CONNECTED) {
+      if (relayStatus.connected == ClientConnected.CONNECTED) {
         // relay has bean connected, return true, but also send a connect message.
         mainToSubSendPort!.send(RelayIsolateMsgs.CONNECT);
         return true;
@@ -63,7 +63,7 @@ class RelayIsolate extends Relay {
         } else {
           // this maybe relay had disconnect after connected, try to connected again.
           if (mainToSubSendPort != null) {
-            relayStatus.connected = ClientConneccted.CONNECTING;
+            relayStatus.connected = ClientConnected.CONNECTING;
             // send connect msg
             mainToSubSendPort!.send(RelayIsolateMsgs.CONNECT);
             // wait connected msg.
@@ -79,8 +79,8 @@ class RelayIsolate extends Relay {
 
   @override
   Future<void> disconnect() async {
-    if (relayStatus.connected != ClientConneccted.UN_CONNECT) {
-      relayStatus.connected = ClientConneccted.UN_CONNECT;
+    if (relayStatus.connected != ClientConnected.DISCONNECT) {
+      relayStatus.connected = ClientConnected.DISCONNECT;
       if (mainToSubSendPort != null) {
         mainToSubSendPort!.send(RelayIsolateMsgs.DIS_CONNECT);
       }
@@ -91,7 +91,7 @@ class RelayIsolate extends Relay {
   bool send(List message, {bool? forceSend}) {
     if (forceSend == true ||
         (mainToSubSendPort != null &&
-            relayStatus.connected == ClientConneccted.CONNECTED)) {
+            relayStatus.connected == ClientConnected.CONNECTED)) {
       // Defensive serialization: Ensure all data is JSON-serializable
       final sanitizedMessage = sanitizeForJson(message);
       final encoded = jsonEncode(sanitizedMessage);
@@ -129,7 +129,7 @@ class RelayIsolate extends Relay {
       } catch (e) {
         // Ignore toJson errors and fall through
       }
-      
+
       // As last resort, convert to string
       return data.toString();
     }
@@ -142,7 +142,7 @@ class RelayIsolate extends Relay {
         // print("msg is $message $url");
         if (message == RelayIsolateMsgs.CONNECTED) {
           // print("$url receive connected status!");
-          relayStatus.connected = ClientConneccted.CONNECTED;
+          relayStatus.connected = ClientConnected.CONNECTED;
           if (relayStatusCallback != null) {
             relayStatusCallback!();
           }

@@ -126,16 +126,18 @@ Future<void> _startOpenVineApp() async {
         );
         await windowManager.ensureInitialized();
 
-      // Set initial window size for desktop vine experience
-      const initialWindowOptions = WindowOptions(
-        size: Size(750, 950), // Wider, better proportioned for desktop
-        minimumSize:
-            Size(WindowSizeConstants.baseWidth, WindowSizeConstants.baseHeight),
-        center: true,
-        backgroundColor: Colors.black,
-        skipTaskbar: false,
-        titleBarStyle: TitleBarStyle.normal,
-      );
+        // Set initial window size for desktop vine experience
+        const initialWindowOptions = WindowOptions(
+          size: Size(750, 950), // Wider, better proportioned for desktop
+          minimumSize: Size(
+            WindowSizeConstants.baseWidth,
+            WindowSizeConstants.baseHeight,
+          ),
+          center: true,
+          backgroundColor: Colors.black,
+          skipTaskbar: false,
+          titleBarStyle: TitleBarStyle.normal,
+        );
 
         await windowManager.waitUntilReadyToShow(
           initialWindowOptions,
