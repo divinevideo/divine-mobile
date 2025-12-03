@@ -84,13 +84,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                     // Spacer pushes content below to the bottom
                     const Spacer(),
 
-                // Age verification and TOS acceptance
-                _TermsCheckboxSection(
-                  isOver16: _isOver16,
-                  agreedToTerms: _agreedToTerms,
-                  onOver16Changed: (value) => setState(() => _isOver16 = value),
-                  onAgreedToTermsChanged: (value) => setState(() => _agreedToTerms = value),
-                ),
+                    // Age verification and TOS acceptance
+                    _TermsCheckboxSection(
+                      isOver16: _isOver16,
+                      agreedToTerms: _agreedToTerms,
+                      onOver16Changed: (value) =>
+                          setState(() => _isOver16 = value),
+                      onAgreedToTermsChanged: (value) =>
+                          setState(() => _agreedToTerms = value),
+                    ),
 
                     const SizedBox(height: 16),
 
@@ -111,22 +113,22 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
                     const SizedBox(height: 32),
 
-                // Main action buttons - show based on auth state
-                _WelcomeActionSection(
-                  authState: authState,
-                  lastError: authService.lastError,
-                  canProceed: _canProceed,
-                  isAccepting: _isAccepting,
-                  onContinue: () => _handleContinue(context),
+                    // Main action buttons - show based on auth state
+                    _WelcomeActionSection(
+                      authState: authState,
+                      lastError: authService.lastError,
+                      canProceed: _canProceed,
+                      isAccepting: _isAccepting,
+                      onContinue: () => _handleContinue(context),
+                    ),
+                  ],
                 ),
-                ],
               ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   bool get _canProceed => _isOver16 && _agreedToTerms;
@@ -173,7 +175,8 @@ class _WelcomeActionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (authState == AuthState.checking || authState == AuthState.authenticating) {
+    if (authState == AuthState.checking ||
+        authState == AuthState.authenticating) {
       return const _LoadingIndicator();
     }
 
@@ -195,9 +198,7 @@ class _LoadingIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: CircularProgressIndicator(
-        color: VineTheme.vineGreen,
-      ),
+      child: CircularProgressIndicator(color: VineTheme.vineGreen),
     );
   }
 }
@@ -218,11 +219,7 @@ class _ErrorMessage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.error_outline,
-            color: Colors.red,
-            size: 48,
-          ),
+          const Icon(Icons.error_outline, color: Colors.red, size: 48),
           const SizedBox(height: 16),
           const Text(
             'Setup Error',
@@ -235,19 +232,13 @@ class _ErrorMessage extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             error,
-            style: const TextStyle(
-              color: Colors.red,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Colors.red, fontSize: 14),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           const Text(
             'Please restart the app. If the problem persists, contact support.',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: Colors.grey, fontSize: 12),
             textAlign: TextAlign.center,
           ),
         ],
@@ -355,10 +346,7 @@ class _TermsCheckboxSection extends StatelessWidget {
                 const Expanded(
                   child: Text(
                     'I am 16 years or older',
-                    style: TextStyle(
-                      color: VineTheme.whiteText,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: VineTheme.whiteText, fontSize: 14),
                   ),
                 ),
               ],
@@ -377,7 +365,8 @@ class _TermsCheckboxSection extends StatelessWidget {
                   height: 24,
                   child: Checkbox(
                     value: agreedToTerms,
-                    onChanged: (value) => onAgreedToTermsChanged(value ?? false),
+                    onChanged: (value) =>
+                        onAgreedToTermsChanged(value ?? false),
                     fillColor: WidgetStateProperty.resolveWith((states) {
                       if (states.contains(WidgetState.selected)) {
                         return Colors.white;
@@ -405,7 +394,8 @@ class _TermsCheckboxSection extends StatelessWidget {
                             decoration: TextDecoration.underline,
                           ),
                           recognizer: TapGestureRecognizer()
-                            ..onTap = () => _openUrl('https://divine.video/terms'),
+                            ..onTap = () =>
+                                _openUrl('https://divine.video/terms'),
                         ),
                         const TextSpan(text: ', '),
                         TextSpan(
@@ -415,7 +405,8 @@ class _TermsCheckboxSection extends StatelessWidget {
                             decoration: TextDecoration.underline,
                           ),
                           recognizer: TapGestureRecognizer()
-                            ..onTap = () => _openUrl('https://divine.video/privacy'),
+                            ..onTap = () =>
+                                _openUrl('https://divine.video/privacy'),
                         ),
                         const TextSpan(text: ', and '),
                         TextSpan(
@@ -425,7 +416,8 @@ class _TermsCheckboxSection extends StatelessWidget {
                             decoration: TextDecoration.underline,
                           ),
                           recognizer: TapGestureRecognizer()
-                            ..onTap = () => _openUrl('https://divine.video/safety'),
+                            ..onTap = () =>
+                                _openUrl('https://divine.video/safety'),
                         ),
                       ],
                     ),

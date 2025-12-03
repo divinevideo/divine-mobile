@@ -164,7 +164,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       if (location.startsWith('/welcome')) {
         final hasAcceptedTerms = prefs.getBool('age_verified_16_plus') ?? false;
         if (hasAcceptedTerms) {
-          debugPrint('[Router] TOS accepted, redirecting from /welcome to /explore');
+          debugPrint(
+            '[Router] TOS accepted, redirecting from /welcome to /explore',
+          );
           return '/explore';
         }
       }
