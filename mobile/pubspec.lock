@@ -873,7 +873,7 @@ packages:
       path: flutter_embedded_nostr_relay
       ref: HEAD
       resolved-ref: "0fbd1d62ea545cd14741279315a772db40c44c30"
-      url: "git@github.com:rabble/flutter_embedded_nostr_relay.git"
+      url: "https://github.com/rabble/flutter_embedded_nostr_relay.git"
     source: git
     version: "0.1.0"
   flutter_launcher_icons:

@@ -1566,9 +1566,7 @@ class NostrService implements INostrService {
   Stream<Event> searchUsers(String query, {int? limit}) {
     // Create filter for video events with NIP-50 search query using nostr.Filter
     final nostrFilter = nostr.Filter(
-      kinds: [
-        EventKind.METADATA,
-      ],
+      kinds: [EventKind.METADATA],
       limit: limit ?? 100,
       search: query, // NIP-50 search parameter
     );

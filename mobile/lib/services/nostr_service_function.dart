@@ -803,13 +803,11 @@ class NostrServiceFunction implements INostrService {
   }
 
   @override
-  Stream<Event> searchUsers(
-    String query, {
-    int? limit,
-  }) {
+  Stream<Event> searchUsers(String query, {int? limit}) {
     // Create search filter for NIP-50
     final filter = nostr.Filter()
-      ..kinds = [EventKind.METADATA] // Kind 0 only
+      ..kinds =
+          [EventKind.METADATA] // Kind 0 only
       ..search = query;
 
     if (limit != null) {

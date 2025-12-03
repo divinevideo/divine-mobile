@@ -365,11 +365,17 @@ class AuthService {
       // Notify listeners and stream
       _profileController.add(_currentProfile);
 
-      Log.info('✅ AuthService profile updated',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.info(
+        '✅ AuthService profile updated',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
     } else {
-      Log.warning('⚠️ No cached profile found in UserProfileService',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.warning(
+        '⚠️ No cached profile found in UserProfileService',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
     }
   }
 
@@ -377,7 +383,10 @@ class AuthService {
   Future<void> acceptTermsOfService() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('terms_accepted_at', DateTime.now().toIso8601String());
+      await prefs.setString(
+        'terms_accepted_at',
+        DateTime.now().toIso8601String(),
+      );
       await prefs.setBool('age_verified_16_plus', true);
 
       // If unauthenticated (e.g., after logout), re-initialize to load existing keys
@@ -388,11 +397,17 @@ class AuthService {
 
       _setAuthState(AuthState.authenticated);
 
-      Log.info('Terms of Service accepted, user is now fully authenticated',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.info(
+        'Terms of Service accepted, user is now fully authenticated',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
     } catch (e) {
-      Log.error('Failed to save TOS acceptance: $e',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.error(
+        'Failed to save TOS acceptance: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       _lastError = 'Failed to accept terms: $e';
     }
   }
@@ -430,12 +445,18 @@ class AuthService {
 
       _setAuthState(AuthState.unauthenticated);
 
-      Log.info('User signed out',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.info(
+        'User signed out',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
 
       if (deleteKeys) {
-        Log.info('Auto-creating new identity after key deletion',
-            name: 'AuthService', category: LogCategory.auth);
+        Log.info(
+          'Auto-creating new identity after key deletion',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
         await _checkExistingAuth();
       }
     } catch (e) {
@@ -775,7 +796,9 @@ class AuthService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
-          'current_user_pubkey_hex', keyContainer.publicKeyHex);
+        'current_user_pubkey_hex',
+        keyContainer.publicKeyHex,
+      );
 
       final hasAcceptedTos = prefs.getBool('age_verified_16_plus') ?? false;
       if (hasAcceptedTos) {
@@ -784,8 +807,11 @@ class AuthService {
         _setAuthState(AuthState.awaitingTosAcceptance);
       }
     } catch (e) {
-      Log.warning('Failed to check TOS status: $e',
-          name: 'AuthService', category: LogCategory.auth);
+      Log.warning(
+        'Failed to check TOS status: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       // Default to awaiting TOS if we can't check
       _setAuthState(AuthState.awaitingTosAcceptance);
     }
