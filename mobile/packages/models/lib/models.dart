@@ -1,4 +1,4 @@
-/// A Very Good Project created by Very Good CLI.
+/// A package containing data models used across the application.
 library;
 
 export 'src/aspect_ratio.dart';
