@@ -118,8 +118,10 @@ class NostrClient {
   /// the REST gateway first for faster cached responses.
   Future<Event?> fetchEventById(
     String eventId, {
+    String? relayUrl,
     bool useGateway = true,
   }) async {
+    final targetRelays = relayUrl != null ? [relayUrl] : null;
     if (useGateway) {
       final gatewayClient = _gatewayClient;
       if (gatewayClient != null) {
@@ -136,7 +138,11 @@ class NostrClient {
     final filters = [
       Filter(ids: [eventId], limit: 1),
     ];
-    final events = await queryEvents(filters, useGateway: false);
+    final events = await queryEvents(
+      filters,
+      useGateway: false,
+      tempRelays: targetRelays,
+    );
     return events.isEmpty ? null : events.first;
   }
 
@@ -241,6 +247,41 @@ class NostrClient {
     _subscriptionStreams.keys.toList().forEach(unsubscribe);
   }
 
+  /// Adds a relay connection
+  ///
+  /// Delegates to relayPool.add().
+  Future<bool> addRelay(String relayUrl) async {
+    final relay = RelayBase(relayUrl, RelayStatus(relayUrl));
+    return relayPool.add(relay);
+  }
+
+  /// Removes a relay connection
+  ///
+  /// Delegates to relayPool.remove().
+  Future<void> removeRelay(String relayUrl) async {
+    relayPool.remove(relayUrl);
+  }
+
+  /// Gets list of connected relay URLs
+  List<String> get connectedRelays {
+    return relayPool.activeRelays().map((r) => r.url).toList();
+  }
+
+  /// Gets count of connected relays
+  int get relayCount => connectedRelays.length;
+
+  /// Gets relay statuses as a map
+  Map<String, dynamic> get relayStatuses {
+    final activeRelays = relayPool.activeRelays();
+    return {
+      for (final relay in activeRelays)
+        relay.url: {
+          'connected': true,
+          'url': relay.url,
+        },
+    };
+  }
+
   /// Sends a like reaction to an event
   Future<Event?> sendLike(
     String eventId, {
@@ -314,18 +355,15 @@ class NostrClient {
     );
   }
 
-  /// Closes the client and cleans up resources
+  /// Disposes the client and cleans up resources
   ///
   /// Closes all subscriptions, disconnects from relays, and cleans up
   /// internal state. After calling this, the client should not be used.
-  void close() {
+  void dispose() {
     closeAllSubscriptions();
     _nostr.close();
     _subscriptionFilters.clear();
   }
-
-  /// Disposes the client (alias for [close])
-  void dispose() => close();
 
   /// Generates a deterministic hash for filters
   /// to prevent duplicate subscriptions
