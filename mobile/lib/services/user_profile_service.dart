@@ -812,7 +812,7 @@ class UserProfileService extends ChangeNotifier {
   }
 
   /// Search for users using NIP-0 search capability
-  Future<void> searchUsers(String query, {int? limit}) async {
+  Future<List<UserProfile>> searchUsers(String query, {int? limit}) async {
     if (query.trim().isEmpty) {
       throw ArgumentError('Search query cannot be empty');
     }
@@ -880,6 +880,8 @@ class UserProfileService extends ChangeNotifier {
           // Don't throw - return partial results
         },
       );
+
+      return foundUsers.toList();
     } catch (e) {
       Log.error(
         'Failed to start search: $e',
