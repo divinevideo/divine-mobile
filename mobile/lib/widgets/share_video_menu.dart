@@ -1497,8 +1497,6 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
         category: LogCategory.ui,
       );
 
-      if (pubkeyToSearch == null) return;
-
       // If we have a specific pubkey to search for
       if (pubkeyToSearch != null) {
         try {
