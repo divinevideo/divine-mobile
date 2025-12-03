@@ -26,7 +26,6 @@ void main() {
       test('should export private key as nsec bech32 format', () async {
         // Arrange: Generate a keypair
         await keyManager.generateKeys();
-        final hexPrivateKey = keyManager.privateKey!;
 
         // Act: Export as nsec
         final nsec = keyManager.exportAsNsec();
@@ -88,7 +87,6 @@ void main() {
       test('should persist backup across app restarts', () async {
         // Arrange: Generate and replace key
         await keyManager.generateKeys();
-        final oldPrivateKey = keyManager.privateKey!;
         await keyManager.replaceKeyWithBackup();
         await keyManager.clearKeys();
 
@@ -140,9 +138,7 @@ void main() {
         await keyManager.generateKeys();
         final originalKey = keyManager.privateKey!;
 
-        final backupInfo = await keyManager.replaceKeyWithBackup();
-        final secondKey = keyManager.privateKey!;
-
+        await keyManager.replaceKeyWithBackup();
         await keyManager.restoreFromBackup();
 
         // Assert: Original key is active
