@@ -325,6 +325,14 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
           as _i4.Stream<_i6.Event>);
 
   @override
+  _i4.Stream<_i6.Event> searchUsers(String? query, {int? limit}) =>
+      (super.noSuchMethod(
+            Invocation.method(#searchUsers, [query], {#limit: limit}),
+            returnValue: _i4.Stream<_i6.Event>.empty(),
+          )
+          as _i4.Stream<_i6.Event>);
+
+  @override
   _i4.Future<Map<String, dynamic>?> getRelayStats() =>
       (super.noSuchMethod(
             Invocation.method(#getRelayStats, []),
@@ -487,6 +495,15 @@ class MockUserProfileService extends _i1.Mock
     Invocation.method(#removeProfile, [pubkey]),
     returnValueForMissingStub: null,
   );
+
+  @override
+  _i4.Future<void> searchUsers(String? query, {int? limit}) =>
+      (super.noSuchMethod(
+            Invocation.method(#searchUsers, [query], {#limit: limit}),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
 
   @override
   Map<String, dynamic> getCacheStats() =>
