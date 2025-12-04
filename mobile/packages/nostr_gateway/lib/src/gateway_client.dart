@@ -59,8 +59,8 @@ class GatewayClient {
       } else {
         throw GatewayException('Network error: ${e.message}');
       }
-    } on FormatException catch (e) {
-      throw GatewayException('Invalid response format: $e');
+    } on Exception catch (e) {
+      throw GatewayException('Error parsing response: $e');
     }
   }
 
