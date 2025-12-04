@@ -1,0 +1,22 @@
+name: db_client
+description: A Very Good Project created by Very Good CLI.
+version: 0.1.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  collection: ^1.19.1
+  drift: ^2.29.0
+  meta: ^1.16.0
+  models:
+    path: ../models
+  nostr_sdk:
+    path: ../nostr_sdk
+  path_provider: ^2.1.5
+
+dev_dependencies:
+  mocktail: ^1.0.4
+  test: ^1.26.3
+  very_good_analysis: ^10.0.0
