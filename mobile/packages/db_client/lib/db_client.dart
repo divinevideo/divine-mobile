@@ -1,4 +1,4 @@
-/// A Very Good Project created by Very Good CLI.
+/// A database client package for managing local data storage.
 library;
 
 export 'src/app_db_client.dart';

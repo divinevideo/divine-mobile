@@ -1,5 +1,5 @@
 name: db_client
-description: A Very Good Project created by Very Good CLI.
+description: A database client package for managing local data storage.
 version: 0.1.0+1
 publish_to: none
 
