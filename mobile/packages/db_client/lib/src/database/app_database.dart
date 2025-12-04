@@ -1,16 +1,12 @@
 // ABOUTME: Main Drift database that shares SQLite file with nostr_sdk
 // ABOUTME: Provides reactive queries and unified event/profile caching
 
-import 'dart:io';
-
+import 'package:db_client/src/database/connection/connection.dart';
 import 'package:db_client/src/database/daos/nostr_events_dao.dart';
 import 'package:db_client/src/database/daos/user_profiles_dao.dart';
 import 'package:db_client/src/database/daos/video_metrics_dao.dart';
 import 'package:db_client/src/database/tables.dart';
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 part 'app_database.g.dart';
 
@@ -27,37 +23,14 @@ part 'app_database.g.dart';
   daos: [UserProfilesDao, NostrEventsDao, VideoMetricsDao],
 )
 class AppDatabase extends _$AppDatabase {
-  /// Default constructor - uses shared database path with nostr_sdk
-  AppDatabase() : super(_openConnection());
+  /// Default constructor - uses platform-appropriate connection
+  AppDatabase() : super(openConnection());
 
-  /// Test constructor - allows custom database path for testing
-  AppDatabase.test(String path)
-    : super(
-        NativeDatabase(File(path), logStatements: false),
-      ); // Disabled - too verbose
+  /// Constructor that accepts a custom QueryExecutor (for testing)
+  AppDatabase.test(super.e);
 
   @override
   int get schemaVersion => 5;
-
-  /// Open connection to shared database file
-  static QueryExecutor _openConnection() {
-    return LazyDatabase(() async {
-      final dbPath = await _getSharedDatabasePath();
-      return NativeDatabase(
-        File(dbPath),
-        logStatements: false, // Disabled - too verbose for production
-      );
-    });
-  }
-
-  /// Get path to shared database file
-  ///
-  /// Uses same pattern as nostr_sdk:
-  /// {appDocuments}/openvine/database/local_relay.db
-  static Future<String> _getSharedDatabasePath() async {
-    final docDir = await getApplicationDocumentsDirectory();
-    return p.join(docDir.path, 'openvine', 'database', 'local_relay.db');
-  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(

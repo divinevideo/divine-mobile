@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:models/models.dart';
 import 'package:test/test.dart';
 
@@ -57,7 +58,7 @@ void main() {
     final tempDir = Directory.systemTemp.createTempSync('dao_test_');
     tempDbPath = '${tempDir.path}/test.db';
 
-    database = AppDatabase.test(tempDbPath);
+    database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
     dbClient = DbClient(generatedDatabase: database);
     appDbClient = AppDbClient(dbClient, database);
     dao = database.userProfilesDao;

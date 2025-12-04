@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
+import 'package:drift/native.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -16,7 +17,7 @@ void main() {
     final tempDir = Directory.systemTemp.createTempSync('db_client_test_');
     tempDbPath = '${tempDir.path}/test.db';
 
-    database = AppDatabase.test(tempDbPath);
+    database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
     dbClient = DbClient(generatedDatabase: database);
   });
 
@@ -472,9 +473,11 @@ void main() {
 
         final stream = dbClient.watchBy(
           database.userProfiles,
-          filter: (t) => (t as UserProfiles)
-              .pubkey
-              .isIn(['pubkey1', 'pubkey2', 'pubkey3']),
+          filter: (t) => (t as UserProfiles).pubkey.isIn([
+            'pubkey1',
+            'pubkey2',
+            'pubkey3',
+          ]),
           orderBy: [
             (t) => OrderingTerm.asc((t as UserProfiles).name),
           ],

@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
+import 'package:drift/native.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -17,7 +18,7 @@ void main() {
     final tempDir = Directory.systemTemp.createTempSync('db_client_test_');
     tempDbPath = '${tempDir.path}/test.db';
 
-    database = AppDatabase.test(tempDbPath);
+    database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
     dbClient = DbClient(generatedDatabase: database);
     appDbClient = AppDbClient(dbClient, database);
   });
@@ -41,17 +42,20 @@ void main() {
     required int kind,
     int? createdAt,
   }) async {
-    await database.into(database.nostrEvents).insert(
-      NostrEventsCompanion.insert(
-        id: id,
-        pubkey: pubkey,
-        createdAt: createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        kind: kind,
-        tags: '[]',
-        content: 'test content',
-        sig: 'test_sig_$id',
-      ),
-    );
+    await database
+        .into(database.nostrEvents)
+        .insert(
+          NostrEventsCompanion.insert(
+            id: id,
+            pubkey: pubkey,
+            createdAt:
+                createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            kind: kind,
+            tags: '[]',
+            content: 'test content',
+            sig: 'test_sig_$id',
+          ),
+        );
   }
 
   /// Helper to create a UserProfilesCompanion for testing.
@@ -65,8 +69,9 @@ void main() {
       pubkey: pubkey,
       eventId: eventId,
       name: name != null ? Value(name) : const Value.absent(),
-      displayName:
-          displayName != null ? Value(displayName) : const Value.absent(),
+      displayName: displayName != null
+          ? Value(displayName)
+          : const Value.absent(),
       createdAt: DateTime.now(),
       lastFetched: DateTime.timestamp(),
     );
