@@ -298,6 +298,14 @@ class MockNostrService extends _i1.Mock implements _i4.NostrService {
           as _i5.Stream<_i7.Event>);
 
   @override
+  _i5.Stream<_i7.Event> searchUsers(String? query, {int? limit}) =>
+      (super.noSuchMethod(
+            Invocation.method(#searchUsers, [query], {#limit: limit}),
+            returnValue: _i5.Stream<_i7.Event>.empty(),
+          )
+          as _i5.Stream<_i7.Event>);
+
+  @override
   _i5.Future<Map<String, dynamic>?> getRelayStats() =>
       (super.noSuchMethod(
             Invocation.method(#getRelayStats, []),

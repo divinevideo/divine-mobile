@@ -588,7 +588,8 @@ class VideoEvent {
   bool get hasProofMode {
     return proofModeVerificationLevel != null ||
         proofModeManifest != null ||
-        proofModePgpFingerprint != null;
+        proofModePgpFingerprint != null ||
+        proofModeDeviceAttestation != null;
   }
 
   /// ProofMode: Check if video is verified mobile (highest level)

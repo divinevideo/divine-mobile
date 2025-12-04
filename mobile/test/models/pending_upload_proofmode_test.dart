@@ -1,95 +1,58 @@
 // ABOUTME: Unit tests for ProofMode integration with PendingUpload model
-// ABOUTME: Tests serialization, deserialization, and helper methods for ProofManifest storage
+// ABOUTME: Tests serialization, deserialization, and helper methods for NativeProofData storage
 
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+<<<<<<< HEAD
 import 'package:models/models.dart';
 import 'package:openvine/services/proofmode_session_service.dart';
 import 'package:openvine/services/proofmode_key_service.dart';
 import 'package:openvine/services/proofmode_attestation_service.dart';
+=======
+import 'package:openvine/models/pending_upload.dart';
+import 'package:openvine/models/native_proof_data.dart';
+>>>>>>> 20f7cdc1d38e98687536362c32449565171c5091
 
 void main() {
   group('PendingUpload ProofMode Integration', () {
-    late ProofManifest testManifest;
-    late String testManifestJson;
+    late NativeProofData testProofData;
+    late String testProofJson;
 
     setUp(() {
-      // Create a test ProofManifest
-      testManifest = ProofManifest(
-        sessionId: 'test_session_123',
-        challengeNonce: 'test_nonce_abc',
-        vineSessionStart: DateTime(2025, 1, 1, 10, 0, 0),
-        vineSessionEnd: DateTime(2025, 1, 1, 10, 0, 6),
-        segments: [
-          RecordingSegment(
-            segmentId: 'segment_1',
-            startTime: DateTime(2025, 1, 1, 10, 0, 0),
-            endTime: DateTime(2025, 1, 1, 10, 0, 3),
-            frameHashes: ['hash1', 'hash2'],
-          ),
-          RecordingSegment(
-            segmentId: 'segment_2',
-            startTime: DateTime(2025, 1, 1, 10, 0, 3),
-            endTime: DateTime(2025, 1, 1, 10, 0, 6),
-            frameHashes: ['hash3', 'hash4'],
-          ),
-        ],
-        pauseProofs: [
-          PauseProof(
-            startTime: DateTime(2025, 1, 1, 10, 0, 3),
-            endTime: DateTime(2025, 1, 1, 10, 0, 3, 500),
-            sensorData: {
-              'accelerometer': {'x': 0.1, 'y': 0.2, 'z': 9.8},
-            },
-          ),
-        ],
-        interactions: [
-          UserInteractionProof(
-            timestamp: DateTime(2025, 1, 1, 10, 0, 0),
-            interactionType: 'start',
-            coordinates: {'x': 100.0, 'y': 200.0},
-          ),
-        ],
-        finalVideoHash: 'abc123def456',
-        deviceAttestation: DeviceAttestation(
-          token: 'attestation_token_xyz',
-          platform: 'iOS',
-          deviceId: 'device_123',
-          isHardwareBacked: true,
-          createdAt: DateTime(2025, 1, 1, 10, 0, 0),
-          challenge: 'test_nonce_abc',
-        ),
-        pgpSignature: ProofSignature(
-          signature: 'pgp_signature_content',
-          publicKeyFingerprint: 'ABCD1234EFGH5678',
-          signedAt: DateTime(2025, 1, 1, 10, 0, 6),
-        ),
+      // Create a test NativeProofData
+      testProofData = const NativeProofData(
+        videoHash: 'abc123def456789012345678901234567890123456789012345678901234',
+        sensorDataCsv: 'timestamp,lat,lon\n2025-01-01T10:00:00,37.7749,-122.4194',
+        pgpSignature: '-----BEGIN PGP SIGNATURE-----\ntest_signature_content\n-----END PGP SIGNATURE-----',
+        publicKey: '-----BEGIN PGP PUBLIC KEY BLOCK-----\ntest_public_key\n-----END PGP PUBLIC KEY BLOCK-----',
+        deviceAttestation: 'attestation_token_xyz',
+        timestamp: '2025-01-01T10:00:06Z',
       );
 
-      testManifestJson = jsonEncode(testManifest.toJson());
+      testProofJson = jsonEncode(testProofData.toJson());
     });
 
-    test('PendingUpload stores ProofManifest JSON', () {
+    test('PendingUpload stores NativeProofData JSON', () {
       final upload = PendingUpload.create(
         localVideoPath: '/path/to/video.mp4',
         nostrPubkey: 'pubkey123',
-        proofManifestJson: testManifestJson,
+        proofManifestJson: testProofJson,
       );
 
-      expect(upload.proofManifestJson, equals(testManifestJson));
+      expect(upload.proofManifestJson, equals(testProofJson));
     });
 
-    test('hasProofMode returns true when manifestJson is present', () {
+    test('hasProofMode returns true when proofManifestJson is present', () {
       final upload = PendingUpload.create(
         localVideoPath: '/path/to/video.mp4',
         nostrPubkey: 'pubkey123',
-        proofManifestJson: testManifestJson,
+        proofManifestJson: testProofJson,
       );
 
       expect(upload.hasProofMode, isTrue);
     });
 
-    test('hasProofMode returns false when manifestJson is null', () {
+    test('hasProofMode returns false when proofManifestJson is null', () {
       final upload = PendingUpload.create(
         localVideoPath: '/path/to/video.mp4',
         nostrPubkey: 'pubkey123',
@@ -98,117 +61,178 @@ void main() {
       expect(upload.hasProofMode, isFalse);
     });
 
-    test('proofManifest getter deserializes JSON correctly', () {
+    test('nativeProof getter deserializes JSON correctly', () {
       final upload = PendingUpload.create(
         localVideoPath: '/path/to/video.mp4',
         nostrPubkey: 'pubkey123',
-        proofManifestJson: testManifestJson,
+        proofManifestJson: testProofJson,
       );
 
-      final manifest = upload.proofManifest;
+      final proof = upload.nativeProof;
 
-      expect(manifest, isNotNull);
-      expect(manifest!.sessionId, equals('test_session_123'));
-      expect(manifest.challengeNonce, equals('test_nonce_abc'));
-      expect(manifest.segments.length, equals(2));
-      expect(manifest.pauseProofs.length, equals(1));
-      expect(manifest.interactions.length, equals(1));
-      expect(manifest.finalVideoHash, equals('abc123def456'));
-      expect(manifest.deviceAttestation, isNotNull);
+      expect(proof, isNotNull);
       expect(
-        manifest.deviceAttestation!.token,
-        equals('attestation_token_xyz'),
+        proof!.videoHash,
+        equals(
+          'abc123def456789012345678901234567890123456789012345678901234',
+        ),
       );
-      expect(manifest.pgpSignature, isNotNull);
-      expect(
-        manifest.pgpSignature!.publicKeyFingerprint,
-        equals('ABCD1234EFGH5678'),
-      );
+      expect(proof.sensorDataCsv, isNotNull);
+      expect(proof.pgpSignature, isNotNull);
+      expect(proof.publicKey, isNotNull);
+      expect(proof.deviceAttestation, equals('attestation_token_xyz'));
+      expect(proof.timestamp, equals('2025-01-01T10:00:06Z'));
     });
 
-    test('proofManifest getter returns null for invalid JSON', () {
+    test('nativeProof getter returns null for invalid JSON', () {
       final upload = PendingUpload.create(
         localVideoPath: '/path/to/video.mp4',
         nostrPubkey: 'pubkey123',
         proofManifestJson: 'invalid json {',
       );
 
-      final manifest = upload.proofManifest;
+      final proof = upload.nativeProof;
 
-      expect(manifest, isNull);
+      expect(proof, isNull);
     });
 
-    test('proofManifest getter returns null when manifestJson is null', () {
+    test('nativeProof getter returns null when proofManifestJson is null', () {
       final upload = PendingUpload.create(
         localVideoPath: '/path/to/video.mp4',
         nostrPubkey: 'pubkey123',
       );
 
-      final manifest = upload.proofManifest;
+      final proof = upload.nativeProof;
 
-      expect(manifest, isNull);
+      expect(proof, isNull);
     });
 
-    test('copyWith preserves ProofManifest', () {
+    test('nativeProof getter returns null for non-native proof JSON', () {
+      // JSON without 'videoHash' field should return null
+      final nonNativeJson = jsonEncode({'someOtherField': 'value'});
       final upload = PendingUpload.create(
         localVideoPath: '/path/to/video.mp4',
         nostrPubkey: 'pubkey123',
-        proofManifestJson: testManifestJson,
+        proofManifestJson: nonNativeJson,
+      );
+
+      final proof = upload.nativeProof;
+
+      expect(proof, isNull);
+    });
+
+    test('copyWith preserves NativeProofData', () {
+      final upload = PendingUpload.create(
+        localVideoPath: '/path/to/video.mp4',
+        nostrPubkey: 'pubkey123',
+        proofManifestJson: testProofJson,
       );
 
       final copied = upload.copyWith(title: 'New Title');
 
-      expect(copied.proofManifestJson, equals(testManifestJson));
+      expect(copied.proofManifestJson, equals(testProofJson));
       expect(copied.hasProofMode, isTrue);
-      expect(copied.proofManifest, isNotNull);
-      expect(copied.proofManifest!.sessionId, equals('test_session_123'));
+      expect(copied.nativeProof, isNotNull);
+      expect(
+        copied.nativeProof!.videoHash,
+        equals(
+          'abc123def456789012345678901234567890123456789012345678901234',
+        ),
+      );
     });
 
-    test('copyWith can update ProofManifest', () {
+    test('copyWith can update proofManifestJson', () {
       final upload = PendingUpload.create(
         localVideoPath: '/path/to/video.mp4',
         nostrPubkey: 'pubkey123',
       );
 
-      final copied = upload.copyWith(proofManifestJson: testManifestJson);
+      final copied = upload.copyWith(proofManifestJson: testProofJson);
 
-      expect(copied.proofManifestJson, equals(testManifestJson));
+      expect(copied.proofManifestJson, equals(testProofJson));
       expect(copied.hasProofMode, isTrue);
     });
 
-    test('roundtrip serialization preserves ProofManifest data', () {
+    test('roundtrip serialization preserves NativeProofData', () {
       final original = PendingUpload.create(
         localVideoPath: '/path/to/video.mp4',
         nostrPubkey: 'pubkey123',
-        proofManifestJson: testManifestJson,
+        proofManifestJson: testProofJson,
       );
 
-      // Serialize and deserialize the manifest
-      final manifest = original.proofManifest;
-      expect(manifest, isNotNull);
+      // Serialize and deserialize the proof data
+      final proof = original.nativeProof;
+      expect(proof, isNotNull);
 
-      final reserializedJson = jsonEncode(manifest!.toJson());
+      final reserializedJson = jsonEncode(proof!.toJson());
       final roundtripped = PendingUpload.create(
         localVideoPath: '/path/to/video.mp4',
         nostrPubkey: 'pubkey123',
         proofManifestJson: reserializedJson,
       );
 
-      final roundtrippedManifest = roundtripped.proofManifest;
-      expect(roundtrippedManifest, isNotNull);
-      expect(roundtrippedManifest!.sessionId, equals(manifest.sessionId));
+      final roundtrippedProof = roundtripped.nativeProof;
+      expect(roundtrippedProof, isNotNull);
+      expect(roundtrippedProof!.videoHash, equals(proof.videoHash));
+      expect(roundtrippedProof.pgpSignature, equals(proof.pgpSignature));
+      expect(roundtrippedProof.publicKey, equals(proof.publicKey));
       expect(
-        roundtrippedManifest.challengeNonce,
-        equals(manifest.challengeNonce),
+        roundtrippedProof.deviceAttestation,
+        equals(proof.deviceAttestation),
       );
-      expect(
-        roundtrippedManifest.finalVideoHash,
-        equals(manifest.finalVideoHash),
+    });
+
+    test('NativeProofData isComplete returns true when all fields present', () {
+      final completeProof = const NativeProofData(
+        videoHash: 'abc123',
+        sensorDataCsv: 'data',
+        pgpSignature: 'sig',
+        publicKey: 'key',
       );
-      expect(
-        roundtrippedManifest.segments.length,
-        equals(manifest.segments.length),
+
+      expect(completeProof.isComplete, isTrue);
+    });
+
+    test('NativeProofData isComplete returns false when fields missing', () {
+      final incompleteProof = const NativeProofData(
+        videoHash: 'abc123',
       );
+
+      expect(incompleteProof.isComplete, isFalse);
+    });
+
+    test('NativeProofData hasMobileAttestation checks deviceAttestation', () {
+      expect(testProofData.hasMobileAttestation, isTrue);
+
+      final noAttestation = const NativeProofData(
+        videoHash: 'abc123',
+      );
+      expect(noAttestation.hasMobileAttestation, isFalse);
+    });
+
+    test('NativeProofData verificationLevel returns correct levels', () {
+      // Full mobile verification
+      expect(testProofData.verificationLevel, equals('verified_mobile'));
+
+      // Web verification (signature but no attestation)
+      final webProof = const NativeProofData(
+        videoHash: 'abc123',
+        pgpSignature: 'sig',
+      );
+      expect(webProof.verificationLevel, equals('verified_web'));
+
+      // Basic proof (sensor data only)
+      final basicProof = const NativeProofData(
+        videoHash: 'abc123',
+        sensorDataCsv: 'data',
+      );
+      expect(basicProof.verificationLevel, equals('basic_proof'));
+
+      // Unverified (hash only)
+      final unverifiedProof = const NativeProofData(
+        videoHash: 'abc123',
+      );
+      expect(unverifiedProof.verificationLevel, equals('unverified'));
     });
   });
 }

@@ -1,11 +1,17 @@
 // ABOUTME: Mock implementation of upload manager for testing camera screen upload flows
 // ABOUTME: Provides controllable upload states and progress simulation for UI testing
 
+import 'dart:convert';
 import 'dart:io';
 
+<<<<<<< HEAD
 import 'package:models/models.dart';
 import 'package:openvine/services/proofmode_session_service.dart'
     show ProofManifest;
+=======
+import 'package:openvine/models/native_proof_data.dart';
+import 'package:openvine/models/pending_upload.dart';
+>>>>>>> 20f7cdc1d38e98687536362c32449565171c5091
 import 'package:openvine/services/upload_manager.dart';
 
 class MockUploadManager implements UploadManager {
@@ -22,8 +28,8 @@ class MockUploadManager implements UploadManager {
     int? videoWidth,
     int? videoHeight,
     Duration? videoDuration,
-    ProofManifest? proofManifest,
-  }) async {
+    NativeProofData? nativeProof,
+  }) {
     final upload = PendingUpload.create(
       localVideoPath: videoFile.path,
       nostrPubkey: nostrPubkey,
@@ -34,10 +40,13 @@ class MockUploadManager implements UploadManager {
       videoWidth: videoWidth,
       videoHeight: videoHeight,
       videoDuration: videoDuration,
+      proofManifestJson: nativeProof != null
+          ? json.encode(nativeProof.toJson())
+          : null,
     );
 
     _uploads.add(upload);
-    return upload;
+    return Future.value(upload);
   }
 
   @override

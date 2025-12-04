@@ -68,7 +68,7 @@ void main() {
             container: container,
             child: MaterialApp(
               home: Scaffold(
-                body: VideoOverlayActions(video: testVideo, isVisible: true),
+                body: VideoOverlayActions(video: testVideo, isVisible: true, isActive: true),
               ),
             ),
           ),
@@ -108,7 +108,7 @@ void main() {
             container: container,
             child: MaterialApp(
               home: Scaffold(
-                body: VideoOverlayActions(video: testVideo, isVisible: true),
+                body: VideoOverlayActions(video: testVideo, isVisible: true, isActive: true),
               ),
             ),
           ),
@@ -149,7 +149,7 @@ void main() {
           container: container,
           child: MaterialApp(
             home: Scaffold(
-              body: VideoOverlayActions(video: testVideo, isVisible: true),
+              body: VideoOverlayActions(video: testVideo, isVisible: true, isActive: true),
             ),
           ),
         ),

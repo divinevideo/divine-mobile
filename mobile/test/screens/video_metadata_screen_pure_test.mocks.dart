@@ -487,6 +487,15 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
           as _i5.Future<void>);
 
   @override
+  _i5.Future<void> acceptTermsOfService() =>
+      (super.noSuchMethod(
+            Invocation.method(#acceptTermsOfService, []),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
   _i5.Future<void> signOut({bool? deleteKeys = false}) =>
       (super.noSuchMethod(
             Invocation.method(#signOut, [], {#deleteKeys: deleteKeys}),

@@ -41,7 +41,7 @@ void main() {
     test('getCachedVideoSync() should return File for cached video', () async {
       // ARRANGE: Cache a video first
       const videoId = 'test_video_cached';
-      const videoUrl = 'https://cdn.blossom.software/test_video.mp4';
+      // const videoUrl = 'https://cdn.blossom.software/test_video.mp4';
 
       // Create a mock cached file in the cache directory
       // First, cache the video using the async method

@@ -34,13 +34,11 @@ void main() {
       );
     });
 
-    tearDown() {
+    tearDown(() {
       videoEventService.dispose();
       reset(mockNostrService);
       reset(mockSubscriptionManager);
-    }
-
-    ;
+    });
 
     group('Search Method Tests', () {
       test('should call searchVideos and handle empty query', () {

@@ -69,7 +69,7 @@ void main() {
     testWidgets('initState() starts background upload immediately', (
       tester,
     ) async {
-      // Arrange: Create mock upload that will be returned by startUpload()
+      // Arrange: Create mock upload that will be returned by startUploadFromDraft()
       final mockUpload = PendingUpload.create(
         localVideoPath: testVideoFile.path,
         nostrPubkey: 'test-pubkey',
@@ -79,17 +79,10 @@ void main() {
       );
 
       when(
-        mockUploadManager.startUpload(
-          videoFile: anyNamed('videoFile'),
+        mockUploadManager.startUploadFromDraft(
+          draft: anyNamed('draft'),
           nostrPubkey: anyNamed('nostrPubkey'),
-          title: anyNamed('title'),
-          description: anyNamed('description'),
-          hashtags: anyNamed('hashtags'),
           videoDuration: anyNamed('videoDuration'),
-          thumbnailPath: anyNamed('thumbnailPath'),
-          videoWidth: anyNamed('videoWidth'),
-          videoHeight: anyNamed('videoHeight'),
-          proofManifest: anyNamed('proofManifest'),
         ),
       ).thenAnswer((_) async => mockUpload);
 
@@ -110,19 +103,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
 
-      // Assert: Verify startUpload was called
+      // Assert: Verify startUploadFromDraft was called
       verify(
-        mockUploadManager.startUpload(
-          videoFile: anyNamed('videoFile'),
+        mockUploadManager.startUploadFromDraft(
+          draft: anyNamed('draft'),
           nostrPubkey: anyNamed('nostrPubkey'),
-          title: anyNamed('title'),
-          description: anyNamed('description'),
-          hashtags: anyNamed('hashtags'),
           videoDuration: anyNamed('videoDuration'),
-          thumbnailPath: anyNamed('thumbnailPath'),
-          videoWidth: anyNamed('videoWidth'),
-          videoHeight: anyNamed('videoHeight'),
-          proofManifest: anyNamed('proofManifest'),
         ),
       ).called(1);
     });
@@ -148,7 +134,7 @@ void main() {
           thumbnailPath: anyNamed('thumbnailPath'),
           videoWidth: anyNamed('videoWidth'),
           videoHeight: anyNamed('videoHeight'),
-          proofManifest: anyNamed('proofManifest'),
+          nativeProof: anyNamed('nativeProof'),
         ),
       ).thenAnswer((_) async => mockUpload);
 
@@ -205,7 +191,7 @@ void main() {
           thumbnailPath: anyNamed('thumbnailPath'),
           videoWidth: anyNamed('videoWidth'),
           videoHeight: anyNamed('videoHeight'),
-          proofManifest: anyNamed('proofManifest'),
+          nativeProof: anyNamed('nativeProof'),
         ),
       ).thenAnswer((_) async => mockUpload);
 

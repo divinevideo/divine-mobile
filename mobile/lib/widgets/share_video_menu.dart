@@ -2452,7 +2452,6 @@ class _EditVideoDialogState extends ConsumerState<_EditVideoDialog> {
 
       if (mounted) {
         Navigator.of(context).pop(); // Close edit dialog
-        Navigator.of(context).pop(); // Close share menu
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

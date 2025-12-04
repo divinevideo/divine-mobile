@@ -120,7 +120,7 @@ void main() {
       );
 
       // Act
-      final result = await service.deleteAccount();
+      await expectLater(service.deleteAccount(), completes);
 
       // Assert
       verify(mockNostrService.broadcastEvent(any)).called(1);
