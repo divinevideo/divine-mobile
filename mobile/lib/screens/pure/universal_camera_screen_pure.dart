@@ -903,59 +903,45 @@ class _UniversalCameraScreenPureState
             ),
           ),
 
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Record button - Platform-specific interaction
-            // Web: Tap to start/stop (single continuous recording)
-            // Mobile: Press-and-hold to record, release to pause (segmented)
-            GestureDetector(
-              onTap: kIsWeb ? _toggleRecordingWeb : null,
-              onTapDown: !kIsWeb && recordingState.canRecord
-                  ? (_) => _startRecording()
-                  : null,
-              onTapUp: !kIsWeb && recordingState.isRecording
-                  ? (_) => _stopRecording()
-                  : null,
-              onTapCancel: !kIsWeb && recordingState.isRecording
-                  ? () => _stopRecording()
-                  : null,
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: recordingState.isRecording ? Colors.red : Colors.white,
-                  border: Border.all(
-                    color: recordingState.isRecording
-                        ? Colors.white
-                        : Colors.grey,
-                    width: 4,
-                  ),
-                ),
-                child: recordingState.isRecording
-                    ? Center(
-                        child: Text(
-                          _formatDuration(recordingState.recordingDuration),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      )
-                    : const Icon(
-                        Icons.fiber_manual_record,
-                        color: Colors.red,
-                        size: 32,
-                      ),
+        GestureDetector(
+          onTap: kIsWeb ? _toggleRecordingWeb : null,
+          onTapDown: !kIsWeb && recordingState.canRecord
+              ? (_) => _startRecording()
+              : null,
+          onTapUp: !kIsWeb && recordingState.isRecording
+              ? (_) => _stopRecording()
+              : null,
+          onTapCancel: !kIsWeb && recordingState.isRecording
+              ? () => _stopRecording()
+              : null,
+          child: Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: recordingState.isRecording ? Colors.red : Colors.white,
+              border: Border.all(
+                color: recordingState.isRecording ? Colors.white : Colors.grey,
+                width: 4,
               ),
             ),
-
-            // Camera switch button moved to right side controls
-            // Placeholder to balance the row layout
-            const SizedBox(width: 48),
-          ],
+            child: recordingState.isRecording
+                ? Center(
+                    child: Text(
+                      _formatDuration(recordingState.recordingDuration),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  )
+                : const Icon(
+                    Icons.fiber_manual_record,
+                    color: Colors.red,
+                    size: 32,
+                  ),
+          ),
         ),
       ],
     );

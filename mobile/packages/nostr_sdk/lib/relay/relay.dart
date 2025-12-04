@@ -1,3 +1,6 @@
+// ABOUTME: Abstract relay class defining the Nostr relay interface.
+// ABOUTME: Manages subscriptions, queries, and pending messages.
+
 import '../subscription.dart';
 import 'client_connected.dart';
 import 'relay_info.dart';
@@ -13,10 +16,10 @@ abstract class Relay {
 
   RelayInfo? info;
 
-  // to hold the message when the ws havn't connected and should be send after connected.
+  // to hold the message when the ws haven't connected and should be send after connected.
   List<List<dynamic>> pendingMessages = [];
 
-  // to hold the message when the ws havn't authed and should be send after auth.
+  // to hold the message when the ws haven't authed and should be send after auth.
   List<List<dynamic>> pendingAuthedMessages = [];
 
   Function(Relay, List<dynamic>)? onMessage;
@@ -24,7 +27,7 @@ abstract class Relay {
   // subscriptions
   final Map<String, Subscription> _subscriptions = {};
 
-  // quries
+  // queries
   final Map<String, Subscription> _queries = {};
 
   Relay(this.url, this.relayStatus);
@@ -74,24 +77,14 @@ abstract class Relay {
 
   Future<void> disconnect();
 
-  bool _waitingReconnect = false;
-
   void onError(String errMsg, {bool reconnect = false}) {
     print("relay error $errMsg");
     relayStatus.onError();
-    relayStatus.connected = ClientConneccted.UN_CONNECT;
+    relayStatus.connected = ClientConnected.DISCONNECT;
     if (relayStatusCallback != null) {
       relayStatusCallback!();
     }
-    disconnect();
-
-    if (reconnect && !_waitingReconnect) {
-      _waitingReconnect = true;
-      Future.delayed(const Duration(seconds: 30), () {
-        _waitingReconnect = false;
-        connect();
-      });
-    }
+    // Note: reconnection is now handled by WebSocketConnectionManager
   }
 
   List<Subscription> getSubscriptions() {

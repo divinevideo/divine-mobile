@@ -92,20 +92,28 @@ class PlatformSecureStorage {
       _instance ??= PlatformSecureStorage._();
 
   // Flutter secure storage fallback for platforms without native implementation
-  static const FlutterSecureStorage _fallbackStorage = FlutterSecureStorage(
+  static final FlutterSecureStorage _fallbackStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-    mOptions: MacOsOptions(accessibility: KeychainAccessibility.first_unlock),
+    mOptions: MacOsOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+      // Don't use data protection keychain on macOS in debug mode
+      useDataProtectionKeyChain:
+          defaultTargetPlatform != TargetPlatform.macOS || !kDebugMode,
+    ),
   );
 
   // Legacy storage with old accessibility settings for migration
-  static const FlutterSecureStorage _legacyStorage = FlutterSecureStorage(
+  static final FlutterSecureStorage _legacyStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(
       accessibility: KeychainAccessibility.first_unlock_this_device,
     ),
     mOptions: MacOsOptions(
       accessibility: KeychainAccessibility.first_unlock_this_device,
+      // Don't use data protection keychain on macOS in debug mode
+      useDataProtectionKeyChain:
+          defaultTargetPlatform != TargetPlatform.macOS || !kDebugMode,
     ),
   );
 

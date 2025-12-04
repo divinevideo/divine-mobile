@@ -47,8 +47,8 @@ void main() {
       ).thenAnswer(
         (_) async => BlossomUploadResult(
           success: true,
-          cdnUrl: 'https://blossom.example.com/image-hash.jpg',
           videoId: 'image-hash',
+          thumbnailUrl: 'https://blossom.example.com/image-hash.jpg',
         ),
       );
 
@@ -88,8 +88,8 @@ void main() {
 
         return BlossomUploadResult(
           success: true,
-          cdnUrl: 'https://blossom.example.com/image-hash.jpg',
           videoId: 'image-hash',
+          thumbnailUrl: 'https://blossom.example.com/image-hash.jpg',
         );
       });
 
@@ -107,13 +107,11 @@ void main() {
       final result = BlossomUploadResult(
         success: true,
         videoId: 'video-123',
-        cdnUrl: 'https://cdn.example.com/video.mp4',
         thumbnailUrl: 'https://cdn.example.com/thumbnail.jpg',
       );
 
       expect(result.success, isTrue);
       expect(result.videoId, 'video-123');
-      expect(result.cdnUrl, 'https://cdn.example.com/video.mp4');
       expect(result.thumbnailUrl, 'https://cdn.example.com/thumbnail.jpg');
     });
 
@@ -121,8 +119,7 @@ void main() {
       final result = BlossomUploadResult(
         success: true,
         videoId: 'video-123',
-        cdnUrl: 'https://cdn.example.com/video.mp4',
-        // thumbnailUrl not provided
+        thumbnailUrl: 'https://cdn.example.com/video.mp4',
       );
 
       expect(result.success, isTrue);
@@ -194,8 +191,8 @@ void main() {
       ).thenAnswer(
         (_) async => BlossomUploadResult(
           success: true,
-          cdnUrl: 'https://blossom.example.com/image-hash.png',
           videoId: 'image-hash',
+          thumbnailUrl: 'https://blossom.example.com/image-hash.png',
         ),
       );
 
@@ -206,7 +203,7 @@ void main() {
       );
 
       expect(result.success, isTrue);
-      expect(result.cdnUrl, contains('.png'));
+      expect(result.thumbnailUrl, contains('.png'));
     });
 
     test('uploadImage returns existing file URL on 409 conflict', () async {
@@ -223,8 +220,8 @@ void main() {
       ).thenAnswer(
         (_) async => BlossomUploadResult(
           success: true,
-          cdnUrl: 'https://blossom.example.com/$fileHash',
           videoId: fileHash,
+          thumbnailUrl: 'https://blossom.example.com/$fileHash',
         ),
       );
 
@@ -235,7 +232,7 @@ void main() {
       );
 
       expect(result.success, isTrue);
-      expect(result.cdnUrl, contains(fileHash));
+      expect(result.thumbnailUrl, contains(fileHash));
     });
   });
 

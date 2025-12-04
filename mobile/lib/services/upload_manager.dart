@@ -1017,8 +1017,6 @@ class UploadManager {
         return ConnectivityResult.vpn;
       }
       return ConnectivityResult.none;
-      // Older versions return single ConnectivityResult
-      return result as ConnectivityResult;
     } catch (e) {
       Log.error(
         'Failed to check network connectivity: $e',

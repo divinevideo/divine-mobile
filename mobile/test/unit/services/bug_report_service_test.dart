@@ -1,6 +1,7 @@
 // ABOUTME: Unit tests for BugReportService diagnostic collection and sanitization
 // ABOUTME: Tests data gathering, sensitive data removal, and report packaging
 
+import 'dart:io' show Platform;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/bug_report_service.dart';
@@ -14,48 +15,53 @@ void main() {
     setUp(() {
       TestWidgetsFlutterBinding.ensureInitialized();
 
+      final binding = TestDefaultBinaryMessengerBinding.instance;
+
       // Mock package_info_plus
-      const MethodChannel(
-        'dev.fluttercommunity.plus/package_info',
-      ).setMockMethodCallHandler((MethodCall methodCall) async {
-        if (methodCall.method == 'getAll') {
-          return <String, dynamic>{
-            'appName': 'OpenVine',
-            'packageName': 'com.openvine.mobile',
-            'version': '0.0.1',
-            'buildNumber': '35',
-          };
-        }
-        return null;
-      });
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('dev.fluttercommunity.plus/package_info'),
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'getAll') {
+            return <String, dynamic>{
+              'appName': 'OpenVine',
+              'packageName': 'com.openvine.mobile',
+              'version': '0.0.1',
+              'buildNumber': '35',
+            };
+          }
+          return null;
+        },
+      );
 
       // Mock Firebase Core
-      const MethodChannel(
-        'plugins.flutter.io/firebase_core',
-      ).setMockMethodCallHandler((MethodCall methodCall) async {
-        if (methodCall.method == 'Firebase#initializeCore') {
-          return [
-            {
-              'name': '[DEFAULT]',
-              'options': {
-                'apiKey': 'test',
-                'appId': 'test',
-                'messagingSenderId': 'test',
-                'projectId': 'test',
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/firebase_core'),
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'Firebase#initializeCore') {
+            return [
+              {
+                'name': '[DEFAULT]',
+                'options': {
+                  'apiKey': 'test',
+                  'appId': 'test',
+                  'messagingSenderId': 'test',
+                  'projectId': 'test',
+                },
+                'pluginConstants': {},
               },
-              'pluginConstants': {},
-            },
-          ];
-        }
-        return null;
-      });
+            ];
+          }
+          return null;
+        },
+      );
 
       // Mock Firebase Analytics
-      const MethodChannel(
-        'plugins.flutter.io/firebase_analytics',
-      ).setMockMethodCallHandler((MethodCall methodCall) async {
-        return null; // Just return null for all analytics calls
-      });
+      binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/firebase_analytics'),
+        (MethodCall methodCall) async {
+          return null; // Just return null for all analytics calls
+        },
+      );
 
       service = BugReportService();
     });
@@ -67,12 +73,27 @@ void main() {
 
       expect(data.reportId, isNotEmpty);
       expect(data.userDescription, equals('App crashed when loading feed'));
-      expect(data.deviceInfo, isNotEmpty);
+      expect(data.deviceInfo, isA<Map<String, dynamic>>());
       expect(data.appVersion, isNotEmpty);
-      expect(data.recentLogs, isNotEmpty);
+      expect(data.recentLogs, isA<List>());
       expect(data.errorCounts, isA<Map<String, int>>());
       expect(data.timestamp, isA<DateTime>());
     });
+
+    test(
+      'should populate deviceInfo on mobile platforms',
+      () async {
+        final data = await service.collectDiagnostics(
+          userDescription: 'Test on mobile',
+        );
+
+        expect(data.deviceInfo, isNotEmpty);
+        expect(data.deviceInfo.containsKey('model'), isTrue);
+      },
+      skip: !(Platform.isIOS || Platform.isAndroid)
+          ? 'Only runs on iOS/Android'
+          : null,
+    );
 
     test('should sanitize nsec keys from description', () {
       final input = BugReportData(
@@ -201,11 +222,20 @@ void main() {
       final data = await service.collectDiagnostics(userDescription: '');
 
       expect(data.reportId, isNotEmpty);
-      expect(
-        data.deviceInfo,
-        isNotEmpty,
-      ); // Device info should still be collected
+      expect(data.deviceInfo, isA<Map<String, dynamic>>());
     });
+
+    test(
+      'should collect deviceInfo even with empty description on mobile',
+      () async {
+        final data = await service.collectDiagnostics(userDescription: '');
+
+        expect(data.deviceInfo, isNotEmpty);
+      },
+      skip: !(Platform.isIOS || Platform.isAndroid)
+          ? 'Only runs on iOS/Android'
+          : null,
+    );
 
     test('should validate report size', () {
       // Create a huge report

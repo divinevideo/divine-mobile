@@ -208,18 +208,6 @@ Future<void> _showDeleteAllContentFinalConfirmation({
   );
 }
 
-/// Deprecated: Use showDeleteAllContentWarningDialog instead
-@Deprecated('Use showDeleteAllContentWarningDialog for content deletion')
-Future<void> showDeleteAccountWarningDialog({
-  required BuildContext context,
-  required VoidCallback onConfirm,
-}) {
-  return showDeleteAllContentWarningDialog(
-    context: context,
-    onConfirm: onConfirm,
-  );
-}
-
 /// Show completion dialog after account deletion
 Future<void> showDeleteAccountCompletionDialog({
   required BuildContext context,

@@ -54,7 +54,7 @@ void main() {
     await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
   });
 
-  tearDown() async {
+  tearDown(() async {
     // Clean up after each test using proper async coordination
     try {
       // Dispose the upload manager and wait for completion
@@ -72,9 +72,7 @@ void main() {
       // Manager or box might already be disposed/closed
     }
     reset(mockUploadService);
-  }
-
-  ;
+  });
 
   group('UploadManager.getUploadByFilePath', () {
     test('should return upload with matching file path', () async {

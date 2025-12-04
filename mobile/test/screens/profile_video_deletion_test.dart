@@ -2,7 +2,6 @@
 // ABOUTME: Verifies NIP-09 deletion workflow and optimistic UI removal from feeds
 
 import 'package:flutter_test/flutter_test.dart';
-import '../builders/test_video_event_builder.dart';
 
 void main() {
   group('VideoEventService - removeVideoFromAuthorList', () {
@@ -88,11 +87,7 @@ void main() {
       // This test verifies the existing ContentDeletionService works correctly
       // The service already exists - we just need to use it properly
 
-      final testVideo = TestVideoEventBuilder.create(
-        id: 'video_id_123',
-        pubkey: 'user_pubkey_hex',
-        title: 'Test Video',
-      );
+
 
       // Expected behavior:
       // 1. Given a video owned by the user

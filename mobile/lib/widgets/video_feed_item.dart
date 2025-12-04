@@ -656,6 +656,7 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                                           Icons.play_arrow,
                                           size: 56,
                                           color: Colors.white,
+                                          semanticLabel: 'Play video',
                                         ),
                                       ),
                                     ),
