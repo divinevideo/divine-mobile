@@ -708,8 +708,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   /// Build subscribed lists section with independent loading state
   Widget _buildSubscribedListsSection() {
     final allListsAsync = ref.watch(allListsProvider);
-    final serviceAsync = ref.watch(curatedListServiceProvider);
-
+    final serviceAsync = ref.watch(curatedListsStateProvider);
+    final service = ref.read(curatedListsStateProvider.notifier).service;
     // Wait for both to load subscribed lists
     if (!allListsAsync.hasValue || !serviceAsync.hasValue) {
       return Padding(
@@ -744,12 +744,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
       );
     }
 
-    final service = serviceAsync.value!;
     final allCuratedLists = allListsAsync.value!.curatedLists;
 
     // Filter subscribed lists
     final subscribedLists = allCuratedLists.where((list) {
-      return service.isSubscribedToList(list.id);
+      return service?.isSubscribedToList(list.id) ?? false;
     }).toList();
 
     if (subscribedLists.isEmpty) {

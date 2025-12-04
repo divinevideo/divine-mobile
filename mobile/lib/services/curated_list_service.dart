@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -158,7 +159,7 @@ class CuratedList {
 
 /// Service for managing NIP-51 curated lists
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
-class CuratedListService {
+class CuratedListService extends ChangeNotifier {
   CuratedListService({
     required INostrService nostrService,
     required AuthService authService,
@@ -1023,6 +1024,7 @@ class CuratedListService {
   /// Save lists to local storage
   Future<void> _saveLists() async {
     try {
+      notifyListeners();
       final listsJson = _lists.map((list) => list.toJson()).toList();
       await _prefs.setString(listsStorageKey, jsonEncode(listsJson));
     } catch (e) {

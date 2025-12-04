@@ -581,23 +581,41 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
   return service;
 }
 
-/// Curated list service for NIP-51 kind 30005 video lists
+// In app_providers.dart
+
+/// Lists state notifier - manages curated lists state
 @riverpod
-Future<CuratedListService> curatedListService(Ref ref) async {
-  final nostrService = ref.watch(nostrServiceProvider);
-  final authService = ref.watch(authServiceProvider);
-  final prefs = await ref.watch(sharedPreferencesProvider.future);
+class CuratedListsState extends _$CuratedListsState {
+  CuratedListService? _service;
 
-  final service = CuratedListService(
-    nostrService: nostrService,
-    authService: authService,
-    prefs: prefs,
-  );
+  CuratedListService? get service => _service;
+  
+  @override
+  Future<List<CuratedList>> build() async {
+    final nostrService = ref.watch(nostrServiceProvider);
+    final authService = ref.watch(authServiceProvider);
+    final prefs = await ref.watch(sharedPreferencesProvider.future);
 
-  // Initialize the service to create default list and sync with relays
-  await service.initialize();
+    _service = CuratedListService(
+      nostrService: nostrService,
+      authService: authService,
+      prefs: prefs,
+    );
 
-  return service;
+    // Initialize the service to create default list and sync with relays
+    await _service!.initialize();   
+
+    // Listen to changes and update state
+    _service!.addListener(_onServiceChanged);
+    ref.onDispose(() => _service?.removeListener(_onServiceChanged));
+
+    return _service!.lists;
+  }
+
+  void _onServiceChanged() {
+    // When service calls notifyListeners(), update the state
+    state = AsyncValue.data(_service!.lists);
+  }
 }
 
 /// User list service for NIP-51 kind 30000 people lists

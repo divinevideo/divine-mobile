@@ -1930,52 +1930,57 @@ final class ContentReportingServiceProvider
 String _$contentReportingServiceHash() =>
     r'90600ce05c4cc607ee58bb9166d14fb5982b7430';
 
-/// Curated list service for NIP-51 kind 30005 video lists
+/// Lists state notifier - manages curated lists state
 
-@ProviderFor(curatedListService)
-const curatedListServiceProvider = CuratedListServiceProvider._();
+@ProviderFor(CuratedListsState)
+const curatedListsStateProvider = CuratedListsStateProvider._();
 
-/// Curated list service for NIP-51 kind 30005 video lists
-
-final class CuratedListServiceProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<CuratedListService>,
-          CuratedListService,
-          FutureOr<CuratedListService>
-        >
-    with
-        $FutureModifier<CuratedListService>,
-        $FutureProvider<CuratedListService> {
-  /// Curated list service for NIP-51 kind 30005 video lists
-  const CuratedListServiceProvider._()
+/// Lists state notifier - manages curated lists state
+final class CuratedListsStateProvider
+    extends $AsyncNotifierProvider<CuratedListsState, List<CuratedList>> {
+  /// Lists state notifier - manages curated lists state
+  const CuratedListsStateProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'curatedListServiceProvider',
+        name: r'curatedListsStateProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$curatedListServiceHash();
+  String debugGetCreateSourceHash() => _$curatedListsStateHash();
 
   @$internal
   @override
-  $FutureProviderElement<CuratedListService> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<CuratedListService> create(Ref ref) {
-    return curatedListService(ref);
-  }
+  CuratedListsState create() => CuratedListsState();
 }
 
-String _$curatedListServiceHash() =>
-    r'4cb1e31f4432938d5c0f9944a55dc52266d37c96';
+String _$curatedListsStateHash() => r'81250850e632c5ba622f6e54d2d048e5736d3281';
+
+/// Lists state notifier - manages curated lists state
+
+abstract class _$CuratedListsState extends $AsyncNotifier<List<CuratedList>> {
+  FutureOr<List<CuratedList>> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref =
+        this.ref as $Ref<AsyncValue<List<CuratedList>>, List<CuratedList>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<List<CuratedList>>, List<CuratedList>>,
+              AsyncValue<List<CuratedList>>,
+              Object?,
+              Object?
+            >;
+    element.handleValue(ref, created);
+  }
+}
 
 /// User list service for NIP-51 kind 30000 people lists
 
