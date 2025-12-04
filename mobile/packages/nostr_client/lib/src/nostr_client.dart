@@ -29,14 +29,18 @@ class NostrClient {
             : null;
 
   static Nostr _createNostr(NostrClientConfig config) {
-    RelayBase tempRelayGenerator(String url) =>
-        RelayBase(url, RelayStatus(url));
+    RelayBase tempRelayGenerator(String url) => RelayBase(
+          url,
+          RelayStatus(url),
+          channelFactory: config.webSocketChannelFactory,
+        );
     return Nostr(
       config.signer,
       config.publicKey,
       config.eventFilters,
       tempRelayGenerator,
       onNotice: config.onNotice,
+      channelFactory: config.webSocketChannelFactory,
     );
   }
 

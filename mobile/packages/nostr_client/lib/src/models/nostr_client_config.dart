@@ -1,4 +1,5 @@
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:nostr_sdk/relay/web_socket_connection_manager.dart';
 
 /// {@template nostr_client_config}
 /// Configuration for NostrClient initialization
@@ -12,6 +13,7 @@ class NostrClientConfig {
     this.onNotice,
     this.gatewayUrl,
     this.enableGateway = false,
+    this.webSocketChannelFactory,
   });
 
   /// Signer for event signing
@@ -26,4 +28,6 @@ class NostrClientConfig {
   final String? gatewayUrl;
   /// Whether to enable gateway support
   final bool enableGateway;
+  /// WebSocket channel factory for testing (optional)
+  final WebSocketChannelFactory? webSocketChannelFactory;
 }
