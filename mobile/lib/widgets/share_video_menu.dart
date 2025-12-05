@@ -857,10 +857,6 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
       final shareText = sharingService.generateShareText(widget.video);
 
       await SharePlus.instance.share(ShareParams(text: shareText));
-
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
     } catch (e) {
       Log.error(
         'Failed to share externally: $e',
