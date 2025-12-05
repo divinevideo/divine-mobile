@@ -1122,13 +1122,14 @@ class MockUserProfileService extends _i1.Mock
   );
 
   @override
-  _i6.Future<void> searchUsers(String? query, {int? limit}) =>
+  _i6.Future<List<_i14.UserProfile>> searchUsers(String? query, {int? limit}) =>
       (super.noSuchMethod(
             Invocation.method(#searchUsers, [query], {#limit: limit}),
-            returnValue: _i6.Future<void>.value(),
-            returnValueForMissingStub: _i6.Future<void>.value(),
+            returnValue: _i6.Future<List<_i14.UserProfile>>.value(
+              <_i14.UserProfile>[],
+            ),
           )
-          as _i6.Future<void>);
+          as _i6.Future<List<_i14.UserProfile>>);
 
   @override
   Map<String, dynamic> getCacheStats() =>
