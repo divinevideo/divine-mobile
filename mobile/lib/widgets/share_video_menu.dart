@@ -2442,7 +2442,7 @@ class _EditVideoDialogState extends ConsumerState<_EditVideoDialog> {
       // Create and sign the updated event
       final content = _descriptionController.text.trim();
       final event = await authService.createAndSignEvent(
-        kind: 32222, // Addressable short looping video
+        kind: 34236, // Addressable short looping video (NIP-71)
         content: content,
         tags: tags,
       );

@@ -783,7 +783,7 @@ class SocialNotifier extends _$SocialNotifier {
         }
 
         // Update state - add to reposted set
-        final addressableId = '32222:${video.pubkey}:${video.rawTags['d']}';
+        final addressableId = '34236:${video.pubkey}:${video.rawTags['d']}';
         state = state.copyWith(
           repostedEventIds: {...state.repostedEventIds, addressableId},
         );
@@ -809,7 +809,7 @@ class SocialNotifier extends _$SocialNotifier {
         }
 
         // Update state - remove from reposted set
-        final addressableId = '32222:${video.pubkey}:${video.rawTags['d']}';
+        final addressableId = '34236:${video.pubkey}:${video.rawTags['d']}';
         final newRepostedEventIds = {...state.repostedEventIds}
           ..remove(addressableId);
 

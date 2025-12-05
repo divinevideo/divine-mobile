@@ -1259,7 +1259,7 @@ class VideoOverlayActions extends ConsumerWidget {
                       // Construct addressable ID for repost state check
                       final dTag = video.rawTags['d'];
                       final addressableId = dTag != null
-                          ? '32222:${video.pubkey}:$dTag'
+                          ? '34236:${video.pubkey}:$dTag'
                           : video.id;
                       final isReposted = socialState.hasReposted(addressableId);
 
