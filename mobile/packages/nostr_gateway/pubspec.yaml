@@ -9,7 +9,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  dio: ^5.8.0
+  dio: ^5.9.0
   nostr_sdk:
     path: ../nostr_sdk
 
