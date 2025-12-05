@@ -1730,9 +1730,7 @@ class _SelectListDialog extends StatelessWidget {
 
       return listServiceAsync.when(
         data: (listService) {
-          final availableLists = listService.lists
-              .where((list) => list.id != CuratedListService.defaultListId)
-              .toList();
+          final availableLists = listService.lists.toList();
 
           return AlertDialog(
             backgroundColor: VineTheme.cardBackground,

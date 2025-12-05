@@ -1,18 +1,24 @@
 // ABOUTME: Unit tests for CuratedListService CRUD operations (create, update, delete lists)
 // ABOUTME: Tests core list management functionality with mocked dependencies
 
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/utils/curated_list_ext.dart';
+import 'package:openvine/utils/nostr_event_ext.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'curated_list_service_crud_test.mocks.dart';
 
-@GenerateMocks([INostrService, AuthService])
+@GenerateNiceMocks([MockSpec<INostrService>(), MockSpec<AuthService>()])
 void main() {
   group('CuratedListService - CRUD Operations', () {
     late CuratedListService service;
@@ -102,6 +108,145 @@ void main() {
         expect(defaultList, isNotNull);
         expect(defaultList!.id, CuratedListService.defaultListId);
         expect(defaultList.name, 'My List');
+      });
+
+      test('creates default list with correct ID', () async {
+        // Start with no lists
+        expect(service.hasDefaultList(), isFalse);
+
+        await service.initialize();
+
+        // Should create default list
+        expect(service.hasDefaultList(), isTrue);
+        expect(
+          service.lists.where((l) => l.id == CuratedListService.defaultListId),
+          hasLength(1),
+        );
+      });
+
+      test('does not create duplicate default list after relaunch', () async {
+        // Collect lists saved to the relay
+        final lists = <CuratedList>[];
+
+        when(
+          mockAuth.createAndSignEvent(
+            kind: anyNamed('kind'),
+            content: anyNamed('content'),
+            tags: anyNamed('tags'),
+          ),
+        ).thenAnswer((invocation) {
+          final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          final event = Event.fromJson({
+            'id': sha256
+                .convert(
+                  utf8.encode(
+                    json.encode([
+                      0,
+                      'test_pubkey_123456789abcdef',
+                      now,
+                      30005,
+                      invocation.namedArguments[#tags] as List<List<String>>,
+                      invocation.namedArguments[#content] as String,
+                    ]),
+                  ),
+                )
+                .toString(),
+            'pubkey': 'test_pubkey_123456789abcdef',
+            'created_at': now,
+            'kind': 30005,
+            'tags': invocation.namedArguments[#tags] as List<List<String>>,
+            'content': invocation.namedArguments[#content] as String,
+            'sig': 'test_signature',
+          });
+
+          return Future.value(event);
+        });
+
+        when(mockNostr.broadcastEvent(any)).thenAnswer((invocation) {
+          final event = invocation.positionalArguments[0] as Event;
+          lists.add(event.toCuratedList());
+
+          return Future.value(
+            NostrBroadcastResult(
+              event: event,
+              successCount: 1,
+              totalRelays: 1,
+              results: {'wss://relay.example.com': true},
+              errors: {},
+            ),
+          );
+        });
+
+        // Mock subscription to return collected lists
+        when(
+          mockNostr.subscribeToEvents(filters: anyNamed('filters')),
+        ).thenAnswer((invocation) {
+          final filters = invocation.namedArguments[#filters] as List<Filter>;
+
+          if (filters.isNotEmpty) {
+            final filter = filters.first;
+
+            if (filter.kinds?.contains(30005) ?? false) {
+              if (filter.authors?.contains('test_pubkey_123456789abcdef') ??
+                  false) {
+                return Stream.fromIterable(
+                  lists.map((l) {
+                    final tags = l.getEventTags();
+                    final description =
+                        l.description ?? 'Curated video list: ${l.name}';
+
+                    return Event.fromJson({
+                      'id': sha256
+                          .convert(
+                            utf8.encode(
+                              json.encode([
+                                0,
+                                'test_pubkey_123456789abcdef',
+                                DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                                30005,
+                                tags,
+                                description,
+                              ]),
+                            ),
+                          )
+                          .toString(),
+                      'pubkey': 'test_pubkey_123456789abcdef',
+                      'created_at':
+                          DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                      'kind': 30005,
+                      'tags': tags,
+                      'content': description,
+                      'sig': 'test_signature',
+                    });
+                  }),
+                );
+              }
+            }
+          }
+
+          return Stream.empty();
+        });
+
+        expect(service.hasDefaultList(), isFalse);
+
+        await service.initialize();
+
+        expect(service.hasDefaultList(), isTrue);
+        expect(service.lists.length, 1);
+
+        // Trigger the constructor again
+        service = CuratedListService(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          prefs: prefs,
+        );
+
+        // Initialize again
+        await service.initialize();
+
+        // Verify that there is still only the default list
+        expect(service.hasDefaultList(), isTrue);
+        expect(service.lists.length, 1);
       });
 
       test('does not create duplicate default list', () async {
