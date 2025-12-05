@@ -357,6 +357,15 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
           as _i7.Future<void>);
 
   @override
+  _i7.Future<void> acceptTermsOfService() =>
+      (super.noSuchMethod(
+            Invocation.method(#acceptTermsOfService, []),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
+          )
+          as _i7.Future<void>);
+
+  @override
   _i7.Future<void> signOut({bool? deleteKeys = false}) =>
       (super.noSuchMethod(
             Invocation.method(#signOut, [], {#deleteKeys: deleteKeys}),
@@ -682,6 +691,14 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
               [query],
               {#authors: authors, #since: since, #until: until, #limit: limit},
             ),
+            returnValue: _i7.Stream<_i10.Event>.empty(),
+          )
+          as _i7.Stream<_i10.Event>);
+
+  @override
+  _i7.Stream<_i10.Event> searchUsers(String? query, {int? limit}) =>
+      (super.noSuchMethod(
+            Invocation.method(#searchUsers, [query], {#limit: limit}),
             returnValue: _i7.Stream<_i10.Event>.empty(),
           )
           as _i7.Stream<_i10.Event>);

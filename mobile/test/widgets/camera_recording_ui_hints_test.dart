@@ -38,6 +38,7 @@ void main() {
         canSwitchCamera: true,
         aspectRatio: model.AspectRatio.square,
         segments: [],
+        hasSegments: false,
       );
 
       await tester.pumpWidget(
@@ -112,6 +113,7 @@ void main() {
             filePath: '/test/segment2.mp4',
           ),
         ],
+        hasSegments: true,
       );
 
       await tester.pumpWidget(
@@ -172,6 +174,7 @@ void main() {
             filePath: '/test/segment1.mp4',
           ),
         ],
+        hasSegments: true,
       );
 
       await tester.pumpWidget(
@@ -219,6 +222,7 @@ void main() {
         canSwitchCamera: false,
         aspectRatio: model.AspectRatio.square,
         segments: [],
+        hasSegments: false,
       );
 
       await tester.pumpWidget(
@@ -274,6 +278,7 @@ void main() {
             filePath: '/test/segment1.mp4',
           ),
         ],
+        hasSegments: true,
       );
 
       await tester.pumpWidget(

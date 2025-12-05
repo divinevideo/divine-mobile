@@ -28,10 +28,8 @@ void main() {
       PathProviderPlatform.instance = mockPathProvider;
 
       // Clear any cached service instance
-      ServicesBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
-        'flutter/assets',
-        null,
-      );
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMessageHandler('flutter/assets', null);
     });
 
     tearDown(() async {
@@ -41,10 +39,8 @@ void main() {
       }
 
       // Clear mock asset handler
-      ServicesBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
-        'flutter/assets',
-        null,
-      );
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMessageHandler('flutter/assets', null);
     });
 
     test(
@@ -91,27 +87,36 @@ void main() {
           'generatedAt': '2025-11-10T00:00:00.000000',
         });
 
-        ServicesBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
-          'flutter/assets',
-          (ByteData? message) async {
-            if (message == null) return null;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMessageHandler('flutter/assets', (ByteData? message) async {
+              if (message == null) return null;
 
-            // Message is the asset name as UTF-8 bytes
-            final assetName = utf8.decode(message.buffer.asUint8List());
+              // Message is the asset name as UTF-8 bytes
+              final assetName = utf8.decode(message.buffer.asUint8List());
 
-            if (assetName.contains('manifest.json')) {
-              // Return manifest JSON as bytes
-              final bytes = Uint8List.fromList(utf8.encode(manifestJson));
-              return ByteData.sublistView(bytes);
-            } else if (assetName.contains('.mp4')) {
-              // Return fake video bytes
-              final bytes = Uint8List.fromList([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-              return ByteData.sublistView(bytes);
-            }
+              if (assetName.contains('manifest.json')) {
+                // Return manifest JSON as bytes
+                final bytes = Uint8List.fromList(utf8.encode(manifestJson));
+                return ByteData.sublistView(bytes);
+              } else if (assetName.contains('.mp4')) {
+                // Return fake video bytes
+                final bytes = Uint8List.fromList([
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                ]);
+                return ByteData.sublistView(bytes);
+              }
 
-            return null;
-          },
-        );
+              return null;
+            });
 
         // Act: Load seed media
         await SeedMediaPreloadService.loadSeedMediaIfNeeded();
@@ -131,12 +136,10 @@ void main() {
 
     test('loadSeedMediaIfNeeded handles missing manifest gracefully', () async {
       // Setup: Mock manifest not found by returning null
-      ServicesBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
-        'flutter/assets',
-        (message) async {
-          return null; // Simulate asset not found
-        },
-      );
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMessageHandler('flutter/assets', (message) async {
+            return null; // Simulate asset not found
+          });
 
       // Act & Assert: Should not throw, just log error
       expect(
@@ -150,16 +153,14 @@ void main() {
       'loadSeedMediaIfNeeded handles corrupted manifest gracefully',
       () async {
         // Setup: Mock invalid JSON
-        ServicesBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
-          'flutter/assets',
-          (ByteData? message) async {
-            if (message == null) return null;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMessageHandler('flutter/assets', (ByteData? message) async {
+              if (message == null) return null;
 
-            // Return invalid JSON
-            final bytes = Uint8List.fromList(utf8.encode('not valid json'));
-            return ByteData.sublistView(bytes);
-          },
-        );
+              // Return invalid JSON
+              final bytes = Uint8List.fromList(utf8.encode('not valid json'));
+              return ByteData.sublistView(bytes);
+            });
 
         // Act & Assert: Should not throw
         expect(
@@ -199,27 +200,25 @@ void main() {
           0x45,
         ]);
 
-        ServicesBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
-          'flutter/assets',
-          (ByteData? message) async {
-            if (message == null) return null;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMessageHandler('flutter/assets', (ByteData? message) async {
+              if (message == null) return null;
 
-            // Message is the asset name as UTF-8 bytes
-            final assetName = utf8.decode(message.buffer.asUint8List());
+              // Message is the asset name as UTF-8 bytes
+              final assetName = utf8.decode(message.buffer.asUint8List());
 
-            if (assetName.contains('manifest.json')) {
-              // Return manifest JSON as bytes
-              final bytes = Uint8List.fromList(utf8.encode(manifestJson));
-              return ByteData.sublistView(bytes);
-            } else if (assetName.contains('unique0000test1111') &&
-                assetName.contains('.mp4')) {
-              // Return fake video bytes if unique string is in the path
-              return ByteData.sublistView(testVideoBytes);
-            }
+              if (assetName.contains('manifest.json')) {
+                // Return manifest JSON as bytes
+                final bytes = Uint8List.fromList(utf8.encode(manifestJson));
+                return ByteData.sublistView(bytes);
+              } else if (assetName.contains('unique0000test1111') &&
+                  assetName.contains('.mp4')) {
+                // Return fake video bytes if unique string is in the path
+                return ByteData.sublistView(testVideoBytes);
+              }
 
-            return null;
-          },
-        );
+              return null;
+            });
 
         // Act: Load seed media
         await SeedMediaPreloadService.loadSeedMediaIfNeeded();

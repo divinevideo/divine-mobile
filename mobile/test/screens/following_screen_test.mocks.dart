@@ -307,6 +307,14 @@ class MockNostrService extends _i1.Mock implements _i5.NostrService {
           as _i6.Stream<_i8.Event>);
 
   @override
+  _i6.Stream<_i8.Event> searchUsers(String? query, {int? limit}) =>
+      (super.noSuchMethod(
+            Invocation.method(#searchUsers, [query], {#limit: limit}),
+            returnValue: _i6.Stream<_i8.Event>.empty(),
+          )
+          as _i6.Stream<_i8.Event>);
+
+  @override
   _i6.Future<Map<String, dynamic>?> getRelayStats() =>
       (super.noSuchMethod(
             Invocation.method(#getRelayStats, []),
@@ -575,6 +583,15 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
   ) =>
       (super.noSuchMethod(
             Invocation.method(#refreshCurrentProfile, [userProfileService]),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
+          )
+          as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> acceptTermsOfService() =>
+      (super.noSuchMethod(
+            Invocation.method(#acceptTermsOfService, []),
             returnValue: _i6.Future<void>.value(),
             returnValueForMissingStub: _i6.Future<void>.value(),
           )

@@ -18,7 +18,10 @@ enum AuthState {
   /// User is not authenticated (no keys stored)
   unauthenticated,
 
-  /// User is authenticated (has valid keys)
+  /// User has keys but hasn't accepted Terms of Service yet
+  awaitingTosAcceptance,
+
+  /// User is authenticated (has valid keys and accepted TOS)
   authenticated,
 
   /// Authentication state is being checked
@@ -376,6 +379,39 @@ class AuthService {
     }
   }
 
+  /// Accept Terms of Service - transitions to authenticated state
+  Future<void> acceptTermsOfService() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'terms_accepted_at',
+        DateTime.now().toIso8601String(),
+      );
+      await prefs.setBool('age_verified_16_plus', true);
+
+      // If unauthenticated (e.g., after logout), re-initialize to load existing keys
+      if (_authState == AuthState.unauthenticated) {
+        await initialize();
+        return;
+      }
+
+      _setAuthState(AuthState.authenticated);
+
+      Log.info(
+        'Terms of Service accepted, user is now fully authenticated',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+    } catch (e) {
+      Log.error(
+        'Failed to save TOS acceptance: $e',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
+      _lastError = 'Failed to accept terms: $e';
+    }
+  }
+
   /// Sign out the current user
   Future<void> signOut({bool deleteKeys = false}) async {
     Log.debug(
@@ -385,6 +421,11 @@ class AuthService {
     );
 
     try {
+      // Clear TOS acceptance on any logout - user must re-accept when logging back in
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('age_verified_16_plus');
+      await prefs.remove('terms_accepted_at');
+
       if (deleteKeys) {
         Log.debug(
           '📱️ Deleting stored keys',
@@ -393,7 +434,6 @@ class AuthService {
         );
         await _keyStorage.deleteKeys();
       } else {
-        // Just clear cache
         _keyStorage.clearCache();
       }
 
@@ -410,6 +450,15 @@ class AuthService {
         name: 'AuthService',
         category: LogCategory.auth,
       );
+
+      if (deleteKeys) {
+        Log.info(
+          'Auto-creating new identity after key deletion',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        await _checkExistingAuth();
+      }
     } catch (e) {
       Log.error(
         'Error during sign out: $e',
@@ -750,15 +799,23 @@ class AuthService {
         'current_user_pubkey_hex',
         keyContainer.publicKeyHex,
       );
+
+      final hasAcceptedTos = prefs.getBool('age_verified_16_plus') ?? false;
+      if (hasAcceptedTos) {
+        _setAuthState(AuthState.authenticated);
+      } else {
+        _setAuthState(AuthState.awaitingTosAcceptance);
+      }
     } catch (e) {
       Log.warning(
-        'Failed to save current user pubkey to prefs: $e',
+        'Failed to check TOS status: $e',
         name: 'AuthService',
         category: LogCategory.auth,
       );
+      // Default to awaiting TOS if we can't check
+      _setAuthState(AuthState.awaitingTosAcceptance);
     }
 
-    _setAuthState(AuthState.authenticated);
     _profileController.add(_currentProfile);
 
     Log.info(

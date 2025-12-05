@@ -10,7 +10,6 @@ void main() {
       // The issue: NostrService._rememberGlobalEvent() drops events across ALL subscriptions
 
       // Create a mock event ID that would appear in both search and hashtag results
-      const testEventId = 'test_event_12345';
 
       // Simulate the flow:
       // 1. User searches for "integration" - event arrives via search subscription
@@ -21,8 +20,8 @@ void main() {
       // - NostrService should allow same event in different subscription contexts
       // - Deduplication should be per-subscription-type, not global
 
-      // TODO: Implement actual test with NostrService instance
-      // For now, this documents the expected behavior
+      // TODO(any): Implement actual test with NostrService instance.
+      //  For now, this documents the expected behavior.
 
       expect(
         true,
@@ -36,8 +35,6 @@ void main() {
       () async {
         // Even with per-subscription-type deduplication, we should still prevent
         // the same event from being processed twice within the SAME subscription
-
-        const testEventId = 'duplicate_in_same_sub';
 
         // Expected behavior:
         // - First delivery of event to hashtag sub: accepted

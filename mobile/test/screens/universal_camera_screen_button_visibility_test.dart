@@ -1,4 +1,8 @@
+// ABOUTME: Tests for VineRecordingUIState canSwitchCamera field
+// ABOUTME: Validates camera switch button visibility state management
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/models/aspect_ratio.dart' as model;
 import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/services/vine_recording_controller.dart'
     show VineRecordingState;
@@ -14,8 +18,10 @@ void main() {
         remainingDuration: Duration(seconds: 30),
         canRecord: true,
         segments: [],
+        hasSegments: false,
         isCameraInitialized: true,
         canSwitchCamera: true,
+        aspectRatio: model.AspectRatio.square,
       );
 
       expect(state.canSwitchCamera, isTrue);
@@ -29,8 +35,10 @@ void main() {
         remainingDuration: Duration(seconds: 30),
         canRecord: true,
         segments: [],
+        hasSegments: false,
         isCameraInitialized: true,
         canSwitchCamera: false,
+        aspectRatio: model.AspectRatio.square,
       );
 
       expect(state.canSwitchCamera, isFalse);
@@ -44,8 +52,10 @@ void main() {
         remainingDuration: Duration(seconds: 30),
         canRecord: true,
         segments: [],
+        hasSegments: false,
         isCameraInitialized: true,
         canSwitchCamera: true,
+        aspectRatio: model.AspectRatio.square,
       );
 
       final copied = state.copyWith(progress: 0.5);
@@ -62,8 +72,10 @@ void main() {
         remainingDuration: Duration(seconds: 30),
         canRecord: true,
         segments: [],
+        hasSegments: false,
         isCameraInitialized: true,
         canSwitchCamera: true,
+        aspectRatio: model.AspectRatio.square,
       );
 
       final copied = state.copyWith(canSwitchCamera: false);

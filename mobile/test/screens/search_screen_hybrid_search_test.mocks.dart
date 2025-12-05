@@ -976,6 +976,15 @@ class MockUserProfileService extends _i1.Mock
   );
 
   @override
+  _i8.Future<void> searchUsers(String? query, {int? limit}) =>
+      (super.noSuchMethod(
+            Invocation.method(#searchUsers, [query], {#limit: limit}),
+            returnValue: _i8.Future<void>.value(),
+            returnValueForMissingStub: _i8.Future<void>.value(),
+          )
+          as _i8.Future<void>);
+
+  @override
   Map<String, dynamic> getCacheStats() =>
       (super.noSuchMethod(
             Invocation.method(#getCacheStats, []),

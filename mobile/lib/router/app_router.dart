@@ -25,6 +25,8 @@ import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_editor_screen.dart';
 import 'package:openvine/screens/vine_drafts_screen.dart';
 import 'package:openvine/screens/welcome_screen.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_stop_navigator_observer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -63,6 +65,7 @@ int tabIndexFromLocation(String loc) {
     case 'edit-profile':
     case 'setup-profile':
     case 'import-key':
+    case 'welcome':
     case 'camera':
     case 'drafts':
     case 'followers':
@@ -117,7 +120,22 @@ Future<bool> hasAnyFollowingInCache(SharedPreferences prefs) async {
   }
 }
 
+/// Listenable that notifies when auth state changes
+class _AuthStateListenable extends ChangeNotifier {
+  _AuthStateListenable(this._authService) {
+    _authService.authStateStream.listen((_) {
+      notifyListeners();
+    });
+  }
+
+  final AuthService _authService;
+}
+
 final goRouterProvider = Provider<GoRouter>((ref) {
+  // Watch auth service to trigger router refresh on auth state changes
+  final authService = ref.watch(authServiceProvider);
+  final authListenable = _AuthStateListenable(authService);
+
   return GoRouter(
     navigatorKey: _rootKey,
     initialLocation: '/home/0',
@@ -125,6 +143,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       VideoStopNavigatorObserver(),
       FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
     ],
+    // Refresh router when auth state changes
+    refreshListenable: authListenable,
     redirect: (context, state) async {
       final location = state.matchedLocation;
       final prefs = await SharedPreferences.getInstance();
@@ -135,7 +155,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         final hasAcceptedTerms = prefs.getBool('age_verified_16_plus') ?? false;
 
         if (!hasAcceptedTerms) {
+          debugPrint('[Router] TOS not accepted, redirecting to /welcome');
           return '/welcome';
+        }
+      }
+
+      // Redirect FROM /welcome TO /explore when TOS is accepted
+      if (location.startsWith('/welcome')) {
+        final hasAcceptedTerms = prefs.getBool('age_verified_16_plus') ?? false;
+        if (hasAcceptedTerms) {
+          debugPrint(
+            '[Router] TOS accepted, redirecting from /welcome to /explore',
+          );
+          return '/explore';
         }
       }
 
@@ -146,6 +178,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
         // Check SharedPreferences cache directly for following list
         // This is more reliable than checking socialProvider state which may not be initialized
+        final prefs = await SharedPreferences.getInstance();
         final hasFollowing = await hasAnyFollowingInCache(prefs);
         debugPrint(
           '[Router] Empty contacts check: hasFollowing=$hasFollowing, redirecting=${!hasFollowing}',
