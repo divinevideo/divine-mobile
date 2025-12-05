@@ -23,6 +23,8 @@ environment:
   flutter: ^3.38.3
 
 workspace:
+  - packages/db_client
+  - packages/models
   - packages/nostr_sdk
   - packages/nostr_client
   - packages/nostr_gateway
@@ -170,6 +172,7 @@ dev_dependencies:
   alchemist: ^0.12.1
   async: ^2.13.0
   drift_dev: ^2.29.0
+  melos: ^7.3.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -243,3 +246,9 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   adaptive_icon_background: "#00B488"
   adaptive_icon_foreground: "assets/icon/app_icon.png"
+
+melos:
+  useRootAsPackage: true
+
+  scripts:
+    generate: melos exec --depends-on build_runner -- dart run build_runner build -d

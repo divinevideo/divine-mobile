@@ -2,6 +2,7 @@ name: models
 description: A package containing data models used across the application.
 version: 0.1.0+1
 publish_to: none
+resolution: workspace
 
 environment:
   sdk: ^3.9.0
