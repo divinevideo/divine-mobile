@@ -2,10 +2,22 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Flutter: Run",
+      "name": "Flutter: Run (iOS)",
       "type": "dart",
       "request": "launch",
-      "program": "lib/main.dart"
+      "program": "lib/main.dart",
+      "args": [
+        "-d", "00008110-0004283602D0201E"
+      ]
+    },
+    {
+      "name": "Flutter: Run (Android)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "args": [
+        "-d", "ce0517155bc37c530d"
+      ]
     },
     
   ]
