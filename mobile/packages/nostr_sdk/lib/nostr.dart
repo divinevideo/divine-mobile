@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
-
 import 'event.dart';
 import 'event_kind.dart';
 import 'event_mem_box.dart';
@@ -33,7 +31,6 @@ class Nostr {
     List<EventFilter> eventFilters,
     this.tempRelayGener, {
     this.onNotice,
-    @visibleForTesting
     WebSocketChannelFactory? channelFactory,
   }) {
     _pool = RelayPool(

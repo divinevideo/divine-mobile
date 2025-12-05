@@ -37,6 +37,8 @@ void main() {
         final config = NostrClientConfig(
           signer: mockSigner,
           publicKey: testPublicKey,
+          // easier to verify that the values are set correctly
+          // ignore: avoid_redundant_argument_values
           eventFilters: eventFilters,
           onNotice: noticeCallback,
           gatewayUrl: 'https://gateway.example.com',
@@ -65,4 +67,3 @@ void main() {
     });
   });
 }
-

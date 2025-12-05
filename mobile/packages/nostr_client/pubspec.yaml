@@ -10,6 +10,7 @@ resolution: workspace
 
 dependencies:
   crypto: ^3.0.7
+  meta: ^1.16.0
   nostr_gateway:
     path: ../nostr_gateway
   nostr_sdk:

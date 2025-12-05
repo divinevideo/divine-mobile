@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:meta/meta.dart';
 import 'package:nostr_client/src/models/models.dart';
 import 'package:nostr_gateway/nostr_gateway.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -22,18 +23,29 @@ class NostrClient {
   /// {@macro nostr_client}
   ///
   /// Creates a new NostrClient instance with the given configuration
-  NostrClient(NostrClientConfig config)
-      : _nostr = _createNostr(config),
-        _gatewayClient = config.enableGateway
-            ? GatewayClient(gatewayUrl: config.gatewayUrl)
-            : null;
+  NostrClient({
+    required NostrClientConfig config,
+    required GatewayClient gatewayClient,
+  }) : _config = config,
+       _nostr = _createNostr(config),
+       _gatewayClient = gatewayClient;
+
+  /// Creates a NostrClient with injected dependencies for testing
+  @visibleForTesting
+  NostrClient.forTesting({
+    required NostrClientConfig config,
+    required Nostr nostr,
+    GatewayClient? gatewayClient,
+  }) : _config = config,
+       _nostr = nostr,
+       _gatewayClient = gatewayClient;
 
   static Nostr _createNostr(NostrClientConfig config) {
     RelayBase tempRelayGenerator(String url) => RelayBase(
-          url,
-          RelayStatus(url),
-          channelFactory: config.webSocketChannelFactory,
-        );
+      url,
+      RelayStatus(url),
+      channelFactory: config.webSocketChannelFactory,
+    );
     return Nostr(
       config.signer,
       config.publicKey,
@@ -45,8 +57,9 @@ class NostrClient {
   }
 
   final Nostr _nostr;
+  final NostrClientConfig _config;
   final GatewayClient? _gatewayClient;
-
+  
   /// Public key of the client
   String get publicKey => _nostr.publicKey;
 
@@ -255,7 +268,11 @@ class NostrClient {
   ///
   /// Delegates to relayPool.add().
   Future<bool> addRelay(String relayUrl) async {
-    final relay = RelayBase(relayUrl, RelayStatus(relayUrl));
+    final relay = RelayBase(
+      relayUrl,
+      RelayStatus(relayUrl),
+      channelFactory: _config.webSocketChannelFactory,
+    );
     return relayPool.add(relay);
   }
 

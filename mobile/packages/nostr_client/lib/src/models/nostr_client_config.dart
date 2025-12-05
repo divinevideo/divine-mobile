@@ -1,5 +1,4 @@
 import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:nostr_sdk/relay/web_socket_connection_manager.dart';
 
 /// {@template nostr_client_config}
 /// Configuration for NostrClient initialization

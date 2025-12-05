@@ -19,6 +19,7 @@ export 'relay/relay_pool.dart';
 export 'relay/relay_status.dart';
 export 'relay/relay_type.dart';
 export 'relay/event_filter.dart';
+export 'relay/web_socket_connection_manager.dart';
 
 // Essential NIP implementations
 export 'nip02/contact.dart';

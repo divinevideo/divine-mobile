@@ -1,648 +1,1478 @@
-// Easier to read and understand test validation
-// ignore_for_file: avoid_redundant_argument_values
-
 import 'dart:async';
+
 import 'package:mocktail/mocktail.dart';
-import 'package:nostr_client/src/models/models.dart';
-import 'package:nostr_client/src/nostr_client.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_gateway/nostr_gateway.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:test/test.dart';
 
-class MockGatewayClient extends Mock implements GatewayClient {}
+class _MockNostr extends Mock implements Nostr {}
 
-class MockNostrSigner extends Mock implements NostrSigner {}
+class _MockGatewayClient extends Mock implements GatewayClient {}
+
+class _MockRelayPool extends Mock implements RelayPool {}
+
+class _MockRelay extends Mock implements Relay {}
+
+class _MockNostrSigner extends Mock implements NostrSigner {}
+
+class _FakeEvent extends Fake implements Event {}
+
+class _FakeFilter extends Fake implements Filter {}
+
+class _FakeContactList extends Fake implements ContactList {}
+
+class _FakeRelay extends Fake implements Relay {
+  @override
+  final String url = 'wss://fake.example.com';
+
+  @override
+  RelayStatus relayStatus = RelayStatus('wss://fake.example.com');
+}
+
+const testPublicKey =
+    '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2';
+
+Event _createTestEvent({
+  String? id,
+  String? pubkey,
+  int? kind,
+  String? content,
+  int? createdAt,
+}) {
+  final eventPubkey = pubkey ?? testPublicKey;
+  final eventKind = kind ?? EventKind.TEXT_NOTE;
+  final eventContent = content ?? 'Test content';
+  final event = Event(
+    eventPubkey,
+    eventKind,
+    <List<dynamic>>[],
+    eventContent,
+    createdAt: createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
+  );
+  if (id != null) {
+    // Override the generated ID for testing
+    event.id = id;
+  }
+  return event;
+}
+
+NostrClientConfig _createTestConfig({
+  NostrSigner? signer,
+  String? publicKey,
+}) {
+  return NostrClientConfig(
+    signer: signer ?? _MockNostrSigner(),
+    publicKey: publicKey ?? testPublicKey,
+  );
+}
+
+// =============================================================================
+// Tests
+// =============================================================================
 
 void main() {
+  late _MockNostr mockNostr;
+  late _MockGatewayClient mockGatewayClient;
+  late _MockRelayPool mockRelayPool;
+  late NostrClientConfig config;
+  late NostrClient client;
+
   setUpAll(() {
-    registerFallbackValue(
-      Event(
-        '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2',
-        1,
-        <dynamic>[],
-        '',
-        createdAt: 1234567890,
-      ),
+    registerFallbackValue(_FakeEvent());
+    registerFallbackValue(_FakeFilter());
+    registerFallbackValue(_FakeContactList());
+    registerFallbackValue(_FakeRelay());
+    registerFallbackValue(<Map<String, dynamic>>[]);
+    registerFallbackValue(<String>[]);
+    registerFallbackValue(RelayType.ALL);
+  });
+
+  setUp(() {
+    mockNostr = _MockNostr();
+    mockGatewayClient = _MockGatewayClient();
+    mockRelayPool = _MockRelayPool();
+    config = _createTestConfig();
+
+    // Set up default mock behavior
+    when(() => mockNostr.publicKey).thenReturn(testPublicKey);
+    when(() => mockNostr.relayPool).thenReturn(mockRelayPool);
+    when(() => mockNostr.close()).thenReturn(null);
+
+    client = NostrClient.forTesting(
+      config: config,
+      nostr: mockNostr,
+      gatewayClient: mockGatewayClient,
     );
   });
 
+  tearDown(() {
+    reset(mockNostr);
+    reset(mockGatewayClient);
+    reset(mockRelayPool);
+  });
+
   group('NostrClient', () {
-    late NostrSigner mockSigner;
-    const testPublicKey =
-        '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2';
-    const testEventId =
-        '0000000000000000000000000000000000000000000000000000000000000000';
-    const testRelayUrl = 'wss://relay.example.com';
-
-    setUp(() {
-      mockSigner = MockNostrSigner();
-      when(() => mockSigner.getPublicKey()).thenAnswer((_) async => testPublicKey);
-      when(() => mockSigner.signEvent(any())).thenAnswer((_) async => null);
-    });
-
-    group('constructor', () {
-      test('creates client with gateway disabled', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-          enableGateway: false,
-        );
-
-        final client = NostrClient(config);
-
+    group('constructor and properties', () {
+      test('publicKey returns the nostr public key', () {
         expect(client.publicKey, equals(testPublicKey));
-        expect(client.relayCount, equals(0));
+        verify(() => mockNostr.publicKey).called(1);
       });
 
-      test('creates client with gateway enabled', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-          enableGateway: true,
-          gatewayUrl: 'https://gateway.example.com',
-        );
-
-        final client = NostrClient(config);
-
-        expect(client.publicKey, equals(testPublicKey));
-        expect(client.relayCount, equals(0));
+      test('relayPool returns the nostr relay pool', () {
+        expect(client.relayPool, equals(mockRelayPool));
+        verify(() => mockNostr.relayPool).called(1);
       });
-    });
 
-    group('publicKey', () {
-      test('returns public key from config', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
+      test('creates client with null gatewayClient', () {
+        final clientWithoutGateway = NostrClient.forTesting(
+          config: config,
+          nostr: mockNostr,
         );
-
-        final client = NostrClient(config);
-
-        expect(client.publicKey, equals(testPublicKey));
-      });
-    });
-
-    group('relayPool', () {
-      test('provides access to relay pool', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
-
-        final client = NostrClient(config);
-
-        expect(client.relayPool, isNotNull);
-        expect(client.relayPool, isA<RelayPool>());
+        expect(clientWithoutGateway.publicKey, equals(testPublicKey));
       });
     });
 
     group('publishEvent', () {
-      test('delegates to nostr sendEvent', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+      test('publishes event successfully', () async {
+        final event = _createTestEvent();
+        when(
+          () => mockNostr.sendEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => event);
 
-        final client = NostrClient(config);
-        final event = Event(
-          testPublicKey,
-          1,
-          <dynamic>[],
-          'Test content',
-          createdAt: 1234567890,
-        );
-
-        // Since we can't easily mock Nostr, we test that the method
-        // doesn't throw and handles the call appropriately
-        // In a real scenario, this would require a connected relay
         final result = await client.publishEvent(event);
 
-        // Result may be null if no relay is connected, which is expected
-        expect(result, anyOf(isNull, isA<Event>()));
+        expect(result, equals(event));
+        verify(
+          () => mockNostr.sendEvent(
+            event,
+          ),
+        ).called(1);
       });
 
-      test('accepts target relays parameter', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+      test('publishes event with target relays', () async {
+        final event = _createTestEvent();
+        final targetRelays = ['wss://relay1.example.com'];
+        when(
+          () => mockNostr.sendEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => event);
 
-        final client = NostrClient(config);
-        final event = Event(
-          testPublicKey,
-          1,
-          <dynamic>[],
-          'Test content',
-          createdAt: 1234567890,
-        );
+        await client.publishEvent(event, targetRelays: targetRelays);
 
-        final result = await client.publishEvent(
-          event,
-          targetRelays: [testRelayUrl],
-        );
+        verify(
+          () => mockNostr.sendEvent(
+            event,
+            targetRelays: targetRelays,
+          ),
+        ).called(1);
+      });
 
-        expect(result, anyOf(isNull, isA<Event>()));
+      test('returns null when sendEvent fails', () async {
+        final event = _createTestEvent();
+        when(
+          () => mockNostr.sendEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => null);
+
+        final result = await client.publishEvent(event);
+
+        expect(result, isNull);
       });
     });
 
     group('queryEvents', () {
-      test('returns list when no relays connected', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-          enableGateway: false,
+      test('uses gateway when enabled and single filter', () async {
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+        final events = [_createTestEvent(), _createTestEvent()];
+        final response = GatewayResponse(
+          events: events,
+          eose: true,
+          complete: true,
+          cached: true,
         );
 
-        final client = NostrClient(config);
-        final filters = [Filter(kinds: [1], limit: 10)];
+        when(
+          () => mockGatewayClient.query(any()),
+        ).thenAnswer((_) async => response);
 
-        // Query will timeout or return empty list when no relays connected
-        final result = await client.queryEvents(
-          filters,
-          useGateway: false,
-        ).timeout(
-          const Duration(seconds: 2),
-          onTimeout: () => <Event>[],
+        final result = await client.queryEvents(filters);
+
+        expect(result, equals(events));
+        verify(() => mockGatewayClient.query(any())).called(1);
+        verifyNever(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
         );
-
-        expect(result, isA<List<Event>>());
       });
 
-      test('uses gateway when enabled and useGateway is true', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-          enableGateway: true,
-          gatewayUrl: 'https://gateway.example.com',
+      test('falls back to WebSocket when gateway returns empty', () async {
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+        final events = [_createTestEvent()];
+        const emptyResponse = GatewayResponse(
+          events: [],
+          eose: true,
+          complete: true,
+          cached: false,
         );
 
-        final client = NostrClient(config);
-        final filters = [Filter(kinds: [1], limit: 10)];
+        when(
+          () => mockGatewayClient.query(any()),
+        ).thenAnswer((_) async => emptyResponse);
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => events);
 
-        // Gateway will be tried first, but since we can't inject mock,
-        // it will fall back to WebSocket query
-        final result = await client.queryEvents(
-          filters,
-          useGateway: true,
-        ).timeout(
-          const Duration(seconds: 2),
-          onTimeout: () => <Event>[],
-        );
+        final result = await client.queryEvents(filters);
 
-        expect(result, isA<List<Event>>());
+        expect(result, equals(events));
+        verify(() => mockGatewayClient.query(any())).called(1);
+        verify(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).called(1);
+      });
+
+      test('falls back to WebSocket when gateway throws', () async {
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+        final events = [_createTestEvent()];
+
+        when(
+          () => mockGatewayClient.query(any()),
+        ).thenThrow(Exception('Gateway error'));
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => events);
+
+        final result = await client.queryEvents(filters);
+
+        expect(result, equals(events));
       });
 
       test('skips gateway when useGateway is false', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-          enableGateway: true,
-        );
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+        final events = [_createTestEvent()];
 
-        final client = NostrClient(config);
-        final filters = [Filter(kinds: [1], limit: 10)];
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => events);
 
-        final result = await client.queryEvents(
-          filters,
-          useGateway: false,
-        ).timeout(
-          const Duration(seconds: 2),
-          onTimeout: () => <Event>[],
-        );
+        final result = await client.queryEvents(filters, useGateway: false);
 
-        expect(result, isA<List<Event>>());
+        expect(result, equals(events));
+        verifyNever(() => mockGatewayClient.query(any()));
       });
 
       test('skips gateway when multiple filters provided', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-          enableGateway: true,
-        );
-
-        final client = NostrClient(config);
         final filters = [
-          Filter(kinds: [1], limit: 10),
-          Filter(kinds: [0], limit: 5),
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.METADATA], limit: 5),
         ];
+        final events = [_createTestEvent()];
 
-        final result = await client.queryEvents(
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => events);
+
+        final result = await client.queryEvents(filters);
+
+        expect(result, equals(events));
+        verifyNever(() => mockGatewayClient.query(any()));
+      });
+
+      test('passes all parameters to WebSocket query', () async {
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+        final events = [_createTestEvent()];
+        final tempRelays = ['wss://temp.example.com'];
+
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => events);
+
+        await client.queryEvents(
           filters,
-          useGateway: true,
-        ).timeout(
-          const Duration(seconds: 2),
-          onTimeout: () => <Event>[],
+          subscriptionId: 'test-sub',
+          tempRelays: tempRelays,
+          relayTypes: [RelayType.NORMAL],
+          sendAfterAuth: true,
+          useGateway: false,
         );
 
-        expect(result, isA<List<Event>>());
+        verify(
+          () => mockNostr.queryEvents(
+            any(),
+            id: 'test-sub',
+            tempRelays: tempRelays,
+            relayTypes: [RelayType.NORMAL],
+            sendAfterAuth: true,
+          ),
+        ).called(1);
+      });
+
+      test('works without gateway client', () async {
+        final clientWithoutGateway = NostrClient.forTesting(
+          config: config,
+          nostr: mockNostr,
+        );
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+        final events = [_createTestEvent()];
+
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => events);
+
+        final result = await clientWithoutGateway.queryEvents(filters);
+
+        expect(result, equals(events));
       });
     });
 
     group('fetchEventById', () {
-      test('returns null when event not found', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-          enableGateway: false,
-        );
+      test('uses gateway when enabled', () async {
+        const eventId = 'test-event-id';
+        final event = _createTestEvent(id: eventId);
 
-        final client = NostrClient(config);
+        when(
+          () => mockGatewayClient.getEvent(eventId),
+        ).thenAnswer((_) async => event);
 
-        final result = await client.fetchEventById(
-          testEventId,
-          useGateway: false,
-        ).timeout(
-          const Duration(seconds: 2),
-          onTimeout: () => null,
-        );
+        final result = await client.fetchEventById(eventId);
+
+        expect(result, equals(event));
+        verify(() => mockGatewayClient.getEvent(eventId)).called(1);
+      });
+
+      test('falls back to WebSocket when gateway returns null', () async {
+        const eventId = 'test-event-id';
+        final event = _createTestEvent(id: eventId);
+
+        when(
+          () => mockGatewayClient.getEvent(eventId),
+        ).thenAnswer((_) async => null);
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => [event]);
+
+        final result = await client.fetchEventById(eventId);
+
+        expect(result, equals(event));
+      });
+
+      test('falls back to WebSocket when gateway throws', () async {
+        const eventId = 'test-event-id';
+        final event = _createTestEvent(id: eventId);
+
+        when(
+          () => mockGatewayClient.getEvent(eventId),
+        ).thenThrow(Exception('Gateway error'));
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => [event]);
+
+        final result = await client.fetchEventById(eventId);
+
+        expect(result, equals(event));
+      });
+
+      test('skips gateway when useGateway is false', () async {
+        const eventId = 'test-event-id';
+        final event = _createTestEvent(id: eventId);
+
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => [event]);
+
+        await client.fetchEventById(eventId, useGateway: false);
+
+        verifyNever(() => mockGatewayClient.getEvent(any()));
+      });
+
+      test('uses provided relayUrl', () async {
+        const eventId = 'test-event-id';
+        const relayUrl = 'wss://relay.example.com';
+        final event = _createTestEvent(id: eventId);
+
+        when(
+          () => mockGatewayClient.getEvent(eventId),
+        ).thenAnswer((_) async => null);
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => [event]);
+
+        await client.fetchEventById(eventId, relayUrl: relayUrl);
+
+        verify(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: [relayUrl],
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).called(1);
+      });
+
+      test('returns null when no events found', () async {
+        const eventId = 'nonexistent-id';
+
+        when(
+          () => mockGatewayClient.getEvent(eventId),
+        ).thenAnswer((_) async => null);
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => []);
+
+        final result = await client.fetchEventById(eventId);
 
         expect(result, isNull);
-      });
-
-      test('uses gateway when enabled', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-          enableGateway: true,
-        );
-
-        final client = NostrClient(config);
-
-        final result = await client.fetchEventById(
-          testEventId,
-          useGateway: true,
-        ).timeout(
-          const Duration(seconds: 2),
-          onTimeout: () => null,
-        );
-
-        expect(result, anyOf(isNull, isA<Event>()));
-      });
-
-      test('accepts relay URL parameter', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-          enableGateway: false,
-        );
-
-        final client = NostrClient(config);
-
-        final result = await client.fetchEventById(
-          testEventId,
-          relayUrl: testRelayUrl,
-          useGateway: false,
-        ).timeout(
-          const Duration(seconds: 2),
-          onTimeout: () => null,
-        );
-
-        expect(result, anyOf(isNull, isA<Event>()));
       });
     });
 
     group('fetchProfile', () {
-      test('returns null when profile not found', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-          enableGateway: false,
+      test('uses gateway when enabled', () async {
+        const pubkey = testPublicKey;
+        final profileEvent = _createTestEvent(
+          pubkey: pubkey,
+          kind: EventKind.METADATA,
+          content: '{"name":"Test User"}',
         );
 
-        final client = NostrClient(config);
+        when(
+          () => mockGatewayClient.getProfile(pubkey),
+        ).thenAnswer((_) async => profileEvent);
 
-        final result = await client.fetchProfile(
-          testPublicKey,
-          useGateway: false,
-        ).timeout(
-          const Duration(seconds: 2),
-          onTimeout: () => null,
-        );
+        final result = await client.fetchProfile(pubkey);
 
-        expect(result, anyOf(isNull, isA<Event>()));
+        expect(result, equals(profileEvent));
+        verify(() => mockGatewayClient.getProfile(pubkey)).called(1);
       });
 
-      test('uses gateway when enabled', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-          enableGateway: true,
+      test('falls back to WebSocket when gateway returns null', () async {
+        const pubkey = testPublicKey;
+        final profileEvent = _createTestEvent(
+          pubkey: pubkey,
+          kind: EventKind.METADATA,
         );
 
-        final client = NostrClient(config);
+        when(
+          () => mockGatewayClient.getProfile(pubkey),
+        ).thenAnswer((_) async => null);
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => [profileEvent]);
 
-        final result = await client.fetchProfile(
-          testPublicKey,
-          useGateway: true,
-        ).timeout(
-          const Duration(seconds: 2),
-          onTimeout: () => null,
+        final result = await client.fetchProfile(pubkey);
+
+        expect(result, equals(profileEvent));
+      });
+
+      test('falls back to WebSocket when gateway throws', () async {
+        const pubkey = testPublicKey;
+        final profileEvent = _createTestEvent(
+          pubkey: pubkey,
+          kind: EventKind.METADATA,
         );
 
-        expect(result, anyOf(isNull, isA<Event>()));
+        when(
+          () => mockGatewayClient.getProfile(pubkey),
+        ).thenThrow(Exception('Gateway error'));
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => [profileEvent]);
+
+        final result = await client.fetchProfile(pubkey);
+
+        expect(result, equals(profileEvent));
+      });
+
+      test('skips gateway when useGateway is false', () async {
+        const pubkey = testPublicKey;
+        final profileEvent = _createTestEvent(
+          pubkey: pubkey,
+          kind: EventKind.METADATA,
+        );
+
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => [profileEvent]);
+
+        await client.fetchProfile(pubkey, useGateway: false);
+
+        verifyNever(() => mockGatewayClient.getProfile(any()));
+      });
+
+      test('returns null when no profile found', () async {
+        const pubkey = testPublicKey;
+
+        when(
+          () => mockGatewayClient.getProfile(pubkey),
+        ).thenAnswer((_) async => null);
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => []);
+
+        final result = await client.fetchProfile(pubkey);
+
+        expect(result, isNull);
       });
     });
 
     group('subscribe', () {
-      test('returns stream for new subscription', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+      test('creates subscription and returns stream', () {
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
 
-        final client = NostrClient(config);
-        final filters = [Filter(kinds: [1], limit: 10)];
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenReturn('test-sub-id');
 
         final stream = client.subscribe(filters);
 
         expect(stream, isA<Stream<Event>>());
+        verify(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).called(1);
       });
 
-      test('deduplicates subscriptions with same filters', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+      test('creates new subscription for different filters', () {
+        final filters1 = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+        final filters2 = [
+          Filter(kinds: [EventKind.METADATA], limit: 5),
+        ];
 
-        final client = NostrClient(config);
-        final filters = [Filter(kinds: [1], limit: 10)];
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenReturn('test-sub-id');
 
-        final stream1 = client.subscribe(filters);
-        final stream2 = client.subscribe(filters);
+        client
+          ..subscribe(filters1)
+          ..subscribe(filters2);
 
-        // Should return the same stream for duplicate subscriptions
-        expect(stream1, equals(stream2));
+        // Should create two separate subscriptions
+        verify(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).called(2);
       });
 
-      test('creates different streams for different filters', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+      test('uses custom subscription ID when provided', () {
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+        const customId = 'my-custom-subscription';
 
-        final client = NostrClient(config);
-        final filters1 = [Filter(kinds: [1], limit: 10)];
-        final filters2 = [Filter(kinds: [0], limit: 5)];
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenReturn(customId);
 
-        final stream1 = client.subscribe(filters1);
-        final stream2 = client.subscribe(filters2);
+        client.subscribe(filters, subscriptionId: customId);
 
-        expect(stream1, isNot(equals(stream2)));
+        verify(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: customId,
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).called(1);
       });
 
-      test('accepts custom subscription ID', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+      test('passes all parameters correctly', () {
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+        final tempRelays = ['wss://temp.example.com'];
+        final targetRelays = ['wss://target.example.com'];
 
-        final client = NostrClient(config);
-        final filters = [Filter(kinds: [1], limit: 10)];
-
-        final stream = client.subscribe(filters, subscriptionId: 'custom_id');
-
-        expect(stream, isA<Stream<Event>>());
-      });
-
-      test('calls onEose callback when provided', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
-
-        final client = NostrClient(config);
-        final filters = [Filter(kinds: [1], limit: 10)];
-        var eoseCalled = false;
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenReturn('test-sub-id');
 
         client.subscribe(
           filters,
-          onEose: () {
-            eoseCalled = true;
-          },
+          subscriptionId: 'test-id',
+          tempRelays: tempRelays,
+          targetRelays: targetRelays,
+          relayTypes: [RelayType.NORMAL],
+          sendAfterAuth: true,
         );
 
-        // onEose will be called by nostr_sdk when EOSE is received
-        expect(eoseCalled, isFalse);
+        verify(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: 'test-id',
+            tempRelays: tempRelays,
+            targetRelays: targetRelays,
+            relayTypes: [RelayType.NORMAL],
+            sendAfterAuth: true,
+          ),
+        ).called(1);
+      });
+
+      test('handles nostr returning different subscription ID', () {
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+
+        // Nostr returns a different ID than what was requested
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenReturn('nostr-generated-id');
+
+        final stream = client.subscribe(filters, subscriptionId: 'my-id');
+
+        expect(stream, isA<Stream<Event>>());
       });
     });
 
     group('unsubscribe', () {
-      test('closes subscription stream', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+      test('unsubscribes and closes stream', () async {
+        const subscriptionId = 'test-sub-id';
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
 
-        final client = NostrClient(config);
-        final filters = [Filter(kinds: [1], limit: 10)];
-        final stream = client.subscribe(filters, subscriptionId: 'test_sub');
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenReturn(subscriptionId);
+        when(() => mockNostr.unsubscribe(any())).thenReturn(null);
 
-        await client.unsubscribe('test_sub');
+        client.subscribe(filters, subscriptionId: subscriptionId);
+        await client.unsubscribe(subscriptionId);
 
-        // Stream should be closed
-        expect(
-          () => stream.listen(null),
-          returnsNormally,
-        );
+        verify(() => mockNostr.unsubscribe(subscriptionId)).called(1);
       });
 
-      test('handles unsubscribe for non-existent subscription', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
-
-        final client = NostrClient(config);
+      test('handles unsubscribing non-existent subscription', () async {
+        when(() => mockNostr.unsubscribe(any())).thenReturn(null);
 
         // Should not throw
-        await client.unsubscribe('non_existent');
+        await client.unsubscribe('nonexistent-id');
+
+        verify(() => mockNostr.unsubscribe('nonexistent-id')).called(1);
       });
     });
 
     group('closeAllSubscriptions', () {
-      test('closes all active subscriptions', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+      test('closes all active subscriptions', () async {
+        final filters1 = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+        final filters2 = [
+          Filter(kinds: [EventKind.METADATA], limit: 5),
+        ];
 
-        final client = NostrClient(config);
-        client.subscribe([Filter(kinds: [1])], subscriptionId: 'sub1');
-        client.subscribe([Filter(kinds: [0])], subscriptionId: 'sub2');
+        var callCount = 0;
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) => 'sub-${callCount++}');
+        when(() => mockNostr.unsubscribe(any())).thenReturn(null);
 
-        client.closeAllSubscriptions();
+        client
+          ..subscribe(filters1)
+          ..subscribe(filters2)
+          ..closeAllSubscriptions();
 
-        // All subscriptions should be closed
-        expect(client.relayCount, equals(0));
-      });
-    });
-
-    group('relay management', () {
-      test('addRelay adds relay to pool', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
-
-        final client = NostrClient(config);
-
-        final result = await client.addRelay(testRelayUrl);
-
-        // Result depends on whether relay connects successfully
-        expect(result, isA<bool>());
+        verify(() => mockNostr.unsubscribe(any())).called(2);
       });
 
-      test('removeRelay removes relay from pool', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
-
-        final client = NostrClient(config);
+      test('handles no active subscriptions', () {
+        when(() => mockNostr.unsubscribe(any())).thenReturn(null);
 
         // Should not throw
-        await client.removeRelay(testRelayUrl);
-      });
+        client.closeAllSubscriptions();
 
-      test('connectedRelays returns list of relay URLs', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
-
-        final client = NostrClient(config);
-
-        final relays = client.connectedRelays;
-
-        expect(relays, isA<List<String>>());
-        expect(relays, isEmpty);
-      });
-
-      test('relayCount returns count of connected relays', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
-
-        final client = NostrClient(config);
-
-        expect(client.relayCount, equals(0));
-      });
-
-      test('relayStatuses returns map of relay statuses', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
-
-        final client = NostrClient(config);
-
-        final statuses = client.relayStatuses;
-
-        expect(statuses, isA<Map<String, dynamic>>());
-        expect(statuses, isEmpty);
+        verifyNever(() => mockNostr.unsubscribe(any()));
       });
     });
 
-    group('event actions', () {
-      test('sendLike delegates to nostr', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+    group('addRelay', () {
+      test('adds relay to pool', () async {
+        const relayUrl = 'wss://relay.example.com';
 
-        final client = NostrClient(config);
+        when(() => mockRelayPool.add(any())).thenAnswer((_) async => true);
 
-        final result = await client.sendLike(testEventId);
+        final result = await client.addRelay(relayUrl);
 
-        expect(result, anyOf(isNull, isA<Event>()));
+        expect(result, isTrue);
+        verify(() => mockRelayPool.add(any())).called(1);
       });
 
-      test('sendRepost delegates to nostr', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+      test('returns false when add fails', () async {
+        const relayUrl = 'wss://relay.example.com';
 
-        final client = NostrClient(config);
+        when(() => mockRelayPool.add(any())).thenAnswer((_) async => false);
 
-        final result = await client.sendRepost(testEventId);
+        final result = await client.addRelay(relayUrl);
 
-        expect(result, anyOf(isNull, isA<Event>()));
+        expect(result, isFalse);
+      });
+    });
+
+    group('removeRelay', () {
+      test('removes relay from pool', () async {
+        const relayUrl = 'wss://relay.example.com';
+
+        when(() => mockRelayPool.remove(any())).thenReturn(null);
+
+        await client.removeRelay(relayUrl);
+
+        verify(() => mockRelayPool.remove(relayUrl)).called(1);
+      });
+    });
+
+    group('connectedRelays', () {
+      test('returns list of connected relay URLs', () {
+        final mockRelay1 = _MockRelay();
+        final mockRelay2 = _MockRelay();
+
+        when(() => mockRelay1.url).thenReturn('wss://relay1.example.com');
+        when(() => mockRelay2.url).thenReturn('wss://relay2.example.com');
+        when(
+          () => mockRelayPool.activeRelays(),
+        ).thenReturn([mockRelay1, mockRelay2]);
+
+        final result = client.connectedRelays;
+
+        expect(result, hasLength(2));
+        expect(result, contains('wss://relay1.example.com'));
+        expect(result, contains('wss://relay2.example.com'));
       });
 
-      test('deleteEvent delegates to nostr', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+      test('returns empty list when no relays connected', () {
+        when(() => mockRelayPool.activeRelays()).thenReturn([]);
 
-        final client = NostrClient(config);
+        final result = client.connectedRelays;
 
-        final result = await client.deleteEvent(testEventId);
+        expect(result, isEmpty);
+      });
+    });
 
-        expect(result, anyOf(isNull, isA<Event>()));
+    group('relayCount', () {
+      test('returns count of connected relays', () {
+        final mockRelay1 = _MockRelay();
+        final mockRelay2 = _MockRelay();
+        final mockRelay3 = _MockRelay();
+
+        when(() => mockRelay1.url).thenReturn('wss://relay1.example.com');
+        when(() => mockRelay2.url).thenReturn('wss://relay2.example.com');
+        when(() => mockRelay3.url).thenReturn('wss://relay3.example.com');
+        when(
+          () => mockRelayPool.activeRelays(),
+        ).thenReturn([mockRelay1, mockRelay2, mockRelay3]);
+
+        expect(client.relayCount, equals(3));
       });
 
-      test('deleteEvents delegates to nostr', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+      test('returns 0 when no relays connected', () {
+        when(() => mockRelayPool.activeRelays()).thenReturn([]);
 
-        final client = NostrClient(config);
+        expect(client.relayCount, equals(0));
+      });
+    });
 
-        final result = await client.deleteEvents([testEventId]);
+    group('relayStatuses', () {
+      test('returns map of relay statuses', () {
+        final mockRelay1 = _MockRelay();
+        final mockRelay2 = _MockRelay();
 
-        expect(result, anyOf(isNull, isA<Event>()));
+        when(() => mockRelay1.url).thenReturn('wss://relay1.example.com');
+        when(() => mockRelay2.url).thenReturn('wss://relay2.example.com');
+        when(
+          () => mockRelayPool.activeRelays(),
+        ).thenReturn([mockRelay1, mockRelay2]);
+
+        final result = client.relayStatuses;
+
+        expect(result, hasLength(2));
       });
 
-      test('sendContactList delegates to nostr', () async {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
+      test('returns empty map when no relays', () {
+        when(() => mockRelayPool.activeRelays()).thenReturn([]);
+
+        final result = client.relayStatuses;
+
+        expect(result, isEmpty);
+      });
+    });
+
+    group('sendLike', () {
+      test('sends like successfully', () async {
+        const eventId = 'event-to-like';
+        final likeEvent = _createTestEvent(kind: EventKind.REACTION);
+
+        when(
+          () => mockNostr.sendLike(
+            any(),
+            content: any(named: 'content'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => likeEvent);
+
+        final result = await client.sendLike(eventId);
+
+        expect(result, equals(likeEvent));
+        verify(
+          () => mockNostr.sendLike(
+            eventId,
+          ),
+        ).called(1);
+      });
+
+      test('sends like with custom content', () async {
+        const eventId = 'event-to-like';
+        const content = '❤️';
+        final likeEvent = _createTestEvent(kind: EventKind.REACTION);
+
+        when(
+          () => mockNostr.sendLike(
+            any(),
+            content: any(named: 'content'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => likeEvent);
+
+        await client.sendLike(eventId, content: content);
+
+        verify(
+          () => mockNostr.sendLike(
+            eventId,
+            content: content,
+          ),
+        ).called(1);
+      });
+
+      test('sends like with relay parameters', () async {
+        const eventId = 'event-to-like';
+        final tempRelays = ['wss://temp.example.com'];
+        final targetRelays = ['wss://target.example.com'];
+        final likeEvent = _createTestEvent(kind: EventKind.REACTION);
+
+        when(
+          () => mockNostr.sendLike(
+            any(),
+            content: any(named: 'content'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => likeEvent);
+
+        await client.sendLike(
+          eventId,
+          tempRelays: tempRelays,
+          targetRelays: targetRelays,
         );
 
-        final client = NostrClient(config);
+        verify(
+          () => mockNostr.sendLike(
+            eventId,
+            tempRelays: tempRelays,
+            targetRelays: targetRelays,
+          ),
+        ).called(1);
+      });
+
+      test('returns null when sendLike fails', () async {
+        const eventId = 'event-to-like';
+
+        when(
+          () => mockNostr.sendLike(
+            any(),
+            content: any(named: 'content'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => null);
+
+        final result = await client.sendLike(eventId);
+
+        expect(result, isNull);
+      });
+    });
+
+    group('sendRepost', () {
+      test('sends repost successfully', () async {
+        const eventId = 'event-to-repost';
+        final repostEvent = _createTestEvent(kind: EventKind.REPOST);
+
+        when(
+          () => mockNostr.sendRepost(
+            any(),
+            relayAddr: any(named: 'relayAddr'),
+            content: any(named: 'content'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => repostEvent);
+
+        final result = await client.sendRepost(eventId);
+
+        expect(result, equals(repostEvent));
+        verify(
+          () => mockNostr.sendRepost(
+            eventId,
+          ),
+        ).called(1);
+      });
+
+      test('sends repost with all parameters', () async {
+        const eventId = 'event-to-repost';
+        const relayAddr = 'wss://relay.example.com';
+        const content = '{"event":"data"}';
+        final tempRelays = ['wss://temp.example.com'];
+        final targetRelays = ['wss://target.example.com'];
+        final repostEvent = _createTestEvent(kind: EventKind.REPOST);
+
+        when(
+          () => mockNostr.sendRepost(
+            any(),
+            relayAddr: any(named: 'relayAddr'),
+            content: any(named: 'content'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => repostEvent);
+
+        await client.sendRepost(
+          eventId,
+          relayAddr: relayAddr,
+          content: content,
+          tempRelays: tempRelays,
+          targetRelays: targetRelays,
+        );
+
+        verify(
+          () => mockNostr.sendRepost(
+            eventId,
+            relayAddr: relayAddr,
+            content: content,
+            tempRelays: tempRelays,
+            targetRelays: targetRelays,
+          ),
+        ).called(1);
+      });
+
+      test('returns null when sendRepost fails', () async {
+        const eventId = 'event-to-repost';
+
+        when(
+          () => mockNostr.sendRepost(
+            any(),
+            relayAddr: any(named: 'relayAddr'),
+            content: any(named: 'content'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => null);
+
+        final result = await client.sendRepost(eventId);
+
+        expect(result, isNull);
+      });
+    });
+
+    group('deleteEvent', () {
+      test('deletes event successfully', () async {
+        const eventId = 'event-to-delete';
+        final deleteEvent = _createTestEvent(kind: EventKind.EVENT_DELETION);
+
+        when(
+          () => mockNostr.deleteEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => deleteEvent);
+
+        final result = await client.deleteEvent(eventId);
+
+        expect(result, equals(deleteEvent));
+        verify(
+          () => mockNostr.deleteEvent(
+            eventId,
+          ),
+        ).called(1);
+      });
+
+      test('deletes event with relay parameters', () async {
+        const eventId = 'event-to-delete';
+        final tempRelays = ['wss://temp.example.com'];
+        final targetRelays = ['wss://target.example.com'];
+        final deleteEvent = _createTestEvent(kind: EventKind.EVENT_DELETION);
+
+        when(
+          () => mockNostr.deleteEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => deleteEvent);
+
+        await client.deleteEvent(
+          eventId,
+          tempRelays: tempRelays,
+          targetRelays: targetRelays,
+        );
+
+        verify(
+          () => mockNostr.deleteEvent(
+            eventId,
+            tempRelays: tempRelays,
+            targetRelays: targetRelays,
+          ),
+        ).called(1);
+      });
+
+      test('returns null when deleteEvent fails', () async {
+        const eventId = 'event-to-delete';
+
+        when(
+          () => mockNostr.deleteEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => null);
+
+        final result = await client.deleteEvent(eventId);
+
+        expect(result, isNull);
+      });
+    });
+
+    group('deleteEvents', () {
+      test('deletes multiple events successfully', () async {
+        final eventIds = ['event-1', 'event-2', 'event-3'];
+        final deleteEvent = _createTestEvent(kind: EventKind.EVENT_DELETION);
+
+        when(
+          () => mockNostr.deleteEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => deleteEvent);
+
+        final result = await client.deleteEvents(eventIds);
+
+        expect(result, equals(deleteEvent));
+        verify(
+          () => mockNostr.deleteEvents(
+            eventIds,
+          ),
+        ).called(1);
+      });
+
+      test('deletes events with relay parameters', () async {
+        final eventIds = ['event-1', 'event-2'];
+        final tempRelays = ['wss://temp.example.com'];
+        final targetRelays = ['wss://target.example.com'];
+        final deleteEvent = _createTestEvent(kind: EventKind.EVENT_DELETION);
+
+        when(
+          () => mockNostr.deleteEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => deleteEvent);
+
+        await client.deleteEvents(
+          eventIds,
+          tempRelays: tempRelays,
+          targetRelays: targetRelays,
+        );
+
+        verify(
+          () => mockNostr.deleteEvents(
+            eventIds,
+            tempRelays: tempRelays,
+            targetRelays: targetRelays,
+          ),
+        ).called(1);
+      });
+
+      test('returns null when deleteEvents fails', () async {
+        final eventIds = ['event-1', 'event-2'];
+
+        when(
+          () => mockNostr.deleteEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => null);
+
+        final result = await client.deleteEvents(eventIds);
+
+        expect(result, isNull);
+      });
+    });
+
+    group('sendContactList', () {
+      test('sends contact list successfully', () async {
         final contacts = ContactList();
+        const content = '{"relay":"preferences"}';
+        final contactListEvent = _createTestEvent(kind: EventKind.CONTACT_LIST);
 
-        final result = await client.sendContactList(contacts, 'content');
+        when(
+          () => mockNostr.sendContactList(
+            any(),
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => contactListEvent);
 
-        expect(result, anyOf(isNull, isA<Event>()));
+        final result = await client.sendContactList(contacts, content);
+
+        expect(result, equals(contactListEvent));
+        verify(
+          () => mockNostr.sendContactList(
+            contacts,
+            content,
+          ),
+        ).called(1);
+      });
+
+      test('sends contact list with relay parameters', () async {
+        final contacts = ContactList();
+        const content = '{"relay":"preferences"}';
+        final tempRelays = ['wss://temp.example.com'];
+        final targetRelays = ['wss://target.example.com'];
+        final contactListEvent = _createTestEvent(kind: EventKind.CONTACT_LIST);
+
+        when(
+          () => mockNostr.sendContactList(
+            any(),
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => contactListEvent);
+
+        await client.sendContactList(
+          contacts,
+          content,
+          tempRelays: tempRelays,
+          targetRelays: targetRelays,
+        );
+
+        verify(
+          () => mockNostr.sendContactList(
+            contacts,
+            content,
+            tempRelays: tempRelays,
+            targetRelays: targetRelays,
+          ),
+        ).called(1);
+      });
+
+      test('returns null when sendContactList fails', () async {
+        final contacts = ContactList();
+        const content = '{"relay":"preferences"}';
+
+        when(
+          () => mockNostr.sendContactList(
+            any(),
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => null);
+
+        final result = await client.sendContactList(contacts, content);
+
+        expect(result, isNull);
       });
     });
 
     group('dispose', () {
-      test('cleans up resources and closes subscriptions', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
-
-        final client = NostrClient(config);
-        client.subscribe([Filter(kinds: [1])], subscriptionId: 'sub1');
+      test('closes all subscriptions and nostr client', () {
+        when(() => mockNostr.unsubscribe(any())).thenReturn(null);
 
         client.dispose();
 
-        // After dispose, subscriptions should be closed
-        expect(client.relayCount, equals(0));
+        verify(() => mockNostr.close()).called(1);
       });
 
-      test('can be called multiple times safely', () {
-        final config = NostrClientConfig(
-          signer: mockSigner,
-          publicKey: testPublicKey,
-        );
+      test('closes active subscriptions before disposing', () {
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
 
-        final client = NostrClient(config);
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenReturn('test-sub-id');
+        when(() => mockNostr.unsubscribe(any())).thenReturn(null);
 
-        client.dispose();
-        client.dispose();
+        client
+          ..subscribe(filters)
+          ..dispose();
 
-        // Should not throw
-        expect(client.relayCount, equals(0));
+        verify(() => mockNostr.unsubscribe(any())).called(1);
+        verify(() => mockNostr.close()).called(1);
+      });
+    });
+
+    group('gateway fallback behavior', () {
+      test('handles GatewayException gracefully', () async {
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+        final events = [_createTestEvent()];
+
+        when(
+          () => mockGatewayClient.query(any()),
+        ).thenThrow(const GatewayException('Server error', statusCode: 500));
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => events);
+
+        final result = await client.queryEvents(filters);
+
+        expect(result, equals(events));
+      });
+
+      test('handles network errors gracefully', () async {
+        final filters = [
+          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+        ];
+        final events = [_createTestEvent()];
+
+        when(
+          () => mockGatewayClient.query(any()),
+        ).thenThrow(Exception('Network timeout'));
+        when(
+          () => mockNostr.queryEvents(
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((_) async => events);
+
+        final result = await client.queryEvents(filters);
+
+        expect(result, equals(events));
       });
     });
   });
 }
-
