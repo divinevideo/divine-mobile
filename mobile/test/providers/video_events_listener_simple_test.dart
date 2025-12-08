@@ -99,12 +99,14 @@ void main() {
 
       // Assert - Use any() matchers for optional arguments
       // May be called more than once due to async provider rebuilds
-      verify(mockVideoEventService.subscribeToDiscovery(
-        limit: anyNamed('limit'),
-        sortBy: anyNamed('sortBy'),
-        nip50Sort: anyNamed('nip50Sort'),
-        force: anyNamed('force'),
-      )).called(greaterThanOrEqualTo(1));
+      verify(
+        mockVideoEventService.subscribeToDiscovery(
+          limit: anyNamed('limit'),
+          sortBy: anyNamed('sortBy'),
+          nip50Sort: anyNamed('nip50Sort'),
+          force: anyNamed('force'),
+        ),
+      ).called(greaterThanOrEqualTo(1));
 
       listener.close();
       container.dispose();
@@ -285,13 +287,9 @@ void main() {
 
       // Late subscriber - like PopularVideosTab subscribing after data emits
       final lateStates = <AsyncValue<List<VideoEvent>>>[];
-      final lateListener = container.listen(
-        videoEventsProvider,
-        (prev, next) {
-          lateStates.add(next);
-        },
-        fireImmediately: true,
-      );
+      final lateListener = container.listen(videoEventsProvider, (prev, next) {
+        lateStates.add(next);
+      }, fireImmediately: true);
 
       await pumpEventQueue();
       await pumpEventQueue();
