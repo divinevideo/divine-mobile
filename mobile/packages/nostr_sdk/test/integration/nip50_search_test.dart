@@ -1,7 +1,6 @@
 // ABOUTME: Integration tests for NIP-50 full-text search functionality
 // ABOUTME: Tests search queries against real relays that support NIP-50
 
-import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 

@@ -33,7 +33,7 @@ class DioUtil {
     return _dio!;
   }
 
-  static setCookie(String link, String key, String value) {
+  static void setCookie(String link, String key, String value) {
     cookieJar.saveFromResponse(Uri.parse(link), [Cookie(key, value)]);
   }
 

@@ -17,7 +17,7 @@ class TLVUtil {
     return null;
   }
 
-  static writeTLVEntry(List<int> buf, int typ, List<int> data) {
+  static void writeTLVEntry(List<int> buf, int typ, List<int> data) {
     var length = data.length;
     buf.add(typ);
     buf.add(length);

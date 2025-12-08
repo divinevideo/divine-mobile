@@ -1,4 +1,4 @@
-library nostr_sdk;
+library;
 
 // Core classes - essential for any Nostr application
 export 'nostr.dart';

@@ -123,7 +123,7 @@ class RelayIsolate extends Relay {
       // For any other type, try to convert to JSON-compatible format
       try {
         // If it has a toJson method, use it
-        if (data is dynamic && data.toJson != null) {
+        if (data.toJson != null) {
           return sanitizeForJson(data.toJson());
         }
       } catch (e) {
