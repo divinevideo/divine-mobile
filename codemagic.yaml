@@ -9,6 +9,10 @@
 #   3.1 - Code signing: https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/#:~:text=Generating%20a%20keystore
 #   3.2 - Connect to Google Play: https://docs.codemagic.io/yaml-publishing/google-play/
 # 4 - Setup emails to receive build notifications.
+# 5 - Create environment variable group "zendesk_credentials" with:
+#   - ZENDESK_APP_ID
+#   - ZENDESK_CLIENT_ID
+#   - ZENDESK_URL
 
 definitions:
   environment:
@@ -26,13 +30,26 @@ definitions:
       script: echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/android/local.properties"
     - &build_apk
       name: Build Android APK
-      script: flutter build apk --release --build-number=$PROJECT_BUILD_NUMBER
+      script: |
+        flutter build apk --release --build-number=$PROJECT_BUILD_NUMBER \
+          --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
+          --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
+          --dart-define=ZENDESK_URL=$ZENDESK_URL
     - &build_aab
       name: Build Android AAB
-      script: flutter build appbundle --release --build-number=$PROJECT_BUILD_NUMBER
+      script: |
+        flutter build appbundle --release --build-number=$PROJECT_BUILD_NUMBER \
+          --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
+          --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
+          --dart-define=ZENDESK_URL=$ZENDESK_URL
     - &build_ios
       name: Build and sign iOS
-      script: flutter build ipa --release --build-number=$PROJECT_BUILD_NUMBER --export-options-plist=/Users/builder/export_options.plist
+      script: |
+        flutter build ipa --release --build-number=$PROJECT_BUILD_NUMBER \
+          --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
+          --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
+          --dart-define=ZENDESK_URL=$ZENDESK_URL \
+          --export-options-plist=/Users/builder/export_options.plist
 
 workflows:
   ios-build:
@@ -46,6 +63,8 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      groups:
+        - zendesk_credentials
       vars:
         BUNDLE_ID: co.openvine.app
       ios_signing:
@@ -74,6 +93,8 @@ workflows:
     environment:
       flutter: stable
       java: 17
+      groups:
+        - zendesk_credentials
       android_signing:
         - divine_keystore
     cache:
