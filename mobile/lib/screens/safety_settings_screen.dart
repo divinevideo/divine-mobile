@@ -154,37 +154,47 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
   }
 
   Widget _buildAdultContentSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('ADULT CONTENT'),
-        if (!_isAgeVerified)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Verify your age above to change adult content settings',
-              style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+    return RadioGroup<AdultContentPreference>(
+      groupValue: _preference,
+      onChanged: (value) {
+        _isAgeVerified
+            ? value != null
+                  ? _setPreference(value)
+                  : null
+            : null;
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader('ADULT CONTENT'),
+          if (!_isAgeVerified)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Verify your age above to change adult content settings',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ),
+          _buildRadioOption(
+            title: 'Always show',
+            subtitle: 'Auto-authenticate for age-gated content',
+            value: AdultContentPreference.alwaysShow,
           ),
-        _buildRadioOption(
-          title: 'Always show',
-          subtitle: 'Auto-authenticate for age-gated content',
-          value: AdultContentPreference.alwaysShow,
-          enabled: _isAgeVerified,
-        ),
-        _buildRadioOption(
-          title: 'Ask each time',
-          subtitle: 'Show confirmation dialog for each video',
-          value: AdultContentPreference.askEachTime,
-          enabled: _isAgeVerified,
-        ),
-        _buildRadioOption(
-          title: 'Never show',
-          subtitle: 'Filter adult content from your feed',
-          value: AdultContentPreference.neverShow,
-          enabled: _isAgeVerified,
-        ),
-      ],
+          _buildRadioOption(
+            title: 'Ask each time',
+            subtitle: 'Show confirmation dialog for each video',
+            value: AdultContentPreference.askEachTime,
+          ),
+          _buildRadioOption(
+            title: 'Never show',
+            subtitle: 'Filter adult content from your feed',
+            value: AdultContentPreference.neverShow,
+          ),
+        ],
+      ),
     );
   }
 
@@ -192,25 +202,18 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
     required String title,
     required String subtitle,
     required AdultContentPreference value,
-    required bool enabled,
   }) {
     return RadioListTile<AdultContentPreference>(
       value: value,
-      groupValue: _preference,
-      onChanged: enabled
-          ? (newValue) {
-              if (newValue != null) {
-                _setPreference(newValue);
-              }
-            }
-          : null,
       title: Text(
         title,
-        style: TextStyle(color: enabled ? Colors.white : Colors.grey),
+        style: TextStyle(color: _isAgeVerified ? Colors.white : Colors.grey),
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(color: enabled ? Colors.grey : Colors.grey[700]),
+        style: TextStyle(
+          color: _isAgeVerified ? Colors.grey : Colors.grey[700],
+        ),
       ),
       activeColor: VineTheme.vineGreen,
     );

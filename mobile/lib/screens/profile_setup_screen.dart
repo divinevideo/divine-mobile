@@ -36,10 +36,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   bool _isPublishing = false;
   bool _isUploadingImage = false;
-  bool _isCheckingUsername = false;
   bool _isWaitingForRelay = false; // Track relay confirmation phase
-  bool? _usernameAvailable;
-  String? _usernameError;
   File? _selectedImage;
   String? _uploadedImageUrl;
 
@@ -82,7 +79,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   profile.nip05!.endsWith('@openvine.co')) {
                 final username = profile.nip05!.split('@')[0];
                 _nip05Controller.text = username;
-                _usernameAvailable = true; // Already registered
               }
             });
 
@@ -334,7 +330,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                         const SizedBox(height: 16),
 
                         // NIP-05 Username (optional) - HIDDEN until @divine.video is ready
-                        // TODO: Re-enable when @divine.video NIP-05 service is available
+                        // TODO(any): Re-enable when @divine.video NIP-05 service is available
                         // TextFormField(
                         //   controller: _nip05Controller,
                         //   style: const TextStyle(color: Colors.white),
@@ -898,7 +894,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       );
 
       // Handle NIP-05 registration if username provided - DISABLED until @divine.video is ready
-      // TODO: Re-enable when @divine.video NIP-05 service is available
+      // TODO(any): Re-enable when @divine.video NIP-05 service is available
       // String? nip05Identifier;
       // if (_nip05Controller.text.trim().isNotEmpty &&
       //     _usernameAvailable == true) {
@@ -1573,7 +1569,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   }
 
   // NIP-05 username checking - DISABLED until @divine.video is ready
-  // TODO: Re-enable when @divine.video NIP-05 service is available
+  // TODO(any): Re-enable when @divine.video NIP-05 service is available
   // Timer? _usernameCheckTimer;
   //
   // void _onUsernameChanged(String value) {

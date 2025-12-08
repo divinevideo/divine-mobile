@@ -24,7 +24,6 @@ import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/macos_camera_preview.dart';
-import 'package:crypto/crypto.dart';
 
 /// Represents a single recording segment in the Vine-style recording
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
@@ -2015,13 +2014,6 @@ class VineRecordingController {
       );
       rethrow;
     }
-  }
-
-  /// Calculate SHA256 hash of a video file
-  Future<String> _calculateSHA256(File file) async {
-    final bytes = await file.readAsBytes();
-    final digest = sha256.convert(bytes);
-    return digest.toString();
   }
 
   /// Get the recorded video path from macOS single recording mode.

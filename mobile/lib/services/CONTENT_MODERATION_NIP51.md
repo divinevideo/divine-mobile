@@ -36,6 +36,7 @@ await service.subscribeToMuteList('pubkey:<hex_pubkey>');
 ```
 
 Example:
+
 ```dart
 await service.subscribeToMuteList(
   'pubkey:3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d'

@@ -23,45 +23,6 @@ class NostrEvents extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
-
-  @override
-  List<Index> get indexes => [
-    // Index on kind for filtering video events (kind IN (34236, 6))
-    Index(
-      'idx_event_kind',
-      'CREATE INDEX IF NOT EXISTS idx_event_kind ON event (kind)',
-    ),
-
-    // Index on created_at for sorting by timestamp (ORDER BY created_at DESC)
-    Index(
-      'idx_event_created_at',
-      'CREATE INDEX IF NOT EXISTS idx_event_created_at ON event (created_at)',
-    ),
-
-    // Composite index for optimal video queries (WHERE kind = ? ORDER BY created_at DESC)
-    Index(
-      'idx_event_kind_created_at',
-      'CREATE INDEX IF NOT EXISTS idx_event_kind_created_at ON event (kind, created_at)',
-    ),
-
-    // Index on pubkey for author queries (WHERE pubkey = ?)
-    Index(
-      'idx_event_pubkey',
-      'CREATE INDEX IF NOT EXISTS idx_event_pubkey ON event (pubkey)',
-    ),
-
-    // Composite index for profile page video queries (WHERE kind = ? AND pubkey = ?)
-    Index(
-      'idx_event_kind_pubkey',
-      'CREATE INDEX IF NOT EXISTS idx_event_kind_pubkey ON event (kind, pubkey)',
-    ),
-
-    // Composite index for author video timeline (WHERE pubkey = ? ORDER BY created_at DESC)
-    Index(
-      'idx_event_pubkey_created_at',
-      'CREATE INDEX IF NOT EXISTS idx_event_pubkey_created_at ON event (pubkey, created_at)',
-    ),
-  ];
 }
 
 /// Denormalized cache of user profiles extracted from kind 0 events
@@ -121,26 +82,5 @@ class VideoMetrics extends Table {
   @override
   List<String> get customConstraints => [
     'FOREIGN KEY (event_id) REFERENCES event(id) ON DELETE CASCADE',
-  ];
-
-  @override
-  List<Index> get indexes => [
-    // Index on loop_count for trending/popular queries (ORDER BY loop_count DESC)
-    Index(
-      'idx_metrics_loop_count',
-      'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count ON video_metrics (loop_count)',
-    ),
-
-    // Index on likes for sorting by popularity (ORDER BY likes DESC)
-    Index(
-      'idx_metrics_likes',
-      'CREATE INDEX IF NOT EXISTS idx_metrics_likes ON video_metrics (likes)',
-    ),
-
-    // Index on views for sorting by view count (ORDER BY views DESC)
-    Index(
-      'idx_metrics_views',
-      'CREATE INDEX IF NOT EXISTS idx_metrics_views ON video_metrics (views)',
-    ),
   ];
 }

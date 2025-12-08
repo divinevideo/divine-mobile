@@ -1574,12 +1574,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
     }
   }
 
-  void _sendMessage() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Opening messages...')));
-  }
-
   Future<void> _copyNpubToClipboard(String userIdHex) async {
     try {
       final npub = NostrEncoding.encodePublicKey(userIdHex);

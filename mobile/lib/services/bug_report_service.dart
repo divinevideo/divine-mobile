@@ -3,6 +3,8 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:js_interop';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -21,10 +23,11 @@ import 'package:openvine/services/nip17_message_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
-// Conditional import: dart:html on web, stub on native
-import 'dart:html'
+
+// Conditional import: `package:web` on web, stub on native.
+import 'package:web/web.dart'
     if (dart.library.io) 'package:openvine/services/bug_report_service_stub.dart'
-    as html;
+    as web;
 
 /// Service for creating and managing bug reports
 class BugReportService {
@@ -620,14 +623,18 @@ class BugReportService {
   ) {
     try {
       final bytes = utf8.encode(content);
-      final blob = html.Blob([bytes], 'text/plain');
-      final url = html.Url.createObjectUrlFromBlob(blob);
+      final blob = web.Blob(
+        [bytes.toJS].toJS,
+        web.BlobPropertyBag(type: 'text/plain'),
+      );
+      final url = web.URL.createObjectURL(blob);
 
-      html.AnchorElement(href: url)
-        ..setAttribute('download', fileName)
-        ..click();
+      final anchor = web.document.createElement('a') as web.HTMLAnchorElement
+        ..href = url
+        ..download = fileName;
+      anchor.click();
 
-      html.Url.revokeObjectUrl(url);
+      web.URL.revokeObjectURL(url);
 
       final sizeMB = (bytes.length / (1024 * 1024)).toStringAsFixed(2);
       Log.info(
@@ -843,14 +850,18 @@ class BugReportService {
   bool _exportLogsWeb(String content, String fileName, int lineCount) {
     try {
       final bytes = utf8.encode(content);
-      final blob = html.Blob([bytes], 'text/plain');
-      final url = html.Url.createObjectUrlFromBlob(blob);
+      final blob = web.Blob(
+        [bytes.toJS].toJS,
+        web.BlobPropertyBag(type: 'text/plain'),
+      );
+      final url = web.URL.createObjectURL(blob);
 
-      html.AnchorElement(href: url)
-        ..setAttribute('download', fileName)
-        ..click();
+      final anchor = web.document.createElement('a') as web.HTMLAnchorElement
+        ..href = url
+        ..download = fileName;
+      anchor.click();
 
-      html.Url.revokeObjectUrl(url);
+      web.URL.revokeObjectURL(url);
 
       final sizeMB = (bytes.length / (1024 * 1024)).toStringAsFixed(2);
       Log.info(
