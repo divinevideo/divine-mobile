@@ -366,7 +366,10 @@ void main() {
           16, // kind - Generic repost (NIP-18)
           [
             ['k', '34236'], // k tag indicating original kind
-            ['a', '34236:$authorPubkey:unique-video-id'], // Correct: uses kind 34236
+            [
+              'a',
+              '34236:$authorPubkey:unique-video-id',
+            ], // Correct: uses kind 34236
             ['p', authorPubkey],
           ], // tags
           '', // content

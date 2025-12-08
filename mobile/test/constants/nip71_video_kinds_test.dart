@@ -6,9 +6,12 @@ import 'package:openvine/constants/nip71_migration.dart';
 
 void main() {
   group('NIP71VideoKinds', () {
-    test('isVideoKind returns true for kind 34236 (addressable short video)', () {
-      expect(NIP71VideoKinds.isVideoKind(34236), isTrue);
-    });
+    test(
+      'isVideoKind returns true for kind 34236 (addressable short video)',
+      () {
+        expect(NIP71VideoKinds.isVideoKind(34236), isTrue);
+      },
+    );
 
     test('isVideoKind returns false for kind 32222 (incorrect kind)', () {
       // This documents the bug: 32222 is NOT a valid video kind
