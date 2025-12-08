@@ -28,7 +28,7 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
 
   static Future<RelayLocalDB?> init(String appName) async {
     var path = await getFilepath(appName);
-    print("path $path");
+    log("path $path");
 
     var database = await openDatabase(
       path,
@@ -209,7 +209,7 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
         batch.commit();
         // print("batch insert ${notExistEventMapList.length} events");
       } catch (e) {
-        print(e);
+        log('$e');
       }
     }
   }

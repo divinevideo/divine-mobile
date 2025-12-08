@@ -1,6 +1,8 @@
 // ABOUTME: Abstract relay class defining the Nostr relay interface.
 // ABOUTME: Manages subscriptions, queries, and pending messages.
 
+import 'dart:developer';
+
 import '../subscription.dart';
 import 'client_connected.dart';
 import 'relay_info.dart';
@@ -41,13 +43,13 @@ abstract class Relay {
         try {
           onConnected();
         } catch (e) {
-          print("onConnected exception.");
-          print(e);
+          log("onConnected exception.");
+          log('$e');
         }
       }
       return result;
     } catch (e) {
-      print("connect fail");
+      log("connect fail");
       disconnect();
       return false;
     }
@@ -62,7 +64,7 @@ abstract class Relay {
       // TODO To check result? and how to handle if send fail?
       var result = send(message);
       if (!result) {
-        print("message send fail onConnected");
+        log("message send fail onConnected");
       }
     }
 
@@ -78,7 +80,7 @@ abstract class Relay {
   Future<void> disconnect();
 
   void onError(String errMsg, {bool reconnect = false}) {
-    print("relay error $errMsg");
+    log("relay error $errMsg");
     relayStatus.onError();
     relayStatus.connected = ClientConnected.DISCONNECT;
     if (relayStatusCallback != null) {

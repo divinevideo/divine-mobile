@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:typed_data';
 
 import 'package:bech32/bech32.dart';
@@ -176,7 +177,7 @@ class NIP19Tlv {
 
       return null;
     } catch (e) {
-      print(e);
+      log('$e');
     }
     return null;
   }

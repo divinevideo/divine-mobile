@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:math';
+import 'dart:developer';
+import 'dart:math' hide log;
 import 'dart:typed_data';
 
 import 'package:convert/convert.dart';
@@ -104,7 +105,7 @@ class NIP04 {
     try {
       y = liftX(x);
     } on Error {
-      print("error in handle pubkey");
+      log("error in handle pubkey");
     }
     ECPoint endPoint = secp256k1.curve.createPoint(x, y!);
     return ECPublicKey(endPoint, secp256k1);

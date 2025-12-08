@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:math';
 
 import 'package:android_content_provider/android_content_provider.dart';
@@ -432,8 +433,8 @@ class AndroidNostrSigner implements NostrSigner {
       var values = await _getValuesFromCursor(cursor, valueNames);
       return values;
     } catch (e) {
-      print("contentResolverQuery exception");
-      print(e);
+      developer.log("contentResolverQuery exception");
+      developer.log('$e');
     }
 
     return {};

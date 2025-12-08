@@ -116,8 +116,8 @@ class BolssomUploader {
         return body["url"];
       }
     } catch (e) {
-      print("BolssomUploader.upload upload exception:");
-      print(e);
+      log("BolssomUploader.upload upload exception:");
+      log('$e');
     }
 
     return null;

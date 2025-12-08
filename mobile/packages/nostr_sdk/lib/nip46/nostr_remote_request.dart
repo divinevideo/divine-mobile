@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import '../signer/nostr_signer.dart';
 import '../utils/string_util.dart';
@@ -50,8 +51,8 @@ class NostrRemoteRequest {
         }
       }
     } catch (e) {
-      print("NostrRemoteRequest decrypt error");
-      print(e);
+      log("NostrRemoteRequest decrypt error");
+      log('$e');
     }
 
     return null;

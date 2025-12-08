@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:nostr_sdk/utils/relay_addr_util.dart';
 
@@ -42,8 +43,8 @@ class NIP02 {
 
         relayStatuses.add(relayStatus);
       } catch (e) {
-        print("parse content to relay error");
-        print(e);
+        log("parse content to relay error");
+        log('$e');
       }
     }
 

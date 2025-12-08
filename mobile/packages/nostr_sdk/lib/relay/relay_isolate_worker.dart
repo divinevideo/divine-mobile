@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:isolate';
 
 import 'package:flutter_socks_proxy/socks_proxy.dart';
@@ -78,7 +79,7 @@ class RelayIsolateWorker {
 
     final wsUrl = Uri.parse(url);
     try {
-      print("Begin to connect ${config.url}");
+      log("Begin to connect ${config.url}");
       wsChannel = WebSocketChannel.connect(wsUrl);
       wsChannel!.stream.listen(
         (message) {
@@ -99,18 +100,18 @@ class RelayIsolateWorker {
           subToMainSendPort.send(json);
         },
         onError: (error) async {
-          print("Websocket stream error:  $url");
+          log("Websocket stream error:  $url");
           _closeWS(wsChannel);
           subToMainSendPort.send(RelayIsolateMsgs.DIS_CONNECTED);
         },
         onDone: () {
-          print("Websocket stream closed by remote:  $url");
+          log("Websocket stream closed by remote:  $url");
           _closeWS(wsChannel);
           subToMainSendPort.send(RelayIsolateMsgs.DIS_CONNECTED);
         },
       );
       await wsChannel!.ready;
-      print("Connect complete! ${config.url}");
+      log("Connect complete! ${config.url}");
       subToMainSendPort.send(RelayIsolateMsgs.CONNECTED);
 
       return wsChannel;
@@ -130,7 +131,7 @@ class RelayIsolateWorker {
     try {
       wsChannel.sink.close();
     } catch (e) {
-      print("ws close error ${e.toString()}");
+      log("ws close error ${e.toString()}");
     }
 
     wsChannel = null;

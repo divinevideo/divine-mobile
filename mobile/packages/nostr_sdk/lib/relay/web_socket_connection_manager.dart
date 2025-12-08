@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -125,8 +126,7 @@ class WebSocketConnectionManager {
   void Function(String message) log;
 
   static void _defaultLog(String message) {
-    // Use print for now, can be replaced with proper logging
-    print('[WebSocketConnectionManager] $message');
+    developer.log('[WebSocketConnectionManager] $message');
   }
 
   /// Connect to the WebSocket server
