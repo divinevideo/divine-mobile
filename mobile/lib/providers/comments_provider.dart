@@ -423,9 +423,6 @@ class CommentsNotifier extends _$CommentsNotifier {
         replyToEventId: replyToEventId,
         replyToAuthorPubkey: replyToAuthorPubkey,
       );
-
-      // Optimistic comment is already showing - no need to reload.
-      // The existing subscription will receive the real event when the relay sends it back.
     } catch (e) {
       Log.error(
         'Error posting comment: $e',
@@ -480,19 +477,16 @@ class CommentsNotifier extends _$CommentsNotifier {
   List<CommentNode> _removeCommentFromTree(
     List<CommentNode> nodes,
     String commentId,
-  ) => nodes
-      .where((node) => node.comment.id != commentId)
-      .map((node) {
-        if (node.replies.isNotEmpty) {
-          return CommentNode(
-            comment: node.comment,
-            replies: _removeCommentFromTree(node.replies, commentId),
-            isExpanded: node.isExpanded,
-          );
-        }
-        return node;
-      })
-      .toList();
+  ) => nodes.where((node) => node.comment.id != commentId).map((node) {
+    if (node.replies.isNotEmpty) {
+      return CommentNode(
+        comment: node.comment,
+        replies: _removeCommentFromTree(node.replies, commentId),
+        isExpanded: node.isExpanded,
+      );
+    }
+    return node;
+  }).toList();
 
   /// Toggle expansion state of a comment node
   void toggleCommentExpansion(String commentId) {
