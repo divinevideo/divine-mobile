@@ -30,8 +30,12 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
     var path = await getFilepath(appName);
     print("path $path");
 
-    var database = await openDatabase(path,
-        version: _VERSION, onCreate: _onCreate, onUpgrade: onUpgrade);
+    var database = await openDatabase(
+      path,
+      version: _VERSION,
+      onCreate: _onCreate,
+      onUpgrade: onUpgrade,
+    );
 
     return RelayLocalDB._(database, appName);
   }
@@ -51,7 +55,8 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
     log("db onCreate version $version");
     // init db
     await db.execute(
-        "CREATE TABLE IF NOT EXISTS event (id text NOT NULL, pubkey text NOT NULL, created_at integer NOT NULL, kind integer NOT NULL, tags jsonb NOT NULL, content text NOT NULL, sig text NOT NULL, sources text);");
+      "CREATE TABLE IF NOT EXISTS event (id text NOT NULL, pubkey text NOT NULL, created_at integer NOT NULL, kind integer NOT NULL, tags jsonb NOT NULL, content text NOT NULL, sig text NOT NULL, sources text);",
+    );
     await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS ididx ON event(id)");
     // these version 1 index was delete since version 2
     // await db
@@ -63,11 +68,15 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
     //     "CREATE INDEX IF NOT EXISTS kindtimeidx ON event(kind,created_at DESC)");
     // this index create since version 2
     await db.execute(
-        "CREATE INDEX IF NOT EXISTS kindpubtimeidx ON event(kind,pubkey,created_at DESC)");
+      "CREATE INDEX IF NOT EXISTS kindpubtimeidx ON event(kind,pubkey,created_at DESC)",
+    );
   }
 
   static Future<void> onUpgrade(
-      Database db, int oldVersion, int newVersion) async {
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
     log("onUpgrade oldVersion $oldVersion newVersion $newVersion");
     if (oldVersion == 1 && newVersion == 2) {
       log("onUpgrade begin! ${DateTime.now().toLocal()}");
@@ -78,7 +87,8 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
       await db.execute("DROP INDEX IF EXISTS kindtimeidx ;");
       // create new index
       await db.execute(
-          "CREATE INDEX IF NOT EXISTS kindpubtimeidx ON event(kind,pubkey,created_at DESC)");
+        "CREATE INDEX IF NOT EXISTS kindpubtimeidx ON event(kind,pubkey,created_at DESC)",
+      );
       log("onUpgrade complete! ${DateTime.now().toLocal()}");
     }
   }
@@ -88,8 +98,10 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
     return loadEventFromMaps(rawEvents);
   }
 
-  List<Event> loadEventFromMaps(List<Map<String, Object?>> rawEvents,
-      {EventFilter? eventFilter}) {
+  List<Event> loadEventFromMaps(
+    List<Map<String, Object?>> rawEvents, {
+    EventFilter? eventFilter,
+  }) {
     List<Event> events = [];
     for (var rawEvent in rawEvents) {
       var event = Event.fromJson(rawEvent);
@@ -232,7 +244,8 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
 
   @override
   Future<List<Map<String, Object?>>> doQueryEvent(
-      Map<String, dynamic> filter) async {
+    Map<String, dynamic> filter,
+  ) async {
     List<dynamic> params = [];
     var sql = queryEventsSql(filter, false, params);
     // print("doQueryEvent $sql $params");
@@ -249,7 +262,10 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
   }
 
   String queryEventsSql(
-      Map<String, dynamic> filter, bool doCount, List<dynamic> params) {
+    Map<String, dynamic> filter,
+    bool doCount,
+    List<dynamic> params,
+  ) {
     List<String> conditions = [];
 
     // clone filter, due to filter will be change download.
@@ -356,8 +372,10 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
   }
 
   @override
-  Future<List<Map<String, Object?>>> queryEventByPubkey(String pubkey,
-      {List<int>? eventKinds}) async {
+  Future<List<Map<String, Object?>>> queryEventByPubkey(
+    String pubkey, {
+    List<int>? eventKinds,
+  }) async {
     // print("queryEventByPubkey $pubkey $eventKinds");
     String kindsStr = "";
     if (eventKinds != null && eventKinds.isNotEmpty) {
@@ -384,7 +402,8 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
   }
 
   List<Map<String, Object?>> _handleEventMaps(
-      List<Map<String, Object?>> rawEvents) {
+    List<Map<String, Object?>> rawEvents,
+  ) {
     var length = rawEvents.length;
     List<Map<String, Object?>> events = List.filled(length, {});
     for (var i = 0; i < length; i++) {

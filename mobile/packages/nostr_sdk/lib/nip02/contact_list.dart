@@ -28,10 +28,11 @@ class ContactList {
   }
 
   static void getContactInfoFromTags(
-      List<dynamic> tags,
-      Map<String, Contact> contacts,
-      Map<String, int> followedTags,
-      Map<String, int> followedCommunitys) {
+    List<dynamic> tags,
+    Map<String, Contact> contacts,
+    Map<String, int> followedTags,
+    Map<String, int> followedCommunitys,
+  ) {
     for (List<dynamic> tag in tags) {
       var length = tag.length;
       if (length == 0) {
@@ -49,8 +50,11 @@ class ContactList {
           petname = tag[3];
         }
         try {
-          final contact =
-              Contact(publicKey: tag[1], url: url, petname: petname);
+          final contact = Contact(
+            publicKey: tag[1],
+            url: url,
+            petname: petname,
+          );
           contacts[contact.publicKey] = contact;
         } catch (e) {}
       } else if (t == "t" && length > 1) {
@@ -71,8 +75,12 @@ class ContactList {
     return ContactList._(contacts, followedTags, followedCommunitys, createdAt);
   }
 
-  ContactList._(this._contacts, this._followedTags, this._followedCommunitys,
-      this.createdAt);
+  ContactList._(
+    this._contacts,
+    this._followedTags,
+    this._followedCommunitys,
+    this.createdAt,
+  );
 
   List<dynamic> toJson() {
     List<dynamic> result = [];

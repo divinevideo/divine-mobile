@@ -82,8 +82,5 @@ class EventSignCheckArg {
 
   Event event;
 
-  EventSignCheckArg({
-    required this.subId,
-    required this.event,
-  });
+  EventSignCheckArg({required this.subId, required this.event});
 }

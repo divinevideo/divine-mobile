@@ -10,8 +10,11 @@ import '../utils/base64.dart';
 import '../utils/string_util.dart';
 
 class NIP95Uploader {
-  static Future<String?> upload(Nostr nostr, String filePath,
-      {String? fileName}) async {
+  static Future<String?> upload(
+    Nostr nostr,
+    String filePath, {
+    String? fileName,
+  }) async {
     var result = await uploadForEvent(nostr, filePath, fileName: fileName);
     if (result != null) {
       // TODO Here should set relayAddrs to event.
@@ -21,8 +24,11 @@ class NIP95Uploader {
     return null;
   }
 
-  static Future<Event?> uploadForEvent(Nostr nostr, String filePath,
-      {String? fileName}) async {
+  static Future<Event?> uploadForEvent(
+    Nostr nostr,
+    String filePath, {
+    String? fileName,
+  }) async {
     String? base64Content;
     if (BASE64.check(filePath)) {
       base64Content = filePath;
@@ -54,8 +60,12 @@ class NIP95Uploader {
     ];
 
     var pubkey = nostr.publicKey;
-    var event =
-        Event(pubkey, EventKind.STORAGE_SHARED_FILE, tags, base64Content);
+    var event = Event(
+      pubkey,
+      EventKind.STORAGE_SHARED_FILE,
+      tags,
+      base64Content,
+    );
 
     return nostr.sendEvent(event);
   }

@@ -48,9 +48,7 @@ class VoidCatUploader {
     var response = await NostrBuildUploader.dio.post<String>(
       UPLOAD_ACTION,
       data: Stream.fromIterable(bytes.map((e) => [e])),
-      options: Options(
-        headers: headers,
-      ),
+      options: Options(headers: headers),
     );
     var body = response.data;
 

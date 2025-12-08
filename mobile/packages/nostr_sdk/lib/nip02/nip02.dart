@@ -22,8 +22,9 @@ class NIP02 {
   static List<RelayStatus> parseContenToRelays(String content) {
     List<RelayStatus> relayStatuses = [];
     var jsonObj = jsonDecode(content);
-    Map<dynamic, dynamic> jsonMap =
-        jsonObj.map((key, value) => MapEntry(key, true));
+    Map<dynamic, dynamic> jsonMap = jsonObj.map(
+      (key, value) => MapEntry(key, true),
+    );
 
     for (var entry in jsonMap.entries) {
       try {

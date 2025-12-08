@@ -11,10 +11,7 @@ class NostrfilesDevUploader {
     MultipartFile? multipartFile;
     if (BASE64.check(filePath)) {
       var bytes = BASE64.toData(filePath);
-      multipartFile = MultipartFile.fromBytes(
-        bytes,
-        filename: fileName,
-      );
+      multipartFile = MultipartFile.fromBytes(bytes, filename: fileName);
     } else {
       multipartFile = await MultipartFile.fromFile(
         filePath,

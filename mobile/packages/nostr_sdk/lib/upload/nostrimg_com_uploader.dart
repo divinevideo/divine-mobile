@@ -29,8 +29,10 @@ class NostrimgComUploader {
     }
 
     var formData = FormData.fromMap({"image": multipartFile});
-    var response =
-        await NostrBuildUploader.dio.post(UPLOAD_ACTION, data: formData);
+    var response = await NostrBuildUploader.dio.post(
+      UPLOAD_ACTION,
+      data: formData,
+    );
     var body = response.data;
     if (body is Map<String, dynamic>) {
       return body["data"]["link"];

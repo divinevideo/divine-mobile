@@ -11,8 +11,10 @@ class RelayInfoUtil {
       uri = Uri.parse(url).replace(scheme: 'http');
     }
     try {
-      final response =
-          await http.get(uri, headers: {'Accept': 'application/nostr+json'});
+      final response = await http.get(
+        uri,
+        headers: {'Accept': 'application/nostr+json'},
+      );
       final decodedResponse = jsonDecode(response.body) as Map;
       return RelayInfo.fromJson(decodedResponse);
     } catch (e) {

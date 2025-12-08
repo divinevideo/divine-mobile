@@ -98,7 +98,7 @@ class StringUtil {
     "w",
     "x",
     "y",
-    "z"
+    "z",
   ];
 
   static String rndStr(int length) {
@@ -149,7 +149,7 @@ class StringUtil {
     "w",
     "x",
     "y",
-    "z"
+    "z",
   ];
 
   static String rndNameStr(int length) {

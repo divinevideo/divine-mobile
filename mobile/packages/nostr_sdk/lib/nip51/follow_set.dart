@@ -36,10 +36,10 @@ class FollowSet extends ContactList {
     this.createdAt, {
     this.title,
   }) : super(
-          contacts: contacts,
-          followedTags: followedTags,
-          followedCommunitys: followedCommunitys,
-        );
+         contacts: contacts,
+         followedTags: followedTags,
+         followedCommunitys: followedCommunitys,
+       );
 
   static String? getDTag(Event e) {
     for (var tag in e.tags) {
@@ -70,7 +70,11 @@ class FollowSet extends ContactList {
     Map<String, int> privateFollowedCommunitys = {};
 
     ContactList.getContactInfoFromTags(
-        e.tags, publicContacts, publicFollowedTags, publicFollowedCommunitys);
+      e.tags,
+      publicContacts,
+      publicFollowedTags,
+      publicFollowedCommunitys,
+    );
     String dTag = "";
     String? title;
     for (var tag in e.tags) {
@@ -123,13 +127,19 @@ class FollowSet extends ContactList {
     if (StringUtil.isNotBlank(e.content) && nostr != null) {
       // content and nostr not null, decrypt the content.
       try {
-        var contentSource =
-            await nostr.nostrSigner.decrypt(e.pubkey, e.content);
+        var contentSource = await nostr.nostrSigner.decrypt(
+          e.pubkey,
+          e.content,
+        );
         if (StringUtil.isNotBlank(contentSource)) {
           var jsonObj = jsonDecode(contentSource!);
           if (jsonObj is List) {
-            ContactList.getContactInfoFromTags(jsonObj, privateContacts,
-                privateFollowedTags, privateFollowedCommunitys);
+            ContactList.getContactInfoFromTags(
+              jsonObj,
+              privateContacts,
+              privateFollowedTags,
+              privateFollowedCommunitys,
+            );
           }
         }
       } catch (e) {

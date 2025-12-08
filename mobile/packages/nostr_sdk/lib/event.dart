@@ -33,8 +33,15 @@ class Event {
     id = _getId(pubkey, this.createdAt, kind, tags, content);
   }
 
-  Event._(this.id, this.pubkey, this.createdAt, this.kind, this.tags,
-      this.content, this.sig);
+  Event._(
+    this.id,
+    this.pubkey,
+    this.createdAt,
+    this.kind,
+    this.tags,
+    this.content,
+    this.sig,
+  );
 
   factory Event.fromJson(Map<String, dynamic> data) {
     final id = data['id'] as String;
@@ -84,7 +91,7 @@ class Event {
       'kind': kind,
       'tags': tags,
       'content': content,
-      'sig': sig
+      'sig': sig,
     };
   }
 
@@ -147,10 +154,21 @@ class Event {
     return secondsSinceEpoch;
   }
 
-  static String _getId(String publicKey, int createdAt, int kind,
-      List<dynamic> tags, String content) {
-    final jsonData =
-        json.encode([0, publicKey, createdAt, kind, tags, content]);
+  static String _getId(
+    String publicKey,
+    int createdAt,
+    int kind,
+    List<dynamic> tags,
+    String content,
+  ) {
+    final jsonData = json.encode([
+      0,
+      publicKey,
+      createdAt,
+      kind,
+      tags,
+      content,
+    ]);
     final bytes = utf8.encode(jsonData);
     final digest = sha256.convert(bytes);
     return digest.toString();

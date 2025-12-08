@@ -5,9 +5,5 @@ class RelayMetadata {
 
   bool write;
 
-  RelayMetadata(
-    this.addr,
-    this.read,
-    this.write,
-  );
+  RelayMetadata(this.addr, this.read, this.write);
 }

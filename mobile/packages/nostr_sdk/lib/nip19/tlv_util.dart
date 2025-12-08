@@ -1,8 +1,5 @@
 class TLVUtil {
-  static TLVData? readTLVEntry(
-    List<int> data, {
-    int startIndex = 0,
-  }) {
+  static TLVData? readTLVEntry(List<int> data, {int startIndex = 0}) {
     var dataLength = data.length;
     if (dataLength < startIndex + 2) {
       return null;

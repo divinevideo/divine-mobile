@@ -23,7 +23,10 @@ class NostrRemoteRequest {
   }
 
   static Future<NostrRemoteRequest?> decrypt(
-      String ciphertext, NostrSigner signer, String pubkey) async {
+    String ciphertext,
+    NostrSigner signer,
+    String pubkey,
+  ) async {
     try {
       var plaintext = await signer.nip44Decrypt(pubkey, ciphertext);
       if (StringUtil.isNotBlank(plaintext)) {
