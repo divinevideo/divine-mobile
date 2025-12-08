@@ -22,6 +22,9 @@ definitions:
     - &setup_code_signing_xcode
       name: Set up code signing settings on Xcode project
       script: xcode-project use-profiles
+    - &install_flutterfire
+      name: Install FlutterFire CLI
+      script: dart pub global activate flutterfire_cli
     - &pod_install
       name: Run pod install
       script: find . -name "Podfile" -execdir pod install \;
@@ -78,6 +81,7 @@ workflows:
       events: []
     scripts:
       - *setup_code_signing_xcode
+      - *install_flutterfire
       - *pod_install
       - *build_ios
     artifacts:
