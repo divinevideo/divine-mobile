@@ -361,18 +361,21 @@ class CommentsNotifier extends _$CommentsNotifier {
       return;
     }
 
+    // Get current user's public key for optimistic update
+    final currentUserPubkey = authService.currentPublicKeyHex;
+    if (currentUserPubkey == null) {
+      throw Exception('User public key not found');
+    }
+
+    // Generate temp ID outside try so we can reference it in catch
+    final tempCommentId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+
     try {
       state = state.copyWith(error: null);
 
-      // Get current user's public key for optimistic update
-      final currentUserPubkey = authService.currentPublicKeyHex;
-      if (currentUserPubkey == null) {
-        throw Exception('User public key not found');
-      }
-
       // Create optimistic comment
       final optimisticComment = Comment(
-        id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+        id: tempCommentId,
         content: content,
         authorPubkey: currentUserPubkey,
         createdAt: DateTime.now(),
@@ -421,21 +424,28 @@ class CommentsNotifier extends _$CommentsNotifier {
         replyToAuthorPubkey: replyToAuthorPubkey,
       );
 
-      // Check if provider is still mounted after async operation
-      if (!ref.mounted) return;
-
-      // Reload comments to get the real event ID
-      await _loadComments();
+      // Optimistic comment is already showing - no need to reload.
+      // The existing subscription will receive the real event when the relay sends it back.
     } catch (e) {
       Log.error(
         'Error posting comment: $e',
         name: 'CommentsNotifier',
         category: LogCategory.ui,
       );
-      state = state.copyWith(error: 'Failed to post comment');
 
-      // Remove optimistic comment on error
-      await _loadComments();
+      // Remove optimistic comment from state
+      final cleanedCache = Map<String, Comment>.from(state.commentCache)
+        ..remove(tempCommentId);
+      final cleanedTopLevel = _removeCommentFromTree(
+        state.topLevelComments,
+        tempCommentId,
+      );
+      state = state.copyWith(
+        topLevelComments: cleanedTopLevel,
+        totalCommentCount: state.totalCommentCount - 1,
+        commentCache: cleanedCache,
+        error: 'Failed to post comment',
+      );
     }
   }
 
@@ -465,6 +475,24 @@ class CommentsNotifier extends _$CommentsNotifier {
     }
     return node;
   }).toList();
+
+  /// Remove a comment from the tree by ID
+  List<CommentNode> _removeCommentFromTree(
+    List<CommentNode> nodes,
+    String commentId,
+  ) => nodes
+      .where((node) => node.comment.id != commentId)
+      .map((node) {
+        if (node.replies.isNotEmpty) {
+          return CommentNode(
+            comment: node.comment,
+            replies: _removeCommentFromTree(node.replies, commentId),
+            isExpanded: node.isExpanded,
+          );
+        }
+        return node;
+      })
+      .toList();
 
   /// Toggle expansion state of a comment node
   void toggleCommentExpansion(String commentId) {

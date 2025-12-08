@@ -51,11 +51,13 @@ class _CommentsScreenState extends ConsumerState<CommentsScreen> {
     setState(() => _isPosting = true);
 
     try {
-      final socialService = ref.read(socialServiceProvider);
-      await socialService.postComment(
+      // Use the provider's postComment for optimistic UI updates
+      final commentsNotifier = ref.read(
+        commentsProvider(widget.videoEvent.id, widget.videoEvent.pubkey)
+            .notifier,
+      );
+      await commentsNotifier.postComment(
         content: controller.text.trim(),
-        rootEventId: widget.videoEvent.id,
-        rootEventAuthorPubkey: widget.videoEvent.pubkey,
         replyToEventId: replyToId,
       );
 
