@@ -47,10 +47,7 @@ void main() {
           priority: any(named: 'priority'),
         ),
       ).thenAnswer((invocation) async {
-        // Get callbacks
-        final onEvent =
-            invocation.namedArguments[const Symbol('onEvent')]
-                as void Function(Event)?;
+                // Get callbacks
         final onComplete =
             invocation.namedArguments[const Symbol('onComplete')]
                 as void Function()?;

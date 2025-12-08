@@ -3,6 +3,7 @@
 
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/models/aspect_ratio.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/services/vine_recording_controller.dart';
 
@@ -17,8 +18,10 @@ void main() {
           remainingDuration: Duration(seconds: 3),
           canRecord: true,
           segments: [],
+          hasSegments: false,
           isCameraInitialized: true,
           canSwitchCamera: false,
+          aspectRatio: AspectRatio.square,
         );
 
         const idleState = VineRecordingUIState(
@@ -28,8 +31,10 @@ void main() {
           remainingDuration: Duration(seconds: 6),
           canRecord: true,
           segments: [],
+          hasSegments: false,
           isCameraInitialized: true,
           canSwitchCamera: false,
+          aspectRatio: AspectRatio.square,
         );
 
         expect(recordingState.isRecording, true);
@@ -44,8 +49,10 @@ void main() {
           remainingDuration: Duration(seconds: 6),
           canRecord: true,
           segments: [],
+          hasSegments: false,
           isCameraInitialized: true,
           canSwitchCamera: false,
+          aspectRatio: AspectRatio.square,
         );
 
         const errorState = VineRecordingUIState(
@@ -55,8 +62,10 @@ void main() {
           remainingDuration: Duration(seconds: 6),
           canRecord: false,
           segments: [],
+          hasSegments: false,
           isCameraInitialized: true,
           canSwitchCamera: false,
+          aspectRatio: AspectRatio.square,
         );
 
         const processingState = VineRecordingUIState(
@@ -66,8 +75,10 @@ void main() {
           remainingDuration: Duration.zero,
           canRecord: false,
           segments: [],
+          hasSegments: false,
           isCameraInitialized: true,
           canSwitchCamera: false,
+          aspectRatio: AspectRatio.square,
         );
 
         expect(idleState.isInitialized, true);
@@ -83,8 +94,10 @@ void main() {
           remainingDuration: Duration(seconds: 6),
           canRecord: false,
           segments: [],
+          hasSegments: false,
           isCameraInitialized: true,
           canSwitchCamera: false,
+          aspectRatio: AspectRatio.square,
         );
 
         const idleState = VineRecordingUIState(
@@ -94,8 +107,10 @@ void main() {
           remainingDuration: Duration(seconds: 6),
           canRecord: true,
           segments: [],
+          hasSegments: false,
           isCameraInitialized: true,
           canSwitchCamera: false,
+          aspectRatio: AspectRatio.square,
         );
 
         expect(errorState.isError, true);
@@ -110,8 +125,10 @@ void main() {
           remainingDuration: Duration(seconds: 3),
           canRecord: true,
           segments: [],
+          hasSegments: false,
           isCameraInitialized: true,
           canSwitchCamera: false,
+          aspectRatio: AspectRatio.square,
         );
 
         expect(state.recordingDuration, Duration(seconds: 3));
@@ -125,8 +142,10 @@ void main() {
           remainingDuration: Duration(seconds: 6),
           canRecord: false,
           segments: [],
+          hasSegments: false,
           isCameraInitialized: true,
           canSwitchCamera: false,
+          aspectRatio: AspectRatio.square,
         );
 
         const idleState = VineRecordingUIState(
@@ -136,8 +155,10 @@ void main() {
           remainingDuration: Duration(seconds: 6),
           canRecord: true,
           segments: [],
+          hasSegments: false,
           isCameraInitialized: true,
           canSwitchCamera: false,
+          aspectRatio: AspectRatio.square,
         );
 
         expect(errorState.errorMessage, isA<String>());
@@ -159,13 +180,13 @@ void main() {
         final result = RecordingResult(
           videoFile: File('/path/to/video.mp4'),
           draftId: 'draft_12345',
-          proofManifest: null,
+          nativeProof: null,
         );
 
         expect(result.videoFile, isNotNull);
         expect(result.draftId, isNotNull);
         expect(result.draftId, startsWith('draft_'));
-        expect(result.proofManifest, isNull);
+        expect(result.nativeProof, isNull);
       },
     );
   });
