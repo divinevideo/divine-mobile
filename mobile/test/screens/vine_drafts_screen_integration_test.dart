@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/models/aspect_ratio.dart' as model;
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/vine_drafts_screen.dart';
@@ -38,6 +39,7 @@ void main() {
         publishStatus: PublishStatus.draft,
         publishError: null,
         publishAttempts: 0,
+        aspectRatio: model.AspectRatio.square,
       );
 
       final draft2 = VineDraft(
@@ -53,6 +55,7 @@ void main() {
         publishStatus: PublishStatus.draft,
         publishError: null,
         publishAttempts: 0,
+        aspectRatio: model.AspectRatio.square,
       );
 
       await draftService.saveDraft(draft1);
@@ -111,10 +114,10 @@ void main() {
       // Assert: Should show empty state
       expect(find.text('No Drafts Yet'), findsOneWidget);
       expect(
-        find.text('Your saved Vine drafts will appear here'),
+        find.text('Your saved video drafts will appear here'),
         findsOneWidget,
       );
-      expect(find.text('Record a Vine'), findsOneWidget);
+      expect(find.text('Record a Video'), findsOneWidget);
     });
 
     testWidgets('should delete draft when delete is confirmed', (tester) async {
@@ -133,6 +136,7 @@ void main() {
         publishStatus: PublishStatus.draft,
         publishError: null,
         publishAttempts: 0,
+        aspectRatio: model.AspectRatio.square,
       );
 
       final draft2 = VineDraft(
@@ -148,6 +152,7 @@ void main() {
         publishStatus: PublishStatus.draft,
         publishError: null,
         publishAttempts: 0,
+        aspectRatio: model.AspectRatio.square,
       );
 
       await draftService.saveDraft(draft1);
@@ -213,6 +218,7 @@ void main() {
         publishStatus: PublishStatus.draft,
         publishError: null,
         publishAttempts: 0,
+        aspectRatio: model.AspectRatio.square,
       );
 
       final draft2 = VineDraft(
@@ -228,6 +234,7 @@ void main() {
         publishStatus: PublishStatus.draft,
         publishError: null,
         publishAttempts: 0,
+        aspectRatio: model.AspectRatio.square,
       );
 
       await draftService.saveDraft(draft1);
@@ -292,6 +299,7 @@ void main() {
         publishStatus: PublishStatus.draft,
         publishError: null,
         publishAttempts: 0,
+        aspectRatio: model.AspectRatio.square,
       );
 
       await draftService.saveDraft(draft);

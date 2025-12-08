@@ -8,6 +8,7 @@ import 'relay/event_filter.dart';
 import 'relay/relay.dart';
 import 'relay/relay_pool.dart';
 import 'relay/relay_type.dart';
+import 'relay/web_socket_connection_manager.dart';
 import 'signer/nostr_signer.dart';
 import 'signer/pubkey_only_nostr_signer.dart';
 import 'utils/string_util.dart';
@@ -23,10 +24,21 @@ class Nostr {
 
   Relay Function(String) tempRelayGener;
 
-  Nostr(this.nostrSigner, this._publicKey, List<EventFilter> eventFilters,
-      this.tempRelayGener,
-      {this.onNotice}) {
-    _pool = RelayPool(this, eventFilters, tempRelayGener, onNotice: onNotice);
+
+  Nostr(
+    this.nostrSigner,
+    this._publicKey,
+    List<EventFilter> eventFilters,
+    this.tempRelayGener, {
+    this.onNotice,
+    WebSocketChannelFactory? channelFactory,
+  }) {
+    _pool = RelayPool(
+      this,
+      eventFilters,
+      tempRelayGener,
+      onNotice: onNotice,
+    );
   }
 
   String get publicKey => _publicKey;

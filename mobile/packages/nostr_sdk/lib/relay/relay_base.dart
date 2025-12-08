@@ -17,8 +17,13 @@ class RelayBase extends Relay {
   StreamSubscription<ConnectionState>? _stateSubscription;
   StreamSubscription<String>? _messageSubscription;
   StreamSubscription<String>? _errorSubscription;
+  final WebSocketChannelFactory? _channelFactory;
 
-  RelayBase(super.url, super.relayStatus);
+  RelayBase(
+    super.url,
+    super.relayStatus, {
+    WebSocketChannelFactory? channelFactory,
+  }) : _channelFactory = channelFactory;
 
   @override
   Future<bool> doConnect() async {
@@ -35,7 +40,8 @@ class RelayBase extends Relay {
       // Create connection manager if needed
       _connectionManager ??= WebSocketConnectionManager(
         url: url,
-        channelFactory: const PlatformWebSocketChannelFactory(),
+        channelFactory:
+            _channelFactory ?? const PlatformWebSocketChannelFactory(),
         logger: (msg) => log("[$url] $msg"),
       );
 
