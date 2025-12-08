@@ -2101,7 +2101,8 @@ class VineRecordingController {
         '${tempDir.path}/vine_final_${DateTime.now().millisecondsSinceEpoch}.mp4';
 
     final cropFilter = _buildCropFilter(_aspectRatio);
-    final command = '-i "$inputPath" -vf "$cropFilter" -c:v libx264 -preset ultrafast -r 30 -vsync cfr -c:a aac -b:a 128k -async 1 "$outputPath"';
+    final command =
+        '-i "$inputPath" -vf "$cropFilter" -c:v libx264 -preset ultrafast -r 30 -vsync cfr -c:a aac -b:a 128k -async 1 "$outputPath"';
 
     Log.info(
       '📹 Executing FFmpeg crop command: $command',
