@@ -68,7 +68,7 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(home: VideoMetadataScreenPure(draftId: "")),
+            child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
           ),
         );
 
@@ -86,7 +86,7 @@ void main() {
     testWidgets('should save draft with empty fields', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(home: VideoMetadataScreenPure(draftId: "")),
+          child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
         ),
       );
 
@@ -107,7 +107,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(home: VideoMetadataScreenPure(draftId: "")),
+          child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
         ),
       );
 
