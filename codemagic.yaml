@@ -30,7 +30,7 @@ definitions:
       script: find . -name "Podfile" -execdir pod install \;
     - &setup_local_properties
       name: Set up local.properties
-      script: echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+      script: echo "flutter.sdk=$FLUTTER_ROOT" > "$CM_BUILD_DIR/mobile/android/local.properties"
     - &build_apk
       name: Build Android APK
       script: |
