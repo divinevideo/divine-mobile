@@ -1,39 +1,26 @@
-// ABOUTME: Tests for ProofMode manifest serialization in VineDraft
-// ABOUTME: Validates that ProofManifest JSON is stored and retrieved correctly
+// ABOUTME: Tests for NativeProofData serialization in VineDraft
+// ABOUTME: Validates that native proof JSON is stored and retrieved correctly
 
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/vine_draft.dart';
-import 'package:openvine/services/proofmode_session_service.dart';
+import 'package:openvine/models/native_proof_data.dart';
 
 void main() {
-  group('VineDraft ProofMode serialization', () {
+  group('VineDraft NativeProof serialization', () {
     test('should serialize and deserialize proofManifestJson correctly', () {
-      final now = DateTime.now();
-
-      // Create a sample ProofManifest
-      final manifest = ProofManifest(
-        sessionId: 'test_recording_123',
-        challengeNonce: 'challenge_abc',
-        vineSessionStart: now,
-        vineSessionEnd: now.add(const Duration(seconds: 5)),
-        segments: [
-          RecordingSegment(
-            segmentId: 'seg_0',
-            startTime: now,
-            endTime: now.add(const Duration(seconds: 1)),
-            frameHashes: ['abc123', 'def456'],
-          ),
-        ],
-        pauseProofs: [],
-        interactions: [],
-        finalVideoHash: 'video_hash_xyz',
-        deviceAttestation: null,
-        pgpSignature: null,
+      // Create a sample NativeProofData
+      final proofData = NativeProofData(
+        videoHash: 'abc123def456',
+        sensorDataCsv: 'timestamp,lat,lng\n2025-01-01,0.0,0.0',
+        pgpSignature: 'pgp_signature_data',
+        publicKey: 'pgp_public_key_data',
+        deviceAttestation: 'attestation_token',
+        timestamp: '2025-01-01T00:00:00Z',
       );
 
-      final manifestJson = jsonEncode(manifest.toJson());
+      final proofJson = jsonEncode(proofData.toJson());
 
       // Create draft with proofManifestJson
       final draft = VineDraft.create(
@@ -43,27 +30,26 @@ void main() {
         hashtags: ['test'],
         frameCount: 30,
         selectedApproach: 'native',
-        proofManifestJson: manifestJson,
+        proofManifestJson: proofJson,
       );
 
       // Verify hasProofMode returns true
       expect(draft.hasProofMode, true);
 
-      // Verify proofManifest can be deserialized
-      final deserializedManifest = draft.proofManifest;
-      expect(deserializedManifest, isNotNull);
-      expect(deserializedManifest!.sessionId, 'test_recording_123');
-      expect(deserializedManifest.segments.length, 1);
-      expect(deserializedManifest.segments[0].frameHashes[0], 'abc123');
+      // Verify nativeProof can be deserialized
+      final deserializedProof = draft.nativeProof;
+      expect(deserializedProof, isNotNull);
+      expect(deserializedProof!.videoHash, 'abc123def456');
+      expect(deserializedProof.pgpSignature, 'pgp_signature_data');
 
       // Verify JSON serialization round-trip
       final json = draft.toJson();
-      expect(json['proofManifestJson'], manifestJson);
+      expect(json['proofManifestJson'], proofJson);
 
       final deserialized = VineDraft.fromJson(json);
       expect(deserialized.hasProofMode, true);
-      expect(deserialized.proofManifest, isNotNull);
-      expect(deserialized.proofManifest!.sessionId, 'test_recording_123');
+      expect(deserialized.nativeProof, isNotNull);
+      expect(deserialized.nativeProof!.videoHash, 'abc123def456');
     });
 
     test('should handle drafts without proofManifestJson', () {
@@ -78,13 +64,13 @@ void main() {
       );
 
       expect(draft.hasProofMode, false);
-      expect(draft.proofManifest, null);
+      expect(draft.nativeProof, null);
 
       // Verify JSON serialization handles null
       final json = draft.toJson();
       final deserialized = VineDraft.fromJson(json);
       expect(deserialized.hasProofMode, false);
-      expect(deserialized.proofManifest, null);
+      expect(deserialized.nativeProof, null);
     });
 
     test('should migrate old drafts without proofManifestJson gracefully', () {
@@ -106,25 +92,17 @@ void main() {
       final draft = VineDraft.fromJson(json);
 
       expect(draft.hasProofMode, false);
-      expect(draft.proofManifest, null);
+      expect(draft.nativeProof, null);
     });
 
     test('should preserve proofManifestJson through copyWith', () {
-      final now = DateTime.now();
-      final manifest = ProofManifest(
-        sessionId: 'test_123',
-        challengeNonce: 'nonce_123',
-        vineSessionStart: now,
-        vineSessionEnd: now.add(const Duration(seconds: 5)),
-        segments: [],
-        pauseProofs: [],
-        interactions: [],
-        finalVideoHash: 'hash_123',
-        deviceAttestation: null,
-        pgpSignature: null,
+      final proofData = NativeProofData(
+        videoHash: 'hash_123',
+        pgpSignature: 'sig_123',
+        publicKey: 'key_123',
       );
 
-      final manifestJson = jsonEncode(manifest.toJson());
+      final proofJson = jsonEncode(proofData.toJson());
 
       final draft = VineDraft.create(
         videoFile: File('/path/to/video.mp4'),
@@ -133,7 +111,7 @@ void main() {
         hashtags: [],
         frameCount: 30,
         selectedApproach: 'native',
-        proofManifestJson: manifestJson,
+        proofManifestJson: proofJson,
       );
 
       expect(draft.hasProofMode, true);
@@ -141,11 +119,51 @@ void main() {
       // Update title via copyWith
       final updated = draft.copyWith(title: 'Updated Title');
 
-      // ProofManifest should be preserved
+      // NativeProof should be preserved
       expect(updated.hasProofMode, true);
-      expect(updated.proofManifest, isNotNull);
-      expect(updated.proofManifest!.sessionId, 'test_123');
+      expect(updated.nativeProof, isNotNull);
+      expect(updated.nativeProof!.videoHash, 'hash_123');
       expect(updated.title, 'Updated Title');
+    });
+
+    test('NativeProofData verification level should work correctly', () {
+      // Full verification with mobile attestation
+      final fullProof = NativeProofData(
+        videoHash: 'hash',
+        pgpSignature: 'sig',
+        publicKey: 'key',
+        deviceAttestation: 'attestation',
+        sensorDataCsv: 'csv',
+      );
+      expect(fullProof.verificationLevel, 'verified_mobile');
+      expect(fullProof.isComplete, true);
+      expect(fullProof.hasMobileAttestation, true);
+
+      // Web verification (no attestation)
+      final webProof = NativeProofData(
+        videoHash: 'hash',
+        pgpSignature: 'sig',
+        publicKey: 'key',
+        sensorDataCsv: 'csv',
+      );
+      expect(webProof.verificationLevel, 'verified_web');
+      expect(webProof.isComplete, true);
+      expect(webProof.hasMobileAttestation, false);
+
+      // Basic proof (sensor data only)
+      final basicProof = NativeProofData(
+        videoHash: 'hash',
+        sensorDataCsv: 'csv',
+      );
+      expect(basicProof.verificationLevel, 'basic_proof');
+      expect(basicProof.isComplete, false);
+
+      // Unverified (hash only)
+      const unverifiedProof = NativeProofData(
+        videoHash: 'hash',
+      );
+      expect(unverifiedProof.verificationLevel, 'unverified');
+      expect(unverifiedProof.isComplete, false);
     });
   });
 }
