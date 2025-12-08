@@ -70,9 +70,8 @@ void main() {
           ],
         );
 
-        // ACT: Read initial state (should be empty)
-        final initialState = container.read(curationProvider);
-
+        // ACT: Wait for initialization
+        container.read(curationProvider);
         // Wait for initialization
         await Future.delayed(Duration(milliseconds: 50));
 
@@ -155,8 +154,8 @@ void main() {
           ],
         );
 
-        // ACT: Read initial state (empty)
-        final initialState = container.read(curationProvider);
+        // ACT: Initialize and wait for async work
+        container.read(curationProvider);
         await Future.delayed(Duration(milliseconds: 50));
 
         final stateBeforeNav = container.read(curationProvider);
