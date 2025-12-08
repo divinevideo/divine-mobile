@@ -1,32 +1,38 @@
 # ABOUTME: Codemagic CI/CD configuration for diVine mobile app builds.
-# ABOUTME: Currently configured for iOS builds with manual triggering only.
+# ABOUTME: Configured for iOS and Android builds with manual triggering only.
 
 # TODOs:
 # 1 - Create the Codemagic project with access to the repository.
 # 2 - Setup iOS publishing:
 #   2.1 - https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/#:~:text=Creating%20the%20App%20Store%20Connect%20API%20key
-# 3 - Setup Android publishing (when ready):
+# 3 - Setup Android publishing:
 #   3.1 - Code signing: https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/#:~:text=Generating%20a%20keystore
 #   3.2 - Connect to Google Play: https://docs.codemagic.io/yaml-publishing/google-play/
+# 4 - Setup emails to receive build notifications.
 
 definitions:
+  environment:
+    emails: &emails
+      - TODO
   scripts:
     - &setup_code_signing_xcode
       name: Set up code signing settings on Xcode project
-      script: |
-        xcode-project use-profiles
+      script: xcode-project use-profiles
     - &pod_install
       name: Run pod install
-      script: |
-        find . -name "Podfile" -execdir pod install \;
-    - &flutter_pub_get
-      name: Get Flutter packages
-      script: |
-        flutter pub get
+      script: find . -name "Podfile" -execdir pod install \;
+    - &setup_local_properties
+      name: Set up local.properties
+      script: echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/android/local.properties"
+    - &build_apk
+      name: Build Android APK
+      script: flutter build apk --release --build-number=$PROJECT_BUILD_NUMBER
+    - &build_aab
+      name: Build Android AAB
+      script: flutter build appbundle --release --build-number=$PROJECT_BUILD_NUMBER
     - &build_ios
-      name: Build iOS IPA
-      script: |
-        flutter build ipa --release --build-number=$PROJECT_BUILD_NUMBER --export-options-plist=/Users/builder/export_options.plist
+      name: Build and sign iOS
+      script: flutter build ipa --release --build-number=$PROJECT_BUILD_NUMBER --export-options-plist=/Users/builder/export_options.plist
 
 workflows:
   ios-build:
@@ -52,7 +58,6 @@ workflows:
     triggering:
       events: []
     scripts:
-      - *flutter_pub_get
       - *setup_code_signing_xcode
       - *pod_install
       - *build_ios
@@ -60,3 +65,28 @@ workflows:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
+
+  android-build:
+    name: Android Build
+    working_directory: mobile
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      java: 17
+      android_signing:
+        - divine_keystore
+    cache:
+      cache_paths:
+        - $HOME/.gradle/caches
+        - $HOME/.pub-cache
+    triggering:
+      events: []
+    scripts:
+      - *setup_local_properties
+      - *build_apk
+      - *build_aab
+    artifacts:
+      - build/app/outputs/apk/release/*.apk
+      - build/app/outputs/bundle/release/*.aab
+      - build/app/outputs/mapping/**/mapping.txt
