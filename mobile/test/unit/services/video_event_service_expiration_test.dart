@@ -33,6 +33,9 @@ void main() {
     });
 
     test('filters out expired events when adding to discovery feed', () {
+      when(() => nostrService.isInitialized).thenReturn(true);
+      when(() => nostrService.connectedRelayCount).thenReturn(1);
+
       // Before fix: This would add the video to discovery
       // After fix: This should NOT add expired video
       service.subscribeToDiscovery();
