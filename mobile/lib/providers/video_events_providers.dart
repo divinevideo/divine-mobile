@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:openvine/models/video_event.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/state/seen_videos_state.dart';
@@ -37,11 +38,13 @@ SubscriptionManager videoEventsSubscriptionManager(Ref ref) {
 /// Stream provider for video events from Nostr
 @Riverpod(keepAlive: true) // Keep alive to prevent state loss on tab switches
 class VideoEvents extends _$VideoEvents {
-  StreamController<List<VideoEvent>>? _controller;
+  // BehaviorSubject replays last value to late subscribers, fixing race condition
+  // where PopularVideosTab subscribes AFTER initial emission
+  BehaviorSubject<List<VideoEvent>>? _subject;
   Timer? _debounceTimer;
   List<VideoEvent>? _pendingEvents;
   List<VideoEvent>? _lastEmittedEvents;
-  bool get _canEmit => _controller != null && !(_controller!.isClosed);
+  bool get _canEmit => _subject != null && !(_subject!.isClosed);
 
   // Buffer for new videos that arrive while user is browsing
   final List<VideoEvent> _bufferedEvents = [];
@@ -90,7 +93,7 @@ class VideoEvents extends _$VideoEvents {
 
     // Emit updated list
     if (_canEmit) {
-      _controller!.add(currentVideos);
+      _subject!.add(currentVideos);
       _lastEmittedEvents = currentVideos;
     }
 
@@ -100,8 +103,9 @@ class VideoEvents extends _$VideoEvents {
 
   @override
   Stream<List<VideoEvent>> build() {
-    // Create stream controller first
-    _controller = StreamController<List<VideoEvent>>.broadcast();
+    // BehaviorSubject replays last value to late subscribers (unlike broadcast streams)
+    // This fixes the race condition where UI subscribes after initial data emission
+    _subject = BehaviorSubject<List<VideoEvent>>();
 
     // Get services and gate states
     final videoEventService = ref.watch(videoEventServiceProvider);
@@ -151,8 +155,8 @@ class VideoEvents extends _$VideoEvents {
       );
       _debounceTimer?.cancel();
       videoEventService.removeListener(_onVideoEventServiceChange);
-      _controller?.close();
-      _controller = null;
+      _subject?.close();
+      _subject = null;
     });
 
     // Setup listeners to react to gate changes
@@ -163,7 +167,7 @@ class VideoEvents extends _$VideoEvents {
     // and skip Nostr subscription until gates flip true
     _startSubscription(videoEventService, seenVideosState);
 
-    return _controller!.stream;
+    return _subject!.stream;
   }
 
   /// Setup listeners on gate providers to start/stop subscription
@@ -318,7 +322,7 @@ class VideoEvents extends _$VideoEvents {
         category: LogCategory.video,
       );
       if (_canEmit && !_listEquals(currentEvents, _lastEmittedEvents)) {
-        _controller!.add(currentEvents);
+        _subject!.add(currentEvents);
         // Store reference (not copy) to enable identical() checks downstream
         _lastEmittedEvents = currentEvents;
         Log.error(
@@ -402,7 +406,7 @@ class VideoEvents extends _$VideoEvents {
             name: 'VideoEventsProvider',
             category: LogCategory.video,
           );
-          _controller!.add(_pendingEvents!);
+          _subject!.add(_pendingEvents!);
           // Store reference (not copy) to enable identical() checks downstream
           _lastEmittedEvents = _pendingEvents;
         }

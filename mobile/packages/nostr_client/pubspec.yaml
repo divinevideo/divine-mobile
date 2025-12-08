@@ -1,0 +1,23 @@
+name: nostr_client
+description: Nostr client abstraction layer for repositories
+version: 0.1.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.9.0
+
+resolution: workspace
+
+dependencies:
+  crypto: ^3.0.7
+  meta: ^1.17.0
+  nostr_gateway:
+    path: ../nostr_gateway
+  nostr_sdk:
+    path: ../nostr_sdk
+
+dev_dependencies:
+  mocktail: ^1.0.4
+  test: ^1.26.3
+  very_good_analysis: ^10.0.0
+  web_socket_channel: ^3.0.2

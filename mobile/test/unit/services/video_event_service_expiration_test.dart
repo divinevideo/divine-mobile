@@ -2,53 +2,47 @@
 // ABOUTME: Ensures expired events are filtered out and not added to feeds
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/video_event.dart';
 
+class _MockNostrService extends Mock implements INostrService {}
+
+class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
+
 void main() {
   group('VideoEventService NIP-40 Expiration Filtering', () {
     late VideoEventService service;
+    late INostrService nostrService;
+    late SubscriptionManager subscriptionManager;
 
     setUp(() {
-      service = VideoEventService();
+      nostrService = _MockNostrService();
+      subscriptionManager = _MockSubscriptionManager();
+      service = VideoEventService(
+        nostrService,
+        subscriptionManager: subscriptionManager,
+      );
     });
 
-    tearDown(() async {
-      await service.dispose();
+    tearDown(() {
+      service.dispose();
     });
 
     test('filters out expired events when adding to discovery feed', () {
-      // Create an expired event (1 hour ago)
-      final oneHourAgo = DateTime.now().subtract(Duration(hours: 1));
-      final expirationTimestamp = oneHourAgo.millisecondsSinceEpoch ~/ 1000;
-
-      final expiredEvent = Event.fromJson({
-        'id': 'expired123',
-        'pubkey': 'pubkey123',
-        'created_at':
-            DateTime.now()
-                .subtract(Duration(hours: 2))
-                .millisecondsSinceEpoch ~/
-            1000,
-        'kind': 34236,
-        'tags': [
-          ['url', 'https://example.com/video.mp4'],
-          ['expiration', expirationTimestamp.toString()],
-        ],
-        'content': 'Expired video',
-        'sig': 'sig123',
-      });
-
-      final videoEvent = VideoEvent.fromNostrEvent(expiredEvent);
+      when(() => nostrService.isInitialized).thenReturn(true);
+      when(() => nostrService.connectedRelayCount).thenReturn(1);
 
       // Before fix: This would add the video to discovery
       // After fix: This should NOT add expired video
       service.subscribeToDiscovery();
 
-      // Manually call internal _addVideoToSubscription (testing private method behavior through public API)
+      // Manually call internal _addVideoToSubscription
+      //(testing private method behavior through public API)
       // We'll check by verifying the event list doesn't contain it
-      final initialCount = service.getVideos(SubscriptionType.discovery).length;
 
       // This would normally be called internally, but we're testing the filtering logic
       // In practice, expired events should never make it into the feed
@@ -56,6 +50,7 @@ void main() {
 
       // Verify no expired events in the list
       final discoveryVideos = service.getVideos(SubscriptionType.discovery);
+
       expect(
         discoveryVideos.where((v) => v.isExpired).length,
         equals(0),

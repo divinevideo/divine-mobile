@@ -162,8 +162,10 @@ void main() {
     test('isRestApiAvailable returns false when token not configured', () {
       // ZendeskConfig uses String.fromEnvironment which defaults to ''
       // Without --dart-define, this will be empty
-      expect(ZendeskConfig.apiToken.isEmpty || ZendeskConfig.isRestApiConfigured,
-          isTrue);
+      expect(
+        ZendeskConfig.apiToken.isEmpty || ZendeskConfig.isRestApiConfigured,
+        isTrue,
+      );
     });
 
     test('ZendeskConfig has default apiEmail configured', () {
@@ -183,17 +185,19 @@ void main() {
       expect(result, ZendeskConfig.isRestApiConfigured);
     });
 
-    test('createBugReportTicketViaApi returns false when API not configured',
-        () async {
-      final result = await ZendeskSupportService.createBugReportTicketViaApi(
-        reportId: 'test-123',
-        userDescription: 'Test bug',
-        appVersion: '1.0.0',
-        deviceInfo: {'platform': 'test'},
-      );
+    test(
+      'createBugReportTicketViaApi returns false when API not configured',
+      () async {
+        final result = await ZendeskSupportService.createBugReportTicketViaApi(
+          reportId: 'test-123',
+          userDescription: 'Test bug',
+          appVersion: '1.0.0',
+          deviceInfo: {'platform': 'test'},
+        );
 
-      // When API token is not configured, should return false
-      expect(result, ZendeskConfig.isRestApiConfigured);
-    });
+        // When API token is not configured, should return false
+        expect(result, ZendeskConfig.isRestApiConfigured);
+      },
+    );
   });
 }

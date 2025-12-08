@@ -652,11 +652,14 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                                           ),
                                           shape: BoxShape.circle,
                                         ),
-                                        child: const Icon(
-                                          Icons.play_arrow,
-                                          size: 56,
-                                          color: Colors.white,
-                                          semanticLabel: 'Play video',
+                                        child: Semantics(
+                                          identifier: 'play_button',
+                                          child: const Icon(
+                                            Icons.play_arrow,
+                                            size: 56,
+                                            color: Colors.white,
+                                            semanticLabel: 'Play video',
+                                          ),
                                         ),
                                       ),
                                     ),

@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/models/vine_draft.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:openvine/services/proofmode_session_service.dart';
 
 void main() {
   group('VineRecordingProvider auto-draft', () {

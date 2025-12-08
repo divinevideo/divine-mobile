@@ -33,8 +33,11 @@ void main() {
       await service.initialize();
       await service.setAdultContentVerified(true);
 
-      expect(service.isAdultContentVerified, true,
-          reason: 'Service should be verified after setAdultContentVerified');
+      expect(
+        service.isAdultContentVerified,
+        true,
+        reason: 'Service should be verified after setAdultContentVerified',
+      );
 
       // Read multiple times - should always return same instance with keepAlive
       final service2 = container.read(ageVerificationServiceProvider);
@@ -42,8 +45,11 @@ void main() {
 
       expect(identical(service, service2), true);
       expect(identical(service2, service3), true);
-      expect(service3.isAdultContentVerified, true,
-          reason: 'Verification state should be retained across reads');
+      expect(
+        service3.isAdultContentVerified,
+        true,
+        reason: 'Verification state should be retained across reads',
+      );
     });
 
     test('should maintain verification state without race condition', () async {
@@ -55,7 +61,8 @@ void main() {
       // First, set up verification in SharedPreferences
       SharedPreferences.setMockInitialValues({
         'adult_content_verified': true,
-        'adult_content_verification_date': DateTime.now().millisecondsSinceEpoch,
+        'adult_content_verification_date':
+            DateTime.now().millisecondsSinceEpoch,
       });
 
       final container = ProviderContainer();
@@ -71,8 +78,11 @@ void main() {
       // so we need to explicitly wait for initialization.
       await service.initialize();
 
-      expect(service.isAdultContentVerified, true,
-          reason: 'Verification status should be loaded from SharedPreferences');
+      expect(
+        service.isAdultContentVerified,
+        true,
+        reason: 'Verification status should be loaded from SharedPreferences',
+      );
     });
 
     test('should be a singleton across multiple reads', () async {
@@ -105,8 +115,11 @@ void main() {
       // Even after many reads (simulating widget rebuilds), state should persist
       for (var i = 0; i < 10; i++) {
         final s = container.read(ageVerificationServiceProvider);
-        expect(s.isAdultContentVerified, true,
-            reason: 'Verification should persist across reads (iteration $i)');
+        expect(
+          s.isAdultContentVerified,
+          true,
+          reason: 'Verification should persist across reads (iteration $i)',
+        );
       }
     });
   });

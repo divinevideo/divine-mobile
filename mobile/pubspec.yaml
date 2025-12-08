@@ -23,8 +23,12 @@ environment:
   flutter: ^3.38.3
 
 workspace:
+  - packages/db_client
+  - packages/models
   - packages/nostr_sdk
-  
+  - packages/nostr_client
+  - packages/nostr_gateway
+
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
 # consider running `flutter pub upgrade --major-versions`. Alternatively,
@@ -62,7 +66,7 @@ dependencies:
   video_player: ^2.9.1 # Uses native AVPlayer (iOS/macOS) and ExoPlayer (Android)
   visibility_detector: ^0.4.0+2 # Detect widget visibility for proper video control
   image: ^4.1.7 # Image processing for GIF generation
-  video_thumbnail: ^0.5.3 # Extract thumbnails from videos
+  video_thumbnail: ^0.5.6 # Extract thumbnails from videos
   image_picker: ^1.2.0 # For selecting images from gallery or camera
   file_selector: ^1.0.4 # For desktop file selection (macOS, Windows, Linux)
 
@@ -91,7 +95,7 @@ dependencies:
   # Nostr SDK - Local package for comprehensive Nostr support
   nostr_sdk:
     path: packages/nostr_sdk
-  
+
   # Embedded Nostr Relay - Local embedded relay replacing external relay infrastructure
   flutter_embedded_nostr_relay:
     git:
@@ -168,6 +172,7 @@ dev_dependencies:
   alchemist: ^0.12.1
   async: ^2.13.0
   drift_dev: ^2.29.0
+  melos: ^7.3.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -241,3 +246,9 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   adaptive_icon_background: "#00B488"
   adaptive_icon_foreground: "assets/icon/app_icon.png"
+
+melos:
+  useRootAsPackage: true
+
+  scripts:
+    generate: melos exec --depends-on build_runner -- dart run build_runner build -d

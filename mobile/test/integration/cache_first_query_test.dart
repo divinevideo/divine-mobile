@@ -442,7 +442,6 @@ void main() {
 
       // Track when events arrive
       final receivedEvents = <String>[];
-      bool eoseReceived = false;
 
       videoEventService.addListener(() {
         final events = videoEventService.getVideos(SubscriptionType.discovery);

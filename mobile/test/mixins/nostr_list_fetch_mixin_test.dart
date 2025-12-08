@@ -166,7 +166,6 @@ void main() {
     });
 
     test('startLoading sets correct state', () {
-      final widget = TestListScreen();
       final state = _TestListScreenState();
 
       // Manually set initial state
