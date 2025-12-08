@@ -28,7 +28,7 @@ workspace:
   - packages/nostr_sdk
   - packages/nostr_client
   - packages/nostr_gateway
-  
+
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
 # consider running `flutter pub upgrade --major-versions`. Alternatively,
@@ -95,7 +95,7 @@ dependencies:
   # Nostr SDK - Local package for comprehensive Nostr support
   nostr_sdk:
     path: packages/nostr_sdk
-  
+
   # Embedded Nostr Relay - Local embedded relay replacing external relay infrastructure
   flutter_embedded_nostr_relay:
     git:
