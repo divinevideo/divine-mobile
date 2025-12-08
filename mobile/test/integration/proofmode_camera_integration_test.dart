@@ -39,7 +39,11 @@ void main() {
       // - lib/services/proofmode_attestation_service.dart
       // - lib/services/proofmode_session_service.dart
       // - lib/services/proofmode_human_detection.dart
-      expect(true, isTrue, reason: 'Placeholder test - services not implemented');
+      expect(
+        true,
+        isTrue,
+        reason: 'Placeholder test - services not implemented',
+      );
     });
   });
 }

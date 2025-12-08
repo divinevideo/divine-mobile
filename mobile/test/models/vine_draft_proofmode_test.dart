@@ -159,9 +159,7 @@ void main() {
       expect(basicProof.isComplete, false);
 
       // Unverified (hash only)
-      const unverifiedProof = NativeProofData(
-        videoHash: 'hash',
-      );
+      const unverifiedProof = NativeProofData(videoHash: 'hash');
       expect(unverifiedProof.verificationLevel, 'unverified');
       expect(unverifiedProof.isComplete, false);
     });

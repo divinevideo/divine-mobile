@@ -15,9 +15,12 @@ void main() {
       for (var i = 0; i < iterations; i++) {
         final proofData = NativeProofData(
           videoHash: 'hash_$i' * 8, // 64 char hash
-          sensorDataCsv: 'timestamp,lat,lng,accuracy\n2025-01-01T00:00:00Z,37.7749,-122.4194,10.0',
-          pgpSignature: '-----BEGIN PGP SIGNATURE-----\nVersion: GnuPG v1\n...\n-----END PGP SIGNATURE-----',
-          publicKey: '-----BEGIN PGP PUBLIC KEY BLOCK-----\nVersion: GnuPG v1\n...\n-----END PGP PUBLIC KEY BLOCK-----',
+          sensorDataCsv:
+              'timestamp,lat,lng,accuracy\n2025-01-01T00:00:00Z,37.7749,-122.4194,10.0',
+          pgpSignature:
+              '-----BEGIN PGP SIGNATURE-----\nVersion: GnuPG v1\n...\n-----END PGP SIGNATURE-----',
+          publicKey:
+              '-----BEGIN PGP PUBLIC KEY BLOCK-----\nVersion: GnuPG v1\n...\n-----END PGP PUBLIC KEY BLOCK-----',
           deviceAttestation: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...',
           timestamp: '2025-01-01T00:00:00Z',
         );
@@ -34,7 +37,8 @@ void main() {
       expect(
         avgMicroseconds,
         lessThan(100),
-        reason: 'NativeProofData serialization took $avgMicroseconds µs/op (target: <100 µs)',
+        reason:
+            'NativeProofData serialization took $avgMicroseconds µs/op (target: <100 µs)',
       );
     });
 
@@ -60,13 +64,15 @@ void main() {
       }
 
       stopwatch.stop();
-      final avgMicroseconds = stopwatch.elapsedMicroseconds / jsonStrings.length;
+      final avgMicroseconds =
+          stopwatch.elapsedMicroseconds / jsonStrings.length;
 
       // Deserialization should be under 100 microseconds per instance
       expect(
         avgMicroseconds,
         lessThan(100),
-        reason: 'NativeProofData deserialization took $avgMicroseconds µs/op (target: <100 µs)',
+        reason:
+            'NativeProofData deserialization took $avgMicroseconds µs/op (target: <100 µs)',
       );
     });
 
@@ -88,14 +94,9 @@ void main() {
           sensorDataCsv: 'csv',
         ),
         // Basic proof
-        const NativeProofData(
-          videoHash: 'hash3',
-          sensorDataCsv: 'csv',
-        ),
+        const NativeProofData(videoHash: 'hash3', sensorDataCsv: 'csv'),
         // Unverified
-        const NativeProofData(
-          videoHash: 'hash4',
-        ),
+        const NativeProofData(videoHash: 'hash4'),
       ];
 
       final stopwatch = Stopwatch()..start();
@@ -116,7 +117,8 @@ void main() {
       expect(
         avgNanoseconds,
         lessThan(1000),
-        reason: 'Verification level check took $avgNanoseconds ns/op (target: <1000 ns)',
+        reason:
+            'Verification level check took $avgNanoseconds ns/op (target: <1000 ns)',
       );
     });
 
@@ -128,9 +130,7 @@ void main() {
           publicKey: 'key',
           sensorDataCsv: 'csv',
         ),
-        const NativeProofData(
-          videoHash: 'hash2',
-        ),
+        const NativeProofData(videoHash: 'hash2'),
       ];
 
       final stopwatch = Stopwatch()..start();
@@ -176,13 +176,15 @@ void main() {
       }
 
       stopwatch.stop();
-      final avgMicroseconds = stopwatch.elapsedMicroseconds / metadataList.length;
+      final avgMicroseconds =
+          stopwatch.elapsedMicroseconds / metadataList.length;
 
       // fromMetadata should be under 50 microseconds per instance
       expect(
         avgMicroseconds,
         lessThan(50),
-        reason: 'fromMetadata conversion took $avgMicroseconds µs/op (target: <50 µs)',
+        reason:
+            'fromMetadata conversion took $avgMicroseconds µs/op (target: <50 µs)',
       );
     });
   });
