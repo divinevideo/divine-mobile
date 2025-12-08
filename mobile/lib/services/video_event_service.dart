@@ -112,6 +112,12 @@ enum SubscriptionType {
   search, // Search results
 }
 
+/// References extracted from repost event tags ('e' and 'a' tags)
+typedef RepostTagRefs = ({String? eventId, String? addressableId});
+
+/// Parsed components of an addressable ID (kind:pubkey:d-tag format)
+typedef AddressableIdParts = ({int kind, String pubkey, String dTag});
+
 /// Service for handling video events (NIP-71 kinds 22, 34236) with separate lists per subscription type
 /// REFACTORED: Multiple event lists per subscription type with proper REQ filtering
 class VideoEventService extends ChangeNotifier {
@@ -1980,16 +1986,9 @@ class VideoEventService extends ChangeNotifier {
           category: LogCategory.video,
         );
 
-        // Extract both 'e' tags (event IDs) and 'a' tags (addressable events)
-        String? originalEventId;
-        String? addressableId;
-        for (final tag in event.tags) {
-          if (tag.isNotEmpty && tag[0] == 'e' && tag.length > 1) {
-            originalEventId = tag[1];
-          } else if (tag.isNotEmpty && tag[0] == 'a' && tag.length > 1) {
-            addressableId = tag[1];
-          }
-        }
+        final repostTags = _extractRepostTags(event);
+        final originalEventId = repostTags.eventId;
+        final addressableId = repostTags.addressableId;
 
         // Smart filtering: Only process reposts that are likely video-related
         if (!_isLikelyVideoRepost(event)) {
@@ -2009,98 +2008,71 @@ class VideoEventService extends ChangeNotifier {
             category: LogCategory.video,
           );
 
-          // Parse addressable ID format: kind:pubkey:d-tag
-          final parts = addressableId.split(':');
-          if (parts.length >= 3) {
-            final kindStr = parts[0];
-            final pubkey = parts[1];
-            final dTag = parts[2];
+          final parsed = _parseAddressableId(addressableId);
+          if (parsed != null && NIP71VideoKinds.isVideoKind(parsed.kind)) {
+            final existingOriginal = _findCachedVideoByAddressable(
+              parsed.pubkey,
+              parsed.dTag,
+            );
 
-            final kind = int.tryParse(kindStr);
-            if (kind != null && NIP71VideoKinds.isVideoKind(kind)) {
-              // Check if we already have the original video in our cache
-              // Match by pubkey and d-tag (which uniquely identify addressable events)
-              VideoEvent? existingOriginal;
-              for (final events in _eventLists.values) {
-                try {
-                  existingOriginal = events.firstWhere(
-                    (v) => v.pubkey == pubkey && v.rawTags['d'] == dTag,
-                  );
-                  break;
-                } catch (e) {
-                  // Continue searching in other lists
-                }
-              }
-
-              if (existingOriginal != null) {
-                // Create repost version of existing video
-                Log.info(
-                  'Found cached original video for addressable repost, creating repost',
-                  name: 'VideoEventService',
-                  category: LogCategory.video,
-                );
-                final repostVideoEvent = VideoEvent.createRepostEvent(
-                  originalEvent: existingOriginal,
-                  repostEventId: event.id,
-                  reposterPubkey: event.pubkey,
-                  repostedAt: DateTime.fromMillisecondsSinceEpoch(
-                    event.createdAt * 1000,
-                  ),
-                );
-
-                // Check hashtag filter for reposts too
-                if (_activeHashtagFilters[subscriptionType] != null &&
-                    _activeHashtagFilters[subscriptionType]!.isNotEmpty) {
-                  final hasRequiredHashtag =
-                      _activeHashtagFilters[subscriptionType]!.any(
-                        repostVideoEvent.hashtags.contains,
-                      );
-
-                  if (!hasRequiredHashtag) {
-                    Log.warning(
-                      '⏩ Skipping repost without required hashtags: ${_activeHashtagFilters[subscriptionType]}',
-                      name: 'VideoEventService',
-                      category: LogCategory.video,
-                    );
-                    return;
-                  }
-                }
-
-                _addVideoToSubscription(
-                  repostVideoEvent,
-                  subscriptionType,
-                  isHistorical: false,
-                );
-                final totalEvents = getEventCount(subscriptionType);
-                Log.verbose(
-                  'Added $subscriptionType repost event (addressable)! Total: $totalEvents events',
-                  name: 'VideoEventService',
-                  category: LogCategory.video,
-                );
-              } else {
-                // Fetch addressable event from relays
-                Log.verbose(
-                  'Fetching addressable video event from relays...',
-                  name: 'VideoEventService',
-                  category: LogCategory.video,
-                );
-                _fetchAddressableEventForRepost(
-                  addressableId,
-                  event,
-                  subscriptionType,
-                );
-              }
-              return; // Processed addressable repost, don't check 'e' tag
-            } else {
-              Log.warning(
-                'Invalid addressable ID format or non-video kind: $addressableId',
+            if (existingOriginal != null) {
+              // Create repost version of existing video
+              Log.info(
+                'Found cached original video for addressable repost, creating repost',
                 name: 'VideoEventService',
                 category: LogCategory.video,
               );
+              final repostVideoEvent = _createRepostVideoEvent(
+                existingOriginal,
+                event,
+              );
+
+              // Check hashtag filter for reposts too
+              if (_activeHashtagFilters[subscriptionType] != null &&
+                  _activeHashtagFilters[subscriptionType]!.isNotEmpty) {
+                final hasRequiredHashtag =
+                    _activeHashtagFilters[subscriptionType]!.any(
+                      repostVideoEvent.hashtags.contains,
+                    );
+
+                if (!hasRequiredHashtag) {
+                  Log.warning(
+                    '⏩ Skipping repost without required hashtags: ${_activeHashtagFilters[subscriptionType]}',
+                    name: 'VideoEventService',
+                    category: LogCategory.video,
+                  );
+                  return;
+                }
+              }
+
+              _addVideoToSubscription(
+                repostVideoEvent,
+                subscriptionType,
+                isHistorical: false,
+              );
+              final totalEvents = getEventCount(subscriptionType);
+              Log.verbose(
+                'Added $subscriptionType repost event (addressable)! Total: $totalEvents events',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
+            } else {
+              // Fetch addressable event from relays
+              Log.verbose(
+                'Fetching addressable video event from relays...',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
+              _fetchAddressableEventForRepost(
+                addressableId,
+                event,
+                subscriptionType,
+              );
             }
+            return; // Processed addressable repost, don't check 'e' tag
           } else {
             Log.warning(
-              'Invalid addressable ID format (expected kind:pubkey:d-tag): $addressableId',
+              'Invalid addressable ID format or non-video kind: $addressableId',
               name: 'VideoEventService',
               category: LogCategory.video,
             );
@@ -2143,13 +2115,9 @@ class VideoEventService extends ChangeNotifier {
               name: 'VideoEventService',
               category: LogCategory.video,
             );
-            final repostEvent = VideoEvent.createRepostEvent(
-              originalEvent: existingOriginal,
-              repostEventId: event.id,
-              reposterPubkey: event.pubkey,
-              repostedAt: DateTime.fromMillisecondsSinceEpoch(
-                event.createdAt * 1000,
-              ),
+            final repostEvent = _createRepostVideoEvent(
+              existingOriginal,
+              event,
             );
 
             // Check hashtag filter for reposts too
@@ -2366,16 +2334,9 @@ class VideoEventService extends ChangeNotifier {
           category: LogCategory.video,
         );
 
-        // Extract both 'e' tags (event IDs) and 'a' tags (addressable events)
-        String? originalEventId;
-        String? addressableId;
-        for (final tag in event.tags) {
-          if (tag.isNotEmpty && tag[0] == 'e' && tag.length > 1) {
-            originalEventId = tag[1];
-          } else if (tag.isNotEmpty && tag[0] == 'a' && tag.length > 1) {
-            addressableId = tag[1];
-          }
-        }
+        final repostTags = _extractRepostTags(event);
+        final originalEventId = repostTags.eventId;
+        final addressableId = repostTags.addressableId;
 
         // Handle 'a' tag (addressable event reference)
         if (addressableId != null) {
@@ -2385,73 +2346,46 @@ class VideoEventService extends ChangeNotifier {
             category: LogCategory.video,
           );
 
-          // Parse addressable ID format: kind:pubkey:d-tag
-          final parts = addressableId.split(':');
-          if (parts.length >= 3) {
-            final kindStr = parts[0];
-            final pubkey = parts[1];
-            final dTag = parts[2];
+          final parsed = _parseAddressableId(addressableId);
+          if (parsed != null && NIP71VideoKinds.isVideoKind(parsed.kind)) {
+            final existingOriginal = _findCachedVideoByAddressable(
+              parsed.pubkey,
+              parsed.dTag,
+            );
 
-            final kind = int.tryParse(kindStr);
-            if (kind != null && NIP71VideoKinds.isVideoKind(kind)) {
-              // Check if we already have the original video in our cache
-              // Match by pubkey and d-tag (which uniquely identify addressable events)
-              VideoEvent? existingOriginal;
-              for (final eventList in _eventLists.values) {
-                try {
-                  existingOriginal = eventList.firstWhere(
-                    (e) => e.pubkey == pubkey && e.rawTags['d'] == dTag,
-                  );
-                  break;
-                } catch (e) {
-                  // Continue searching in other lists
-                }
-              }
-
-              if (existingOriginal != null) {
-                final repostEvent = VideoEvent.createRepostEvent(
-                  originalEvent: existingOriginal,
-                  repostEventId: event.id,
-                  reposterPubkey: event.pubkey,
-                  repostedAt: DateTime.fromMillisecondsSinceEpoch(
-                    event.createdAt * 1000,
-                  ),
-                );
-                _addVideoToSubscription(
-                  repostEvent,
-                  subscriptionType,
-                  isHistorical: true,
-                );
-                final totalEvents = getEventCount(subscriptionType);
-                Log.verbose(
-                  'Added historical $subscriptionType repost event (addressable)! Total: $totalEvents events',
-                  name: 'VideoEventService',
-                  category: LogCategory.video,
-                );
-              } else {
-                // For historical reposts, fetch the addressable event
-                Log.verbose(
-                  'Fetching historical addressable video event from relays...',
-                  name: 'VideoEventService',
-                  category: LogCategory.video,
-                );
-                _fetchAddressableEventForRepost(
-                  addressableId,
-                  event,
-                  subscriptionType,
-                );
-              }
-              return; // Processed addressable repost, don't check 'e' tag
-            } else {
-              Log.warning(
-                'Invalid addressable ID format or non-video kind: $addressableId',
+            if (existingOriginal != null) {
+              final repostEvent = _createRepostVideoEvent(
+                existingOriginal,
+                event,
+              );
+              _addVideoToSubscription(
+                repostEvent,
+                subscriptionType,
+                isHistorical: true,
+              );
+              final totalEvents = getEventCount(subscriptionType);
+              Log.verbose(
+                'Added historical $subscriptionType repost event (addressable)! Total: $totalEvents events',
                 name: 'VideoEventService',
                 category: LogCategory.video,
               );
+            } else {
+              // For historical reposts, fetch the addressable event
+              Log.verbose(
+                'Fetching historical addressable video event from relays...',
+                name: 'VideoEventService',
+                category: LogCategory.video,
+              );
+              _fetchAddressableEventForRepost(
+                addressableId,
+                event,
+                subscriptionType,
+              );
             }
+            return; // Processed addressable repost, don't check 'e' tag
           } else {
             Log.warning(
-              'Invalid addressable ID format (expected kind:pubkey:d-tag): $addressableId',
+              'Invalid addressable ID format or non-video kind: $addressableId',
               name: 'VideoEventService',
               category: LogCategory.video,
             );
@@ -2473,13 +2407,9 @@ class VideoEventService extends ChangeNotifier {
           }
 
           if (existingOriginal != null) {
-            final repostEvent = VideoEvent.createRepostEvent(
-              originalEvent: existingOriginal,
-              repostEventId: event.id,
-              reposterPubkey: event.pubkey,
-              repostedAt: DateTime.fromMillisecondsSinceEpoch(
-                event.createdAt * 1000,
-              ),
+            final repostEvent = _createRepostVideoEvent(
+              existingOriginal,
+              event,
             );
             _addVideoToSubscription(
               repostEvent,
@@ -3604,13 +3534,9 @@ class VideoEventService extends ChangeNotifier {
               // Only process if it has video content
               if (originalVideoEvent.hasVideo) {
                 // Create the repost version
-                final repostVideoEvent = VideoEvent.createRepostEvent(
-                  originalEvent: originalVideoEvent,
-                  repostEventId: repostEvent.id,
-                  reposterPubkey: repostEvent.pubkey,
-                  repostedAt: DateTime.fromMillisecondsSinceEpoch(
-                    repostEvent.createdAt * 1000,
-                  ),
+                final repostVideoEvent = _createRepostVideoEvent(
+                  originalVideoEvent,
+                  repostEvent,
                 );
 
                 // Check hashtag filter for fetched reposts too
@@ -3714,9 +3640,8 @@ class VideoEventService extends ChangeNotifier {
         category: LogCategory.video,
       );
 
-      // Parse addressable ID format: kind:pubkey:d-tag
-      final parts = addressableId.split(':');
-      if (parts.length < 3) {
+      final parsed = _parseAddressableId(addressableId);
+      if (parsed == null) {
         Log.error(
           'Invalid addressable ID format: $addressableId (expected kind:pubkey:d-tag)',
           name: 'VideoEventService',
@@ -3725,14 +3650,9 @@ class VideoEventService extends ChangeNotifier {
         return;
       }
 
-      final kindStr = parts[0];
-      final pubkey = parts[1];
-      final dTag = parts[2];
-
-      final kind = int.tryParse(kindStr);
-      if (kind == null || !NIP71VideoKinds.isVideoKind(kind)) {
+      if (!NIP71VideoKinds.isVideoKind(parsed.kind)) {
         Log.error(
-          'Invalid kind in addressable ID: $kindStr (not a video kind)',
+          'Invalid kind in addressable ID: ${parsed.kind} (not a video kind)',
           name: 'VideoEventService',
           category: LogCategory.video,
         );
@@ -3741,9 +3661,9 @@ class VideoEventService extends ChangeNotifier {
 
       // Create filter for addressable event
       final filter = Filter(
-        kinds: [kind],
-        authors: [pubkey],
-        d: [dTag],
+        kinds: [parsed.kind],
+        authors: [parsed.pubkey],
+        d: [parsed.dTag],
         limit: 1,
       );
 
@@ -3780,13 +3700,9 @@ class VideoEventService extends ChangeNotifier {
               // Only process if it has video content
               if (originalVideoEvent.hasVideo) {
                 // Create the repost version
-                final repostVideoEvent = VideoEvent.createRepostEvent(
-                  originalEvent: originalVideoEvent,
-                  repostEventId: repostEvent.id,
-                  reposterPubkey: repostEvent.pubkey,
-                  repostedAt: DateTime.fromMillisecondsSinceEpoch(
-                    repostEvent.createdAt * 1000,
-                  ),
+                final repostVideoEvent = _createRepostVideoEvent(
+                  originalVideoEvent,
+                  repostEvent,
                 );
 
                 // Check hashtag filter for fetched reposts too
@@ -3864,6 +3780,55 @@ class VideoEventService extends ChangeNotifier {
         category: LogCategory.video,
       );
     }
+  }
+
+  /// Extract 'e' (event ID) and 'a' (addressable) tags from a repost event
+  RepostTagRefs _extractRepostTags(Event event) {
+    String? eventId;
+    String? addressableId;
+    for (final tag in event.tags) {
+      if (tag.isNotEmpty && tag.length > 1) {
+        if (tag[0] == 'e') {
+          eventId = tag[1];
+        } else if (tag[0] == 'a') {
+          addressableId = tag[1];
+        }
+      }
+    }
+    return (eventId: eventId, addressableId: addressableId);
+  }
+
+  /// Parse addressable ID format: kind:pubkey:d-tag
+  /// Returns null if format is invalid
+  AddressableIdParts? _parseAddressableId(String addressableId) {
+    final parts = addressableId.split(':');
+    if (parts.length < 3) return null;
+    final kind = int.tryParse(parts[0]);
+    if (kind == null) return null;
+    return (kind: kind, pubkey: parts[1], dTag: parts[2]);
+  }
+
+  /// Search all event lists for a video matching pubkey and d-tag
+  VideoEvent? _findCachedVideoByAddressable(String pubkey, String dTag) {
+    for (final events in _eventLists.values) {
+      final match = events
+          .where((v) => v.pubkey == pubkey && v.rawTags['d'] == dTag)
+          .firstOrNull;
+      if (match != null) return match;
+    }
+    return null;
+  }
+
+  /// Create a repost VideoEvent from original video and repost event
+  VideoEvent _createRepostVideoEvent(VideoEvent original, Event repostEvent) {
+    return VideoEvent.createRepostEvent(
+      originalEvent: original,
+      repostEventId: repostEvent.id,
+      reposterPubkey: repostEvent.pubkey,
+      repostedAt: DateTime.fromMillisecondsSinceEpoch(
+        repostEvent.createdAt * 1000,
+      ),
+    );
   }
 
   /// Check if an error is connection-related
