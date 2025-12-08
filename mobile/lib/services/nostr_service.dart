@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
     as embedded;
 import 'package:logging/logging.dart' as logging;
@@ -591,7 +592,8 @@ class NostrService implements INostrService {
       );
     }
 
-    final controller = StreamController<Event>.broadcast();
+    // Use BehaviorSubject so the most recent event is replayed to new listeners
+    final controller = ReplaySubject<Event>();
     // Per-subscription de-duplication to avoid duplicate EVENTs from multiple relays/filters
     final seenEventIds = <String>{};
     // Track replaceable events (kind, pubkey) -> (eventId, timestamp) for deduplication
