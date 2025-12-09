@@ -19,9 +19,6 @@ class FollowSet extends ContactList {
   final Map<String, int> _privateFollowedTags;
   final Map<String, int> _privateFollowedCommunitys;
 
-  @override
-  int createdAt;
-
   FollowSet(
     this.dTag,
     Map<String, Contact> contacts,
@@ -33,12 +30,13 @@ class FollowSet extends ContactList {
     this._privateContacts,
     this._privateFollowedTags,
     this._privateFollowedCommunitys,
-    this.createdAt, {
+    int createdAt, {
     this.title,
   }) : super(
          contacts: contacts,
          followedTags: followedTags,
          followedCommunitys: followedCommunitys,
+         createdAt: createdAt,
        );
 
   static String? getDTag(Event e) {
