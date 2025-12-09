@@ -243,7 +243,8 @@ class PendingUpload {
   }
 
   @override
-  String toString() => 'PendingUpload{id: $id, status: $status, '
+  String toString() =>
+      'PendingUpload{id: $id, status: $status, '
       'progress: $uploadProgress, cloudinaryId: $cloudinaryPublicId}';
 
   @override
