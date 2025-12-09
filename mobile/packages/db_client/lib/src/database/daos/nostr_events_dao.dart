@@ -117,14 +117,14 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     } else {
       final placeholders = List.filled(effectiveKinds.length, '?').join(', ');
       conditions.add('kind IN ($placeholders)');
-      variables.addAll(effectiveKinds.map((k) => Variable.withInt(k)));
+      variables.addAll(effectiveKinds.map(Variable.withInt));
     }
 
     // Authors filter
     if (authors != null && authors.isNotEmpty) {
       final placeholders = List.filled(authors.length, '?').join(', ');
       conditions.add('pubkey IN ($placeholders)');
-      variables.addAll(authors.map((a) => Variable.withString(a)));
+      variables.addAll(authors.map(Variable.withString));
     }
 
     // Hashtags filter (search in tags JSON)
