@@ -289,18 +289,21 @@ void main() {
         expect(count, equals(0));
       });
 
-      test('returns count of all rows (UPDATE touches all rows regardless of current value)', () async {
-        await dao.upsertNotification(
-          id: 'notif_1',
-          type: 'like',
-          fromPubkey: testPubkey,
-          timestamp: 1700000000,
-          isRead: true,
-        );
+      test(
+        'returns count of all rows (UPDATE touches all rows regardless of current value)',
+        () async {
+          await dao.upsertNotification(
+            id: 'notif_1',
+            type: 'like',
+            fromPubkey: testPubkey,
+            timestamp: 1700000000,
+            isRead: true,
+          );
 
-        final updated = await dao.markAllAsRead();
-        expect(updated, equals(1));
-      });
+          final updated = await dao.markAllAsRead();
+          expect(updated, equals(1));
+        },
+      );
     });
 
     group('deleteNotification', () {
