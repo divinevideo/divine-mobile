@@ -302,8 +302,8 @@ packages:
     description:
       path: "."
       ref: master
-      resolved-ref: "598352da2dbbea128504437f169a4e74342bae6b"
-      url: "https://github.com/Apparence-io/CamerAwesome.git"
+      resolved-ref: b2b891c754f0b5708f0964fe84788ba7daa18ed8
+      url: "https://github.com/VGVentures/CamerAwesome.git"
     source: git
     version: "2.5.0"
   carousel_slider:

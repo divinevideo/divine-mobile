@@ -128,7 +128,7 @@ dependencies:
   firebase_performance: ^0.11.1+1
   camerawesome:
     git:
-      url: https://github.com/Apparence-io/CamerAwesome.git
+      url: https://github.com/VGVentures/CamerAwesome.git
       ref: master
 
 dependency_overrides:
