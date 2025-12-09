@@ -26,7 +26,6 @@ class NostrEvents extends Table {
   @override
   Set<Column> get primaryKey => {id};
 
-  @override
   List<Index> get indexes => [
     // Index on kind for filtering video events (kind IN (34236, 6))
     Index(
@@ -135,7 +134,6 @@ class VideoMetrics extends Table {
     'FOREIGN KEY (event_id) REFERENCES event(id) ON DELETE CASCADE',
   ];
 
-  @override
   List<Index> get indexes => [
     // Index on loop_count for trending/popular queries
     // (ORDER BY loop_count DESC)
@@ -197,7 +195,6 @@ class HashtagStats extends Table {
   @override
   Set<Column> get primaryKey => {hashtag};
 
-  @override
   List<Index> get indexes => [
     Index(
       'idx_hashtag_video_count',
@@ -228,7 +225,6 @@ class Notifications extends Table {
   @override
   Set<Column> get primaryKey => {id};
 
-  @override
   List<Index> get indexes => [
     Index(
       'idx_notification_timestamp',
@@ -288,7 +284,6 @@ class PendingUploads extends Table {
   @override
   Set<Column> get primaryKey => {id};
 
-  @override
   List<Index> get indexes => [
     Index(
       'idx_pending_upload_status',
