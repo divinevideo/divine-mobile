@@ -1,5 +1,5 @@
-// ABOUTME: Hybrid database client combining DbClient with typed methods.
-// ABOUTME: Provides type-safe access to all application database tables.
+// ABOUTME: Hybrid database client combining generic DbClient
+// ABOUTME: with typed domain methods.
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
