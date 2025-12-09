@@ -48,7 +48,9 @@ definitions:
     - &build_ios
       name: Build and sign iOS
       script: |
-        flutter build ipa --release --build-number=$PROJECT_BUILD_NUMBER \
+        # Offset to continue from existing manual builds (last was 132)
+        BUILD_NUMBER=$((PROJECT_BUILD_NUMBER + 132))
+        flutter build ipa --release --build-number=$BUILD_NUMBER \
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
@@ -88,6 +90,13 @@ workflows:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
+        # Don't auto-distribute to any groups - we'll manually add builds to testers
+        beta_groups: []
 
   android-build:
     name: Android Build
