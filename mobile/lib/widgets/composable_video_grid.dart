@@ -162,11 +162,14 @@ class ComposableVideoGrid extends ConsumerWidget {
                           color: VineTheme.darkOverlay,
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
-                          Icons.play_arrow,
-                          size: 24,
-                          color: VineTheme.whiteText,
-                          semanticLabel: 'Play video',
+                        child: Semantics(
+                          identifier: 'play_button',
+                          child: Icon(
+                            Icons.play_arrow,
+                            size: 24,
+                            color: VineTheme.whiteText,
+                            semanticLabel: 'Play video',
+                          ),
                         ),
                       ),
                     ),

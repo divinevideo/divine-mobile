@@ -2,6 +2,8 @@
 // ABOUTME: Provides web-compatible storage through drift's web implementation
 
 import 'package:drift/drift.dart';
+// TODO: migrate to `package:web` and `dart:js_interop`.
+// ignore: deprecated_member_use
 import 'package:drift/web.dart';
 
 /// Open a database connection for web platform
