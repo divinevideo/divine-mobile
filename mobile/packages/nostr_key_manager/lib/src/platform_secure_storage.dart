@@ -696,6 +696,9 @@ class PlatformSecureStorage {
         'Windows uses software-based Credential Store (no hardware backing)',
       );
 
+      // Enable fallback storage for Windows
+      _useFallbackStorage = true;
+
       _capabilities = {SecureStorageCapability.basicSecureStorage};
       _platformName = 'Windows';
     } on Exception catch (e) {
@@ -715,6 +718,9 @@ class PlatformSecureStorage {
       _log.warning(
         'Linux uses software-based Secret Service (no hardware backing)',
       );
+
+      // Enable fallback storage for Linux
+      _useFallbackStorage = true;
 
       _capabilities = {SecureStorageCapability.basicSecureStorage};
       _platformName = 'Linux';

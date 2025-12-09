@@ -203,7 +203,10 @@ void main() {
         final results = await dao.getPendingUploads();
 
         expect(results, hasLength(3));
-        expect(results.map((r) => r.id), containsAll(['pending', 'uploading', 'processing']));
+        expect(
+          results.map((r) => r.id),
+          containsAll(['pending', 'uploading', 'processing']),
+        );
         expect(results.map((r) => r.id), isNot(contains('published')));
         expect(results.map((r) => r.id), isNot(contains('failed')));
       });

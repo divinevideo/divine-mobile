@@ -59,7 +59,7 @@ class NostrClient {
   final Nostr _nostr;
   final NostrClientConfig _config;
   final GatewayClient? _gatewayClient;
-  
+
   /// Public key of the client
   String get publicKey => _nostr.publicKey;
 

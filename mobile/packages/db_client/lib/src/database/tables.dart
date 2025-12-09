@@ -255,7 +255,8 @@ class PendingUploads extends Table {
   TextColumn get hashtags =>
       text().nullable()(); // JSON-encoded array of strings
   TextColumn get nostrEventId => text().nullable().named('nostr_event_id')();
-  DateTimeColumn get completedAt => dateTime().nullable().named('completed_at')();
+  DateTimeColumn get completedAt =>
+      dateTime().nullable().named('completed_at')();
   IntColumn get retryCount =>
       integer().withDefault(const Constant(0)).named('retry_count')();
   IntColumn get videoWidth => integer().nullable().named('video_width')();

@@ -186,25 +186,27 @@ void main() {
       test('deletes only expired entries', () async {
         // Insert with old timestamps using direct database insert
         final oldTime = DateTime.now().subtract(const Duration(minutes: 10));
-        await database.into(database.profileStats).insert(
-          ProfileStatsCompanion.insert(
-            pubkey: testPubkey,
-            videoCount: const Value(10),
-            cachedAt: oldTime,
-          ),
-        );
-        await database.into(database.profileStats).insert(
-          ProfileStatsCompanion.insert(
-            pubkey: testPubkey2,
-            videoCount: const Value(20),
-            cachedAt: oldTime,
-          ),
-        );
+        await database
+            .into(database.profileStats)
+            .insert(
+              ProfileStatsCompanion.insert(
+                pubkey: testPubkey,
+                videoCount: const Value(10),
+                cachedAt: oldTime,
+              ),
+            );
+        await database
+            .into(database.profileStats)
+            .insert(
+              ProfileStatsCompanion.insert(
+                pubkey: testPubkey2,
+                videoCount: const Value(20),
+                cachedAt: oldTime,
+              ),
+            );
 
         // Delete with 5 minute expiry - entries are 10 minutes old so should be deleted
-        final deleted = await dao.deleteExpired(
-          
-        );
+        final deleted = await dao.deleteExpired();
 
         expect(deleted, equals(2));
         expect(await appDbClient.countProfileStats(), equals(0));

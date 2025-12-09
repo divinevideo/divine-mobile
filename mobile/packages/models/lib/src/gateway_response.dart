@@ -22,6 +22,7 @@ class GatewayResponse {
       cacheAgeSeconds: json['cache_age_seconds'] as int?,
     );
   }
+
   /// List of raw event JSON objects from the gateway
   final List<Map<String, dynamic>> events;
 
