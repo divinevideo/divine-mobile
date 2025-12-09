@@ -3,11 +3,6 @@
 
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/proofmode_session_service.dart';
-import 'package:openvine/services/proofmode_key_service.dart';
-import 'package:openvine/services/proofmode_attestation_service.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:crypto/crypto.dart';
 import 'package:openvine/models/native_proof_data.dart';
 
 void main() {
