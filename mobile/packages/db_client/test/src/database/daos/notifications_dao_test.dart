@@ -180,7 +180,6 @@ void main() {
           type: 'like',
           fromPubkey: testPubkey,
           timestamp: 1700000000,
-          isRead: false,
         );
         await dao.upsertNotification(
           id: 'notif_2',
@@ -194,7 +193,6 @@ void main() {
           type: 'comment',
           fromPubkey: testPubkey,
           timestamp: 1700000002,
-          isRead: false,
         );
 
         final count = await dao.getUnreadCount();
@@ -227,7 +225,6 @@ void main() {
           type: 'like',
           fromPubkey: testPubkey,
           timestamp: 1700000000,
-          isRead: false,
         );
 
         final result = await dao.markAsRead('notif_1');
@@ -248,14 +245,12 @@ void main() {
           type: 'like',
           fromPubkey: testPubkey,
           timestamp: 1700000000,
-          isRead: false,
         );
         await dao.upsertNotification(
           id: 'notif_2',
           type: 'follow',
           fromPubkey: testPubkey,
           timestamp: 1700000001,
-          isRead: false,
         );
 
         await dao.markAsRead('notif_1');
@@ -272,14 +267,12 @@ void main() {
           type: 'like',
           fromPubkey: testPubkey,
           timestamp: 1700000000,
-          isRead: false,
         );
         await dao.upsertNotification(
           id: 'notif_2',
           type: 'follow',
           fromPubkey: testPubkey,
           timestamp: 1700000001,
-          isRead: false,
         );
 
         final updated = await dao.markAllAsRead();
@@ -418,7 +411,6 @@ void main() {
           type: 'like',
           fromPubkey: testPubkey,
           timestamp: 1700000000,
-          isRead: false,
         );
         await dao.upsertNotification(
           id: 'notif_2',

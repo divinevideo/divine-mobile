@@ -95,7 +95,7 @@ class PendingUploadsDao extends DatabaseAccessor<AppDatabase>
     final query = select(pendingUploads)
       ..where((t) => t.status.isNotIn(['published', 'failed']))
       ..orderBy([
-        (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.asc),
+        (t) => OrderingTerm(expression: t.createdAt),
       ]);
     final rows = await query.get();
     return rows.map(_rowToModel).toList();
@@ -170,7 +170,7 @@ class PendingUploadsDao extends DatabaseAccessor<AppDatabase>
     final query = select(pendingUploads)
       ..where((t) => t.status.isNotIn(['published', 'failed']))
       ..orderBy([
-        (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.asc),
+        (t) => OrderingTerm(expression: t.createdAt),
       ]);
     return query.watch().map((rows) => rows.map(_rowToModel).toList());
   }
