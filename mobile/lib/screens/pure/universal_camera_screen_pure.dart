@@ -1449,6 +1449,9 @@ class _UniversalCameraScreenPureState
       );
 
       if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
         // Navigate to metadata screen
         await Navigator.of(context).push(
           MaterialPageRoute(
@@ -1465,7 +1468,6 @@ class _UniversalCameraScreenPureState
 
           // CRITICAL: Dispose all controllers again before navigation
           // This ensures no stale controllers exist when switching to profile tab
-          disposeAllVideoControllers(ref);
           Log.info(
             '🗑️ Disposed controllers before profile navigation',
             category: LogCategory.video,
@@ -1479,9 +1481,6 @@ class _UniversalCameraScreenPureState
           );
 
           // Reset processing flag after navigation
-          setState(() {
-            _isProcessing = false;
-          });
         }
       }
     } catch (e) {
