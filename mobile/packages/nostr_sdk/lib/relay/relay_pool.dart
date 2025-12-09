@@ -903,6 +903,7 @@ class RelayPool {
     // Set up timeout
     final timeoutDuration = timeout ?? Duration(seconds: 5);
     final completer = Completer<List<Event>>();
+    // ignore: unused_local_variable - Timer runs but variable isn't read after assignment
     Timer? timeoutTimer;
     String? subscriptionId;
 

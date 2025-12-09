@@ -93,11 +93,6 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
     }
   }
 
-  List<Event> _loadEventFromRawEvents(List<Map<String, Object?>> rawEvents) {
-    rawEvents = _handleEventMaps(rawEvents);
-    return loadEventFromMaps(rawEvents);
-  }
-
   List<Event> loadEventFromMaps(
     List<Map<String, Object?>> rawEvents, {
     EventFilter? eventFilter,
@@ -422,20 +417,6 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
     }
 
     return events;
-  }
-
-  Map<String, Object?> _handleEventMap(Map<String, Object?> rawEvent) {
-    var event = Map<String, Object?>.from(rawEvent);
-    var tagsStr = rawEvent["tags"];
-    if (tagsStr is String) {
-      event["tags"] = jsonDecode(tagsStr);
-    }
-    var sourcesStr = rawEvent["sources"];
-    if (sourcesStr != null) {
-      event["sources"] = jsonDecode(sourcesStr as String);
-    }
-
-    return event;
   }
 
   @override
