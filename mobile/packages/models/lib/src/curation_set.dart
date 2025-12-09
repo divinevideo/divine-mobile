@@ -1,10 +1,14 @@
-// ABOUTME: Model for NIP-51 video curation sets (kind 30005)
-// ABOUTME: Represents curated collections of videos with metadata and referenced video events
+// ABOUTME: Model for NIP-51 video curation sets (kind 30005). Represents
+// ABOUTME: curated collections of videos with metadata and referenced video
+// ABOUTME: events.
 
+import 'package:meta/meta.dart';
 import 'package:nostr_sdk/event.dart';
 
 /// NIP-51 Video Curation Set
-/// Kind 30005: Groups of videos picked by users as interesting and/or belonging to the same category
+/// Kind 30005: Groups of videos picked by users as interesting
+/// and/or belonging to the same category
+@immutable
 class CurationSet {
   // Should be 30005 for video curation sets
 
@@ -116,7 +120,8 @@ class CurationSet {
 
   @override
   String toString() =>
-      'CurationSet(id: $id, title: $title, curator: $curatorPubkey, videos: ${videoIds.length})';
+      'CurationSet(id: $id, title: $title, '
+      'curator: $curatorPubkey, videos: ${videoIds.length})';
 
   @override
   bool operator ==(Object other) {
@@ -141,7 +146,8 @@ enum CurationSetType {
     'trending',
     'Trending',
     'Videos getting the most likes and shares right now',
-  );
+  )
+  ;
 
   const CurationSetType(this.id, this.displayName, this.description);
 
@@ -160,7 +166,7 @@ class SampleCurationSets {
       title: CurationSetType.editorsPicks.displayName,
       description: CurationSetType.editorsPicks.description,
       imageUrl: 'https://example.com/editors-picks.jpg',
-      videoIds: [], // Will be populated with actual video IDs
+      videoIds: const [], // Will be populated with actual video IDs
       createdAt: DateTime.now(),
     ),
     CurationSet(
@@ -170,7 +176,7 @@ class SampleCurationSets {
       title: CurationSetType.trending.displayName,
       description: CurationSetType.trending.description,
       imageUrl: 'https://example.com/trending.jpg',
-      videoIds: [], // Will be populated with actual video IDs
+      videoIds: const [], // Will be populated with actual video IDs
       createdAt: DateTime.now(),
     ),
   ];
@@ -178,11 +184,10 @@ class SampleCurationSets {
   static List<CurationSet> get all => List.unmodifiable(_sampleSets);
 
   static CurationSet? getById(String id) {
-    try {
-      return _sampleSets.firstWhere((set) => set.id == id);
-    } catch (e) {
-      return null;
+    for (final set in _sampleSets) {
+      if (set.id == id) return set;
     }
+    return null;
   }
 
   static CurationSet? getByType(CurationSetType type) => getById(type.id);

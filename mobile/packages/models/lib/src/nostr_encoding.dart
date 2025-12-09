@@ -168,7 +168,7 @@ class NostrEncoding {
       if (Nip19.isPubkey(bech32Key)) return 'npub';
       if (Nip19.isPrivateKey(bech32Key)) return 'nsec';
       return null;
-    } catch (e) {
+    } on Exception {
       return null;
     }
   }

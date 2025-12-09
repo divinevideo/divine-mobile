@@ -1,12 +1,19 @@
-// ABOUTME: Data model for NIP-01 user profile metadata from kind 0 events
-// ABOUTME: Represents user information like display name, avatar, bio, and social links
+// ABOUTME: Data model for NIP-01 user profile metadata from kind 0 events.
+// ABOUTME: Represents user information like display name, avatar, bio, and
+// ABOUTME: social links.
+
+// TODO(any): Replace dynamic row with typed Drift table class to fix
+//  avoid_dynamic_calls warnings. Requires coordination with database layer.
+// ignore_for_file: avoid_dynamic_calls
 
 import 'dart:convert';
 
+import 'package:meta/meta.dart';
 import 'package:models/src/nostr_encoding.dart';
 import 'package:nostr_sdk/event.dart';
 
 /// Model representing a Nostr user profile from kind 0 events
+@immutable
 class UserProfile {
   const UserProfile({
     required this.pubkey,
@@ -51,11 +58,11 @@ class UserProfile {
         createdAt: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
         eventId: event.id,
       );
-    } catch (e) {
+    } on FormatException {
       // If JSON parsing fails, create a minimal profile
       return UserProfile(
         pubkey: event.pubkey,
-        rawData: {},
+        rawData: const {},
         createdAt: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
         eventId: event.id,
       );
@@ -87,7 +94,7 @@ class UserProfile {
       try {
         parsedRawData =
             jsonDecode(row.rawData as String) as Map<String, dynamic>;
-      } catch (e) {
+      } on FormatException {
         // If JSON parsing fails, use empty map
         parsedRawData = {};
       }
@@ -141,7 +148,7 @@ class UserProfile {
   String get npub {
     try {
       return NostrEncoding.encodePublicKey(pubkey);
-    } catch (e) {
+    } on NostrEncodingException {
       // Fallback to shortened pubkey if encoding fails
       return shortPubkey;
     }
@@ -153,11 +160,13 @@ class UserProfile {
       final fullNpub = NostrEncoding.encodePublicKey(pubkey);
       if (fullNpub.length <= 16) return fullNpub;
       // Show first 10 chars + "..." + last 6 chars (npub1abc...xyz format)
-      return '${fullNpub.substring(0, 10)}...${fullNpub.substring(fullNpub.length - 6)}';
-    } catch (e) {
+      final suffix = fullNpub.substring(fullNpub.length - 6);
+      return '${fullNpub.substring(0, 10)}...$suffix';
+    } on NostrEncodingException {
       // Fallback to shortened hex pubkey if encoding fails
       if (pubkey.length <= 16) return pubkey;
-      return '${pubkey.substring(0, 8)}...${pubkey.substring(pubkey.length - 6)}';
+      final suffix = pubkey.substring(pubkey.length - 6);
+      return '${pubkey.substring(0, 8)}...$suffix';
     }
   }
 
@@ -268,5 +277,6 @@ class UserProfile {
 
   @override
   String toString() =>
-      'UserProfile(pubkey: $shortPubkey, name: $bestDisplayName, hasAvatar: $hasAvatar)';
+      'UserProfile(pubkey: $shortPubkey, '
+      'name: $bestDisplayName, hasAvatar: $hasAvatar)';
 }

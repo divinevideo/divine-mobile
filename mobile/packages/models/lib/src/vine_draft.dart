@@ -20,7 +20,9 @@ class VineDraft {
     required this.createdAt,
     required this.lastModified,
     required this.publishStatus,
-    required this.publishAttempts, required this.aspectRatio, this.publishError,
+    required this.publishAttempts,
+    required this.aspectRatio,
+    this.publishError,
     this.proofManifestJson,
   });
 

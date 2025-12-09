@@ -88,7 +88,7 @@ class NativeProofData {
   /// Get PGP fingerprint from public key (simplified)
   String? get pgpFingerprint {
     if (publicKey == null) return null;
-    // TODO: Extract actual fingerprint from PGP public key
+    // TODO(any): Extract actual fingerprint from PGP public key.
     // For now, return first 40 chars of key as placeholder
     return publicKey!.length > 40 ? publicKey!.substring(0, 40) : publicKey;
   }

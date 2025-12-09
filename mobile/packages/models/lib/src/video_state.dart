@@ -194,7 +194,8 @@ class VideoState {
   /// Whether the video has been disposed
   bool get isDisposed => loadingState == VideoLoadingState.disposed;
 
-  /// Validates that the current state can transition to one of the allowed states
+  /// Validates that the current state can transition to one of the
+  /// allowed states
   void _validateTransition(List<VideoLoadingState> allowedFromStates) {
     if (loadingState == VideoLoadingState.disposed) {
       throw StateError('Cannot transition from disposed state');

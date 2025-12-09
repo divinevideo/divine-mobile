@@ -3,7 +3,6 @@
 
 /// Response from the Divine REST Gateway API
 class GatewayResponse {
-
   GatewayResponse({
     required this.events,
     required this.eose,

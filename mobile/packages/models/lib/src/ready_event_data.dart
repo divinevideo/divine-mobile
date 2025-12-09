@@ -1,9 +1,9 @@
-// ABOUTME: Stub ReadyEventData model for backward compatibility with tests
-// ABOUTME: Minimal implementation to resolve compilation errors in legacy test files
+// ABOUTME: Stub ReadyEventData model for backward compatibility with tests.
+// ABOUTME: Minimal implementation to resolve compilation errors in legacy
+// ABOUTME: test files.
 
 /// Ready event data model for legacy test compatibility
 class ReadyEventData {
-
   ReadyEventData({
     this.id,
     this.videoId,
@@ -66,9 +66,10 @@ class ReadyEventData {
     final tags = <List<String>>[];
 
     if (secureUrl != null) {
-      tags.add(['url', secureUrl!]);
-      // Add MIME type based on URL extension or default to mp4
-      tags.add(['m', 'video/mp4']);
+      tags
+        ..add(['url', secureUrl!])
+        // Add MIME type based on URL extension or default to mp4
+        ..add(['m', 'video/mp4']);
     }
 
     // Add dimensions if available in metadata

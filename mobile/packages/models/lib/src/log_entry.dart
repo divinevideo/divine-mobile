@@ -1,9 +1,11 @@
 // ABOUTME: Data model representing a single log entry in the circular buffer
-// ABOUTME: Includes timestamp, level, message, category, and optional error/stack trace
+// ABOUTME: Includes timestamp, level, message, category, optional error/stack
 
+import 'package:meta/meta.dart';
 import 'package:models/src/logging_types.dart';
 
 /// Represents a single log entry in the circular buffer
+@immutable
 class LogEntry {
   const LogEntry({
     required this.timestamp,
@@ -49,9 +51,9 @@ class LogEntry {
 
   /// Create formatted string for display
   String toFormattedString() {
-    final buffer = StringBuffer();
-    buffer.write('[${timestamp.toIso8601String()}] ');
-    buffer.write('[${level.name.toUpperCase()}] ');
+    final buffer = StringBuffer()
+      ..write('[${timestamp.toIso8601String()}] ')
+      ..write('[${level.name.toUpperCase()}] ');
     if (category != null) {
       buffer.write('[${category!.name}] ');
     }

@@ -5,7 +5,8 @@
 enum FeedType {
   trending('trending', 'Trending Now', 'Popular videos right now'),
   popularNow('popular_now', 'Popular Now', 'Videos gaining popularity'),
-  recent('recent', 'Recent', 'Latest videos from the network');
+  recent('recent', 'Recent', 'Latest videos from the network')
+  ;
 
   const FeedType(this.id, this.displayName, this.description);
 

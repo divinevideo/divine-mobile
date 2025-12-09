@@ -1,19 +1,20 @@
-// ABOUTME: DivineFilter - extends nostr_sdk Filter to support divine relay extensions
-// ABOUTME: Adds sort, int# filters, and cursor for server-side sorted queries
+// ABOUTME: DivineFilter - extends nostr_sdk Filter to support divine relay
+// ABOUTME: extensions. Adds sort, int# filters, and cursor for server-side
+// ABOUTME: sorted queries.
 
 import 'package:nostr_sdk/filter.dart';
 
 /// Sort direction for server-side sorting
 enum SortDirection {
   asc,
-  desc;
+  desc
+  ;
 
   String toJson() => name;
 }
 
 /// Sort configuration for divine relay queries
 class SortConfig {
-
   const SortConfig({required this.field, this.direction = SortDirection.desc});
   final String field; // e.g., 'loop_count', 'likes', 'created_at'
   final SortDirection direction;
@@ -22,7 +23,8 @@ class SortConfig {
 }
 
 /// Range filter for integer metrics
-class IntRangeFilter { // Less than
+class IntRangeFilter {
+  // Less than
 
   const IntRangeFilter({this.gte, this.lte, this.gt, this.lt});
   final int? gte; // Greater than or equal
@@ -53,7 +55,8 @@ class IntRangeFilter { // Less than
 ///   },
 /// );
 /// ```
-class DivineFilter { // For pagination
+class DivineFilter {
+  // For pagination
 
   const DivineFilter({
     required this.baseFilter,
