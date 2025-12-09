@@ -1452,6 +1452,7 @@ class _UniversalCameraScreenPureState
         setState(() {
           _isProcessing = false;
         });
+
         // Navigate to metadata screen
         await Navigator.of(context).push(
           MaterialPageRoute(
@@ -1461,6 +1462,8 @@ class _UniversalCameraScreenPureState
 
         // After metadata screen returns, navigate to profile
         if (mounted) {
+          disposeAllVideoControllers(ref);
+
           Log.info(
             '📹 Returned from metadata screen, navigating to profile',
             category: LogCategory.video,
@@ -1480,7 +1483,7 @@ class _UniversalCameraScreenPureState
             category: LogCategory.video,
           );
 
-          // Reset processing flag after navigation
+          // // Reset processing flag after navigation
         }
       }
     } catch (e) {
