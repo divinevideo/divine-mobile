@@ -4,8 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/router/app_router.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -27,7 +27,7 @@ void main() {
       // Use a dummy pubkey for current user
       const currentUserPubkey =
           'currentuser11111111111111111111111111111111111111111111111111111111';
-      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+      final currentUserNpub = Nip19.encodePubKey(currentUserPubkey);
 
       final c = ProviderContainer();
       addTearDown(c.dispose);
@@ -72,7 +72,7 @@ void main() {
     ) async {
       const currentUserPubkey =
           'currentuser11111111111111111111111111111111111111111111111111111111';
-      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+      final currentUserNpub = Nip19.encodePubKey(currentUserPubkey);
 
       final c = ProviderContainer();
       addTearDown(c.dispose);
@@ -101,7 +101,7 @@ void main() {
     ) async {
       const currentUserPubkey =
           'currentuser11111111111111111111111111111111111111111111111111111111';
-      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+      final currentUserNpub = Nip19.encodePubKey(currentUserPubkey);
 
       final c = ProviderContainer();
       addTearDown(c.dispose);
@@ -130,7 +130,7 @@ void main() {
     ) async {
       const otherUserPubkey =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-      final otherUserNpub = NostrEncoding.encodePublicKey(otherUserPubkey);
+      final otherUserNpub = Nip19.encodePubKey(otherUserPubkey);
 
       final c = ProviderContainer();
       addTearDown(c.dispose);

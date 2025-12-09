@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/user_profile_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -44,7 +45,7 @@ void main() {
           // Arrange: Create a valid test nsec key
           final testPrivateKeyHex =
               'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
-          final testNsec = NostrEncoding.encodePrivateKey(testPrivateKeyHex);
+          final testNsec = Nip19.encodePrivateKey(testPrivateKeyHex);
 
           // Act: Import the nsec key
           await keyManager.importFromNsec(testNsec);
@@ -89,7 +90,7 @@ void main() {
         // Arrange: Create a valid test nsec key
         final testPrivateKeyHex =
             'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3';
-        final testNsec = NostrEncoding.encodePrivateKey(testPrivateKeyHex);
+        final testNsec = Nip19.encodePrivateKey(testPrivateKeyHex);
 
         // Act: Import nsec (profile fetching is now app responsibility)
         final result = await keyManager.importFromNsec(testNsec);
@@ -104,7 +105,7 @@ void main() {
         // Arrange: Create a valid test nsec key
         final testPrivateKeyHex =
             'c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4';
-        final testNsec = NostrEncoding.encodePrivateKey(testPrivateKeyHex);
+        final testNsec = Nip19.encodePrivateKey(testPrivateKeyHex);
 
         // Mock profile service to throw an error
         when(
@@ -144,7 +145,7 @@ void main() {
           // Arrange: Create a valid test nsec key
           final testPrivateKeyHex =
               'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5';
-          final testNsec = NostrEncoding.encodePrivateKey(testPrivateKeyHex);
+          final testNsec = Nip19.encodePrivateKey(testPrivateKeyHex);
 
           // Mock NostrService as NOT initialized
           when(mockNostrService.isInitialized).thenReturn(false);
@@ -172,7 +173,7 @@ void main() {
           // Arrange: Create a valid test nsec key
           final testPrivateKeyHex =
               'e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6';
-          final testNsec = NostrEncoding.encodePrivateKey(testPrivateKeyHex);
+          final testNsec = Nip19.encodePrivateKey(testPrivateKeyHex);
 
           // Act: Import key
           await keyManager.importFromNsec(testNsec);

@@ -4,14 +4,15 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart' show SecureKeyStorageService;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nostr_sdk/nip19/nip19.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart'
+    show SecureKeyContainer, SecureKeyStorageService;
 import 'package:openvine/services/user_profile_service.dart' as ups;
-import 'package:nostr_key_manager/nostr_key_manager.dart' show NostrEncoding;
 import 'package:openvine/utils/nostr_timestamp.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart' show SecureKeyContainer;
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Authentication state for the user
 enum AuthState {
@@ -67,7 +68,7 @@ class UserProfile {
       UserProfile(
         npub: keyContainer.npub,
         publicKeyHex: keyContainer.publicKeyHex,
-        displayName: NostrEncoding.maskKey(keyContainer.npub),
+        displayName: AuthService._maskKey(keyContainer.npub),
       );
   final String npub;
   final String publicKeyHex;
@@ -85,6 +86,24 @@ class AuthService {
   AuthService({SecureKeyStorageService? keyStorage})
     : _keyStorage = keyStorage ?? SecureKeyStorageService();
   final SecureKeyStorageService _keyStorage;
+
+  /// Mask a key for display purposes (show first 8 and last 4 characters)
+  static String _maskKey(String key) {
+    if (key.length < 12) return key;
+    final start = key.substring(0, 8);
+    final end = key.substring(key.length - 4);
+    return '$start...$end';
+  }
+
+  /// Check if nsec is valid by attempting to decode it
+  static bool _isValidNsec(String nsec) {
+    try {
+      Nip19.decode(nsec);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   AuthState _authState = AuthState.checking;
   SecureKeyContainer? _currentKeyContainer;
@@ -183,7 +202,7 @@ class AuthService {
         category: LogCategory.auth,
       );
       Log.debug(
-        '📱 Public key: ${NostrEncoding.maskKey(keyContainer.npub)}',
+        '📱 Public key: ${_maskKey(keyContainer.npub)}',
         name: 'AuthService',
         category: LogCategory.auth,
       );
@@ -218,7 +237,7 @@ class AuthService {
 
     try {
       // Validate nsec format
-      if (!NostrEncoding.isValidNsec(nsec)) {
+      if (!_isValidNsec(nsec)) {
         throw Exception('Invalid nsec format');
       }
 
@@ -237,7 +256,7 @@ class AuthService {
         category: LogCategory.auth,
       );
       Log.debug(
-        '📱 Public key: ${NostrEncoding.maskKey(keyContainer.npub)}',
+        '📱 Public key: ${_maskKey(keyContainer.npub)}',
         name: 'AuthService',
         category: LogCategory.auth,
       );
@@ -272,7 +291,7 @@ class AuthService {
 
     try {
       // Validate hex format
-      if (!NostrEncoding.isValidHexKey(privateKeyHex)) {
+      if (!keyIsValid(privateKeyHex)) {
         throw Exception('Invalid private key format');
       }
 
@@ -291,7 +310,7 @@ class AuthService {
         category: LogCategory.auth,
       );
       Log.debug(
-        '📱 Public key: ${NostrEncoding.maskKey(keyContainer.npub)}',
+        '📱 Public key: ${_maskKey(keyContainer.npub)}',
         name: 'AuthService',
         category: LogCategory.auth,
       );
@@ -356,7 +375,7 @@ class AuthService {
         displayName:
             cachedProfile.displayName ??
             cachedProfile.name ??
-            NostrEncoding.maskKey(_currentKeyContainer!.npub),
+            _maskKey(_currentKeyContainer!.npub),
         about: cachedProfile.about,
         picture: cachedProfile.picture,
         nip05: cachedProfile.nip05,
@@ -725,7 +744,7 @@ class AuthService {
         final keyContainer = await _keyStorage.getKeyContainer();
         if (keyContainer != null) {
           Log.info(
-            'Loaded existing secure identity: ${NostrEncoding.maskKey(keyContainer.npub)}',
+            'Loaded existing secure identity: ${_maskKey(keyContainer.npub)}',
             name: 'AuthService',
             category: LogCategory.auth,
           );
@@ -751,7 +770,7 @@ class AuthService {
       final result = await createNewIdentity();
       if (result.success && result.keyContainer != null) {
         Log.info(
-          'Auto-created NEW secure Nostr identity: ${NostrEncoding.maskKey(result.keyContainer!.npub)}',
+          'Auto-created NEW secure Nostr identity: ${_maskKey(result.keyContainer!.npub)}',
           name: 'AuthService',
           category: LogCategory.auth,
         );
@@ -788,7 +807,7 @@ class AuthService {
     _currentProfile = UserProfile(
       npub: keyContainer.npub,
       publicKeyHex: keyContainer.publicKeyHex,
-      displayName: NostrEncoding.maskKey(keyContainer.npub),
+      displayName: _maskKey(keyContainer.npub),
     );
 
     // Store current user pubkey in SharedPreferences for router redirect checks
@@ -853,7 +872,7 @@ class AuthService {
   Map<String, dynamic> get userStats => {
     'is_authenticated': isAuthenticated,
     'auth_state': authState.name,
-    'npub': currentNpub != null ? NostrEncoding.maskKey(currentNpub!) : null,
+    'npub': currentNpub != null ? _maskKey(currentNpub!) : null,
     'key_created_at': _currentProfile?.keyCreatedAt?.toIso8601String(),
     'last_access_at': _currentProfile?.lastAccessAt?.toIso8601String(),
     'has_error': _lastError != null,

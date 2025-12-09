@@ -2,7 +2,6 @@
 // ABOUTME: Handles npub, nprofile, hex, and special 'me' identifier universally
 
 import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart' show NostrEncoding;
 
 /// Normalized result containing hex pubkey and optional relay hints
 class NormalizedPublicIdentifier {
@@ -42,14 +41,14 @@ NormalizedPublicIdentifier? normalizePublicIdentifier(
   }
 
   // Try hex format first (most common internally)
-  if (NostrEncoding.isValidHexKey(identifier)) {
+  if (keyIsValid(identifier)) {
     return NormalizedPublicIdentifier(hexPubkey: identifier);
   }
 
   // Try npub format
   if (identifier.startsWith('npub1')) {
     try {
-      final hexKey = NostrEncoding.decodePublicKey(identifier);
+      final hexKey = Nip19.decode(identifier);
       return NormalizedPublicIdentifier(hexPubkey: hexKey);
     } catch (e) {
       return null;
@@ -97,7 +96,7 @@ String? normalizeToNpub(String identifier, {String? currentUserHex}) {
   if (normalized == null) return null;
 
   try {
-    return NostrEncoding.encodePublicKey(normalized.hexPubkey);
+    return Nip19.encodePubKey(normalized.hexPubkey);
   } catch (e) {
     return null;
   }

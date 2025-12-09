@@ -2,6 +2,7 @@
 // ABOUTME: Supports various auth scenarios including logged in, logged out, and error states
 
 import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 
 /// Test data class for authentication information
 class AuthData {
@@ -60,8 +61,8 @@ class AuthStateBuilder {
     isAuthenticated = true;
     privateKey = keyPair.private;
     publicKey = keyPair.public;
-    nsec = NostrEncoding.encodePrivateKey(keyPair.private);
-    npub = NostrEncoding.encodePublicKey(keyPair.public);
+    nsec = Nip19.encodePrivateKey(keyPair.private);
+    npub = Nip19.encodePubKey(keyPair.public);
     lastAuthenticated = DateTime.now();
     return this;
   }
@@ -84,8 +85,8 @@ class AuthStateBuilder {
   }) {
     this.privateKey = privateKey;
     this.publicKey = publicKey;
-    nsec = NostrEncoding.encodePrivateKey(privateKey);
-    npub = NostrEncoding.encodePublicKey(publicKey);
+    nsec = Nip19.encodePrivateKey(privateKey);
+    npub = Nip19.encodePubKey(publicKey);
     isAuthenticated = true;
     lastAuthenticated = DateTime.now();
     return this;

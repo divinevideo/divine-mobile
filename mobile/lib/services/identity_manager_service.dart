@@ -4,8 +4,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:nostr_key_manager/nostr_key_manager.dart' show SecureKeyStorageService;
-import 'package:nostr_key_manager/nostr_key_manager.dart' show NostrEncoding;
+import 'package:nostr_key_manager/nostr_key_manager.dart'
+    show SecureKeyStorageService;
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -53,6 +53,14 @@ class IdentityManagerService {
   static const String _activeIdentityKey = 'active_nostr_identity';
 
   final SecureKeyStorageService _keyStorage;
+
+  /// Mask a key for display purposes (show first 8 and last 4 characters)
+  static String _maskKey(String key) {
+    if (key.length < 12) return key;
+    final start = key.substring(0, 8);
+    final end = key.substring(key.length - 4);
+    return '$start...$end';
+  }
   List<SavedIdentity> _savedIdentities = [];
   String? _activeIdentityNpub;
 
@@ -114,7 +122,7 @@ class IdentityManagerService {
         (identity) => identity.npub == currentKeyContainer.npub,
       );
 
-      final displayName = NostrEncoding.maskKey(currentKeyContainer.npub);
+      final displayName = _maskKey(currentKeyContainer.npub);
 
       if (existingIndex >= 0) {
         // Update existing identity
@@ -233,7 +241,7 @@ class IdentityManagerService {
 
       await _persistIdentities();
       Log.debug(
-        '📱️ Removed identity with npub: ${NostrEncoding.maskKey(npub)}',
+        '📱️ Removed identity with npub: ${_maskKey(npub)}',
         name: 'IdentityManagerService',
         category: LogCategory.system,
       );

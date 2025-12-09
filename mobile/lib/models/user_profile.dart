@@ -4,7 +4,7 @@
 import 'dart:convert';
 import 'package:hive_ce/hive.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart' show NostrEncoding;
+import 'package:nostr_sdk/nip19/nip19.dart';
 
 part 'user_profile.g.dart';
 
@@ -156,7 +156,7 @@ class UserProfile {
   /// Get npub encoding of pubkey
   String get npub {
     try {
-      return NostrEncoding.encodePublicKey(pubkey);
+      return Nip19.encodePubKey(pubkey);
     } catch (e) {
       // Fallback to shortened pubkey if encoding fails
       return shortPubkey;
@@ -166,7 +166,7 @@ class UserProfile {
   /// Get truncated npub for display (e.g., "npub1abc...xyz")
   String get truncatedNpub {
     try {
-      final fullNpub = NostrEncoding.encodePublicKey(pubkey);
+      final fullNpub = Nip19.encodePubKey(pubkey);
       if (fullNpub.length <= 16) return fullNpub;
       // Show first 10 chars + "..." + last 6 chars (npub1abc...xyz format)
       return '${fullNpub.substring(0, 10)}...${fullNpub.substring(fullNpub.length - 6)}';
