@@ -1,5 +1,6 @@
 // ABOUTME: Unit tests for PendingUploadsDao with domain model conversion.
-// ABOUTME: Tests upsertUpload, getUpload, getPendingUploads, updateStatus, watchUploads.
+// ABOUTME: Tests upsertUpload, getUpload, getPendingUploads, updateStatus,
+// ABOUTME: watchUploads.
 
 import 'dart:io';
 

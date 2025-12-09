@@ -1,5 +1,6 @@
-// ABOUTME: Unit tests for NotificationsDao with read status and cleanup operations.
-// ABOUTME: Tests upsertNotification, getAllNotifications, markAsRead, deleteOlderThan.
+// ABOUTME: Unit tests for NotificationsDao with read status and cleanup
+// ABOUTME: operations. Tests upsertNotification, getAllNotifications,
+// ABOUTME: markAsRead, deleteOlderThan.
 
 import 'dart:io';
 
@@ -283,7 +284,8 @@ void main() {
       });
 
       test(
-        'returns count of all rows (UPDATE touches all rows regardless of current value)',
+        'returns count of all rows '
+        '(UPDATE touches all rows regardless of current value)',
         () async {
           await dao.upsertNotification(
             id: 'notif_1',
