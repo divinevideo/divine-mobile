@@ -12,7 +12,7 @@ part 'nostr_events_dao.g.dart';
 @DriftAccessor(tables: [NostrEvents, VideoMetrics])
 class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     with _$NostrEventsDaoMixin {
-  NostrEventsDao(AppDatabase db) : super(db);
+  NostrEventsDao(super.db);
 
   /// Insert or replace event
   ///
@@ -112,14 +112,14 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     } else {
       final placeholders = List.filled(effectiveKinds.length, '?').join(', ');
       conditions.add('kind IN ($placeholders)');
-      variables.addAll(effectiveKinds.map((k) => Variable.withInt(k)));
+      variables.addAll(effectiveKinds.map(Variable.withInt));
     }
 
     // Authors filter
     if (authors != null && authors.isNotEmpty) {
       final placeholders = List.filled(authors.length, '?').join(', ');
       conditions.add('pubkey IN ($placeholders)');
-      variables.addAll(authors.map((a) => Variable.withString(a)));
+      variables.addAll(authors.map(Variable.withString));
     }
 
     // Hashtags filter (search in tags JSON)
@@ -151,7 +151,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
 
     // Determine ORDER BY clause and whether we need to join video_metrics
     String orderByClause;
-    bool needsMetricsJoin = false;
+    var needsMetricsJoin = false;
 
     if (sortBy != null && sortBy != 'created_at') {
       // Server-side sorting by engagement metrics requires join with video_metrics

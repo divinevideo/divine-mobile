@@ -16,6 +16,26 @@ class NativeProofData {
     this.timestamp,
   });
 
+  /// Create from JSON
+  factory NativeProofData.fromJson(Map<String, dynamic> json) =>
+      NativeProofData(
+        videoHash: json['videoHash'] as String,
+        sensorDataCsv: json['sensorDataCsv'] as String?,
+        pgpSignature: json['pgpSignature'] as String?,
+        publicKey: json['publicKey'] as String?,
+        deviceAttestation: json['deviceAttestation'] as String?,
+        timestamp: json['timestamp'] as String?,
+      );
+
+  /// Create from raw proof metadata map (from NativeProofModeService)
+  factory NativeProofData.fromMetadata(Map<String, String> metadata) =>
+      NativeProofData(
+        videoHash: metadata['hash']!,
+        sensorDataCsv: metadata['csv'],
+        pgpSignature: metadata['signature'],
+        publicKey: metadata['publicKey'],
+      );
+
   /// SHA256 hash of the video file (used as proof identifier)
   final String videoHash;
 
@@ -43,29 +63,6 @@ class NativeProofData {
     if (deviceAttestation != null) 'deviceAttestation': deviceAttestation,
     if (timestamp != null) 'timestamp': timestamp,
   };
-
-  /// Create from JSON
-  factory NativeProofData.fromJson(Map<String, dynamic> json) =>
-      NativeProofData(
-        videoHash: json['videoHash'] as String,
-        sensorDataCsv: json['sensorDataCsv'] as String?,
-        pgpSignature: json['pgpSignature'] as String?,
-        publicKey: json['publicKey'] as String?,
-        deviceAttestation: json['deviceAttestation'] as String?,
-        timestamp: json['timestamp'] as String?,
-      );
-
-  /// Create from raw proof metadata map (from NativeProofModeService)
-  factory NativeProofData.fromMetadata(Map<String, String> metadata) =>
-      NativeProofData(
-        videoHash: metadata['hash']!,
-        sensorDataCsv: metadata['csv'],
-        pgpSignature: metadata['signature'],
-        publicKey: metadata['publicKey'],
-        // Device attestation would come from SafetyNet API separately
-        deviceAttestation: null,
-        timestamp: null,
-      );
 
   /// Check if proof data is complete
   bool get isComplete =>

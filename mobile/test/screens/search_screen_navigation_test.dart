@@ -6,8 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/video_events_providers.dart';
-import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 // Mock VideoEvents stream provider
 class MockVideoEvents extends VideoEvents {
@@ -65,7 +65,7 @@ void main() {
     testWidgets('tapping user in search results navigates to profile screen', (
       WidgetTester tester,
     ) async {
-      final user123Npub = Nip19.encodePubKey('user123');
+      final user123Npub = NostrKeyUtils.encodePubKey('user123');
 
       // Arrange: Setup provider override with test videos
       final c = ProviderContainer(

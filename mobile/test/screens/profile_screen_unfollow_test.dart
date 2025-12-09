@@ -10,8 +10,8 @@ import 'package:openvine/router/app_router.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
-import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 
 import 'profile_screen_unfollow_test.mocks.dart';
@@ -44,7 +44,7 @@ void main() {
       (WidgetTester tester) async {
         const profilePubkey = 'target_user_pubkey_456';
         const currentUserPubkey = 'current_user_pubkey_123';
-        final profileNpub = Nip19.encodePubKey(profilePubkey);
+        final profileNpub = NostrKeyUtils.encodePubKey(profilePubkey);
 
         // Setup: User is following the target
         when(mockSocialService.isFollowing(profilePubkey)).thenReturn(true);
@@ -94,7 +94,7 @@ void main() {
     ) async {
       const profilePubkey = 'target_user_pubkey_789';
       const currentUserPubkey = 'current_user_pubkey_123';
-      final profileNpub = Nip19.encodePubKey(profilePubkey);
+      final profileNpub = NostrKeyUtils.encodePubKey(profilePubkey);
 
       // Setup: User is NOT following the target
       when(mockSocialService.isFollowing(profilePubkey)).thenReturn(false);
@@ -140,7 +140,7 @@ void main() {
     ) async {
       const profilePubkey = 'target_user_pubkey_abc';
       const currentUserPubkey = 'current_user_pubkey_123';
-      final profileNpub = Nip19.encodePubKey(profilePubkey);
+      final profileNpub = NostrKeyUtils.encodePubKey(profilePubkey);
 
       // Start with user following the target
       var isFollowing = true;
@@ -192,7 +192,7 @@ void main() {
     ) async {
       const profilePubkey = 'target_user_pubkey_xyz';
       const currentUserPubkey = 'current_user_pubkey_123';
-      final profileNpub = Nip19.encodePubKey(profilePubkey);
+      final profileNpub = NostrKeyUtils.encodePubKey(profilePubkey);
 
       when(mockSocialService.isFollowing(profilePubkey)).thenReturn(true);
       when(mockAuthService.currentPublicKeyHex).thenReturn(currentUserPubkey);
@@ -232,7 +232,7 @@ void main() {
       WidgetTester tester,
     ) async {
       const profilePubkey = 'target_user_pubkey_def';
-      final profileNpub = Nip19.encodePubKey(profilePubkey);
+      final profileNpub = NostrKeyUtils.encodePubKey(profilePubkey);
 
       // Setup: User is not authenticated
       when(mockAuthService.isAuthenticated).thenReturn(false);

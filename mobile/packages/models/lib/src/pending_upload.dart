@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
 
-import 'native_proof_data.dart';
+import 'package:models/src/native_proof_data.dart';
 
 /// Status of a video upload to Cloudinary
 enum UploadStatus {

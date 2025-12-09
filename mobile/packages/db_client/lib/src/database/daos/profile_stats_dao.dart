@@ -12,7 +12,7 @@ const profileStatsCacheDuration = Duration(minutes: 5);
 @DriftAccessor(tables: [ProfileStats])
 class ProfileStatsDao extends DatabaseAccessor<AppDatabase>
     with _$ProfileStatsDaoMixin {
-  ProfileStatsDao(AppDatabase db) : super(db);
+  ProfileStatsDao(super.db);
 
   /// Upsert profile stats (insert or update)
   Future<void> upsertStats({

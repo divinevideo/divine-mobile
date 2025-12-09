@@ -1,7 +1,7 @@
 // ABOUTME: Complete diagnostic data model for bug reports
 // ABOUTME: Aggregates logs, device info, errors, and user description for NIP-17 transmission
 
-import 'log_entry.dart';
+import 'package:models/src/log_entry.dart';
 
 /// Complete diagnostic data for a bug report
 class BugReportData {

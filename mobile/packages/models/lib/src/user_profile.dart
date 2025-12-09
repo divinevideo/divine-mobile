@@ -2,8 +2,9 @@
 // ABOUTME: Represents user information like display name, avatar, bio, and social links
 
 import 'dart:convert';
+
+import 'package:models/src/nostr_encoding.dart';
 import 'package:nostr_sdk/event.dart';
-import 'nostr_encoding.dart';
 
 /// Model representing a Nostr user profile from kind 0 events
 class UserProfile {
@@ -81,7 +82,7 @@ class UserProfile {
   /// Create profile from Drift database row
   factory UserProfile.fromDrift(dynamic row) {
     // Parse rawData from JSON string if present
-    Map<String, dynamic> parsedRawData = {};
+    var parsedRawData = <String, dynamic>{};
     if (row.rawData != null && row.rawData is String) {
       try {
         parsedRawData =
@@ -124,8 +125,8 @@ class UserProfile {
 
   /// Get the best available display name
   String get bestDisplayName {
-    if (displayName?.isNotEmpty == true) return displayName!;
-    if (name?.isNotEmpty == true) return name!;
+    if (displayName?.isNotEmpty ?? false) return displayName!;
+    if (name?.isNotEmpty ?? false) return name!;
     // Fallback to truncated npub (e.g., "npub1abc...xyz")
     return truncatedNpub;
   }
@@ -162,27 +163,27 @@ class UserProfile {
 
   /// Check if profile has basic information
   bool get hasBasicInfo =>
-      name?.isNotEmpty == true ||
-      displayName?.isNotEmpty == true ||
-      picture?.isNotEmpty == true;
+      (name?.isNotEmpty ?? false) ||
+      (displayName?.isNotEmpty ?? false) ||
+      (picture?.isNotEmpty ?? false);
 
   /// Check if profile has avatar
-  bool get hasAvatar => picture?.isNotEmpty == true;
+  bool get hasAvatar => picture?.isNotEmpty ?? false;
 
   /// Check if profile has bio
-  bool get hasBio => about?.isNotEmpty == true;
+  bool get hasBio => about?.isNotEmpty ?? false;
 
   /// Check if profile has verified NIP-05 identifier
-  bool get hasNip05 => nip05?.isNotEmpty == true;
+  bool get hasNip05 => nip05?.isNotEmpty ?? false;
 
   /// Check if profile has Lightning support
   bool get hasLightning =>
-      lud16?.isNotEmpty == true || lud06?.isNotEmpty == true;
+      (lud16?.isNotEmpty ?? false) || (lud06?.isNotEmpty ?? false);
 
   /// Get Lightning address (prefers lud16 over lud06)
   String? get lightningAddress {
-    if (lud16?.isNotEmpty == true) return lud16;
-    if (lud06?.isNotEmpty == true) return lud06;
+    if (lud16?.isNotEmpty ?? false) return lud16;
+    if (lud06?.isNotEmpty ?? false) return lud06;
     return null;
   }
 

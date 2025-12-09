@@ -1,7 +1,7 @@
 // ABOUTME: Data model representing a single log entry in the circular buffer
 // ABOUTME: Includes timestamp, level, message, category, and optional error/stack trace
 
-import 'logging_types.dart';
+import 'package:models/src/logging_types.dart';
 
 /// Represents a single log entry in the circular buffer
 class LogEntry {
@@ -14,6 +14,19 @@ class LogEntry {
     this.error,
     this.stackTrace,
   });
+
+  /// Create from JSON
+  factory LogEntry.fromJson(Map<String, dynamic> json) => LogEntry(
+    timestamp: DateTime.parse(json['timestamp'] as String),
+    level: LogLevel.fromString(json['level'] as String),
+    message: json['message'] as String,
+    category: json['category'] != null
+        ? LogCategory.fromString(json['category'] as String)
+        : null,
+    name: json['name'] as String?,
+    error: json['error'] as String?,
+    stackTrace: json['stackTrace'] as String?,
+  );
 
   final DateTime timestamp;
   final LogLevel level;
@@ -33,19 +46,6 @@ class LogEntry {
     if (error != null) 'error': error,
     if (stackTrace != null) 'stackTrace': stackTrace,
   };
-
-  /// Create from JSON
-  factory LogEntry.fromJson(Map<String, dynamic> json) => LogEntry(
-    timestamp: DateTime.parse(json['timestamp'] as String),
-    level: LogLevel.fromString(json['level'] as String),
-    message: json['message'] as String,
-    category: json['category'] != null
-        ? LogCategory.fromString(json['category'] as String)
-        : null,
-    name: json['name'] as String?,
-    error: json['error'] as String?,
-    stackTrace: json['stackTrace'] as String?,
-  );
 
   /// Create formatted string for display
   String toFormattedString() {

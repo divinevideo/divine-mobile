@@ -4,9 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart'
     show SecureKeyContainer, SecureKeyStorageService;
 import 'package:openvine/services/user_profile_service.dart' as ups;
@@ -87,16 +85,6 @@ class AuthService {
   AuthService({SecureKeyStorageService? keyStorage})
     : _keyStorage = keyStorage ?? SecureKeyStorageService();
   final SecureKeyStorageService _keyStorage;
-
-  /// Check if nsec is valid by attempting to decode it
-  static bool _isValidNsec(String nsec) {
-    try {
-      Nip19.decode(nsec);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
 
   AuthState _authState = AuthState.checking;
   SecureKeyContainer? _currentKeyContainer;
@@ -230,7 +218,7 @@ class AuthService {
 
     try {
       // Validate nsec format
-      if (!_isValidNsec(nsec)) {
+      if (!NostrKeyUtils.isValidNsec(nsec)) {
         throw Exception('Invalid nsec format');
       }
 
@@ -284,7 +272,7 @@ class AuthService {
 
     try {
       // Validate hex format
-      if (!keyIsValid(privateKeyHex)) {
+      if (!NostrKeyUtils.isValidKey(privateKeyHex)) {
         throw Exception('Invalid private key format');
       }
 

@@ -3,6 +3,7 @@
 
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 /// Test data class for authentication information
 class AuthData {
@@ -62,7 +63,7 @@ class AuthStateBuilder {
     privateKey = keyPair.private;
     publicKey = keyPair.public;
     nsec = Nip19.encodePrivateKey(keyPair.private);
-    npub = Nip19.encodePubKey(keyPair.public);
+    npub = NostrKeyUtils.encodePubKey(keyPair.public);
     lastAuthenticated = DateTime.now();
     return this;
   }
@@ -86,7 +87,7 @@ class AuthStateBuilder {
     this.privateKey = privateKey;
     this.publicKey = publicKey;
     nsec = Nip19.encodePrivateKey(privateKey);
-    npub = Nip19.encodePubKey(publicKey);
+    npub = NostrKeyUtils.encodePubKey(publicKey);
     isAuthenticated = true;
     lastAuthenticated = DateTime.now();
     return this;

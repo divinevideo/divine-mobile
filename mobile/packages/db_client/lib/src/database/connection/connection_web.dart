@@ -10,7 +10,6 @@ QueryExecutor openConnection() {
   return LazyDatabase(() async {
     return WebDatabase(
       'local_relay_db',
-      logStatements: false,
     ); // Disabled - too verbose
   });
 }

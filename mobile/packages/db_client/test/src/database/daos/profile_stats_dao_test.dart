@@ -4,7 +4,7 @@
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
-import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:test/test.dart';
 
@@ -132,7 +132,6 @@ void main() {
 
         final result = await dao.getStats(
           testPubkey,
-          expiry: const Duration(minutes: 5),
         );
 
         expect(result, isNotNull);
@@ -204,7 +203,7 @@ void main() {
 
         // Delete with 5 minute expiry - entries are 10 minutes old so should be deleted
         final deleted = await dao.deleteExpired(
-          expiry: const Duration(minutes: 5),
+          
         );
 
         expect(deleted, equals(2));

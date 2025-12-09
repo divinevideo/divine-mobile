@@ -3,9 +3,8 @@
 
 import 'dart:developer' as developer;
 
+import 'package:models/src/nip71_video_kinds.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
-
-import 'nip71_video_kinds.dart';
 
 /// Represents a video event (NIP-71 compliant kinds 22, 34236)
 class VideoEvent {
@@ -380,7 +379,7 @@ class VideoEvent {
     developer.log('🔍 DEBUG: thumbnailUrl = $thumbnailUrl', name: 'VideoEvent');
 
     // DEBUG: Log the exact videoUrl being passed to VideoEvent constructor
-    if (videoUrl?.contains('cdn.divine.video') == true) {
+    if (videoUrl?.contains('cdn.divine.video') ?? false) {
       developer.log(
         '⚠️ SUSPICIOUS: Found cdn.divine.video URL: $videoUrl',
         name: 'VideoEvent',
@@ -430,7 +429,7 @@ class VideoEvent {
     // The URL selection logic above now properly handles cdn.divine.video URLs from imeta tags
 
     // If we still have a broken apt.openvine.co URL (shouldn't happen now), fix it
-    if (videoUrl?.contains('apt.openvine.co') == true) {
+    if (videoUrl?.contains('apt.openvine.co') ?? false) {
       final fixedUrl = videoUrl!.replaceAll(
         'apt.openvine.co',
         'api.openvine.co',
@@ -502,10 +501,6 @@ class VideoEvent {
       group: group,
       altText: altText,
       blurhash: blurhash,
-      isRepost: false,
-      reposterId: null,
-      reposterPubkey: null,
-      repostedAt: null,
       originalLoops: originalLoops,
       originalLikes: originalLikes,
       originalComments: originalComments,
@@ -685,7 +680,7 @@ class VideoEvent {
     final reposts = event.originalReposts ?? 0;
 
     // Calculate weighted score
-    double score = 0.0;
+    var score = 0.0;
     score += loops * 1.0; // Base weight for views/loops
     score += comments * 3.0; // Comments show high engagement
     score += likes * 2.0; // Likes show appreciation
@@ -934,7 +929,7 @@ class VideoEvent {
     if (url.isEmpty) return false;
 
     // Fix common typo: apt.openvine.co -> api.openvine.co
-    String correctedUrl = url;
+    var correctedUrl = url;
     if (url.contains('apt.openvine.co')) {
       correctedUrl = url.replaceAll('apt.openvine.co', 'api.openvine.co');
     }
@@ -975,30 +970,34 @@ class VideoEvent {
     // Only reject URLs that are ACTUALLY from the dead vine.co domain
     if (urlLower.contains('//vine.co/') ||
         urlLower.contains('//www.vine.co/') ||
-        urlLower.startsWith('vine.co/'))
+        urlLower.startsWith('vine.co/')) {
       return -1;
+    }
 
     // POSTEL'S LAW: Deprioritize known broken URL patterns
     // The cdn.divine.video/*/manifest/video.m3u8 pattern is often broken
     // Prefer stream.divine.video HLS or direct MP4 files
     if (urlLower.contains('cdn.divine.video') &&
-        urlLower.contains('/manifest/'))
+        urlLower.contains('/manifest/')) {
       return 5;
+    }
 
     // ALWAYS prefer MP4 over HLS for short videos (6 seconds)
     // HLS adaptive bitrate is pointless for content this short
     // MP4 is simpler, faster (single file vs manifest + segments)
 
     // Direct MP4 from cdn.divine.video (blob storage) - highest priority
-    if (urlLower.contains('.mp4') && urlLower.contains('cdn.divine.video'))
+    if (urlLower.contains('.mp4') && urlLower.contains('cdn.divine.video')) {
       return 115;
+    }
 
     // Any other MP4 - still preferred
     if (urlLower.contains('.mp4')) return 110;
 
     // BunnyStream HLS (stream.divine.video) - reliable streaming
-    if (urlLower.contains('.m3u8') && urlLower.contains('stream.divine.video'))
+    if (urlLower.contains('.m3u8') && urlLower.contains('stream.divine.video')) {
       return 105;
+    }
 
     // Generic HLS fallback
     if (urlLower.contains('.m3u8') || urlLower.contains('hls')) return 100;
@@ -1025,7 +1024,7 @@ class VideoEvent {
 
     // Score all candidates and pick the highest scoring one
     String? bestUrl;
-    int bestScore = -1;
+    var bestScore = -1;
 
     for (final url in candidates) {
       final isValid = _isValidVideoUrl(url);

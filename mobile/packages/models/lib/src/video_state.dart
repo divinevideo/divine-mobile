@@ -3,7 +3,7 @@
 
 import 'package:meta/meta.dart';
 
-import 'video_event.dart';
+import 'package:models/src/video_event.dart';
 
 /// Enum representing the different loading states of a video
 enum VideoLoadingState {
@@ -97,7 +97,6 @@ class VideoState {
     return VideoState._internal(
       event: event,
       loadingState: VideoLoadingState.loading,
-      errorMessage: null, // Clear error when starting new load
       retryCount: retryCount,
       lastUpdated: DateTime.now(),
     );
@@ -110,7 +109,6 @@ class VideoState {
     return VideoState._internal(
       event: event,
       loadingState: VideoLoadingState.ready,
-      errorMessage: null,
       retryCount: retryCount,
       lastUpdated: DateTime.now(),
     );

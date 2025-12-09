@@ -14,7 +14,7 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_prewarmer.dart';
-import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart'
     as ff;
 import 'package:openvine/services/analytics_service.dart';
@@ -28,7 +28,7 @@ void main() {
         // ARRANGE: Create authenticated user with known public key
         const testUserHex =
             '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
-        final testUserNpub = Nip19.encodePubKey(testUserHex);
+        final testUserNpub = NostrKeyUtils.encodePubKey(testUserHex);
 
         final testVideo = VideoEvent(
           id: 'test-video-1',
@@ -118,7 +118,7 @@ void main() {
       // ARRANGE
       const testUserHex =
           '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
-      final testUserNpub = Nip19.encodePubKey(testUserHex);
+      final testUserNpub = NostrKeyUtils.encodePubKey(testUserHex);
 
       final mockAuthService = _MockAuthService(testUserHex);
       final fakeVideoService = _FakeVideoEventService(authorVideos: {});
