@@ -95,7 +95,7 @@ workflows:
         auth: integration
         submit_to_testflight: true
         submit_to_app_store: false
-        # Don't auto-distribute to any groups - we'll manually add builds to testers
+        # Don't auto-distribute to any groups - we'll manually add builds to external testers
         beta_groups: []
 
   android-build:
