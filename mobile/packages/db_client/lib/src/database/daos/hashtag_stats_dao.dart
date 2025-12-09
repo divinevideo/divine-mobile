@@ -12,7 +12,7 @@ const hashtagStatsCacheDuration = Duration(hours: 1);
 @DriftAccessor(tables: [HashtagStats])
 class HashtagStatsDao extends DatabaseAccessor<AppDatabase>
     with _$HashtagStatsDaoMixin {
-  HashtagStatsDao(AppDatabase db) : super(db);
+  HashtagStatsDao(super.attachedDatabase);
 
   /// Upsert a single hashtag stat
   Future<void> upsertHashtag({

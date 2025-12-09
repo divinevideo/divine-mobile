@@ -9,7 +9,7 @@ part 'notifications_dao.g.dart';
 @DriftAccessor(tables: [Notifications])
 class NotificationsDao extends DatabaseAccessor<AppDatabase>
     with _$NotificationsDaoMixin {
-  NotificationsDao(AppDatabase db) : super(db);
+  NotificationsDao(super.attachedDatabase);
 
   /// Upsert a notification
   Future<void> upsertNotification({

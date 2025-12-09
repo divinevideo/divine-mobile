@@ -11,7 +11,7 @@ part 'video_metrics_dao.g.dart';
 @DriftAccessor(tables: [VideoMetrics])
 class VideoMetricsDao extends DatabaseAccessor<AppDatabase>
     with _$VideoMetricsDaoMixin {
-  VideoMetricsDao(AppDatabase db) : super(db);
+  VideoMetricsDao(super.attachedDatabase);
 
   /// Upsert video metrics extracted from a video event
   ///

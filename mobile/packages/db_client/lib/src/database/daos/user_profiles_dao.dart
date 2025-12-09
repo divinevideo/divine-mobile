@@ -13,7 +13,7 @@ part 'user_profiles_dao.g.dart';
 @DriftAccessor(tables: [UserProfiles])
 class UserProfilesDao extends DatabaseAccessor<AppDatabase>
     with _$UserProfilesDaoMixin {
-  UserProfilesDao(AppDatabase db) : super(db);
+  UserProfilesDao(super.attachedDatabase);
 
   /// Upsert profile from domain model (insert or update)
   ///
