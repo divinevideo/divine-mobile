@@ -1483,7 +1483,7 @@ class _UniversalCameraScreenPureState
             category: LogCategory.video,
           );
 
-          // // Reset processing flag after navigation
+          // Reset processing flag after navigation
         }
       }
     } catch (e) {
