@@ -1,5 +1,5 @@
 // ABOUTME: Data Access Object for pending upload persistence operations.
-// ABOUTME: Provides CRUD for upload state management. Replaces Hive pending_uploads.
+// ABOUTME: Provides CRUD for upload state management.
 
 import 'dart:convert';
 

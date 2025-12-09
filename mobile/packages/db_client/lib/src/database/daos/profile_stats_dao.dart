@@ -1,5 +1,5 @@
 // ABOUTME: Data Access Object for profile statistics cache operations.
-// ABOUTME: Provides upsert with expiry checking. Replaces Hive profile_stats_cache.
+// ABOUTME: Provides upsert with expiry checking.
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';

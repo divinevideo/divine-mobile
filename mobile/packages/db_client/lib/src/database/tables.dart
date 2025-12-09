@@ -148,7 +148,6 @@ class VideoMetrics extends Table {
 /// Cache of profile statistics (followers, following, video counts, etc.)
 ///
 /// Stores aggregated stats for user profiles with a 5-minute expiry.
-/// Replaces Hive's profile_stats_cache box.
 @DataClassName('ProfileStatRow')
 class ProfileStats extends Table {
   @override
@@ -170,7 +169,6 @@ class ProfileStats extends Table {
 /// Cache of trending/popular hashtags
 ///
 /// Stores hashtag statistics with a 1-hour expiry.
-/// Replaces Hive's hashtag_stats box.
 @DataClassName('HashtagStatRow')
 class HashtagStats extends Table {
   @override
@@ -198,7 +196,6 @@ class HashtagStats extends Table {
 /// Persistent storage for notifications
 ///
 /// Stores notification metadata for offline access.
-/// Replaces Hive's notifications box.
 @DataClassName('NotificationRow')
 class Notifications extends Table {
   @override
@@ -235,7 +232,6 @@ class Notifications extends Table {
 /// Tracks video uploads in progress
 ///
 /// Stores pending upload state for resumption after app restart.
-/// Replaces Hive's pending_uploads box.
 @DataClassName('PendingUploadRow')
 class PendingUploads extends Table {
   @override

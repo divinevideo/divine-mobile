@@ -1,5 +1,5 @@
 // ABOUTME: Data Access Object for notification persistence operations.
-// ABOUTME: Provides CRUD with timestamp-based cleanup. Replaces Hive notifications.
+// ABOUTME: Provides CRUD with timestamp-based cleanup.
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';

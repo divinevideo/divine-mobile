@@ -1,5 +1,5 @@
 // ABOUTME: Data Access Object for hashtag statistics cache operations.
-// ABOUTME: Provides upsert with expiry checking. Replaces Hive hashtag_stats.
+// ABOUTME: Provides upsert with expiry checking.
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
