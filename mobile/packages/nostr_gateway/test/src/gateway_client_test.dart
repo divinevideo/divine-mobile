@@ -233,7 +233,8 @@ void main() {
             ),
           ).thenAnswer((_) async => mockResponse);
 
-          // Null check operator will throw, which is not caught by Exception handler
+          // Null check operator will throw, which is not caught by
+          // Exception handler
           expect(
             () => gatewayClient.query(filter),
             throwsA(isA<TypeError>()),
