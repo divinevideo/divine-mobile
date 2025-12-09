@@ -135,6 +135,7 @@ dependencies:
     git:
       url: https://github.com/VGVentures/CamerAwesome.git
       ref: master
+  convert: ^3.1.2
 
 dependency_overrides:
   device_info_plus: ^10.1.2
