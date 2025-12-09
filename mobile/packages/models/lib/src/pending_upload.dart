@@ -5,42 +5,21 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
 
-import 'package:hive_ce/hive.dart';
-
 import 'native_proof_data.dart';
 
-part 'pending_upload.g.dart';
-
 /// Status of a video upload to Cloudinary
-@HiveType(typeId: 1)
 enum UploadStatus {
-  @HiveField(0)
   pending, // Waiting to start upload
-
-  @HiveField(1)
   uploading, // Currently uploading to Cloudinary
-
-  @HiveField(2)
   retrying, // Retrying after failure
-
-  @HiveField(3)
   processing, // Cloudinary is processing the video
-
-  @HiveField(4)
   readyToPublish, // Processing complete, ready for Nostr publishing
-
-  @HiveField(5)
   published, // Successfully published to Nostr
-
-  @HiveField(6)
   failed, // Upload or processing failed
-
-  @HiveField(7)
   paused, // Upload paused by user
 }
 
 /// Represents a video upload in progress or completed
-@HiveType(typeId: 2)
 class PendingUpload {
   const PendingUpload({
     required this.id,
@@ -96,76 +75,29 @@ class PendingUpload {
     videoDurationMillis: videoDuration?.inMilliseconds,
     proofManifestJson: proofManifestJson,
   );
-  @HiveField(0)
   final String id;
-
-  @HiveField(1)
   final String localVideoPath;
-
-  @HiveField(2)
   final String nostrPubkey;
-
-  @HiveField(3)
   final UploadStatus status;
-
-  @HiveField(4)
   final DateTime createdAt;
-
-  @HiveField(5)
   final String? cloudinaryPublicId; // Deprecated - use videoId instead
-
-  @HiveField(15)
-  final String? videoId; // New field for direct upload
-
-  @HiveField(16)
-  final String? cdnUrl; // Direct CDN URL from upload
-
-  @HiveField(6)
+  final String? videoId;
+  final String? cdnUrl;
   final String? errorMessage;
-
-  @HiveField(7)
   final double? uploadProgress; // 0.0 to 1.0
-
-  @HiveField(8)
   final String? thumbnailPath;
-
-  @HiveField(9)
   final String? title;
-
-  @HiveField(10)
   final String? description;
-
-  @HiveField(11)
   final List<String>? hashtags;
-
-  @HiveField(12)
   final String? nostrEventId; // Set when published to Nostr
-
-  @HiveField(13)
   final DateTime? completedAt;
-
-  @HiveField(14)
   final int? retryCount;
-
-  @HiveField(17)
   final int? videoWidth;
-
-  @HiveField(18)
   final int? videoHeight;
-
-  @HiveField(19)
-  final int? videoDurationMillis; // Store as milliseconds for Hive
-
-  @HiveField(20)
+  final int? videoDurationMillis;
   final String? proofManifestJson; // Serialized ProofManifest
-
-  @HiveField(21)
   final String? streamingMp4Url; // BunnyStream MP4 URL from Blossom
-
-  @HiveField(22)
   final String? streamingHlsUrl; // BunnyStream HLS URL from Blossom
-
-  @HiveField(23)
   final String? fallbackUrl; // R2 MP4 fallback URL from Blossom
 
   /// Get video duration as Duration object

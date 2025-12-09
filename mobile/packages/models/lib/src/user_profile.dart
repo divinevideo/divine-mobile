@@ -2,14 +2,10 @@
 // ABOUTME: Represents user information like display name, avatar, bio, and social links
 
 import 'dart:convert';
-import 'package:hive_ce/hive.dart';
 import 'package:nostr_sdk/event.dart';
 import 'nostr_encoding.dart';
 
-part 'user_profile.g.dart';
-
 /// Model representing a Nostr user profile from kind 0 events
-@HiveType(typeId: 3)
 class UserProfile {
   const UserProfile({
     required this.pubkey,
@@ -112,31 +108,18 @@ class UserProfile {
       eventId: row.eventId as String,
     );
   }
-  @HiveField(0)
   final String pubkey;
-  @HiveField(1)
   final String? name;
-  @HiveField(2)
   final String? displayName;
-  @HiveField(3)
   final String? about;
-  @HiveField(4)
   final String? picture;
-  @HiveField(5)
   final String? banner;
-  @HiveField(6)
   final String? website;
-  @HiveField(7)
   final String? nip05;
-  @HiveField(8)
   final String? lud16; // Lightning address
-  @HiveField(9)
   final String? lud06; // LNURL
-  @HiveField(10)
   final Map<String, dynamic> rawData;
-  @HiveField(11)
   final DateTime createdAt;
-  @HiveField(12)
   final String eventId;
 
   /// Get the best available display name

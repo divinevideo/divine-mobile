@@ -9,7 +9,6 @@ environment:
 
 dependencies:
   equatable: ^2.0.5
-  hive_ce: ^2.10.1
   json_annotation: ^4.9.0
   logging: ^1.2.0
   meta: ^1.16.0

@@ -1,5 +1,5 @@
 // ABOUTME: Drift table definitions for OpenVine's shared Nostr database
-// ABOUTME: Defines NostrEvents (read-only from nostr_sdk) and UserProfiles (denormalized cache)
+// ABOUTME: Defines tables for events, profiles, metrics, stats, notifications, and uploads
 
 import 'package:drift/drift.dart';
 
@@ -141,6 +141,149 @@ class VideoMetrics extends Table {
     Index(
       'idx_metrics_views',
       'CREATE INDEX IF NOT EXISTS idx_metrics_views ON video_metrics (views)',
+    ),
+  ];
+}
+
+/// Cache of profile statistics (followers, following, video counts, etc.)
+///
+/// Stores aggregated stats for user profiles with a 5-minute expiry.
+@DataClassName('ProfileStatRow')
+class ProfileStats extends Table {
+  @override
+  String get tableName => 'profile_stats';
+
+  TextColumn get pubkey => text()();
+  IntColumn get videoCount => integer().nullable().named('video_count')();
+  IntColumn get followerCount => integer().nullable().named('follower_count')();
+  IntColumn get followingCount =>
+      integer().nullable().named('following_count')();
+  IntColumn get totalViews => integer().nullable().named('total_views')();
+  IntColumn get totalLikes => integer().nullable().named('total_likes')();
+  DateTimeColumn get cachedAt => dateTime().named('cached_at')();
+
+  @override
+  Set<Column> get primaryKey => {pubkey};
+}
+
+/// Cache of trending/popular hashtags
+///
+/// Stores hashtag statistics with a 1-hour expiry.
+@DataClassName('HashtagStatRow')
+class HashtagStats extends Table {
+  @override
+  String get tableName => 'hashtag_stats';
+
+  TextColumn get hashtag => text()();
+  IntColumn get videoCount => integer().nullable().named('video_count')();
+  IntColumn get totalViews => integer().nullable().named('total_views')();
+  IntColumn get totalLikes => integer().nullable().named('total_likes')();
+  DateTimeColumn get cachedAt => dateTime().named('cached_at')();
+
+  @override
+  Set<Column> get primaryKey => {hashtag};
+
+  @override
+  List<Index> get indexes => [
+    Index(
+      'idx_hashtag_video_count',
+      'CREATE INDEX IF NOT EXISTS idx_hashtag_video_count '
+          'ON hashtag_stats (video_count DESC)',
+    ),
+  ];
+}
+
+/// Persistent storage for notifications
+///
+/// Stores notification metadata for offline access.
+@DataClassName('NotificationRow')
+class Notifications extends Table {
+  @override
+  String get tableName => 'notifications';
+
+  TextColumn get id => text()();
+  TextColumn get type => text()(); // like, repost, follow, comment, mention
+  TextColumn get fromPubkey => text().named('from_pubkey')();
+  TextColumn get targetEventId => text().nullable().named('target_event_id')();
+  TextColumn get targetPubkey => text().nullable().named('target_pubkey')();
+  TextColumn get content => text().nullable()();
+  IntColumn get timestamp => integer()(); // Unix timestamp
+  BoolColumn get isRead => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get cachedAt => dateTime().named('cached_at')();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Index> get indexes => [
+    Index(
+      'idx_notification_timestamp',
+      'CREATE INDEX IF NOT EXISTS idx_notification_timestamp '
+          'ON notifications (timestamp DESC)',
+    ),
+    Index(
+      'idx_notification_is_read',
+      'CREATE INDEX IF NOT EXISTS idx_notification_is_read '
+          'ON notifications (is_read)',
+    ),
+  ];
+}
+
+/// Tracks video uploads in progress
+///
+/// Stores pending upload state for resumption after app restart.
+@DataClassName('PendingUploadRow')
+class PendingUploads extends Table {
+  @override
+  String get tableName => 'pending_uploads';
+
+  TextColumn get id => text()();
+  TextColumn get localVideoPath => text().named('local_video_path')();
+  TextColumn get nostrPubkey => text().named('nostr_pubkey')();
+  TextColumn get status => text()(); // pending, uploading, processing, etc.
+  DateTimeColumn get createdAt => dateTime().named('created_at')();
+  TextColumn get cloudinaryPublicId =>
+      text().nullable().named('cloudinary_public_id')();
+  TextColumn get videoId => text().nullable().named('video_id')();
+  TextColumn get cdnUrl => text().nullable().named('cdn_url')();
+  TextColumn get errorMessage => text().nullable().named('error_message')();
+  RealColumn get uploadProgress =>
+      real().nullable().named('upload_progress')(); // 0.0 to 1.0
+  TextColumn get thumbnailPath => text().nullable().named('thumbnail_path')();
+  TextColumn get title => text().nullable()();
+  TextColumn get description => text().nullable()();
+  TextColumn get hashtags =>
+      text().nullable()(); // JSON-encoded array of strings
+  TextColumn get nostrEventId => text().nullable().named('nostr_event_id')();
+  DateTimeColumn get completedAt => dateTime().nullable().named('completed_at')();
+  IntColumn get retryCount =>
+      integer().withDefault(const Constant(0)).named('retry_count')();
+  IntColumn get videoWidth => integer().nullable().named('video_width')();
+  IntColumn get videoHeight => integer().nullable().named('video_height')();
+  IntColumn get videoDurationMillis =>
+      integer().nullable().named('video_duration_millis')();
+  TextColumn get proofManifestJson =>
+      text().nullable().named('proof_manifest_json')();
+  TextColumn get streamingMp4Url =>
+      text().nullable().named('streaming_mp4_url')();
+  TextColumn get streamingHlsUrl =>
+      text().nullable().named('streaming_hls_url')();
+  TextColumn get fallbackUrl => text().nullable().named('fallback_url')();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  @override
+  List<Index> get indexes => [
+    Index(
+      'idx_pending_upload_status',
+      'CREATE INDEX IF NOT EXISTS idx_pending_upload_status '
+          'ON pending_uploads (status)',
+    ),
+    Index(
+      'idx_pending_upload_created',
+      'CREATE INDEX IF NOT EXISTS idx_pending_upload_created '
+          'ON pending_uploads (created_at DESC)',
     ),
   ];
 }
