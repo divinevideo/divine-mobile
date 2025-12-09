@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   build:
-    name: Nostr SDK CI
+    name: Nostr Key Manager CI
     runs-on: ubuntu-latest
     defaults:
       run:
