@@ -289,7 +289,7 @@ void main() {
         expect(count, equals(0));
       });
 
-      test('returns count even when already read', () async {
+      test('returns count of all rows (UPDATE touches all rows regardless of current value)', () async {
         await dao.upsertNotification(
           id: 'notif_1',
           type: 'like',
