@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'contact.dart';
 
 class ContactList {
@@ -56,7 +58,9 @@ class ContactList {
             petname: petname,
           );
           contacts[contact.publicKey] = contact;
-        } catch (e) {}
+        } catch (e) {
+          log("$e");
+        }
       } else if (t == "t" && length > 1) {
         var tagName = tag[1];
         followedTags[tagName] = 1;
