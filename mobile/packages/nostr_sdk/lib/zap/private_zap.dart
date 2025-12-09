@@ -37,7 +37,7 @@ class PrivateZap {
         pubkey = senderPubkey;
       }
 
-      if (StringUtil.isNotBlank(anonStr)) {
+      if (StringUtil.isNotBlank(anonStr) && pubkey != null) {
         var strs = anonStr!.split("_");
         if (strs.length > 1) {
           var encryptedText = Nip19.decode(strs[0]);
