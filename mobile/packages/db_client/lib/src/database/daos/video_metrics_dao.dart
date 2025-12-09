@@ -1,8 +1,7 @@
 // ABOUTME: Data Access Object for video metrics with Event model parsing.
 // ABOUTME: Provides upsert from Event model. Simple CRUD is in AppDbClient.
 
-import 'package:db_client/src/database/app_database.dart';
-import 'package:db_client/src/database/tables.dart';
+import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
