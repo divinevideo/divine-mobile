@@ -15,6 +15,7 @@ dependencies:
     path: ../models
   nostr_sdk:
     path: ../nostr_sdk
+  path: ^1.9.1
   path_provider: ^2.1.5
 
 dev_dependencies:
