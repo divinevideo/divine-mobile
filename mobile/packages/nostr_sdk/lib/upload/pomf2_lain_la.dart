@@ -1,3 +1,6 @@
+// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
+// ignore_for_file: constant_identifier_names
+
 import 'package:dio/dio.dart';
 import 'package:nostr_sdk/upload/upload_util.dart';
 import 'package:http_parser/src/media_type.dart';
