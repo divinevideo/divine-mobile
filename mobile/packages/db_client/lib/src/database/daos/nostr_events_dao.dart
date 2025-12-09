@@ -228,8 +228,8 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
       createdAt: row.read<int>('created_at'),
     );
     // Set id and sig manually since they're stored fields
-    event.id = row.read<String>('id');
-    event.sig = row.read<String>('sig');
-    return event;
+    return event
+      ..id = row.read<String>('id')
+      ..sig = row.read<String>('sig');
   }
 }
