@@ -1,4 +1,5 @@
-// ignore_for_file: avoid_web_libraries_in_flutter
+// TODO(any): Migrate from dart:js to dart:js_interop - https://github.com/divinevideo/divine-mobile/issues/355
+// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use, invalid_runtime_check_with_js_interop_types
 
 import 'dart:convert';
 

@@ -1,3 +1,6 @@
+// TODO(any): Migrate onHttpClientCreate to createHttpClient - https://github.com/divinevideo/divine-mobile/issues/356
+// ignore_for_file: deprecated_member_use
+
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
