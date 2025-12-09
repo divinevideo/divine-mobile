@@ -83,22 +83,19 @@ void main() {
       expect(results, isA<List<Event>>());
     });
 
-    test(
-      'searchEvents results are deduplicated by event ID',
-      () async {
-        // The deduplication is guaranteed by the implementation using
-        // Map<String, Event> keyed by event ID. Without connected relays,
-        // we get an empty list, but the invariant still holds.
-        final results = await nostr.relayPool.searchEvents(
-          'test',
-          timeout: Duration(milliseconds: 100),
-        );
+    test('searchEvents results are deduplicated by event ID', () async {
+      // The deduplication is guaranteed by the implementation using
+      // Map<String, Event> keyed by event ID. Without connected relays,
+      // we get an empty list, but the invariant still holds.
+      final results = await nostr.relayPool.searchEvents(
+        'test',
+        timeout: Duration(milliseconds: 100),
+      );
 
-        // Verify the invariant: all event IDs are unique
-        final eventIds = results.map((e) => e.id).toSet();
-        expect(eventIds.length, equals(results.length));
-      },
-    );
+      // Verify the invariant: all event IDs are unique
+      final eventIds = results.map((e) => e.id).toSet();
+      expect(eventIds.length, equals(results.length));
+    });
 
     test('searchEvents should return empty list for no results', () async {
       final results = await nostr.relayPool.searchEvents(
