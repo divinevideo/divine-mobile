@@ -43,7 +43,12 @@ class AndroidPluginIntent {
   ///
   /// TypedExtra class holds predefined constants ( type information ),
   /// consider using those
-  void putExtra(String extra, dynamic data, {String? type, bool setType = true}) {
+  void putExtra(
+    String extra,
+    dynamic data, {
+    String? type,
+    bool setType = true,
+  }) {
     _extra[extra] = data;
     if (type != null) {
       _typeInfo[extra] = type;

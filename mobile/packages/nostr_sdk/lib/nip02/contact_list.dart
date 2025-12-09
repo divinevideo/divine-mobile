@@ -16,10 +16,10 @@ class ContactList {
     Map<String, int>? followedTags,
     Map<String, int>? followedCommunitys,
     int? createdAt,
-  })  : _contacts = contacts ?? {},
-        _followedTags = followedTags ?? {},
-        _followedCommunitys = followedCommunitys ?? {},
-        createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
+  }) : _contacts = contacts ?? {},
+       _followedTags = followedTags ?? {},
+       _followedCommunitys = followedCommunitys ?? {},
+       createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
   static void getContactInfoFromTags(
     List<dynamic> tags,
