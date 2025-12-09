@@ -1,6 +1,8 @@
 // ABOUTME: Integration tests for NIP-50 full-text search functionality
 // ABOUTME: Tests search queries against real relays that support NIP-50
 
+import 'dart:developer';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
@@ -117,7 +119,7 @@ void main() {
             event.content.toLowerCase().contains('nostr') ||
             event.content.toLowerCase().contains('protocol');
         if (!containsSearch) {
-          print(
+          log(
             'Event without search term: ${event.content.substring(0, 100)}...',
           );
         }
@@ -145,7 +147,7 @@ void main() {
 
       // Should still work on relays that support search
       // Non-supporting relays might send NOTICE or just ignore the search param
-      print('Received ${events.length} events from search');
+      log('Received ${events.length} events from search');
     });
 
     test('Search API should provide convenient method', () async {
@@ -160,7 +162,7 @@ void main() {
         timeout: Duration(seconds: 10),
       );
 
-      print('SearchEvents returned ${results.length} results');
+      log('SearchEvents returned ${results.length} results');
 
       expect(
         results.isNotEmpty,
