@@ -1,5 +1,5 @@
-# ABOUTME: CI workflow for the nostr_sdk package.
-# ABOUTME: Runs tests, formatting, and analysis only when nostr_sdk files change.
+# ABOUTME: CI workflow for the nostr_key_manager package.
+# ABOUTME: Runs tests, formatting, and analysis only when nostr_key_manager files change.
 
 name: Nostr Key Manager CI
 
