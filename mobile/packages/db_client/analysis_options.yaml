@@ -1,1 +1,6 @@
 include: package:very_good_analysis/analysis_options.yaml
+
+linter:
+  rules:
+    # TODO(any): Add documentation for public members https://github.com/divinevideo/divine-mobile/issues/370
+    public_member_api_docs: false
