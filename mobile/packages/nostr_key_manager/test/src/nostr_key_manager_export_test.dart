@@ -3,18 +3,15 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../test_setup.dart';
 
 void main() {
-  setupTestEnvironment();
-
   group('NostrKeyManager Export and Backup', () {
     late NostrKeyManager keyManager;
 
     setUp(() async {
-      SharedPreferences.setMockInitialValues({});
+      setupTestEnvironment();
       keyManager = NostrKeyManager();
       await keyManager.initialize();
     });

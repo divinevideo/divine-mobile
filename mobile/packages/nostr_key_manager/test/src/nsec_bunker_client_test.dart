@@ -4,14 +4,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 
-void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+import '../test_setup.dart';
 
+void main() {
   group('NsecBunkerClient Integration Tests', () {
     late NsecBunkerClient bunkerClient;
     const testEndpoint = 'https://bunker.example.com/auth';
 
     setUp(() {
+      setupTestEnvironment();
       bunkerClient = NsecBunkerClient(authEndpoint: testEndpoint);
     });
 

@@ -3,19 +3,15 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../test_setup.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-  setupTestEnvironment();
-
   group('PlatformSecureStorage Keychain Persistence', () {
     late SecureKeyStorageService storageService;
 
     setUp(() async {
-      SharedPreferences.setMockInitialValues({});
+      setupTestEnvironment();
 
       // Use desktop config for testing (allows software fallback)
       storageService = SecureKeyStorageService(

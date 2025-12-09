@@ -4,12 +4,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 
+import '../test_setup.dart';
+
 void main() {
   group('SecureKeyStorageService - NIP-46 Bunker Error Handling', () {
     late SecureKeyStorageService service;
 
     setUp(() {
-      // Use desktop config for testing (allows software-only security)
+      setupTestEnvironment();
       service = SecureKeyStorageService(securityConfig: SecurityConfig.desktop);
     });
 

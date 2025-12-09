@@ -11,16 +11,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../test_setup.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-  setupTestEnvironment();
-
   group('NostrKeyManager with SecureKeyStorageService Integration', () {
     late NostrKeyManager keyManager;
 
     setUp(() async {
-      // Set up mock SharedPreferences
-      SharedPreferences.setMockInitialValues({});
-
+      setupTestEnvironment();
       keyManager = NostrKeyManager();
     });
 
