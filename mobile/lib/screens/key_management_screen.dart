@@ -395,7 +395,9 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
       await keyManager.importFromNsec(nsec);
 
       // Optionally fetch profile after import if services are available
-      if (context.mounted && nostrService.isInitialized && keyManager.publicKey != null) {
+      if (context.mounted &&
+          nostrService.isInitialized &&
+          keyManager.publicKey != null) {
         try {
           await profileService.fetchProfile(
             keyManager.publicKey!,

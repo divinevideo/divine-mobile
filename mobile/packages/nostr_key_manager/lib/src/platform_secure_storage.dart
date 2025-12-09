@@ -202,7 +202,7 @@ class PlatformSecureStorage {
       ..fine(
         '⚙️ Requirements - Hardware: $requireHardwareBacked, '
         'Biometrics: $requireBiometrics',
-    );
+      );
 
     try {
       // Check if we can meet the security requirements

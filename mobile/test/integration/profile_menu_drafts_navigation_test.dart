@@ -58,9 +58,7 @@ void main() {
       (tester) async {
         const currentUserPubkey =
             'currentuser11111111111111111111111111111111111111111111111111111111';
-        final currentUserNpub = Nip19.encodePubKey(
-          currentUserPubkey,
-        );
+        final currentUserNpub = Nip19.encodePubKey(currentUserPubkey);
 
         final c = ProviderContainer();
         addTearDown(c.dispose);

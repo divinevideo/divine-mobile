@@ -61,6 +61,7 @@ class IdentityManagerService {
     final end = key.substring(key.length - 4);
     return '$start...$end';
   }
+
   List<SavedIdentity> _savedIdentities = [];
   String? _activeIdentityNpub;
 
