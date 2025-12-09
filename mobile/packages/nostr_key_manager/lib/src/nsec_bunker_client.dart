@@ -1,20 +1,28 @@
-// ABOUTME: NIP-46 nsec bunker client for secure remote signing on web platform
-// ABOUTME: Handles authentication and communication with external bunker server for key management
+// ABOUTME: NIP-46 nsec bunker client for secure remote signing
+// ABOUTME: Handles authentication and communication with bunker server
+// ABOUTME: Uses nostr_sdk's NostrRemoteSigner for NIP-46 communication
 
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:nostr_sdk/client_utils/keys.dart' as keys;
-import 'package:nostr_sdk/nip04/nip04.dart';
-import 'package:pointycastle/export.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nip19/nip19.dart';
+import 'package:nostr_sdk/nip46/nostr_remote_signer.dart';
+import 'package:nostr_sdk/nip46/nostr_remote_signer_info.dart';
+import 'package:nostr_sdk/relay/relay_mode.dart';
 
 final _log = Logger('NsecBunkerClient');
 
-/// Bunker connection configuration
+/// Bunker connection configuration.
 class BunkerConfig {
+  /// Creates a new bunker configuration.
+  ///
+  /// [relayUrl] is the WebSocket URL of the bunker relay.
+  /// [bunkerPubkey] is the public key of the bunker server.
+  /// [secret] is the optional secret for authentication.
+  /// [permissions] is the list of requested permissions.
   const BunkerConfig({
     required this.relayUrl,
     required this.bunkerPubkey,
@@ -22,11 +30,20 @@ class BunkerConfig {
     this.permissions = const [],
   });
 
+  /// The WebSocket URL of the bunker relay.
   final String relayUrl;
+
+  /// The public key of the bunker server.
   final String bunkerPubkey;
+
+  /// The optional secret for authentication.
   final String secret;
+
+  /// The list of requested permissions.
   final List<String> permissions;
 
+  /// Creates a [BunkerConfig] from JSON.
+  // ignore: sort_constructors_first
   factory BunkerConfig.fromJson(Map<String, dynamic> json) {
     return BunkerConfig(
       relayUrl: json['relay_url'] as String,
@@ -41,8 +58,14 @@ class BunkerConfig {
   }
 }
 
-/// Authentication result from bunker server
+/// Authentication result from bunker server.
 class BunkerAuthResult {
+  /// Creates a new authentication result.
+  ///
+  /// [success] indicates whether authentication was successful.
+  /// [config] contains the bunker configuration if successful.
+  /// [userPubkey] is the user's public key if available.
+  /// [error] contains an error message if authentication failed.
   const BunkerAuthResult({
     required this.success,
     this.config,
@@ -50,32 +73,45 @@ class BunkerAuthResult {
     this.error,
   });
 
+  /// Whether authentication was successful.
   final bool success;
+
+  /// The bunker configuration if authentication was successful.
   final BunkerConfig? config;
+
+  /// The user's public key if available.
   final String? userPubkey;
+
+  /// An error message if authentication failed.
   final String? error;
 }
 
-/// NIP-46 Remote Signer Client
+/// NIP-46 Remote Signer Client.
+///
+/// Uses nostr_sdk's NostrRemoteSigner for NIP-46 communication.
 class NsecBunkerClient {
+  /// Creates a new bunker client.
+  ///
+  /// [authEndpoint] is the HTTP endpoint for authentication.
   NsecBunkerClient({required this.authEndpoint});
 
+  /// The HTTP endpoint for authentication.
   final String authEndpoint;
 
-  WebSocketChannel? _wsChannel;
   BunkerConfig? _config;
   String? _userPubkey;
-  String? _clientPubkey;
-  String? _clientPrivateKey;
-  ECDHBasicAgreement? _agreement;
+  NostrRemoteSigner? _remoteSigner;
+  NostrRemoteSignerInfo? _signerInfo;
 
-  final _pendingRequests = <String, Completer<Map<String, dynamic>>>{};
-  StreamSubscription<dynamic>? _wsSubscription;
+  /// Whether the client is connected to the bunker.
+  bool get isConnected => _remoteSigner != null && _config != null;
 
-  bool get isConnected => _wsChannel != null && _config != null;
+  /// The user's public key if available.
   String? get userPubkey => _userPubkey;
 
-  /// Authenticate with username/password to get bunker connection details
+  /// Authenticate with username/password to get bunker connection details.
+  ///
+  /// Returns a [BunkerAuthResult] indicating success or failure.
   Future<BunkerAuthResult> authenticate({
     required String username,
     required String password,
@@ -111,13 +147,15 @@ class NsecBunkerClient {
         config: _config,
         userPubkey: _userPubkey,
       );
-    } catch (e) {
+    } on Exception catch (e) {
       _log.severe('Bunker authentication error: $e');
       return BunkerAuthResult(success: false, error: e.toString());
     }
   }
 
-  /// Connect to the bunker relay
+  /// Connect to the bunker relay.
+  ///
+  /// Returns true if connection was successful, false otherwise.
   Future<bool> connect() async {
     if (_config == null) {
       _log.severe('Cannot connect: no bunker configuration');
@@ -127,241 +165,99 @@ class NsecBunkerClient {
     try {
       _log.fine('Connecting to bunker relay: ${_config!.relayUrl}');
 
-      // Generate ephemeral client keypair for this session
-      _clientPrivateKey = keys.generatePrivateKey();
-      _clientPubkey = keys.getPublicKey(_clientPrivateKey!);
-      _agreement = NIP04.getAgreement(_clientPrivateKey!);
+      // Generate ephemeral client keypair for this session (nsec format)
+      final clientPrivateKey = keys.generatePrivateKey();
+      final clientNsec = Nip19.encodePrivateKey(clientPrivateKey);
 
-      _wsChannel = WebSocketChannel.connect(Uri.parse(_config!.relayUrl));
-
-      // Subscribe to bunker responses
-      _wsSubscription = _wsChannel!.stream.listen(
-        _handleMessage,
-        onError: (Object error) {
-          _log.severe('WebSocket error: $error');
-          _handleDisconnect();
-        },
-        onDone: () {
-          _log.warning('WebSocket connection closed');
-          _handleDisconnect();
-        },
+      // Create NostrRemoteSignerInfo from bunker config
+      _signerInfo = NostrRemoteSignerInfo(
+        remoteSignerPubkey: _config!.bunkerPubkey,
+        relays: [_config!.relayUrl],
+        optionalSecret: _config!.secret,
+        nsec: clientNsec,
+        userPubkey: _userPubkey,
       );
 
-      // Send connect request to bunker
-      await _sendConnectRequest();
+      // Create and connect NostrRemoteSigner
+      _remoteSigner = NostrRemoteSigner(RelayMode.BASE_MODE, _signerInfo!);
+      await _remoteSigner!.connect();
 
       _log.info('Connected to bunker relay');
       return true;
-    } catch (e) {
+    } on Exception catch (e) {
       _log.severe('Failed to connect to bunker: $e');
+      _remoteSigner = null;
       return false;
     }
   }
 
-  /// Sign a Nostr event using the remote bunker
+  /// Sign a Nostr event using the remote bunker.
+  ///
+  /// Returns the signed event as a map, or null if signing failed.
   Future<Map<String, dynamic>?> signEvent(Map<String, dynamic> event) async {
-    if (!isConnected) {
+    if (!isConnected || _remoteSigner == null) {
       _log.severe('Cannot sign: not connected to bunker');
       return null;
     }
 
     try {
-      final requestId = _generateRequestId();
-      final completer = Completer<Map<String, dynamic>>();
-      _pendingRequests[requestId] = completer;
+      // Convert Map to Event object
+      final eventObj = Event.fromJson(event);
 
-      // Send NIP-46 sign_event request
-      final request = {
-        'id': requestId,
-        'method': 'sign_event',
-        'params': [event],
-      };
+      // Sign using NostrRemoteSigner
+      final signedEvent = await _remoteSigner!.signEvent(eventObj);
 
-      await _sendRequest(request);
-
-      // Wait for response with timeout
-      final response = await completer.future.timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          _pendingRequests.remove(requestId);
-          throw TimeoutException('Signing request timed out');
-        },
-      );
-
-      if (response['error'] != null) {
-        _log.severe('Signing failed: ${response['error']}');
+      if (signedEvent == null) {
+        _log.severe('Signing failed: remote signer returned null');
         return null;
       }
 
-      return response['result'] as Map<String, dynamic>?;
-    } catch (e) {
+      return signedEvent.toJson();
+    } on Exception catch (e) {
       _log.severe('Failed to sign event: $e');
       return null;
     }
   }
 
-  /// Get public key from bunker
+  /// Get public key from bunker.
+  ///
+  /// Returns the user's public key, or null if not available.
   Future<String?> getPublicKey() async {
-    if (!isConnected) {
+    if (!isConnected || _remoteSigner == null) {
       _log.severe('Cannot get pubkey: not connected to bunker');
       return null;
     }
 
     try {
-      final requestId = _generateRequestId();
-      final completer = Completer<Map<String, dynamic>>();
-      _pendingRequests[requestId] = completer;
+      // Use pullPubkey to get the public key from remote signer
+      final pubkey = await _remoteSigner!.pullPubkey();
 
-      // Send NIP-46 get_public_key request
-      final request = {
-        'id': requestId,
-        'method': 'get_public_key',
-        'params': <dynamic>[],
-      };
-
-      await _sendRequest(request);
-
-      final response = await completer.future.timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          _pendingRequests.remove(requestId);
-          throw TimeoutException('Get public key request timed out');
-        },
-      );
-
-      if (response['error'] != null) {
-        _log.severe('Failed to get public key: ${response['error']}');
-        return null;
+      if (pubkey != null) {
+        _userPubkey = pubkey;
+        if (_signerInfo != null) {
+          _signerInfo!.userPubkey = pubkey;
+        }
       }
 
-      return response['result'] as String?;
-    } catch (e) {
+      return pubkey;
+    } on Exception catch (e) {
       _log.severe('Failed to get public key: $e');
       return null;
     }
   }
 
-  /// Disconnect from bunker
+  /// Disconnect from bunker.
   void disconnect() {
     _log.fine('Disconnecting from bunker');
 
-    _wsSubscription?.cancel();
-    _wsChannel?.sink.close();
-    _wsChannel = null;
-    _pendingRequests.clear();
+    _remoteSigner?.close();
+    _remoteSigner = null;
+    _signerInfo = null;
   }
 
-  void _handleMessage(dynamic message) {
-    try {
-      final data = jsonDecode(message as String) as List<dynamic>;
-      if (data.length < 3) return;
-
-      final type = data[0] as String;
-      if (type != 'EVENT') return;
-
-      final event = data[2] as Map<String, dynamic>;
-      final content = event['content'] as String?;
-      if (content == null) return;
-
-      // Decrypt content if encrypted (NIP-04)
-      final decryptedContent = _decryptContent(content);
-      final response = jsonDecode(decryptedContent) as Map<String, dynamic>;
-
-      final requestId = response['id'] as String?;
-      if (requestId != null && _pendingRequests.containsKey(requestId)) {
-        _pendingRequests[requestId]!.complete(response);
-        _pendingRequests.remove(requestId);
-      }
-    } catch (e) {
-      _log.severe('Failed to handle bunker message: $e');
-    }
-  }
-
-  void _handleDisconnect() {
-    _wsChannel = null;
-
-    // Fail all pending requests
-    for (final completer in _pendingRequests.values) {
-      completer.completeError('Connection lost');
-    }
-    _pendingRequests.clear();
-  }
-
-  Future<void> _sendConnectRequest() async {
-    // Send NIP-46 connect request
-    final connectRequest = {
-      'id': _generateRequestId(),
-      'method': 'connect',
-      'params': [_clientPubkey, _config!.secret],
-    };
-
-    await _sendRequest(connectRequest);
-  }
-
-  Future<void> _sendRequest(Map<String, dynamic> request) async {
-    if (_wsChannel == null) {
-      throw Exception('Not connected to bunker');
-    }
-
-    // Wrap request in Nostr event format for NIP-46
-    final event = _createRequestEvent(request);
-
-    // Send as Nostr REQ message
-    final message = ['REQ', 'bunker-${request['id']}', event];
-    _wsChannel!.sink.add(jsonEncode(message));
-  }
-
-  Map<String, dynamic> _createRequestEvent(Map<String, dynamic> request) {
-    // Create NIP-46 request event
-    // In production, properly implement NIP-04 encryption
-    return {
-      'kind': 24133, // NIP-46 request kind
-      'pubkey': _clientPubkey,
-      'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'tags': [
-        ['p', _config!.bunkerPubkey],
-      ],
-      'content': _encryptContent(jsonEncode(request)),
-    };
-  }
-
-  String _encryptContent(String content) {
-    if (_agreement == null || _config == null) {
-      throw StateError('Bunker not properly configured for encryption');
-    }
-    return NIP04.encrypt(content, _agreement!, _config!.bunkerPubkey);
-  }
-
-  String _decryptContent(String encryptedContent) {
-    if (_agreement == null || _config == null) {
-      throw StateError('Bunker not properly configured for decryption');
-    }
-    try {
-      return NIP04.decrypt(
-        encryptedContent,
-        _agreement!,
-        _config!.bunkerPubkey,
-      );
-    } catch (e) {
-      _log.severe('Failed to decrypt content: $e');
-      return '';
-    }
-  }
-
-  String _generateRequestId() {
-    return DateTime.now().millisecondsSinceEpoch.toString();
-  }
-
-  /// Check if NIP-04 encryption is supported
-  bool supportsNIP04Encryption() => true;
-
-  // Test-only methods for setting up encryption
-  void setClientKeys(String privateKey, String publicKey) {
-    _clientPrivateKey = privateKey;
-    _clientPubkey = publicKey;
-    _agreement = NIP04.getAgreement(privateKey);
-  }
-
+  /// Test-only method for setting up bunker public key.
+  ///
+  /// This method is only intended for testing purposes.
   void setBunkerPublicKey(String publicKey) {
     if (_config == null) {
       _config = BunkerConfig(
@@ -379,80 +275,57 @@ class NsecBunkerClient {
     }
   }
 
-  void setConfig(BunkerConfig config) {
+  /// Test-only getter for bunker configuration.
+  ///
+  /// This getter is only intended for testing purposes.
+  BunkerConfig? get config => _config;
+
+  /// Test-only setter for bunker configuration.
+  ///
+  /// This setter is only intended for testing purposes.
+  set config(BunkerConfig config) {
     _config = config;
   }
 
-  String generateClientPrivateKey() {
-    return keys.generatePrivateKey();
-  }
-
-  String getClientPublicKey(String privateKey) {
-    return keys.getPublicKey(privateKey);
-  }
-
-  String encryptContent(String content) {
-    return _encryptContent(content);
-  }
-
-  String decryptContent(String encryptedContent) {
-    return _decryptContent(encryptedContent);
-  }
-
-  Map<String, dynamic> createRequestEvent(Map<String, dynamic> request) {
-    return _createRequestEvent(request);
-  }
-
-  Map<String, dynamic>? processResponse(Map<String, dynamic> event) {
-    try {
-      final content = event['content'] as String?;
-      if (content == null) return null;
-
-      final decryptedContent = _decryptContent(content);
-      if (decryptedContent.isEmpty) return null;
-
-      return jsonDecode(decryptedContent) as Map<String, dynamic>;
-    } catch (e) {
-      _log.severe('Failed to process response: $e');
-      return null;
-    }
-  }
-
-  /// Parse bunker URI and authenticate
+  /// Parse bunker URI and authenticate.
+  ///
+  /// Parses a bunker URI and attempts to authenticate with the bunker server.
+  /// Returns a [BunkerAuthResult] indicating success or failure.
   Future<BunkerAuthResult> authenticateFromUri(String bunkerUri) async {
     try {
-      final uri = Uri.parse(bunkerUri);
-      if (uri.scheme != 'bunker') {
-        return BunkerAuthResult(
+      // Use nostr_sdk's NostrRemoteSignerInfo to parse bunker URI
+      final signerInfo = NostrRemoteSignerInfo.parseBunkerUrl(bunkerUri);
+
+      if (signerInfo == null) {
+        return const BunkerAuthResult(
           success: false,
-          error: 'Invalid bunker URI scheme: ${uri.scheme}',
+          error: 'Failed to parse bunker URI',
         );
       }
 
-      // Extract npub and relay from URI
-      final userInfo = uri.userInfo;
-      final relay = uri.host;
-      final queryParams = uri.queryParameters;
-      final secret = queryParams['secret'] ?? '';
-      final permissions = queryParams['perms']?.split(',') ?? <String>[];
+      // Convert to BunkerConfig format
+      if (signerInfo.relays.isEmpty) {
+        return const BunkerAuthResult(
+          success: false,
+          error: 'No relays found in bunker URI',
+        );
+      }
 
-      // Create config from URI
       _config = BunkerConfig(
-        relayUrl: 'wss://$relay',
-        bunkerPubkey: userInfo, // This should be converted from npub to hex
-        secret: secret,
-        permissions: permissions,
+        relayUrl: signerInfo.relays.first,
+        bunkerPubkey: signerInfo.remoteSignerPubkey,
+        secret: signerInfo.optionalSecret ?? '',
       );
 
-      // For now, simulate successful auth
-      _userPubkey = userInfo; // In production, get actual user pubkey
+      _userPubkey = signerInfo.userPubkey;
+      _signerInfo = signerInfo;
 
       return BunkerAuthResult(
         success: true,
         config: _config,
         userPubkey: _userPubkey,
       );
-    } catch (e) {
+    } on Exception catch (e) {
       return BunkerAuthResult(
         success: false,
         error: 'Failed to parse bunker URI: $e',

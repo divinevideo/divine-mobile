@@ -109,7 +109,7 @@ void main() {
           'kind': 1,
           'content': 'Test message',
           'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          'tags': [],
+          'tags': <dynamic>[],
         };
 
         // Act
@@ -125,14 +125,14 @@ void main() {
           'kind': 1,
           'content': 'Test message',
           'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          'tags': [],
+          'tags': <dynamic>[],
         };
 
         // The request should follow NIP-46 format
         expect(event['kind'], equals(1));
         expect(event['content'], isNotEmpty);
         expect(event['created_at'], isA<int>());
-        expect(event['tags'], isA<List>());
+        expect(event['tags'], isA<List<dynamic>>());
       });
     });
 

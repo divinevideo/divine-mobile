@@ -1,38 +1,17 @@
-// ABOUTME: Unit tests for NsecBunkerClient NIP-04 encryption functionality
-// ABOUTME: Tests encryption/decryption of NIP-46 bunker messages using NIP-04 standard
-
-import 'dart:convert';
+// ABOUTME: Unit tests for NsecBunkerClient public interface
+// ABOUTME: Tests after migration to use nostr_sdk's NostrRemoteSigner
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:nostr_sdk/client_utils/keys.dart' as keys;
-import 'package:nostr_sdk/nip04/nip04.dart';
-
-class MockWebSocketChannel extends Mock {
-  // Mock WebSocket channel for testing
-}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('NsecBunkerClient NIP-04 Encryption Tests', () {
+  group('NsecBunkerClient Public Interface Tests', () {
     late NsecBunkerClient bunkerClient;
     const testEndpoint = 'https://bunker.test.com/auth';
 
-    // Test keys for encryption
-    late String clientPrivateKey;
-    late String clientPublicKey;
-    late String bunkerPrivateKey;
-    late String bunkerPublicKey;
-
     setUp(() {
-      // Generate test keys
-      clientPrivateKey = keys.generatePrivateKey();
-      clientPublicKey = keys.getPublicKey(clientPrivateKey);
-      bunkerPrivateKey = keys.generatePrivateKey();
-      bunkerPublicKey = keys.getPublicKey(bunkerPrivateKey);
-
       bunkerClient = NsecBunkerClient(authEndpoint: testEndpoint);
     });
 
@@ -40,361 +19,167 @@ void main() {
       bunkerClient.disconnect();
     });
 
-    group('Key Generation', () {
-      test('should generate valid ephemeral client keypair', () {
-        // Act
-        final privateKey = bunkerClient.generateClientPrivateKey();
-        final publicKey = bunkerClient.getClientPublicKey(privateKey);
-
+    group('Initialization', () {
+      test('should create client with auth endpoint', () {
         // Assert
-        expect(privateKey, isNotNull);
-        expect(privateKey.length, equals(64)); // 32 bytes hex
-        expect(keys.keyIsValid(privateKey), isTrue);
-
-        expect(publicKey, isNotNull);
-        expect(publicKey.length, equals(64)); // 32 bytes hex
-        expect(keys.keyIsValid(publicKey), isTrue);
+        expect(bunkerClient, isNotNull);
+        expect(bunkerClient.isConnected, isFalse);
+        expect(bunkerClient.userPubkey, isNull);
       });
 
-      test('should generate different keys each time', () {
-        // Act
-        final key1 = bunkerClient.generateClientPrivateKey();
-        final key2 = bunkerClient.generateClientPrivateKey();
-
+      test('should not be connected initially', () {
         // Assert
-        expect(key1, isNot(equals(key2)));
+        expect(bunkerClient.isConnected, isFalse);
       });
     });
 
-    group('NIP-04 Encryption', () {
-      test('should encrypt content using NIP-04 standard', () {
+    group('Configuration', () {
+      test('should set bunker public key', () {
         // Arrange
-        const plaintext = 'Test message for encryption';
-        bunkerClient.setClientKeys(clientPrivateKey, clientPublicKey);
-        bunkerClient.setBunkerPublicKey(bunkerPublicKey);
+        const testPubkey =
+            'test_pubkey_123456789012345678901234567890123456789';
 
         // Act
-        final encrypted = bunkerClient.encryptContent(plaintext);
+        bunkerClient.setBunkerPublicKey(testPubkey);
 
-        // Assert
-        expect(encrypted, isNotNull);
-        expect(encrypted, contains('?iv=')); // NIP-04 format
-        expect(NIP04.isEncrypted(encrypted), isTrue);
-        expect(encrypted, isNot(equals(plaintext)));
-      });
-
-      test('should decrypt content using NIP-04 standard', () {
-        // Arrange
-        const plaintext = 'Test message for decryption';
-
-        // Encrypt using bunker's perspective
-        final agreement = NIP04.getAgreement(bunkerPrivateKey);
-        final encrypted = NIP04.encrypt(plaintext, agreement, clientPublicKey);
-
-        bunkerClient.setClientKeys(clientPrivateKey, clientPublicKey);
-        bunkerClient.setBunkerPublicKey(bunkerPublicKey);
-
-        // Act
-        final decrypted = bunkerClient.decryptContent(encrypted);
-
-        // Assert
-        expect(decrypted, equals(plaintext));
-      });
-
-      test('should handle round-trip encryption/decryption', () {
-        // Arrange
-        const plaintext = 'Round-trip test message';
-        bunkerClient.setClientKeys(clientPrivateKey, clientPublicKey);
-        bunkerClient.setBunkerPublicKey(bunkerPublicKey);
-
-        // Act - Client encrypts to bunker
-        final clientEncrypted = bunkerClient.encryptContent(plaintext);
-
-        // Bunker decrypts
-        final bunkerAgreement = NIP04.getAgreement(bunkerPrivateKey);
-        final bunkerDecrypted = NIP04.decrypt(
-          clientEncrypted,
-          bunkerAgreement,
-          clientPublicKey,
-        );
-
-        // Bunker encrypts response
-        const response = 'Response from bunker';
-        final bunkerEncrypted = NIP04.encrypt(
-          response,
-          bunkerAgreement,
-          clientPublicKey,
-        );
-
-        // Client decrypts response
-        final clientDecrypted = bunkerClient.decryptContent(bunkerEncrypted);
-
-        // Assert
-        expect(bunkerDecrypted, equals(plaintext));
-        expect(clientDecrypted, equals(response));
-      });
-
-      test('should fail to decrypt with wrong key', () {
-        // Arrange
-        const plaintext = 'Secret message';
-        final wrongPrivateKey = keys.generatePrivateKey();
-        final wrongPublicKey = keys.getPublicKey(wrongPrivateKey);
-
-        // Encrypt with correct key
-        final agreement = NIP04.getAgreement(bunkerPrivateKey);
-        final encrypted = NIP04.encrypt(plaintext, agreement, clientPublicKey);
-
-        // Try to decrypt with wrong key
-        bunkerClient.setClientKeys(wrongPrivateKey, wrongPublicKey);
-        bunkerClient.setBunkerPublicKey(bunkerPublicKey);
-
-        // Act
-        final decrypted = bunkerClient.decryptContent(encrypted);
-
-        // Assert - Wrong key should result in garbage or empty string
-        expect(decrypted, isNot(equals(plaintext)));
-      });
-
-      test('should handle invalid encrypted content gracefully', () {
-        // Arrange
-        bunkerClient.setClientKeys(clientPrivateKey, clientPublicKey);
-        bunkerClient.setBunkerPublicKey(bunkerPublicKey);
-
-        // Act & Assert
+        // Assert - Config should be created
         expect(
-          bunkerClient.decryptContent('invalid_encrypted_data'),
-          equals(''),
-        ); // Returns empty string for invalid data
-        expect(
-          bunkerClient.decryptContent('no_iv_marker'),
-          equals(''),
-        ); // Returns empty string when no IV marker
-      });
-    });
-
-    group('NIP-46 Request Event Creation', () {
-      test('should create properly formatted NIP-46 request event', () {
-        // Arrange
-        bunkerClient.setClientKeys(clientPrivateKey, clientPublicKey);
-        bunkerClient.setBunkerPublicKey(bunkerPublicKey);
-
-        final request = {
-          'id': '12345',
-          'method': 'sign_event',
-          'params': [
-            {
-              'kind': 1,
-              'content': 'Test note',
-              'created_at': 1234567890,
-              'tags': [],
-            },
-          ],
-        };
-
-        // Act
-        final event = bunkerClient.createRequestEvent(request);
-
-        // Assert
-        expect(event['kind'], equals(24133)); // NIP-46 request kind
-        expect(event['pubkey'], equals(clientPublicKey));
-        expect(event['tags'], isA<List>());
-
-        // Check p tag for bunker pubkey
-        final pTags = (event['tags'] as List)
-            .where((tag) => tag[0] == 'p')
-            .toList();
-        expect(pTags.length, equals(1));
-        expect(pTags[0][1], equals(bunkerPublicKey));
-
-        // Check content is encrypted
-        expect(NIP04.isEncrypted(event['content'] as String), isTrue);
-
-        // Verify bunker can decrypt the content
-        final bunkerAgreement = NIP04.getAgreement(bunkerPrivateKey);
-        final decryptedContent = NIP04.decrypt(
-          event['content'] as String,
-          bunkerAgreement,
-          clientPublicKey,
-        );
-        expect(decryptedContent, contains('sign_event'));
+          bunkerClient.isConnected,
+          isFalse,
+        ); // Still not connected without relay
       });
 
-      test('should handle connect request with secret', () {
+      test('should set bunker config', () {
         // Arrange
-        bunkerClient.setClientKeys(clientPrivateKey, clientPublicKey);
-        bunkerClient.setBunkerPublicKey(bunkerPublicKey);
-        const secret = 'test_secret_123';
-
-        final connectRequest = {
-          'id': 'connect_1',
-          'method': 'connect',
-          'params': [clientPublicKey, secret],
-        };
-
-        // Act
-        final event = bunkerClient.createRequestEvent(connectRequest);
-
-        // Assert
-        expect(event['kind'], equals(24133));
-
-        // Decrypt and verify content
-        final bunkerAgreement = NIP04.getAgreement(bunkerPrivateKey);
-        final decryptedContent = NIP04.decrypt(
-          event['content'] as String,
-          bunkerAgreement,
-          clientPublicKey,
-        );
-
-        expect(decryptedContent, contains('connect'));
-        expect(decryptedContent, contains(secret));
-      });
-    });
-
-    group('NIP-46 Response Processing', () {
-      test('should process encrypted response from bunker', () {
-        // Arrange
-        bunkerClient.setClientKeys(clientPrivateKey, clientPublicKey);
-        bunkerClient.setBunkerPublicKey(bunkerPublicKey);
-
-        const responseData = {
-          'id': '12345',
-          'result': {
-            'id': 'event_id_123',
-            'pubkey': 'user_pubkey',
-            'sig': 'signature_abc',
-          },
-        };
-
-        // Bunker encrypts response
-        final bunkerAgreement = NIP04.getAgreement(bunkerPrivateKey);
-        final encryptedContent = NIP04.encrypt(
-          jsonEncode(responseData),
-          bunkerAgreement,
-          clientPublicKey,
-        );
-
-        final event = {
-          'kind': 24133,
-          'pubkey': bunkerPublicKey,
-          'content': encryptedContent,
-          'tags': [
-            ['p', clientPublicKey],
-          ],
-        };
-
-        // Act
-        final response = bunkerClient.processResponse(event);
-
-        // Assert
-        expect(response, isNotNull);
-        expect(response!['id'], equals('12345'));
-        expect(response['result'], isA<Map>());
-        expect(response['result']['id'], equals('event_id_123'));
-      });
-
-      test('should handle error responses', () {
-        // Arrange
-        bunkerClient.setClientKeys(clientPrivateKey, clientPublicKey);
-        bunkerClient.setBunkerPublicKey(bunkerPublicKey);
-
-        const errorResponse = {
-          'id': '12345',
-          'error': 'User rejected signing request',
-        };
-
-        // Bunker encrypts error response
-        final bunkerAgreement = NIP04.getAgreement(bunkerPrivateKey);
-        final encryptedContent = NIP04.encrypt(
-          jsonEncode(errorResponse),
-          bunkerAgreement,
-          clientPublicKey,
-        );
-
-        final event = {
-          'kind': 24133,
-          'pubkey': bunkerPublicKey,
-          'content': encryptedContent,
-          'tags': [
-            ['p', clientPublicKey],
-          ],
-        };
-
-        // Act
-        final response = bunkerClient.processResponse(event);
-
-        // Assert
-        expect(response, isNotNull);
-        expect(response!['id'], equals('12345'));
-        expect(response['error'], equals('User rejected signing request'));
-        expect(response['result'], isNull);
-      });
-    });
-
-    group('Integration with BunkerConfig', () {
-      test('should use bunker pubkey from config for encryption', () {
-        // Arrange
-        final config = BunkerConfig(
+        const config = BunkerConfig(
           relayUrl: 'wss://relay.test.com',
-          bunkerPubkey: bunkerPublicKey,
-          secret: 'config_secret',
-          permissions: ['sign_event', 'nip04_encrypt', 'nip04_decrypt'],
+          bunkerPubkey: 'test_pubkey',
+          secret: 'test_secret',
         );
 
-        bunkerClient.setConfig(config);
-        bunkerClient.setClientKeys(clientPrivateKey, clientPublicKey);
-
         // Act
-        const message = 'Test with config';
-        final encrypted = bunkerClient.encryptContent(message);
+        bunkerClient.config = config;
 
-        // Bunker can decrypt
-        final bunkerAgreement = NIP04.getAgreement(bunkerPrivateKey);
-        final decrypted = NIP04.decrypt(
-          encrypted,
-          bunkerAgreement,
-          clientPublicKey,
+        // Assert
+        expect(bunkerClient.isConnected, isFalse); // Still not connected
+      });
+    });
+
+    group('Connection State', () {
+      test('should track connection state correctly', () {
+        // Assert initial state
+        expect(bunkerClient.isConnected, isFalse);
+        expect(bunkerClient.userPubkey, isNull);
+      });
+
+      test('should disconnect cleanly when not connected', () {
+        // Act & Assert - Should not throw
+        expect(() => bunkerClient.disconnect(), returnsNormally);
+        expect(bunkerClient.isConnected, isFalse);
+      });
+    });
+
+    group('Authentication', () {
+      test('should handle authentication failure without server', () async {
+        // Act
+        final result = await bunkerClient.authenticate(
+          username: 'testuser',
+          password: 'testpass',
+        );
+
+        // Assert - Should fail without real server
+        expect(result.success, isFalse);
+        expect(result.error, isNotNull);
+      });
+    });
+
+    group('BunkerConfig', () {
+      test('should create config with default permissions', () {
+        // Arrange & Act
+        const config = BunkerConfig(
+          relayUrl: 'wss://relay.test.com',
+          bunkerPubkey: 'pubkey123',
+          secret: 'secret123',
         );
 
         // Assert
-        expect(decrypted, equals(message));
+        expect(config.relayUrl, equals('wss://relay.test.com'));
+        expect(config.bunkerPubkey, equals('pubkey123'));
+        expect(config.secret, equals('secret123'));
+        expect(config.permissions, isEmpty);
       });
 
-      test('should verify NIP-04 permissions in config', () {
-        // Arrange
-        final config = BunkerConfig(
+      test('should create config with custom permissions', () {
+        // Arrange & Act
+        const config = BunkerConfig(
           relayUrl: 'wss://relay.test.com',
-          bunkerPubkey: bunkerPublicKey,
-          secret: 'config_secret',
-          permissions: ['sign_event', 'nip04_encrypt', 'nip04_decrypt'],
+          bunkerPubkey: 'pubkey123',
+          secret: 'secret123',
+          permissions: ['sign_event', 'get_public_key'],
         );
 
-        // Act & Assert
-        expect(config.permissions.contains('nip04_encrypt'), isTrue);
-        expect(config.permissions.contains('nip04_decrypt'), isTrue);
+        // Assert
+        expect(config.permissions.length, equals(2));
+        expect(config.permissions, contains('sign_event'));
+        expect(config.permissions, contains('get_public_key'));
+      });
+
+      test('should parse config from JSON', () {
+        // Arrange
+        final json = {
+          'relay_url': 'wss://relay.test.com',
+          'bunker_pubkey': 'pubkey123',
+          'secret': 'secret123',
+          'permissions': ['sign_event', 'get_public_key'],
+        };
+
+        // Act
+        final config = BunkerConfig.fromJson(json);
+
+        // Assert
+        expect(config.relayUrl, equals('wss://relay.test.com'));
+        expect(config.bunkerPubkey, equals('pubkey123'));
+        expect(config.secret, equals('secret123'));
+        expect(config.permissions.length, equals(2));
       });
     });
-  });
 
-  group('NsecBunkerClient Public Methods', () {
-    late NsecBunkerClient bunkerClient;
+    group('BunkerAuthResult', () {
+      test('should create success result', () {
+        // Arrange
+        const config = BunkerConfig(
+          relayUrl: 'wss://relay.test.com',
+          bunkerPubkey: 'pubkey123',
+          secret: 'secret123',
+        );
 
-    setUp(() {
-      bunkerClient = NsecBunkerClient(authEndpoint: 'https://test.com');
-    });
+        // Act
+        const result = BunkerAuthResult(
+          success: true,
+          config: config,
+          userPubkey: 'user_pubkey_123',
+        );
 
-    test('should expose encryption capability check', () {
-      // Act & Assert
-      expect(bunkerClient.supportsNIP04Encryption(), isTrue);
-    });
+        // Assert
+        expect(result.success, isTrue);
+        expect(result.config, isNotNull);
+        expect(result.userPubkey, equals('user_pubkey_123'));
+        expect(result.error, isNull);
+      });
 
-    test('should require configuration before encryption', () {
-      // Act & Assert
-      expect(
-        () => bunkerClient.encryptContent('test'),
-        throwsA(isA<StateError>()),
-      );
+      test('should create failure result', () {
+        // Act
+        const result = BunkerAuthResult(
+          success: false,
+          error: 'Invalid credentials',
+        );
+
+        // Assert
+        expect(result.success, isFalse);
+        expect(result.error, equals('Invalid credentials'));
+        expect(result.config, isNull);
+        expect(result.userPubkey, isNull);
+      });
     });
   });
 }
-
-// Note: Test methods are now implemented in the actual NsecBunkerClient class

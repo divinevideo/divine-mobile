@@ -1,5 +1,5 @@
-// ABOUTME: Tests for platform secure storage keychain persistence across app reinstall
-// ABOUTME: Verifies that nsec keys survive app deletion and reinstallation
+// ABOUTME: Tests for platform secure storage keychain persistence
+// ABOUTME: Verifies that nsec keys survive app deletion/reinstallation
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
@@ -26,7 +26,7 @@ void main() {
     tearDown(() async {
       try {
         await storageService.deleteKeys();
-      } catch (e) {
+      } on Exception catch (_) {
         // Ignore errors during cleanup
       }
       storageService.dispose();
@@ -166,7 +166,7 @@ void main() {
       );
 
       // Verify we can access the private key
-      final privateKeyHex = await retrievedContainer.withPrivateKey((pk) => pk);
+      final privateKeyHex = retrievedContainer.withPrivateKey((pk) => pk);
       expect(
         privateKeyHex,
         equals(testPrivateKeyHex),
@@ -229,24 +229,24 @@ void main() {
       // )
       //
       // Why this matters:
-      // - Without _this_device: Data persists in iCloud Keychain, survives app deletion ✅
-      // - With _this_device: Data is device-only, deleted on app uninstall ❌
+      // - Without _this_device: Data persists in iCloud, survives deletion ✅
+      // - With _this_device: Data is device-only, deleted on uninstall ❌
 
       expect(
         true,
         isTrue,
-        reason:
-            'Keychain accessibility must be first_unlock (not first_unlock_this_device)',
+        reason: 'Keychain accessibility must be first_unlock',
       );
     });
   });
 
   group('Keychain Migration Tests', () {
-    // These tests verify the migration from first_unlock_this_device to first_unlock
-    // They test the actual migration logic that runs when a user upgrades
+    // These tests verify the migration from first_unlock_this_device
+    // to first_unlock. Tests the migration logic that runs on upgrade.
 
     test('hasKeys() should detect keys in legacy storage', () async {
-      // This simulates: User has a key from before the fix (stored with first_unlock_this_device)
+      // This simulates: User has a key from before the fix
+      // (stored with first_unlock_this_device)
       // Expected: hasKeys() returns true (detects key in legacy storage)
 
       final storageService = SecureKeyStorageService(
@@ -270,7 +270,7 @@ void main() {
     });
 
     test(
-      'retrieveKey() should retrieve from legacy storage if new storage is empty',
+      'retrieveKey() should retrieve from legacy if new storage is empty',
       () async {
         // This simulates: User upgrades app, key is in legacy storage
         // Expected: retrieveKey() finds and returns the key from legacy storage
@@ -291,7 +291,7 @@ void main() {
         expect(retrievedContainer, isNotNull, reason: 'Should retrieve key');
 
         // Verify it's the same key
-        final retrievedPrivateKey = await retrievedContainer!.withPrivateKey(
+        final retrievedPrivateKey = retrievedContainer!.withPrivateKey(
           (pk) => pk,
         );
         expect(
@@ -308,8 +308,8 @@ void main() {
     );
 
     test('should NOT generate new key if legacy key exists', () async {
-      // This is the critical test: Don't create a NEW identity if user has an existing one
-      // Expected: App detects legacy key, retrieves it, doesn't generate new one
+      // Critical: Don't create NEW identity if user has an existing one
+      // Expected: App detects legacy key, retrieves it, no new generation
 
       final storageService = SecureKeyStorageService(
         securityConfig: SecurityConfig.desktop,
@@ -356,7 +356,7 @@ void main() {
     });
 
     test(
-      'end-to-end migration: legacy key → detect → retrieve → migrate on next store',
+      'end-to-end migration: legacy → detect → retrieve → migrate',
       () async {
         // Full migration flow test:
         // 1. Key exists in legacy storage
@@ -401,9 +401,9 @@ void main() {
           reason: 'Should retrieve same legacy key',
         );
 
-        // Step 5: Trigger migration by trying to store (simulate any store operation)
+        // Step 5: Trigger migration by trying to store (simulate store op)
         // This should detect the duplicate and migrate
-        // Note: In real usage, this might happen during a profile update or similar
+        // Note: In real usage, happens during a profile update or similar
 
         // Cleanup
         retrievedContainer.dispose();

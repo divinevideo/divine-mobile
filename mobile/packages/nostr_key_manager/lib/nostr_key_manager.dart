@@ -1,15 +1,12 @@
 /// Secure Nostr key management with hardware-backed persistence.
 ///
-/// This package provides:
-/// - [NostrKeyManager]: Main key management class for generating, importing,
-///   and exporting Nostr keys
-/// - [SecureKeyStorageService]: Hardware-backed secure storage for keys
-/// - [SecureKeyContainer]: Memory-safe container for cryptographic keys
-/// - [NsecBunkerClient]: NIP-46 remote signer client for web platforms
-/// - [NostrEncoding]: Utilities for encoding/decoding Nostr keys (npub/nsec)
-library nostr_key_manager;
+/// This package provides secure key management with hardware-backed storage.
+///
+/// For key validation and encoding, use nostr_sdk's utilities:
+/// - `keyIsValid()` from `nostr_sdk/client_utils/keys.dart` for validation
+/// - `Nip19` class from `nostr_sdk/nip19/nip19.dart` for encoding/decoding
+library;
 
-export 'src/nostr_encoding.dart';
 export 'src/nostr_key_manager.dart';
 export 'src/nsec_bunker_client.dart';
 export 'src/platform_secure_storage.dart';

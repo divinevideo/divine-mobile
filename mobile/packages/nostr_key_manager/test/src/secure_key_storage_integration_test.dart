@@ -1,10 +1,11 @@
-// ABOUTME: Integration tests for secure key storage with hardware-backed security
-// ABOUTME: Tests NostrKeyManager refactoring, SecureKeyStorageService, and migration
+// ABOUTME: Integration tests for secure key storage with hardware security
+// ABOUTME: Tests NostrKeyManager, SecureKeyStorageService, migration
 
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../test_setup.dart';
@@ -69,11 +70,16 @@ void main() {
 
     test('should migrate legacy keys from SharedPreferences', () async {
       // Arrange - Set up legacy keys in SharedPreferences
+      // Use a valid private key and derive the correct public key
+      const testPrivateKey =
+          '5dab4a6cf3b8c9b8d3c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7';
+
+      // Import nostr_sdk to get the correct public key derivation
+      final testPublicKey = getPublicKey(testPrivateKey);
+
       final legacyKeyData = {
-        'private':
-            '5dab4a6cf3b8c9b8d3c5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7',
-        'public':
-            '8e4c3a5b6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3',
+        'private': testPrivateKey,
+        'public': testPublicKey,
         'created_at': DateTime.now().millisecondsSinceEpoch,
         'version': 1,
       };
@@ -252,21 +258,21 @@ void main() {
 
   group('Security Configuration', () {
     test('should use strict security by default', () {
-      final config = SecurityConfig.strict;
+      const config = SecurityConfig.strict;
       expect(config.requireHardwareBacked, isTrue);
       expect(config.requireBiometrics, isFalse);
       expect(config.allowFallbackSecurity, isFalse);
     });
 
     test('should allow desktop configuration', () {
-      final config = SecurityConfig.desktop;
+      const config = SecurityConfig.desktop;
       expect(config.requireHardwareBacked, isFalse);
       expect(config.requireBiometrics, isFalse);
       expect(config.allowFallbackSecurity, isTrue);
     });
 
     test('should support maximum security with biometrics', () {
-      final config = SecurityConfig.maximum;
+      const config = SecurityConfig.maximum;
       expect(config.requireHardwareBacked, isTrue);
       expect(config.requireBiometrics, isTrue);
       expect(config.allowFallbackSecurity, isFalse);

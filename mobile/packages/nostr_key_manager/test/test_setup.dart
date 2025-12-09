@@ -1,5 +1,5 @@
-// ABOUTME: Test setup configuration for handling platform channels and mock services
-// ABOUTME: Provides mock implementations for plugins that aren't available in test environment
+// ABOUTME: Test setup for handling platform channels and mock services
+// ABOUTME: Mock implementations for plugins unavailable in tests
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,30 +19,31 @@ void setupTestEnvironment() {
 
 void _setupSecureStorageMock() {
   // Mock flutter_secure_storage
-  const MethodChannel secureStorageChannel = MethodChannel(
+  const secureStorageChannel = MethodChannel(
     'plugins.it_nomads.com/flutter_secure_storage',
   );
 
   // Simple in-memory storage for testing
-  final Map<String, String> testStorage = {};
+  final testStorage = <String, String>{};
 
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(secureStorageChannel, (
         MethodCall methodCall,
       ) async {
+        final args = methodCall.arguments as Map<dynamic, dynamic>? ?? {};
         switch (methodCall.method) {
           case 'read':
-            final key = methodCall.arguments['key'] as String?;
+            final key = args['key'] as String?;
             return testStorage[key];
           case 'write':
-            final key = methodCall.arguments['key'] as String?;
-            final value = methodCall.arguments['value'] as String?;
+            final key = args['key'] as String?;
+            final value = args['value'] as String?;
             if (key != null && value != null) {
               testStorage[key] = value;
             }
             return null;
           case 'delete':
-            final key = methodCall.arguments['key'] as String?;
+            final key = args['key'] as String?;
             testStorage.remove(key);
             return null;
           case 'deleteAll':
@@ -51,7 +52,7 @@ void _setupSecureStorageMock() {
           case 'readAll':
             return testStorage;
           case 'containsKey':
-            final key = methodCall.arguments['key'] as String?;
+            final key = args['key'] as String?;
             return testStorage.containsKey(key);
           case 'getCapabilities':
             // Return basic capabilities for testing
@@ -62,7 +63,7 @@ void _setupSecureStorageMock() {
       });
 
   // Mock the secure storage capability check channel
-  const MethodChannel capabilityChannel = MethodChannel(
+  const capabilityChannel = MethodChannel(
     'openvine.secure_storage',
   );
 
@@ -87,7 +88,7 @@ void _setupPlatformChannelMocks() {
   // Mock other platform channels that might be needed
 
   // Mock device info
-  const MethodChannel deviceInfoChannel = MethodChannel(
+  const deviceInfoChannel = MethodChannel(
     'plugins.flutter.io/device_info',
   );
 
@@ -107,7 +108,7 @@ void _setupPlatformChannelMocks() {
       });
 
   // Mock path provider
-  const MethodChannel pathProviderChannel = MethodChannel(
+  const pathProviderChannel = MethodChannel(
     'plugins.flutter.io/path_provider',
   );
 

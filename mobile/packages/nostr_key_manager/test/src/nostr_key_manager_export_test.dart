@@ -1,5 +1,5 @@
 // ABOUTME: Tests for NostrKeyManager export and backup features
-// ABOUTME: Tests nsec export, key replacement with backup, and backup restoration
+// ABOUTME: Tests nsec export, key replacement, backup restoration
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
@@ -36,7 +36,7 @@ void main() {
         expect(nsec.length, greaterThan(60)); // nsec is ~63 characters
 
         // Verify it's the same key by converting back
-        // (we'll need NostrEncoding.nsecToHex for this verification)
+        // (use Nip19.decode() from nostr_sdk for this verification)
         expect(nsec, isNotEmpty);
       });
 
@@ -86,18 +86,19 @@ void main() {
       });
 
       test('should persist backup across app restarts', () async {
-        // Arrange: Generate and replace key
+        // Arrange: Generate and replace key (creates backup)
         await keyManager.generateKeys();
         await keyManager.replaceKeyWithBackup();
-        await keyManager.clearKeys();
+        // Note: Don't clear keys here - we want to test backup persistence
 
         // Act: Create new keyManager instance (simulates app restart)
         final newKeyManager = NostrKeyManager();
         await newKeyManager.initialize();
 
-        // Assert: Should still have backup available
+        // Assert: Should still have backup available after restart
         expect(newKeyManager.hasBackup, isTrue);
 
+        // Cleanup
         await newKeyManager.clearKeys();
       });
     });

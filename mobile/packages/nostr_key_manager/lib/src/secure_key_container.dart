@@ -1,5 +1,5 @@
-// ABOUTME: Secure container for storing cryptographic keys with automatic memory wiping
-// ABOUTME: Provides memory-safe key handling to prevent exposure through memory dumps or debugging
+// ABOUTME: Secure container for storing cryptographic keys with memory wipe
+// ABOUTME: Prevents key exposure through memory dumps or debugging
 
 import 'dart:typed_data';
 
@@ -7,14 +7,17 @@ import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
-import 'nostr_encoding.dart';
-
 final _log = Logger('SecureKeyContainer');
 
-/// Exception thrown by secure key operations
+/// Exception thrown by secure key operations.
 class SecureKeyException implements Exception {
+  /// Creates a new [SecureKeyException].
   const SecureKeyException(this.message, {this.code});
+
+  /// The error message.
   final String message;
+
+  /// Optional error code.
   final String? code;
 
   @override
@@ -35,7 +38,7 @@ class SecureKeyContainer {
       throw const SecureKeyException('Container has been disposed');
     }
 
-    if (!NostrEncoding.isValidHexKey(privateKeyHex)) {
+    if (!keyIsValid(privateKeyHex)) {
       throw const SecureKeyException('Invalid private key format');
     }
 
@@ -48,16 +51,17 @@ class SecureKeyContainer {
       _publicKeyBytes = _hexToBytes(publicKeyHex);
 
       // Generate npub for public operations
-      _npub = NostrEncoding.encodePublicKey(publicKeyHex);
+      _npub = Nip19.encodePubKey(publicKeyHex);
 
       // Register for automatic cleanup
-      _finalizer.attach(this, _privateKeyBytes);
-      _finalizer.attach(this, _publicKeyBytes);
+      _finalizer
+        ..attach(this, _privateKeyBytes)
+        ..attach(this, _publicKeyBytes);
 
       _log.info(
-        '📱 SecureKeyContainer created for ${NostrEncoding.maskKey(_npub)}',
+        '📱 SecureKeyContainer created for ${_maskKey(_npub)}',
       );
-    } catch (e) {
+    } on Exception catch (e) {
       // Clean up any allocated memory on error
       _secureWipeIfAllocated();
       throw SecureKeyException('Failed to create secure container: $e');
@@ -66,7 +70,7 @@ class SecureKeyContainer {
 
   /// Create a secure container from an nsec (bech32 private key)
   SecureKeyContainer.fromNsec(String nsec)
-    : this.fromPrivateKeyHex(NostrEncoding.decodePrivateKey(nsec));
+    : this.fromPrivateKeyHex(Nip19.decode(nsec));
 
   /// Generate a new secure container with a random private key
   factory SecureKeyContainer.generate() {
@@ -121,11 +125,11 @@ class SecureKeyContainer {
       final result = operation(privateKeyHex);
 
       // Immediately wipe the temporary hex string from memory
-      // Note: This doesn't guarantee the string is wiped from all memory locations
-      // but it's better than keeping it around
+      // Note: This doesn't guarantee the string is wiped from all memory
+      // locations but it's better than keeping it around
 
       return result;
-    } catch (e) {
+    } on Exception catch (e) {
       _log.severe('Error in private key operation: $e');
       rethrow;
     }
@@ -139,7 +143,7 @@ class SecureKeyContainer {
 
     try {
       final privateKeyHex = _bytesToHex(_privateKeyBytes);
-      final nsec = NostrEncoding.encodePrivateKey(privateKeyHex);
+      final nsec = Nip19.encodePrivateKey(privateKeyHex);
 
       _log.warning('NSEC temporarily exposed - ensure secure handling');
 
@@ -190,7 +194,7 @@ class SecureKeyContainer {
     try {
       _secureWipe(_privateKeyBytes);
       _secureWipe(_publicKeyBytes);
-    } catch (_) {
+    } on Exception catch (_) {
       // Ignore errors during cleanup
     }
   }
@@ -226,11 +230,11 @@ class SecureKeyContainer {
 
   /// Derive public key from private key using secp256k1
   ///
-  /// Uses NostrEncoding.derivePublicKey() which implements secure secp256k1
-  /// via nostr_sdk's PointyCastle implementation.
+  /// Uses nostr_sdk's getPublicKey() which implements secure secp256k1
+  /// via PointyCastle implementation.
   static String _derivePublicKey(String privateKeyHex) {
     try {
-      return NostrEncoding.derivePublicKey(privateKeyHex);
+      return getPublicKey(privateKeyHex);
     } catch (e) {
       throw SecureKeyException('Failed to derive public key: $e');
     }
@@ -249,7 +253,15 @@ class SecureKeyContainer {
     }
   }
 
+  /// Mask a key for display purposes (show first 8 and last 4 characters)
+  static String _maskKey(String key) {
+    if (key.length < 12) return key;
+    final start = key.substring(0, 8);
+    final end = key.substring(key.length - 4);
+    return '$start...$end';
+  }
+
   @override
   String toString() =>
-      'SecureKeyContainer(npub: ${NostrEncoding.maskKey(_npub)}, disposed: $_isDisposed)';
+      'SecureKeyContainer(npub: ${_maskKey(_npub)}, disposed: $_isDisposed)';
 }

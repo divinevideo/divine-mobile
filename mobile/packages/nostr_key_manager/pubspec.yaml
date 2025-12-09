@@ -8,17 +8,17 @@ environment:
   sdk: ^3.9.0
 
 dependencies:
+  crypto: ^3.0.7
   flutter:
     sdk: flutter
+  flutter_secure_storage: ^9.0.0
+  http: ^1.4.0
+  logging: ^1.2.0
   nostr_sdk:
     path: ../nostr_sdk
-  flutter_secure_storage: ^9.0.0
-  shared_preferences: ^2.2.3
-  crypto: ^3.0.7
-  logging: ^1.2.0
-  web_socket_channel: ^3.0.2
-  http: ^1.4.0
   pointycastle: ^3.7.3
+  shared_preferences: ^2.2.3
+  web_socket_channel: ^3.0.2
 
 dev_dependencies:
   flutter_test:
