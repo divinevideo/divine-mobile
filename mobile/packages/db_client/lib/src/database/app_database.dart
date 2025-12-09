@@ -1,11 +1,7 @@
 // ABOUTME: Main Drift database that shares SQLite file with nostr_sdk
 // ABOUTME: Provides reactive queries and unified event/profile caching
 
-import 'package:db_client/src/database/connection/connection.dart';
-import 'package:db_client/src/database/daos/nostr_events_dao.dart';
-import 'package:db_client/src/database/daos/user_profiles_dao.dart';
-import 'package:db_client/src/database/daos/video_metrics_dao.dart';
-import 'package:db_client/src/database/tables.dart';
+import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
 
 part 'app_database.g.dart';
@@ -18,9 +14,26 @@ part 'app_database.g.dart';
 /// Schema versioning:
 /// - nostr_sdk: schema version 1-2 (event table)
 /// - AppDatabase: schema version 3+ (adds user_profiles, etc.)
+/// - Schema v6: adds profile_stats, hashtag_stats, notifications, pending_uploads
 @DriftDatabase(
-  tables: [NostrEvents, UserProfiles, VideoMetrics],
-  daos: [UserProfilesDao, NostrEventsDao, VideoMetricsDao],
+  tables: [
+    NostrEvents,
+    UserProfiles,
+    VideoMetrics,
+    ProfileStats,
+    HashtagStats,
+    Notifications,
+    PendingUploads,
+  ],
+  daos: [
+    UserProfilesDao,
+    NostrEventsDao,
+    VideoMetricsDao,
+    ProfileStatsDao,
+    HashtagStatsDao,
+    NotificationsDao,
+    PendingUploadsDao,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   /// Default constructor - uses platform-appropriate connection
@@ -30,7 +43,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -40,6 +53,10 @@ class AppDatabase extends _$AppDatabase {
       await m.createTable(nostrEvents);
       await m.createTable(userProfiles);
       await m.createTable(videoMetrics);
+      await m.createTable(profileStats);
+      await m.createTable(hashtagStats);
+      await m.createTable(notifications);
+      await m.createTable(pendingUploads);
     },
     onUpgrade: (m, from, to) async {
       // Migration from nostr_sdk schema v2 to AppDatabase schema v3
@@ -195,6 +212,20 @@ class AppDatabase extends _$AppDatabase {
 
         print(
           '[MIGRATION] ✅ Created 6 indexes on event table for fast discovery/trending/profile queries',
+        );
+      }
+
+      // Migration from schema v5 to v6: Add cache tables for Hive replacement
+      if (from < 6) {
+        print('[MIGRATION] Adding cache tables (replacing Hive)...');
+
+        await m.createTable(profileStats);
+        await m.createTable(hashtagStats);
+        await m.createTable(notifications);
+        await m.createTable(pendingUploads);
+
+        print(
+          '[MIGRATION] ✅ Created profile_stats, hashtag_stats, notifications, pending_uploads tables',
         );
       }
     },
