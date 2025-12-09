@@ -3,31 +3,23 @@ import 'dart:developer';
 import 'contact.dart';
 
 class ContactList {
-  late Map<String, Contact> _contacts;
+  Map<String, Contact> _contacts;
 
-  late Map<String, int> _followedTags;
+  Map<String, int> _followedTags;
 
-  late Map<String, int> _followedCommunitys;
+  Map<String, int> _followedCommunitys;
 
-  late int createdAt;
+  int createdAt;
 
   ContactList({
     Map<String, Contact>? contacts,
     Map<String, int>? followedTags,
     Map<String, int>? followedCommunitys,
     int? createdAt,
-  }) {
-    contacts ??= {};
-    followedTags ??= {};
-    followedCommunitys ??= {};
-
-    _contacts = contacts;
-    _followedTags = followedTags;
-    _followedCommunitys = followedCommunitys;
-
-    createdAt ??= DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    this.createdAt = createdAt;
-  }
+  })  : _contacts = contacts ?? {},
+        _followedTags = followedTags ?? {},
+        _followedCommunitys = followedCommunitys ?? {},
+        createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
   static void getContactInfoFromTags(
     List<dynamic> tags,
