@@ -13,7 +13,10 @@ class NostrRemoteResponse {
   NostrRemoteResponse(this.id, this.result, {this.error});
 
   static Future<NostrRemoteResponse?> decrypt(
-      String ciphertext, NostrSigner signer, String pubkey) async {
+    String ciphertext,
+    NostrSigner signer,
+    String pubkey,
+  ) async {
     var plaintext = await signer.nip44Decrypt(pubkey, ciphertext);
     if (StringUtil.isNotBlank(plaintext)) {
       // print("plaintext $plaintext");

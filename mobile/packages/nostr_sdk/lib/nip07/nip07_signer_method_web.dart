@@ -1,4 +1,5 @@
-// ignore_for_file: avoid_web_libraries_in_flutter
+// TODO(any): Migrate from dart:js to dart:js_interop - https://github.com/divinevideo/divine-mobile/issues/355
+// ignore_for_file: avoid_web_libraries_in_flutter, deprecated_member_use, invalid_runtime_check_with_js_interop_types
 
 import 'dart:convert';
 
@@ -52,22 +53,34 @@ Future<Map?> nip07SignerMethodGetRelays() async {
   return null;
 }
 
-Future<String?> nip07SignerMethodDecrypt(pubkey, ciphertext) async {
+Future<String?> nip07SignerMethodDecrypt(
+  String pubkey,
+  String ciphertext,
+) async {
   var promise = nip07Nip04Decrypt(pubkey, ciphertext);
   return (await promise.toDart) as String?;
 }
 
-Future<String?> nip07SignerMethodEncrypt(pubkey, plaintext) async {
+Future<String?> nip07SignerMethodEncrypt(
+  String pubkey,
+  String plaintext,
+) async {
   var promise = nip07Nip04Encrypt(pubkey, plaintext);
   return (await promise.toDart) as String?;
 }
 
-Future<String?> nip07SignerMethodNip44Decrypt(pubkey, ciphertext) async {
+Future<String?> nip07SignerMethodNip44Decrypt(
+  String pubkey,
+  String ciphertext,
+) async {
   var promise = nip07Nip44Decrypt(pubkey, ciphertext);
   return (await promise.toDart) as String?;
 }
 
-Future<String?> nip07SignerMethodNip44Encrypt(pubkey, plaintext) async {
+Future<String?> nip07SignerMethodNip44Encrypt(
+  String pubkey,
+  String plaintext,
+) async {
   var promise = nip07Nip44Encrypt(pubkey, plaintext);
   return (await promise.toDart) as String?;
 }

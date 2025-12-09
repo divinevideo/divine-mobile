@@ -1,4 +1,8 @@
+// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
+// ignore_for_file: constant_identifier_names, non_constant_identifier_names
+
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:math';
 
 import 'package:android_content_provider/android_content_provider.dart';
@@ -85,8 +89,11 @@ class AndroidNostrSigner implements NostrSigner {
   @override
   Future<String?> decrypt(pubkey, ciphertext) async {
     return _lock.synchronized(() async {
-      var queryResult = await _contentResolverQuery("NIP04_DECRYPT",
-          [ciphertext, pubkey, _npub!], ["signature", "result", "rejected"]);
+      var queryResult = await _contentResolverQuery(
+        "NIP04_DECRYPT",
+        [ciphertext, pubkey, _npub!],
+        ["signature", "result", "rejected"],
+      );
       if (hasResult(queryResult)) {
         return getResult(queryResult);
       }
@@ -122,8 +129,11 @@ class AndroidNostrSigner implements NostrSigner {
   @override
   Future<String?> encrypt(pubkey, plaintext) async {
     return _lock.synchronized(() async {
-      var queryResult = await _contentResolverQuery("NIP04_ENCRYPT",
-          [plaintext, pubkey, _npub!], ["signature", "result", "rejected"]);
+      var queryResult = await _contentResolverQuery(
+        "NIP04_ENCRYPT",
+        [plaintext, pubkey, _npub!],
+        ["signature", "result", "rejected"],
+      );
       if (hasResult(queryResult)) {
         return getResult(queryResult);
       }
@@ -209,8 +219,11 @@ class AndroidNostrSigner implements NostrSigner {
   @override
   Future<String?> nip44Decrypt(pubkey, ciphertext) async {
     return _lock.synchronized(() async {
-      var queryResult = await _contentResolverQuery("NIP44_DECRYPT",
-          [ciphertext, pubkey, _npub!], ["signature", "result", "rejected"]);
+      var queryResult = await _contentResolverQuery(
+        "NIP44_DECRYPT",
+        [ciphertext, pubkey, _npub!],
+        ["signature", "result", "rejected"],
+      );
       if (hasResult(queryResult)) {
         return getResult(queryResult);
       }
@@ -246,8 +259,11 @@ class AndroidNostrSigner implements NostrSigner {
   @override
   Future<String?> nip44Encrypt(pubkey, plaintext) async {
     return _lock.synchronized(() async {
-      var queryResult = await _contentResolverQuery("NIP44_ENCRYPT",
-          [plaintext, pubkey, _npub!], ["signature", "result", "rejected"]);
+      var queryResult = await _contentResolverQuery(
+        "NIP44_ENCRYPT",
+        [plaintext, pubkey, _npub!],
+        ["signature", "result", "rejected"],
+      );
       if (hasResult(queryResult)) {
         return getResult(queryResult);
       }
@@ -287,9 +303,10 @@ class AndroidNostrSigner implements NostrSigner {
 
     return _lock.synchronized(() async {
       var queryResult = await _contentResolverQuery(
-          "SIGN_EVENT",
-          [eventJson, "", _npub!],
-          ["signature", "result", "event", "rejected"]);
+        "SIGN_EVENT",
+        [eventJson, "", _npub!],
+        ["signature", "result", "event", "rejected"],
+      );
       if (hasResult(queryResult)) {
         event.sig = getResult(queryResult)!;
         return event;
@@ -361,7 +378,9 @@ class AndroidNostrSigner implements NostrSigner {
   }
 
   Future<Map<String, Object?>> _getValuesFromCursor(
-      NativeCursor? cursor, List<String> columnNames) async {
+    NativeCursor? cursor,
+    List<String> columnNames,
+  ) async {
     Map<String, Object?> resultMap = {};
     if (cursor == null || !(await cursor.moveToFirst())) {
       return resultMap;
@@ -401,19 +420,24 @@ class AndroidNostrSigner implements NostrSigner {
   }
 
   Future<Map<String, Object?>> _contentResolverQuery(
-      String method, List<String> args, List<String> valueNames) async {
+    String method,
+    List<String> args,
+    List<String> valueNames,
+  ) async {
     if (StringUtil.isBlank(_package)) {
       return {};
     }
 
     try {
-      var cursor = await AndroidContentResolver.instance
-          .query(uri: "content://$_package.$method", projection: args);
+      var cursor = await AndroidContentResolver.instance.query(
+        uri: "content://$_package.$method",
+        projection: args,
+      );
       var values = await _getValuesFromCursor(cursor, valueNames);
       return values;
     } catch (e) {
-      print("contentResolverQuery exception");
-      print(e);
+      developer.log("contentResolverQuery exception");
+      developer.log('$e');
     }
 
     return {};

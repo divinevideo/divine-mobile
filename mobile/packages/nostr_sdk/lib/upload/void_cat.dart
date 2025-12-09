@@ -1,3 +1,6 @@
+// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
+// ignore_for_file: constant_identifier_names
+
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -48,9 +51,7 @@ class VoidCatUploader {
     var response = await NostrBuildUploader.dio.post<String>(
       UPLOAD_ACTION,
       data: Stream.fromIterable(bytes.map((e) => [e])),
-      options: Options(
-        headers: headers,
-      ),
+      options: Options(headers: headers),
     );
     var body = response.data;
 

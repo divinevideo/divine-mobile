@@ -15,9 +15,12 @@ class AndroidPlugin {
   }
 
   static Future<AndroidPluginActivityResult?> startForResult(
-      AndroidPluginIntent intent) async {
+    AndroidPluginIntent intent,
+  ) async {
     var resultMap = await _channel.invokeMethod<Map>(
-        "startActivityForResult", intent.toArgs());
+      "startActivityForResult",
+      intent.toArgs(),
+    );
     if (resultMap != null) {
       var intent = AndroidPluginIntent();
       var intentMap = resultMap["intent"];

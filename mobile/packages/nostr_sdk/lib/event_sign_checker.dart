@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:isolate';
 
 import 'event.dart';
@@ -48,8 +49,8 @@ class EventSignChecker {
         _length = _sendPorts.length;
       } else if (message is EventSignCheckArg) {
         // this must be an checked event
-        print("message check return from sub!");
-        print(onEventSignChecked);
+        log("message check return from sub!");
+        log('$onEventSignChecked');
         if (onEventSignChecked != null) {
           onEventSignChecked!(message);
         }
@@ -67,10 +68,10 @@ class EventSignChecker {
         // this is an event need checked
         if (message.event.isValid && message.event.isSigned) {
           // check success, send it back.
-          print("message check success!");
+          log("message check success!");
           subToMainSendPort.send(message);
         } else {
-          print("oh no! message check fail!");
+          log("oh no! message check fail!");
         }
       }
     });
@@ -82,8 +83,5 @@ class EventSignCheckArg {
 
   Event event;
 
-  EventSignCheckArg({
-    required this.subId,
-    required this.event,
-  });
+  EventSignCheckArg({required this.subId, required this.event});
 }

@@ -53,8 +53,10 @@ class NostrRemoteSignerInfo {
     return false;
   }
 
-  static NostrRemoteSignerInfo? parseBunkerUrl(String bunkerUrlText,
-      {String? nsec}) {
+  static NostrRemoteSignerInfo? parseBunkerUrl(
+    String bunkerUrlText, {
+    String? nsec,
+  }) {
     var uri = Uri.parse(bunkerUrlText);
 
     var pars = uri.queryParametersAll;

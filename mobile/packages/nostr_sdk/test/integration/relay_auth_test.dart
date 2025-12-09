@@ -119,6 +119,7 @@ void main() {
       nostr.setRelayAlwaysAuth(relayUrl, true);
 
       // Subscribe should be queued for authentication
+      // ignore: unused_local_variable - subscription created to test queueing behavior
       final subscription = nostr.subscribe([
         Filter(kinds: [EventKind.TEXT_NOTE]).toJson(),
       ], (event) {});

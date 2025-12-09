@@ -1,3 +1,6 @@
+// TODO(any): Migrate onHttpClientCreate to createHttpClient - https://github.com/divinevideo/divine-mobile/issues/356
+// ignore_for_file: deprecated_member_use
+
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -15,11 +18,11 @@ class DioUtil {
       if (_dio!.httpClientAdapter is IOHttpClientAdapter) {
         (_dio!.httpClientAdapter as IOHttpClientAdapter).onHttpClientCreate =
             (client) {
-          client.badCertificateCallback = (cert, host, port) {
-            return true;
-          };
-          return null;
-        };
+              client.badCertificateCallback = (cert, host, port) {
+                return true;
+              };
+              return null;
+            };
       }
 
       // _dio!.options.connectTimeout = Duration(minutes: 1);
@@ -33,13 +36,15 @@ class DioUtil {
     return _dio!;
   }
 
-  static setCookie(String link, String key, String value) {
+  static void setCookie(String link, String key, String value) {
     cookieJar.saveFromResponse(Uri.parse(link), [Cookie(key, value)]);
   }
 
-  static Future<Map<String, dynamic>?> get(String link,
-      [Map<String, dynamic>? queryParameters,
-      Map<String, String>? header]) async {
+  static Future<Map<String, dynamic>?> get(
+    String link, [
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? header,
+  ]) async {
     var dio = getDio();
     if (header != null) {
       dio.options.headers.addAll(header);
@@ -55,15 +60,19 @@ class DioUtil {
     }
   }
 
-  static Future<String?> getStr(String link,
-      [Map<String, dynamic>? queryParameters,
-      Map<String, String>? header]) async {
+  static Future<String?> getStr(
+    String link, [
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? header,
+  ]) async {
     var dio = getDio();
     if (header != null) {
       dio.options.headers.addAll(header);
     }
-    Response resp =
-        await dio.get<String>(link, queryParameters: queryParameters);
+    Response resp = await dio.get<String>(
+      link,
+      queryParameters: queryParameters,
+    );
     if (resp.statusCode == 200) {
       return resp.data;
     } else {
@@ -72,8 +81,10 @@ class DioUtil {
   }
 
   static Future<Map<String, dynamic>> post(
-      String link, Map<String, dynamic> parameters,
-      [Map<String, String>? header]) async {
+    String link,
+    Map<String, dynamic> parameters, [
+    Map<String, String>? header,
+  ]) async {
     var dio = getDio();
     if (header != null) {
       dio.options.headers.addAll(header);

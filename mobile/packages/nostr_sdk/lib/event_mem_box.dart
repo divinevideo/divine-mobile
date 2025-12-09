@@ -50,8 +50,10 @@ class EventMemBox implements FindEventInterface {
   }
 
   // find event oldest createdAt by relay
-  OldestCreatedAtByRelayResult oldestCreatedAtByRelay(List<Relay> relays,
-      [int? initTime]) {
+  OldestCreatedAtByRelayResult oldestCreatedAtByRelay(
+    List<Relay> relays, [
+    int? initTime,
+  ]) {
     OldestCreatedAtByRelayResult result = OldestCreatedAtByRelayResult();
     Map<String, Relay> relayMap = {};
     for (var relay in relays) {

@@ -9,7 +9,9 @@ import '../utils/string_util.dart';
 
 class PrivateZap {
   static Future<String?> decryptZapEvent(
-      NostrSigner signer, Event event) async {
+    NostrSigner signer,
+    Event event,
+  ) async {
     var signerPubkey = await signer.getPublicKey();
     var tags = event.tags;
     var senderPubkey = event.pubkey;
@@ -35,7 +37,7 @@ class PrivateZap {
         pubkey = senderPubkey;
       }
 
-      if (StringUtil.isNotBlank(anonStr)) {
+      if (StringUtil.isNotBlank(anonStr) && pubkey != null) {
         var strs = anonStr!.split("_");
         if (strs.length > 1) {
           var encryptedText = Nip19.decode(strs[0]);

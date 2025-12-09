@@ -1,4 +1,8 @@
+// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
+// ignore_for_file: constant_identifier_names
+
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:typed_data';
 
 import 'package:bech32/bech32.dart';
@@ -167,12 +171,16 @@ class NIP19Tlv {
 
       if (id != null && author != null && kind != null) {
         return Naddr(
-            id: id, author: author, kind: kind, relays: relayMap.keys.toList());
+          id: id,
+          author: author,
+          kind: kind,
+          relays: relayMap.keys.toList(),
+        );
       }
 
       return null;
     } catch (e) {
-      print(e);
+      log('$e');
     }
     return null;
   }
@@ -227,8 +235,11 @@ class NIP19Tlv {
     List<int> buf = [];
     TLVUtil.writeTLVEntry(buf, TLVType.Default, utf8.encode(o.id));
     TLVUtil.writeTLVEntry(buf, TLVType.Author, HEX.decode(o.author));
-    TLVUtil.writeTLVEntry(buf, TLVType.Kind,
-        Uint8List(4)..buffer.asByteData().setInt32(0, o.kind, Endian.big));
+    TLVUtil.writeTLVEntry(
+      buf,
+      TLVType.Kind,
+      Uint8List(4)..buffer.asByteData().setInt32(0, o.kind, Endian.big),
+    );
     if (o.relays != null) {
       for (var relay in o.relays!) {
         TLVUtil.writeTLVEntry(buf, TLVType.Relay, utf8.encode(relay));

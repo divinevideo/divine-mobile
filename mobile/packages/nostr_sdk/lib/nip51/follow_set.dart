@@ -19,9 +19,6 @@ class FollowSet extends ContactList {
   final Map<String, int> _privateFollowedTags;
   final Map<String, int> _privateFollowedCommunitys;
 
-  @override
-  int createdAt;
-
   FollowSet(
     this.dTag,
     Map<String, Contact> contacts,
@@ -33,13 +30,14 @@ class FollowSet extends ContactList {
     this._privateContacts,
     this._privateFollowedTags,
     this._privateFollowedCommunitys,
-    this.createdAt, {
+    int createdAt, {
     this.title,
   }) : super(
-          contacts: contacts,
-          followedTags: followedTags,
-          followedCommunitys: followedCommunitys,
-        );
+         contacts: contacts,
+         followedTags: followedTags,
+         followedCommunitys: followedCommunitys,
+         createdAt: createdAt,
+       );
 
   static String? getDTag(Event e) {
     for (var tag in e.tags) {
@@ -70,7 +68,11 @@ class FollowSet extends ContactList {
     Map<String, int> privateFollowedCommunitys = {};
 
     ContactList.getContactInfoFromTags(
-        e.tags, publicContacts, publicFollowedTags, publicFollowedCommunitys);
+      e.tags,
+      publicContacts,
+      publicFollowedTags,
+      publicFollowedCommunitys,
+    );
     String dTag = "";
     String? title;
     for (var tag in e.tags) {
@@ -123,13 +125,19 @@ class FollowSet extends ContactList {
     if (StringUtil.isNotBlank(e.content) && nostr != null) {
       // content and nostr not null, decrypt the content.
       try {
-        var contentSource =
-            await nostr.nostrSigner.decrypt(e.pubkey, e.content);
+        var contentSource = await nostr.nostrSigner.decrypt(
+          e.pubkey,
+          e.content,
+        );
         if (StringUtil.isNotBlank(contentSource)) {
           var jsonObj = jsonDecode(contentSource!);
           if (jsonObj is List) {
-            ContactList.getContactInfoFromTags(jsonObj, privateContacts,
-                privateFollowedTags, privateFollowedCommunitys);
+            ContactList.getContactInfoFromTags(
+              jsonObj,
+              privateContacts,
+              privateFollowedTags,
+              privateFollowedCommunitys,
+            );
           }
         }
       } catch (e) {

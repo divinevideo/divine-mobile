@@ -1,6 +1,9 @@
+// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
+// ignore_for_file: constant_identifier_names
+
 import 'package:dio/dio.dart';
 import 'package:nostr_sdk/upload/upload_util.dart';
-import 'package:http_parser/src/media_type.dart';
+import 'package:http_parser/http_parser.dart';
 
 import '../utils/base64.dart';
 import 'nostr_build_uploader.dart';
@@ -29,8 +32,10 @@ class Pomf2LainLa {
     }
 
     var formData = FormData.fromMap({"files[]": multipartFile});
-    var response =
-        await NostrBuildUploader.dio.post(UPLOAD_ACTION, data: formData);
+    var response = await NostrBuildUploader.dio.post(
+      UPLOAD_ACTION,
+      data: formData,
+    );
     var body = response.data;
     if (body is Map<String, dynamic>) {
       return body["files"][0]["url"];

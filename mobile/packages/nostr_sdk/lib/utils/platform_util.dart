@@ -15,6 +15,7 @@ class PlatformUtil {
       deviceInfo = await deviceInfoPlus.deviceInfo;
     }
 
+    if (!context.mounted) return;
     var size = MediaQuery.of(context).size;
     if (!isWeb() &&
         Platform.isIOS &&

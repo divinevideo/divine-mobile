@@ -10,10 +10,7 @@ class BookmarkItem {
 
   String value;
 
-  BookmarkItem({
-    required this.key,
-    required this.value,
-  });
+  BookmarkItem({required this.key, required this.value});
 
   List<dynamic> toJson() {
     List<dynamic> list = [];

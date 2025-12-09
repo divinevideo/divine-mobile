@@ -12,19 +12,31 @@ Future<Map?> nip07SignerMethodGetRelays() async {
   throw UnimplementedError('not implement');
 }
 
-Future<String?> nip07SignerMethodDecrypt(pubkey, ciphertext) async {
+Future<String?> nip07SignerMethodDecrypt(
+  String pubkey,
+  String ciphertext,
+) async {
   throw UnimplementedError('not implement');
 }
 
-Future<String?> nip07SignerMethodEncrypt(pubkey, plaintext) async {
+Future<String?> nip07SignerMethodEncrypt(
+  String pubkey,
+  String plaintext,
+) async {
   throw UnimplementedError('not implement');
 }
 
-Future<String?> nip07SignerMethodNip44Decrypt(pubkey, ciphertext) async {
+Future<String?> nip07SignerMethodNip44Decrypt(
+  String pubkey,
+  String ciphertext,
+) async {
   throw UnimplementedError('not implement');
 }
 
-Future<String?> nip07SignerMethodNip44Encrypt(pubkey, plaintext) async {
+Future<String?> nip07SignerMethodNip44Encrypt(
+  String pubkey,
+  String plaintext,
+) async {
   throw UnimplementedError('not implement');
 }
 

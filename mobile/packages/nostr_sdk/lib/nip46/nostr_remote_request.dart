@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import '../signer/nostr_signer.dart';
 import '../utils/string_util.dart';
@@ -23,7 +24,10 @@ class NostrRemoteRequest {
   }
 
   static Future<NostrRemoteRequest?> decrypt(
-      String ciphertext, NostrSigner signer, String pubkey) async {
+    String ciphertext,
+    NostrSigner signer,
+    String pubkey,
+  ) async {
     try {
       var plaintext = await signer.nip44Decrypt(pubkey, ciphertext);
       if (StringUtil.isNotBlank(plaintext)) {
@@ -47,8 +51,8 @@ class NostrRemoteRequest {
         }
       }
     } catch (e) {
-      print("NostrRemoteRequest decrypt error");
-      print(e);
+      log("NostrRemoteRequest decrypt error");
+      log('$e');
     }
 
     return null;
