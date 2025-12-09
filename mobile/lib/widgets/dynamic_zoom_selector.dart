@@ -111,12 +111,12 @@ class _ZoomButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isSelected
-              ? VineTheme.vineGreen.withOpacity(0.3)
-              : Colors.black.withOpacity(0.4),
+              ? VineTheme.vineGreen.withValues(alpha: 0.3)
+              : Colors.black.withValues(alpha: 0.4),
           border: Border.all(
             color: isSelected
                 ? VineTheme.vineGreen
-                : Colors.white.withOpacity(0.5),
+                : Colors.white.withValues(alpha: 0.5),
             width: isSelected ? 2 : 1,
           ),
         ),

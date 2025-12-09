@@ -24,7 +24,6 @@ import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/macos_camera_preview.dart';
-import 'package:crypto/crypto.dart';
 
 /// Represents a single recording segment in the Vine-style recording
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
@@ -1821,8 +1820,10 @@ class VineRecordingController {
           '${tempDir.path}/vine_final_${DateTime.now().millisecondsSinceEpoch}.mp4';
 
       final cropFilter = _buildCropFilter(_aspectRatio);
+
+      final audioEncodeFlag = Platform.isAndroid ? '-c:a aac' : '-c:a copy';
       final command =
-          '-y -i "$inputPath" -vf "$cropFilter" -c:a copy "$outputPath"';
+          '-y -i "$inputPath" -vf "$cropFilter" $audioEncodeFlag "$outputPath"';
 
       Log.info(
         '📹 Executing FFmpeg square crop command: $command',
@@ -1947,7 +1948,7 @@ class VineRecordingController {
       // Use -vsync cfr for constant frame rate and -async 1 to sync audio to video
       final cropFilter = _buildCropFilter(_aspectRatio);
       final command =
-          '-y -f concat -safe 0 -i "$concatFilePath" -vf "$cropFilter" -c:v libx264 -preset fast -vsync cfr -r 30 -c:a aac -b:a 128k -async 1 "$outputPath"';
+          '-y -f concat -safe 0 -i "$concatFilePath" -vf "$cropFilter" -c:v libx264 -preset ultrafast -vsync cfr -r 30 -c:a aac -b:a 128k -async 1 "$outputPath"';
 
       Log.info(
         '📹 Executing FFmpeg command: $command',
@@ -2015,13 +2016,6 @@ class VineRecordingController {
       );
       rethrow;
     }
-  }
-
-  /// Calculate SHA256 hash of a video file
-  Future<String> _calculateSHA256(File file) async {
-    final bytes = await file.readAsBytes();
-    final digest = sha256.convert(bytes);
-    return digest.toString();
   }
 
   /// Get the recorded video path from macOS single recording mode.
@@ -2107,7 +2101,8 @@ class VineRecordingController {
         '${tempDir.path}/vine_final_${DateTime.now().millisecondsSinceEpoch}.mp4';
 
     final cropFilter = _buildCropFilter(_aspectRatio);
-    final command = '-i "$inputPath" -vf "$cropFilter" -c:a copy "$outputPath"';
+    final command =
+        '-i "$inputPath" -vf "$cropFilter" -c:v libx264 -preset ultrafast -r 30 -vsync cfr -c:a aac -b:a 128k -async 1 "$outputPath"';
 
     Log.info(
       '📹 Executing FFmpeg crop command: $command',

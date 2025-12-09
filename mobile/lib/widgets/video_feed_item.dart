@@ -652,11 +652,14 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                                           ),
                                           shape: BoxShape.circle,
                                         ),
-                                        child: const Icon(
-                                          Icons.play_arrow,
-                                          size: 56,
-                                          color: Colors.white,
-                                          semanticLabel: 'Play video',
+                                        child: Semantics(
+                                          identifier: 'play_button',
+                                          child: const Icon(
+                                            Icons.play_arrow,
+                                            size: 56,
+                                            color: Colors.white,
+                                            semanticLabel: 'Play video',
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -1434,7 +1437,7 @@ class VideoOverlayActions extends ConsumerWidget {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black.withValues(alpha: 0.3),
         shape: BoxShape.circle,
       ),
       child: IconButton(

@@ -1,0 +1,79 @@
+# ABOUTME: Codemagic CI/CD configuration for diVine mobile app builds.
+# ABOUTME: Configured for iOS builds with manual triggering and TestFlight distribution.
+
+# Steps to setup:
+# 1 - Create the Codemagic project with access to the repository.
+# 2 - Setup iOS publishing:
+#   2.1 - https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/#:~:text=Creating%20the%20App%20Store%20Connect%20API%20key
+# 3 - Setup emails to receive build notifications.
+# 4 - Create environment variable group "zendesk_credentials" with:
+#   - ZENDESK_APP_ID
+#   - ZENDESK_CLIENT_ID
+#   - ZENDESK_URL
+
+definitions:
+  environment:
+    emails: &emails
+      - TODO
+  scripts:
+    - &setup_code_signing_xcode
+      name: Set up code signing settings on Xcode project
+      script: xcode-project use-profiles
+    - &install_flutterfire
+      name: Install FlutterFire CLI
+      script: dart pub global activate flutterfire_cli
+    - &pod_install
+      name: Run pod install
+      script: find . -name "Podfile" -execdir pod install \;
+    - &build_ios
+      name: Build and sign iOS
+      script: |
+        # Offset to continue from existing manual builds (last was 132)
+        BUILD_NUMBER=$((PROJECT_BUILD_NUMBER + 132))
+        flutter build ipa --release --build-number=$BUILD_NUMBER \
+          --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
+          --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
+          --dart-define=ZENDESK_URL=$ZENDESK_URL \
+          --export-options-plist=/Users/builder/export_options.plist
+
+workflows:
+  ios-build:
+    name: iOS Build
+    working_directory: mobile
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: API key for Codemagic # Setup in Codemagic UI
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - zendesk_credentials
+      vars:
+        BUNDLE_ID: co.openvine.app
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: $BUNDLE_ID
+    cache:
+      cache_paths:
+        - $HOME/Library/Caches/CocoaPods
+        - $HOME/.pub-cache
+    triggering:
+      events: []
+    scripts:
+      - *setup_code_signing_xcode
+      - *install_flutterfire
+      - *pod_install
+      - *build_ios
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
+        # Don't auto-distribute to any groups - we'll manually add builds to external testers
+        beta_groups: []

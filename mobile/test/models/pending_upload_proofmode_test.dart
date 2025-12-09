@@ -14,10 +14,14 @@ void main() {
     setUp(() {
       // Create a test NativeProofData
       testProofData = const NativeProofData(
-        videoHash: 'abc123def456789012345678901234567890123456789012345678901234',
-        sensorDataCsv: 'timestamp,lat,lon\n2025-01-01T10:00:00,37.7749,-122.4194',
-        pgpSignature: '-----BEGIN PGP SIGNATURE-----\ntest_signature_content\n-----END PGP SIGNATURE-----',
-        publicKey: '-----BEGIN PGP PUBLIC KEY BLOCK-----\ntest_public_key\n-----END PGP PUBLIC KEY BLOCK-----',
+        videoHash:
+            'abc123def456789012345678901234567890123456789012345678901234',
+        sensorDataCsv:
+            'timestamp,lat,lon\n2025-01-01T10:00:00,37.7749,-122.4194',
+        pgpSignature:
+            '-----BEGIN PGP SIGNATURE-----\ntest_signature_content\n-----END PGP SIGNATURE-----',
+        publicKey:
+            '-----BEGIN PGP PUBLIC KEY BLOCK-----\ntest_public_key\n-----END PGP PUBLIC KEY BLOCK-----',
         deviceAttestation: 'attestation_token_xyz',
         timestamp: '2025-01-01T10:00:06Z',
       );
@@ -66,9 +70,7 @@ void main() {
       expect(proof, isNotNull);
       expect(
         proof!.videoHash,
-        equals(
-          'abc123def456789012345678901234567890123456789012345678901234',
-        ),
+        equals('abc123def456789012345678901234567890123456789012345678901234'),
       );
       expect(proof.sensorDataCsv, isNotNull);
       expect(proof.pgpSignature, isNotNull);
@@ -128,9 +130,7 @@ void main() {
       expect(copied.nativeProof, isNotNull);
       expect(
         copied.nativeProof!.videoHash,
-        equals(
-          'abc123def456789012345678901234567890123456789012345678901234',
-        ),
+        equals('abc123def456789012345678901234567890123456789012345678901234'),
       );
     });
 
@@ -187,9 +187,7 @@ void main() {
     });
 
     test('NativeProofData isComplete returns false when fields missing', () {
-      final incompleteProof = const NativeProofData(
-        videoHash: 'abc123',
-      );
+      final incompleteProof = const NativeProofData(videoHash: 'abc123');
 
       expect(incompleteProof.isComplete, isFalse);
     });
@@ -197,9 +195,7 @@ void main() {
     test('NativeProofData hasMobileAttestation checks deviceAttestation', () {
       expect(testProofData.hasMobileAttestation, isTrue);
 
-      final noAttestation = const NativeProofData(
-        videoHash: 'abc123',
-      );
+      final noAttestation = const NativeProofData(videoHash: 'abc123');
       expect(noAttestation.hasMobileAttestation, isFalse);
     });
 
@@ -222,9 +218,7 @@ void main() {
       expect(basicProof.verificationLevel, equals('basic_proof'));
 
       // Unverified (hash only)
-      final unverifiedProof = const NativeProofData(
-        videoHash: 'abc123',
-      );
+      final unverifiedProof = const NativeProofData(videoHash: 'abc123');
       expect(unverifiedProof.verificationLevel, equals('unverified'));
     });
   });

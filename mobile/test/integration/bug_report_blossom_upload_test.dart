@@ -26,9 +26,6 @@ class MockAuthService implements AuthService {
   bool get isAuthenticated => true;
 
   @override
-  String get publicKey => _keychain.public;
-
-  @override
   String get currentPublicKeyHex => _keychain.public;
 
   @override
@@ -73,47 +70,52 @@ void main() {
 
     setUpAll(() async {
       // Mock package_info_plus
-      const MethodChannel(
-        'dev.fluttercommunity.plus/package_info',
-      ).setMockMethodCallHandler((MethodCall methodCall) async {
-        if (methodCall.method == 'getAll') {
-          return <String, dynamic>{
-            'appName': 'OpenVine',
-            'packageName': 'com.openvine.mobile',
-            'version': '0.0.1',
-            'buildNumber': '35',
-          };
-        }
-        return null;
-      });
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            MethodChannel('dev.fluttercommunity.plus/package_info'),
+            (methodCall) async {
+              if (methodCall.method == 'getAll') {
+                return <String, dynamic>{
+                  'appName': 'OpenVine',
+                  'packageName': 'com.openvine.mobile',
+                  'version': '0.0.1',
+                  'buildNumber': '35',
+                };
+              }
+              return null;
+            },
+          );
 
       // Mock Firebase Core
-      const MethodChannel(
-        'plugins.flutter.io/firebase_core',
-      ).setMockMethodCallHandler((MethodCall methodCall) async {
-        if (methodCall.method == 'Firebase#initializeCore') {
-          return [
-            {
-              'name': '[DEFAULT]',
-              'options': {
-                'apiKey': 'test',
-                'appId': 'test',
-                'messagingSenderId': 'test',
-                'projectId': 'test',
-              },
-              'pluginConstants': {},
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            MethodChannel('plugins.flutter.io/firebase_core'),
+            (methodCall) async {
+              if (methodCall.method == 'Firebase#initializeCore') {
+                return [
+                  {
+                    'name': '[DEFAULT]',
+                    'options': {
+                      'apiKey': 'test',
+                      'appId': 'test',
+                      'messagingSenderId': 'test',
+                      'projectId': 'test',
+                    },
+                    'pluginConstants': {},
+                  },
+                ];
+              }
+              return null;
             },
-          ];
-        }
-        return null;
-      });
+          );
 
       // Mock Firebase Analytics
-      const MethodChannel(
-        'plugins.flutter.io/firebase_analytics',
-      ).setMockMethodCallHandler((MethodCall methodCall) async {
-        return null;
-      });
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            MethodChannel('plugins.flutter.io/firebase_analytics'),
+            (methodCall) async => null,
+          );
 
       // Initialize SharedPreferences with mock
       SharedPreferences.setMockInitialValues({});

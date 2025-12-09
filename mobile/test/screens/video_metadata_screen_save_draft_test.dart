@@ -1,8 +1,6 @@
 // ABOUTME: TDD test for save draft functionality in VideoMetadataScreenPure
 // ABOUTME: Ensures draft save button exists and saves to storage correctly
 
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,16 +19,9 @@ void main() {
     });
 
     testWidgets('should have a Save Draft button in app bar', (tester) async {
-      final videoFile = File('/path/to/test/video.mp4');
-
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VideoMetadataScreenPure(
-              videoFile: videoFile,
-              duration: const Duration(seconds: 6),
-            ),
-          ),
+          child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
         ),
       );
 
@@ -41,16 +32,9 @@ void main() {
     testWidgets('should save draft when Save Draft button is tapped', (
       tester,
     ) async {
-      final videoFile = File('/path/to/test/video.mp4');
-
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VideoMetadataScreenPure(
-              videoFile: videoFile,
-              duration: const Duration(seconds: 6),
-            ),
-          ),
+          child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
         ),
       );
 
@@ -73,7 +57,6 @@ void main() {
       expect(drafts.length, 1);
       expect(drafts.first.title, 'Test Video Title');
       expect(drafts.first.description, 'Test video description');
-      expect(drafts.first.videoFile.path, videoFile.path);
     });
 
     // NOTE: Skipping "should show success message and close after saving draft" test
@@ -83,16 +66,9 @@ void main() {
     testWidgets(
       'should save draft without hashtags (UI interaction is complex)',
       (tester) async {
-        final videoFile = File('/path/to/test/video.mp4');
-
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              home: VideoMetadataScreenPure(
-                videoFile: videoFile,
-                duration: const Duration(seconds: 6),
-              ),
-            ),
+            child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
           ),
         );
 
@@ -108,16 +84,9 @@ void main() {
     );
 
     testWidgets('should save draft with empty fields', (tester) async {
-      final videoFile = File('/path/to/test/video.mp4');
-
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VideoMetadataScreenPure(
-              videoFile: videoFile,
-              duration: const Duration(seconds: 6),
-            ),
-          ),
+          child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
         ),
       );
 
@@ -136,16 +105,9 @@ void main() {
     testWidgets('should not disable Save Draft button when publishing', (
       tester,
     ) async {
-      final videoFile = File('/path/to/test/video.mp4');
-
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(
-            home: VideoMetadataScreenPure(
-              videoFile: videoFile,
-              duration: const Duration(seconds: 6),
-            ),
-          ),
+          child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
         ),
       );
 

@@ -48,9 +48,6 @@ void main() {
         ),
       ).thenAnswer((invocation) async {
         // Get callbacks
-        final onEvent =
-            invocation.namedArguments[const Symbol('onEvent')]
-                as void Function(Event)?;
         final onComplete =
             invocation.namedArguments[const Symbol('onComplete')]
                 as void Function()?;

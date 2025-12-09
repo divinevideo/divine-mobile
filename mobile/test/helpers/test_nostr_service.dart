@@ -325,4 +325,10 @@ class TestNostrService implements INostrService {
       'external_relays': relays.length,
     };
   }
+
+  @override
+  Stream<Event> searchUsers(String query, {int? limit}) {
+    // TODO: implement searchUsers
+    throw UnimplementedError();
+  }
 }

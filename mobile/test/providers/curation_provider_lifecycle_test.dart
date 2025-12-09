@@ -161,6 +161,8 @@ void main() {
 
       // Editor's picks may be empty if no videos available, but service should not be loading
       expect(service.isLoading, isFalse);
+      // Verify editorsPicks is a valid list (may be empty if no videos available)
+      expect(editorsPicks, isA<List<VideoEvent>>());
     });
   });
 }

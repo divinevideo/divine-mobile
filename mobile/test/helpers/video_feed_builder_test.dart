@@ -12,6 +12,25 @@ import 'package:openvine/services/video_event_service.dart';
 
 import 'video_feed_builder_test.mocks.dart';
 
+// Helper to create mock VideoEvent for testing
+VideoEvent _createMockVideo({
+  required String id,
+  DateTime? createdAt,
+  int loops = 0,
+}) {
+  final timestamp = createdAt ?? DateTime.now();
+  return VideoEvent(
+    id: id,
+    pubkey: 'test_pubkey',
+    createdAt: timestamp.millisecondsSinceEpoch ~/ 1000,
+    content: 'Test video',
+    timestamp: timestamp,
+    videoUrl: 'https://example.com/video.mp4',
+    thumbnailUrl: 'https://example.com/thumb.jpg',
+    originalLoops: loops,
+  );
+}
+
 @GenerateMocks([VideoEventService])
 void main() {
   group('VideoFeedBuilder', () {
@@ -65,7 +84,6 @@ void main() {
       test('should wait for video count stability before returning', () async {
         // Arrange
         final videos = <VideoEvent>[];
-        final completer = Completer<void>();
         var listenerCallCount = 0;
 
         final config = VideoFeedConfig(
@@ -98,6 +116,8 @@ void main() {
 
         // Assert
         expect(state.videos.length, greaterThanOrEqualTo(0));
+        expect(listenerCallCount, greaterThanOrEqualTo(1));
+
         // Should wait at least 300ms for stability
         expect(stopwatch.elapsedMilliseconds, greaterThanOrEqualTo(100));
       });
@@ -124,6 +144,7 @@ void main() {
           stopwatch.stop();
 
           // Assert
+          expect(state.videos.length, greaterThanOrEqualTo(0));
           // Should timeout at 3 seconds
           expect(stopwatch.elapsedMilliseconds, lessThan(3500));
           expect(stopwatch.elapsedMilliseconds, greaterThanOrEqualTo(2800));
@@ -227,6 +248,8 @@ void main() {
         );
 
         // Assert
+        expect(onUpdateCallCount, isZero);
+
         // Verify that a listener was added to the service
         verify(mockService.addListener(any)).called(1);
       });
@@ -272,23 +295,4 @@ void main() {
       });
     });
   });
-}
-
-// Helper to create mock VideoEvent for testing
-VideoEvent _createMockVideo({
-  required String id,
-  DateTime? createdAt,
-  int loops = 0,
-}) {
-  final timestamp = createdAt ?? DateTime.now();
-  return VideoEvent(
-    id: id,
-    pubkey: 'test_pubkey',
-    createdAt: timestamp.millisecondsSinceEpoch ~/ 1000,
-    content: 'Test video',
-    timestamp: timestamp,
-    videoUrl: 'https://example.com/video.mp4',
-    thumbnailUrl: 'https://example.com/thumb.jpg',
-    originalLoops: loops,
-  );
 }

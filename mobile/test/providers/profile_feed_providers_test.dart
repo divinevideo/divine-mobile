@@ -40,6 +40,7 @@ class FakeVideoEventService extends ChangeNotifier
   Future<void> subscribeToHashtagVideos(
     List<String> hashtags, {
     int limit = 100,
+    bool force = false,
   }) async {
     subscribedHashtags.add(hashtags);
   }

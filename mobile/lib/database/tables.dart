@@ -25,6 +25,7 @@ class NostrEvents extends Table {
   Set<Column> get primaryKey => {id};
 
   @override
+  // ignore: override_on_non_overriding_member
   List<Index> get indexes => [
     // Index on kind for filtering video events (kind IN (34236, 6))
     Index(
@@ -124,6 +125,7 @@ class VideoMetrics extends Table {
   ];
 
   @override
+  // ignore: override_on_non_overriding_member
   List<Index> get indexes => [
     // Index on loop_count for trending/popular queries (ORDER BY loop_count DESC)
     Index(
