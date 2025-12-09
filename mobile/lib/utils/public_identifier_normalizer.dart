@@ -2,6 +2,7 @@
 // ABOUTME: Handles npub, nprofile, hex, and special 'me' identifier universally
 
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 /// Normalized result containing hex pubkey and optional relay hints
 class NormalizedPublicIdentifier {
@@ -96,7 +97,7 @@ String? normalizeToNpub(String identifier, {String? currentUserHex}) {
   if (normalized == null) return null;
 
   try {
-    return Nip19.encodePubKey(normalized.hexPubkey);
+    return NostrKeyUtils.encodePubKey(normalized.hexPubkey);
   } catch (e) {
     return null;
   }
