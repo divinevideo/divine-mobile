@@ -7,7 +7,7 @@ import 'dart:async' as _i5;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:openvine/models/bug_report_data.dart' as _i2;
-import 'package:openvine/models/bug_report_result.dart' as _i3;
+import 'package:models/models.dart' as _i3 show BugReportResult;
 import 'package:openvine/services/bug_report_service.dart' as _i4;
 
 // ignore_for_file: type=lint

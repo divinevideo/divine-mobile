@@ -1,11 +1,14 @@
 // ABOUTME: Tests for NativeProofData serialization in VineDraft
 // ABOUTME: Validates that native proof JSON is stored and retrieved correctly
 
+// No need for const constructors in tests
+// ignore_for_file: prefer_const_constructors
+
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/vine_draft.dart';
-import 'package:models/models.dart' show NativeProofData;
+
+import 'package:models/models.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('VineDraft NativeProof serialization', () {

@@ -12,7 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/models/bug_report_data.dart';
-import 'package:openvine/models/bug_report_result.dart';
+import 'package:models/models.dart' show BugReportResult;
 import 'package:openvine/models/log_entry.dart';
 import 'package:openvine/services/log_capture_service.dart';
 import 'package:openvine/services/error_analytics_tracker.dart';

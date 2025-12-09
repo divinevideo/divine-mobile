@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' show AspectRatio;
+import 'package:models/models.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('AspectRatio', () {

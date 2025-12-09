@@ -1,7 +1,7 @@
 // ABOUTME: Helper functions for video dimension calculations
 // ABOUTME: Converts aspect ratios to Nostr NIP-71 dimension tags
 
-import 'package:openvine/models/aspect_ratio.dart';
+import 'package:models/models.dart' show AspectRatio;
 
 /// Get dimension tag for Nostr event based on aspect ratio
 ///

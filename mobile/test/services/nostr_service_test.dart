@@ -3,7 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:openvine/models/nip94_metadata.dart';
+import 'package:models/models.dart' show NIP94Metadata, NIP94ValidationException, SimpleKeyPair;
 import 'package:openvine/services/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';

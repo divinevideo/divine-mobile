@@ -10,7 +10,7 @@ import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
 import 'package:nostr_sdk/event.dart' as _i9;
 import 'package:nostr_sdk/filter.dart' as _i13;
-import 'package:openvine/models/nip94_metadata.dart' as _i14;
+import 'package:models/models.dart' as _i14 show NIP94Metadata, NIP94ValidationException, SimpleKeyPair;
 import 'package:openvine/models/video_event.dart' as _i5;
 import 'package:openvine/services/age_verification_service.dart' as _i8;
 import 'package:openvine/services/content_blocklist_service.dart' as _i7;

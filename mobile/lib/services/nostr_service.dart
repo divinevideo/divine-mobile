@@ -12,7 +12,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart' as nostr;
 import 'package:openvine/constants/app_constants.dart';
-import 'package:openvine/models/nip94_metadata.dart';
+import 'package:models/models.dart' show NIP94Metadata;
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';

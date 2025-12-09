@@ -2,9 +2,9 @@
 // ABOUTME: Tests serialization, deserialization, and helper methods for NativeProofData storage
 
 import 'dart:convert';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/pending_upload.dart';
-import 'package:models/models.dart' show NativeProofData;
+
+import 'package:models/models.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('PendingUpload ProofMode Integration', () {
@@ -176,7 +176,7 @@ void main() {
     });
 
     test('NativeProofData isComplete returns true when all fields present', () {
-      final completeProof = const NativeProofData(
+      const completeProof = NativeProofData(
         videoHash: 'abc123',
         sensorDataCsv: 'data',
         pgpSignature: 'sig',
@@ -187,7 +187,7 @@ void main() {
     });
 
     test('NativeProofData isComplete returns false when fields missing', () {
-      final incompleteProof = const NativeProofData(videoHash: 'abc123');
+      const incompleteProof = NativeProofData(videoHash: 'abc123');
 
       expect(incompleteProof.isComplete, isFalse);
     });
@@ -195,7 +195,7 @@ void main() {
     test('NativeProofData hasMobileAttestation checks deviceAttestation', () {
       expect(testProofData.hasMobileAttestation, isTrue);
 
-      final noAttestation = const NativeProofData(videoHash: 'abc123');
+      const noAttestation = NativeProofData(videoHash: 'abc123');
       expect(noAttestation.hasMobileAttestation, isFalse);
     });
 
@@ -204,21 +204,21 @@ void main() {
       expect(testProofData.verificationLevel, equals('verified_mobile'));
 
       // Web verification (signature but no attestation)
-      final webProof = const NativeProofData(
+      const webProof = NativeProofData(
         videoHash: 'abc123',
         pgpSignature: 'sig',
       );
       expect(webProof.verificationLevel, equals('verified_web'));
 
       // Basic proof (sensor data only)
-      final basicProof = const NativeProofData(
+      const basicProof = NativeProofData(
         videoHash: 'abc123',
         sensorDataCsv: 'data',
       );
       expect(basicProof.verificationLevel, equals('basic_proof'));
 
       // Unverified (hash only)
-      final unverifiedProof = const NativeProofData(videoHash: 'abc123');
+      const unverifiedProof = NativeProofData(videoHash: 'abc123');
       expect(unverifiedProof.verificationLevel, equals('unverified'));
     });
   });

@@ -16,8 +16,8 @@ import 'package:openvine/services/vine_recording_controller.dart'
         CameraPlatformInterface,
         MobileCameraInterface;
 import 'package:openvine/models/vine_draft.dart';
-import 'package:openvine/models/native_proof_data.dart';
-import 'package:openvine/models/aspect_ratio.dart' as model;
+import 'package:models/models.dart' show NativeProofData;
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:path_provider/path_provider.dart';

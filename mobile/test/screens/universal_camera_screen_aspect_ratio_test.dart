@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/aspect_ratio.dart' as vine;
+import 'package:models/models.dart' as vine show AspectRatio;
 
 void main() {
   group('AspectRatio Toggle Logic', () {

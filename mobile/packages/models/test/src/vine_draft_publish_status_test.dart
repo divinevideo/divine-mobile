@@ -2,9 +2,9 @@
 // ABOUTME: Validates serialization, migration, and status lifecycle
 
 import 'dart:io';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/vine_draft.dart';
-import 'package:models/models.dart' show AspectRatio;
+
+import 'package:models/models.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('VineDraft PublishStatus', () {
@@ -21,7 +21,6 @@ void main() {
         createdAt: now,
         lastModified: now,
         publishStatus: PublishStatus.draft,
-        publishError: null,
         publishAttempts: 0,
         aspectRatio: AspectRatio.square,
       );
@@ -49,7 +48,6 @@ void main() {
           createdAt: now,
           lastModified: now,
           publishStatus: status,
-          publishError: null,
           publishAttempts: 0,
           aspectRatio: AspectRatio.square,
         );
@@ -124,7 +122,6 @@ void main() {
         createdAt: now,
         lastModified: now,
         publishStatus: PublishStatus.draft,
-        publishError: null,
         publishAttempts: 0,
         aspectRatio: AspectRatio.square,
       );
@@ -149,7 +146,6 @@ void main() {
         createdAt: now,
         lastModified: now,
         publishStatus: PublishStatus.draft,
-        publishError: null,
         publishAttempts: 0,
         aspectRatio: AspectRatio.square,
       );

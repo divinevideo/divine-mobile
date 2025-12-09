@@ -4,7 +4,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:hive_ce/hive.dart';
-import 'package:openvine/models/native_proof_data.dart';
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/utils/unified_logger.dart';
 
 part 'pending_upload.g.dart';

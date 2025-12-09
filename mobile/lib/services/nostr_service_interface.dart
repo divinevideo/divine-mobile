@@ -5,7 +5,7 @@ import 'dart:async';
 
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/models/nip94_metadata.dart';
+import 'package:models/models.dart' show NIP94Metadata;
 import 'package:openvine/services/nostr_key_manager.dart';
 
 /// Result of broadcasting an event to relays
