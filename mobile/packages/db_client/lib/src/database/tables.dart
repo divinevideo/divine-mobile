@@ -37,7 +37,7 @@ class NostrEvents extends Table {
     Index(
       'idx_event_created_at',
       'CREATE INDEX IF NOT EXISTS idx_event_created_at '
-      'ON event (created_at)',
+          'ON event (created_at)',
     ),
 
     // Composite index for optimal video queries
@@ -45,7 +45,7 @@ class NostrEvents extends Table {
     Index(
       'idx_event_kind_created_at',
       'CREATE INDEX IF NOT EXISTS idx_event_kind_created_at '
-      'ON event (kind, created_at)',
+          'ON event (kind, created_at)',
     ),
 
     // Index on pubkey for author queries (WHERE pubkey = ?)
@@ -59,7 +59,7 @@ class NostrEvents extends Table {
     Index(
       'idx_event_kind_pubkey',
       'CREATE INDEX IF NOT EXISTS idx_event_kind_pubkey '
-      'ON event (kind, pubkey)',
+          'ON event (kind, pubkey)',
     ),
 
     // Composite index for author video timeline
@@ -67,7 +67,7 @@ class NostrEvents extends Table {
     Index(
       'idx_event_pubkey_created_at',
       'CREATE INDEX IF NOT EXISTS idx_event_pubkey_created_at '
-      'ON event (pubkey, created_at)',
+          'ON event (pubkey, created_at)',
     ),
   ];
 }
@@ -140,7 +140,7 @@ class VideoMetrics extends Table {
     Index(
       'idx_metrics_loop_count',
       'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count '
-      'ON video_metrics (loop_count)',
+          'ON video_metrics (loop_count)',
     ),
 
     // Index on likes for sorting by popularity (ORDER BY likes DESC)
