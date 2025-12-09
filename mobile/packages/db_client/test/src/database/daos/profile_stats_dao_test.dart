@@ -206,9 +206,7 @@ void main() {
             );
 
         // Delete with 5 minute expiry - entries are 10 minutes old so should be deleted
-        final deleted = await dao.deleteExpired(
-          
-        );
+        final deleted = await dao.deleteExpired();
 
         expect(deleted, equals(2));
         expect(await appDbClient.countProfileStats(), equals(0));

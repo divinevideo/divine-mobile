@@ -43,9 +43,7 @@ void main() {
           totalLikes: 250,
         );
 
-        final results = await dao.getPopularHashtags(
-          
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(1));
         expect(results.first.hashtag, equals('flutter'));
         expect(results.first.videoCount, equals(100));
@@ -65,9 +63,7 @@ void main() {
           totalViews: 10000,
         );
 
-        final results = await dao.getPopularHashtags(
-          
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(1));
         expect(results.first.videoCount, equals(200));
         expect(results.first.totalViews, equals(10000));
@@ -76,9 +72,7 @@ void main() {
       test('handles null optional fields', () async {
         await dao.upsertHashtag(hashtag: 'nostr');
 
-        final results = await dao.getPopularHashtags(
-          
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(1));
         expect(results.first.hashtag, equals('nostr'));
         expect(results.first.videoCount, isNull);
@@ -91,9 +85,7 @@ void main() {
         await dao.upsertHashtag(hashtag: 'dart', videoCount: 80);
         await dao.upsertHashtag(hashtag: 'nostr', videoCount: 50);
 
-        final results = await dao.getPopularHashtags(
-          
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(3));
       });
     });
@@ -118,9 +110,7 @@ void main() {
           ),
         ]);
 
-        final results = await dao.getPopularHashtags(
-          
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(3));
       });
 
@@ -140,9 +130,7 @@ void main() {
           ),
         ]);
 
-        final results = await dao.getPopularHashtags(
-          
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(2));
 
         final flutter = results.firstWhere((r) => r.hashtag == 'flutter');
@@ -156,9 +144,7 @@ void main() {
         await dao.upsertHashtag(hashtag: 'high', videoCount: 100);
         await dao.upsertHashtag(hashtag: 'medium', videoCount: 50);
 
-        final results = await dao.getPopularHashtags(
-          
-        );
+        final results = await dao.getPopularHashtags();
         expect(results[0].hashtag, equals('high'));
         expect(results[1].hashtag, equals('medium'));
         expect(results[2].hashtag, equals('low'));
@@ -197,9 +183,7 @@ void main() {
       });
 
       test('returns empty list when no hashtags exist', () async {
-        final results = await dao.getPopularHashtags(
-          
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, isEmpty);
       });
     });
@@ -208,16 +192,12 @@ void main() {
       test('returns true when fresh data exists', () async {
         await dao.upsertHashtag(hashtag: 'flutter', videoCount: 100);
 
-        final isFresh = await dao.isCacheFresh(
-          
-        );
+        final isFresh = await dao.isCacheFresh();
         expect(isFresh, isTrue);
       });
 
       test('returns false when no data exists', () async {
-        final isFresh = await dao.isCacheFresh(
-          
-        );
+        final isFresh = await dao.isCacheFresh();
         expect(isFresh, isFalse);
       });
 
@@ -264,9 +244,7 @@ void main() {
 
         expect(deleted, equals(2));
 
-        final results = await dao.getPopularHashtags(
-          
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, isEmpty);
       });
 
@@ -274,15 +252,11 @@ void main() {
         await dao.upsertHashtag(hashtag: 'flutter', videoCount: 100);
 
         // Delete with long expiry should keep the entry
-        final deleted = await dao.deleteExpired(
-          
-        );
+        final deleted = await dao.deleteExpired();
 
         expect(deleted, equals(0));
 
-        final results = await dao.getPopularHashtags(
-          
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(1));
       });
     });
@@ -297,9 +271,7 @@ void main() {
 
         expect(deleted, equals(3));
 
-        final results = await dao.getPopularHashtags(
-          
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, isEmpty);
       });
 
