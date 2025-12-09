@@ -5,7 +5,7 @@
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
-import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:test/test.dart';
 
