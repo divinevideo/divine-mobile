@@ -16,6 +16,26 @@ class NativeProofData {
     this.timestamp,
   });
 
+  /// Create from JSON
+  factory NativeProofData.fromJson(Map<String, dynamic> json) =>
+      NativeProofData(
+        videoHash: json['videoHash'] as String,
+        sensorDataCsv: json['sensorDataCsv'] as String?,
+        pgpSignature: json['pgpSignature'] as String?,
+        publicKey: json['publicKey'] as String?,
+        deviceAttestation: json['deviceAttestation'] as String?,
+        timestamp: json['timestamp'] as String?,
+      );
+
+  /// Create from raw proof metadata map (from NativeProofModeService)
+  factory NativeProofData.fromMetadata(Map<String, String> metadata) =>
+      NativeProofData(
+        videoHash: metadata['hash']!,
+        sensorDataCsv: metadata['csv'],
+        pgpSignature: metadata['signature'],
+        publicKey: metadata['publicKey'],
+      );
+
   /// SHA256 hash of the video file (used as proof identifier)
   final String videoHash;
 
@@ -44,29 +64,6 @@ class NativeProofData {
     if (timestamp != null) 'timestamp': timestamp,
   };
 
-  /// Create from JSON
-  factory NativeProofData.fromJson(Map<String, dynamic> json) =>
-      NativeProofData(
-        videoHash: json['videoHash'] as String,
-        sensorDataCsv: json['sensorDataCsv'] as String?,
-        pgpSignature: json['pgpSignature'] as String?,
-        publicKey: json['publicKey'] as String?,
-        deviceAttestation: json['deviceAttestation'] as String?,
-        timestamp: json['timestamp'] as String?,
-      );
-
-  /// Create from raw proof metadata map (from NativeProofModeService)
-  factory NativeProofData.fromMetadata(Map<String, String> metadata) =>
-      NativeProofData(
-        videoHash: metadata['hash']!,
-        sensorDataCsv: metadata['csv'],
-        pgpSignature: metadata['signature'],
-        publicKey: metadata['publicKey'],
-        // Device attestation would come from SafetyNet API separately
-        deviceAttestation: null,
-        timestamp: null,
-      );
-
   /// Check if proof data is complete
   bool get isComplete =>
       pgpSignature != null && publicKey != null && sensorDataCsv != null;
@@ -91,7 +88,7 @@ class NativeProofData {
   /// Get PGP fingerprint from public key (simplified)
   String? get pgpFingerprint {
     if (publicKey == null) return null;
-    // TODO: Extract actual fingerprint from PGP public key
+    // TODO(any): Extract actual fingerprint from PGP public key.
     // For now, return first 40 chars of key as placeholder
     return publicKey!.length > 40 ? publicKey!.substring(0, 40) : publicKey;
   }

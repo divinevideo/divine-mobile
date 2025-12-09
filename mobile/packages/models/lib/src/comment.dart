@@ -1,7 +1,11 @@
-// ABOUTME: Comment model representing a single comment or reply in a video thread
-// ABOUTME: Contains metadata for threading, author info, and Nostr event relationships
+// ABOUTME: Comment model representing a single comment or reply in a video
+// ABOUTME: thread. Contains metadata for threading, author info, and Nostr
+// ABOUTME: event relationships
+
+import 'package:meta/meta.dart';
 
 /// Model representing a comment on a video
+@immutable
 class Comment {
   const Comment({
     required this.id,
@@ -118,6 +122,11 @@ class Comment {
   int get hashCode => id.hashCode;
 
   @override
-  String toString() =>
-      'Comment(id: $id, content: ${content.length > 50 ? '${content.substring(0, 50)}...' : content}, author: $shortAuthorPubkey)';
+  String toString() {
+    final truncatedContent = content.length > 50
+        ? '${content.substring(0, 50)}...'
+        : content;
+    return 'Comment(id: $id, content: $truncatedContent, '
+        'author: $shortAuthorPubkey)';
+  }
 }

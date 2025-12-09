@@ -11,14 +11,8 @@ class BugReportResult {
     this.timestamp,
   });
 
-  final bool success;
-  final String? reportId;
-  final String? messageEventId; // NIP-17 gift wrap event ID
-  final String? error;
-  final DateTime? timestamp;
-
   /// Create success result
-  static BugReportResult createSuccess({
+  factory BugReportResult.success({
     required String reportId,
     required String messageEventId,
   }) => BugReportResult(
@@ -29,7 +23,7 @@ class BugReportResult {
   );
 
   /// Create failure result
-  static BugReportResult failure(String error, {String? reportId}) =>
+  factory BugReportResult.failure(String error, {String? reportId}) =>
       BugReportResult(
         success: false,
         error: error,
@@ -37,10 +31,17 @@ class BugReportResult {
         timestamp: DateTime.now(),
       );
 
+  final bool success;
+  final String? reportId;
+  final String? messageEventId; // NIP-17 gift wrap event ID
+  final String? error;
+  final DateTime? timestamp;
+
   @override
   String toString() {
     if (success) {
-      return 'BugReportResult(success: true, reportId: $reportId, messageEventId: $messageEventId)';
+      return 'BugReportResult(success: true, '
+          'reportId: $reportId, messageEventId: $messageEventId)';
     } else {
       return 'BugReportResult(success: false, error: $error)';
     }

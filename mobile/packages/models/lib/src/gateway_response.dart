@@ -3,21 +3,6 @@
 
 /// Response from the Divine REST Gateway API
 class GatewayResponse {
-  /// List of raw event JSON objects from the gateway
-  final List<Map<String, dynamic>> events;
-
-  /// Whether End of Stored Events was reached
-  final bool eose;
-
-  /// Whether the query is complete (all matching events returned)
-  final bool complete;
-
-  /// Whether the response came from cache
-  final bool cached;
-
-  /// Age of cached data in seconds (null if not cached)
-  final int? cacheAgeSeconds;
-
   GatewayResponse({
     required this.events,
     required this.eose,
@@ -37,6 +22,21 @@ class GatewayResponse {
       cacheAgeSeconds: json['cache_age_seconds'] as int?,
     );
   }
+
+  /// List of raw event JSON objects from the gateway
+  final List<Map<String, dynamic>> events;
+
+  /// Whether End of Stored Events was reached
+  final bool eose;
+
+  /// Whether the query is complete (all matching events returned)
+  final bool complete;
+
+  /// Whether the response came from cache
+  final bool cached;
+
+  /// Age of cached data in seconds (null if not cached)
+  final int? cacheAgeSeconds;
 
   /// Whether the response contains any events
   bool get hasEvents => events.isNotEmpty;

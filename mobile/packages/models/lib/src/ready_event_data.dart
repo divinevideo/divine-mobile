@@ -1,21 +1,9 @@
-// ABOUTME: Stub ReadyEventData model for backward compatibility with tests
-// ABOUTME: Minimal implementation to resolve compilation errors in legacy test files
+// ABOUTME: Stub ReadyEventData model for backward compatibility with tests.
+// ABOUTME: Minimal implementation to resolve compilation errors in legacy
+// ABOUTME: test files.
 
 /// Ready event data model for legacy test compatibility
 class ReadyEventData {
-  final String? id;
-  final String? videoId;
-  final String? publicId;
-  final String? secureUrl;
-  final String? contentSuggestion;
-  final String? title;
-  final String? description;
-  final List<String>? hashtags;
-  final List<List<String>>? tags;
-  final Map<String, dynamic>? metadata;
-  final DateTime? createdAt;
-  final DateTime? processedAt;
-
   ReadyEventData({
     this.id,
     this.videoId,
@@ -55,6 +43,18 @@ class ReadyEventData {
       metadata: metadata,
     );
   }
+  final String? id;
+  final String? videoId;
+  final String? publicId;
+  final String? secureUrl;
+  final String? contentSuggestion;
+  final String? title;
+  final String? description;
+  final List<String>? hashtags;
+  final List<List<String>>? tags;
+  final Map<String, dynamic>? metadata;
+  final DateTime? createdAt;
+  final DateTime? processedAt;
 
   /// Check if the event data is ready for publishing to Nostr
   bool get isReadyForPublishing {
@@ -63,12 +63,13 @@ class ReadyEventData {
 
   /// Generate NIP-94 tags from the event data
   List<List<String>> get nip94Tags {
-    final List<List<String>> tags = [];
+    final tags = <List<String>>[];
 
     if (secureUrl != null) {
-      tags.add(['url', secureUrl!]);
-      // Add MIME type based on URL extension or default to mp4
-      tags.add(['m', 'video/mp4']);
+      tags
+        ..add(['url', secureUrl!])
+        // Add MIME type based on URL extension or default to mp4
+        ..add(['m', 'video/mp4']);
     }
 
     // Add dimensions if available in metadata
@@ -94,7 +95,7 @@ class ReadyEventData {
 
   /// Estimate the size of the Nostr event in bytes
   int get estimatedEventSize {
-    int size = 0;
+    var size = 0;
 
     // Base event structure overhead
     size += 200; // JSON structure, timestamps, etc.

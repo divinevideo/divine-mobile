@@ -11,14 +11,8 @@ class NIP17SendResult {
     this.timestamp,
   });
 
-  final bool success;
-  final String? messageEventId; // Gift wrap event ID (kind 1059)
-  final String? recipientPubkey;
-  final String? error;
-  final DateTime? timestamp;
-
   /// Create success result
-  static NIP17SendResult createSuccess({
+  factory NIP17SendResult.success({
     required String messageEventId,
     required String recipientPubkey,
   }) => NIP17SendResult(
@@ -29,13 +23,20 @@ class NIP17SendResult {
   );
 
   /// Create failure result
-  static NIP17SendResult failure(String error) =>
+  factory NIP17SendResult.failure(String error) =>
       NIP17SendResult(success: false, error: error);
+
+  final bool success;
+  final String? messageEventId; // Gift wrap event ID (kind 1059)
+  final String? recipientPubkey;
+  final String? error;
+  final DateTime? timestamp;
 
   @override
   String toString() {
     if (success) {
-      return 'NIP17SendResult(success: true, messageEventId: $messageEventId, recipient: $recipientPubkey)';
+      return 'NIP17SendResult(success: true, '
+          'messageEventId: $messageEventId, recipient: $recipientPubkey)';
     } else {
       return 'NIP17SendResult(success: false, error: $error)';
     }

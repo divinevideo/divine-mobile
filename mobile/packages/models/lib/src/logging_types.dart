@@ -7,10 +7,12 @@ enum LogLevel {
   debug(700),
   info(800),
   warning(900),
-  error(1000);
+  error(1000)
+  ;
+
+  const LogLevel(this.value);
 
   final int value;
-  const LogLevel(this.value);
 
   static LogLevel fromString(String level) {
     switch (level.toLowerCase()) {
@@ -39,18 +41,18 @@ enum LogCategory {
   auth('AUTH'), // Authentication, key management, identity
   storage('STORAGE'), // Local storage, caching, persistence
   api('API'), // External API calls, network requests
-  system('SYSTEM'); // App lifecycle, initialization, configuration
+  system('SYSTEM')
+  ; // App lifecycle, initialization, configuration
 
-  final String name;
   const LogCategory(this.name);
 
+  final String name;
+
   static LogCategory? fromString(String category) {
-    try {
-      return LogCategory.values.firstWhere(
-        (cat) => cat.name.toLowerCase() == category.toLowerCase(),
-      );
-    } catch (_) {
-      return null;
+    final lowerCategory = category.toLowerCase();
+    for (final cat in LogCategory.values) {
+      if (cat.name.toLowerCase() == lowerCategory) return cat;
     }
+    return null;
   }
 }

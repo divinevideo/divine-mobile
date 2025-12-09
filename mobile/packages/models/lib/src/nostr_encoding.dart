@@ -1,8 +1,8 @@
 // ABOUTME: Minimal wrapper utilities for Nostr key operations using nostr_sdk
 // ABOUTME: Delegates to Nip19 for bech32 encoding/decoding per NIP-19
 
-import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/client_utils/keys.dart' as nostr_keys;
+import 'package:nostr_sdk/nostr_sdk.dart';
 
 /// Exception thrown when encoding/decoding operations fail
 class NostrEncodingException implements Exception {
@@ -168,7 +168,7 @@ class NostrEncoding {
       if (Nip19.isPubkey(bech32Key)) return 'npub';
       if (Nip19.isPrivateKey(bech32Key)) return 'nsec';
       return null;
-    } catch (e) {
+    } on Exception {
       return null;
     }
   }

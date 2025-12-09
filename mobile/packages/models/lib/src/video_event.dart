@@ -1,13 +1,16 @@
-// ABOUTME: Video Event model for NIP-71 compliant video events - OpenVine uses kind 34236 (addressable short videos)
-// ABOUTME: Parses video metadata from Nostr events with support for kinds 22, 21, 34236, 34235
+// ABOUTME: Video Event model for NIP-71 compliant video events
+// OpenVine uses kind 34236 (addressable short videos)
+// Parses video metadata from Nostr events with support for
+// kinds 22, 21, 34236, 34235
 
 import 'dart:developer' as developer;
 
+import 'package:meta/meta.dart';
+import 'package:models/src/nip71_video_kinds.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
-import 'nip71_video_kinds.dart';
-
 /// Represents a video event (NIP-71 compliant kinds 22, 34236)
+@immutable
 class VideoEvent {
   // approved, flagged, etc.
 
@@ -50,7 +53,7 @@ class VideoEvent {
   factory VideoEvent.fromNostrEvent(Event event) {
     if (!NIP71VideoKinds.isVideoKind(event.kind)) {
       throw ArgumentError(
-        'Event must be a NIP-71 video kind (${NIP71VideoKinds.getAllVideoKinds().join(', ')})',
+        '''Event must be a NIP-71 video kind (${NIP71VideoKinds.getAllVideoKinds().join(', ')})''',
       );
     }
 
@@ -63,7 +66,7 @@ class VideoEvent {
       name: 'VideoEvent',
     );
     developer.log(
-      '🔍 DEBUG: Event content: ${event.content.length > 100 ? "${event.content.substring(0, 100)}..." : event.content}',
+      '''🔍 DEBUG: Event content: ${event.content.length > 100 ? "${event.content.substring(0, 100)}..." : event.content}''',
       name: 'VideoEvent',
     );
 
@@ -90,7 +93,8 @@ class VideoEvent {
     int? expirationTimestamp;
 
     // Parse event tags according to NIP-71
-    // Handle both List<String> and List<dynamic> from different nostr implementations
+    // Handle both List<String> and List<dynamic>
+    // from different nostr implementations
     for (var i = 0; i < event.tags.length; i++) {
       final tagRaw = event.tags[i];
       if ((tagRaw as List).isEmpty) continue;
@@ -121,7 +125,7 @@ class VideoEvent {
                 'api.openvine.co',
               );
               developer.log(
-                '🔧 FIXED: Corrected apt.openvine.co to api.openvine.co: $fixedUrl',
+                '''🔧 FIXED: Corrected apt.openvine.co to api.openvine.co: $fixedUrl''',
                 name: 'VideoEvent',
               );
               videoUrlCandidates.add(fixedUrl);
@@ -180,7 +184,7 @@ class VideoEvent {
                       'api.openvine.co',
                     );
                     developer.log(
-                      '🔧 FIXED: Corrected apt.openvine.co to api.openvine.co in imeta: $fixedUrl',
+                      '''🔧 FIXED: Corrected apt.openvine.co to api.openvine.co in imeta: $fixedUrl''',
                       name: 'VideoEvent',
                     );
                     videoUrlCandidates.add(fixedUrl);
@@ -197,7 +201,8 @@ class VideoEvent {
                     name: 'VideoEvent',
                   );
                 }
-              // POSTEL'S LAW: Accept various video URL keys that different clients may use
+              // POSTEL'S LAW: Accept various video URL keys that
+              // different clients may use
               case 'hls':
               case 'dash':
               case 'stream':
@@ -256,11 +261,11 @@ class VideoEvent {
           // Thumbnail URL - prefer static thumbnails for grid display
           thumbnailUrl = tagValue as String?;
         case 'preview':
-          // Animated GIF preview - store separately, don't use as main thumbnail
-          // GIFs auto-play and would make the grid look chaotic
-          // We could use this for hover effects or preview on long-press in the future
+          // Animated GIF preview - store separately, don't use as main
+          // thumbnail. GIFs auto-play and would make the grid look chaotic.
+          // We could use this for hover effects or preview on long-press.
           if (tagValue.isNotEmpty && tagValue.endsWith('.gif')) {
-            // Store in tags for potential future use but don't use as main thumbnail
+            // Store in tags for potential future use
             tags['preview_gif'] = tagValue;
             developer.log(
               '✅ Found preview GIF tag (not using as thumbnail): $tagValue',
@@ -305,13 +310,14 @@ class VideoEvent {
             hashtags.add(tagValue);
           }
         case 'r':
-          // NIP-25 reference - might contain media URLs
-          // Also handle "r" tags with type annotation (e.g., ["r", "url", "video"] or ["r", "url", "thumbnail"])
+          // NIP-25 reference - might contain media URLs. Also handle "r" tags
+          // with type annotation (e.g., ["r", "url", "video"])
           if (tag.length >= 3) {
             final url = tagValue;
             final type = tag[2];
             developer.log(
-              '🔍 DEBUG: Found r tag with type annotation: url="$url" type="$type"',
+              '🔍 DEBUG: Found r tag with type annotation: '
+              'url="$url" type="$type"',
               name: 'VideoEvent',
             );
 
@@ -361,7 +367,8 @@ class VideoEvent {
           if (tagValue.isNotEmpty && _isValidVideoUrl(tagValue)) {
             videoUrlCandidates.add(tagValue);
             developer.log(
-              '✅ Added video URL candidate from unknown tag "$tagName": $tagValue',
+              '✅ Added video URL candidate from unknown tag '
+              '"$tagName": $tagValue',
               name: 'VideoEvent',
             );
           }
@@ -380,7 +387,7 @@ class VideoEvent {
     developer.log('🔍 DEBUG: thumbnailUrl = $thumbnailUrl', name: 'VideoEvent');
 
     // DEBUG: Log the exact videoUrl being passed to VideoEvent constructor
-    if (videoUrl?.contains('cdn.divine.video') == true) {
+    if (videoUrl?.contains('cdn.divine.video') ?? false) {
       developer.log(
         '⚠️ SUSPICIOUS: Found cdn.divine.video URL: $videoUrl',
         name: 'VideoEvent',
@@ -408,13 +415,15 @@ class VideoEvent {
     if (videoUrlCandidates.isNotEmpty) {
       videoUrl = _selectBestVideoUrl(videoUrlCandidates);
       developer.log(
-        '🎯 Selected best video URL from ${videoUrlCandidates.length} candidates: $videoUrl',
+        '🎯 Selected best video URL from ${videoUrlCandidates.length} '
+        'candidates: $videoUrl',
         name: 'VideoEvent',
       );
     } else {
       // If no candidates found, use the old fallback method
       developer.log(
-        '🔧 FALLBACK: No URL candidates found, searching all tags for any potential video URL...',
+        '🔧 FALLBACK: No URL candidates found, searching all tags '
+        'for any potential video URL...',
         name: 'VideoEvent',
       );
       videoUrl = _findAnyVideoUrlInTags(event.tags);
@@ -426,17 +435,19 @@ class VideoEvent {
       }
     }
 
-    // Note: Removed Classic Vine hardening that was forcing api.openvine.co URLs
-    // The URL selection logic above now properly handles cdn.divine.video URLs from imeta tags
+    // Note: Removed Classic Vine hardening that was forcing api.openvine.co
+    // URLs. The URL selection logic above now properly handles cdn.divine.video
+    // URLs from imeta tags.
 
-    // If we still have a broken apt.openvine.co URL (shouldn't happen now), fix it
-    if (videoUrl?.contains('apt.openvine.co') == true) {
+    // If we still have a broken apt.openvine.co URL, fix it
+    if (videoUrl?.contains('apt.openvine.co') ?? false) {
       final fixedUrl = videoUrl!.replaceAll(
         'apt.openvine.co',
         'api.openvine.co',
       );
       developer.log(
-        '🔧 FINAL FIX: Corrected remaining apt.openvine.co to api.openvine.co: $fixedUrl',
+        '🔧 FINAL FIX: Corrected remaining apt.openvine.co to '
+        'api.openvine.co: $fixedUrl',
         name: 'VideoEvent',
       );
       videoUrl = fixedUrl;
@@ -451,7 +462,8 @@ class VideoEvent {
     // Many relays don't include 'd' tags on NIP-71 addressable events
     if (vineId == null || vineId.isEmpty) {
       developer.log(
-        '⚠️ WARNING: NIP-71 addressable event missing "d" tag, using event ID as fallback',
+        '⚠️ WARNING: NIP-71 addressable event missing "d" tag, '
+        'using event ID as fallback',
         name: 'VideoEvent',
       );
       vineId = event.id; // Use event ID as unique identifier
@@ -502,10 +514,6 @@ class VideoEvent {
       group: group,
       altText: altText,
       blurhash: blurhash,
-      isRepost: false,
-      reposterId: null,
-      reposterPubkey: null,
-      repostedAt: null,
       originalLoops: originalLoops,
       originalLikes: originalLikes,
       originalComments: originalComments,
@@ -553,8 +561,8 @@ class VideoEvent {
   final int? originalLikes; // Original like count from classic Vine
   final int? originalComments; // Original comment count from classic Vine
   final int? originalReposts; // Original repost count from classic Vine
-  final int?
-  expirationTimestamp; // NIP-40 expiration timestamp (Unix timestamp in seconds)
+  // NIP-40 expiration timestamp (Unix timestamp in seconds)
+  final int? expirationTimestamp;
 
   /// NIP-40: Check if this event has expired
   /// Returns true if expiration timestamp is set and current time >= expiration
@@ -617,9 +625,9 @@ class VideoEvent {
     return !isRepost;
   }
 
-  /// Check if we should show the Original Content badge
-  /// Show for original content that is NOT a vintage recovered vine
-  /// AND does NOT have ProofMode verification (those show ProofMode badge instead)
+  /// Check if we should show the Original Content badge. Show for original
+  /// content that is NOT a vintage recovered vine AND does NOT have ProofMode
+  /// verification (those show ProofMode badge instead)
   bool get shouldShowOriginalBadge {
     return isOriginalContent && !isOriginalVine && !hasProofMode;
   }
@@ -650,9 +658,9 @@ class VideoEvent {
     return b.createdAt.compareTo(a.createdAt);
   }
 
-  /// Enhanced comparator that combines multiple engagement metrics
-  /// Uses embedded metrics from imported vine data
-  /// Priority based on combined engagement: loops + (comments * 3) + (likes * 2) + (reposts * 2.5)
+  /// Enhanced comparator that combines multiple engagement metrics.
+  /// Uses embedded metrics from imported vine data. Priority based on
+  /// combined engagement: loops + (comments*3) + (likes*2) + (reposts*2.5)
   static int compareByEngagementScore(VideoEvent a, VideoEvent b) {
     // Calculate engagement scores using embedded metrics
     final aScore = _calculateEngagementScore(a);
@@ -666,7 +674,8 @@ class VideoEvent {
     final loopCompare = (b.originalLoops ?? 0).compareTo(a.originalLoops ?? 0);
     if (loopCompare != 0) return loopCompare;
 
-    // Final tiebreaker: created_at (though most will have same timestamp from import)
+    // Final tiebreaker: created_at (though most will have same timestamp
+    // from import)
     return b.createdAt.compareTo(a.createdAt);
   }
 
@@ -685,7 +694,7 @@ class VideoEvent {
     final reposts = event.originalReposts ?? 0;
 
     // Calculate weighted score
-    double score = 0.0;
+    var score = 0.0;
     score += loops * 1.0; // Base weight for views/loops
     score += comments * 3.0; // Comments show high engagement
     score += likes * 2.0; // Likes show appreciation
@@ -722,7 +731,8 @@ class VideoEvent {
           }
         }
       } else {
-        // NEW FORMAT: positional key-value pairs (tag[i] is key, tag[i+1] is value)
+        // NEW FORMAT: positional key-value pairs (tag[i] is key, tag[i+1]
+        // is value)
         for (var i = 1; i < tag.length - 1; i += 2) {
           final key = tag[i];
           final value = tag[i + 1];
@@ -794,8 +804,8 @@ class VideoEvent {
 
   /// Get effective thumbnail URL
   ///
-  /// Returns the thumbnailUrl if set, otherwise null.
-  /// For fallback thumbnail generation, use ThumbnailApiService in the app layer.
+  /// Returns the thumbnailUrl if set, otherwise null. For fallback thumbnail
+  /// generation, use ThumbnailApiService in the app layer.
   String? get effectiveThumbnailUrl {
     if (thumbnailUrl != null && thumbnailUrl!.isNotEmpty) {
       return thumbnailUrl;
@@ -934,7 +944,7 @@ class VideoEvent {
     if (url.isEmpty) return false;
 
     // Fix common typo: apt.openvine.co -> api.openvine.co
-    String correctedUrl = url;
+    var correctedUrl = url;
     if (url.contains('apt.openvine.co')) {
       correctedUrl = url.replaceAll('apt.openvine.co', 'api.openvine.co');
     }
@@ -954,7 +964,7 @@ class VideoEvent {
       // This is an open protocol - people can host videos anywhere
       // The video player will determine if it can actually play the content
       return true;
-    } catch (e) {
+    } on FormatException catch (e) {
       developer.log(
         '🔍 INVALID URL (parse error): $correctedUrl - error: $e',
         name: 'VideoEvent',
@@ -971,34 +981,39 @@ class VideoEvent {
   static int _scoreVideoUrl(String url) {
     final urlLower = url.toLowerCase();
 
-    // Reject broken vine.co URLs immediately (but NOT openvine.co, divine.video, etc.)
-    // Only reject URLs that are ACTUALLY from the dead vine.co domain
+    // Reject broken vine.co URLs immediately (but NOT openvine.co,
+    // divine.video, etc.). Only reject URLs from the dead vine.co domain
     if (urlLower.contains('//vine.co/') ||
         urlLower.contains('//www.vine.co/') ||
-        urlLower.startsWith('vine.co/'))
+        urlLower.startsWith('vine.co/')) {
       return -1;
+    }
 
     // POSTEL'S LAW: Deprioritize known broken URL patterns
     // The cdn.divine.video/*/manifest/video.m3u8 pattern is often broken
     // Prefer stream.divine.video HLS or direct MP4 files
     if (urlLower.contains('cdn.divine.video') &&
-        urlLower.contains('/manifest/'))
+        urlLower.contains('/manifest/')) {
       return 5;
+    }
 
     // ALWAYS prefer MP4 over HLS for short videos (6 seconds)
     // HLS adaptive bitrate is pointless for content this short
     // MP4 is simpler, faster (single file vs manifest + segments)
 
     // Direct MP4 from cdn.divine.video (blob storage) - highest priority
-    if (urlLower.contains('.mp4') && urlLower.contains('cdn.divine.video'))
+    if (urlLower.contains('.mp4') && urlLower.contains('cdn.divine.video')) {
       return 115;
+    }
 
     // Any other MP4 - still preferred
     if (urlLower.contains('.mp4')) return 110;
 
     // BunnyStream HLS (stream.divine.video) - reliable streaming
-    if (urlLower.contains('.m3u8') && urlLower.contains('stream.divine.video'))
+    if (urlLower.contains('.m3u8') &&
+        urlLower.contains('stream.divine.video')) {
       return 105;
+    }
 
     // Generic HLS fallback
     if (urlLower.contains('.m3u8') || urlLower.contains('hls')) return 100;
@@ -1025,7 +1040,7 @@ class VideoEvent {
 
     // Score all candidates and pick the highest scoring one
     String? bestUrl;
-    int bestScore = -1;
+    var bestScore = -1;
 
     for (final url in candidates) {
       final isValid = _isValidVideoUrl(url);

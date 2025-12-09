@@ -1,34 +1,36 @@
-// ABOUTME: DivineFilter - extends nostr_sdk Filter to support divine relay extensions
-// ABOUTME: Adds sort, int# filters, and cursor for server-side sorted queries
+// ABOUTME: DivineFilter - extends nostr_sdk Filter to support divine relay
+// ABOUTME: extensions. Adds sort, int# filters, and cursor for server-side
+// ABOUTME: sorted queries.
 
 import 'package:nostr_sdk/filter.dart';
 
 /// Sort direction for server-side sorting
 enum SortDirection {
   asc,
-  desc;
+  desc
+  ;
 
   String toJson() => name;
 }
 
 /// Sort configuration for divine relay queries
 class SortConfig {
+  const SortConfig({required this.field, this.direction = SortDirection.desc});
   final String field; // e.g., 'loop_count', 'likes', 'created_at'
   final SortDirection direction;
-
-  const SortConfig({required this.field, this.direction = SortDirection.desc});
 
   Map<String, dynamic> toJson() => {'field': field, 'dir': direction.toJson()};
 }
 
 /// Range filter for integer metrics
 class IntRangeFilter {
+  // Less than
+
+  const IntRangeFilter({this.gte, this.lte, this.gt, this.lt});
   final int? gte; // Greater than or equal
   final int? lte; // Less than or equal
   final int? gt; // Greater than
-  final int? lt; // Less than
-
-  const IntRangeFilter({this.gte, this.lte, this.gt, this.lt});
+  final int? lt;
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -54,10 +56,7 @@ class IntRangeFilter {
 /// );
 /// ```
 class DivineFilter {
-  final Filter baseFilter;
-  final SortConfig? sort;
-  final Map<String, IntRangeFilter>? intFilters; // int#<field> filters
-  final String? cursor; // For pagination
+  // For pagination
 
   const DivineFilter({
     required this.baseFilter,
@@ -65,6 +64,51 @@ class DivineFilter {
     this.intFilters,
     this.cursor,
   });
+
+  /// Create a standard trending query (sorted by loop_count)
+  factory DivineFilter.trending({required Filter baseFilter, int? minLoops}) {
+    return DivineFilter(
+      baseFilter: baseFilter,
+      sort: const SortConfig(field: 'loop_count'),
+      intFilters: minLoops != null
+          ? {'loop_count': IntRangeFilter(gte: minLoops)}
+          : null,
+    );
+  }
+
+  /// Create a most liked query (sorted by likes)
+  factory DivineFilter.mostLiked({required Filter baseFilter, int? minLikes}) {
+    return DivineFilter(
+      baseFilter: baseFilter,
+      sort: const SortConfig(field: 'likes'),
+      intFilters: minLikes != null
+          ? {'likes': IntRangeFilter(gte: minLikes)}
+          : null,
+    );
+  }
+
+  /// Create a most viewed query (sorted by views)
+  factory DivineFilter.mostViewed({required Filter baseFilter, int? minViews}) {
+    return DivineFilter(
+      baseFilter: baseFilter,
+      sort: const SortConfig(field: 'views'),
+      intFilters: minViews != null
+          ? {'views': IntRangeFilter(gte: minViews)}
+          : null,
+    );
+  }
+
+  /// Create a newest first query (sorted by created_at)
+  factory DivineFilter.newest({required Filter baseFilter}) {
+    return DivineFilter(
+      baseFilter: baseFilter,
+      sort: const SortConfig(field: 'created_at'),
+    );
+  }
+  final Filter baseFilter;
+  final SortConfig? sort;
+  final Map<String, IntRangeFilter>? intFilters; // int#<field> filters
+  final String? cursor;
 
   /// Convert to JSON for Nostr REQ message
   /// Merges base filter JSON with divine extensions
@@ -98,47 +142,6 @@ class DivineFilter {
       sort: sort,
       intFilters: intFilters,
       cursor: newCursor,
-    );
-  }
-
-  /// Create a standard trending query (sorted by loop_count)
-  factory DivineFilter.trending({required Filter baseFilter, int? minLoops}) {
-    return DivineFilter(
-      baseFilter: baseFilter,
-      sort: SortConfig(field: 'loop_count', direction: SortDirection.desc),
-      intFilters: minLoops != null
-          ? {'loop_count': IntRangeFilter(gte: minLoops)}
-          : null,
-    );
-  }
-
-  /// Create a most liked query (sorted by likes)
-  factory DivineFilter.mostLiked({required Filter baseFilter, int? minLikes}) {
-    return DivineFilter(
-      baseFilter: baseFilter,
-      sort: SortConfig(field: 'likes', direction: SortDirection.desc),
-      intFilters: minLikes != null
-          ? {'likes': IntRangeFilter(gte: minLikes)}
-          : null,
-    );
-  }
-
-  /// Create a most viewed query (sorted by views)
-  factory DivineFilter.mostViewed({required Filter baseFilter, int? minViews}) {
-    return DivineFilter(
-      baseFilter: baseFilter,
-      sort: SortConfig(field: 'views', direction: SortDirection.desc),
-      intFilters: minViews != null
-          ? {'views': IntRangeFilter(gte: minViews)}
-          : null,
-    );
-  }
-
-  /// Create a newest first query (sorted by created_at)
-  factory DivineFilter.newest({required Filter baseFilter}) {
-    return DivineFilter(
-      baseFilter: baseFilter,
-      sort: SortConfig(field: 'created_at', direction: SortDirection.desc),
     );
   }
 }

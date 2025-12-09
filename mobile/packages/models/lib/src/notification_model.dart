@@ -1,5 +1,6 @@
-// ABOUTME: Data model for divine notifications with different types and metadata
-// ABOUTME: Supports likes, comments, follows, mentions, and system notifications
+// ABOUTME: Data model for divine notifications with different types and
+// ABOUTME: metadata. Supports likes, comments, follows, mentions, and system
+// ABOUTME: notifications.
 
 import 'package:equatable/equatable.dart';
 
