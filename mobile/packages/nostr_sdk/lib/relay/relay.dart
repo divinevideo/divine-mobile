@@ -71,7 +71,7 @@ abstract class Relay {
     pendingMessages.clear();
   }
 
-  Future<void> getRelayInfo(url) async {
+  Future<void> getRelayInfo(String url) async {
     info ??= await RelayInfoUtil.get(url);
   }
 

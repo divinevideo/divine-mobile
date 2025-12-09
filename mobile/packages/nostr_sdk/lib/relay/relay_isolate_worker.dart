@@ -33,7 +33,7 @@ class RelayIsolateWorker {
     wsChannel = await handleWS();
   }
 
-  void onMainToSubMessage(message) async {
+  void onMainToSubMessage(dynamic message) async {
     try {
       if (message is String) {
         // this is the msg need to sended.
