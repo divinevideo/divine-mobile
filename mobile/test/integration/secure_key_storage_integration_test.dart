@@ -1,12 +1,11 @@
 // ABOUTME: Integration tests for secure key storage with hardware-backed security
 // ABOUTME: Tests NostrKeyManager refactoring, SecureKeyStorageService, and migration
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
-import 'package:openvine/services/secure_key_storage_service.dart';
-import 'package:openvine/utils/unified_logger.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -15,9 +14,6 @@ void main() {
     late NostrKeyManager keyManager;
 
     setUp(() async {
-      // Initialize logger
-      Log.info('Setting up test', name: 'Test', category: LogCategory.system);
-
       // Set up mock SharedPreferences
       SharedPreferences.setMockInitialValues({});
 
@@ -169,12 +165,6 @@ void main() {
     late SecureKeyStorageService storageService;
 
     setUp(() async {
-      Log.info(
-        'Setting up SecureKeyStorageService test',
-        name: 'Test',
-        category: LogCategory.system,
-      );
-
       storageService = SecureKeyStorageService();
     });
 

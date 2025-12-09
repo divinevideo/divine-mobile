@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/router/app_router.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 
 // Mock VideoEvents stream provider
 class MockVideoEvents extends VideoEvents {

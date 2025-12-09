@@ -4,7 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
     as embedded;
 

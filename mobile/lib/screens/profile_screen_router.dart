@@ -25,7 +25,7 @@ import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/widgets/video_feed_item.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart' show NostrEncoding;
 import 'package:openvine/utils/npub_hex.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:openvine/utils/unified_logger.dart';

@@ -4,8 +4,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:openvine/services/secure_key_storage_service.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart' show SecureKeyStorageService;
+import 'package:nostr_key_manager/nostr_key_manager.dart' show NostrEncoding;
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

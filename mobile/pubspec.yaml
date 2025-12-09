@@ -28,6 +28,7 @@ workspace:
   - packages/nostr_sdk
   - packages/nostr_client
   - packages/nostr_gateway
+  - packages/nostr_key_manager
   
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -95,6 +96,10 @@ dependencies:
   # Nostr SDK - Local package for comprehensive Nostr support
   nostr_sdk:
     path: packages/nostr_sdk
+  
+  # Nostr Key Manager - Secure key management with hardware-backed storage
+  nostr_key_manager:
+    path: packages/nostr_key_manager
   
   # Embedded Nostr Relay - Local embedded relay replacing external relay infrastructure
   flutter_embedded_nostr_relay:

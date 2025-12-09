@@ -8,7 +8,7 @@ import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/relay/relay.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/models/nip17_send_result.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/utils/unified_logger.dart';
 

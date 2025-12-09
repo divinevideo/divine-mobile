@@ -5,7 +5,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/services/nsec_bunker_client.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:nostr_sdk/nip04/nip04.dart';

@@ -14,7 +14,7 @@ import 'package:nostr_sdk/filter.dart' as _i12;
 import 'package:openvine/models/nip94_metadata.dart' as _i13;
 import 'package:openvine/services/auth_service.dart' as _i2;
 import 'package:openvine/services/blossom_upload_service.dart' as _i5;
-import 'package:openvine/services/nostr_key_manager.dart' as _i6;
+import 'package:nostr_key_manager/nostr_key_manager.dart' as _i6;
 import 'package:openvine/services/nostr_service_interface.dart' as _i3;
 import 'package:openvine/services/user_profile_service.dart' as _i9;
 

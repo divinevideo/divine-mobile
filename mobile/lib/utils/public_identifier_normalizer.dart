@@ -2,7 +2,7 @@
 // ABOUTME: Handles npub, nprofile, hex, and special 'me' identifier universally
 
 import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart' show NostrEncoding;
 
 /// Normalized result containing hex pubkey and optional relay hints
 class NormalizedPublicIdentifier {

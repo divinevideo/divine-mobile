@@ -7,7 +7,7 @@ import 'package:openvine/services/bookmark_sync_worker.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

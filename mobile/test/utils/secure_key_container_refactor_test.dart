@@ -2,8 +2,8 @@
 // ABOUTME: Ensures refactoring maintains existing behavior while eliminating duplication
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/utils/secure_key_container.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 
 void main() {
   group('SecureKeyContainer - Refactored Implementation', () {

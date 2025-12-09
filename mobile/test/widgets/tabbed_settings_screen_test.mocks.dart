@@ -18,7 +18,7 @@ import 'package:openvine/models/notification_model.dart' as _i19;
 import 'package:openvine/services/auth_service.dart' as _i2;
 import 'package:openvine/services/blossom_upload_service.dart' as _i6;
 import 'package:openvine/services/bug_report_service.dart' as _i21;
-import 'package:openvine/services/nostr_key_manager.dart' as _i3;
+import 'package:nostr_key_manager/nostr_key_manager.dart' as _i3;
 import 'package:openvine/services/nostr_service.dart' as _i12;
 import 'package:openvine/services/nostr_service_interface.dart' as _i4;
 import 'package:openvine/services/notification_service_enhanced.dart' as _i18;

@@ -3,7 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/user_profile.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 
 void main() {
   group('UserProfile npub Encoding', () {

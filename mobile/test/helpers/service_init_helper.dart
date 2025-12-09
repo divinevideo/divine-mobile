@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:openvine/providers/app_providers.dart';
 // import 'package:openvine/providers/video_events_providers.dart';
 // import 'package:openvine/providers/home_feed_provider.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';

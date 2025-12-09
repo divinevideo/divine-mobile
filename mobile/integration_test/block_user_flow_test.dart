@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/content_blocklist_service.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

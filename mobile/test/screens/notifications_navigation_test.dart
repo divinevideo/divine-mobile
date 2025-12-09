@@ -13,7 +13,7 @@ import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/pure/explore_video_screen_pure.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/widgets/notification_list_item.dart';
 
 import 'notifications_navigation_test.mocks.dart';

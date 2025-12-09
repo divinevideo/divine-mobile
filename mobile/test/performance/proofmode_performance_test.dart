@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/proofmode_session_service.dart';
 import 'package:openvine/services/proofmode_key_service.dart';
 import 'package:openvine/services/proofmode_attestation_service.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:crypto/crypto.dart';
 
 void main() {

@@ -14,7 +14,7 @@ import 'package:openvine/models/nip94_metadata.dart' as _i13;
 import 'package:openvine/models/user_profile.dart' as _i14;
 import 'package:openvine/models/video_event.dart' as _i9;
 import 'package:openvine/services/auth_service.dart' as _i2;
-import 'package:openvine/services/nostr_key_manager.dart' as _i3;
+import 'package:nostr_key_manager/nostr_key_manager.dart' as _i3;
 import 'package:openvine/services/nostr_service_interface.dart' as _i4;
 import 'package:openvine/services/profile_cache_service.dart' as _i15;
 import 'package:openvine/services/social_service.dart' as _i7;

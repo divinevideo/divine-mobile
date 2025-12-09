@@ -1,0 +1,28 @@
+name: nostr_key_manager
+description: Secure Nostr key management with hardware-backed persistence and NIP-46 bunker support.
+version: 0.1.0+1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  nostr_sdk:
+    path: ../nostr_sdk
+  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.2.3
+  crypto: ^3.0.7
+  logging: ^1.2.0
+  web_socket_channel: ^3.0.2
+  http: ^1.4.0
+  pointycastle: ^3.7.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  test: ^1.26.3
+  very_good_analysis: ^10.0.0

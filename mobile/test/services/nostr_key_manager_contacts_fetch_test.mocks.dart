@@ -6,8 +6,8 @@
 import 'dart:async' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:openvine/services/secure_key_storage_service.dart' as _i3;
-import 'package:openvine/utils/secure_key_container.dart' as _i2;
+import 'package:nostr_key_manager/nostr_key_manager.dart' as _i3;
+import 'package:nostr_key_manager/nostr_key_manager.dart' as _i2;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values

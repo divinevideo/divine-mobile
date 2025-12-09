@@ -4,13 +4,14 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:logging/logging.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:openvine/services/secure_key_storage_service.dart';
-import 'package:openvine/services/user_profile_service.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
-import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'nostr_encoding.dart';
+import 'secure_key_storage_service.dart';
+
+final _log = Logger('NostrKeyManager');
 
 // Simple KeyPair class to replace Keychain
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
@@ -52,22 +53,14 @@ class NostrKeyManager {
   /// Initialize key manager and load existing keys
   Future<void> initialize() async {
     try {
-      Log.debug(
-        '🔧 Initializing Nostr key manager with secure storage...',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.fine('🔧 Initializing Nostr key manager with secure storage...');
 
       // Initialize secure storage service
       await _secureStorage.initialize();
 
       // Try to load existing keys from secure storage
       if (await _secureStorage.hasKeys()) {
-        Log.debug(
-          '📱 Loading existing Nostr keys from secure storage...',
-          name: 'NostrKeyManager',
-          category: LogCategory.relay,
-        );
+        _log.fine('📱 Loading existing Nostr keys from secure storage...');
 
         final secureContainer = await _secureStorage.getKeyContainer();
         if (secureContainer != null) {
@@ -78,11 +71,7 @@ class NostrKeyManager {
           });
           secureContainer.dispose(); // Clean up secure memory
 
-          Log.info(
-            'Keys loaded from secure storage',
-            name: 'NostrKeyManager',
-            category: LogCategory.relay,
-          );
+          _log.info('Keys loaded from secure storage');
         }
       } else {
         // Check for legacy keys in SharedPreferences for migration
@@ -99,24 +88,14 @@ class NostrKeyManager {
       _isInitialized = true;
 
       if (hasKeys) {
-        Log.info(
+        _log.info(
           'Key manager initialized with existing identity (secure storage)',
-          name: 'NostrKeyManager',
-          category: LogCategory.relay,
         );
       } else {
-        Log.info(
-          'Key manager initialized, ready for key generation',
-          name: 'NostrKeyManager',
-          category: LogCategory.relay,
-        );
+        _log.info('Key manager initialized, ready for key generation');
       }
     } catch (e) {
-      Log.error(
-        'Failed to initialize key manager: $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.severe('Failed to initialize key manager: $e');
       rethrow;
     }
   }
@@ -128,11 +107,7 @@ class NostrKeyManager {
     }
 
     try {
-      Log.debug(
-        '📱 Generating new Nostr key pair with secure storage...',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.fine('📱 Generating new Nostr key pair with secure storage...');
 
       // Generate and store keys securely
       final secureContainer = await _secureStorage.generateAndStoreKeys();
@@ -146,24 +121,12 @@ class NostrKeyManager {
       // Clean up secure container after extracting what we need
       secureContainer.dispose();
 
-      Log.info(
-        'New Nostr key pair generated and saved',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
-      Log.verbose(
-        'Public key: ${_keyPair!.public}',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.info('New Nostr key pair generated and saved');
+      _log.finer('Public key: ${_keyPair!.public}');
 
       return _keyPair!;
     } catch (e) {
-      Log.error(
-        'Failed to generate keys: $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.severe('Failed to generate keys: $e');
       throw NostrKeyException('Failed to generate new keys: $e');
     }
   }
@@ -175,11 +138,7 @@ class NostrKeyManager {
     }
 
     try {
-      Log.debug(
-        '📱 Importing Nostr private key to secure storage...',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.fine('📱 Importing Nostr private key to secure storage...');
 
       // Validate private key format (64 character hex)
       if (!_isValidPrivateKey(privateKey)) {
@@ -198,63 +157,24 @@ class NostrKeyManager {
       // Clean up secure container
       secureContainer.dispose();
 
-      Log.info(
-        'Private key imported successfully',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
-      Log.verbose(
-        'Public key: ${_keyPair!.public}',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.info('Private key imported successfully');
+      _log.finer('Public key: ${_keyPair!.public}');
 
       return _keyPair!;
     } catch (e) {
-      Log.error(
-        'Failed to import private key: $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.severe('Failed to import private key: $e');
       throw NostrKeyException('Failed to import private key: $e');
     }
   }
 
-  /// Import key pair from private key with automatic profile fetching
-  /// This is a convenience method that imports the key and fetches the user's profile
-  Future<Keychain> importPrivateKeyWithServices(
-    String privateKey, {
-    INostrService? nostrService,
-    UserProfileService? profileService,
-  }) async {
-    // Import the key first
-    final keyPair = await importPrivateKey(privateKey);
-
-    // Attempt to fetch profile if services are available
-    await _fetchProfileAfterImport(
-      nostrService: nostrService,
-      profileService: profileService,
-    );
-
-    return keyPair;
-  }
-
-  /// Import nsec (bech32-encoded private key) with automatic profile fetching
-  Future<Keychain> importFromNsec(
-    String nsec, {
-    INostrService? nostrService,
-    UserProfileService? profileService,
-  }) async {
+  /// Import nsec (bech32-encoded private key)
+  Future<Keychain> importFromNsec(String nsec) async {
     if (!_isInitialized) {
       throw const NostrKeyException('Key manager not initialized');
     }
 
     try {
-      Log.debug(
-        '📱 Importing Nostr nsec key to secure storage...',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.fine('📱 Importing Nostr nsec key to secure storage...');
 
       // Validate nsec format
       if (!nsec.startsWith('nsec1')) {
@@ -278,104 +198,13 @@ class NostrKeyManager {
       // Clean up secure container
       secureContainer.dispose();
 
-      Log.info(
-        'Nsec key imported successfully',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
-      Log.verbose(
-        'Public key: ${_keyPair!.public}',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
-
-      // Attempt to fetch profile if services are available
-      await _fetchProfileAfterImport(
-        nostrService: nostrService,
-        profileService: profileService,
-      );
+      _log.info('Nsec key imported successfully');
+      _log.finer('Public key: ${_keyPair!.public}');
 
       return _keyPair!;
     } catch (e) {
-      Log.error(
-        'Failed to import nsec: $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.severe('Failed to import nsec: $e');
       throw NostrKeyException('Failed to import nsec: $e');
-    }
-  }
-
-  /// Helper method to fetch user profile after successful key import
-  /// This is called automatically after importFromNsec() and importPrivateKeyWithServices()
-  Future<void> _fetchProfileAfterImport({
-    INostrService? nostrService,
-    UserProfileService? profileService,
-  }) async {
-    // Skip if no services provided
-    if (nostrService == null || profileService == null) {
-      Log.debug(
-        'Skipping profile fetch - services not provided',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
-      return;
-    }
-
-    // Skip if NostrService is not initialized
-    if (!nostrService.isInitialized) {
-      Log.debug(
-        'Skipping profile fetch - NostrService not initialized',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
-      return;
-    }
-
-    // Skip if we don't have keys (shouldn't happen, but be safe)
-    if (!hasKeys || publicKey == null) {
-      Log.warning(
-        'Skipping profile fetch - no public key available',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
-      return;
-    }
-
-    try {
-      Log.info(
-        '🔍 Fetching user profile for imported key: ${publicKey}...',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
-
-      // Fetch profile (non-blocking - fire and forget)
-      // Use forceRefresh=false to use cached profile if available
-      final profile = await profileService.fetchProfile(
-        publicKey!,
-        forceRefresh: false,
-      );
-
-      if (profile != null) {
-        Log.info(
-          '✅ Profile fetched successfully: ${profile.bestDisplayName}',
-          name: 'NostrKeyManager',
-          category: LogCategory.relay,
-        );
-      } else {
-        Log.info(
-          'ℹ️  No profile found for imported key (user may not have published one yet)',
-          name: 'NostrKeyManager',
-          category: LogCategory.relay,
-        );
-      }
-    } catch (e) {
-      // Don't fail import if profile fetch fails
-      Log.warning(
-        '⚠️  Profile fetch failed (non-fatal): $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
     }
   }
 
@@ -385,11 +214,7 @@ class NostrKeyManager {
       throw const NostrKeyException('No keys available for export');
     }
 
-    Log.debug(
-      '📱 Exporting private key for backup',
-      name: 'NostrKeyManager',
-      category: LogCategory.relay,
-    );
+    _log.fine('📱 Exporting private key for backup');
     return _keyPair!.private;
   }
 
@@ -399,11 +224,7 @@ class NostrKeyManager {
       throw const NostrKeyException('No keys available for export');
     }
 
-    Log.debug(
-      '📱 Exporting private key as nsec',
-      name: 'NostrKeyManager',
-      category: LogCategory.relay,
-    );
+    _log.fine('📱 Exporting private key as nsec');
     return NostrEncoding.encodePrivateKey(_keyPair!.private);
   }
 
@@ -413,11 +234,7 @@ class NostrKeyManager {
       throw const NostrKeyException('No keys available to backup');
     }
 
-    Log.debug(
-      '📱 Replacing key with backup...',
-      name: 'NostrKeyManager',
-      category: LogCategory.relay,
-    );
+    _log.fine('📱 Replacing key with backup...');
 
     try {
       // Save current keys info for return
@@ -434,11 +251,7 @@ class NostrKeyManager {
       // Generate new keypair
       await generateKeys();
 
-      Log.info(
-        'Key replaced successfully, old key backed up',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.info('Key replaced successfully, old key backed up');
 
       return {
         'oldPrivateKey': oldPrivateKey,
@@ -446,11 +259,7 @@ class NostrKeyManager {
         'backedUpAt': backedUpAt,
       };
     } catch (e) {
-      Log.error(
-        'Failed to replace key: $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.severe('Failed to replace key: $e');
       throw NostrKeyException('Failed to replace key: $e');
     }
   }
@@ -461,11 +270,7 @@ class NostrKeyManager {
       throw const NostrKeyException('No backup available to restore');
     }
 
-    Log.debug(
-      '📱 Restoring backup key as active key...',
-      name: 'NostrKeyManager',
-      category: LogCategory.relay,
-    );
+    _log.fine('📱 Restoring backup key as active key...');
 
     try {
       // Save current key as new backup (swap operation)
@@ -501,28 +306,16 @@ class NostrKeyManager {
 
       backupContainer.dispose();
 
-      Log.info(
-        'Backup key restored as active key',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.info('Backup key restored as active key');
     } catch (e) {
-      Log.error(
-        'Failed to restore backup: $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.severe('Failed to restore backup: $e');
       throw NostrKeyException('Failed to restore backup: $e');
     }
   }
 
   /// Clear backup key without affecting active key
   Future<void> clearBackup() async {
-    Log.debug(
-      '📱 Clearing backup key...',
-      name: 'NostrKeyManager',
-      category: LogCategory.relay,
-    );
+    _log.fine('📱 Clearing backup key...');
 
     try {
       await _secureStorage.deleteBackupKey();
@@ -532,17 +325,9 @@ class NostrKeyManager {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('backup_created_at');
 
-      Log.info(
-        'Backup key cleared',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.info('Backup key cleared');
     } catch (e) {
-      Log.error(
-        'Failed to clear backup: $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.severe('Failed to clear backup: $e');
       throw NostrKeyException('Failed to clear backup: $e');
     }
   }
@@ -554,11 +339,7 @@ class NostrKeyManager {
     }
 
     try {
-      Log.debug(
-        '📱 Creating mnemonic backup...',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.fine('📱 Creating mnemonic backup...');
 
       // Use private key as entropy source for mnemonic generation
       final privateKeyBytes = _hexToBytes(_keyPair!.private);
@@ -583,18 +364,10 @@ class NostrKeyManager {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_backupHashKey, _backupHash!);
 
-      Log.info(
-        'Mnemonic backup created',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.info('Mnemonic backup created');
       return mnemonic;
     } catch (e) {
-      Log.error(
-        'Failed to create mnemonic backup: $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.severe('Failed to create mnemonic backup: $e');
       throw NostrKeyException('Failed to create backup: $e');
     }
   }
@@ -606,11 +379,7 @@ class NostrKeyManager {
     }
 
     try {
-      Log.debug(
-        '📱 Restoring from mnemonic backup...',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.fine('📱 Restoring from mnemonic backup...');
 
       if (mnemonic.length != 12) {
         throw const NostrKeyException(
@@ -632,11 +401,7 @@ class NostrKeyManager {
         'Mnemonic restoration requires private key for verification in prototype',
       );
     } catch (e) {
-      Log.error(
-        'Failed to restore from mnemonic: $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.severe('Failed to restore from mnemonic: $e');
       rethrow;
     }
   }
@@ -650,11 +415,7 @@ class NostrKeyManager {
 
       return calculatedHash == _backupHash;
     } catch (e) {
-      Log.error(
-        'Backup verification failed: $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.severe('Backup verification failed: $e');
       return false;
     }
   }
@@ -662,11 +423,7 @@ class NostrKeyManager {
   /// Clear all stored keys (logout)
   Future<void> clearKeys() async {
     try {
-      Log.debug(
-        '📱 Clearing stored Nostr keys from secure storage...',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.fine('📱 Clearing stored Nostr keys from secure storage...');
 
       // Clear from secure storage
       await _secureStorage.deleteKeys();
@@ -684,17 +441,9 @@ class NostrKeyManager {
       _backupHash = null;
       _hasBackupCached = false;
 
-      Log.info(
-        'Nostr keys cleared successfully',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.info('Nostr keys cleared successfully');
     } catch (e) {
-      Log.error(
-        'Failed to clear keys: $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.severe('Failed to clear keys: $e');
       throw NostrKeyException('Failed to clear keys: $e');
     }
   }
@@ -706,10 +455,8 @@ class NostrKeyManager {
       final existingKeyData = prefs.getString(_keyPairKey);
 
       if (existingKeyData != null) {
-        Log.warning(
+        _log.warning(
           '⚠️ Found legacy keys in SharedPreferences, migrating to secure storage...',
-          name: 'NostrKeyManager',
-          category: LogCategory.relay,
         );
 
         try {
@@ -735,27 +482,15 @@ class NostrKeyManager {
             await prefs.remove(_keyPairKey);
             await prefs.remove(_keyVersionKey);
 
-            Log.info(
-              '✅ Successfully migrated keys to secure storage',
-              name: 'NostrKeyManager',
-              category: LogCategory.relay,
-            );
+            _log.info('✅ Successfully migrated keys to secure storage');
           }
         } catch (e) {
-          Log.error(
-            'Failed to migrate legacy keys: $e',
-            name: 'NostrKeyManager',
-            category: LogCategory.relay,
-          );
+          _log.severe('Failed to migrate legacy keys: $e');
           // Don't throw - allow user to regenerate if migration fails
         }
       }
     } catch (e) {
-      Log.error(
-        'Error checking for legacy keys: $e',
-        name: 'NostrKeyManager',
-        category: LogCategory.relay,
-      );
+      _log.severe('Error checking for legacy keys: $e');
     }
   }
 

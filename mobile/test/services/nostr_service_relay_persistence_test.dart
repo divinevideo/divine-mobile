@@ -2,7 +2,7 @@
 // ABOUTME: Ensures user's relay choices are saved to SharedPreferences and restored on launch
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

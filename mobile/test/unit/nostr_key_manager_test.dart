@@ -2,7 +2,7 @@
 // ABOUTME: Tests key generation, storage, and migration without platform dependencies
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../test_setup.dart';

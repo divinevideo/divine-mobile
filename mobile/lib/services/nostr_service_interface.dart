@@ -6,7 +6,7 @@ import 'dart:async';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/models/nip94_metadata.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 
 /// Result of broadcasting an event to relays
 class NostrBroadcastResult {

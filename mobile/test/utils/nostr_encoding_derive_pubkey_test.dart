@@ -2,7 +2,7 @@
 // ABOUTME: Verifies public key derivation from private key using secp256k1
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 
 void main() {
   group('NostrEncoding.derivePublicKey', () {

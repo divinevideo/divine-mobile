@@ -4,7 +4,7 @@
 import 'dart:convert';
 import 'package:hive_ce/hive.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart' show NostrEncoding;
 
 part 'user_profile.g.dart';
 

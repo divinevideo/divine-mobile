@@ -5,12 +5,15 @@ import 'dart:async';
 import 'dart:io' if (dart.library.html) 'stubs/platform_stub.dart';
 
 import 'package:flutter/foundation.dart';
-import 'package:openvine/services/nsec_bunker_client.dart';
-import 'package:openvine/services/platform_secure_storage.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
-import 'package:openvine/utils/secure_key_container.dart';
-import 'package:openvine/utils/unified_logger.dart';
+import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'nostr_encoding.dart';
+import 'nsec_bunker_client.dart';
+import 'platform_secure_storage.dart';
+import 'secure_key_container.dart';
+
+final _log = Logger('SecureKeyStorageService');
 
 /// Exception thrown by secure key storage operations
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
@@ -126,11 +129,7 @@ class SecureKeyStorageService {
   Future<void> initialize() async {
     if (_isInitialized && _initializationError == null) return;
 
-    Log.debug(
-      'Initializing SecureKeyStorageService',
-      name: 'SecureKeyStorageService',
-      category: LogCategory.auth,
-    );
+    _log.fine('Initializing SecureKeyStorageService');
 
     try {
       // Initialize platform-specific secure storage
@@ -145,10 +144,8 @@ class SecureKeyStorageService {
             code: 'hardware_not_available',
           );
         } else {
-          Log.warning(
+          _log.warning(
             'Hardware security not available, using software fallback',
-            name: 'SecureKeyStorageService',
-            category: LogCategory.auth,
           );
         }
       }
@@ -161,10 +158,8 @@ class SecureKeyStorageService {
             code: 'biometrics_not_available',
           );
         } else {
-          Log.warning(
+          _log.warning(
             'Biometrics not available, continuing without biometric protection',
-            name: 'SecureKeyStorageService',
-            category: LogCategory.auth,
           );
         }
       }
@@ -172,23 +167,11 @@ class SecureKeyStorageService {
       _isInitialized = true;
       _initializationError = null;
 
-      Log.info(
-        'SecureKeyStorageService initialized',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
-      Log.debug(
-        '📱 Security level: ${_getSecurityLevelDescription()}',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.info('SecureKeyStorageService initialized');
+      _log.fine('📱 Security level: ${_getSecurityLevelDescription()}');
     } catch (e) {
       _initializationError = e.toString();
-      Log.error(
-        'Failed to initialize secure key storage: $e',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Failed to initialize secure key storage: $e');
       rethrow;
     }
   }
@@ -200,11 +183,7 @@ class SecureKeyStorageService {
     try {
       return await _platformStorage.hasKey(_primaryKeyId);
     } catch (e) {
-      Log.error(
-        'Error checking for keys: $e',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Error checking for keys: $e');
       return false;
     }
   }
@@ -215,20 +194,14 @@ class SecureKeyStorageService {
   }) async {
     await _ensureInitialized();
 
-    Log.debug(
-      'Generating new secure Nostr key pair',
-      name: 'SecureKeyStorageService',
-      category: LogCategory.auth,
-    );
+    _log.fine('Generating new secure Nostr key pair');
 
     try {
       // Generate new secure key container
       final keyContainer = SecureKeyContainer.generate();
 
-      Log.debug(
+      _log.fine(
         '📱 Generated key for: ${NostrEncoding.maskKey(keyContainer.npub)}',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
       );
 
       // Store in platform-specific secure storage
@@ -250,22 +223,14 @@ class SecureKeyStorageService {
       // Store metadata
       await _storeMetadata();
 
-      Log.info(
-        'Generated and stored new secure key pair',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.info('Generated and stored new secure key pair');
       debugPrint(
         '🔒 Security level: ${result.securityLevel?.name ?? 'unknown'}',
       );
 
       return keyContainer;
     } catch (e) {
-      Log.error(
-        'Key generation error: $e',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Key generation error: $e');
       if (e is SecureKeyStorageException) rethrow;
       throw SecureKeyStorageException('Failed to generate keys: $e');
     }
@@ -278,11 +243,7 @@ class SecureKeyStorageService {
   }) async {
     await _ensureInitialized();
 
-    Log.debug(
-      'Importing keys from nsec',
-      name: 'SecureKeyStorageService',
-      category: LogCategory.auth,
-    );
+    _log.fine('Importing keys from nsec');
 
     try {
       if (!NostrEncoding.isValidNsec(nsec)) {
@@ -292,10 +253,8 @@ class SecureKeyStorageService {
       // Create secure container from nsec
       final keyContainer = SecureKeyContainer.fromNsec(nsec);
 
-      Log.debug(
+      _log.fine(
         '📱 Imported key for: ${NostrEncoding.maskKey(keyContainer.npub)}',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
       );
 
       // Store in platform-specific secure storage
@@ -319,22 +278,14 @@ class SecureKeyStorageService {
       // Store metadata
       await _storeMetadata();
 
-      Log.info(
-        'Keys imported and stored securely',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.info('Keys imported and stored securely');
       debugPrint(
         '🔒 Security level: ${result.securityLevel?.name ?? 'unknown'}',
       );
 
       return keyContainer;
     } catch (e) {
-      Log.error(
-        'Import error: $e',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Import error: $e');
       if (e is SecureKeyStorageException) rethrow;
       throw SecureKeyStorageException('Failed to import keys: $e');
     }
@@ -347,20 +298,12 @@ class SecureKeyStorageService {
     // Check cache first - if valid, always return the cached container
     if (_cachedKeyContainer != null && !_cachedKeyContainer!.isDisposed) {
       await _updateLastAccess();
-      Log.info(
-        'Returning cached secure key container',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.info('Returning cached secure key container');
       return _cachedKeyContainer;
     }
 
     try {
-      Log.debug(
-        '📱 Retrieving secure key container from storage',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.fine('📱 Retrieving secure key container from storage');
 
       final keyContainer = await _platformStorage.retrieveKey(
         keyId: _primaryKeyId,
@@ -368,11 +311,7 @@ class SecureKeyStorageService {
       );
 
       if (keyContainer == null) {
-        Log.warning(
-          'No key found in secure storage',
-          name: 'SecureKeyStorageService',
-          category: LogCategory.auth,
-        );
+        _log.warning('No key found in secure storage');
         return null;
       }
 
@@ -381,18 +320,10 @@ class SecureKeyStorageService {
 
       await _updateLastAccess();
 
-      Log.info(
-        'Retrieved and cached secure key container',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.info('Retrieved and cached secure key container');
       return keyContainer;
     } catch (e) {
-      Log.error(
-        'Error retrieving key container: $e',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Error retrieving key container: $e');
       if (e is SecureKeyStorageException) rethrow;
       throw SecureKeyStorageException('Failed to retrieve keys: $e');
     }
@@ -405,11 +336,7 @@ class SecureKeyStorageService {
   }) async {
     await _ensureInitialized();
 
-    Log.debug(
-      'Importing keys from hex to secure storage',
-      name: 'SecureKeyStorageService',
-      category: LogCategory.auth,
-    );
+    _log.fine('Importing keys from hex to secure storage');
 
     try {
       if (!NostrEncoding.isValidHexKey(privateKeyHex)) {
@@ -419,10 +346,8 @@ class SecureKeyStorageService {
       // Create secure container from hex
       final keyContainer = SecureKeyContainer.fromPrivateKeyHex(privateKeyHex);
 
-      Log.debug(
+      _log.fine(
         '📱 Imported key for: ${NostrEncoding.maskKey(keyContainer.npub)}',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
       );
 
       // Store in platform-specific secure storage
@@ -446,22 +371,14 @@ class SecureKeyStorageService {
       // Store metadata
       await _storeMetadata();
 
-      Log.info(
-        'Keys imported from hex and stored securely',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.info('Keys imported from hex and stored securely');
       debugPrint(
         '🔒 Security level: ${result.securityLevel?.name ?? 'unknown'}',
       );
 
       return keyContainer;
     } catch (e) {
-      Log.error(
-        'Hex import error: $e',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Hex import error: $e');
       if (e is SecureKeyStorageException) rethrow;
       throw SecureKeyStorageException('Failed to import keys: $e');
     }
@@ -485,11 +402,7 @@ class SecureKeyStorageService {
     );
     if (keyContainer == null) return null;
 
-    Log.debug(
-      '📱 Private key accessed for signing operation',
-      name: 'SecureKeyStorageService',
-      category: LogCategory.auth,
-    );
+    _log.fine('📱 Private key accessed for signing operation');
     await _updateLastAccess();
 
     return keyContainer.withPrivateKey(operation);
@@ -502,11 +415,7 @@ class SecureKeyStorageService {
     );
     if (keyContainer == null) return null;
 
-    Log.warning(
-      'NSEC export requested - ensure secure handling',
-      name: 'SecureKeyStorageService',
-      category: LogCategory.auth,
-    );
+    _log.warning('NSEC export requested - ensure secure handling');
 
     return keyContainer.withNsec((nsec) => nsec);
   }
@@ -515,11 +424,7 @@ class SecureKeyStorageService {
   Future<void> deleteKeys({String? biometricPrompt}) async {
     await _ensureInitialized();
 
-    Log.debug(
-      '📱️ Deleting all stored secure keys',
-      name: 'SecureKeyStorageService',
-      category: LogCategory.auth,
-    );
+    _log.fine('📱️ Deleting all stored secure keys');
 
     try {
       // Delete from platform storage
@@ -529,11 +434,7 @@ class SecureKeyStorageService {
       );
 
       if (!success) {
-        Log.error(
-          'Platform key deletion may have failed',
-          name: 'SecureKeyStorageService',
-          category: LogCategory.auth,
-        );
+        _log.severe('Platform key deletion may have failed');
       }
 
       // Dispose cached container before clearing cache (this is the proper place to dispose)
@@ -544,11 +445,7 @@ class SecureKeyStorageService {
 
       // TODO: Delete metadata
 
-      Log.info(
-        'All keys deleted',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.info('All keys deleted');
     } catch (e) {
       throw SecureKeyStorageException('Failed to delete keys: $e');
     }
@@ -567,11 +464,7 @@ class SecureKeyStorageService {
     try {
       return await _platformStorage.hasKey(_backupKeyId);
     } catch (e) {
-      Log.error(
-        'Failed to check backup key: $e',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Failed to check backup key: $e');
       return false;
     }
   }
@@ -580,11 +473,7 @@ class SecureKeyStorageService {
   Future<void> saveBackupKey(String privateKeyHex) async {
     await _ensureInitialized();
 
-    Log.debug(
-      '📱 Saving backup key to secure storage',
-      name: 'SecureKeyStorageService',
-      category: LogCategory.auth,
-    );
+    _log.fine('📱 Saving backup key to secure storage');
 
     try {
       // Create secure container for backup key
@@ -616,11 +505,7 @@ class SecureKeyStorageService {
 
       backupContainer.dispose();
 
-      Log.info(
-        'Backup key stored successfully',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.info('Backup key stored successfully');
     } catch (e) {
       throw SecureKeyStorageException('Failed to save backup key: $e');
     }
@@ -636,26 +521,14 @@ class SecureKeyStorageService {
       );
 
       if (keyContainer == null) {
-        Log.debug(
-          'No backup key found in storage',
-          name: 'SecureKeyStorageService',
-          category: LogCategory.auth,
-        );
+        _log.fine('No backup key found in storage');
         return null;
       }
 
-      Log.debug(
-        'Retrieved backup key from secure storage',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.fine('Retrieved backup key from secure storage');
       return keyContainer;
     } catch (e) {
-      Log.error(
-        'Failed to retrieve backup key: $e',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Failed to retrieve backup key: $e');
       return null;
     }
   }
@@ -664,11 +537,7 @@ class SecureKeyStorageService {
   Future<void> deleteBackupKey() async {
     await _ensureInitialized();
 
-    Log.debug(
-      '📱 Deleting backup key',
-      name: 'SecureKeyStorageService',
-      category: LogCategory.auth,
-    );
+    _log.fine('📱 Deleting backup key');
 
     try {
       await _platformStorage.deleteKey(keyId: _backupKeyId);
@@ -677,11 +546,7 @@ class SecureKeyStorageService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_backupTimestampKey);
 
-      Log.info(
-        'Backup key deleted',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.info('Backup key deleted');
     } catch (e) {
       throw SecureKeyStorageException('Failed to delete backup key: $e');
     }
@@ -695,10 +560,8 @@ class SecureKeyStorageService {
     await _ensureInitialized();
 
     try {
-      Log.debug(
+      _log.fine(
         '📱 Storing identity key container for ${NostrEncoding.maskKey(npub)}',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
       );
 
       final identityKeyId = '$_savedKeysPrefix$npub';
@@ -716,11 +579,7 @@ class SecureKeyStorageService {
         );
       }
 
-      Log.info(
-        'Stored identity for ${NostrEncoding.maskKey(npub)}',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.info('Stored identity for ${NostrEncoding.maskKey(npub)}');
     } catch (e) {
       if (e is SecureKeyStorageException) rethrow;
       throw SecureKeyStorageException('Failed to store identity: $e');
@@ -742,11 +601,7 @@ class SecureKeyStorageService {
         biometricPrompt: biometricPrompt,
       );
     } catch (e) {
-      Log.error(
-        'Error retrieving identity: $e',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Error retrieving identity: $e');
       return null;
     }
   }
@@ -771,11 +626,7 @@ class SecureKeyStorageService {
         biometricPrompt: biometricPrompt,
       );
       if (targetContainer == null) {
-        Log.error(
-          'Target identity not found',
-          name: 'SecureKeyStorageService',
-          category: LogCategory.auth,
-        );
+        _log.severe('Target identity not found');
         return false;
       }
 
@@ -795,19 +646,11 @@ class SecureKeyStorageService {
       // Update cache
       _updateCache(targetContainer);
 
-      Log.info(
-        'Switched to identity: ${NostrEncoding.maskKey(npub)}',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.info('Switched to identity: ${NostrEncoding.maskKey(npub)}');
 
       return true;
     } catch (e) {
-      Log.error(
-        'Error switching identity: $e',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Error switching identity: $e');
       return false;
     }
   }
@@ -838,11 +681,7 @@ class SecureKeyStorageService {
   void _clearCache() {
     _cachedKeyContainer = null;
     _cacheTimestamp = null;
-    Log.debug(
-      '🧹 Secure key cache cleared (reference only)',
-      name: 'SecureKeyStorageService',
-      category: LogCategory.auth,
-    );
+    _log.fine('🧹 Secure key cache cleared (reference only)');
   }
 
   /// Public method to clear cache (for compatibility)
@@ -897,11 +736,7 @@ class SecureKeyStorageService {
   }
 
   void dispose() {
-    Log.debug(
-      '📱️ Disposing SecureKeyStorageService',
-      name: 'SecureKeyStorageService',
-      category: LogCategory.auth,
-    );
+    _log.fine('📱️ Disposing SecureKeyStorageService');
     // Dispose cached container when service is disposed (app shutdown)
     _cachedKeyContainer?.dispose();
     _clearCache();
@@ -915,20 +750,12 @@ class SecureKeyStorageService {
     required String bunkerEndpoint,
   }) async {
     if (!kIsWeb) {
-      Log.warning(
-        'Bunker authentication is only for web platform',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.warning('Bunker authentication is only for web platform');
       return false;
     }
 
     try {
-      Log.debug(
-        'Authenticating with nsec bunker',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.fine('Authenticating with nsec bunker');
 
       _bunkerClient = NsecBunkerClient(authEndpoint: bunkerEndpoint);
 
@@ -938,11 +765,7 @@ class SecureKeyStorageService {
       );
 
       if (!authResult.success) {
-        Log.error(
-          'Bunker authentication failed: ${authResult.error}',
-          name: 'SecureKeyStorageService',
-          category: LogCategory.auth,
-        );
+        _log.severe('Bunker authentication failed: ${authResult.error}');
         _bunkerClient = null;
         return false;
       }
@@ -950,11 +773,7 @@ class SecureKeyStorageService {
       // Connect to the bunker relay
       final connected = await _bunkerClient!.connect();
       if (!connected) {
-        Log.error(
-          'Failed to connect to bunker relay',
-          name: 'SecureKeyStorageService',
-          category: LogCategory.auth,
-        );
+        _log.severe('Failed to connect to bunker relay');
         _bunkerClient = null;
         return false;
       }
@@ -971,10 +790,8 @@ class SecureKeyStorageService {
 
         if (bunkerContainer == null) {
           // Feature not yet implemented - return false to indicate failure
-          Log.error(
+          _log.severe(
             'Cannot create bunker key container - feature not yet implemented',
-            name: 'SecureKeyStorageService',
-            category: LogCategory.auth,
           );
           _bunkerClient = null;
           _usingBunker = false;
@@ -985,19 +802,11 @@ class SecureKeyStorageService {
         _cacheTimestamp = DateTime.now();
       }
 
-      Log.info(
-        'Successfully authenticated with nsec bunker',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.info('Successfully authenticated with nsec bunker');
 
       return true;
     } catch (e) {
-      Log.error(
-        'Bunker authentication error: $e',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Bunker authentication error: $e');
       _bunkerClient = null;
       _usingBunker = false;
       return false;
@@ -1014,11 +823,9 @@ class SecureKeyStorageService {
     // public-key-only mode for bunker scenarios
     // For now, return null to indicate feature is not yet implemented
 
-    Log.warning(
+    _log.warning(
       'NIP-46 bunker key container feature is not yet implemented. '
       'Bunker authentication will not function until this feature is completed.',
-      name: 'SecureKeyStorageService',
-      category: LogCategory.auth,
     );
 
     // Return null instead of throwing to prevent app crashes
@@ -1030,22 +837,14 @@ class SecureKeyStorageService {
     Map<String, dynamic> event,
   ) async {
     if (!_usingBunker || _bunkerClient == null) {
-      Log.error(
-        'Bunker not available for signing',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Bunker not available for signing');
       return null;
     }
 
     try {
       return await _bunkerClient!.signEvent(event);
     } catch (e) {
-      Log.error(
-        'Bunker signing error: $e',
-        name: 'SecureKeyStorageService',
-        category: LogCategory.auth,
-      );
+      _log.severe('Bunker signing error: $e');
       return null;
     }
   }

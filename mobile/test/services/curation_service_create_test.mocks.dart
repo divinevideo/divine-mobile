@@ -15,7 +15,7 @@ import 'package:openvine/models/video_event.dart' as _i11;
 import 'package:openvine/services/age_verification_service.dart' as _i13;
 import 'package:openvine/services/auth_service.dart' as _i4;
 import 'package:openvine/services/content_blocklist_service.dart' as _i12;
-import 'package:openvine/services/nostr_key_manager.dart' as _i2;
+import 'package:nostr_key_manager/nostr_key_manager.dart' as _i2;
 import 'package:openvine/services/nostr_service_interface.dart' as _i3;
 import 'package:openvine/services/social_service.dart' as _i16;
 import 'package:openvine/services/user_profile_service.dart' as _i17;
@@ -1407,6 +1407,21 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
   bool get hasBackup =>
       (super.noSuchMethod(Invocation.getter(#hasBackup), returnValue: false)
           as bool);
+
+  @override
+  String? get publicKey =>
+      (super.noSuchMethod(Invocation.getter(#publicKey), returnValue: null)
+          as String?);
+
+  @override
+  String? get privateKey =>
+      (super.noSuchMethod(Invocation.getter(#privateKey), returnValue: null)
+          as String?);
+
+  @override
+  _i2.Keychain? get keyPair =>
+      (super.noSuchMethod(Invocation.getter(#keyPair), returnValue: null)
+          as _i2.Keychain?);
 
   @override
   _i5.Future<void> initialize() =>

@@ -12,7 +12,7 @@ import 'package:openvine/router/router_location_provider.dart';
 import 'package:openvine/router/route_utils.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_prewarmer.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 
 /// Fake VideoEventService for testing reactive behavior
 class FakeVideoEventService extends ChangeNotifier

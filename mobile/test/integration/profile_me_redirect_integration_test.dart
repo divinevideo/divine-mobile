@@ -16,7 +16,7 @@ import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_prewarmer.dart';
 import 'package:openvine/services/visibility_tracker.dart';
 import 'package:openvine/services/analytics_service.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart'
     as ff;
 import 'package:shared_preferences/shared_preferences.dart';

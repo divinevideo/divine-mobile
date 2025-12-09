@@ -2,7 +2,7 @@
 // ABOUTME: Tests authentication, connection, and remote signing functionality
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/nsec_bunker_client.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 void main() {

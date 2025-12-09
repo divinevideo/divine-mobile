@@ -3,7 +3,7 @@
 
 import 'dart:async';
 import 'package:openvine/services/nip07_service.dart';
-import 'package:openvine/services/nsec_bunker_client.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart' show NsecBunkerClient;
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Available authentication methods for web
