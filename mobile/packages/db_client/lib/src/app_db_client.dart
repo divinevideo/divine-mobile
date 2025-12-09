@@ -1,11 +1,8 @@
 // ABOUTME: Hybrid database client combining generic DbClient with typed domain methods.
-// ABOUTME: Provides type-safe access to NostrEvents, UserProfiles, and VideoMetrics tables.
+// ABOUTME: Provides type-safe access to all application database tables.
 
+import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
-
-import 'database/app_database.dart';
-import 'database/tables.dart';
-import 'db_client.dart';
 
 /// {@template app_db_client}
 /// A typed database client that wraps [DbClient] with domain-specific methods.
@@ -356,5 +353,208 @@ class AppDbClient {
   /// Count total video metrics entries.
   Future<int> countVideoMetrics() async {
     return _dbClient.count(_db.videoMetrics);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Notifications operations
+  // ---------------------------------------------------------------------------
+
+  /// Get a notification by ID.
+  Future<NotificationRow?> getNotification(String id) async {
+    final result = await _dbClient.getBy(
+      _db.notifications,
+      filter: (t) => (t as Notifications).id.equals(id),
+    );
+    return result as NotificationRow?;
+  }
+
+  /// Get all notifications sorted by timestamp (newest first).
+  Future<List<NotificationRow>> getAllNotifications({
+    int? limit,
+    int? offset,
+  }) async {
+    final results = await _dbClient.getAll(
+      _db.notifications,
+      orderBy: [(t) => OrderingTerm.desc((t as Notifications).timestamp)],
+      limit: limit,
+      offset: offset,
+    );
+    return results.cast<NotificationRow>();
+  }
+
+  /// Get unread notifications.
+  Future<List<NotificationRow>> getUnreadNotifications({
+    int? limit,
+    int? offset,
+  }) async {
+    final results = await _dbClient.getAll(
+      _db.notifications,
+      filter: (t) => (t as Notifications).isRead.equals(false),
+      orderBy: [(t) => OrderingTerm.desc((t as Notifications).timestamp)],
+      limit: limit,
+      offset: offset,
+    );
+    return results.cast<NotificationRow>();
+  }
+
+  /// Watch a single notification by ID.
+  Stream<NotificationRow?> watchNotification(String id) {
+    return _dbClient
+        .watchSingleBy(
+          _db.notifications,
+          filter: (t) => (t as Notifications).id.equals(id),
+        )
+        .map((result) => result as NotificationRow?);
+  }
+
+  /// Watch all notifications sorted by timestamp (newest first).
+  Stream<List<NotificationRow>> watchAllNotifications({
+    int? limit,
+    int? offset,
+  }) {
+    return _dbClient
+        .watchBy(
+          _db.notifications,
+          filter: (t) => const Constant(true),
+          orderBy: [(t) => OrderingTerm.desc((t as Notifications).timestamp)],
+          limit: limit,
+          offset: offset,
+        )
+        .map((results) => results.cast<NotificationRow>());
+  }
+
+  /// Watch unread notifications.
+  Stream<List<NotificationRow>> watchUnreadNotifications({
+    int? limit,
+    int? offset,
+  }) {
+    return _dbClient
+        .watchBy(
+          _db.notifications,
+          filter: (t) => (t as Notifications).isRead.equals(false),
+          orderBy: [(t) => OrderingTerm.desc((t as Notifications).timestamp)],
+          limit: limit,
+          offset: offset,
+        )
+        .map((results) => results.cast<NotificationRow>());
+  }
+
+  /// Delete a notification by ID.
+  Future<int> deleteNotification(String id) async {
+    return _dbClient.delete(
+      _db.notifications,
+      filter: (t) => (t as Notifications).id.equals(id),
+    );
+  }
+
+  /// Delete all notifications.
+  Future<int> clearAllNotifications() async {
+    return _dbClient.deleteAll(_db.notifications);
+  }
+
+  /// Count total notifications.
+  Future<int> countNotifications() async {
+    return _dbClient.count(_db.notifications);
+  }
+
+  /// Count unread notifications.
+  Future<int> countUnreadNotifications() async {
+    return _dbClient.count(
+      _db.notifications,
+      filter: (t) => (t as Notifications).isRead.equals(false),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // ProfileStats operations (cache table - most logic in DAO)
+  // ---------------------------------------------------------------------------
+
+  /// Get profile stats by pubkey (raw row, no expiry check).
+  Future<ProfileStatRow?> getProfileStatRow(String pubkey) async {
+    final result = await _dbClient.getBy(
+      _db.profileStats,
+      filter: (t) => (t as ProfileStats).pubkey.equals(pubkey),
+    );
+    return result as ProfileStatRow?;
+  }
+
+  /// Delete profile stats by pubkey.
+  Future<int> deleteProfileStat(String pubkey) async {
+    return _dbClient.delete(
+      _db.profileStats,
+      filter: (t) => (t as ProfileStats).pubkey.equals(pubkey),
+    );
+  }
+
+  /// Delete all profile stats.
+  Future<int> clearAllProfileStats() async {
+    return _dbClient.deleteAll(_db.profileStats);
+  }
+
+  /// Count total profile stats entries.
+  Future<int> countProfileStats() async {
+    return _dbClient.count(_db.profileStats);
+  }
+
+  // ---------------------------------------------------------------------------
+  // HashtagStats operations (cache table - most logic in DAO)
+  // ---------------------------------------------------------------------------
+
+  /// Get hashtag stats by hashtag (raw row, no expiry check).
+  Future<HashtagStatRow?> getHashtagStatRow(String hashtag) async {
+    final result = await _dbClient.getBy(
+      _db.hashtagStats,
+      filter: (t) => (t as HashtagStats).hashtag.equals(hashtag),
+    );
+    return result as HashtagStatRow?;
+  }
+
+  /// Delete hashtag stats by hashtag.
+  Future<int> deleteHashtagStat(String hashtag) async {
+    return _dbClient.delete(
+      _db.hashtagStats,
+      filter: (t) => (t as HashtagStats).hashtag.equals(hashtag),
+    );
+  }
+
+  /// Delete all hashtag stats.
+  Future<int> clearAllHashtagStats() async {
+    return _dbClient.deleteAll(_db.hashtagStats);
+  }
+
+  /// Count total hashtag stats entries.
+  Future<int> countHashtagStats() async {
+    return _dbClient.count(_db.hashtagStats);
+  }
+
+  // ---------------------------------------------------------------------------
+  // PendingUploads operations (domain model in DAO - minimal here)
+  // ---------------------------------------------------------------------------
+
+  /// Get pending upload row by ID (raw row, use DAO for domain model).
+  Future<PendingUploadRow?> getPendingUploadRow(String id) async {
+    final result = await _dbClient.getBy(
+      _db.pendingUploads,
+      filter: (t) => (t as PendingUploads).id.equals(id),
+    );
+    return result as PendingUploadRow?;
+  }
+
+  /// Delete pending upload by ID.
+  Future<int> deletePendingUpload(String id) async {
+    return _dbClient.delete(
+      _db.pendingUploads,
+      filter: (t) => (t as PendingUploads).id.equals(id),
+    );
+  }
+
+  /// Delete all pending uploads.
+  Future<int> clearAllPendingUploads() async {
+    return _dbClient.deleteAll(_db.pendingUploads);
+  }
+
+  /// Count total pending uploads.
+  Future<int> countPendingUploads() async {
+    return _dbClient.count(_db.pendingUploads);
   }
 }
