@@ -156,7 +156,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
 
     // Determine ORDER BY clause and whether we need to join video_metrics
     String orderByClause;
-    bool needsMetricsJoin = false;
+    var needsMetricsJoin = false;
 
     if (sortBy != null && sortBy != 'created_at') {
       // Server-side sorting by engagement metrics requires join with
