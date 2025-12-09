@@ -138,6 +138,8 @@ final isVideoActiveProvider = Provider.family<bool, String>((ref, videoId) {
 /// This ensures only one video can be playing at a time
 /// Must be watched at app level to activate
 final videoControllerAutoCleanupProvider = Provider<void>((ref) {
+  // This variable updates with the next value in activeVideoIdProvider.
+  // ignore: unused_local_variable
   String? previousActiveVideoId;
 
   // Listen to active video changes and dispose all controllers when it changes

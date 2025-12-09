@@ -36,10 +36,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   bool _isPublishing = false;
   bool _isUploadingImage = false;
-  bool _isCheckingUsername = false;
   bool _isWaitingForRelay = false; // Track relay confirmation phase
-  bool? _usernameAvailable;
-  String? _usernameError;
   File? _selectedImage;
   String? _uploadedImageUrl;
 
@@ -82,7 +79,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   profile.nip05!.endsWith('@openvine.co')) {
                 final username = profile.nip05!.split('@')[0];
                 _nip05Controller.text = username;
-                _usernameAvailable = true; // Already registered
               }
             });
 

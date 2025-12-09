@@ -194,9 +194,12 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
     required AdultContentPreference value,
     required bool enabled,
   }) {
+    // TODO: migrate to `RadioGroup` widget.
     return RadioListTile<AdultContentPreference>(
       value: value,
+      // ignore: deprecated_member_use
       groupValue: _preference,
+      // ignore: deprecated_member_use
       onChanged: enabled
           ? (newValue) {
               if (newValue != null) {

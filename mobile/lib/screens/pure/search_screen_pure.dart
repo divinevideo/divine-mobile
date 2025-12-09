@@ -39,9 +39,6 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
 
   bool _isSearching = false;
   bool _isSearchingExternal = false;
-  bool _hasSearchedExternal = false;
-  int _localResultCount = 0;
-  int _externalResultCount = 0;
   String _currentQuery = '';
   Timer? _debounceTimer;
 
@@ -110,9 +107,6 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
         _userResults = [];
         _hashtagResults = [];
         _isSearching = false;
-        _hasSearchedExternal = false;
-        _localResultCount = 0;
-        _externalResultCount = 0;
         _currentQuery = '';
       });
       return;
@@ -120,9 +114,6 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
 
     setState(() {
       _isSearching = true;
-      _hasSearchedExternal = false;
-      _localResultCount = 0;
-      _externalResultCount = 0;
       _currentQuery = query;
     });
 
@@ -195,7 +186,6 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
           _videoResults = filteredVideos;
           _hashtagResults = hashtags.take(20).toList();
           _userResults = users.take(20).toList();
-          _localResultCount = filteredVideos.length;
           _isSearching = false;
         });
         // Update provider so active video system can access search results
@@ -291,8 +281,6 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
           _videoResults = uniqueVideos;
           _hashtagResults = allHashtags.take(20).toList();
           _userResults = allUsers.take(20).toList();
-          _externalResultCount = remoteResults.length;
-          _hasSearchedExternal = true;
           _isSearchingExternal = false;
         });
         // Update provider so active video system can access merged search results
