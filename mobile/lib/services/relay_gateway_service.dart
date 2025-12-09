@@ -5,7 +5,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:nostr_sdk/filter.dart' as nostr;
-import 'package:openvine/models/gateway_response.dart';
+import 'package:models/models.dart' show GatewayResponse;
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Exception thrown when gateway request fails

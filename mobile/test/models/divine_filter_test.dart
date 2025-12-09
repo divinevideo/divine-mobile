@@ -3,7 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/models/divine_filter.dart';
+import 'package:models/models.dart' show DivineFilter, IntRangeFilter, SortConfig, SortDirection;
 
 void main() {
   group('DivineFilter', () {
