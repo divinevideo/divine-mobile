@@ -93,7 +93,7 @@ void main() {
 
       test('updates existing upload with same ID', () async {
         final upload1 = createTestUpload(
-          uploadProgress: 0.0,
+          uploadProgress: 0,
         );
         await dao.upsertUpload(upload1);
 
@@ -123,7 +123,7 @@ void main() {
           cloudinaryPublicId: 'cloud_123',
           videoId: 'video_456',
           cdnUrl: 'https://cdn.example.com/video.mp4',
-          uploadProgress: 1.0,
+          uploadProgress: 1,
           thumbnailPath: '/path/to/thumb.jpg',
           title: 'Test Video',
           description: 'Test description',
