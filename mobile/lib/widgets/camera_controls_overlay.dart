@@ -27,26 +27,6 @@ class _CameraControlsOverlayState extends State<CameraControlsOverlay> {
     // Flash, timer, and aspect ratio buttons are in UniversalCameraScreenPure._buildCameraControls
     return const SizedBox.shrink();
   }
-
-  Widget _buildControlButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.black54,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          child: Icon(icon, color: Colors.white, size: 24),
-        ),
-      ),
-    );
-  }
 }
 
 /// Enhanced camera features info widget

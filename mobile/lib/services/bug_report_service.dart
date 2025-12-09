@@ -21,7 +21,8 @@ import 'package:openvine/services/nip17_message_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
-// Conditional import: dart:html on web, stub on native
+// TODO: migrate to `package:web` and `dart:js_interop`.
+// ignore: deprecated_member_use
 import 'dart:html'
     if (dart.library.io) 'package:openvine/services/bug_report_service_stub.dart'
     as html;

@@ -554,8 +554,6 @@ class EnhancedCameraPreview extends StatefulWidget {
 }
 
 class _EnhancedCameraPreviewState extends State<EnhancedCameraPreview> {
-  double _baseZoom = 1.0;
-  Offset? _focusPoint;
   Timer? _focusTimer;
 
   @override
