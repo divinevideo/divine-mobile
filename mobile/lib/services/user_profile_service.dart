@@ -42,6 +42,9 @@ class UserProfileService extends ChangeNotifier {
   final Set<String> _knownMissingProfiles = {};
   final Map<String, DateTime> _missingProfileRetryAfter = {};
 
+  // Track failed fetch attempts - only mark as missing after 2+ failures
+  final Map<String, int> _fetchAttempts = {};
+
   // Completers to track when profile fetches complete
   final Map<String, Completer<UserProfile?>> _profileFetchCompleters = {};
 
@@ -402,7 +405,7 @@ class UserProfileService extends ChangeNotifier {
           category: LogCategory.system,
         );
         _completeBatchFetch(_currentBatchPubkeys!);
-  }
+      }
     });
   }
 
@@ -698,11 +701,18 @@ class UserProfileService extends ChangeNotifier {
       _batchSubscriptionId = null;
     }
 
-    // Check which profiles were not found and mark them as missing
+    // Check which profiles were not found
     final unfetchedPubkeys = batchPubkeys
         .where((pubkey) => !_profileCache.containsKey(pubkey))
         .toSet();
     final fetchedCount = batchPubkeys.length - unfetchedPubkeys.length;
+
+    // Clear attempt tracking for successfully fetched profiles
+    for (final pubkey in batchPubkeys) {
+      if (_profileCache.containsKey(pubkey)) {
+        _fetchAttempts.remove(pubkey);
+      }
+    }
 
     if (unfetchedPubkeys.isNotEmpty) {
       Log.debug(
@@ -711,19 +721,32 @@ class UserProfileService extends ChangeNotifier {
         category: LogCategory.system,
       );
 
-      // Mark unfetched profiles as missing to avoid future relay spam
+      // Track attempts and only mark as missing after 2+ failures
       for (final pubkey in unfetchedPubkeys) {
-        markProfileAsMissing(pubkey);
+        final attempts = (_fetchAttempts[pubkey] ?? 0) + 1;
+        _fetchAttempts[pubkey] = attempts;
 
-        // Complete pending fetch requests with null for missing profiles
-        final completer = _profileFetchCompleters.remove(pubkey);
-        if (completer != null && !completer.isCompleted) {
-          completer.complete(null);
+        if (attempts >= 2) {
+          // Only mark as missing after 2+ failed attempts
+          markProfileAsMissing(pubkey);
+          _fetchAttempts.remove(pubkey);
           Log.debug(
-            '❌ Completed fetch request for missing profile ${pubkey}',
+            '❌ Profile marked as missing after $attempts attempts: $pubkey',
             name: 'UserProfileService',
             category: LogCategory.system,
           );
+        } else {
+          Log.debug(
+            '⚠️ Profile not found (attempt $attempts/2), will retry: $pubkey',
+            name: 'UserProfileService',
+            category: LogCategory.system,
+          );
+        }
+
+        // Complete pending fetch requests with null for this batch
+        final completer = _profileFetchCompleters.remove(pubkey);
+        if (completer != null && !completer.isCompleted) {
+          completer.complete(null);
         }
       }
 
@@ -970,6 +993,7 @@ class UserProfileService extends ChangeNotifier {
     _pendingBatchPubkeys.clear();
     _knownMissingProfiles.clear();
     _missingProfileRetryAfter.clear();
+    _fetchAttempts.clear();
 
     Log.debug(
       '🗑️ UserProfileService disposed',
