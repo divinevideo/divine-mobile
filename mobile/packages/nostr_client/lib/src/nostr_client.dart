@@ -65,11 +65,6 @@ class NostrClient {
   /// Public key of the client
   String get publicKey => _nostr.publicKey;
 
-  /// Relay manager for relay operations
-  ///
-  /// Provides persistence, status tracking, and reactive updates.
-  RelayManager get relayManager => _relayManager;
-
   /// Map of subscription IDs to their filter hashes (for deduplication)
   final Map<String, String> _subscriptionFilters = {};
 

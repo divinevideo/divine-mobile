@@ -103,10 +103,6 @@ void main() {
         verify(() => mockNostr.publicKey).called(1);
       });
 
-      test('relayManager returns the relay manager', () {
-        expect(client.relayManager, equals(mockRelayManager));
-      });
-
       test('creates client with null gatewayClient', () {
         final localMockRelayManager = _MockRelayManager();
         final clientWithoutGateway = NostrClient.forTesting(

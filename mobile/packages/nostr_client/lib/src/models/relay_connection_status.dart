@@ -132,12 +132,12 @@ class RelayConnectionStatus extends Equatable {
 
   @override
   List<Object?> get props => [
-        url,
-        state,
-        isDefault,
-        isConfigured,
-        errorCount,
-      ];
+    url,
+    state,
+    isDefault,
+    isConfigured,
+    errorCount,
+  ];
 
   @override
   String toString() {
