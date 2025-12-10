@@ -33,7 +33,6 @@ class UserProfileService extends ChangeNotifier {
 
   // Batch fetching management
   String? _batchSubscriptionId;
-  Timer? _batchTimeout;
   Timer? _batchDebounceTimer;
   final Set<String> _pendingBatchPubkeys = {};
 
@@ -669,9 +668,6 @@ class UserProfileService extends ChangeNotifier {
       _batchSubscriptionId = null;
     }
 
-    _batchTimeout?.cancel();
-    _batchTimeout = null;
-
     // Check which profiles were not found and mark them as missing
     final unfetchedPubkeys = batchPubkeys
         .where((pubkey) => !_profileCache.containsKey(pubkey))
@@ -911,7 +907,6 @@ class UserProfileService extends ChangeNotifier {
   void dispose() {
     // Cancel batch operations
     _batchDebounceTimer?.cancel();
-    _batchTimeout?.cancel();
 
     // Cancel batch subscription
     if (_batchSubscriptionId != null) {
