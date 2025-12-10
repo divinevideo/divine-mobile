@@ -23,7 +23,7 @@ class NIP65 {
       tags.add(tag);
     }
 
-    var e = Event(nostr.publicKey, EventKind.RELAY_LIST_METADATA, tags, "");
+    var e = Event(nostr.publicKey, EventKind.relayListMetadata, tags, "");
     nostr.sendEvent(e);
   }
 }

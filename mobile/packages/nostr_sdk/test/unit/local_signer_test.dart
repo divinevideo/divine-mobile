@@ -33,7 +33,7 @@ void main() {
 
       final event = Event(
         publicKey!,
-        EventKind.TEXT_NOTE,
+        EventKind.textNote,
         [],
         'Test message for signing',
       );
@@ -123,8 +123,8 @@ void main() {
         final signer = LocalNostrSigner(privateKey);
         final publicKey = await signer.getPublicKey();
 
-        final event1 = Event(publicKey!, EventKind.TEXT_NOTE, [], 'Message 1');
-        final event2 = Event(publicKey, EventKind.TEXT_NOTE, [], 'Message 2');
+        final event1 = Event(publicKey!, EventKind.textNote, [], 'Message 1');
+        final event2 = Event(publicKey, EventKind.textNote, [], 'Message 2');
 
         final signed1 = await signer.signEvent(event1);
         final signed2 = await signer.signEvent(event2);

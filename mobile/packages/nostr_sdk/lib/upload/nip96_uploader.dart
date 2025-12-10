@@ -40,8 +40,8 @@ class NIP96Uploader {
     String? payload;
     MultipartFile? multipartFile;
     Uint8List? bytes;
-    if (BASE64.check(filePath)) {
-      bytes = BASE64.toData(filePath);
+    if (Base64Util.check(filePath)) {
+      bytes = Base64Util.toData(filePath);
     } else {
       var file = File(filePath);
       bytes = file.readAsBytesSync();
@@ -82,7 +82,7 @@ class NIP96Uploader {
       if (StringUtil.isNotBlank(payload)) {
         tags.add(["payload", payload]);
       }
-      var nip98Event = Event(nostr.publicKey, EventKind.HTTP_AUTH, tags, "");
+      var nip98Event = Event(nostr.publicKey, EventKind.httpAuth, tags, "");
 
       await nostr.signEvent(nip98Event);
       // log(jsonEncode(nip98Event.toJson()));

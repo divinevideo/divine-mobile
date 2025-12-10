@@ -1,8 +1,8 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: non_constant_identifier_names
+// ABOUTME: Mixin providing debounce functionality for delayed function execution.
+// ABOUTME: Executes a function only after user input has stopped for a specified duration.
 
 mixin WhenStopFunction {
-  bool _WhenStopRunning = true;
+  bool _whenStopRunning = true;
 
   int whenStopMS = 200;
 
@@ -24,7 +24,7 @@ mixin WhenStopFunction {
 
   void _goWaitForStop(Function func) {
     Future.delayed(Duration(milliseconds: whenStopMS), () {
-      if (!_WhenStopRunning) {
+      if (!_whenStopRunning) {
         return;
       }
 
@@ -39,6 +39,6 @@ mixin WhenStopFunction {
   }
 
   void disposeWhenStop() {
-    _WhenStopRunning = false;
+    _whenStopRunning = false;
   }
 }

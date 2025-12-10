@@ -1,8 +1,11 @@
+// ABOUTME: Utility class for determining file/path types from URLs and paths.
+// ABOUTME: Identifies image, video, audio, and link types based on file extensions.
+
 import 'base64.dart';
 
 class PathTypeUtil {
   static String? getPathType(String path) {
-    if (path.indexOf(BASE64.PREFIX) == 0) {
+    if (path.indexOf(Base64Util.prefix) == 0) {
       return "image";
     }
 

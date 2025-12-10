@@ -1,156 +1,125 @@
 // ABOUTME: Defines Nostr event kind constants for different event types (NIP-01 and extensions).
-// ABOUTME: Maps integer kind values to semantic names like METADATA, TEXT_NOTE, ZAP, etc.
-
-// TODO(any): Rename constants to lowerCamelCase (e.g., TEXT_NOTE -> textNote) - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: constant_identifier_names
+// ABOUTME: Maps integer kind values to semantic names like metadata, textNote, zap, etc.
 
 class EventKind {
-  static const int METADATA = 0;
+  static const int metadata = 0;
 
-  static const int TEXT_NOTE = 1;
+  static const int textNote = 1;
 
-  static const int RECOMMEND_SERVER = 2;
+  static const int recommendServer = 2;
 
-  static const int CONTACT_LIST = 3;
+  static const int contactList = 3;
 
-  static const int DIRECT_MESSAGE = 4;
+  static const int directMessage = 4;
 
-  static const int EVENT_DELETION = 5;
+  static const int eventDeletion = 5;
 
-  static const int REPOST = 6;
+  static const int repost = 6;
 
-  static const int REACTION = 7;
+  static const int reaction = 7;
 
-  static const int BADGE_AWARD = 8;
+  static const int badgeAward = 8;
 
-  static const int GROUP_CHAT_MESSAGE = 9;
+  static const int groupChatMessage = 9;
 
   // @Deprecated("deprecated at nips, only query, not gen.")
-  // static const int GROUP_CHAT_REPLY = 10;
+  // static const int groupChatReply = 10;
 
-  static const int GROUP_NOTE = 11;
+  static const int groupNote = 11;
 
   // @Deprecated(
-  //     "deprecated at nips, only query, not gen. and use COMMENT 1111 instead")
-  // static const int GROUP_NOTE_REPLY = 12;
+  //     "deprecated at nips, only query, not gen. and use comment 1111 instead")
+  // static const int groupNoteReply = 12;
 
-  static const int SEAL_EVENT_KIND = 13;
+  static const int sealEventKind = 13;
 
-  static const int PRIVATE_DIRECT_MESSAGE = 14;
+  static const int privateDirectMessage = 14;
 
-  static const int GENERIC_REPOST = 16;
+  static const int genericRepost = 16;
 
-  static const int PICTURE = 20;
+  static const int picture = 20;
 
-  static const int GIFT_WRAP = 1059;
+  static const int giftWrap = 1059;
 
-  static const int FILE_HEADER = 1063;
+  static const int fileHeader = 1063;
 
-  static const int STORAGE_SHARED_FILE = 1064;
+  static const int storageSharedFile = 1064;
 
-  static const int COMMENT = 1111;
+  static const int comment = 1111;
 
-  static const int TORRENTS = 2003;
+  static const int torrents = 2003;
 
-  static const int COMMUNITY_APPROVED = 4550;
+  static const int communityApproved = 4550;
 
-  static const int POLL = 6969;
+  static const int poll = 6969;
 
-  static const int GROUP_ADD_USER = 9000;
+  static const int groupAddUser = 9000;
 
-  static const int GROUP_REMOVE_USER = 9001;
+  static const int groupRemoveUser = 9001;
 
-  static const int GROUP_EDIT_METADATA = 9002;
+  static const int groupEditMetadata = 9002;
 
-  static const int GROUP_ADD_PERMISSION = 9003;
+  static const int groupAddPermission = 9003;
 
-  static const int GROUP_REMOVE_PERMISSION = 9004;
+  static const int groupRemovePermission = 9004;
 
-  static const int GROUP_DELETE_EVENT = 9005;
+  static const int groupDeleteEvent = 9005;
 
-  static const int GROUP_EDIT_STATUS = 9006;
+  static const int groupEditStatus = 9006;
 
-  static const int GROUP_CREATE_GROUP = 9007;
+  static const int groupCreateGroup = 9007;
 
-  static const int GROUP_JOIN = 9021;
+  static const int groupJoin = 9021;
 
-  static const int ZAP_GOALS = 9041;
+  static const int zapGoals = 9041;
 
-  static const int ZAP_REQUEST = 9734;
+  static const int zapRequest = 9734;
 
-  static const int ZAP = 9735;
+  static const int zap = 9735;
 
-  static const int RELAY_LIST_METADATA = 10002;
+  static const int relayListMetadata = 10002;
 
-  static const int BOOKMARKS_LIST = 10003;
+  static const int bookmarksList = 10003;
 
-  static const int GROUP_LIST = 10009;
+  static const int groupList = 10009;
 
-  static const int EMOJIS_LIST = 10030;
+  static const int emojisList = 10030;
 
-  static const int NWC_INFO_EVENT = 13194;
+  static const int nwcInfoEvent = 13194;
 
-  static const int AUTHENTICATION = 22242;
+  static const int authentication = 22242;
 
-  static const int NWC_REQUEST_EVENT = 23194;
+  static const int nwcRequestEvent = 23194;
 
-  static const int NWC_RESPONSE_EVENT = 23195;
+  static const int nwcResponseEvent = 23195;
 
-  static const int NOSTR_REMOTE_SIGNING = 24133;
+  static const int nostrRemoteSigning = 24133;
 
-  static const int BLOSSOM_HTTP_AUTH = 24242;
+  static const int blossomHttpAuth = 24242;
 
-  static const int HTTP_AUTH = 27235;
+  static const int httpAuth = 27235;
 
-  static const int FOLLOW_SETS = 30000;
+  static const int followSets = 30000;
 
-  static const int BADGE_ACCEPT = 30008;
+  static const int badgeAccept = 30008;
 
-  static const int BADGE_DEFINITION = 30009;
+  static const int badgeDefinition = 30009;
 
-  static const int LONG_FORM = 30023;
+  static const int longForm = 30023;
 
-  static const int LONG_FORM_LINKED = 30024;
+  static const int longFormLinked = 30024;
 
-  static const int LIVE_EVENT = 30311;
+  static const int liveEvent = 30311;
 
-  static const int COMMUNITY_DEFINITION = 34550;
+  static const int communityDefinition = 34550;
 
-  static const int VIDEO_HORIZONTAL = 34235;
+  static const int videoHorizontal = 34235;
 
-  static const int VIDEO_VERTICAL = 34236;
+  static const int videoVertical = 34236;
 
-  static const int GROUP_METADATA = 39000;
+  static const int groupMetadata = 39000;
 
-  static const int GROUP_ADMINS = 39001;
+  static const int groupAdmins = 39001;
 
-  static const int GROUP_MEMBERS = 39002;
-
-  // ---------------------------------------------------------------------------
-  // NIP-01 Replaceable Event Helpers
-  // ---------------------------------------------------------------------------
-
-  /// Checks if an event kind is replaceable (NIP-01).
-  ///
-  /// Replaceable event kinds: 0, 3, or 10000-19999.
-  /// Only one event per pubkey+kind is stored; newer replaces older.
-  static bool isReplaceable(int kind) {
-    return kind == METADATA ||
-        kind == CONTACT_LIST ||
-        (kind >= 10000 && kind < 20000);
-  }
-
-  /// Checks if an event kind is parameterized replaceable (NIP-01).
-  ///
-  /// Parameterized replaceable event kinds: 30000-39999.
-  /// Only one event per pubkey+kind+d-tag is stored; newer replaces older.
-  static bool isParameterizedReplaceable(int kind) {
-    return kind >= 30000 && kind < 40000;
-  }
-
-  /// Checks if an event kind is any type of replaceable (standard or
-  /// parameterized).
-  static bool isAnyReplaceable(int kind) {
-    return isReplaceable(kind) || isParameterizedReplaceable(kind);
-  }
+  static const int groupMembers = 39002;
 }

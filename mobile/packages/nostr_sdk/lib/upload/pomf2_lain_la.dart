@@ -1,5 +1,5 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: constant_identifier_names
+// ABOUTME: Handles file uploads to pomf2.lain.la media hosting service.
+// ABOUTME: Supports base64 and file path inputs with content type detection.
 
 import 'package:dio/dio.dart';
 import 'package:nostr_sdk/upload/upload_util.dart';
@@ -9,15 +9,13 @@ import '../utils/base64.dart';
 import 'nostr_build_uploader.dart';
 
 class Pomf2LainLa {
-  static const String UPLOAD_ACTION = "https://pomf2.lain.la/upload.php";
+  static const String uploadAction = "https://pomf2.lain.la/upload.php";
 
   static Future<String?> upload(String filePath, {String? fileName}) async {
-    // final dio = Dio();
-    // dio.interceptors.add(PrettyDioLogger(requestBody: true));
     var fileType = UploadUtil.getFileType(filePath);
     MultipartFile? multipartFile;
-    if (BASE64.check(filePath)) {
-      var bytes = BASE64.toData(filePath);
+    if (Base64Util.check(filePath)) {
+      var bytes = Base64Util.toData(filePath);
       multipartFile = MultipartFile.fromBytes(
         bytes,
         filename: fileName,
@@ -33,7 +31,7 @@ class Pomf2LainLa {
 
     var formData = FormData.fromMap({"files[]": multipartFile});
     var response = await NostrBuildUploader.dio.post(
-      UPLOAD_ACTION,
+      uploadAction,
       data: formData,
     );
     var body = response.data;

@@ -32,7 +32,7 @@ class NIP58 {
 
     var newEvent = Event(
       nostr.publicKey,
-      EventKind.BADGE_ACCEPT,
+      EventKind.badgeAccept,
       tags,
       content,
     );

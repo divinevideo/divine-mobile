@@ -1,5 +1,5 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: constant_identifier_names
+// ABOUTME: Local relay implementation for caching events locally.
+// ABOUTME: Handles event storage and queries without network connection.
 
 import '../relay/client_connected.dart';
 import '../relay/relay.dart';
@@ -11,12 +11,12 @@ import 'relay_local_mixin.dart';
 /// It is used to handle local events and queries.
 /// It doesn't have a real connection.
 class RelayLocal extends Relay with RelayLocalMixin {
-  static const URL = "Local Relay";
+  static const localUrl = "Local Relay";
 
   RelayDB relayDB;
 
   RelayLocal(super.url, super.relayStatus, this.relayDB) {
-    super.relayStatus.connected = ClientConnected.CONNECTED;
+    super.relayStatus.connected = ClientConnected.connected;
 
     info = RelayInfo(
       "Local Relay",

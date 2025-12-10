@@ -1,20 +1,20 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: constant_identifier_names
+// ABOUTME: Utility class for base64 encoding/decoding of image data.
+// ABOUTME: Handles data URI format detection and conversion for image uploads.
 
 import 'dart:convert';
 import 'dart:typed_data';
 
-class BASE64 {
-  static const String PNG_PREFIX = "data:image/png;base64,";
+class Base64Util {
+  static const String pngPrefix = "data:image/png;base64,";
 
-  static const String PREFIX = "data:image/";
+  static const String prefix = "data:image/";
 
   static bool check(String str) {
-    return str.indexOf(PREFIX) == 0;
+    return str.indexOf(prefix) == 0;
   }
 
   static Uint8List toData(String base64Str) {
-    var text = base64Str.replaceFirst(PREFIX, "");
+    var text = base64Str.replaceFirst(prefix, "");
     var index = text.indexOf(";base64,");
     if (index > -1) {
       text = text.substring(index + 8);
@@ -24,6 +24,6 @@ class BASE64 {
 
   static String toBase64(Uint8List data) {
     var base64Str = base64Encode(data);
-    return "${BASE64.PNG_PREFIX}$base64Str";
+    return "${Base64Util.pngPrefix}$base64Str";
   }
 }

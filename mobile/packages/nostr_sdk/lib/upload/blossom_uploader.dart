@@ -39,8 +39,8 @@ class BolssomUploader {
     String? payload;
     MultipartFile? multipartFile;
     Uint8List? bytes;
-    if (BASE64.check(filePath)) {
-      bytes = BASE64.toData(filePath);
+    if (Base64Util.check(filePath)) {
+      bytes = Base64Util.toData(filePath);
     } else {
       var file = File(filePath);
       bytes = file.readAsBytesSync();
@@ -85,7 +85,7 @@ class BolssomUploader {
     tags.add(["x", payload]);
     var nip98Event = Event(
       nostr.publicKey,
-      EventKind.BLOSSOM_HTTP_AUTH,
+      EventKind.blossomHttpAuth,
       tags,
       "Upload $fileName",
     );

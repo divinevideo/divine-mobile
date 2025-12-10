@@ -105,7 +105,7 @@ class Zap {
     }
     Event? event = Event(
       targetNostr.publicKey,
-      EventKind.ZAP_REQUEST,
+      EventKind.zapRequest,
       tags,
       eventContent,
     );

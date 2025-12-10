@@ -72,19 +72,19 @@ class RelayBase extends Relay {
     // Listen for state changes
     _stateSubscription = _connectionManager!.stateStream.listen((state) {
       final wasDisconnected =
-          relayStatus.connected != ClientConnected.CONNECTED;
+          relayStatus.connected != ClientConnected.connected;
 
       switch (state) {
         case ConnectionState.connected:
-          relayStatus.connected = ClientConnected.CONNECTED;
+          relayStatus.connected = ClientConnected.connected;
           // Flush pending messages on reconnection
           if (wasDisconnected) {
             onConnected();
           }
         case ConnectionState.connecting:
-          relayStatus.connected = ClientConnected.CONNECTING;
+          relayStatus.connected = ClientConnected.connecting;
         case ConnectionState.disconnected:
-          relayStatus.connected = ClientConnected.DISCONNECT;
+          relayStatus.connected = ClientConnected.disconnect;
       }
       if (relayStatusCallback != null) {
         relayStatusCallback!();
@@ -182,7 +182,7 @@ class RelayBase extends Relay {
 
   @override
   Future<void> disconnect() async {
-    relayStatus.connected = ClientConnected.DISCONNECT;
+    relayStatus.connected = ClientConnected.disconnect;
     await _connectionManager?.disconnect();
   }
 

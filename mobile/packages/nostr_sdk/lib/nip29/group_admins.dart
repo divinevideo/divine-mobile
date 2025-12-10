@@ -19,7 +19,7 @@ class GroupAdmins extends GroupObject {
   }
 
   static GroupAdmins? loadFromEvent(Event e) {
-    if (e.kind != EventKind.GROUP_ADMINS) {
+    if (e.kind != EventKind.groupAdmins) {
       return null;
     }
 

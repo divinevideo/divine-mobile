@@ -1,10 +1,10 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: non_constant_identifier_names
+// ABOUTME: Defines connection state constants for relay clients.
+// ABOUTME: Used to track whether a relay is disconnected, connecting, or connected.
 
 class ClientConnected {
-  static int DISCONNECT = -1;
+  static int disconnect = -1;
 
-  static int CONNECTING = 1;
+  static int connecting = 1;
 
-  static int CONNECTED = 2;
+  static int connected = 2;
 }

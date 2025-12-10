@@ -49,7 +49,7 @@ class Nostr {
   }) async {
     content ??= "+";
 
-    Event event = Event(_publicKey, EventKind.REACTION, [
+    Event event = Event(_publicKey, EventKind.reaction, [
       ["e", id],
     ], content);
     return await sendEvent(
@@ -64,7 +64,7 @@ class Nostr {
     List<String>? tempRelays,
     List<String>? targetRelays,
   }) async {
-    Event event = Event(_publicKey, EventKind.EVENT_DELETION, [
+    Event event = Event(_publicKey, EventKind.eventDeletion, [
       ["e", eventId],
     ], "delete");
     return await sendEvent(
@@ -84,7 +84,7 @@ class Nostr {
       tags.add(["e", eventId]);
     }
 
-    Event event = Event(_publicKey, EventKind.EVENT_DELETION, tags, "delete");
+    Event event = Event(_publicKey, EventKind.eventDeletion, tags, "delete");
     return await sendEvent(
       event,
       tempRelays: tempRelays,
@@ -103,7 +103,7 @@ class Nostr {
     if (StringUtil.isNotBlank(relayAddr)) {
       tag.add(relayAddr);
     }
-    Event event = Event(_publicKey, EventKind.REPOST, [tag], content);
+    Event event = Event(_publicKey, EventKind.repost, [tag], content);
     return await sendEvent(
       event,
       tempRelays: tempRelays,
@@ -118,7 +118,7 @@ class Nostr {
     List<String>? targetRelays,
   }) async {
     final tags = contacts.toJson();
-    final event = Event(_publicKey, EventKind.CONTACT_LIST, tags, content);
+    final event = Event(_publicKey, EventKind.contactList, tags, content);
     return await sendEvent(
       event,
       tempRelays: tempRelays,
@@ -204,7 +204,7 @@ class Nostr {
     String? id,
     List<String>? tempRelays,
     List<String>? targetRelays,
-    List<int> relayTypes = RelayType.ALL,
+    List<int> relayTypes = RelayType.all,
     bool sendAfterAuth =
         false, // if relay not connected, it will send after auth
   }) {
@@ -227,7 +227,7 @@ class Nostr {
     List<Map<String, dynamic>> filters, {
     String? id,
     List<String>? tempRelays,
-    List<int> relayTypes = RelayType.ALL,
+    List<int> relayTypes = RelayType.all,
     bool sendAfterAuth = false,
   }) async {
     var eventBox = EventMemBox(sortAfterAdd: false);
@@ -258,7 +258,7 @@ class Nostr {
     Function? onComplete,
     List<String>? tempRelays,
     List<String>? targetRelays,
-    List<int> relayTypes = RelayType.ALL,
+    List<int> relayTypes = RelayType.all,
     bool sendAfterAuth = false,
   }) {
     return _pool.query(
@@ -291,7 +291,7 @@ class Nostr {
     Relay relay, {
     bool autoSubscribe = false,
     bool init = false,
-    int relayType = RelayType.NORMAL,
+    int relayType = RelayType.normal,
   }) async {
     return await _pool.add(
       relay,
@@ -301,7 +301,7 @@ class Nostr {
     );
   }
 
-  void removeRelay(String url, {int relayType = RelayType.NORMAL}) {
+  void removeRelay(String url, {int relayType = RelayType.normal}) {
     _pool.remove(url, relayType: relayType);
   }
 
