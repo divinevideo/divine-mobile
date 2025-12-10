@@ -37,7 +37,7 @@ Event _createTestEvent({
   int? createdAt,
 }) {
   final eventPubkey = pubkey ?? testPublicKey;
-  final eventKind = kind ?? EventKind.TEXT_NOTE;
+  final eventKind = kind ?? EventKind.textNote;
   final eventContent = content ?? 'Test content';
   final event = Event(
     eventPubkey,
@@ -70,7 +70,7 @@ void main() {
     registerFallbackValue(_FakeRelay());
     registerFallbackValue(<Map<String, dynamic>>[]);
     registerFallbackValue(<String>[]);
-    registerFallbackValue(RelayType.ALL);
+    registerFallbackValue(RelayType.all);
   });
 
   setUp(() {
@@ -174,7 +174,7 @@ void main() {
     group('queryEvents', () {
       test('uses gateway when enabled and single filter', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent(), _createTestEvent()];
         final response = GatewayResponse(
@@ -205,7 +205,7 @@ void main() {
 
       test('falls back to WebSocket when gateway returns empty', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
         const emptyResponse = GatewayResponse(
@@ -245,7 +245,7 @@ void main() {
 
       test('falls back to WebSocket when gateway throws', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
 
@@ -269,7 +269,7 @@ void main() {
 
       test('skips gateway when useGateway is false', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
 
@@ -291,8 +291,8 @@ void main() {
 
       test('skips gateway when multiple filters provided', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
-          Filter(kinds: [EventKind.METADATA], limit: 5),
+          Filter(kinds: [EventKind.textNote], limit: 10),
+          Filter(kinds: [EventKind.metadata], limit: 5),
         ];
         final events = [_createTestEvent()];
 
@@ -314,7 +314,7 @@ void main() {
 
       test('passes all parameters to WebSocket query', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
         final tempRelays = ['wss://temp.example.com'];
@@ -333,7 +333,7 @@ void main() {
           filters,
           subscriptionId: 'test-sub',
           tempRelays: tempRelays,
-          relayTypes: [RelayType.NORMAL],
+          relayTypes: [RelayType.normal],
           sendAfterAuth: true,
           useGateway: false,
         );
@@ -343,7 +343,7 @@ void main() {
             any(),
             id: 'test-sub',
             tempRelays: tempRelays,
-            relayTypes: [RelayType.NORMAL],
+            relayTypes: [RelayType.normal],
             sendAfterAuth: true,
           ),
         ).called(1);
@@ -356,7 +356,7 @@ void main() {
           relayManager: localMockRelayManager,
         );
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
 
@@ -512,7 +512,7 @@ void main() {
         const pubkey = testPublicKey;
         final profileEvent = _createTestEvent(
           pubkey: pubkey,
-          kind: EventKind.METADATA,
+          kind: EventKind.metadata,
           content: '{"name":"Test User"}',
         );
 
@@ -530,7 +530,7 @@ void main() {
         const pubkey = testPublicKey;
         final profileEvent = _createTestEvent(
           pubkey: pubkey,
-          kind: EventKind.METADATA,
+          kind: EventKind.metadata,
         );
 
         when(
@@ -555,7 +555,7 @@ void main() {
         const pubkey = testPublicKey;
         final profileEvent = _createTestEvent(
           pubkey: pubkey,
-          kind: EventKind.METADATA,
+          kind: EventKind.metadata,
         );
 
         when(
@@ -580,7 +580,7 @@ void main() {
         const pubkey = testPublicKey;
         final profileEvent = _createTestEvent(
           pubkey: pubkey,
-          kind: EventKind.METADATA,
+          kind: EventKind.metadata,
         );
 
         when(
@@ -623,7 +623,7 @@ void main() {
     group('subscribe', () {
       test('creates subscription and returns stream', () {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
 
         when(
@@ -656,10 +656,10 @@ void main() {
 
       test('creates new subscription for different filters', () {
         final filters1 = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final filters2 = [
-          Filter(kinds: [EventKind.METADATA], limit: 5),
+          Filter(kinds: [EventKind.metadata], limit: 5),
         ];
 
         when(
@@ -694,7 +694,7 @@ void main() {
 
       test('uses custom subscription ID when provided', () {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         const customId = 'my-custom-subscription';
 
@@ -727,7 +727,7 @@ void main() {
 
       test('passes all parameters correctly', () {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final tempRelays = ['wss://temp.example.com'];
         final targetRelays = ['wss://target.example.com'];
@@ -749,7 +749,7 @@ void main() {
           subscriptionId: 'test-id',
           tempRelays: tempRelays,
           targetRelays: targetRelays,
-          relayTypes: [RelayType.NORMAL],
+          relayTypes: [RelayType.normal],
           sendAfterAuth: true,
         );
 
@@ -760,7 +760,7 @@ void main() {
             id: 'test-id',
             tempRelays: tempRelays,
             targetRelays: targetRelays,
-            relayTypes: [RelayType.NORMAL],
+            relayTypes: [RelayType.normal],
             sendAfterAuth: true,
           ),
         ).called(1);
@@ -768,7 +768,7 @@ void main() {
 
       test('handles nostr returning different subscription ID', () {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
 
         // Nostr returns a different ID than what was requested
@@ -794,7 +794,7 @@ void main() {
       test('unsubscribes and closes stream', () async {
         const subscriptionId = 'test-sub-id';
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
 
         when(
@@ -829,10 +829,10 @@ void main() {
     group('closeAllSubscriptions', () {
       test('closes all active subscriptions', () async {
         final filters1 = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final filters2 = [
-          Filter(kinds: [EventKind.METADATA], limit: 5),
+          Filter(kinds: [EventKind.metadata], limit: 5),
         ];
 
         var callCount = 0;
@@ -1035,7 +1035,7 @@ void main() {
     group('sendLike', () {
       test('sends like successfully', () async {
         const eventId = 'event-to-like';
-        final likeEvent = _createTestEvent(kind: EventKind.REACTION);
+        final likeEvent = _createTestEvent(kind: EventKind.reaction);
 
         when(
           () => mockNostr.sendLike(
@@ -1059,7 +1059,7 @@ void main() {
       test('sends like with custom content', () async {
         const eventId = 'event-to-like';
         const content = '❤️';
-        final likeEvent = _createTestEvent(kind: EventKind.REACTION);
+        final likeEvent = _createTestEvent(kind: EventKind.reaction);
 
         when(
           () => mockNostr.sendLike(
@@ -1084,7 +1084,7 @@ void main() {
         const eventId = 'event-to-like';
         final tempRelays = ['wss://temp.example.com'];
         final targetRelays = ['wss://target.example.com'];
-        final likeEvent = _createTestEvent(kind: EventKind.REACTION);
+        final likeEvent = _createTestEvent(kind: EventKind.reaction);
 
         when(
           () => mockNostr.sendLike(
@@ -1131,7 +1131,7 @@ void main() {
     group('sendRepost', () {
       test('sends repost successfully', () async {
         const eventId = 'event-to-repost';
-        final repostEvent = _createTestEvent(kind: EventKind.REPOST);
+        final repostEvent = _createTestEvent(kind: EventKind.repost);
 
         when(
           () => mockNostr.sendRepost(
@@ -1159,7 +1159,7 @@ void main() {
         const content = '{"event":"data"}';
         final tempRelays = ['wss://temp.example.com'];
         final targetRelays = ['wss://target.example.com'];
-        final repostEvent = _createTestEvent(kind: EventKind.REPOST);
+        final repostEvent = _createTestEvent(kind: EventKind.repost);
 
         when(
           () => mockNostr.sendRepost(
@@ -1212,7 +1212,7 @@ void main() {
     group('deleteEvent', () {
       test('deletes event successfully', () async {
         const eventId = 'event-to-delete';
-        final deleteEvent = _createTestEvent(kind: EventKind.EVENT_DELETION);
+        final deleteEvent = _createTestEvent(kind: EventKind.eventDeletion);
 
         when(
           () => mockNostr.deleteEvent(
@@ -1236,7 +1236,7 @@ void main() {
         const eventId = 'event-to-delete';
         final tempRelays = ['wss://temp.example.com'];
         final targetRelays = ['wss://target.example.com'];
-        final deleteEvent = _createTestEvent(kind: EventKind.EVENT_DELETION);
+        final deleteEvent = _createTestEvent(kind: EventKind.eventDeletion);
 
         when(
           () => mockNostr.deleteEvent(
@@ -1281,7 +1281,7 @@ void main() {
     group('deleteEvents', () {
       test('deletes multiple events successfully', () async {
         final eventIds = ['event-1', 'event-2', 'event-3'];
-        final deleteEvent = _createTestEvent(kind: EventKind.EVENT_DELETION);
+        final deleteEvent = _createTestEvent(kind: EventKind.eventDeletion);
 
         when(
           () => mockNostr.deleteEvents(
@@ -1305,7 +1305,7 @@ void main() {
         final eventIds = ['event-1', 'event-2'];
         final tempRelays = ['wss://temp.example.com'];
         final targetRelays = ['wss://target.example.com'];
-        final deleteEvent = _createTestEvent(kind: EventKind.EVENT_DELETION);
+        final deleteEvent = _createTestEvent(kind: EventKind.eventDeletion);
 
         when(
           () => mockNostr.deleteEvents(
@@ -1351,7 +1351,7 @@ void main() {
       test('sends contact list successfully', () async {
         final contacts = ContactList();
         const content = '{"relay":"preferences"}';
-        final contactListEvent = _createTestEvent(kind: EventKind.CONTACT_LIST);
+        final contactListEvent = _createTestEvent(kind: EventKind.contactList);
 
         when(
           () => mockNostr.sendContactList(
@@ -1378,7 +1378,7 @@ void main() {
         const content = '{"relay":"preferences"}';
         final tempRelays = ['wss://temp.example.com'];
         final targetRelays = ['wss://target.example.com'];
-        final contactListEvent = _createTestEvent(kind: EventKind.CONTACT_LIST);
+        final contactListEvent = _createTestEvent(kind: EventKind.contactList);
 
         when(
           () => mockNostr.sendContactList(
@@ -1436,7 +1436,7 @@ void main() {
 
       test('closes active subscriptions before disposing', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
 
         when(
@@ -1463,7 +1463,7 @@ void main() {
     group('gateway fallback behavior', () {
       test('handles GatewayException gracefully', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
 
@@ -1487,7 +1487,7 @@ void main() {
 
       test('handles network errors gracefully', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
 

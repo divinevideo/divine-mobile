@@ -9,7 +9,6 @@ import 'dart:ui' as _i15;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
 import 'package:models/models.dart' as _i9;
-import 'package:nostr_key_manager/nostr_key_manager.dart' as _i2;
 import 'package:nostr_sdk/event.dart' as _i7;
 import 'package:nostr_sdk/filter.dart' as _i8;
 import 'package:openvine/models/video_event.dart' as _i11;

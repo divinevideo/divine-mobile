@@ -807,7 +807,7 @@ class NostrServiceFunction implements INostrService {
     // Create search filter for NIP-50
     final filter = nostr.Filter()
       ..kinds =
-          [EventKind.METADATA] // Kind 0 only
+          [EventKind.metadata] // Kind 0 only
       ..search = query;
 
     if (limit != null) {

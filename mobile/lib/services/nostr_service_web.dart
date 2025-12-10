@@ -660,7 +660,7 @@ abstract class NostrServiceWeb implements INostrService {
   Stream<sdk.Event> searchUsers(String query, {int? limit}) {
     final filters = [
       sdk.Filter(
-        kinds: [sdk.EventKind.METADATA], // User profile event kind
+        kinds: [sdk.EventKind.metadata], // User profile event kind
         search: query,
         limit: limit,
       ),

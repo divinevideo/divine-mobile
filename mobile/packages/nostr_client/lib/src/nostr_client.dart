@@ -60,7 +60,6 @@ class NostrClient {
 
   final Nostr _nostr;
   final GatewayClient? _gatewayClient;
-  final RelayManager _relayManager;
 
   /// Public key of the client
   String get publicKey => _nostr.publicKey;
@@ -96,7 +95,7 @@ class NostrClient {
     List<Filter> filters, {
     String? subscriptionId,
     List<String>? tempRelays,
-    List<int> relayTypes = RelayType.ALL,
+    List<int> relayTypes = RelayType.all,
     bool sendAfterAuth = false,
     bool useGateway = true,
   }) async {
@@ -183,7 +182,7 @@ class NostrClient {
 
     // Fall back to WebSocket query
     final filters = [
-      Filter(authors: [pubkey], kinds: [EventKind.METADATA], limit: 1),
+      Filter(authors: [pubkey], kinds: [EventKind.metadata], limit: 1),
     ];
     final events = await queryEvents(filters, useGateway: false);
     return events.isEmpty ? null : events.first;
@@ -198,7 +197,7 @@ class NostrClient {
     String? subscriptionId,
     List<String>? tempRelays,
     List<String>? targetRelays,
-    List<int> relayTypes = RelayType.ALL,
+    List<int> relayTypes = RelayType.all,
     bool sendAfterAuth = false,
     void Function()? onEose,
   }) {

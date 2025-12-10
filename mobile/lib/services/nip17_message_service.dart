@@ -76,7 +76,7 @@ class NIP17MessageService {
 
       final rumorEvent = Event(
         senderPublicKey,
-        EventKind.PRIVATE_DIRECT_MESSAGE, // Kind 14
+        EventKind.privateDirectMessage, // Kind 14
         rumorTags,
         content,
       );
