@@ -46,10 +46,11 @@ Future<UserProfile?> userProfileReactive(Ref ref, String pubkey) async {
   final completer = Completer<UserProfile?>();
 
   // If the profile is not cached, add a listener to invalidate this provider
-  // when the profile is added.
+  // when the profile is added or marked as missing.
   void listener() {
     Log.info('[UserProfileProvider] Listener fired! Checking for $pubkey');
     final profileExists = userProfileService.hasProfile(pubkey);
+    final profileMissing = userProfileService.shouldSkipProfileFetch(pubkey);
 
     if (profileExists) {
       Log.debug(
@@ -60,6 +61,15 @@ Future<UserProfile?> userProfileReactive(Ref ref, String pubkey) async {
 
       userProfileService.removeListener(listener);
       completer.complete(userProfileService.getCachedProfile(pubkey));
+    } else if (profileMissing && !completer.isCompleted) {
+      Log.debug(
+        '❌ [UserProfileProvider] Profile marked as missing: ${_safePubkeyTrunc(pubkey)}',
+        name: 'UserProfileProvider',
+        category: LogCategory.ui,
+      );
+
+      userProfileService.removeListener(listener);
+      completer.complete(null);
     }
   }
 
