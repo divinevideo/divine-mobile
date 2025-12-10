@@ -696,6 +696,8 @@ class UserProfileService extends ChangeNotifier {
           );
         }
       }
+
+      notifyListeners();
     } else {
       Log.info(
         '✅ Batch profile fetch completed - fetched all ${batchPubkeys.length} profiles',
