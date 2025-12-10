@@ -1,5 +1,5 @@
 // ABOUTME: Unit tests for ProfileStatsDao with cache expiry logic.
-// ABOUTME: Tests upsertStats, getStats with expiry, deleteExpired, and clearAll.
+// ABOUTME: Tests upsertStats, getStats with expiry, deleteExpired, clearAll.
 
 import 'dart:io';
 
@@ -205,7 +205,8 @@ void main() {
               ),
             );
 
-        // Delete with 5 minute expiry - entries are 10 minutes old so should be deleted
+        // Delete with 5 minute expiry - entries are 10 minutes old so
+        // should be deleted
         final deleted = await dao.deleteExpired();
 
         expect(deleted, equals(2));

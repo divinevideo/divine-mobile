@@ -1,5 +1,6 @@
-// ABOUTME: Unit tests for HashtagStatsDao with batch operations and cache expiry.
-// ABOUTME: Tests upsertHashtag, upsertBatch, getPopularHashtags, isCacheFresh, deleteExpired.
+// ABOUTME: Unit tests for HashtagStatsDao with batch operations and cache
+// ABOUTME: expiry. Tests upsertHashtag, upsertBatch, getPopularHashtags,
+// ABOUTME: isCacheFresh, deleteExpired.
 
 import 'dart:io';
 
@@ -175,7 +176,8 @@ void main() {
           ),
         ]);
 
-        // Query with 5 minute expiry - entry is 10 minutes old so should be excluded
+        // Query with 5 minute expiry - entry is 10 minutes old so should
+        // be excluded
         final results = await dao.getPopularHashtags(
           expiry: const Duration(minutes: 5),
         );
@@ -212,7 +214,8 @@ void main() {
           ),
         ]);
 
-        // Query with 5 minute expiry - entry is 10 minutes old so should be expired
+        // Query with 5 minute expiry - entry is 10 minutes old so should
+        // be expired
         final isFresh = await dao.isCacheFresh(
           expiry: const Duration(minutes: 5),
         );
@@ -237,7 +240,8 @@ void main() {
           ),
         ]);
 
-        // Delete with 5 minute expiry - entries are 10 minutes old so should be deleted
+        // Delete with 5 minute expiry - entries are 10 minutes old so
+        // should be deleted
         final deleted = await dao.deleteExpired(
           expiry: const Duration(minutes: 5),
         );

@@ -12,7 +12,7 @@ part 'pending_uploads_dao.g.dart';
 @DriftAccessor(tables: [PendingUploads])
 class PendingUploadsDao extends DatabaseAccessor<AppDatabase>
     with _$PendingUploadsDaoMixin {
-  PendingUploadsDao(super.db);
+  PendingUploadsDao(super.attachedDatabase);
 
   /// Upsert a pending upload from domain model
   Future<void> upsertUpload(PendingUpload upload) {

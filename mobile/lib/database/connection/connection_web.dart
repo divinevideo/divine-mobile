@@ -2,8 +2,8 @@
 // ABOUTME: Provides web-compatible storage through drift's web implementation
 
 import 'package:drift/drift.dart';
-// TODO: migrate to `package:web` and `dart:js_interop`.
-// ignore: deprecated_member_use
+// TODO(any): Migrate from deprecated drift/web.dart https://github.com/divinevideo/divine-mobile/issues/373
+// ignore_for_file: deprecated_member_use
 import 'package:drift/web.dart';
 
 /// Open a database connection for web platform
