@@ -38,7 +38,9 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
     });
 
     try {
-      final service = await ref.read(curatedListsStateProvider.notifier).service;
+      final service = await ref
+          .read(curatedListsStateProvider.notifier)
+          .service;
       final lists = await service?.fetchPublicListsFromRelays(limit: 50);
 
       // Filter out empty lists and sort by video count (popularity)
@@ -73,7 +75,9 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
 
   Future<void> _toggleSubscription(CuratedList list) async {
     try {
-      final service = await ref.read(curatedListsStateProvider.notifier).service;
+      final service = await ref
+          .read(curatedListsStateProvider.notifier)
+          .service;
       final isSubscribed = service?.isSubscribedToList(list.id) ?? false;
 
       if (isSubscribed) {

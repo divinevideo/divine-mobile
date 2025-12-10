@@ -93,7 +93,10 @@ Stream<List<CuratedList>> publicListsContainingVideo(
 ) async* {
   /// wait to initialize the curated list service
   await ref.read(curatedListsStateProvider.future);
-  final curatedListStream = ref.read(curatedListsStateProvider.notifier).service?.streamPublicListsContainingVideo(videoId);
+  final curatedListStream = ref
+      .read(curatedListsStateProvider.notifier)
+      .service
+      ?.streamPublicListsContainingVideo(videoId);
   final accumulated = <CuratedList>[];
   final seenIds = <String>{};
 

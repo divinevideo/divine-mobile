@@ -21,22 +21,20 @@ import 'package:share_plus/share_plus.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-
 // TODO(any): Move this to a reusable widget
- Widget get _buildLoadingIndicator =>
-     Padding(
-      padding: const EdgeInsets.all(12),
-      child: Center(
-        child: const SizedBox(
-              width: 16,
-              height: 16,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: VineTheme.secondaryText,
-          ),
-        ),
+Widget get _buildLoadingIndicator => Padding(
+  padding: const EdgeInsets.all(12),
+  child: Center(
+    child: const SizedBox(
+      width: 16,
+      height: 16,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        color: VineTheme.secondaryText,
       ),
-    );
+    ),
+  ),
+);
 
 /// Comprehensive share menu for videos
 class ShareVideoMenu extends ConsumerStatefulWidget {
@@ -262,14 +260,20 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
   Widget _buildVideoStatusSection() => Consumer(
     builder: (context, ref, child) {
       final curatedListServiceAsync = ref.watch(curatedListsStateProvider);
-      final curatedListService = ref.read(curatedListsStateProvider.notifier).service;
+      final curatedListService = ref
+          .read(curatedListsStateProvider.notifier)
+          .service;
       final bookmarkServiceAsync = ref.watch(bookmarkServiceProvider);
 
       return curatedListServiceAsync.when(
         data: (lists) {
           return bookmarkServiceAsync.when(
             data: (bookmarkService) {
-              final listsContaining = curatedListService?.getListsContainingVideo(widget.video.id) ?? [];
+              final listsContaining =
+                  curatedListService?.getListsContainingVideo(
+                    widget.video.id,
+                  ) ??
+                  [];
               final bookmarkStatus = bookmarkService.getVideoBookmarkSummary(
                 widget.video.id,
               );
@@ -429,11 +433,14 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
       Consumer(
         builder: (context, ref, child) {
           final listServiceAsync = ref.watch(curatedListsStateProvider);
-          final listService = ref.read(curatedListsStateProvider.notifier).service;
+          final listService = ref
+              .read(curatedListsStateProvider.notifier)
+              .service;
 
           return listServiceAsync.when(
             data: (lists) {
-              final listsContainingVideo = listService?.getListsContainingVideo(widget.video.id) ?? [];
+              final listsContainingVideo =
+                  listService?.getListsContainingVideo(widget.video.id) ?? [];
 
               if (listsContainingVideo.isEmpty) {
                 return const SizedBox.shrink();
@@ -544,7 +551,9 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
   /// Remove video from a specific list
   Future<void> _removeFromList(String listId) async {
     try {
-      final listService = await ref.read(curatedListsStateProvider.notifier).service;
+      final listService = await ref
+          .read(curatedListsStateProvider.notifier)
+          .service;
       await listService?.removeVideoFromList(listId, widget.video.id);
 
       if (mounted) {
@@ -1698,7 +1707,9 @@ class _CreateListDialogState extends ConsumerState<_CreateListDialog> {
     if (name.isEmpty) return;
 
     try {
-      final listService = await ref.read(curatedListsStateProvider.notifier).service;
+      final listService = await ref
+          .read(curatedListsStateProvider.notifier)
+          .service;
       final newList = await listService?.createList(
         name: name,
         description: _descriptionController.text.trim().isEmpty
@@ -3273,14 +3284,16 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),  
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) => const SizedBox.shrink(),
     );
   }
 
   Future<void> _toggleSubscription(CuratedList list) async {
     try {
-      final listService = await ref.read(curatedListsStateProvider.notifier).service;
+      final listService = await ref
+          .read(curatedListsStateProvider.notifier)
+          .service;
       final isSubscribed = listService?.isSubscribedToList(list.id) ?? false;
 
       if (isSubscribed) {

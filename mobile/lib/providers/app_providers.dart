@@ -589,7 +589,7 @@ class CuratedListsState extends _$CuratedListsState {
   CuratedListService? _service;
 
   CuratedListService? get service => _service;
-  
+
   @override
   Future<List<CuratedList>> build() async {
     final nostrService = ref.watch(nostrServiceProvider);
@@ -603,7 +603,7 @@ class CuratedListsState extends _$CuratedListsState {
     );
 
     // Initialize the service to create default list and sync with relays
-    await _service!.initialize();   
+    await _service!.initialize();
 
     // Listen to changes and update state
     _service!.addListener(_onServiceChanged);
