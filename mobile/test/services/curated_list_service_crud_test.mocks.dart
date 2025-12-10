@@ -52,18 +52,22 @@ class _FakeAuthResult_2 extends _i1.SmartFake implements _i4.AuthResult {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockINostrService extends _i1.Mock implements _i3.INostrService {
-  MockINostrService() {
-    _i1.throwOnMissingStub(this);
-  }
-
   @override
   bool get isInitialized =>
-      (super.noSuchMethod(Invocation.getter(#isInitialized), returnValue: false)
+      (super.noSuchMethod(
+            Invocation.getter(#isInitialized),
+            returnValue: false,
+            returnValueForMissingStub: false,
+          )
           as bool);
 
   @override
   bool get isDisposed =>
-      (super.noSuchMethod(Invocation.getter(#isDisposed), returnValue: false)
+      (super.noSuchMethod(
+            Invocation.getter(#isDisposed),
+            returnValue: false,
+            returnValueForMissingStub: false,
+          )
           as bool);
 
   @override
@@ -71,12 +75,17 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
       (super.noSuchMethod(
             Invocation.getter(#connectedRelays),
             returnValue: <String>[],
+            returnValueForMissingStub: <String>[],
           )
           as List<String>);
 
   @override
   bool get hasKeys =>
-      (super.noSuchMethod(Invocation.getter(#hasKeys), returnValue: false)
+      (super.noSuchMethod(
+            Invocation.getter(#hasKeys),
+            returnValue: false,
+            returnValueForMissingStub: false,
+          )
           as bool);
 
   @override
@@ -87,12 +96,20 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
               this,
               Invocation.getter(#keyManager),
             ),
+            returnValueForMissingStub: _FakeNostrKeyManager_0(
+              this,
+              Invocation.getter(#keyManager),
+            ),
           )
           as _i2.NostrKeyManager);
 
   @override
   int get relayCount =>
-      (super.noSuchMethod(Invocation.getter(#relayCount), returnValue: 0)
+      (super.noSuchMethod(
+            Invocation.getter(#relayCount),
+            returnValue: 0,
+            returnValueForMissingStub: 0,
+          )
           as int);
 
   @override
@@ -100,12 +117,17 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
       (super.noSuchMethod(
             Invocation.getter(#connectedRelayCount),
             returnValue: 0,
+            returnValueForMissingStub: 0,
           )
           as int);
 
   @override
   List<String> get relays =>
-      (super.noSuchMethod(Invocation.getter(#relays), returnValue: <String>[])
+      (super.noSuchMethod(
+            Invocation.getter(#relays),
+            returnValue: <String>[],
+            returnValueForMissingStub: <String>[],
+          )
           as List<String>);
 
   @override
@@ -113,6 +135,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
       (super.noSuchMethod(
             Invocation.getter(#relayStatuses),
             returnValue: <String, dynamic>{},
+            returnValueForMissingStub: <String, dynamic>{},
           )
           as Map<String, dynamic>);
 
@@ -121,6 +144,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
       (super.noSuchMethod(
             Invocation.getter(#relayAuthStates),
             returnValue: <String, bool>{},
+            returnValueForMissingStub: <String, bool>{},
           )
           as Map<String, bool>);
 
@@ -129,6 +153,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
       (super.noSuchMethod(
             Invocation.getter(#authStateStream),
             returnValue: _i5.Stream<Map<String, bool>>.empty(),
+            returnValueForMissingStub: _i5.Stream<Map<String, bool>>.empty(),
           )
           as _i5.Stream<Map<String, bool>>);
 
@@ -137,6 +162,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
       (super.noSuchMethod(
             Invocation.getter(#isVineRelayAuthenticated),
             returnValue: false,
+            returnValueForMissingStub: false,
           )
           as bool);
 
@@ -148,6 +174,10 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
               this,
               Invocation.getter(#primaryRelay),
             ),
+            returnValueForMissingStub: _i6.dummyValue<String>(
+              this,
+              Invocation.getter(#primaryRelay),
+            ),
           )
           as String);
 
@@ -156,6 +186,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
       (super.noSuchMethod(
             Invocation.method(#isRelayAuthenticated, [relayUrl]),
             returnValue: false,
+            returnValueForMissingStub: false,
           )
           as bool);
 
@@ -187,6 +218,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
               #onEose: onEose,
             }),
             returnValue: _i5.Stream<_i7.Event>.empty(),
+            returnValueForMissingStub: _i5.Stream<_i7.Event>.empty(),
           )
           as _i5.Stream<_i7.Event>);
 
@@ -200,6 +232,13 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
                 Invocation.method(#broadcastEvent, [event]),
               ),
             ),
+            returnValueForMissingStub:
+                _i5.Future<_i3.NostrBroadcastResult>.value(
+                  _FakeNostrBroadcastResult_1(
+                    this,
+                    Invocation.method(#broadcastEvent, [event]),
+                  ),
+                ),
           )
           as _i5.Future<_i3.NostrBroadcastResult>);
 
@@ -225,6 +264,17 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
                 }),
               ),
             ),
+            returnValueForMissingStub:
+                _i5.Future<_i3.NostrBroadcastResult>.value(
+                  _FakeNostrBroadcastResult_1(
+                    this,
+                    Invocation.method(#publishFileMetadata, [], {
+                      #metadata: metadata,
+                      #content: content,
+                      #hashtags: hashtags,
+                    }),
+                  ),
+                ),
           )
           as _i5.Future<_i3.NostrBroadcastResult>);
 
@@ -233,6 +283,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
       (super.noSuchMethod(
             Invocation.method(#addRelay, [relayUrl]),
             returnValue: _i5.Future<bool>.value(false),
+            returnValueForMissingStub: _i5.Future<bool>.value(false),
           )
           as _i5.Future<bool>);
 
@@ -250,6 +301,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
       (super.noSuchMethod(
             Invocation.method(#getRelayStatus, []),
             returnValue: <String, bool>{},
+            returnValueForMissingStub: <String, bool>{},
           )
           as Map<String, bool>);
 
@@ -291,6 +343,9 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
               #limit: limit,
             }),
             returnValue: _i5.Future<List<_i7.Event>>.value(<_i7.Event>[]),
+            returnValueForMissingStub: _i5.Future<List<_i7.Event>>.value(
+              <_i7.Event>[],
+            ),
           )
           as _i5.Future<List<_i7.Event>>);
 
@@ -303,6 +358,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
               {#relayUrl: relayUrl},
             ),
             returnValue: _i5.Future<_i7.Event?>.value(),
+            returnValueForMissingStub: _i5.Future<_i7.Event?>.value(),
           )
           as _i5.Future<_i7.Event?>);
 
@@ -321,6 +377,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
               {#authors: authors, #since: since, #until: until, #limit: limit},
             ),
             returnValue: _i5.Stream<_i7.Event>.empty(),
+            returnValueForMissingStub: _i5.Stream<_i7.Event>.empty(),
           )
           as _i5.Stream<_i7.Event>);
 
@@ -329,6 +386,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
       (super.noSuchMethod(
             Invocation.method(#searchUsers, [query], {#limit: limit}),
             returnValue: _i5.Stream<_i7.Event>.empty(),
+            returnValueForMissingStub: _i5.Stream<_i7.Event>.empty(),
           )
           as _i5.Stream<_i7.Event>);
 
@@ -337,6 +395,8 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
       (super.noSuchMethod(
             Invocation.method(#getRelayStats, []),
             returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+            returnValueForMissingStub:
+                _i5.Future<Map<String, dynamic>?>.value(),
           )
           as _i5.Future<Map<String, dynamic>?>);
 
@@ -354,15 +414,12 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockAuthService extends _i1.Mock implements _i4.AuthService {
-  MockAuthService() {
-    _i1.throwOnMissingStub(this);
-  }
-
   @override
   _i4.AuthState get authState =>
       (super.noSuchMethod(
             Invocation.getter(#authState),
             returnValue: _i4.AuthState.unauthenticated,
+            returnValueForMissingStub: _i4.AuthState.unauthenticated,
           )
           as _i4.AuthState);
 
@@ -371,6 +428,7 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
       (super.noSuchMethod(
             Invocation.getter(#authStateStream),
             returnValue: _i5.Stream<_i4.AuthState>.empty(),
+            returnValueForMissingStub: _i5.Stream<_i4.AuthState>.empty(),
           )
           as _i5.Stream<_i4.AuthState>);
 
@@ -379,6 +437,7 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
       (super.noSuchMethod(
             Invocation.getter(#profileStream),
             returnValue: _i5.Stream<_i4.UserProfile?>.empty(),
+            returnValueForMissingStub: _i5.Stream<_i4.UserProfile?>.empty(),
           )
           as _i5.Stream<_i4.UserProfile?>);
 
@@ -387,6 +446,7 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
       (super.noSuchMethod(
             Invocation.getter(#isAuthenticated),
             returnValue: false,
+            returnValueForMissingStub: false,
           )
           as bool);
 
@@ -395,6 +455,7 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
       (super.noSuchMethod(
             Invocation.getter(#userStats),
             returnValue: <String, dynamic>{},
+            returnValueForMissingStub: <String, dynamic>{},
           )
           as Map<String, dynamic>);
 
@@ -414,6 +475,14 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
               #biometricPrompt: biometricPrompt,
             }),
             returnValue: _i5.Future<_i4.AuthResult>.value(
+              _FakeAuthResult_2(
+                this,
+                Invocation.method(#createNewIdentity, [], {
+                  #biometricPrompt: biometricPrompt,
+                }),
+              ),
+            ),
+            returnValueForMissingStub: _i5.Future<_i4.AuthResult>.value(
               _FakeAuthResult_2(
                 this,
                 Invocation.method(#createNewIdentity, [], {
@@ -445,6 +514,16 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
                 ),
               ),
             ),
+            returnValueForMissingStub: _i5.Future<_i4.AuthResult>.value(
+              _FakeAuthResult_2(
+                this,
+                Invocation.method(
+                  #importFromNsec,
+                  [nsec],
+                  {#biometricPrompt: biometricPrompt},
+                ),
+              ),
+            ),
           )
           as _i5.Future<_i4.AuthResult>);
 
@@ -460,6 +539,16 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
               {#biometricPrompt: biometricPrompt},
             ),
             returnValue: _i5.Future<_i4.AuthResult>.value(
+              _FakeAuthResult_2(
+                this,
+                Invocation.method(
+                  #importFromHex,
+                  [privateKeyHex],
+                  {#biometricPrompt: biometricPrompt},
+                ),
+              ),
+            ),
+            returnValueForMissingStub: _i5.Future<_i4.AuthResult>.value(
               _FakeAuthResult_2(
                 this,
                 Invocation.method(
@@ -508,6 +597,7 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
               #biometricPrompt: biometricPrompt,
             }),
             returnValue: _i5.Future<String?>.value(),
+            returnValueForMissingStub: _i5.Future<String?>.value(),
           )
           as _i5.Future<String?>);
 
@@ -518,6 +608,7 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
               #biometricPrompt: biometricPrompt,
             }),
             returnValue: _i5.Future<String?>.value(),
+            returnValueForMissingStub: _i5.Future<String?>.value(),
           )
           as _i5.Future<String?>);
 
@@ -536,6 +627,7 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
               #biometricPrompt: biometricPrompt,
             }),
             returnValue: _i5.Future<_i7.Event?>.value(),
+            returnValueForMissingStub: _i5.Future<_i7.Event?>.value(),
           )
           as _i5.Future<_i7.Event?>);
 

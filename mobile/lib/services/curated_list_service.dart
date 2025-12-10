@@ -8,6 +8,8 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/utils/curated_list_ext.dart';
+import 'package:openvine/utils/nostr_event_ext.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -69,6 +71,7 @@ class CuratedList {
     this.thumbnailEventId,
     this.playOrder = PlayOrder.chronological,
   });
+
   final String id;
   final String name;
   final String? description;
@@ -254,9 +257,35 @@ class CuratedListService {
     String? thumbnailEventId,
     PlayOrder playOrder = PlayOrder.chronological,
   }) async {
+    return _createList(
+      name: name,
+      description: description,
+      imageUrl: imageUrl,
+      isPublic: isPublic,
+      tags: tags,
+      isCollaborative: isCollaborative,
+      allowedCollaborators: allowedCollaborators,
+      thumbnailEventId: thumbnailEventId,
+      playOrder: playOrder,
+    );
+  }
+
+  /// Internal method to create a list with optional explicit ID
+  Future<CuratedList?> _createList({
+    required String name,
+    String? id,
+    String? description,
+    String? imageUrl,
+    bool isPublic = true,
+    List<String> tags = const [],
+    bool isCollaborative = false,
+    List<String> allowedCollaborators = const [],
+    String? thumbnailEventId,
+    PlayOrder playOrder = PlayOrder.chronological,
+  }) async {
     try {
-      final listId = 'list_${DateTime.now().millisecondsSinceEpoch}';
       final now = DateTime.now();
+      final listId = id ?? 'list_${now.millisecondsSinceEpoch}';
 
       final newList = CuratedList(
         id: listId,
@@ -887,19 +916,12 @@ class CuratedListService {
 
   /// Create the default "My List" for quick access
   Future<void> _createDefaultList() async {
-    await createList(
+    await _createList(
+      id: defaultListId,
       name: 'My List',
       description: 'My favorite vines and videos',
       isPublic: true,
     );
-
-    // Update the ID to be the default ID
-    final listIndex = _lists.indexWhere((list) => list.name == 'My List');
-    if (listIndex != -1) {
-      final list = _lists[listIndex];
-      _lists[listIndex] = list.copyWith(id: defaultListId);
-      await _saveLists();
-    }
   }
 
   /// Publish list to Nostr as NIP-51 kind 30005 event
@@ -914,50 +936,8 @@ class CuratedListService {
         return;
       }
 
-      // Create NIP-51 kind 30005 tags
-      final tags = <List<String>>[
-        ['d', list.id], // Identifier for replaceable event
-        ['title', list.name],
-        ['client', 'diVine'],
-      ];
-
-      // Add description if present
-      if (list.description != null && list.description!.isNotEmpty) {
-        tags.add(['description', list.description!]);
-      }
-
-      // Add image if present
-      if (list.imageUrl != null && list.imageUrl!.isNotEmpty) {
-        tags.add(['image', list.imageUrl!]);
-      }
-
-      // Add tags for categorization
-      for (final tag in list.tags) {
-        tags.add(['t', tag]);
-      }
-
-      // Add collaboration settings
-      if (list.isCollaborative) {
-        tags.add(['collaborative', 'true']);
-        for (final collaborator in list.allowedCollaborators) {
-          tags.add(['collaborator', collaborator]);
-        }
-      }
-
-      // Add thumbnail if present
-      if (list.thumbnailEventId != null) {
-        tags.add(['thumbnail', list.thumbnailEventId!]);
-      }
-
-      // Add play order setting
-      tags.add(['playorder', list.playOrder.value]);
-
-      // Add video events as 'e' tags
-      for (final videoEventId in list.videoEventIds) {
-        tags.add(['e', videoEventId]);
-      }
-
       final content = list.description ?? 'Curated video list: ${list.name}';
+      final tags = list.getEventTags();
 
       final event = await _authService.createAndSignEvent(
         kind: 30005, // NIP-51 curated list
@@ -1609,6 +1589,7 @@ class CuratedListService {
   Future<void> _processListEvent(Event event) async {
     try {
       final dTag = _extractDTag(event);
+
       if (dTag == null) {
         Log.warning(
           'List event missing d tag: ${event.id}',
@@ -1618,56 +1599,7 @@ class CuratedListService {
         return;
       }
 
-      // Extract list metadata from tags
-      String? title;
-      String? description;
-      String? imageUrl;
-      String? thumbnailEventId;
-      String? playOrderStr;
-      final tags = <String>[];
-      final videoEventIds = <String>[];
-      bool isCollaborative = false;
-      final allowedCollaborators = <String>[];
-
-      for (final tag in event.tags) {
-        if (tag.isEmpty) continue;
-
-        switch (tag[0]) {
-          case 'title':
-            if (tag.length > 1) title = tag[1];
-            break;
-          case 'description':
-            if (tag.length > 1) description = tag[1];
-            break;
-          case 'image':
-            if (tag.length > 1) imageUrl = tag[1];
-            break;
-          case 'thumbnail':
-            if (tag.length > 1) thumbnailEventId = tag[1];
-            break;
-          case 'playorder':
-            if (tag.length > 1) playOrderStr = tag[1];
-            break;
-          case 't':
-            if (tag.length > 1) tags.add(tag[1]);
-            break;
-          case 'e':
-            if (tag.length > 1) videoEventIds.add(tag[1]);
-            break;
-          case 'collaborative':
-            if (tag.length > 1 && tag[1] == 'true') isCollaborative = true;
-            break;
-          case 'collaborator':
-            if (tag.length > 1) allowedCollaborators.add(tag[1]);
-            break;
-        }
-      }
-
-      // Use title or fall back to content or default
-      final contentFirstLine = event.content.split('\n').first;
-      final name =
-          title ??
-          (contentFirstLine.isNotEmpty ? contentFirstLine : 'Untitled List');
+      final curatedList = event.toCuratedList();
 
       // Check if we already have this list locally
       final existingListIndex = _lists.indexWhere((list) => list.id == dTag);
@@ -1678,34 +1610,17 @@ class CuratedListService {
         if (event.createdAt >
             existingList.updatedAt.millisecondsSinceEpoch ~/ 1000) {
           Log.debug(
-            'Updating existing list from relay: $name',
+            'Updating existing list from relay: ${curatedList.name}',
             name: 'CuratedListService',
             category: LogCategory.system,
           );
 
-          _lists[existingListIndex] = CuratedList(
-            id: dTag,
-            name: name,
-            description: description ?? event.content,
-            imageUrl: imageUrl,
-            videoEventIds: videoEventIds,
-            createdAt: existingList.createdAt, // Keep original creation time
-            updatedAt: DateTime.fromMillisecondsSinceEpoch(
-              event.createdAt * 1000,
-            ),
-            isPublic: true, // Lists from relays are public
-            nostrEventId: event.id,
-            tags: tags,
-            isCollaborative: isCollaborative,
-            allowedCollaborators: allowedCollaborators,
-            thumbnailEventId: thumbnailEventId,
-            playOrder: playOrderStr != null
-                ? PlayOrderExtension.fromString(playOrderStr)
-                : PlayOrder.chronological,
+          _lists[existingListIndex] = curatedList.copyWith(
+            createdAt: existingList.createdAt,
           );
         } else {
           Log.debug(
-            'Skipping older relay version of list: $name',
+            'Skipping older relay version of list: ${curatedList.name}',
             name: 'CuratedListService',
             category: LogCategory.system,
           );
@@ -1713,35 +1628,12 @@ class CuratedListService {
       } else {
         // Add new list from relay
         Log.debug(
-          'Adding new list from relay: $name',
+          'Adding new list from relay: ${curatedList.name}',
           name: 'CuratedListService',
           category: LogCategory.system,
         );
 
-        _lists.add(
-          CuratedList(
-            id: dTag,
-            name: name,
-            description: description ?? event.content,
-            imageUrl: imageUrl,
-            videoEventIds: videoEventIds,
-            createdAt: DateTime.fromMillisecondsSinceEpoch(
-              event.createdAt * 1000,
-            ),
-            updatedAt: DateTime.fromMillisecondsSinceEpoch(
-              event.createdAt * 1000,
-            ),
-            isPublic: true, // Lists from relays are public
-            nostrEventId: event.id,
-            tags: tags,
-            isCollaborative: isCollaborative,
-            allowedCollaborators: allowedCollaborators,
-            thumbnailEventId: thumbnailEventId,
-            playOrder: playOrderStr != null
-                ? PlayOrderExtension.fromString(playOrderStr)
-                : PlayOrder.chronological,
-          ),
-        );
+        _lists.add(curatedList);
       }
     } catch (e) {
       Log.error(
