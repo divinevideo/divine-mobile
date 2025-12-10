@@ -65,7 +65,7 @@ final class UserProfileReactiveProvider
 }
 
 String _$userProfileReactiveHash() =>
-    r'e66ab60dbfbda727bd549dbd7a6f2695cfd7679a';
+    r'7f0a97ea992b601f1b4205eae0131e1970dc1435';
 
 final class UserProfileReactiveFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<UserProfile?>, String> {
