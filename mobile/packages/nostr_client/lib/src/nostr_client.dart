@@ -28,20 +28,17 @@ class NostrClient {
     required NostrClientConfig config,
     required RelayManager relayManager,
     GatewayClient? gatewayClient,
-  }) : _config = config,
-       _nostr = _createNostr(config),
+  }) : _nostr = _createNostr(config),
        _relayManager = relayManager,
        _gatewayClient = gatewayClient;
 
   /// Creates a NostrClient with injected dependencies for testing
   @visibleForTesting
   NostrClient.forTesting({
-    required NostrClientConfig config,
     required Nostr nostr,
     required RelayManager relayManager,
     GatewayClient? gatewayClient,
-  }) : _config = config,
-       _nostr = nostr,
+  }) : _nostr = nostr,
        _relayManager = relayManager,
        _gatewayClient = gatewayClient;
 
@@ -62,7 +59,6 @@ class NostrClient {
   }
 
   final Nostr _nostr;
-  final NostrClientConfig _config;
   final GatewayClient? _gatewayClient;
   final RelayManager _relayManager;
 

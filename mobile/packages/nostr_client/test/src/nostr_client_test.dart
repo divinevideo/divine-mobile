@@ -10,8 +10,6 @@ class _MockNostr extends Mock implements Nostr {}
 
 class _MockGatewayClient extends Mock implements GatewayClient {}
 
-class _MockNostrSigner extends Mock implements NostrSigner {}
-
 class _MockRelayManager extends Mock implements RelayManager {}
 
 class _FakeEvent extends Fake implements Event {}
@@ -55,16 +53,6 @@ Event _createTestEvent({
   return event;
 }
 
-NostrClientConfig _createTestConfig({
-  NostrSigner? signer,
-  String? publicKey,
-}) {
-  return NostrClientConfig(
-    signer: signer ?? _MockNostrSigner(),
-    publicKey: publicKey ?? testPublicKey,
-  );
-}
-
 // =============================================================================
 // Tests
 // =============================================================================
@@ -73,7 +61,6 @@ void main() {
   late _MockNostr mockNostr;
   late _MockGatewayClient mockGatewayClient;
   late _MockRelayManager mockRelayManager;
-  late NostrClientConfig config;
   late NostrClient client;
 
   setUpAll(() {
@@ -90,7 +77,6 @@ void main() {
     mockNostr = _MockNostr();
     mockGatewayClient = _MockGatewayClient();
     mockRelayManager = _MockRelayManager();
-    config = _createTestConfig();
 
     // Set up default mock behavior
     when(() => mockNostr.publicKey).thenReturn(testPublicKey);
@@ -98,7 +84,6 @@ void main() {
     when(() => mockRelayManager.dispose()).thenAnswer((_) async {});
 
     client = NostrClient.forTesting(
-      config: config,
       nostr: mockNostr,
       relayManager: mockRelayManager,
       gatewayClient: mockGatewayClient,
@@ -125,7 +110,6 @@ void main() {
       test('creates client with null gatewayClient', () {
         final localMockRelayManager = _MockRelayManager();
         final clientWithoutGateway = NostrClient.forTesting(
-          config: config,
           nostr: mockNostr,
           relayManager: localMockRelayManager,
         );
@@ -372,7 +356,6 @@ void main() {
       test('works without gateway client', () async {
         final localMockRelayManager = _MockRelayManager();
         final clientWithoutGateway = NostrClient.forTesting(
-          config: config,
           nostr: mockNostr,
           relayManager: localMockRelayManager,
         );
