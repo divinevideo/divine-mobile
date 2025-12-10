@@ -527,7 +527,7 @@ class _CreatorName extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(fetchUserProfileProvider(pubkey));
+    final profileAsync = ref.watch(userProfileReactiveProvider(pubkey));
 
     final displayName = switch (profileAsync) {
       AsyncData(:final value) when value != null => value.bestDisplayName,
