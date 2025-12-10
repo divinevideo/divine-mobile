@@ -1,5 +1,5 @@
 import 'package:models/models.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 extension UserProfileUtils on UserProfile {
   /// Get the best available display name
@@ -13,7 +13,7 @@ extension UserProfileUtils on UserProfile {
   /// Get npub encoding of pubkey
   String get npub {
     try {
-      return NostrEncoding.encodePublicKey(pubkey);
+      return NostrKeyUtils.encodePubKey(pubkey);
     } catch (e) {
       // Fallback to shortened pubkey if encoding fails
       return shortPubkey;
@@ -23,7 +23,7 @@ extension UserProfileUtils on UserProfile {
   /// Get truncated npub for display (e.g., "npub1abc...xyz")
   String get truncatedNpub {
     try {
-      final fullNpub = NostrEncoding.encodePublicKey(pubkey);
+      final fullNpub = NostrKeyUtils.encodePubKey(pubkey);
       if (fullNpub.length <= 16) return fullNpub;
       // Show first 10 chars + "..." + last 6 chars (npub1abc...xyz format)
       return '${fullNpub.substring(0, 10)}...${fullNpub.substring(fullNpub.length - 6)}';

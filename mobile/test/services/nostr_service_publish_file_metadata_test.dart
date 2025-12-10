@@ -2,10 +2,11 @@
 // ABOUTME: Tests NIP-94 file metadata publishing with proper validation and error handling
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:models/models.dart'
-    show NIP94Metadata, NIP94ValidationException, SimpleKeyPair;
+    show NIP94Metadata, NIP94ValidationException;
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+
 import '../helpers/test_nostr_service.dart';
 
 void main() {
