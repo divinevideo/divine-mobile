@@ -15,31 +15,92 @@ part 'user_profile_providers.g.dart';
 // Helper function for safe pubkey truncation in logs
 String _safePubkeyTrunc(String pubkey) => pubkey.length > 8 ? pubkey : pubkey;
 
+@riverpod
+Future<UserProfile?> userProfileReactive(Ref ref, String pubkey) async {
+  Log.info('[UserProfileProvider] Checking for $pubkey');
+  final userProfileService = ref.watch(userProfileServiceProvider);
+
+  // Is the profile already present in the service cache?
+  final isCached = userProfileService.hasProfile(pubkey);
+
+  if (isCached) {
+    Log.debug(
+      '✅ [UserProfileProvider] Found cached profile: ${_safePubkeyTrunc(pubkey)}',
+      name: 'UserProfileProvider',
+      category: LogCategory.ui,
+    );
+
+    return userProfileService.getCachedProfile(pubkey);
+  }
+
+  // Check if profile is known to be missing (should skip fetch)
+  if (userProfileService.shouldSkipProfileFetch(pubkey)) {
+    Log.debug(
+      '⏭️ [UserProfileProvider] Profile marked as missing: ${_safePubkeyTrunc(pubkey)}',
+      name: 'UserProfileProvider',
+      category: LogCategory.ui,
+    );
+    return null;
+  }
+
+  final completer = Completer<UserProfile?>();
+
+  // If the profile is not cached, add a listener to invalidate this provider
+  // when the profile is added.
+  void listener() {
+    Log.info('[UserProfileProvider] Listener fired! Checking for $pubkey');
+    final profileExists = userProfileService.hasProfile(pubkey);
+
+    if (profileExists) {
+      Log.debug(
+        '✅ [UserProfileProvider] Profile added to cache: ${_safePubkeyTrunc(pubkey)}',
+        name: 'UserProfileProvider',
+        category: LogCategory.ui,
+      );
+
+      userProfileService.removeListener(listener);
+      completer.complete(userProfileService.getCachedProfile(pubkey));
+    }
+  }
+
+  ref.onDispose(() {
+    Log.debug(
+      '🗑️ [UserProfileProvider] Removing listener for profile: ${_safePubkeyTrunc(pubkey)}',
+      name: 'UserProfileProvider',
+      category: LogCategory.ui,
+    );
+
+    userProfileService.removeListener(listener);
+
+    if (!completer.isCompleted) {
+      Log.debug(
+        '🗑️ [UserProfileProvider] Completing completer for profile: ${_safePubkeyTrunc(pubkey)}',
+        name: 'UserProfileProvider',
+        category: LogCategory.ui,
+      );
+
+      completer.complete(null);
+    }
+  });
+
+  Log.debug(
+    '🔍 [UserProfileProvider] Adding listener for profile: ${_safePubkeyTrunc(pubkey)}',
+    name: 'UserProfileProvider',
+    category: LogCategory.ui,
+  );
+
+  userProfileService.addListener(listener);
+  unawaited(userProfileService.fetchProfile(pubkey));
+
+  return completer.future;
+}
+
 /// Async provider for loading a single user profile
 /// Delegates to UserProfileService which is the single source of truth
 @riverpod
 Future<UserProfile?> fetchUserProfile(Ref ref, String pubkey) async {
   // Use UserProfileService as single source of truth
   final userProfileService = ref.watch(userProfileServiceProvider);
-
-  // Is the profile already present in the service cache?
-  final wasPresent = userProfileService.allProfiles.containsKey(pubkey);
-
-  if (!wasPresent) {
-    // If the profile is not cached, add a listener to invalidate this provider
-    // when the profile is added.
-    void listener() {
-      final isPresent = userProfileService.allProfiles.containsKey(pubkey);
-
-      if (!wasPresent && isPresent) {
-        ref.invalidateSelf();
-        userProfileService.removeListener(listener);
-      }
-    }
-
-    userProfileService.addListener(listener);
-    ref.onDispose(() => userProfileService.removeListener(listener));
-  }
 
   // Check if already cached or should skip
   final cached = userProfileService.getCachedProfile(pubkey);
