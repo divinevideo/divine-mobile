@@ -28,7 +28,8 @@
       "Bash(brew update:*)",
       "Bash(brew upgrade:*)",
       "Bash(pod install:*)",
-      "Bash(xcrun simctl:*)"
+      "Bash(xcrun simctl:*)",
+      "Bash(dart fix:*)"
     ],
     "deny": [],
     "ask": []

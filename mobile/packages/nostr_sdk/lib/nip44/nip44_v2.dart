@@ -43,7 +43,9 @@ class NIP44V2 {
   }
 
   static Map<String, Uint8List> getMessageKeys(
-      Uint8List conversationKey, Uint8List nonce) {
+    Uint8List conversationKey,
+    Uint8List nonce,
+  ) {
     assert(conversationKey.length == 32);
     assert(nonce.length == 32);
 
@@ -67,7 +69,8 @@ class NIP44V2 {
   static Uint8List writeU16BE(int num) {
     if (num < 1 || num > 65535) {
       throw Exception(
-          'Invalid plaintext size: must be between 1 and 65535 bytes');
+        'Invalid plaintext size: must be between 1 and 65535 bytes',
+      );
     }
     var buffer = ByteData(2);
     buffer.setUint16(0, num, Endian.big);
@@ -83,8 +86,11 @@ class NIP44V2 {
   }
 
   static String unpad(Uint8List padded) {
-    var unpaddedLen =
-        ByteData.sublistView(padded, 0, 2).getUint16(0, Endian.big);
+    var unpaddedLen = ByteData.sublistView(
+      padded,
+      0,
+      2,
+    ).getUint16(0, Endian.big);
     var unpadded = padded.sublist(2, 2 + unpaddedLen);
     if (unpaddedLen < 1 ||
         unpaddedLen > 65535 ||
@@ -141,9 +147,13 @@ class NIP44V2 {
   }
 
   static Future<Uint8List> chacha20Encrypt(
-      Uint8List key, Uint8List nonce, Uint8List data) async {
-    final algorithm =
-        cryptography.Chacha20(macAlgorithm: cryptography.MacAlgorithm.empty);
+    Uint8List key,
+    Uint8List nonce,
+    Uint8List data,
+  ) async {
+    final algorithm = cryptography.Chacha20(
+      macAlgorithm: cryptography.MacAlgorithm.empty,
+    );
     // Encrypt
     final secretBox = await algorithm.encrypt(
       data,
@@ -155,11 +165,18 @@ class NIP44V2 {
   }
 
   static Future<Uint8List> chacha20Decrypt(
-      Uint8List key, Uint8List nonce, Uint8List ciphertext) async {
-    final algorithm =
-        cryptography.Chacha20(macAlgorithm: cryptography.MacAlgorithm.empty);
-    cryptography.SecretBox secretBox = cryptography.SecretBox(ciphertext,
-        nonce: nonce, mac: cryptography.Mac.empty);
+    Uint8List key,
+    Uint8List nonce,
+    Uint8List ciphertext,
+  ) async {
+    final algorithm = cryptography.Chacha20(
+      macAlgorithm: cryptography.MacAlgorithm.empty,
+    );
+    cryptography.SecretBox secretBox = cryptography.SecretBox(
+      ciphertext,
+      nonce: nonce,
+      mac: cryptography.Mac.empty,
+    );
     // Encrypt
     final result = await algorithm.decrypt(
       secretBox,
@@ -178,28 +195,42 @@ class NIP44V2 {
     return true;
   }
 
-  static Future<String> encrypt(String plaintext, Uint8List conversationKey,
-      [Uint8List? nonce]) async {
+  static Future<String> encrypt(
+    String plaintext,
+    Uint8List conversationKey, [
+    Uint8List? nonce,
+  ]) async {
     nonce ??= randomBytes(32);
     var keys = getMessageKeys(conversationKey, nonce);
     var padded = pad(plaintext);
     var ciphertext = await chacha20Encrypt(
-        keys['chacha_key']!, keys['chacha_nonce']!, padded);
+      keys['chacha_key']!,
+      keys['chacha_nonce']!,
+      padded,
+    );
     var mac = hmacAad(keys['hmac_key']!, ciphertext, nonce);
     return base64Encode(Uint8List.fromList([2] + nonce + ciphertext + mac));
   }
 
   static Future<String> decrypt(
-      String payload, Uint8List conversationKey) async {
+    String payload,
+    Uint8List conversationKey,
+  ) async {
     var payloadData = decodePayload(payload);
     var keys = getMessageKeys(conversationKey, payloadData['nonce']!);
     var calculatedMac = hmacAad(
-        keys['hmac_key']!, payloadData['ciphertext']!, payloadData['nonce']!);
+      keys['hmac_key']!,
+      payloadData['ciphertext']!,
+      payloadData['nonce']!,
+    );
     if (!listEquals(calculatedMac, payloadData['mac']!)) {
       throw Exception('Invalid MAC');
     }
     var padded = await chacha20Decrypt(
-        keys['chacha_key']!, keys['chacha_nonce']!, payloadData['ciphertext']!);
+      keys['chacha_key']!,
+      keys['chacha_nonce']!,
+      payloadData['ciphertext']!,
+    );
     return unpad(padded);
   }
 

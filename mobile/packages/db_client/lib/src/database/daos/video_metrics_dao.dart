@@ -1,8 +1,7 @@
 // ABOUTME: Data Access Object for video metrics with Event model parsing.
 // ABOUTME: Provides upsert from Event model. Simple CRUD is in AppDbClient.
 
-import 'package:db_client/src/database/app_database.dart';
-import 'package:db_client/src/database/tables.dart';
+import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
@@ -12,7 +11,7 @@ part 'video_metrics_dao.g.dart';
 @DriftAccessor(tables: [VideoMetrics])
 class VideoMetricsDao extends DatabaseAccessor<AppDatabase>
     with _$VideoMetricsDaoMixin {
-  VideoMetricsDao(AppDatabase db) : super(db);
+  VideoMetricsDao(super.attachedDatabase);
 
   /// Upsert video metrics extracted from a video event
   ///
@@ -73,12 +72,7 @@ class VideoMetricsDao extends DatabaseAccessor<AppDatabase>
             eventId: event.id,
             loopCount: videoEvent.originalLoops,
             likes: videoEvent.originalLikes,
-            views: null, // not yet extracted from tags
             comments: videoEvent.originalComments,
-            avgCompletion: null, // not yet extracted
-            hasProofmode: null, // not yet extracted
-            hasDeviceAttestation: null, // not yet extracted
-            hasPgpSignature: null, // not yet extracted
             updatedAt: DateTime.now(),
           ),
           mode: InsertMode.insertOrReplace,

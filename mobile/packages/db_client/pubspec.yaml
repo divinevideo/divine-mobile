@@ -15,9 +15,12 @@ dependencies:
     path: ../models
   nostr_sdk:
     path: ../nostr_sdk
+  path: ^1.9.1
   path_provider: ^2.1.5
 
 dev_dependencies:
+  build_runner: ^2.7.1
+  drift_dev: ^2.29.0
   mocktail: ^1.0.4
   test: ^1.26.3
   very_good_analysis: ^10.0.0

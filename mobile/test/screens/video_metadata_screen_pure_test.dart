@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
-import 'package:openvine/models/aspect_ratio.dart' as vine_aspect_ratio;
+import 'package:models/models.dart' as vine_aspect_ratio show AspectRatio;
 import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/providers/app_providers.dart';

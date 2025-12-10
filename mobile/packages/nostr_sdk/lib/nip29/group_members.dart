@@ -7,7 +7,7 @@ class GroupMembers extends GroupObject {
   List<String>? members;
 
   GroupMembers(String groupId, this.members, int createdAt)
-      : super(groupId, createdAt);
+    : super(groupId, createdAt);
 
   static GroupMembers? loadFromEvent(Event e) {
     if (e.kind != EventKind.GROUP_MEMBERS) {

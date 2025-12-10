@@ -4,8 +4,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:openvine/services/secure_key_storage_service.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart' show SecureKeyStorage;
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -47,12 +47,13 @@ class SavedIdentity {
 /// Service for managing multiple Nostr identities
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class IdentityManagerService {
-  IdentityManagerService({SecureKeyStorageService? keyStorage})
-    : _keyStorage = keyStorage ?? SecureKeyStorageService();
+  IdentityManagerService({SecureKeyStorage? keyStorage})
+    : _keyStorage = keyStorage ?? SecureKeyStorage();
   static const String _identitiesKey = 'saved_nostr_identities';
   static const String _activeIdentityKey = 'active_nostr_identity';
 
-  final SecureKeyStorageService _keyStorage;
+  final SecureKeyStorage _keyStorage;
+
   List<SavedIdentity> _savedIdentities = [];
   String? _activeIdentityNpub;
 
@@ -114,7 +115,7 @@ class IdentityManagerService {
         (identity) => identity.npub == currentKeyContainer.npub,
       );
 
-      final displayName = NostrEncoding.maskKey(currentKeyContainer.npub);
+      final displayName = NostrKeyUtils.maskKey(currentKeyContainer.npub);
 
       if (existingIndex >= 0) {
         // Update existing identity
@@ -233,7 +234,7 @@ class IdentityManagerService {
 
       await _persistIdentities();
       Log.debug(
-        '📱️ Removed identity with npub: ${NostrEncoding.maskKey(npub)}',
+        '📱️ Removed identity with npub: ${NostrKeyUtils.maskKey(npub)}',
         name: 'IdentityManagerService',
         category: LogCategory.system,
       );

@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/models/divine_filter.dart';
+import 'package:models/models.dart' show IntRangeFilter, SortDirection;
 import 'package:openvine/services/relay_capability_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 

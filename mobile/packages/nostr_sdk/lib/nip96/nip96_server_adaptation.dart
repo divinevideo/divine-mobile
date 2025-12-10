@@ -7,14 +7,15 @@ class Nip96ServerAdaptation {
   List<String>? contentTypes;
   Nip96Plans? plans;
 
-  Nip96ServerAdaptation(
-      {this.apiUrl,
-      this.downloadUrl,
-      this.delegatedToUrl,
-      this.supportedNips,
-      this.tosUrl,
-      this.contentTypes,
-      this.plans});
+  Nip96ServerAdaptation({
+    this.apiUrl,
+    this.downloadUrl,
+    this.delegatedToUrl,
+    this.supportedNips,
+    this.tosUrl,
+    this.contentTypes,
+    this.plans,
+  });
 
   Nip96ServerAdaptation.fromJson(Map<String, dynamic> json) {
     apiUrl = json['api_url'];
@@ -70,12 +71,13 @@ class PlanINfo {
   int? maxByteSize;
   List<int>? fileExpiration;
 
-  PlanINfo(
-      {this.name,
-      this.isNip98Required,
-      this.url,
-      this.maxByteSize,
-      this.fileExpiration});
+  PlanINfo({
+    this.name,
+    this.isNip98Required,
+    this.url,
+    this.maxByteSize,
+    this.fileExpiration,
+  });
 
   PlanINfo.fromJson(Map<String, dynamic> json) {
     name = json['name'];

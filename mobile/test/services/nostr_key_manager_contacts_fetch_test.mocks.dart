@@ -6,8 +6,8 @@
 import 'dart:async' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:openvine/services/secure_key_storage_service.dart' as _i3;
-import 'package:openvine/utils/secure_key_container.dart' as _i2;
+import 'package:nostr_key_manager/src/secure_key_container.dart' as _i2;
+import 'package:nostr_key_manager/src/secure_key_storage.dart' as _i3;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -22,6 +22,7 @@ import 'package:openvine/utils/secure_key_container.dart' as _i2;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
+// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeSecureKeyContainer_0 extends _i1.SmartFake
     implements _i2.SecureKeyContainer {
@@ -29,12 +30,11 @@ class _FakeSecureKeyContainer_0 extends _i1.SmartFake
     : super(parent, parentInvocation);
 }
 
-/// A class which mocks [SecureKeyStorageService].
+/// A class which mocks [SecureKeyStorage].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSecureKeyStorageService extends _i1.Mock
-    implements _i3.SecureKeyStorageService {
-  MockSecureKeyStorageService() {
+class MockSecureKeyStorage extends _i1.Mock implements _i3.SecureKeyStorage {
+  MockSecureKeyStorage() {
     _i1.throwOnMissingStub(this);
   }
 

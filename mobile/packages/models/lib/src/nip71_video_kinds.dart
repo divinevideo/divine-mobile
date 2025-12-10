@@ -1,5 +1,6 @@
-// ABOUTME: Constants for NIP-71 compliant video kinds - OpenVine uses kind 34236 (addressable short videos)
-// ABOUTME: Defines supported video event kinds per NIP-71 standard for short-form video content
+// ABOUTME: Constants for NIP-71 compliant video kinds - OpenVine uses kind
+// ABOUTME: 34236 (addressable short videos). Defines supported video event
+// ABOUTME: kinds per NIP-71 standard for short-form video content.
 
 /// NIP-71 compliant video event kinds
 class NIP71VideoKinds {

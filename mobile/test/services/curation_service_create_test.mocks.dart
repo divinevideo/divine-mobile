@@ -8,14 +8,14 @@ import 'dart:ui' as _i15;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
+import 'package:models/models.dart' as _i9;
+import 'package:nostr_key_manager/nostr_key_manager.dart' as _i2;
 import 'package:nostr_sdk/event.dart' as _i7;
 import 'package:nostr_sdk/filter.dart' as _i8;
-import 'package:openvine/models/nip94_metadata.dart' as _i9;
 import 'package:openvine/models/video_event.dart' as _i11;
 import 'package:openvine/services/age_verification_service.dart' as _i13;
 import 'package:openvine/services/auth_service.dart' as _i4;
 import 'package:openvine/services/content_blocklist_service.dart' as _i12;
-import 'package:openvine/services/nostr_key_manager.dart' as _i2;
 import 'package:openvine/services/nostr_service_interface.dart' as _i3;
 import 'package:openvine/services/social_service.dart' as _i16;
 import 'package:openvine/services/user_profile_service.dart' as _i17;
@@ -35,6 +35,7 @@ import 'package:openvine/services/video_filter_builder.dart' as _i14;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
+// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeNostrKeyManager_0 extends _i1.SmartFake
     implements _i2.NostrKeyManager {
@@ -1441,57 +1442,11 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
           as _i5.Future<_i2.Keychain>);
 
   @override
-  _i5.Future<_i2.Keychain> importPrivateKeyWithServices(
-    String? privateKey, {
-    _i3.INostrService? nostrService,
-    _i17.UserProfileService? profileService,
-  }) =>
+  _i5.Future<_i2.Keychain> importFromNsec(String? nsec) =>
       (super.noSuchMethod(
-            Invocation.method(
-              #importPrivateKeyWithServices,
-              [privateKey],
-              {#nostrService: nostrService, #profileService: profileService},
-            ),
+            Invocation.method(#importFromNsec, [nsec]),
             returnValue: _i5.Future<_i2.Keychain>.value(
-              _FakeKeychain_2(
-                this,
-                Invocation.method(
-                  #importPrivateKeyWithServices,
-                  [privateKey],
-                  {
-                    #nostrService: nostrService,
-                    #profileService: profileService,
-                  },
-                ),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.Keychain>);
-
-  @override
-  _i5.Future<_i2.Keychain> importFromNsec(
-    String? nsec, {
-    _i3.INostrService? nostrService,
-    _i17.UserProfileService? profileService,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #importFromNsec,
-              [nsec],
-              {#nostrService: nostrService, #profileService: profileService},
-            ),
-            returnValue: _i5.Future<_i2.Keychain>.value(
-              _FakeKeychain_2(
-                this,
-                Invocation.method(
-                  #importFromNsec,
-                  [nsec],
-                  {
-                    #nostrService: nostrService,
-                    #profileService: profileService,
-                  },
-                ),
-              ),
+              _FakeKeychain_2(this, Invocation.method(#importFromNsec, [nsec])),
             ),
           )
           as _i5.Future<_i2.Keychain>);

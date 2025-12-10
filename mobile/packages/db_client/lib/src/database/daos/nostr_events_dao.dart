@@ -1,5 +1,6 @@
-// ABOUTME: Data Access Object for Nostr event operations with reactive Drift queries
-// ABOUTME: Provides CRUD operations for all Nostr events stored in the shared database
+// ABOUTME: Data Access Object for Nostr event operations with reactive
+// ABOUTME: Drift queries. Provides CRUD operations for all Nostr events
+// ABOUTME: stored in the shared database.
 
 import 'dart:convert';
 
@@ -12,7 +13,7 @@ part 'nostr_events_dao.g.dart';
 @DriftAccessor(tables: [NostrEvents, VideoMetrics])
 class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     with _$NostrEventsDaoMixin {
-  NostrEventsDao(AppDatabase db) : super(db);
+  NostrEventsDao(super.attachedDatabase);
 
   /// Insert or replace event
   ///
@@ -23,7 +24,8 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   /// video_metrics table for fast sorted queries.
   Future<void> upsertEvent(Event event) async {
     await customInsert(
-      'INSERT OR REPLACE INTO event (id, pubkey, created_at, kind, tags, content, sig, sources) '
+      'INSERT OR REPLACE INTO event '
+      '(id, pubkey, created_at, kind, tags, content, sig, sources) '
       'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       variables: [
         Variable.withString(event.id),
@@ -54,7 +56,8 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
       // Batch insert all events
       for (final event in events) {
         await customInsert(
-          'INSERT OR REPLACE INTO event (id, pubkey, created_at, kind, tags, content, sig, sources) '
+          'INSERT OR REPLACE INTO event '
+          '(id, pubkey, created_at, kind, tags, content, sig, sources) '
           'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
           variables: [
             Variable.withString(event.id),
@@ -88,9 +91,11 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   /// - since: Minimum created_at timestamp (Unix seconds)
   /// - until: Maximum created_at timestamp (Unix seconds)
   /// - limit: Maximum number of events to return
-  /// - sortBy: Field to sort by (loop_count, likes, views, created_at). Defaults to created_at DESC.
+  /// - sortBy: Field to sort by (loop_count, likes, views, created_at).
+  ///   Defaults to created_at DESC.
   ///
-  /// Used by cache-first query strategy to return instant results before relay query.
+  /// Used by cache-first query strategy to return instant results before
+  /// relay query.
   Future<List<Event>> getVideoEventsByFilter({
     List<int>? kinds,
     List<String>? authors,
@@ -112,14 +117,14 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     } else {
       final placeholders = List.filled(effectiveKinds.length, '?').join(', ');
       conditions.add('kind IN ($placeholders)');
-      variables.addAll(effectiveKinds.map((k) => Variable.withInt(k)));
+      variables.addAll(effectiveKinds.map(Variable.withInt));
     }
 
     // Authors filter
     if (authors != null && authors.isNotEmpty) {
       final placeholders = List.filled(authors.length, '?').join(', ');
       conditions.add('pubkey IN ($placeholders)');
-      variables.addAll(authors.map((a) => Variable.withString(a)));
+      variables.addAll(authors.map(Variable.withString));
     }
 
     // Hashtags filter (search in tags JSON)
@@ -151,10 +156,11 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
 
     // Determine ORDER BY clause and whether we need to join video_metrics
     String orderByClause;
-    bool needsMetricsJoin = false;
+    var needsMetricsJoin = false;
 
     if (sortBy != null && sortBy != 'created_at') {
-      // Server-side sorting by engagement metrics requires join with video_metrics
+      // Server-side sorting by engagement metrics requires join with
+      // video_metrics
       needsMetricsJoin = true;
 
       // Map sort field names to column names
@@ -222,8 +228,8 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
       createdAt: row.read<int>('created_at'),
     );
     // Set id and sig manually since they're stored fields
-    event.id = row.read<String>('id');
-    event.sig = row.read<String>('sig');
-    return event;
+    return event
+      ..id = row.read<String>('id')
+      ..sig = row.read<String>('sig');
   }
 }

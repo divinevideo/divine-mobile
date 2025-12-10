@@ -309,7 +309,7 @@ class VideoEventCompletionHelper {
       eventStream: eventStream,
       config: config,
       onEvent: (event) {
-        if (event.kind == 32222) {
+        if (event.kind == 34236) {
           onVideoEvent(event);
           receivedCount++;
 

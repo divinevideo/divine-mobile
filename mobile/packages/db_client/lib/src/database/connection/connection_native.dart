@@ -14,7 +14,6 @@ QueryExecutor openConnection() {
     final dbPath = await getSharedDatabasePath();
     return NativeDatabase(
       File(dbPath),
-      logStatements: false, // Disabled - too verbose for production
     );
   });
 }

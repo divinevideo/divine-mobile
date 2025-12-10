@@ -3,7 +3,7 @@
 
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/native_proof_data.dart';
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/utils/proofmode_publishing_helpers.dart';
 
 void main() {

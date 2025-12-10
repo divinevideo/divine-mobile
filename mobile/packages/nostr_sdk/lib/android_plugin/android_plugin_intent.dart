@@ -22,7 +22,7 @@ class AndroidPluginIntent {
   /// Adds category for this intent
   ///
   /// Supported values can be found in Category class
-  addCategory(String category) => _category.add(category);
+  void addCategory(String category) => _category.add(category);
 
   List<String> getCategory() {
     return _category;
@@ -31,7 +31,7 @@ class AndroidPluginIntent {
   /// Sets flags for intent
   ///
   /// Get possible flag values from Flag class
-  addFlag(int flag) => _flag.add(flag);
+  void addFlag(int flag) => _flag.add(flag);
 
   List<int> getFlag() {
     return _flag;
@@ -43,7 +43,12 @@ class AndroidPluginIntent {
   ///
   /// TypedExtra class holds predefined constants ( type information ),
   /// consider using those
-  putExtra(String extra, dynamic data, {String? type, bool setType = true}) {
+  void putExtra(
+    String extra,
+    dynamic data, {
+    String? type,
+    bool setType = true,
+  }) {
     _extra[extra] = data;
     if (type != null) {
       _typeInfo[extra] = type;
@@ -97,14 +102,14 @@ class AndroidPluginIntent {
   /// Sets what action this intent is supposed to do
   ///
   /// Possible values can be found in Action class
-  setAction(String action) => _action = action;
+  String setAction(String action) => _action = action;
 
   String? getAction() {
     return _action;
   }
 
   /// Sets data type or mime-type
-  setType(String type) => _type = type;
+  String setType(String type) => _type = type;
 
   String? getType() {
     return _type;
@@ -112,14 +117,14 @@ class AndroidPluginIntent {
 
   /// Explicitly sets package information using which
   /// Intent to be resolved, preventing chooser from showing up
-  setPackage(String package) => _package = package;
+  String setPackage(String package) => _package = package;
 
   String? getPackage() {
     return _package;
   }
 
   /// Sets data, on which intent will perform selected action
-  setData(String data) => _data = data;
+  String setData(String data) => _data = data;
 
   String? getData() {
     return _data;

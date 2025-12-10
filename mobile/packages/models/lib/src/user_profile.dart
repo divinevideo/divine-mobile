@@ -1,15 +1,18 @@
-// ABOUTME: Data model for NIP-01 user profile metadata from kind 0 events
-// ABOUTME: Represents user information like display name, avatar, bio, and social links
+// ABOUTME: Data model for NIP-01 user profile metadata from kind 0 events.
+// ABOUTME: Represents user information like display name, avatar, bio, and
+// ABOUTME: social links.
+
+// TODO(any): Replace dynamic row with typed Drift table class to fix
+//  avoid_dynamic_calls warnings. Requires coordination with database layer.
+// ignore_for_file: avoid_dynamic_calls
 
 import 'dart:convert';
-import 'package:hive_ce/hive.dart';
-import 'package:nostr_sdk/event.dart';
-import 'nostr_encoding.dart';
 
-part 'user_profile.g.dart';
+import 'package:meta/meta.dart';
+import 'package:nostr_sdk/event.dart';
 
 /// Model representing a Nostr user profile from kind 0 events
-@HiveType(typeId: 3)
+@immutable
 class UserProfile {
   const UserProfile({
     required this.pubkey,
@@ -54,11 +57,11 @@ class UserProfile {
         createdAt: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
         eventId: event.id,
       );
-    } catch (e) {
+    } on FormatException {
       // If JSON parsing fails, create a minimal profile
       return UserProfile(
         pubkey: event.pubkey,
-        rawData: {},
+        rawData: const {},
         createdAt: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
         eventId: event.id,
       );
@@ -85,12 +88,12 @@ class UserProfile {
   /// Create profile from Drift database row
   factory UserProfile.fromDrift(dynamic row) {
     // Parse rawData from JSON string if present
-    Map<String, dynamic> parsedRawData = {};
+    var parsedRawData = <String, dynamic>{};
     if (row.rawData != null && row.rawData is String) {
       try {
         parsedRawData =
             jsonDecode(row.rawData as String) as Map<String, dynamic>;
-      } catch (e) {
+      } on FormatException {
         // If JSON parsing fails, use empty map
         parsedRawData = {};
       }
@@ -112,40 +115,19 @@ class UserProfile {
       eventId: row.eventId as String,
     );
   }
-  @HiveField(0)
   final String pubkey;
-  @HiveField(1)
   final String? name;
-  @HiveField(2)
   final String? displayName;
-  @HiveField(3)
   final String? about;
-  @HiveField(4)
   final String? picture;
-  @HiveField(5)
   final String? banner;
-  @HiveField(6)
   final String? website;
-  @HiveField(7)
   final String? nip05;
-  @HiveField(8)
   final String? lud16; // Lightning address
-  @HiveField(9)
   final String? lud06; // LNURL
-  @HiveField(10)
   final Map<String, dynamic> rawData;
-  @HiveField(11)
   final DateTime createdAt;
-  @HiveField(12)
   final String eventId;
-
-  /// Get the best available display name
-  String get bestDisplayName {
-    if (displayName?.isNotEmpty == true) return displayName!;
-    if (name?.isNotEmpty == true) return name!;
-    // Fallback to truncated npub (e.g., "npub1abc...xyz")
-    return truncatedNpub;
-  }
 
   /// Get shortened pubkey for display
   String get shortPubkey {
@@ -153,53 +135,29 @@ class UserProfile {
     return pubkey;
   }
 
-  /// Get npub encoding of pubkey
-  String get npub {
-    try {
-      return NostrEncoding.encodePublicKey(pubkey);
-    } catch (e) {
-      // Fallback to shortened pubkey if encoding fails
-      return shortPubkey;
-    }
-  }
-
-  /// Get truncated npub for display (e.g., "npub1abc...xyz")
-  String get truncatedNpub {
-    try {
-      final fullNpub = NostrEncoding.encodePublicKey(pubkey);
-      if (fullNpub.length <= 16) return fullNpub;
-      // Show first 10 chars + "..." + last 6 chars (npub1abc...xyz format)
-      return '${fullNpub.substring(0, 10)}...${fullNpub.substring(fullNpub.length - 6)}';
-    } catch (e) {
-      // Fallback to shortened hex pubkey if encoding fails
-      if (pubkey.length <= 16) return pubkey;
-      return '${pubkey.substring(0, 8)}...${pubkey.substring(pubkey.length - 6)}';
-    }
-  }
-
   /// Check if profile has basic information
   bool get hasBasicInfo =>
-      name?.isNotEmpty == true ||
-      displayName?.isNotEmpty == true ||
-      picture?.isNotEmpty == true;
+      (name?.isNotEmpty ?? false) ||
+      (displayName?.isNotEmpty ?? false) ||
+      (picture?.isNotEmpty ?? false);
 
   /// Check if profile has avatar
-  bool get hasAvatar => picture?.isNotEmpty == true;
+  bool get hasAvatar => picture?.isNotEmpty ?? false;
 
   /// Check if profile has bio
-  bool get hasBio => about?.isNotEmpty == true;
+  bool get hasBio => about?.isNotEmpty ?? false;
 
   /// Check if profile has verified NIP-05 identifier
-  bool get hasNip05 => nip05?.isNotEmpty == true;
+  bool get hasNip05 => nip05?.isNotEmpty ?? false;
 
   /// Check if profile has Lightning support
   bool get hasLightning =>
-      lud16?.isNotEmpty == true || lud06?.isNotEmpty == true;
+      (lud16?.isNotEmpty ?? false) || (lud06?.isNotEmpty ?? false);
 
   /// Get Lightning address (prefers lud16 over lud06)
   String? get lightningAddress {
-    if (lud16?.isNotEmpty == true) return lud16;
-    if (lud06?.isNotEmpty == true) return lud06;
+    if (lud16?.isNotEmpty ?? false) return lud16;
+    if (lud06?.isNotEmpty ?? false) return lud06;
     return null;
   }
 
@@ -284,5 +242,6 @@ class UserProfile {
 
   @override
   String toString() =>
-      'UserProfile(pubkey: $shortPubkey, name: $bestDisplayName, hasAvatar: $hasAvatar)';
+      'UserProfile(pubkey: $shortPubkey, '
+      'name: $displayName, hasAvatar: $hasAvatar)';
 }

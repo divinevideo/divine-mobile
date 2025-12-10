@@ -4,10 +4,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/router/app_router.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/router/app_router.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
 
 void main() {
   group('Profile /me/ Redirect', () {
@@ -17,7 +17,7 @@ void main() {
       // ARRANGE: Create a test user with known public key
       const testUserHex =
           '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
-      final testUserNpub = NostrEncoding.encodePublicKey(testUserHex);
+      final testUserNpub = NostrKeyUtils.encodePubKey(testUserHex);
 
       // Create a mock auth service that returns our test user
       final mockAuthService = _MockAuthService(testUserHex);
@@ -60,7 +60,7 @@ void main() {
       // ARRANGE
       const testUserHex =
           '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
-      final testUserNpub = NostrEncoding.encodePublicKey(testUserHex);
+      final testUserNpub = NostrKeyUtils.encodePubKey(testUserHex);
 
       final mockAuthService = _MockAuthService(testUserHex);
       final container = ProviderContainer(
@@ -98,7 +98,7 @@ void main() {
           '78a5c21b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
       const otherUserHex =
           'aaaaaa1b5166dc1474b64ddf7454bf79e6b5d6b4a77148593bf1e866b73c2738';
-      final otherUserNpub = NostrEncoding.encodePublicKey(otherUserHex);
+      final otherUserNpub = NostrKeyUtils.encodePubKey(otherUserHex);
 
       final mockAuthService = _MockAuthService(currentUserHex);
       final container = ProviderContainer(

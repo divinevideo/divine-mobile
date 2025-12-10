@@ -6,7 +6,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/models/feed_type.dart';
+import 'package:models/models.dart' show FeedType;
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/video_event_service.dart';

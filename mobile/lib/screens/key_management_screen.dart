@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
 class KeyManagementScreen extends ConsumerStatefulWidget {
@@ -392,11 +392,21 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      await keyManager.importFromNsec(
-        nsec,
-        nostrService: nostrService,
-        profileService: profileService,
-      );
+      await keyManager.importFromNsec(nsec);
+
+      // Optionally fetch profile after import if services are available
+      if (context.mounted &&
+          nostrService.isInitialized &&
+          keyManager.publicKey != null) {
+        try {
+          await profileService.fetchProfile(
+            keyManager.publicKey!,
+            forceRefresh: false,
+          );
+        } catch (e) {
+          // Non-fatal - profile fetch failure shouldn't block import
+        }
+      }
 
       if (context.mounted) {
         _importController.clear();

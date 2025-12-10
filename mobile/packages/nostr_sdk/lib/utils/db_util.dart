@@ -20,10 +20,7 @@ class DBUtil {
 
   //   return path;
   // }
-  static Future<String> getPath(
-    String appName,
-    String dbName,
-  ) async {
+  static Future<String> getPath(String appName, String dbName) async {
     String path = dbName;
 
     if (!PlatformUtil.isWeb()) {

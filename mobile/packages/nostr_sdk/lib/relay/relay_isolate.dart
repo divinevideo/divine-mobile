@@ -1,3 +1,6 @@
+// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
+// ignore_for_file: constant_identifier_names
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
@@ -123,7 +126,7 @@ class RelayIsolate extends Relay {
       // For any other type, try to convert to JSON-compatible format
       try {
         // If it has a toJson method, use it
-        if (data is dynamic && data.toJson != null) {
+        if (data.toJson != null) {
           return sanitizeForJson(data.toJson());
         }
       } catch (e) {

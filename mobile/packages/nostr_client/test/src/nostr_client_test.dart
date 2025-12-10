@@ -10,11 +10,7 @@ class _MockNostr extends Mock implements Nostr {}
 
 class _MockGatewayClient extends Mock implements GatewayClient {}
 
-class _MockRelayPool extends Mock implements RelayPool {}
-
-class _MockRelay extends Mock implements Relay {}
-
-class _MockNostrSigner extends Mock implements NostrSigner {}
+class _MockRelayManager extends Mock implements RelayManager {}
 
 class _FakeEvent extends Fake implements Event {}
 
@@ -57,16 +53,6 @@ Event _createTestEvent({
   return event;
 }
 
-NostrClientConfig _createTestConfig({
-  NostrSigner? signer,
-  String? publicKey,
-}) {
-  return NostrClientConfig(
-    signer: signer ?? _MockNostrSigner(),
-    publicKey: publicKey ?? testPublicKey,
-  );
-}
-
 // =============================================================================
 // Tests
 // =============================================================================
@@ -74,8 +60,7 @@ NostrClientConfig _createTestConfig({
 void main() {
   late _MockNostr mockNostr;
   late _MockGatewayClient mockGatewayClient;
-  late _MockRelayPool mockRelayPool;
-  late NostrClientConfig config;
+  late _MockRelayManager mockRelayManager;
   late NostrClient client;
 
   setUpAll(() {
@@ -91,17 +76,16 @@ void main() {
   setUp(() {
     mockNostr = _MockNostr();
     mockGatewayClient = _MockGatewayClient();
-    mockRelayPool = _MockRelayPool();
-    config = _createTestConfig();
+    mockRelayManager = _MockRelayManager();
 
     // Set up default mock behavior
     when(() => mockNostr.publicKey).thenReturn(testPublicKey);
-    when(() => mockNostr.relayPool).thenReturn(mockRelayPool);
     when(() => mockNostr.close()).thenReturn(null);
+    when(() => mockRelayManager.dispose()).thenAnswer((_) async {});
 
     client = NostrClient.forTesting(
-      config: config,
       nostr: mockNostr,
+      relayManager: mockRelayManager,
       gatewayClient: mockGatewayClient,
     );
   });
@@ -109,7 +93,7 @@ void main() {
   tearDown(() {
     reset(mockNostr);
     reset(mockGatewayClient);
-    reset(mockRelayPool);
+    reset(mockRelayManager);
   });
 
   group('NostrClient', () {
@@ -119,15 +103,11 @@ void main() {
         verify(() => mockNostr.publicKey).called(1);
       });
 
-      test('relayPool returns the nostr relay pool', () {
-        expect(client.relayPool, equals(mockRelayPool));
-        verify(() => mockNostr.relayPool).called(1);
-      });
-
       test('creates client with null gatewayClient', () {
+        final localMockRelayManager = _MockRelayManager();
         final clientWithoutGateway = NostrClient.forTesting(
-          config: config,
           nostr: mockNostr,
+          relayManager: localMockRelayManager,
         );
         expect(clientWithoutGateway.publicKey, equals(testPublicKey));
       });
@@ -370,9 +350,10 @@ void main() {
       });
 
       test('works without gateway client', () async {
+        final localMockRelayManager = _MockRelayManager();
         final clientWithoutGateway = NostrClient.forTesting(
-          config: config,
           nostr: mockNostr,
+          relayManager: localMockRelayManager,
         );
         final filters = [
           Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
@@ -887,21 +868,23 @@ void main() {
     });
 
     group('addRelay', () {
-      test('adds relay to pool', () async {
+      test('delegates to RelayManager', () async {
         const relayUrl = 'wss://relay.example.com';
-
-        when(() => mockRelayPool.add(any())).thenAnswer((_) async => true);
+        when(
+          () => mockRelayManager.addRelay(relayUrl),
+        ).thenAnswer((_) async => true);
 
         final result = await client.addRelay(relayUrl);
 
         expect(result, isTrue);
-        verify(() => mockRelayPool.add(any())).called(1);
+        verify(() => mockRelayManager.addRelay(relayUrl)).called(1);
       });
 
-      test('returns false when add fails', () async {
+      test('returns false when RelayManager returns false', () async {
         const relayUrl = 'wss://relay.example.com';
-
-        when(() => mockRelayPool.add(any())).thenAnswer((_) async => false);
+        when(
+          () => mockRelayManager.addRelay(relayUrl),
+        ).thenAnswer((_) async => false);
 
         final result = await client.addRelay(relayUrl);
 
@@ -910,37 +893,35 @@ void main() {
     });
 
     group('removeRelay', () {
-      test('removes relay from pool', () async {
+      test('delegates to RelayManager', () async {
         const relayUrl = 'wss://relay.example.com';
+        when(
+          () => mockRelayManager.removeRelay(relayUrl),
+        ).thenAnswer((_) async => true);
 
-        when(() => mockRelayPool.remove(any())).thenReturn(null);
+        final result = await client.removeRelay(relayUrl);
 
-        await client.removeRelay(relayUrl);
-
-        verify(() => mockRelayPool.remove(relayUrl)).called(1);
+        expect(result, isTrue);
+        verify(() => mockRelayManager.removeRelay(relayUrl)).called(1);
       });
     });
 
     group('connectedRelays', () {
-      test('returns list of connected relay URLs', () {
-        final mockRelay1 = _MockRelay();
-        final mockRelay2 = _MockRelay();
-
-        when(() => mockRelay1.url).thenReturn('wss://relay1.example.com');
-        when(() => mockRelay2.url).thenReturn('wss://relay2.example.com');
-        when(
-          () => mockRelayPool.activeRelays(),
-        ).thenReturn([mockRelay1, mockRelay2]);
+      test('delegates to RelayManager', () {
+        final expectedRelays = [
+          'wss://relay1.example.com',
+          'wss://relay2.example.com',
+        ];
+        when(() => mockRelayManager.connectedRelays).thenReturn(expectedRelays);
 
         final result = client.connectedRelays;
 
-        expect(result, hasLength(2));
-        expect(result, contains('wss://relay1.example.com'));
-        expect(result, contains('wss://relay2.example.com'));
+        expect(result, equals(expectedRelays));
+        verify(() => mockRelayManager.connectedRelays).called(1);
       });
 
       test('returns empty list when no relays connected', () {
-        when(() => mockRelayPool.activeRelays()).thenReturn([]);
+        when(() => mockRelayManager.connectedRelays).thenReturn([]);
 
         final result = client.connectedRelays;
 
@@ -948,51 +929,106 @@ void main() {
       });
     });
 
-    group('relayCount', () {
-      test('returns count of connected relays', () {
-        final mockRelay1 = _MockRelay();
-        final mockRelay2 = _MockRelay();
-        final mockRelay3 = _MockRelay();
+    group('connectedRelayCount', () {
+      test('delegates to RelayManager', () {
+        when(() => mockRelayManager.connectedRelayCount).thenReturn(3);
 
-        when(() => mockRelay1.url).thenReturn('wss://relay1.example.com');
-        when(() => mockRelay2.url).thenReturn('wss://relay2.example.com');
-        when(() => mockRelay3.url).thenReturn('wss://relay3.example.com');
-        when(
-          () => mockRelayPool.activeRelays(),
-        ).thenReturn([mockRelay1, mockRelay2, mockRelay3]);
-
-        expect(client.relayCount, equals(3));
+        expect(client.connectedRelayCount, equals(3));
+        verify(() => mockRelayManager.connectedRelayCount).called(1);
       });
 
       test('returns 0 when no relays connected', () {
-        when(() => mockRelayPool.activeRelays()).thenReturn([]);
+        when(() => mockRelayManager.connectedRelayCount).thenReturn(0);
 
-        expect(client.relayCount, equals(0));
+        expect(client.connectedRelayCount, equals(0));
       });
     });
 
     group('relayStatuses', () {
-      test('returns map of relay statuses', () {
-        final mockRelay1 = _MockRelay();
-        final mockRelay2 = _MockRelay();
-
-        when(() => mockRelay1.url).thenReturn('wss://relay1.example.com');
-        when(() => mockRelay2.url).thenReturn('wss://relay2.example.com');
+      test('delegates to RelayManager', () {
+        final expectedStatuses = {
+          'wss://relay1.example.com': RelayConnectionStatus.connected(
+            'wss://relay1.example.com',
+          ),
+          'wss://relay2.example.com': RelayConnectionStatus.connected(
+            'wss://relay2.example.com',
+          ),
+        };
         when(
-          () => mockRelayPool.activeRelays(),
-        ).thenReturn([mockRelay1, mockRelay2]);
+          () => mockRelayManager.currentStatuses,
+        ).thenReturn(expectedStatuses);
 
         final result = client.relayStatuses;
 
-        expect(result, hasLength(2));
+        expect(result, equals(expectedStatuses));
+        verify(() => mockRelayManager.currentStatuses).called(1);
       });
 
       test('returns empty map when no relays', () {
-        when(() => mockRelayPool.activeRelays()).thenReturn([]);
+        when(() => mockRelayManager.currentStatuses).thenReturn({});
 
         final result = client.relayStatuses;
 
         expect(result, isEmpty);
+      });
+    });
+
+    group('configuredRelays', () {
+      test('delegates to RelayManager', () {
+        final expectedRelays = [
+          'wss://relay1.example.com',
+          'wss://relay2.example.com',
+        ];
+        when(
+          () => mockRelayManager.configuredRelays,
+        ).thenReturn(expectedRelays);
+
+        final result = client.configuredRelays;
+
+        expect(result, equals(expectedRelays));
+        verify(() => mockRelayManager.configuredRelays).called(1);
+      });
+    });
+
+    group('configuredRelayCount', () {
+      test('delegates to RelayManager', () {
+        when(() => mockRelayManager.configuredRelayCount).thenReturn(2);
+
+        expect(client.configuredRelayCount, equals(2));
+        verify(() => mockRelayManager.configuredRelayCount).called(1);
+      });
+
+      test('returns 0 when no relays configured', () {
+        when(() => mockRelayManager.configuredRelayCount).thenReturn(0);
+
+        expect(client.configuredRelayCount, equals(0));
+      });
+    });
+
+    group('relayStatusStream', () {
+      test('delegates to RelayManager', () async {
+        final controller =
+            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        when(
+          () => mockRelayManager.statusStream,
+        ).thenAnswer((_) => controller.stream);
+
+        final result = client.relayStatusStream;
+
+        expect(result, isNotNull);
+        verify(() => mockRelayManager.statusStream).called(1);
+
+        await controller.close();
+      });
+    });
+
+    group('retryDisconnectedRelays', () {
+      test('delegates to RelayManager', () async {
+        when(mockRelayManager.retryDisconnectedRelays).thenAnswer((_) async {});
+
+        await client.retryDisconnectedRelays();
+
+        verify(mockRelayManager.retryDisconnectedRelays).called(1);
       });
     });
 
@@ -1390,15 +1426,15 @@ void main() {
     });
 
     group('dispose', () {
-      test('closes all subscriptions and nostr client', () {
+      test('closes all subscriptions and nostr client', () async {
         when(() => mockNostr.unsubscribe(any())).thenReturn(null);
 
-        client.dispose();
+        await client.dispose();
 
         verify(() => mockNostr.close()).called(1);
       });
 
-      test('closes active subscriptions before disposing', () {
+      test('closes active subscriptions before disposing', () async {
         final filters = [
           Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
         ];
@@ -1416,9 +1452,8 @@ void main() {
         ).thenReturn('test-sub-id');
         when(() => mockNostr.unsubscribe(any())).thenReturn(null);
 
-        client
-          ..subscribe(filters)
-          ..dispose();
+        client.subscribe(filters);
+        await client.dispose();
 
         verify(() => mockNostr.unsubscribe(any())).called(1);
         verify(() => mockNostr.close()).called(1);

@@ -11,9 +11,9 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/screens/pure/explore_video_screen_pure.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
 import 'package:openvine/widgets/notification_list_item.dart';
 
 import 'notifications_navigation_test.mocks.dart';
@@ -112,7 +112,7 @@ void main() {
     testWidgets('tapping notification without video navigates to profile', (
       WidgetTester tester,
     ) async {
-      final user456Npub = NostrEncoding.encodePublicKey('user456abcdef');
+      final user456Npub = NostrKeyUtils.encodePubKey('user456abcdef');
 
       // Arrange
       final c = ProviderContainer(

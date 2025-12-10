@@ -3,7 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/user_profile.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 void main() {
   group('UserProfile npub Encoding', () {
@@ -23,7 +23,7 @@ void main() {
       expect(profile.npub, startsWith('npub1'));
 
       // Should be decodable back to original hex
-      final decodedPubkey = NostrEncoding.decodePublicKey(profile.npub);
+      final decodedPubkey = NostrKeyUtils.decode(profile.npub);
       expect(decodedPubkey, equals(hexPubkey));
     });
 
@@ -62,7 +62,7 @@ void main() {
         expect(profile.npub, startsWith('npub1'));
 
         // All should be reversible
-        final decoded = NostrEncoding.decodePublicKey(profile.npub);
+        final decoded = NostrKeyUtils.decode(profile.npub);
         expect(decoded, equals(pubkey));
       }
     });

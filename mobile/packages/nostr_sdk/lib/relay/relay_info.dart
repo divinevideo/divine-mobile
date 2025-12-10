@@ -21,8 +21,15 @@ class RelayInfo {
   /// Relay software version identifier
   final String version;
 
-  RelayInfo(this.name, this.description, this.pubkey, this.contact, this.nips,
-      this.software, this.version);
+  RelayInfo(
+    this.name,
+    this.description,
+    this.pubkey,
+    this.contact,
+    this.nips,
+    this.software,
+    this.version,
+  );
 
   factory RelayInfo.fromJson(Map<dynamic, dynamic> json) {
     final String name = json["name"] ?? '';
@@ -33,7 +40,14 @@ class RelayInfo {
     final String software = json["software"] ?? "";
     final String version = json["version"] ?? "";
     return RelayInfo(
-        name, description, pubkey, contact, nips, software, version);
+      name,
+      description,
+      pubkey,
+      contact,
+      nips,
+      software,
+      version,
+    );
   }
 
   Map<String, dynamic> toJson() {

@@ -6,13 +6,12 @@
 import 'dart:async' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i6;
-import 'package:nostr_sdk/event.dart' as _i7;
-import 'package:nostr_sdk/filter.dart' as _i8;
-import 'package:openvine/models/nip94_metadata.dart' as _i9;
-import 'package:openvine/services/nostr_key_manager.dart' as _i2;
+import 'package:mockito/src/dummies.dart' as _i5;
+import 'package:models/models.dart' as _i8;
+import 'package:nostr_key_manager/nostr_key_manager.dart' as _i2;
+import 'package:nostr_sdk/event.dart' as _i6;
+import 'package:nostr_sdk/filter.dart' as _i7;
 import 'package:openvine/services/nostr_service_interface.dart' as _i3;
-import 'package:openvine/services/user_profile_service.dart' as _i5;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -27,6 +26,7 @@ import 'package:openvine/services/user_profile_service.dart' as _i5;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
+// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeKeychain_0 extends _i1.SmartFake implements _i2.Keychain {
   _FakeKeychain_0(Object parent, Invocation parentInvocation)
@@ -101,57 +101,11 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
           as _i4.Future<_i2.Keychain>);
 
   @override
-  _i4.Future<_i2.Keychain> importPrivateKeyWithServices(
-    String? privateKey, {
-    _i3.INostrService? nostrService,
-    _i5.UserProfileService? profileService,
-  }) =>
+  _i4.Future<_i2.Keychain> importFromNsec(String? nsec) =>
       (super.noSuchMethod(
-            Invocation.method(
-              #importPrivateKeyWithServices,
-              [privateKey],
-              {#nostrService: nostrService, #profileService: profileService},
-            ),
+            Invocation.method(#importFromNsec, [nsec]),
             returnValue: _i4.Future<_i2.Keychain>.value(
-              _FakeKeychain_0(
-                this,
-                Invocation.method(
-                  #importPrivateKeyWithServices,
-                  [privateKey],
-                  {
-                    #nostrService: nostrService,
-                    #profileService: profileService,
-                  },
-                ),
-              ),
-            ),
-          )
-          as _i4.Future<_i2.Keychain>);
-
-  @override
-  _i4.Future<_i2.Keychain> importFromNsec(
-    String? nsec, {
-    _i3.INostrService? nostrService,
-    _i5.UserProfileService? profileService,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #importFromNsec,
-              [nsec],
-              {#nostrService: nostrService, #profileService: profileService},
-            ),
-            returnValue: _i4.Future<_i2.Keychain>.value(
-              _FakeKeychain_0(
-                this,
-                Invocation.method(
-                  #importFromNsec,
-                  [nsec],
-                  {
-                    #nostrService: nostrService,
-                    #profileService: profileService,
-                  },
-                ),
-              ),
+              _FakeKeychain_0(this, Invocation.method(#importFromNsec, [nsec])),
             ),
           )
           as _i4.Future<_i2.Keychain>);
@@ -160,7 +114,7 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
   String exportPrivateKey() =>
       (super.noSuchMethod(
             Invocation.method(#exportPrivateKey, []),
-            returnValue: _i6.dummyValue<String>(
+            returnValue: _i5.dummyValue<String>(
               this,
               Invocation.method(#exportPrivateKey, []),
             ),
@@ -171,7 +125,7 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
   String exportAsNsec() =>
       (super.noSuchMethod(
             Invocation.method(#exportAsNsec, []),
-            returnValue: _i6.dummyValue<String>(
+            returnValue: _i5.dummyValue<String>(
               this,
               Invocation.method(#exportAsNsec, []),
             ),
@@ -349,7 +303,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
   String get primaryRelay =>
       (super.noSuchMethod(
             Invocation.getter(#primaryRelay),
-            returnValue: _i6.dummyValue<String>(
+            returnValue: _i5.dummyValue<String>(
               this,
               Invocation.getter(#primaryRelay),
             ),
@@ -380,8 +334,8 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
           as _i4.Future<void>);
 
   @override
-  _i4.Stream<_i7.Event> subscribeToEvents({
-    required List<_i8.Filter>? filters,
+  _i4.Stream<_i6.Event> subscribeToEvents({
+    required List<_i7.Filter>? filters,
     bool? bypassLimits = false,
     void Function()? onEose,
   }) =>
@@ -391,12 +345,12 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
               #bypassLimits: bypassLimits,
               #onEose: onEose,
             }),
-            returnValue: _i4.Stream<_i7.Event>.empty(),
+            returnValue: _i4.Stream<_i6.Event>.empty(),
           )
-          as _i4.Stream<_i7.Event>);
+          as _i4.Stream<_i6.Event>);
 
   @override
-  _i4.Future<_i3.NostrBroadcastResult> broadcastEvent(_i7.Event? event) =>
+  _i4.Future<_i3.NostrBroadcastResult> broadcastEvent(_i6.Event? event) =>
       (super.noSuchMethod(
             Invocation.method(#broadcastEvent, [event]),
             returnValue: _i4.Future<_i3.NostrBroadcastResult>.value(
@@ -410,7 +364,7 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
 
   @override
   _i4.Future<_i3.NostrBroadcastResult> publishFileMetadata({
-    required _i9.NIP94Metadata? metadata,
+    required _i8.NIP94Metadata? metadata,
     required String? content,
     List<String>? hashtags = const [],
   }) =>
@@ -486,8 +440,8 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
           as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i7.Event>> getEvents({
-    required List<_i8.Filter>? filters,
+  _i4.Future<List<_i6.Event>> getEvents({
+    required List<_i7.Filter>? filters,
     int? limit,
   }) =>
       (super.noSuchMethod(
@@ -495,24 +449,24 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
               #filters: filters,
               #limit: limit,
             }),
-            returnValue: _i4.Future<List<_i7.Event>>.value(<_i7.Event>[]),
+            returnValue: _i4.Future<List<_i6.Event>>.value(<_i6.Event>[]),
           )
-          as _i4.Future<List<_i7.Event>>);
+          as _i4.Future<List<_i6.Event>>);
 
   @override
-  _i4.Future<_i7.Event?> fetchEventById(String? eventId, {String? relayUrl}) =>
+  _i4.Future<_i6.Event?> fetchEventById(String? eventId, {String? relayUrl}) =>
       (super.noSuchMethod(
             Invocation.method(
               #fetchEventById,
               [eventId],
               {#relayUrl: relayUrl},
             ),
-            returnValue: _i4.Future<_i7.Event?>.value(),
+            returnValue: _i4.Future<_i6.Event?>.value(),
           )
-          as _i4.Future<_i7.Event?>);
+          as _i4.Future<_i6.Event?>);
 
   @override
-  _i4.Stream<_i7.Event> searchVideos(
+  _i4.Stream<_i6.Event> searchVideos(
     String? query, {
     List<String>? authors,
     DateTime? since,
@@ -525,17 +479,17 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
               [query],
               {#authors: authors, #since: since, #until: until, #limit: limit},
             ),
-            returnValue: _i4.Stream<_i7.Event>.empty(),
+            returnValue: _i4.Stream<_i6.Event>.empty(),
           )
-          as _i4.Stream<_i7.Event>);
+          as _i4.Stream<_i6.Event>);
 
   @override
-  _i4.Stream<_i7.Event> searchUsers(String? query, {int? limit}) =>
+  _i4.Stream<_i6.Event> searchUsers(String? query, {int? limit}) =>
       (super.noSuchMethod(
             Invocation.method(#searchUsers, [query], {#limit: limit}),
-            returnValue: _i4.Stream<_i7.Event>.empty(),
+            returnValue: _i4.Stream<_i6.Event>.empty(),
           )
-          as _i4.Stream<_i7.Event>);
+          as _i4.Stream<_i6.Event>);
 
   @override
   _i4.Future<Map<String, dynamic>?> getRelayStats() =>

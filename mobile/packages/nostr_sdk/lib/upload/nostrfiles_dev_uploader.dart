@@ -1,3 +1,6 @@
+// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
+// ignore_for_file: constant_identifier_names
+
 import 'package:dio/dio.dart';
 
 import '../utils/base64.dart';
@@ -11,10 +14,7 @@ class NostrfilesDevUploader {
     MultipartFile? multipartFile;
     if (BASE64.check(filePath)) {
       var bytes = BASE64.toData(filePath);
-      multipartFile = MultipartFile.fromBytes(
-        bytes,
-        filename: fileName,
-      );
+      multipartFile = MultipartFile.fromBytes(bytes, filename: fileName);
     } else {
       multipartFile = await MultipartFile.fromFile(
         filePath,

@@ -27,13 +27,12 @@ import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/mute_service.dart';
 import 'package:openvine/services/nip05_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 // NostrService now includes embedded relay functionality
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/profile_cache_service.dart';
-import 'package:openvine/services/secure_key_storage_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/hashtag_cache_service.dart';
@@ -133,8 +132,8 @@ GeoBlockingService geoBlockingService(Ref ref) {
 
 /// Secure key storage service (foundational service)
 @Riverpod(keepAlive: true)
-SecureKeyStorageService secureKeyStorageService(Ref ref) {
-  return SecureKeyStorageService();
+SecureKeyStorage secureKeyStorage(Ref ref) {
+  return SecureKeyStorage();
 }
 
 /// Web authentication service (for web platform only)
@@ -233,7 +232,7 @@ Future<DraftStorageService> draftStorageService(Ref ref) async {
 /// Authentication service depends on secure key storage
 @Riverpod(keepAlive: true)
 AuthService authService(Ref ref) {
-  final keyStorage = ref.watch(secureKeyStorageServiceProvider);
+  final keyStorage = ref.watch(secureKeyStorageProvider);
   return AuthService(keyStorage: keyStorage);
 }
 

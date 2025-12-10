@@ -22,7 +22,10 @@ void main() {
     late TestableRelayBase relay;
 
     setUp(() {
-      relay = TestableRelayBase('wss://test.relay', RelayStatus('wss://test.relay'));
+      relay = TestableRelayBase(
+        'wss://test.relay',
+        RelayStatus('wss://test.relay'),
+      );
     });
 
     test('handles primitive types correctly', () {
@@ -47,45 +50,46 @@ void main() {
         'null': null,
       };
       final result = relay.testSanitizeForJson(input);
-      expect(result, equals({
-        'string': 'test',
-        'number': 42,
-        'boolean': true,
-        'null': null,
-      }));
+      expect(
+        result,
+        equals({'string': 'test', 'number': 42, 'boolean': true, 'null': null}),
+      );
     });
 
     test('converts non-string keys to strings', () {
-      final input = {
-        1: 'one',
-        2.5: 'two-point-five',
-        true: 'true-key',
-      };
+      final input = {1: 'one', 2.5: 'two-point-five', true: 'true-key'};
       final result = relay.testSanitizeForJson(input);
-      expect(result, equals({
-        '1': 'one',
-        '2.5': 'two-point-five',
-        'true': 'true-key',
-      }));
+      expect(
+        result,
+        equals({'1': 'one', '2.5': 'two-point-five', 'true': 'true-key'}),
+      );
     });
 
     test('handles nested structures', () {
       final input = {
-        'array': [1, 2, {'nested': 'value'}],
+        'array': [
+          1,
+          2,
+          {'nested': 'value'},
+        ],
         'object': {
           'deep': {
-            'nesting': ['works', 'fine']
-          }
-        }
+            'nesting': ['works', 'fine'],
+          },
+        },
       };
       final result = relay.testSanitizeForJson(input);
       final expected = {
-        'array': [1, 2, {'nested': 'value'}],
+        'array': [
+          1,
+          2,
+          {'nested': 'value'},
+        ],
         'object': {
           'deep': {
-            'nesting': ['works', 'fine']
-          }
-        }
+            'nesting': ['works', 'fine'],
+          },
+        },
       };
       expect(result, equals(expected));
     });
@@ -107,20 +111,17 @@ void main() {
         'event': MockEventWithToJson(),
         'list': [1, 'two', MockEventWithToJson()],
         'unknown': MockObjectWithoutToJson(),
-        'mixed_keys': {
-          1: 'numeric key',
-          'string': 'string key'
-        }
+        'mixed_keys': {1: 'numeric key', 'string': 'string key'},
       };
-      
+
       final sanitized = relay.testSanitizeForJson(complexInput);
-      
+
       // Should be able to JSON encode without errors
       expect(() => jsonEncode(sanitized), returnsNormally);
-      
+
       final jsonString = jsonEncode(sanitized);
       expect(jsonString, isA<String>());
-      
+
       // Should be able to decode back
       final decoded = jsonDecode(jsonString);
       expect(decoded, isA<Map<String, dynamic>>());
@@ -134,18 +135,21 @@ void main() {
           'pubkey': 'pubkey123',
           'created_at': 1234567890,
           'kind': 0,
-          'tags': [['h', 'vine'], ['expiration', '1234567890']],
+          'tags': [
+            ['h', 'vine'],
+            ['expiration', '1234567890'],
+          ],
           'content': '{"name":"test"}',
-          'sig': 'signature123'
-        }
+          'sig': 'signature123',
+        },
       ];
-      
+
       final sanitized = relay.testSanitizeForJson(eventMessage);
       expect(() => jsonEncode(sanitized), returnsNormally);
-      
+
       final jsonString = jsonEncode(sanitized);
       final decoded = jsonDecode(jsonString);
-      
+
       expect(decoded[0], equals('EVENT'));
       expect(decoded[1]['id'], equals('test123'));
       expect(decoded[1]['tags'], isA<List>());

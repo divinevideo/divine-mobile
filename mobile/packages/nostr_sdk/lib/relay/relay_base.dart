@@ -99,7 +99,7 @@ class RelayBase extends Relay {
 
           // Log AUTH-related messages for debugging
           if (json.isNotEmpty && json[0] == 'AUTH') {
-            print("📡 Raw message from $url: $json");
+            log("📡 Raw message from $url: $json");
           }
 
           onMessage!(this, json);
@@ -130,7 +130,7 @@ class RelayBase extends Relay {
       try {
         // Log AUTH-related messages for debugging
         if (message.isNotEmpty && message[0] == 'AUTH') {
-          print("🔐 AUTH response sent, waiting for relay confirmation...");
+          log("🔐 AUTH response sent, waiting for relay confirmation...");
         }
 
         // Defensive serialization: Ensure all data is JSON-serializable

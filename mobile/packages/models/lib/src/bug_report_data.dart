@@ -1,7 +1,8 @@
 // ABOUTME: Complete diagnostic data model for bug reports
-// ABOUTME: Aggregates logs, device info, errors, and user description for NIP-17 transmission
+// ABOUTME: Aggregates logs, device info, errors
+// and user description for NIP-17 transmission
 
-import 'log_entry.dart';
+import 'package:models/src/log_entry.dart';
 
 /// Complete diagnostic data for a bug report
 class BugReportData {
@@ -48,20 +49,17 @@ class BugReportData {
 
   /// Create formatted report text for NIP-17 message content
   String toFormattedReport() {
-    final buffer = StringBuffer();
-
-    buffer.writeln('🐛 OpenVine Bug Report');
-    buffer.writeln('═' * 50);
-    buffer.writeln('Report ID: $reportId');
-    buffer.writeln('Timestamp: ${timestamp.toIso8601String()}');
-    buffer.writeln('Version: $appVersion');
-    buffer.writeln();
-
-    buffer.writeln('📝 User Description:');
-    buffer.writeln(userDescription);
-    buffer.writeln();
-
-    buffer.writeln('📱 Device Info:');
+    final buffer = StringBuffer()
+      ..writeln('🐛 OpenVine Bug Report')
+      ..writeln('═' * 50)
+      ..writeln('Report ID: $reportId')
+      ..writeln('Timestamp: ${timestamp.toIso8601String()}')
+      ..writeln('Version: $appVersion')
+      ..writeln()
+      ..writeln('📝 User Description:')
+      ..writeln(userDescription)
+      ..writeln()
+      ..writeln('📱 Device Info:');
     deviceInfo.forEach((key, value) {
       buffer.writeln('  $key: $value');
     });
@@ -83,8 +81,9 @@ class BugReportData {
       buffer.writeln();
     }
 
-    buffer.writeln('📋 Recent Logs: ${recentLogs.length} entries');
-    buffer.writeln('═' * 50);
+    buffer
+      ..writeln('📋 Recent Logs: ${recentLogs.length} entries')
+      ..writeln('═' * 50);
 
     if (recentLogs.isEmpty) {
       buffer.writeln('  (No logs captured)');
@@ -95,11 +94,11 @@ class BugReportData {
         final category = log.category?.toString().split('.').last ?? 'GENERAL';
         final name = log.name ?? '';
 
-        buffer.writeln();
-        buffer.writeln(
-          '[$timestamp] [$level] ${name.isNotEmpty ? '[$name] ' : ''}$category',
-        );
-        buffer.writeln('  ${log.message}');
+        final namePrefix = name.isNotEmpty ? '[$name] ' : '';
+        buffer
+          ..writeln()
+          ..writeln('[$timestamp] [$level] $namePrefix$category')
+          ..writeln('  ${log.message}');
 
         if (log.error != null) {
           buffer.writeln('  Error: ${log.error}');
@@ -118,12 +117,14 @@ class BugReportData {
         }
       }
     }
-    buffer.writeln();
-    buffer.writeln('═' * 50);
+    buffer
+      ..writeln()
+      ..writeln('═' * 50);
 
     if (currentScreen != null) {
-      buffer.writeln();
-      buffer.writeln('📍 Current Screen: $currentScreen');
+      buffer
+        ..writeln()
+        ..writeln('📍 Current Screen: $currentScreen');
     }
 
     if (userPubkey != null) {

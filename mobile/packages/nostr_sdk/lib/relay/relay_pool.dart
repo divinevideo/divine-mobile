@@ -1,3 +1,6 @@
+// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:async';
 import 'dart:developer';
 
@@ -100,7 +103,7 @@ class RelayPool {
 
       return true;
     } else {
-      print("relay connect fail! ${relay.url}");
+      log("relay connect fail! ${relay.url}");
     }
 
     relay.relayStatus.onError();
@@ -165,7 +168,7 @@ class RelayPool {
           !relay.relayStatus.authed) {
         // For vine.hol.is, send the query to trigger AUTH challenge
         if (relay.url.contains('vine.hol.is')) {
-          print('🔐 vine.hol.is query - sending to trigger AUTH challenge');
+          log('🔐 vine.hol.is query - sending to trigger AUTH challenge');
           var result = relay.send(message, forceSend: true);
           if (result) {
             return true;
@@ -204,7 +207,7 @@ class RelayPool {
 
   Future<void> _onEvent(Relay relay, List<dynamic> json) async {
     final messageType = json[0];
-    print('📡 Raw message from ${relay.url}: $json');
+    log('📡 Raw message from ${relay.url}: $json');
 
     if (messageType == 'EVENT') {
       try {
@@ -287,7 +290,7 @@ class RelayPool {
         }
       }
     } else if (messageType == "OK") {
-      print('📡 OK response from ${relay.url}: $json');
+      log('📡 OK response from ${relay.url}: $json');
 
       // Check if this OK is for an AUTH event
       if (json.length >= 3) {
@@ -301,7 +304,7 @@ class RelayPool {
 
           if (success) {
             relay.relayStatus.authed = true;
-            print('🔐 AUTH succeeded for ${relay.url}');
+            log('🔐 AUTH succeeded for ${relay.url}');
 
             // Send pending messages
             for (var message in relay.pendingAuthedMessages) {
@@ -318,12 +321,12 @@ class RelayPool {
             }
           } else {
             relay.relayStatus.authed = false;
-            print('🔐 AUTH failed for ${relay.url}: $message');
+            log('🔐 AUTH failed for ${relay.url}: $message');
           }
         }
       }
     } else if (messageType == "NOTICE") {
-      print('📡 NOTICE from ${relay.url}: $json');
+      log('📡 NOTICE from ${relay.url}: $json');
       if (json.length < 2) {
         log("NOTICE result not right.");
         return;
@@ -335,14 +338,14 @@ class RelayPool {
       }
     } else if (messageType == "AUTH") {
       // auth needed
-      print('🔐 AUTH challenge received from ${relay.url}');
+      log('🔐 AUTH challenge received from ${relay.url}');
       if (json.length < 2) {
         log("AUTH result not right.");
         return;
       }
 
       final challenge = json[1] as String;
-      print('🔐 Challenge: ${challenge.substring(0, 16)}...');
+      log('🔐 Challenge: ${challenge.substring(0, 16)}...');
       var tags = [
         ["relay", relay.url],
         ["challenge", challenge],
@@ -355,7 +358,7 @@ class RelayPool {
       );
       event = await localNostr.nostrSigner.signEvent(event);
       if (event != null) {
-        print(
+        log(
           '🔐 Sending AUTH response for challenge: ${challenge.substring(0, 16)}...',
         );
 
@@ -363,10 +366,10 @@ class RelayPool {
         _pendingAuthEvents[event.id] = relay.url;
 
         relay.send(["AUTH", event.toJson()], forceSend: true);
-        print('🔐 AUTH response sent, waiting for relay confirmation...');
+        log('🔐 AUTH response sent, waiting for relay confirmation...');
 
         if (relay.pendingAuthedMessages.isNotEmpty) {
-          print(
+          log(
             '🔐 Pending ${relay.pendingAuthedMessages.length} messages for after auth confirmation',
           );
         }
@@ -487,7 +490,7 @@ class RelayPool {
           !relay.relayStatus.authed) {
         // For vine.hol.is, send the subscription to trigger AUTH challenge
         if (relay.url.contains('vine.hol.is')) {
-          print(
+          log(
             '🔐 vine.hol.is subscription - sending to trigger AUTH challenge',
           );
           var result = relay.send(message, forceSend: true);
@@ -701,14 +704,14 @@ class RelayPool {
       try {
         // Check if relay requires authentication
         if (relay.relayStatus.alwaysAuth && !relay.relayStatus.authed) {
-          print(
+          log(
             '🔐 Relay ${relay.url} requires auth (alwaysAuth=${relay.relayStatus.alwaysAuth}, authed=${relay.relayStatus.authed})',
           );
 
           // For vine.hol.is, we need to send one message to trigger AUTH challenge
           // Many relays only send AUTH challenges when they receive a message that needs auth
           if (relay.url.contains('vine.hol.is')) {
-            print(
+            log(
               '🔐 vine.hol.is detected - sending message to trigger AUTH challenge',
             );
             var result = relay.send(message, forceSend: true);
@@ -717,15 +720,15 @@ class RelayPool {
             }
             // Don't queue this message since we're sending it
           } else {
-            print('🔐 Queueing message for authentication: ${message[0]}');
+            log('🔐 Queueing message for authentication: ${message[0]}');
             relay.pendingAuthedMessages.add(message);
             hadSubmitSend = true;
           }
-          print(
+          log(
             '🔐 Pending authed messages count: ${relay.pendingAuthedMessages.length}',
           );
         } else {
-          print(
+          log(
             '🔐 Relay ${relay.url} sending immediately (alwaysAuth=${relay.relayStatus.alwaysAuth}, authed=${relay.relayStatus.authed})',
           );
           var result = relay.send(message);
@@ -903,6 +906,7 @@ class RelayPool {
     // Set up timeout
     final timeoutDuration = timeout ?? Duration(seconds: 5);
     final completer = Completer<List<Event>>();
+    // ignore: unused_local_variable - Timer runs but variable isn't read after assignment
     Timer? timeoutTimer;
     String? subscriptionId;
 

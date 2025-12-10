@@ -9,7 +9,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/bookmark_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

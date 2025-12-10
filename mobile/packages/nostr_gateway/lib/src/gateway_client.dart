@@ -22,10 +22,13 @@ class GatewayClient {
 
   /// {@macro gateway_client}
   static const String defaultGatewayUrl = 'https://gateway.divine.video';
+
   /// Request timeout duration
   static const Duration requestTimeout = Duration(seconds: 10);
+
   /// URL of the Nostr Gateway API
   final String gatewayUrl;
+
   /// HTTP client
   final Dio _dio;
 
@@ -83,9 +86,7 @@ class GatewayClient {
 
     final gatewayResponse = GatewayResponse.fromJson(response.data!);
 
-    return gatewayResponse.events.isEmpty
-        ? null
-        : gatewayResponse.events.first;
+    return gatewayResponse.events.isEmpty ? null : gatewayResponse.events.first;
   }
 
   /// Get single event by ID
@@ -94,9 +95,7 @@ class GatewayClient {
 
     final gatewayResponse = GatewayResponse.fromJson(response.data!);
 
-    return gatewayResponse.events.isEmpty
-        ? null
-        : gatewayResponse.events.first;
+    return gatewayResponse.events.isEmpty ? null : gatewayResponse.events.first;
   }
 
   /// Dispose of HTTP client resources

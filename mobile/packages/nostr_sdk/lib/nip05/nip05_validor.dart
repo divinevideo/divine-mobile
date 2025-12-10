@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:dio/dio.dart';
 
@@ -55,7 +56,7 @@ class Nip05Validor {
         }
       }
     } catch (e) {
-      print(e);
+      log('$e');
     }
 
     return null;

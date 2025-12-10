@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/screens/vine_drafts_screen.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -25,7 +25,7 @@ void main() {
     ) async {
       const currentUserPubkey =
           'currentuser11111111111111111111111111111111111111111111111111111111';
-      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+      final currentUserNpub = NostrKeyUtils.encodePubKey(currentUserPubkey);
 
       final c = ProviderContainer();
       addTearDown(c.dispose);
@@ -58,9 +58,7 @@ void main() {
       (tester) async {
         const currentUserPubkey =
             'currentuser11111111111111111111111111111111111111111111111111111111';
-        final currentUserNpub = NostrEncoding.encodePublicKey(
-          currentUserPubkey,
-        );
+        final currentUserNpub = NostrKeyUtils.encodePubKey(currentUserPubkey);
 
         final c = ProviderContainer();
         addTearDown(c.dispose);
@@ -94,7 +92,7 @@ void main() {
     testWidgets('should close menu after tapping Drafts', (tester) async {
       const currentUserPubkey =
           'currentuser11111111111111111111111111111111111111111111111111111111';
-      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+      final currentUserNpub = NostrKeyUtils.encodePubKey(currentUserPubkey);
 
       final c = ProviderContainer();
       addTearDown(c.dispose);
@@ -128,7 +126,7 @@ void main() {
     ) async {
       const currentUserPubkey =
           'currentuser11111111111111111111111111111111111111111111111111111111';
-      final currentUserNpub = NostrEncoding.encodePublicKey(currentUserPubkey);
+      final currentUserNpub = NostrKeyUtils.encodePubKey(currentUserPubkey);
 
       final c = ProviderContainer();
       addTearDown(c.dispose);

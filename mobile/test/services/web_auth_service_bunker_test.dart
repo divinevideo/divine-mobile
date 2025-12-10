@@ -4,7 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/web_auth_service.dart';
-import 'package:openvine/services/nsec_bunker_client.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 class MockNsecBunkerClient extends Mock implements NsecBunkerClient {}

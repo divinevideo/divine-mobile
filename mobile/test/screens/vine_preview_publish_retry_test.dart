@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/models/aspect_ratio.dart' as model;
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/screens/pure/vine_preview_screen_pure.dart';
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/services/draft_storage_service.dart';

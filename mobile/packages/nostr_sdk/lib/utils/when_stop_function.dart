@@ -1,3 +1,6 @@
+// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
+// ignore_for_file: non_constant_identifier_names
+
 mixin WhenStopFunction {
   bool _WhenStopRunning = true;
 

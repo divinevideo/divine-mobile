@@ -2,7 +2,7 @@
 // ABOUTME: Validates camera switch button visibility state management
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/aspect_ratio.dart' as model;
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/services/vine_recording_controller.dart'
     show VineRecordingState;

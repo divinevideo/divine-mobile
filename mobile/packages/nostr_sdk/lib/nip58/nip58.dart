@@ -4,8 +4,13 @@ import 'package:nostr_sdk/nostr.dart';
 import '../event_kind.dart';
 
 class NIP58 {
-  static Future<Event?> ware(Nostr nostr, String badgeId, String eventId,
-      {Event? badgeEvent, String? relayAddr}) async {
+  static Future<Event?> ware(
+    Nostr nostr,
+    String badgeId,
+    String eventId, {
+    Event? badgeEvent,
+    String? relayAddr,
+  }) async {
     String content = "";
     List<dynamic> tags = [];
 
@@ -14,7 +19,7 @@ class NIP58 {
       tags = badgeEvent.tags;
     } else {
       tags = [
-        ["d", "profile_badges"]
+        ["d", "profile_badges"],
       ];
     }
 
@@ -25,8 +30,12 @@ class NIP58 {
     }
     tags.add(eList);
 
-    var newEvent =
-        Event(nostr.publicKey, EventKind.BADGE_ACCEPT, tags, content);
+    var newEvent = Event(
+      nostr.publicKey,
+      EventKind.BADGE_ACCEPT,
+      tags,
+      content,
+    );
 
     return await nostr.sendEvent(newEvent);
   }

@@ -39,25 +39,27 @@ class Filter {
   String? search;
 
   /// Default constructor
-  Filter(
-      {this.ids,
-      this.authors,
-      this.kinds,
-      this.e,
-      this.p,
-      this.t,
-      this.h,
-      this.d,
-      this.since,
-      this.until,
-      this.limit,
-      this.search});
+  Filter({
+    this.ids,
+    this.authors,
+    this.kinds,
+    this.e,
+    this.p,
+    this.t,
+    this.h,
+    this.d,
+    this.since,
+    this.until,
+    this.limit,
+    this.search,
+  });
 
   /// Deserialize a filter from a JSON
   Filter.fromJson(Map<String, dynamic> json) {
     ids = json['ids'] == null ? null : List<String>.from(json['ids']);
-    authors =
-        json['authors'] == null ? null : List<String>.from(json['authors']);
+    authors = json['authors'] == null
+        ? null
+        : List<String>.from(json['authors']);
     kinds = json['kinds'] == null ? null : List<int>.from(json['kinds']);
     e = json['#e'] == null ? null : List<String>.from(json['#e']);
     p = json['#p'] == null ? null : List<String>.from(json['#p']);

@@ -1,12 +1,12 @@
 // ABOUTME: Integration test for secure key storage that runs on actual device/simulator
-// ABOUTME: Tests the full NostrKeyManager and SecureKeyStorageService implementation
+// ABOUTME: Tests the full NostrKeyManager and SecureKeyStorage implementation
+
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
-import 'package:openvine/services/secure_key_storage_service.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -104,11 +104,11 @@ void main() {
     });
   });
 
-  group('SecureKeyStorageService Integration Tests on Device', () {
-    late SecureKeyStorageService storageService;
+  group('SecureKeyStorage Integration Tests on Device', () {
+    late SecureKeyStorage storageService;
 
     setUp(() async {
-      storageService = SecureKeyStorageService();
+      storageService = SecureKeyStorage();
       await storageService.initialize();
     });
 

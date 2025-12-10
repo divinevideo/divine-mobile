@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:nostr_sdk/utils/relay_addr_util.dart';
 
@@ -22,8 +23,9 @@ class NIP02 {
   static List<RelayStatus> parseContenToRelays(String content) {
     List<RelayStatus> relayStatuses = [];
     var jsonObj = jsonDecode(content);
-    Map<dynamic, dynamic> jsonMap =
-        jsonObj.map((key, value) => MapEntry(key, true));
+    Map<dynamic, dynamic> jsonMap = jsonObj.map(
+      (key, value) => MapEntry(key, true),
+    );
 
     for (var entry in jsonMap.entries) {
       try {
@@ -41,8 +43,8 @@ class NIP02 {
 
         relayStatuses.add(relayStatus);
       } catch (e) {
-        print("parse content to relay error");
-        print(e);
+        log("parse content to relay error");
+        log('$e');
       }
     }
 
