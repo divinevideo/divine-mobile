@@ -3,8 +3,8 @@
 
 import 'dart:convert';
 import 'dart:io';
-import 'package:openvine/models/aspect_ratio.dart';
-import 'package:openvine/models/native_proof_data.dart';
+import 'package:models/models.dart' show AspectRatio;
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/utils/unified_logger.dart';
 
 enum PublishStatus { draft, publishing, failed, published }

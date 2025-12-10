@@ -2,7 +2,7 @@
 // ABOUTME: Validates JSON deserialization from REST gateway responses
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/gateway_response.dart';
+import 'package:models/models.dart' show GatewayResponse;
 
 void main() {
   group('GatewayResponse', () {

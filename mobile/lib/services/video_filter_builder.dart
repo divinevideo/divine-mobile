@@ -2,7 +2,8 @@
 // ABOUTME: Builds DivineFilter (sorted) when relay supports it, falls back to standard Filter otherwise
 
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/models/divine_filter.dart';
+import 'package:models/models.dart'
+    show DivineFilter, IntRangeFilter, SortConfig, SortDirection;
 import 'package:openvine/services/relay_capability_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 

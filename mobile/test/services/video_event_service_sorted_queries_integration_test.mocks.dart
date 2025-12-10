@@ -12,7 +12,9 @@ import 'package:nostr_key_manager/nostr_key_manager.dart' as _i2;
 import 'package:nostr_sdk/event.dart' as _i8;
 import 'package:nostr_sdk/filter.dart' as _i9;
 import 'package:openvine/database/app_database.dart' as _i4;
-import 'package:openvine/models/nip94_metadata.dart' as _i10;
+import 'package:models/models.dart'
+    as _i10
+    show NIP94Metadata, NIP94ValidationException, SimpleKeyPair;
 import 'package:openvine/models/user_profile.dart' as _i13;
 import 'package:openvine/services/event_router.dart' as _i16;
 import 'package:openvine/services/nostr_service_interface.dart' as _i3;

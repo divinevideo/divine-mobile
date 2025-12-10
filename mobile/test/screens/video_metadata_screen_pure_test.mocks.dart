@@ -8,7 +8,7 @@ import 'dart:io' as _i7;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:nostr_sdk/event.dart' as _i10;
-import 'package:openvine/models/native_proof_data.dart' as _i8;
+import 'package:models/models.dart' as _i8 show NativeProofData;
 import 'package:openvine/models/pending_upload.dart' as _i2;
 import 'package:openvine/models/vine_draft.dart' as _i6;
 import 'package:openvine/services/auth_service.dart' as _i3;
