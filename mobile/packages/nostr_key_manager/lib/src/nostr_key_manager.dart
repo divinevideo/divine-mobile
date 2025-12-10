@@ -5,7 +5,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:logging/logging.dart';
-import 'package:nostr_key_manager/src/secure_key_storage_service.dart';
+import 'package:nostr_key_manager/src/secure_key_storage.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -42,7 +42,7 @@ class Keychain {
 /// Secure management of Nostr private keys with hardware-backed persistence.
 ///
 /// This class provides secure key management with:
-/// - Hardware-backed secure storage via [SecureKeyStorageService]
+/// - Hardware-backed secure storage via [SecureKeyStorage]
 /// - Key generation, import, and export
 /// - Backup and restore functionality
 /// - Legacy key migration from SharedPreferences
@@ -50,13 +50,13 @@ class NostrKeyManager {
   /// Creates a new [NostrKeyManager] instance.
   ///
   /// The key manager must be initialized by calling [initialize()] before use.
-  NostrKeyManager() : _secureStorage = SecureKeyStorageService();
+  NostrKeyManager() : _secureStorage = SecureKeyStorage();
 
   static const String _keyPairKey = 'nostr_keypair';
   static const String _keyVersionKey = 'nostr_key_version';
   static const String _backupHashKey = 'nostr_backup_hash';
 
-  final SecureKeyStorageService _secureStorage;
+  final SecureKeyStorage _secureStorage;
   Keychain? _keyPair;
   bool _isInitialized = false;
   String? _backupHash;

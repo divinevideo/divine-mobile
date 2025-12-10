@@ -1,5 +1,5 @@
 // ABOUTME: Integration test for secure key storage that runs on actual device/simulator
-// ABOUTME: Tests the full NostrKeyManager and SecureKeyStorageService implementation
+// ABOUTME: Tests the full NostrKeyManager and SecureKeyStorage implementation
 
 import 'dart:convert';
 
@@ -104,11 +104,11 @@ void main() {
     });
   });
 
-  group('SecureKeyStorageService Integration Tests on Device', () {
-    late SecureKeyStorageService storageService;
+  group('SecureKeyStorage Integration Tests on Device', () {
+    late SecureKeyStorage storageService;
 
     setUp(() async {
-      storageService = SecureKeyStorageService();
+      storageService = SecureKeyStorage();
       await storageService.initialize();
     });
 

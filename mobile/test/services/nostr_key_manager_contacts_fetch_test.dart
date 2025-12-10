@@ -11,12 +11,12 @@ import '../test_setup.dart';
 import 'nostr_key_manager_contacts_fetch_test.mocks.dart';
 
 // Generate mocks for dependencies
-@GenerateMocks([SecureKeyStorageService])
+@GenerateMocks([SecureKeyStorage])
 void main() {
   setupTestEnvironment();
 
   group('AuthService Contact List Fetching After Import', () {
-    late MockSecureKeyStorageService mockKeyStorage;
+    late MockSecureKeyStorage mockKeyStorage;
     late AuthService authService;
 
     // Test nsec from a known keypair
@@ -25,7 +25,7 @@ void main() {
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
-      mockKeyStorage = MockSecureKeyStorageService();
+      mockKeyStorage = MockSecureKeyStorage();
 
       // Create AuthService with mock key storage
       authService = AuthService(keyStorage: mockKeyStorage);

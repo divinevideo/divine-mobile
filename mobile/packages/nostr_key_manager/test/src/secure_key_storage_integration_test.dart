@@ -1,5 +1,5 @@
 // ABOUTME: Integration tests for secure key storage with hardware security
-// ABOUTME: Tests NostrKeyManager, SecureKeyStorageService, migration
+// ABOUTME: Tests NostrKeyManager, SecureKeyStorage, migration
 
 import 'dart:convert';
 
@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../test_setup.dart';
 
 void main() {
-  group('NostrKeyManager with SecureKeyStorageService Integration', () {
+  group('NostrKeyManager with SecureKeyStorage Integration', () {
     late NostrKeyManager keyManager;
 
     setUp(() async {
@@ -165,11 +165,11 @@ void main() {
     });
   });
 
-  group('SecureKeyStorageService Integration', () {
-    late SecureKeyStorageService storageService;
+  group('SecureKeyStorage Integration', () {
+    late SecureKeyStorage storageService;
 
     setUp(() async {
-      storageService = SecureKeyStorageService();
+      storageService = SecureKeyStorage();
     });
 
     tearDown(() {
@@ -247,7 +247,7 @@ void main() {
     // Note: saveIdentity and getSavedIdentities methods need to be implemented
     // test('should handle multiple saved identities', () async {
     //   await storageService.initialize();
-    //   // TODO: Implement saveIdentity and getSavedIdentities in SecureKeyStorageService
+    //   // TODO: Implement saveIdentity and getSavedIdentities in SecureKeyStorage
     // });
   });
 

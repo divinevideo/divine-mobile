@@ -11,4 +11,4 @@ export 'src/nostr_key_manager.dart';
 export 'src/nsec_bunker_client.dart';
 export 'src/platform_secure_storage.dart';
 export 'src/secure_key_container.dart';
-export 'src/secure_key_storage_service.dart';
+export 'src/secure_key_storage.dart';

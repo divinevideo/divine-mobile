@@ -57,7 +57,7 @@ void main() {
       nostrService = NostrServiceFactory.create(keyManager);
       NostrServiceFactory.initialize(nostrService);
 
-      final keyStorage = SecureKeyStorageService();
+      final keyStorage = SecureKeyStorage();
       authService = AuthService(keyStorage: keyStorage);
       await authService.initialize();
 

@@ -6,7 +6,7 @@ import 'dart:convert';
 
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart'
-    show SecureKeyContainer, SecureKeyStorageService;
+    show SecureKeyContainer, SecureKeyStorage;
 import 'package:openvine/services/user_profile_service.dart' as ups;
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/nostr_timestamp.dart';
@@ -82,9 +82,9 @@ class UserProfile {
 /// Main authentication service for the divine app
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class AuthService {
-  AuthService({SecureKeyStorageService? keyStorage})
-    : _keyStorage = keyStorage ?? SecureKeyStorageService();
-  final SecureKeyStorageService _keyStorage;
+  AuthService({SecureKeyStorage? keyStorage})
+    : _keyStorage = keyStorage ?? SecureKeyStorage();
+  final SecureKeyStorage _keyStorage;
 
   AuthState _authState = AuthState.checking;
   SecureKeyContainer? _currentKeyContainer;

@@ -8,13 +8,13 @@ import '../test_setup.dart';
 
 void main() {
   group('PlatformSecureStorage Keychain Persistence', () {
-    late SecureKeyStorageService storageService;
+    late SecureKeyStorage storageService;
 
     setUp(() async {
       setupTestEnvironment();
 
       // Use desktop config for testing (allows software fallback)
-      storageService = SecureKeyStorageService(
+      storageService = SecureKeyStorage(
         securityConfig: SecurityConfig.desktop,
       );
     });
@@ -42,7 +42,7 @@ void main() {
       storageService.dispose();
 
       // Act - Second instance (simulating app restart) retrieves the same key
-      final newStorageService = SecureKeyStorageService(
+      final newStorageService = SecureKeyStorage(
         securityConfig: SecurityConfig.desktop,
       );
       await newStorageService.initialize();
@@ -142,7 +142,7 @@ void main() {
       storageService.dispose();
 
       // Act - New instance retrieves imported key
-      final newStorageService = SecureKeyStorageService(
+      final newStorageService = SecureKeyStorage(
         securityConfig: SecurityConfig.desktop,
       );
       await newStorageService.initialize();
@@ -245,7 +245,7 @@ void main() {
       // (stored with first_unlock_this_device)
       // Expected: hasKeys() returns true (detects key in legacy storage)
 
-      final storageService = SecureKeyStorageService(
+      final storageService = SecureKeyStorage(
         securityConfig: SecurityConfig.desktop,
       );
 
@@ -271,7 +271,7 @@ void main() {
         // This simulates: User upgrades app, key is in legacy storage
         // Expected: retrieveKey() finds and returns the key from legacy storage
 
-        final storageService = SecureKeyStorageService(
+        final storageService = SecureKeyStorage(
           securityConfig: SecurityConfig.desktop,
         );
 
@@ -307,7 +307,7 @@ void main() {
       // Critical: Don't create NEW identity if user has an existing one
       // Expected: App detects legacy key, retrieves it, no new generation
 
-      final storageService = SecureKeyStorageService(
+      final storageService = SecureKeyStorage(
         securityConfig: SecurityConfig.desktop,
       );
 
@@ -323,7 +323,7 @@ void main() {
       originalContainer.dispose();
 
       // Now simulate app restart: create new service instance
-      final newStorageService = SecureKeyStorageService(
+      final newStorageService = SecureKeyStorage(
         securityConfig: SecurityConfig.desktop,
       );
       await newStorageService.initialize();
@@ -361,7 +361,7 @@ void main() {
         // 4. Next store operation migrates it to new accessibility
         // 5. Future retrievals use new storage
 
-        final storageService = SecureKeyStorageService(
+        final storageService = SecureKeyStorage(
           securityConfig: SecurityConfig.desktop,
         );
 
@@ -378,7 +378,7 @@ void main() {
         storageService.dispose();
 
         // Step 2: New instance (simulates app restart after upgrade)
-        final migratedStorageService = SecureKeyStorageService(
+        final migratedStorageService = SecureKeyStorage(
           securityConfig: SecurityConfig.desktop,
         );
         await migratedStorageService.initialize();

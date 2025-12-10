@@ -438,56 +438,54 @@ String _$geoBlockingServiceHash() =>
 
 /// Secure key storage service (foundational service)
 
-@ProviderFor(secureKeyStorageService)
-const secureKeyStorageServiceProvider = SecureKeyStorageServiceProvider._();
+@ProviderFor(secureKeyStorage)
+const secureKeyStorageProvider = SecureKeyStorageProvider._();
 
 /// Secure key storage service (foundational service)
 
-final class SecureKeyStorageServiceProvider
+final class SecureKeyStorageProvider
     extends
         $FunctionalProvider<
-          SecureKeyStorageService,
-          SecureKeyStorageService,
-          SecureKeyStorageService
+          SecureKeyStorage,
+          SecureKeyStorage,
+          SecureKeyStorage
         >
-    with $Provider<SecureKeyStorageService> {
+    with $Provider<SecureKeyStorage> {
   /// Secure key storage service (foundational service)
-  const SecureKeyStorageServiceProvider._()
+  const SecureKeyStorageProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'secureKeyStorageServiceProvider',
+        name: r'secureKeyStorageProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$secureKeyStorageServiceHash();
+  String debugGetCreateSourceHash() => _$secureKeyStorageHash();
 
   @$internal
   @override
-  $ProviderElement<SecureKeyStorageService> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
+  $ProviderElement<SecureKeyStorage> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
 
   @override
-  SecureKeyStorageService create(Ref ref) {
-    return secureKeyStorageService(ref);
+  SecureKeyStorage create(Ref ref) {
+    return secureKeyStorage(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SecureKeyStorageService value) {
+  Override overrideWithValue(SecureKeyStorage value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<SecureKeyStorageService>(value),
+      providerOverride: $SyncValueProvider<SecureKeyStorage>(value),
     );
   }
 }
 
-String _$secureKeyStorageServiceHash() =>
-    r'1502fca4cf3f0a96a4ace27be757fe2406ff0522';
+String _$secureKeyStorageHash() => r'853547d439994307884d2f47f3d9769daa0a1e96';
 
 /// Web authentication service (for web platform only)
 
@@ -983,7 +981,7 @@ final class AuthServiceProvider
   }
 }
 
-String _$authServiceHash() => r'7d7fae6e9bce96247f58dc43b2b87a289dd3e08b';
+String _$authServiceHash() => r'26555c9f1c9a9a0c322592b6425ac0a6808090d8';
 
 /// Stream provider for reactive auth state changes
 /// Widgets should watch this instead of authService.authState to get rebuilds

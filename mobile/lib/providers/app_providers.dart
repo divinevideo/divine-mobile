@@ -132,8 +132,8 @@ GeoBlockingService geoBlockingService(Ref ref) {
 
 /// Secure key storage service (foundational service)
 @Riverpod(keepAlive: true)
-SecureKeyStorageService secureKeyStorageService(Ref ref) {
-  return SecureKeyStorageService();
+SecureKeyStorage secureKeyStorage(Ref ref) {
+  return SecureKeyStorage();
 }
 
 /// Web authentication service (for web platform only)
@@ -232,7 +232,7 @@ Future<DraftStorageService> draftStorageService(Ref ref) async {
 /// Authentication service depends on secure key storage
 @Riverpod(keepAlive: true)
 AuthService authService(Ref ref) {
-  final keyStorage = ref.watch(secureKeyStorageServiceProvider);
+  final keyStorage = ref.watch(secureKeyStorageProvider);
   return AuthService(keyStorage: keyStorage);
 }
 

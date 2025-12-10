@@ -12,7 +12,7 @@ import 'package:nostr_key_manager/src/secure_key_container.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final _log = Logger('SecureKeyStorageService');
+final _log = Logger('SecureKeyStorage');
 
 /// Exception thrown by secure key storage operations.
 ///
@@ -75,12 +75,12 @@ class SecurityConfig {
 /// Secure key storage service with hardware-backed protection.
 ///
 /// REFACTORED: Removed ChangeNotifier - uses pure state management.
-class SecureKeyStorageService {
-  /// Creates a new [SecureKeyStorageService].
+class SecureKeyStorage{
+  /// Creates a new [SecureKeyStorage].
   ///
   /// If [securityConfig] is not provided, platform-appropriate defaults
   /// will be used.
-  SecureKeyStorageService({SecurityConfig? securityConfig}) {
+  SecureKeyStorage({SecurityConfig? securityConfig}) {
     if (securityConfig != null) {
       _securityConfig = securityConfig;
     } else {
@@ -132,7 +132,7 @@ class SecureKeyStorageService {
   Future<void> initialize() async {
     if (_isInitialized && _initializationError == null) return;
 
-    _log.fine('Initializing SecureKeyStorageService');
+    _log.fine('Initializing SecureKeyStorage');
 
     try {
       // Initialize platform-specific secure storage
@@ -171,7 +171,7 @@ class SecureKeyStorageService {
       _initializationError = null;
 
       _log
-        ..info('SecureKeyStorageService initialized')
+        ..info('SecureKeyStorage initialized')
         ..fine('📱 Security level: ${_getSecurityLevelDescription()}');
     } on Exception catch (e) {
       _initializationError = e.toString();
@@ -742,7 +742,7 @@ class SecureKeyStorageService {
 
   /// Disposes of the service and cleans up resources.
   void dispose() {
-    _log.fine('📱️ Disposing SecureKeyStorageService');
+    _log.fine('📱️ Disposing SecureKeyStorage');
     // Dispose cached container when service is disposed (app shutdown)
     _cachedKeyContainer?.dispose();
     _clearCache();

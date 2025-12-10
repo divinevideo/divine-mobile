@@ -1,4 +1,4 @@
-// ABOUTME: Tests for NIP-46 bunker key handling in SecureKeyStorageService
+// ABOUTME: Tests for NIP-46 bunker key handling in SecureKeyStorage
 // ABOUTME: Ensures bunker operations don't crash when feature is pending
 
 import 'package:flutter_test/flutter_test.dart';
@@ -7,12 +7,12 @@ import 'package:nostr_key_manager/nostr_key_manager.dart';
 import '../test_setup.dart';
 
 void main() {
-  group('SecureKeyStorageService - NIP-46 Bunker Error Handling', () {
-    late SecureKeyStorageService service;
+  group('SecureKeyStorage - NIP-46 Bunker Error Handling', () {
+    late SecureKeyStorage service;
 
     setUp(() {
       setupTestEnvironment();
-      service = SecureKeyStorageService(securityConfig: SecurityConfig.desktop);
+      service = SecureKeyStorage(securityConfig: SecurityConfig.desktop);
     });
 
     tearDown(() {
@@ -68,7 +68,7 @@ void main() {
     });
   });
 
-  group('SecureKeyStorageService - NIP-46 Feature Not Implemented', () {
+  group('SecureKeyStorage - NIP-46 Feature Not Implemented', () {
     test('_createBunkerKeyContainer implementation is pending', () {
       // NIP-46 bunker key containers are not yet implemented.
       // Implementation should return null instead of throwing
