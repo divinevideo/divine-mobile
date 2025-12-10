@@ -8,12 +8,12 @@ on:
     branches: [main]
     paths:
       - "mobile/packages/nostr_client/**"
-      - ".github/workflows/nostr_client.yml"
+      - ".github/workflows/nostr_client.yaml"
   pull_request:
     branches: [main]
     paths:
       - "mobile/packages/nostr_client/**"
-      - ".github/workflows/nostr_client.yml"
+      - ".github/workflows/nostr_client.yaml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
