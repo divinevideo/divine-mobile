@@ -75,7 +75,7 @@ class SecurityConfig {
 /// Secure key storage service with hardware-backed protection.
 ///
 /// REFACTORED: Removed ChangeNotifier - uses pure state management.
-class SecureKeyStorage{
+class SecureKeyStorage {
   /// Creates a new [SecureKeyStorage].
   ///
   /// If [securityConfig] is not provided, platform-appropriate defaults
