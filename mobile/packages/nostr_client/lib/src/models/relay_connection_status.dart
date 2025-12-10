@@ -1,7 +1,7 @@
 // ABOUTME: Data model representing the connection status of a single relay.
 // ABOUTME: Used by RelayManager to track and expose relay states to the UI.
 
-import 'package:meta/meta.dart';
+import 'package:equatable/equatable.dart';
 
 /// Connection state for a relay
 enum RelayState {
@@ -26,8 +26,7 @@ enum RelayState {
 ///
 /// Used by RelayManager to provide reactive status updates to the UI.
 /// {@endtemplate}
-@immutable
-class RelayConnectionStatus {
+class RelayConnectionStatus extends Equatable {
   /// {@macro relay_connection_status}
   const RelayConnectionStatus({
     required this.url,
@@ -132,20 +131,13 @@ class RelayConnectionStatus {
   }
 
   @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is RelayConnectionStatus &&
-        other.url == url &&
-        other.state == state &&
-        other.isDefault == isDefault &&
-        other.isConfigured == isConfigured &&
-        other.errorCount == errorCount;
-  }
-
-  @override
-  int get hashCode {
-    return Object.hash(url, state, isDefault, isConfigured, errorCount);
-  }
+  List<Object?> get props => [
+        url,
+        state,
+        isDefault,
+        isConfigured,
+        errorCount,
+      ];
 
   @override
   String toString() {
