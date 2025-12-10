@@ -14,7 +14,7 @@ void main() {
             'pubkey': 'pubkey123',
             'created_at': 1700000000,
             'kind': 1,
-            'tags': [],
+            'tags': <dynamic>[],
             'content': 'Hello',
             'sig': 'sig123',
           },
@@ -37,7 +37,7 @@ void main() {
 
     test('parses response with empty events', () {
       final json = {
-        'events': [],
+        'events': <dynamic>[],
         'eose': true,
         'complete': true,
         'cached': false,
@@ -51,7 +51,7 @@ void main() {
     });
 
     test('handles missing optional fields', () {
-      final json = {'events': []};
+      final json = {'events': <dynamic>[]};
 
       final response = GatewayResponse.fromJson(json);
 
@@ -74,7 +74,7 @@ void main() {
     });
 
     test('hasEvents returns false when events empty', () {
-      final json = {'events': []};
+      final json = {'events': <dynamic>[]};
 
       final response = GatewayResponse.fromJson(json);
 

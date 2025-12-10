@@ -1,5 +1,6 @@
 // ABOUTME: Unit tests for ProofMode integration with PendingUpload model
-// ABOUTME: Tests serialization, deserialization, and helper methods for NativeProofData storage
+// ABOUTME: Tests serialization, deserialization,
+// and helper methods for NativeProofData storage
 
 import 'dart:convert';
 
@@ -19,9 +20,9 @@ void main() {
         sensorDataCsv:
             'timestamp,lat,lon\n2025-01-01T10:00:00,37.7749,-122.4194',
         pgpSignature:
-            '-----BEGIN PGP SIGNATURE-----\ntest_signature_content\n-----END PGP SIGNATURE-----',
+            '''-----BEGIN PGP SIGNATURE-----\ntest_signature_content\n-----END PGP SIGNATURE-----''',
         publicKey:
-            '-----BEGIN PGP PUBLIC KEY BLOCK-----\ntest_public_key\n-----END PGP PUBLIC KEY BLOCK-----',
+            '''-----BEGIN PGP PUBLIC KEY BLOCK-----\ntest_public_key\n-----END PGP PUBLIC KEY BLOCK-----''',
         deviceAttestation: 'attestation_token_xyz',
         timestamp: '2025-01-01T10:00:06Z',
       );

@@ -8,11 +8,9 @@ import 'dart:ui' as _i12;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i5;
+import 'package:models/models.dart' as _i8;
 import 'package:nostr_sdk/event.dart' as _i6;
 import 'package:nostr_sdk/filter.dart' as _i7;
-import 'package:models/models.dart'
-    as _i8
-    show NIP94Metadata, NIP94ValidationException, SimpleKeyPair;
 import 'package:openvine/models/user_profile.dart' as _i10;
 import 'package:openvine/services/nostr_key_manager.dart' as _i2;
 import 'package:openvine/services/nostr_service_interface.dart' as _i3;
@@ -32,6 +30,7 @@ import 'package:openvine/services/user_profile_service.dart' as _i9;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
+// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeNostrKeyManager_0 extends _i1.SmartFake
     implements _i2.NostrKeyManager {

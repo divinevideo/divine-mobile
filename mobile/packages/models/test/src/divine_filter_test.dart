@@ -2,7 +2,7 @@
 // ABOUTME: Covers sort, int# filters, cursor, and factory constructors
 
 // No need for const constructors in tests
-// ignore_for_file: prefer_const_constructors
+// ignore_for_file: prefer_const_constructors, avoid_dynamic_calls
 
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -14,7 +14,7 @@ void main() {
       test('includes sort configuration in JSON', () {
         final filter = DivineFilter(
           baseFilter: Filter(kinds: [34236], limit: 50),
-          sort: SortConfig(field: 'loop_count', direction: SortDirection.desc),
+          sort: SortConfig(field: 'loop_count'),
         );
 
         final json = filter.toJson();
@@ -251,7 +251,7 @@ void main() {
       test('popular hashtag videos', () {
         final filter = DivineFilter(
           baseFilter: Filter(kinds: [34236], t: ['comedy'], limit: 20),
-          sort: SortConfig(field: 'likes', direction: SortDirection.desc),
+          sort: SortConfig(field: 'likes'),
           intFilters: {
             'likes': IntRangeFilter(gte: 50),
             'loop_count': IntRangeFilter(gte: 1000),

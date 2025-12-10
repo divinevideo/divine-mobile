@@ -1,4 +1,5 @@
-// ABOUTME: Tests for PublishStatus enum and publish tracking fields in VineDraft
+// ABOUTME: Tests for PublishStatus enum
+// and publish tracking fields in VineDraft
 // ABOUTME: Validates serialization, migration, and status lifecycle
 
 import 'dart:io';

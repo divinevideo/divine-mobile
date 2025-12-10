@@ -1,5 +1,7 @@
-// ABOUTME: Tests for VideoEvent parsing from Nostr events, including streaming formats
-// ABOUTME: Verifies support for divine.video schema and open protocol URL validation
+// ABOUTME: Tests for VideoEvent parsing from Nostr events,
+// including streaming formats
+// ABOUTME: Verifies support for divine.video schema
+// and open protocol URL validation
 
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -147,7 +149,7 @@ void main() {
     });
 
     test(
-      'should parse imeta tag with blurhash from divine.video events (OLD FORMAT - space-separated)',
+      '''should parse imeta tag with blurhash from divine.video events (OLD FORMAT - space-separated)''',
       () {
         // Arrange
         final nostrEvent = Event(
@@ -187,7 +189,7 @@ void main() {
     );
 
     test(
-      'should parse imeta tag with blurhash (NEW FORMAT - positional key-value pairs)',
+      '''should parse imeta tag with blurhash (NEW FORMAT - positional key-value pairs)''',
       () {
         // Arrange - This is the format used by newer divine.video events
         final nostrEvent = Event(
@@ -208,7 +210,7 @@ void main() {
               'dim',
               '720x720',
               'x',
-              '70c84853646e2e8f64ef07ebd5e5267329d21d194af1138a790cdb4463d1f0b7',
+              '''70c84853646e2e8f64ef07ebd5e5267329d21d194af1138a790cdb4463d1f0b7''',
             ],
             ['title', 'jordan'],
           ],

@@ -7,11 +7,9 @@ import 'dart:async' as _i5;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
+import 'package:models/models.dart' as _i9 show NIP94Metadata;
 import 'package:nostr_sdk/event.dart' as _i7;
 import 'package:nostr_sdk/filter.dart' as _i8;
-import 'package:models/models.dart'
-    as _i9
-    show NIP94Metadata, NIP94ValidationException, SimpleKeyPair;
 import 'package:openvine/services/auth_service.dart' as _i4;
 import 'package:openvine/services/nostr_key_manager.dart' as _i2;
 import 'package:openvine/services/nostr_service_interface.dart' as _i3;

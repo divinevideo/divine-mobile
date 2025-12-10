@@ -6,8 +6,8 @@
 import 'dart:async' as _i5;
 
 import 'package:mockito/mockito.dart' as _i1;
+import 'package:models/models.dart' as _i3;
 import 'package:openvine/models/bug_report_data.dart' as _i2;
-import 'package:models/models.dart' as _i3 show BugReportResult;
 import 'package:openvine/services/bug_report_service.dart' as _i4;
 
 // ignore_for_file: type=lint
@@ -23,6 +23,7 @@ import 'package:openvine/services/bug_report_service.dart' as _i4;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
+// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeBugReportData_0 extends _i1.SmartFake implements _i2.BugReportData {
   _FakeBugReportData_0(Object parent, Invocation parentInvocation)
