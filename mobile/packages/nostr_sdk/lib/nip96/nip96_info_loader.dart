@@ -26,9 +26,10 @@ class NIP96InfoLoader {
   Future<Nip96ServerAdaptation?> pullServerAdaptation(String url) async {
     var uri = Uri.parse(url);
     var newUri = Uri(
-        scheme: uri.scheme,
-        host: uri.host,
-        path: "/.well-known/nostr/nip96.json");
+      scheme: uri.scheme,
+      host: uri.host,
+      path: "/.well-known/nostr/nip96.json",
+    );
 
     var jsonMap = await DioUtil.get(newUri.toString());
     if (jsonMap != null) {

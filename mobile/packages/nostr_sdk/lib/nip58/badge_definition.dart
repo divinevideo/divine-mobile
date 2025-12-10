@@ -17,8 +17,15 @@ class BadgeDefinition {
 
   final int updatedAt;
 
-  BadgeDefinition(this.pubkey, this.d, this.updatedAt,
-      {this.name, this.description, this.image, this.thumb});
+  BadgeDefinition(
+    this.pubkey,
+    this.d,
+    this.updatedAt, {
+    this.name,
+    this.description,
+    this.image,
+    this.thumb,
+  });
 
   static BadgeDefinition? loadFromEvent(Event event) {
     String pubkey = event.pubkey;
@@ -48,8 +55,15 @@ class BadgeDefinition {
       }
 
       if (StringUtil.isNotBlank(d)) {
-        return BadgeDefinition(pubkey, d!, event.createdAt,
-            name: name, description: description, image: image, thumb: thumb);
+        return BadgeDefinition(
+          pubkey,
+          d!,
+          event.createdAt,
+          name: name,
+          description: description,
+          image: image,
+          thumb: thumb,
+        );
       }
     }
     return null;

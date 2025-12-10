@@ -6,11 +6,7 @@ class AId {
 
   String title = "";
 
-  AId({
-    required this.kind,
-    required this.pubkey,
-    required this.title,
-  });
+  AId({required this.kind, required this.pubkey, required this.title});
 
   static AId? fromString(String text) {
     var strs = text.split(":");

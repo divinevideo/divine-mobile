@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -16,8 +17,12 @@ import '../utils/string_util.dart';
 class NIP96Uploader {
   static var dio = Dio();
 
-  static Future<String?> upload(Nostr nostr, String serverUrl, String filePath,
-      {String? fileName}) async {
+  static Future<String?> upload(
+    Nostr nostr,
+    String serverUrl,
+    String filePath, {
+    String? fileName,
+  }) async {
     var sa = await NIP96InfoLoader.getInstance().getServerAdaptation(serverUrl);
     if (sa == null || StringUtil.isBlank(sa.apiUrl)) {
       return null;
@@ -53,10 +58,7 @@ class NIP96Uploader {
     // log("file size is ${bytes.length}");
 
     payload = HashUtil.sha256Bytes(bytes);
-    multipartFile = MultipartFile.fromBytes(
-      bytes,
-      filename: fileName,
-    );
+    multipartFile = MultipartFile.fromBytes(bytes, filename: fileName);
 
     Map<String, String>? headers = {};
     if (StringUtil.isNotBlank(fileName)) {
@@ -94,11 +96,11 @@ class NIP96Uploader {
     var formData = FormData.fromMap({"file": multipartFile});
     // log(formData.toString());
     try {
-      var response = await dio.post(sa.apiUrl!,
-          data: formData,
-          options: Options(
-            headers: headers,
-          ));
+      var response = await dio.post(
+        sa.apiUrl!,
+        data: formData,
+        options: Options(headers: headers),
+      );
       var body = response.data;
       // log(jsonEncode(response.data));
       if (body is Map<String, dynamic> &&
@@ -119,8 +121,8 @@ class NIP96Uploader {
         }
       }
     } catch (e) {
-      print("nostr.build nip96 upload exception:");
-      print(e);
+      log("nostr.build nip96 upload exception:");
+      log('$e');
     }
 
     return null;

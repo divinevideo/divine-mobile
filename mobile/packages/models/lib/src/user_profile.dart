@@ -1,11 +1,18 @@
-// ABOUTME: Data model for NIP-01 user profile metadata from kind 0 events
-// ABOUTME: Represents user information like display name, avatar, bio, and social links
+// ABOUTME: Data model for NIP-01 user profile metadata from kind 0 events.
+// ABOUTME: Represents user information like display name, avatar, bio, and
+// ABOUTME: social links.
+
+// TODO(any): Replace dynamic row with typed Drift table class to fix
+//  avoid_dynamic_calls warnings. Requires coordination with database layer.
+// ignore_for_file: avoid_dynamic_calls
 
 import 'dart:convert';
 
+import 'package:meta/meta.dart';
 import 'package:nostr_sdk/event.dart';
 
 /// Model representing a Nostr user profile from kind 0 events
+@immutable
 class UserProfile {
   const UserProfile({
     required this.pubkey,
@@ -50,11 +57,11 @@ class UserProfile {
         createdAt: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
         eventId: event.id,
       );
-    } catch (e) {
+    } on FormatException {
       // If JSON parsing fails, create a minimal profile
       return UserProfile(
         pubkey: event.pubkey,
-        rawData: {},
+        rawData: const {},
         createdAt: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
         eventId: event.id,
       );
@@ -81,12 +88,12 @@ class UserProfile {
   /// Create profile from Drift database row
   factory UserProfile.fromDrift(dynamic row) {
     // Parse rawData from JSON string if present
-    Map<String, dynamic> parsedRawData = {};
+    var parsedRawData = <String, dynamic>{};
     if (row.rawData != null && row.rawData is String) {
       try {
         parsedRawData =
             jsonDecode(row.rawData as String) as Map<String, dynamic>;
-      } catch (e) {
+      } on FormatException {
         // If JSON parsing fails, use empty map
         parsedRawData = {};
       }
@@ -130,27 +137,27 @@ class UserProfile {
 
   /// Check if profile has basic information
   bool get hasBasicInfo =>
-      name?.isNotEmpty == true ||
-      displayName?.isNotEmpty == true ||
-      picture?.isNotEmpty == true;
+      (name?.isNotEmpty ?? false) ||
+      (displayName?.isNotEmpty ?? false) ||
+      (picture?.isNotEmpty ?? false);
 
   /// Check if profile has avatar
-  bool get hasAvatar => picture?.isNotEmpty == true;
+  bool get hasAvatar => picture?.isNotEmpty ?? false;
 
   /// Check if profile has bio
-  bool get hasBio => about?.isNotEmpty == true;
+  bool get hasBio => about?.isNotEmpty ?? false;
 
   /// Check if profile has verified NIP-05 identifier
-  bool get hasNip05 => nip05?.isNotEmpty == true;
+  bool get hasNip05 => nip05?.isNotEmpty ?? false;
 
   /// Check if profile has Lightning support
   bool get hasLightning =>
-      lud16?.isNotEmpty == true || lud06?.isNotEmpty == true;
+      (lud16?.isNotEmpty ?? false) || (lud06?.isNotEmpty ?? false);
 
   /// Get Lightning address (prefers lud16 over lud06)
   String? get lightningAddress {
-    if (lud16?.isNotEmpty == true) return lud16;
-    if (lud06?.isNotEmpty == true) return lud06;
+    if (lud16?.isNotEmpty ?? false) return lud16;
+    if (lud06?.isNotEmpty ?? false) return lud06;
     return null;
   }
 
@@ -235,5 +242,6 @@ class UserProfile {
 
   @override
   String toString() =>
-      'UserProfile(pubkey: $shortPubkey, name: $displayName, hasAvatar: $hasAvatar)';
+      'UserProfile(pubkey: $shortPubkey, '
+      'name: $displayName, hasAvatar: $hasAvatar)';
 }

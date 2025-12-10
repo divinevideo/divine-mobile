@@ -116,21 +116,23 @@ void main() {
       expect(pubkey1, equals(pubkey2));
     });
 
-    test('Sign different events with same key produces different signatures',
-        () async {
-      final privateKey = generatePrivateKey();
-      final signer = LocalNostrSigner(privateKey);
-      final publicKey = await signer.getPublicKey();
+    test(
+      'Sign different events with same key produces different signatures',
+      () async {
+        final privateKey = generatePrivateKey();
+        final signer = LocalNostrSigner(privateKey);
+        final publicKey = await signer.getPublicKey();
 
-      final event1 = Event(publicKey!, EventKind.TEXT_NOTE, [], 'Message 1');
-      final event2 = Event(publicKey, EventKind.TEXT_NOTE, [], 'Message 2');
+        final event1 = Event(publicKey!, EventKind.TEXT_NOTE, [], 'Message 1');
+        final event2 = Event(publicKey, EventKind.TEXT_NOTE, [], 'Message 2');
 
-      final signed1 = await signer.signEvent(event1);
-      final signed2 = await signer.signEvent(event2);
+        final signed1 = await signer.signEvent(event1);
+        final signed2 = await signer.signEvent(event2);
 
-      expect(signed1!.sig, isNot(equals(signed2!.sig)));
-      expect(signed1.id, isNot(equals(signed2.id)));
-    });
+        expect(signed1!.sig, isNot(equals(signed2!.sig)));
+        expect(signed1.id, isNot(equals(signed2.id)));
+      },
+    );
 
     test('getRelays returns null for LocalNostrSigner', () async {
       final privateKey = generatePrivateKey();

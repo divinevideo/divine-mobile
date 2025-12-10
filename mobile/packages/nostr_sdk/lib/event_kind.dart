@@ -1,3 +1,9 @@
+// ABOUTME: Defines Nostr event kind constants for different event types (NIP-01 and extensions).
+// ABOUTME: Maps integer kind values to semantic names like METADATA, TEXT_NOTE, ZAP, etc.
+
+// TODO(any): Rename constants to lowerCamelCase (e.g., TEXT_NOTE -> textNote) - https://github.com/divinevideo/divine-mobile/issues/354
+// ignore_for_file: constant_identifier_names
+
 class EventKind {
   static const int METADATA = 0;
 

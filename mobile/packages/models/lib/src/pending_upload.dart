@@ -1,11 +1,12 @@
-// ABOUTME: Model for tracking video uploads to Cloudinary in various states
-// ABOUTME: Supports local persistence and state management for async upload flow
+// ABOUTME: Model for tracking video uploads to Cloudinary in various states.
+// ABOUTME: Supports local persistence and state management for async upload.
 
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
 
-import 'native_proof_data.dart';
+import 'package:meta/meta.dart';
+import 'package:models/src/native_proof_data.dart';
 
 /// Status of a video upload to Cloudinary
 enum UploadStatus {
@@ -20,6 +21,7 @@ enum UploadStatus {
 }
 
 /// Represents a video upload in progress or completed
+@immutable
 class PendingUpload {
   const PendingUpload({
     required this.id,
@@ -60,21 +62,25 @@ class PendingUpload {
     int? videoHeight,
     Duration? videoDuration,
     String? proofManifestJson,
-  }) => PendingUpload(
-    id: '${DateTime.now().microsecondsSinceEpoch}_${math.Random().nextInt(999999)}',
-    localVideoPath: localVideoPath,
-    nostrPubkey: nostrPubkey,
-    status: UploadStatus.pending,
-    createdAt: DateTime.now(),
-    thumbnailPath: thumbnailPath,
-    title: title,
-    description: description,
-    hashtags: hashtags,
-    videoWidth: videoWidth,
-    videoHeight: videoHeight,
-    videoDurationMillis: videoDuration?.inMilliseconds,
-    proofManifestJson: proofManifestJson,
-  );
+  }) {
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final randomSuffix = math.Random().nextInt(999999);
+    return PendingUpload(
+      id: '${timestamp}_$randomSuffix',
+      localVideoPath: localVideoPath,
+      nostrPubkey: nostrPubkey,
+      status: UploadStatus.pending,
+      createdAt: DateTime.now(),
+      thumbnailPath: thumbnailPath,
+      title: title,
+      description: description,
+      hashtags: hashtags,
+      videoWidth: videoWidth,
+      videoHeight: videoHeight,
+      videoDurationMillis: videoDuration?.inMilliseconds,
+      proofManifestJson: proofManifestJson,
+    );
+  }
   final String id;
   final String localVideoPath;
   final String nostrPubkey;
@@ -119,7 +125,7 @@ class PendingUpload {
         return NativeProofData.fromJson(json);
       }
       return null;
-    } catch (e) {
+    } on Exception catch (e) {
       developer.log(
         'Failed to parse NativeProofData: $e',
         name: 'PendingUpload',
@@ -238,7 +244,8 @@ class PendingUpload {
 
   @override
   String toString() =>
-      'PendingUpload{id: $id, status: $status, progress: $uploadProgress, cloudinaryId: $cloudinaryPublicId}';
+      'PendingUpload{id: $id, status: $status, '
+      'progress: $uploadProgress, cloudinaryId: $cloudinaryPublicId}';
 
   @override
   bool operator ==(Object other) =>

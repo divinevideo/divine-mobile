@@ -49,7 +49,10 @@ class GroupAdmins extends GroupObject {
             }
 
             var user = GroupAdminUser(
-                pubkey: value, role: role, permissions: permissions);
+              pubkey: value,
+              role: role,
+              permissions: permissions,
+            );
             users.add(user);
           }
         }
@@ -71,9 +74,5 @@ class GroupAdminUser {
 
   List<String>? permissions;
 
-  GroupAdminUser({
-    this.pubkey,
-    this.role,
-    this.permissions,
-  });
+  GroupAdminUser({this.pubkey, this.role, this.permissions});
 }

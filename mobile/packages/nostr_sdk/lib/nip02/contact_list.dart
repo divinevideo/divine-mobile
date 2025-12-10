@@ -1,37 +1,32 @@
+import 'dart:developer';
+
 import 'contact.dart';
 
 class ContactList {
-  late Map<String, Contact> _contacts;
+  Map<String, Contact> _contacts;
 
-  late Map<String, int> _followedTags;
+  Map<String, int> _followedTags;
 
-  late Map<String, int> _followedCommunitys;
+  Map<String, int> _followedCommunitys;
 
-  late int createdAt;
+  int createdAt;
 
   ContactList({
     Map<String, Contact>? contacts,
     Map<String, int>? followedTags,
     Map<String, int>? followedCommunitys,
     int? createdAt,
-  }) {
-    contacts ??= {};
-    followedTags ??= {};
-    followedCommunitys ??= {};
-
-    _contacts = contacts;
-    _followedTags = followedTags;
-    _followedCommunitys = followedCommunitys;
-
-    createdAt ??= DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    this.createdAt = createdAt;
-  }
+  }) : _contacts = contacts ?? {},
+       _followedTags = followedTags ?? {},
+       _followedCommunitys = followedCommunitys ?? {},
+       createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
   static void getContactInfoFromTags(
-      List<dynamic> tags,
-      Map<String, Contact> contacts,
-      Map<String, int> followedTags,
-      Map<String, int> followedCommunitys) {
+    List<dynamic> tags,
+    Map<String, Contact> contacts,
+    Map<String, int> followedTags,
+    Map<String, int> followedCommunitys,
+  ) {
     for (List<dynamic> tag in tags) {
       var length = tag.length;
       if (length == 0) {
@@ -49,10 +44,15 @@ class ContactList {
           petname = tag[3];
         }
         try {
-          final contact =
-              Contact(publicKey: tag[1], url: url, petname: petname);
+          final contact = Contact(
+            publicKey: tag[1],
+            url: url,
+            petname: petname,
+          );
           contacts[contact.publicKey] = contact;
-        } catch (e) {}
+        } catch (e) {
+          log("$e");
+        }
       } else if (t == "t" && length > 1) {
         var tagName = tag[1];
         followedTags[tagName] = 1;
@@ -71,8 +71,12 @@ class ContactList {
     return ContactList._(contacts, followedTags, followedCommunitys, createdAt);
   }
 
-  ContactList._(this._contacts, this._followedTags, this._followedCommunitys,
-      this.createdAt);
+  ContactList._(
+    this._contacts,
+    this._followedTags,
+    this._followedCommunitys,
+    this.createdAt,
+  );
 
   List<dynamic> toJson() {
     List<dynamic> result = [];

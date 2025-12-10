@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:isolate';
 
 import 'package:flutter_socks_proxy/socks_proxy.dart';
@@ -13,9 +14,7 @@ class RelayIsolateWorker {
 
   WebSocketChannel? wsChannel;
 
-  RelayIsolateWorker({
-    required this.config,
-  });
+  RelayIsolateWorker({required this.config});
 
   Future<void> run() async {
     if (StringUtil.isNotBlank(config.network)) {
@@ -34,7 +33,7 @@ class RelayIsolateWorker {
     wsChannel = await handleWS();
   }
 
-  void onMainToSubMessage(message) async {
+  void onMainToSubMessage(dynamic message) async {
     try {
       if (message is String) {
         // this is the msg need to sended.
@@ -80,35 +79,39 @@ class RelayIsolateWorker {
 
     final wsUrl = Uri.parse(url);
     try {
-      print("Begin to connect ${config.url}");
+      log("Begin to connect ${config.url}");
       wsChannel = WebSocketChannel.connect(wsUrl);
-      wsChannel!.stream.listen((message) {
-        List<dynamic> json = jsonDecode(message);
-        if (json.length > 2) {
-          final messageType = json[0];
-          if (messageType == 'EVENT') {
-            final event = Event.fromJson(json[2]);
-            if (config.eventCheck) {
-              // event need to check
-              if (!event.isValid || !event.isSigned) {
-                // check false
-                return;
+      wsChannel!.stream.listen(
+        (message) {
+          List<dynamic> json = jsonDecode(message);
+          if (json.length > 2) {
+            final messageType = json[0];
+            if (messageType == 'EVENT') {
+              final event = Event.fromJson(json[2]);
+              if (config.eventCheck) {
+                // event need to check
+                if (!event.isValid || !event.isSigned) {
+                  // check false
+                  return;
+                }
               }
             }
           }
-        }
-        subToMainSendPort.send(json);
-      }, onError: (error) async {
-        print("Websocket stream error:  $url");
-        _closeWS(wsChannel);
-        subToMainSendPort.send(RelayIsolateMsgs.DIS_CONNECTED);
-      }, onDone: () {
-        print("Websocket stream closed by remote:  $url");
-        _closeWS(wsChannel);
-        subToMainSendPort.send(RelayIsolateMsgs.DIS_CONNECTED);
-      });
+          subToMainSendPort.send(json);
+        },
+        onError: (error) async {
+          log("Websocket stream error:  $url");
+          _closeWS(wsChannel);
+          subToMainSendPort.send(RelayIsolateMsgs.DIS_CONNECTED);
+        },
+        onDone: () {
+          log("Websocket stream closed by remote:  $url");
+          _closeWS(wsChannel);
+          subToMainSendPort.send(RelayIsolateMsgs.DIS_CONNECTED);
+        },
+      );
       await wsChannel!.ready;
-      print("Connect complete! ${config.url}");
+      log("Connect complete! ${config.url}");
       subToMainSendPort.send(RelayIsolateMsgs.CONNECTED);
 
       return wsChannel;
@@ -128,7 +131,7 @@ class RelayIsolateWorker {
     try {
       wsChannel.sink.close();
     } catch (e) {
-      print("ws close error ${e.toString()}");
+      log("ws close error ${e.toString()}");
     }
 
     wsChannel = null;

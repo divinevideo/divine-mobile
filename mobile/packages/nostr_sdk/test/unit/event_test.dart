@@ -11,12 +11,7 @@ void main() {
     const testContent = 'Hello Nostr! This is a test event.';
 
     test('Event creation with valid parameters', () {
-      final event = Event(
-        testPubkey,
-        EventKind.TEXT_NOTE,
-        [],
-        testContent,
-      );
+      final event = Event(testPubkey, EventKind.TEXT_NOTE, [], testContent);
 
       expect(event.pubkey, equals(testPubkey));
       expect(event.kind, equals(EventKind.TEXT_NOTE));
@@ -47,12 +42,7 @@ void main() {
         ['p', testPubkey, '', 'mention'],
       ];
 
-      final event = Event(
-        testPubkey,
-        EventKind.TEXT_NOTE,
-        tags,
-        testContent,
-      );
+      final event = Event(testPubkey, EventKind.TEXT_NOTE, tags, testContent);
 
       expect(event.tags, equals(tags));
       expect(event.tags.length, equals(3));
@@ -79,26 +69,16 @@ void main() {
     });
 
     test('Event validation before signing', () {
-      final event = Event(
-        testPubkey,
-        EventKind.TEXT_NOTE,
-        [],
-        testContent,
-      );
+      final event = Event(testPubkey, EventKind.TEXT_NOTE, [], testContent);
 
       expect(event.isValid, isTrue);
       expect(event.isSigned, isFalse); // No signature yet
     });
 
     test('Event JSON serialization', () {
-      final event = Event(
-        testPubkey,
-        EventKind.TEXT_NOTE,
-        [
-          ['t', 'test']
-        ],
-        testContent,
-      );
+      final event = Event(testPubkey, EventKind.TEXT_NOTE, [
+        ['t', 'test'],
+      ], testContent);
 
       final json = event.toJson();
 
@@ -106,24 +86,20 @@ void main() {
       expect(json['pubkey'], equals(testPubkey));
       expect(json['kind'], equals(EventKind.TEXT_NOTE));
       expect(
-          json['tags'],
-          equals([
-            ['t', 'test']
-          ]));
+        json['tags'],
+        equals([
+          ['t', 'test'],
+        ]),
+      );
       expect(json['content'], equals(testContent));
       expect(json['created_at'], equals(event.createdAt));
       expect(json['sig'], equals(event.sig));
     });
 
     test('Event creation from JSON', () {
-      final originalEvent = Event(
-        testPubkey,
-        EventKind.TEXT_NOTE,
-        [
-          ['t', 'test']
-        ],
-        testContent,
-      );
+      final originalEvent = Event(testPubkey, EventKind.TEXT_NOTE, [
+        ['t', 'test'],
+      ], testContent);
 
       final json = originalEvent.toJson();
       final recreatedEvent = Event.fromJson(json);
@@ -169,23 +145,13 @@ void main() {
 
     test('Invalid pubkey throws error', () {
       expect(
-        () => Event(
-          'invalid_pubkey',
-          EventKind.TEXT_NOTE,
-          [],
-          testContent,
-        ),
+        () => Event('invalid_pubkey', EventKind.TEXT_NOTE, [], testContent),
         throwsArgumentError,
       );
     });
 
     test('Proof of work functionality', () {
-      final event = Event(
-        testPubkey,
-        EventKind.TEXT_NOTE,
-        [],
-        testContent,
-      );
+      final event = Event(testPubkey, EventKind.TEXT_NOTE, [], testContent);
 
       final originalId = event.id;
 

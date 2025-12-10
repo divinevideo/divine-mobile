@@ -73,7 +73,7 @@ mixin RelayLocalMixin {
       callback(connId, [
         "COUNT",
         subscriptionId,
-        {"count": count}
+        {"count": count},
       ]);
     }
   }

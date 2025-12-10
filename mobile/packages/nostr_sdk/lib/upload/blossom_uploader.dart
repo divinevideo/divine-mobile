@@ -17,19 +17,23 @@ import '../utils/string_util.dart';
 class BolssomUploader {
   static var dio = Dio();
 
-  static Future<String?> upload(Nostr nostr, String endPoint, String filePath,
-      {String? fileName}) async {
+  static Future<String?> upload(
+    Nostr nostr,
+    String endPoint,
+    String filePath, {
+    String? fileName,
+  }) async {
     var uri = Uri.tryParse(endPoint);
     if (uri == null) {
       return null;
     }
     var uploadApiPath = Uri(
-            scheme: uri.scheme,
-            userInfo: uri.userInfo,
-            host: uri.host,
-            port: uri.port,
-            path: "/upload")
-        .toString();
+      scheme: uri.scheme,
+      userInfo: uri.userInfo,
+      host: uri.host,
+      port: uri.port,
+      path: "/upload",
+    ).toString();
     // log("uploadApiPath is $uploadApiPath");
 
     String? payload;
@@ -53,10 +57,7 @@ class BolssomUploader {
     var fileSize = bytes.length;
     log("file size is ${bytes.length}");
     payload = HashUtil.sha256Bytes(bytes);
-    multipartFile = MultipartFile.fromBytes(
-      bytes,
-      filename: fileName,
-    );
+    multipartFile = MultipartFile.fromBytes(bytes, filename: fileName);
 
     Map<String, String>? headers = {};
     if (StringUtil.isNotBlank(fileName)) {
@@ -78,12 +79,16 @@ class BolssomUploader {
     tags.add(["t", "upload"]);
     tags.add([
       "expiration",
-      ((DateTime.now().millisecondsSinceEpoch ~/ 1000) + 60 * 10).toString()
+      ((DateTime.now().millisecondsSinceEpoch ~/ 1000) + 60 * 10).toString(),
     ]);
     tags.add(["size", "$fileSize"]);
     tags.add(["x", payload]);
     var nip98Event = Event(
-        nostr.publicKey, EventKind.BLOSSOM_HTTP_AUTH, tags, "Upload $fileName");
+      nostr.publicKey,
+      EventKind.BLOSSOM_HTTP_AUTH,
+      tags,
+      "Upload $fileName",
+    );
     await nostr.signEvent(nip98Event);
     // log(jsonEncode(nip98Event.toJson()));
     // BUD-01 spec requires standard base64 encoding (not base64url)
@@ -111,8 +116,8 @@ class BolssomUploader {
         return body["url"];
       }
     } catch (e) {
-      print("BolssomUploader.upload upload exception:");
-      print(e);
+      log("BolssomUploader.upload upload exception:");
+      log('$e');
     }
 
     return null;

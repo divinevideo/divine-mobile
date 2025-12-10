@@ -9,11 +9,8 @@ import 'package:web_socket_channel/io.dart';
 WebSocketChannel createSecureWebSocketChannel(Uri wsUrl) {
   final httpClient = HttpClient();
   httpClient.badCertificateCallback = (cert, host, port) => true;
-  
-  return IOWebSocketChannel.connect(
-    wsUrl,
-    customClient: httpClient,
-  );
+
+  return IOWebSocketChannel.connect(wsUrl, customClient: httpClient);
 }
 
 /// Creates a standard WebSocket channel for non-web platforms
