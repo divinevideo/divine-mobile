@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:meta/meta.dart';
 import 'package:nostr_client/src/models/models.dart';
+import 'package:nostr_client/src/relay_manager.dart';
 import 'package:nostr_gateway/nostr_gateway.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
@@ -15,29 +16,30 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 /// - Gateway integration for cached queries
 /// - Clean API for repositories to use
 /// - Proper resource management
-///
-/// Relay management is handled by nostr_sdk. Use [relayPool] to access
-/// relay management methods directly.
+/// - Relay management via RelayManager
 /// {@endtemplate}
 class NostrClient {
   /// {@macro nostr_client}
   ///
-  /// Creates a new NostrClient instance with the given configuration
+  /// Creates a new NostrClient instance with the given configuration.
+  /// Requires a [RelayManager] for relay management, persistence, and
+  /// status tracking.
   NostrClient({
     required NostrClientConfig config,
-    required GatewayClient gatewayClient,
-  }) : _config = config,
-       _nostr = _createNostr(config),
+    required RelayManager relayManager,
+    GatewayClient? gatewayClient,
+  }) : _nostr = _createNostr(config),
+       _relayManager = relayManager,
        _gatewayClient = gatewayClient;
 
   /// Creates a NostrClient with injected dependencies for testing
   @visibleForTesting
   NostrClient.forTesting({
-    required NostrClientConfig config,
     required Nostr nostr,
+    required RelayManager relayManager,
     GatewayClient? gatewayClient,
-  }) : _config = config,
-       _nostr = nostr,
+  }) : _nostr = nostr,
+       _relayManager = relayManager,
        _gatewayClient = gatewayClient;
 
   static Nostr _createNostr(NostrClientConfig config) {
@@ -57,17 +59,11 @@ class NostrClient {
   }
 
   final Nostr _nostr;
-  final NostrClientConfig _config;
   final GatewayClient? _gatewayClient;
+  final RelayManager _relayManager;
 
   /// Public key of the client
   String get publicKey => _nostr.publicKey;
-
-  /// Relay pool for relay management operations
-  ///
-  /// Use this to add/remove relays, check active relays, etc.
-  /// All relay management is handled by nostr_sdk.
-  RelayPool get relayPool => _nostr.relayPool;
 
   /// Map of subscription IDs to their filter hashes (for deduplication)
   final Map<String, String> _subscriptionFilters = {};
@@ -266,41 +262,41 @@ class NostrClient {
 
   /// Adds a relay connection
   ///
-  /// Delegates to relayPool.add().
+  /// Delegates to RelayManager for persistence and status tracking.
   Future<bool> addRelay(String relayUrl) async {
-    final relay = RelayBase(
-      relayUrl,
-      RelayStatus(relayUrl),
-      channelFactory: _config.webSocketChannelFactory,
-    );
-    return relayPool.add(relay);
+    return _relayManager.addRelay(relayUrl);
   }
 
   /// Removes a relay connection
   ///
-  /// Delegates to relayPool.remove().
-  Future<void> removeRelay(String relayUrl) async {
-    relayPool.remove(relayUrl);
+  /// Delegates to RelayManager.
+  Future<bool> removeRelay(String relayUrl) async {
+    return _relayManager.removeRelay(relayUrl);
   }
+
+  /// Gets list of configured relay URLs
+  List<String> get configuredRelays => _relayManager.configuredRelays;
 
   /// Gets list of connected relay URLs
-  List<String> get connectedRelays {
-    return relayPool.activeRelays().map((r) => r.url).toList();
-  }
+  List<String> get connectedRelays => _relayManager.connectedRelays;
 
   /// Gets count of connected relays
-  int get relayCount => connectedRelays.length;
+  int get connectedRelayCount => _relayManager.connectedRelayCount;
 
-  /// Gets relay statuses as a map
-  Map<String, dynamic> get relayStatuses {
-    final activeRelays = relayPool.activeRelays();
-    return {
-      for (final relay in activeRelays)
-        relay.url: {
-          'connected': true,
-          'url': relay.url,
-        },
-    };
+  /// Gets count of configured relays
+  int get configuredRelayCount => _relayManager.configuredRelayCount;
+
+  /// Gets relay statuses
+  Map<String, RelayConnectionStatus> get relayStatuses =>
+      _relayManager.currentStatuses;
+
+  /// Stream of relay status updates
+  Stream<Map<String, RelayConnectionStatus>> get relayStatusStream =>
+      _relayManager.statusStream;
+
+  /// Retry connecting to all disconnected relays
+  Future<void> retryDisconnectedRelays() async {
+    await _relayManager.retryDisconnectedRelays();
   }
 
   /// Sends a like reaction to an event
@@ -380,8 +376,9 @@ class NostrClient {
   ///
   /// Closes all subscriptions, disconnects from relays, and cleans up
   /// internal state. After calling this, the client should not be used.
-  void dispose() {
+  Future<void> dispose() async {
     closeAllSubscriptions();
+    await _relayManager.dispose();
     _nostr.close();
     _subscriptionFilters.clear();
   }
