@@ -52,9 +52,9 @@ void main() {
       final stats = RelayStatistics(relayUrl: relayUrl);
       stats.isConnected = true;
       when(() => mockStatsService.getStatistics(any())).thenReturn(stats);
-      when(() => mockStatsService.getAllStatistics()).thenReturn({
-        relayUrl: stats,
-      });
+      when(
+        () => mockStatsService.getAllStatistics(),
+      ).thenReturn({relayUrl: stats});
 
       // Mock capability service
       if (capabilities != null) {
@@ -64,9 +64,7 @@ void main() {
       } else {
         when(
           () => mockCapabilityService.getRelayCapabilities(any()),
-        ).thenThrow(
-          RelayCapabilityException('Not found', 'wss://test.relay'),
-        );
+        ).thenThrow(RelayCapabilityException('Not found', 'wss://test.relay'));
       }
 
       // Create the statistics map for the stream provider
@@ -75,8 +73,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          relayCapabilityServiceProvider
-              .overrideWithValue(mockCapabilityService),
+          relayCapabilityServiceProvider.overrideWithValue(
+            mockCapabilityService,
+          ),
           relayStatisticsServiceProvider.overrideWithValue(mockStatsService),
           relayStatisticsStreamProvider.overrideWith(
             (ref) => Stream.value(statsMap),
@@ -105,10 +104,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        createTestWidget(
-          ['wss://relay.divine.video'],
-          capabilities: capabilities,
-        ),
+        createTestWidget([
+          'wss://relay.divine.video',
+        ], capabilities: capabilities),
       );
       await tester.pumpAndSettle();
 
@@ -133,10 +131,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        createTestWidget(
-          ['wss://relay.divine.video'],
-          capabilities: capabilities,
-        ),
+        createTestWidget([
+          'wss://relay.divine.video',
+        ], capabilities: capabilities),
       );
       await tester.pumpAndSettle();
 
@@ -157,10 +154,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        createTestWidget(
-          ['wss://relay.divine.video'],
-          capabilities: capabilities,
-        ),
+        createTestWidget([
+          'wss://relay.divine.video',
+        ], capabilities: capabilities),
       );
       await tester.pumpAndSettle();
 
@@ -184,10 +180,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        createTestWidget(
-          ['wss://relay.divine.video'],
-          capabilities: capabilities,
-        ),
+        createTestWidget([
+          'wss://relay.divine.video',
+        ], capabilities: capabilities),
       );
       await tester.pumpAndSettle();
 
@@ -211,10 +206,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        createTestWidget(
-          ['wss://relay.divine.video'],
-          capabilities: capabilities,
-        ),
+        createTestWidget([
+          'wss://relay.divine.video',
+        ], capabilities: capabilities),
       );
       await tester.pumpAndSettle();
 
@@ -233,17 +227,13 @@ void main() {
         name: 'Divine Video Relay',
         description: 'Test relay',
         supportedNips: [1, 2, 11],
-        rawData: {
-          'software': 'nosflare',
-          'version': '0.3.0',
-        },
+        rawData: {'software': 'nosflare', 'version': '0.3.0'},
       );
 
       await tester.pumpWidget(
-        createTestWidget(
-          ['wss://relay.divine.video'],
-          capabilities: capabilities,
-        ),
+        createTestWidget([
+          'wss://relay.divine.video',
+        ], capabilities: capabilities),
       );
       await tester.pumpAndSettle();
 
@@ -257,9 +247,7 @@ void main() {
     });
 
     testWidgets('handles missing NIP-11 info gracefully', (tester) async {
-      await tester.pumpWidget(
-        createTestWidget(['wss://relay.divine.video']),
-      );
+      await tester.pumpWidget(createTestWidget(['wss://relay.divine.video']));
       await tester.pumpAndSettle();
 
       // Expand the tile
@@ -282,14 +270,20 @@ void main() {
         () => mockCapabilityService.getRelayCapabilities(any()),
       ).thenAnswer((_) => completer.future);
 
-      when(() => mockNostrService.relays).thenReturn(['wss://relay.divine.video']);
+      when(
+        () => mockNostrService.relays,
+      ).thenReturn(['wss://relay.divine.video']);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
-      final loadingStats = RelayStatistics(relayUrl: 'wss://relay.divine.video');
+      final loadingStats = RelayStatistics(
+        relayUrl: 'wss://relay.divine.video',
+      );
       loadingStats.isConnected = true;
-      when(() => mockStatsService.getStatistics(any())).thenReturn(loadingStats);
-      when(() => mockStatsService.getAllStatistics()).thenReturn({
-        'wss://relay.divine.video': loadingStats,
-      });
+      when(
+        () => mockStatsService.getStatistics(any()),
+      ).thenReturn(loadingStats);
+      when(
+        () => mockStatsService.getAllStatistics(),
+      ).thenReturn({'wss://relay.divine.video': loadingStats});
 
       // Create the statistics map for the stream provider
       final loadingStatsMap = <String, RelayStatistics>{
@@ -299,8 +293,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           nostrServiceProvider.overrideWithValue(mockNostrService),
-          relayCapabilityServiceProvider
-              .overrideWithValue(mockCapabilityService),
+          relayCapabilityServiceProvider.overrideWithValue(
+            mockCapabilityService,
+          ),
           relayStatisticsServiceProvider.overrideWithValue(mockStatsService),
           relayStatisticsStreamProvider.overrideWith(
             (ref) => Stream.value(loadingStatsMap),
@@ -327,11 +322,13 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
       // Complete the future to avoid pending timer error
-      completer.complete(RelayCapabilities(
-        relayUrl: 'wss://relay.divine.video',
-        name: 'Test',
-        rawData: {},
-      ));
+      completer.complete(
+        RelayCapabilities(
+          relayUrl: 'wss://relay.divine.video',
+          name: 'Test',
+          rawData: {},
+        ),
+      );
       await tester.pumpAndSettle();
     });
   });

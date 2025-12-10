@@ -31,8 +31,8 @@ class NostrService implements INostrService {
     embedded.EmbeddedNostrRelay? embeddedRelay,
     void Function()? onInitialized,
     RelayStatisticsService? statisticsService,
-  })  : _onInitialized = onInitialized,
-        _statisticsService = statisticsService {
+  }) : _onInitialized = onInitialized,
+       _statisticsService = statisticsService {
     UnifiedLogger.info(
       '🏗️  NostrService CONSTRUCTOR called - creating NEW instance',
       name: 'NostrService',
@@ -624,7 +624,8 @@ class NostrService implements INostrService {
     _subscriptions[id] = controller;
 
     // Record subscription started for all connected relays
-    final currentConnectedRelays = _embeddedRelay?.connectedRelays ?? <String>[];
+    final currentConnectedRelays =
+        _embeddedRelay?.connectedRelays ?? <String>[];
     for (final relayUrl in currentConnectedRelays) {
       _statisticsService?.recordSubscriptionStarted(relayUrl, id);
     }

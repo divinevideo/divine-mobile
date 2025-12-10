@@ -53,7 +53,9 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
 
     try {
       final capabilityService = ref.read(relayCapabilityServiceProvider);
-      final capabilities = await capabilityService.getRelayCapabilities(relayUrl);
+      final capabilities = await capabilityService.getRelayCapabilities(
+        relayUrl,
+      );
       if (mounted) {
         setState(() {
           _capabilitiesCache[relayUrl] = capabilities;
@@ -411,9 +413,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
             _fetchCapabilities(relayUrl);
           }
         },
-        children: [
-          _buildRelayDetails(stats, relayUrl),
-        ],
+        children: [_buildRelayDetails(stats, relayUrl)],
       ),
     );
   }
@@ -633,14 +633,8 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(color: Colors.grey[500], fontSize: 13),
-          ),
-          Text(
-            value,
-            style: TextStyle(color: valueColor, fontSize: 13),
-          ),
+          Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+          Text(value, style: TextStyle(color: valueColor, fontSize: 13)),
         ],
       ),
     );
