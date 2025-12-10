@@ -92,7 +92,19 @@ Future<UserProfile?> userProfileReactive(Ref ref, String pubkey) async {
   userProfileService.addListener(listener);
   unawaited(userProfileService.fetchProfile(pubkey));
 
-  return completer.future;
+  // Add timeout as safety net - don't wait forever
+  return completer.future.timeout(
+    const Duration(seconds: 15),
+    onTimeout: () {
+      Log.warning(
+        '⏰ [UserProfileProvider] Timeout waiting for profile: ${_safePubkeyTrunc(pubkey)}',
+        name: 'UserProfileProvider',
+        category: LogCategory.ui,
+      );
+      userProfileService.removeListener(listener);
+      return null;
+    },
+  );
 }
 
 /// Async provider for loading a single user profile
