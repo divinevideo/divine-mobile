@@ -176,6 +176,11 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     }
 
     await _insertEvent(event);
+
+    // Also upsert video metrics for video events
+    if (event.kind == 34236) {
+      await db.videoMetricsDao.upsertVideoMetrics(event);
+    }
   }
 
   /// Batch insert or replace multiple events in a single transaction

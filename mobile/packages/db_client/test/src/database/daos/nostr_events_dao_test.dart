@@ -39,7 +39,12 @@ void main() {
     return event;
   }
 
+  /// Counter for unique d-tags in video events
+  var videoEventCounter = 0;
+
   /// Helper to create a video event (kind 34236) with metrics tags.
+  /// Each video event gets a unique d-tag since kind 34236 is parameterized
+  /// replaceable (NIP-01).
   Event createVideoEvent({
     String pubkey = testPubkey,
     int? loops,
@@ -47,8 +52,13 @@ void main() {
     int? comments,
     List<String>? hashtags,
     int? createdAt,
+    String? dTag,
   }) {
     final tags = <List<String>>[];
+
+    // Add unique d-tag for parameterized replaceable events
+    final uniqueDTag = dTag ?? 'video_${videoEventCounter++}';
+    tags.add(['d', uniqueDTag]);
 
     if (loops != null) {
       tags.add(['loops', loops.toString()]);
@@ -77,6 +87,9 @@ void main() {
   }
 
   setUp(() async {
+    // Reset counter for unique d-tags
+    videoEventCounter = 0;
+
     final tempDir = Directory.systemTemp.createTempSync('dao_test_');
     tempDbPath = '${tempDir.path}/test.db';
 
