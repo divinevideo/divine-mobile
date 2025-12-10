@@ -1,12 +1,15 @@
 # ABOUTME: Codemagic CI/CD configuration for diVine mobile app builds.
-# ABOUTME: Configured for iOS builds with manual triggering and TestFlight distribution.
+# ABOUTME: Configured for iOS and Android builds with manual triggering only.
 
 # Steps to setup:
 # 1 - Create the Codemagic project with access to the repository.
 # 2 - Setup iOS publishing:
 #   2.1 - https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/#:~:text=Creating%20the%20App%20Store%20Connect%20API%20key
-# 3 - Setup emails to receive build notifications.
-# 4 - Create environment variable group "zendesk_credentials" with:
+# 3 - Setup Android publishing:
+#   3.1 - Code signing: https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/#:~:text=Generating%20a%20keystore
+#   3.2 - Connect to Google Play: https://docs.codemagic.io/yaml-publishing/google-play/
+# 4 - Setup emails to receive build notifications.
+# 5 - Create environment variable group "zendesk_credentials" with:
 #   - ZENDESK_APP_ID
 #   - ZENDESK_CLIENT_ID
 #   - ZENDESK_URL
@@ -25,6 +28,23 @@ definitions:
     - &pod_install
       name: Run pod install
       script: find . -name "Podfile" -execdir pod install \;
+    - &setup_local_properties
+      name: Set up local.properties
+      script: echo "flutter.sdk=$FLUTTER_ROOT" > "$CM_BUILD_DIR/mobile/android/local.properties"
+    - &build_apk
+      name: Build Android APK
+      script: |
+        flutter build apk --release --build-number=$PROJECT_BUILD_NUMBER \
+          --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
+          --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
+          --dart-define=ZENDESK_URL=$ZENDESK_URL
+    - &build_aab
+      name: Build Android AAB
+      script: |
+        flutter build appbundle --release --build-number=$PROJECT_BUILD_NUMBER \
+          --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
+          --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
+          --dart-define=ZENDESK_URL=$ZENDESK_URL
     - &build_ios
       name: Build and sign iOS
       script: |
@@ -77,3 +97,30 @@ workflows:
         submit_to_app_store: false
         # Don't auto-distribute to any groups - we'll manually add builds to external testers
         beta_groups: []
+
+  android-build:
+    name: Android Build
+    working_directory: mobile
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      java: 17
+      groups:
+        - zendesk_credentials
+      android_signing:
+        - divine_keystore
+    cache:
+      cache_paths:
+        - $HOME/.gradle/caches
+        - $HOME/.pub-cache
+    triggering:
+      events: []
+    scripts:
+      - *setup_local_properties
+      - *build_apk
+      - *build_aab
+    artifacts:
+      - build/app/outputs/apk/release/*.apk
+      - build/app/outputs/bundle/release/*.aab
+      - build/app/outputs/mapping/**/mapping.txt
