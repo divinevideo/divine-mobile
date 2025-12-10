@@ -21,6 +21,23 @@ import 'package:share_plus/share_plus.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+
+// TODO(any): Move this to a reusable widget
+ Widget get _buildLoadingIndicator =>
+     Padding(
+      padding: const EdgeInsets.all(12),
+      child: Center(
+        child: const SizedBox(
+              width: 16,
+              height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: VineTheme.secondaryText,
+          ),
+        ),
+      ),
+    );
+
 /// Comprehensive share menu for videos
 class ShareVideoMenu extends ConsumerStatefulWidget {
   const ShareVideoMenu({required this.video, super.key, this.onDismiss});
@@ -283,6 +300,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
               }
 
               return Container(
+                margin: const EdgeInsets.only(top: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade900,
@@ -351,11 +369,11 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
                 ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => _buildLoadingIndicator,
             error: (_, __) => const SizedBox.shrink(),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => _buildLoadingIndicator,
         error: (_, __) => const SizedBox.shrink(),
       );
     },
@@ -411,12 +429,11 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
       Consumer(
         builder: (context, ref, child) {
           final listServiceAsync = ref.watch(curatedListsStateProvider);
+          final listService = ref.read(curatedListsStateProvider.notifier).service;
 
           return listServiceAsync.when(
             data: (lists) {
-               final listsContainingVideo = lists.where((list) => 
-                list.videoEventIds.contains(widget.video.id)
-              ).toList();
+              final listsContainingVideo = listService?.getListsContainingVideo(widget.video.id) ?? [];
 
               if (listsContainingVideo.isEmpty) {
                 return const SizedBox.shrink();
@@ -499,7 +516,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
                 ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => _buildLoadingIndicator,
             error: (_, __) => const SizedBox.shrink(),
           );
         },
@@ -709,7 +726,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => _buildLoadingIndicator,
         error: (_, __) => const SizedBox.shrink(),
       );
     },
@@ -1789,7 +1806,7 @@ class _SelectListDialog extends StatelessWidget {
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => _buildLoadingIndicator,
         error: (_, __) => const Center(child: Text('Error loading lists')),
       );
     },
@@ -3256,7 +3273,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: CircularProgressIndicator()),  
       error: (_, __) => const SizedBox.shrink(),
     );
   }
