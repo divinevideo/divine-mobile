@@ -106,6 +106,33 @@ RelayStatisticsService relayStatisticsService(Ref ref) {
   return service;
 }
 
+/// Stream provider for reactive relay statistics updates
+/// Use this provider when you need UI to rebuild when statistics change
+@riverpod
+Stream<Map<String, RelayStatistics>> relayStatisticsStream(Ref ref) async* {
+  final service = ref.watch(relayStatisticsServiceProvider);
+
+  // Emit current state immediately
+  yield service.getAllStatistics();
+
+  // Create a stream controller to emit updates on notifyListeners
+  final controller = StreamController<Map<String, RelayStatistics>>();
+
+  void listener() {
+    if (!controller.isClosed) {
+      controller.add(service.getAllStatistics());
+    }
+  }
+
+  service.addListener(listener);
+  ref.onDispose(() {
+    service.removeListener(listener);
+    controller.close();
+  });
+
+  yield* controller.stream;
+}
+
 /// Analytics service with opt-out support
 @Riverpod(keepAlive: true) // Keep alive to maintain singleton behavior
 AnalyticsService analyticsService(Ref ref) {

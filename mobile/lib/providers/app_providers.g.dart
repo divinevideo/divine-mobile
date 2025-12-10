@@ -326,6 +326,56 @@ final class RelayStatisticsServiceProvider
 String _$relayStatisticsServiceHash() =>
     r'08039c024eda98d415d0a0088119d0f12e7fc54d';
 
+/// Stream provider for reactive relay statistics updates
+/// Use this provider when you need UI to rebuild when statistics change
+
+@ProviderFor(relayStatisticsStream)
+const relayStatisticsStreamProvider = RelayStatisticsStreamProvider._();
+
+/// Stream provider for reactive relay statistics updates
+/// Use this provider when you need UI to rebuild when statistics change
+
+final class RelayStatisticsStreamProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, RelayStatistics>>,
+          Map<String, RelayStatistics>,
+          Stream<Map<String, RelayStatistics>>
+        >
+    with
+        $FutureModifier<Map<String, RelayStatistics>>,
+        $StreamProvider<Map<String, RelayStatistics>> {
+  /// Stream provider for reactive relay statistics updates
+  /// Use this provider when you need UI to rebuild when statistics change
+  const RelayStatisticsStreamProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'relayStatisticsStreamProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$relayStatisticsStreamHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<Map<String, RelayStatistics>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<Map<String, RelayStatistics>> create(Ref ref) {
+    return relayStatisticsStream(ref);
+  }
+}
+
+String _$relayStatisticsStreamHash() =>
+    r'0ab9617467aabccc62b36b0de4d79a0ce9d01c5e';
+
 /// Analytics service with opt-out support
 
 @ProviderFor(analyticsService)

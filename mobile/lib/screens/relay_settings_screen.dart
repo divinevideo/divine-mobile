@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/services/relay_capability_service.dart';
 import 'package:openvine/services/relay_gateway_settings.dart';
 import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -25,6 +26,8 @@ class RelaySettingsScreen extends ConsumerStatefulWidget {
 class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
   late RelayGatewaySettings _gatewaySettings;
   bool _gatewayEnabled = true;
+  final Map<String, RelayCapabilities?> _capabilitiesCache = {};
+  final Map<String, bool> _capabilitiesLoading = {};
 
   @override
   void initState() {
@@ -38,6 +41,54 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
     setState(() {
       _gatewayEnabled = _gatewaySettings.isEnabled;
     });
+  }
+
+  Future<void> _fetchCapabilities(String relayUrl) async {
+    if (_capabilitiesLoading[relayUrl] == true) return;
+    if (_capabilitiesCache.containsKey(relayUrl)) return;
+
+    setState(() {
+      _capabilitiesLoading[relayUrl] = true;
+    });
+
+    try {
+      final capabilityService = ref.read(relayCapabilityServiceProvider);
+      final capabilities = await capabilityService.getRelayCapabilities(relayUrl);
+      if (mounted) {
+        setState(() {
+          _capabilitiesCache[relayUrl] = capabilities;
+          _capabilitiesLoading[relayUrl] = false;
+        });
+      }
+    } catch (e) {
+      Log.debug(
+        'Failed to fetch NIP-11 for $relayUrl: $e',
+        name: 'RelaySettingsScreen',
+      );
+      if (mounted) {
+        setState(() {
+          _capabilitiesCache[relayUrl] = null;
+          _capabilitiesLoading[relayUrl] = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _openRelayWebsite(String relayUrl) async {
+    final httpUrl = relayUrl
+        .replaceFirst('wss://', 'https://')
+        .replaceFirst('ws://', 'http://');
+    final url = Uri.parse(httpUrl);
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        _showError('Could not open browser');
+      }
+    } catch (e) {
+      Log.error('Failed to launch relay URL: $e', name: 'RelaySettingsScreen');
+      _showError('Failed to open link');
+    }
   }
 
   @override
@@ -313,8 +364,9 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
   }
 
   Widget _buildRelayTile(String relayUrl) {
-    final statsService = ref.watch(relayStatisticsServiceProvider);
-    final stats = statsService.getStatistics(relayUrl);
+    // Watch the stream provider to get reactive updates when statistics change
+    final statsAsync = ref.watch(relayStatisticsStreamProvider);
+    final stats = statsAsync.whenData((allStats) => allStats[relayUrl]).value;
 
     final isConnected = stats?.isConnected ?? false;
     final statusSummary = stats?.statusSummary ?? 'External relay';
@@ -354,6 +406,11 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         ),
         iconColor: Colors.grey,
         collapsedIconColor: Colors.grey,
+        onExpansionChanged: (expanded) {
+          if (expanded) {
+            _fetchCapabilities(relayUrl);
+          }
+        },
         children: [
           _buildRelayDetails(stats, relayUrl),
         ],
@@ -371,6 +428,9 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         ),
       );
     }
+
+    final capabilities = _capabilitiesCache[relayUrl];
+    final isLoading = _capabilitiesLoading[relayUrl] ?? false;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -452,9 +512,119 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                 style: TextStyle(color: Colors.red[200], fontSize: 11),
               ),
           ],
+          // NIP-11 Relay Info Section
+          _buildRelayInfoSection(relayUrl, capabilities, isLoading),
         ],
       ),
     );
+  }
+
+  Widget _buildRelayInfoSection(
+    String relayUrl,
+    RelayCapabilities? capabilities,
+    bool isLoading,
+  ) {
+    if (isLoading) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Divider(color: Colors.grey, height: 24),
+          Row(
+            children: [
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: VineTheme.vineGreen,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Loading relay info...',
+                style: TextStyle(color: Colors.grey[500], fontSize: 13),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    if (capabilities == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(color: Colors.grey, height: 24),
+        Text(
+          'About Relay',
+          style: TextStyle(
+            color: Colors.grey[400],
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (capabilities.name != null && capabilities.name!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              capabilities.name!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        if (capabilities.description != null &&
+            capabilities.description!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              capabilities.description!,
+              style: TextStyle(color: Colors.grey[400], fontSize: 13),
+            ),
+          ),
+        if (capabilities.supportedNips.isNotEmpty)
+          _buildStatRow(
+            'Supported NIPs',
+            capabilities.supportedNips.join(', '),
+            Colors.grey[400]!,
+          ),
+        if (capabilities.rawData['software'] != null)
+          _buildStatRow(
+            'Software',
+            _formatSoftwareVersion(capabilities.rawData),
+            Colors.grey[400]!,
+          ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: () => _openRelayWebsite(relayUrl),
+          icon: const Icon(Icons.open_in_new, size: 16, color: Colors.white),
+          label: const Text(
+            'View Website',
+            style: TextStyle(color: Colors.white, fontSize: 13),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey[700],
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatSoftwareVersion(Map<String, dynamic> rawData) {
+    final software = rawData['software'] as String?;
+    final version = rawData['version'] as String?;
+    if (software == null) return '';
+    if (version != null) {
+      return '$software v$version';
+    }
+    return software;
   }
 
   Widget _buildStatRow(String label, String value, Color valueColor) {
