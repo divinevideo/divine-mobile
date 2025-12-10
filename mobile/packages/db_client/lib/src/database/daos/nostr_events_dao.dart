@@ -152,10 +152,9 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
 
     for (final row in existingRows) {
       final tagsJson = row.read<String>('tags');
-      final tags =
-          (jsonDecode(tagsJson) as List)
-              .map((tag) => (tag as List).map((e) => e.toString()).toList())
-              .toList();
+      final tags = (jsonDecode(tagsJson) as List)
+          .map((tag) => (tag as List).map((e) => e.toString()).toList())
+          .toList();
       final existingDTag = _getDTagValue(tags);
 
       if (existingDTag == dTagValue) {
