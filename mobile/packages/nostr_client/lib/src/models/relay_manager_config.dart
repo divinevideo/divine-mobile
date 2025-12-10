@@ -1,7 +1,7 @@
 // ABOUTME: Configuration for RelayManager initialization and behavior.
 // ABOUTME: Defines default relay, persistence, and reconnection settings.
 
-import 'package:meta/meta.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 
 /// {@template relay_storage}
 /// Abstract interface for persisting relay configuration.
@@ -40,7 +40,6 @@ class InMemoryRelayStorage implements RelayStorage {
 /// {@template relay_manager_config}
 /// Configuration for RelayManager initialization and behavior.
 /// {@endtemplate}
-@immutable
 class RelayManagerConfig {
   /// {@macro relay_manager_config}
   const RelayManagerConfig({
@@ -49,6 +48,7 @@ class RelayManagerConfig {
     this.autoReconnect = true,
     this.maxReconnectAttempts = 5,
     this.reconnectDelayMs = 2000,
+    this.webSocketChannelFactory,
   });
 
   /// The default relay URL that is always included and cannot be removed
@@ -68,6 +68,10 @@ class RelayManagerConfig {
   /// Uses exponential backoff: delay * 2^attempt
   final int reconnectDelayMs;
 
+  /// WebSocket channel factory for custom connection handling
+  /// If null, uses the default WebSocket implementation
+  final WebSocketChannelFactory? webSocketChannelFactory;
+
   /// Creates a copy with updated fields
   RelayManagerConfig copyWith({
     String? defaultRelayUrl,
@@ -75,6 +79,7 @@ class RelayManagerConfig {
     bool? autoReconnect,
     int? maxReconnectAttempts,
     int? reconnectDelayMs,
+    WebSocketChannelFactory? webSocketChannelFactory,
   }) {
     return RelayManagerConfig(
       defaultRelayUrl: defaultRelayUrl ?? this.defaultRelayUrl,
@@ -82,6 +87,8 @@ class RelayManagerConfig {
       autoReconnect: autoReconnect ?? this.autoReconnect,
       maxReconnectAttempts: maxReconnectAttempts ?? this.maxReconnectAttempts,
       reconnectDelayMs: reconnectDelayMs ?? this.reconnectDelayMs,
+      webSocketChannelFactory:
+          webSocketChannelFactory ?? this.webSocketChannelFactory,
     );
   }
 }

@@ -185,6 +185,7 @@ class RelayManager {
         errorMessage: 'Failed to connect',
       );
     }
+    _notifyStatusChange();
 
     // Persist configuration
     await _saveConfiguration();
@@ -352,6 +353,7 @@ class RelayManager {
         );
       }
     }
+    _notifyStatusChange();
   }
 
   Future<bool> _connectToRelay(String url) async {
@@ -361,7 +363,11 @@ class RelayManager {
       if (_relayFactory != null) {
         relay = _relayFactory(url);
       } else {
-        relay = RelayBase(url, RelayStatus(url));
+        relay = RelayBase(
+          url,
+          RelayStatus(url),
+          channelFactory: _config.webSocketChannelFactory,
+        );
       }
 
       // Add to pool and connect

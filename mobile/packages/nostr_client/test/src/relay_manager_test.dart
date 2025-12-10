@@ -324,6 +324,58 @@ void main() {
 
         expect(statusUpdates.length, greaterThan(0));
       });
+
+      test('emits both connecting and final connected state', () async {
+        final statusUpdates = <Map<String, RelayConnectionStatus>>[];
+        manager.statusStream.listen(statusUpdates.add);
+
+        await manager.addRelay(testCustomRelayUrl);
+        await Future<void>.delayed(Duration.zero);
+
+        // Should have at least 2 emissions: connecting and connected
+        expect(statusUpdates.length, greaterThanOrEqualTo(2));
+
+        // First emission should show connecting state
+        final firstUpdate = statusUpdates.first;
+        expect(
+          firstUpdate[testCustomRelayUrl]?.state,
+          equals(RelayState.connecting),
+        );
+
+        // Last emission should show connected state
+        final lastUpdate = statusUpdates.last;
+        expect(
+          lastUpdate[testCustomRelayUrl]?.state,
+          equals(RelayState.connected),
+        );
+      });
+
+      test('emits both connecting and final error state on failure', () async {
+        when(() => mockRelayPool.add(any())).thenAnswer((_) async => false);
+
+        final statusUpdates = <Map<String, RelayConnectionStatus>>[];
+        manager.statusStream.listen(statusUpdates.add);
+
+        await manager.addRelay(testCustomRelayUrl);
+        await Future<void>.delayed(Duration.zero);
+
+        // Should have at least 2 emissions: connecting and error
+        expect(statusUpdates.length, greaterThanOrEqualTo(2));
+
+        // First emission should show connecting state
+        final firstUpdate = statusUpdates.first;
+        expect(
+          firstUpdate[testCustomRelayUrl]?.state,
+          equals(RelayState.connecting),
+        );
+
+        // Last emission should show error state
+        final lastUpdate = statusUpdates.last;
+        expect(
+          lastUpdate[testCustomRelayUrl]?.state,
+          equals(RelayState.error),
+        );
+      });
     });
 
     group('removeRelay', () {
