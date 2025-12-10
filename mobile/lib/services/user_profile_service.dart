@@ -34,6 +34,8 @@ class UserProfileService extends ChangeNotifier {
   // Batch fetching management
   String? _batchSubscriptionId;
   Timer? _batchDebounceTimer;
+  Timer? _batchTimeoutTimer;
+  Set<String>? _currentBatchPubkeys;
   final Set<String> _pendingBatchPubkeys = {};
 
   // Missing profile tracking to avoid relay spam
@@ -327,6 +329,9 @@ class UserProfileService extends ChangeNotifier {
     try {
       if (event.kind != 0) return;
 
+      // Reset timeout timer on each event received - wait 10s after last event
+      _resetBatchTimeout();
+
       // Parse profile data from event content
       final profile = UserProfile.fromNostrEvent(event);
 
@@ -384,23 +389,22 @@ class UserProfileService extends ChangeNotifier {
     }
   }
 
-  // TODO: Use for error handling if needed
-  /*
-  /// Handle profile fetch error
-  void _handleProfileError(String pubkey, dynamic error) {
-    Log.error('Profile fetch error for ${pubkey}: $error',
-        name: 'UserProfileService', category: LogCategory.system);
-    _cleanupProfileRequest(pubkey);
-  }
-  */
+  /// Reset the batch timeout timer (called on each event received)
+  void _resetBatchTimeout() {
+    if (_currentBatchPubkeys == null || _currentBatchPubkeys!.isEmpty) return;
 
-  // TODO: Use for completion handling if needed
-  /*
-  /// Handle profile fetch completion
-  void _handleProfileComplete(String pubkey) {
-    _cleanupProfileRequest(pubkey);
+    _batchTimeoutTimer?.cancel();
+    _batchTimeoutTimer = Timer(const Duration(seconds: 10), () {
+      if (_currentBatchPubkeys != null && _currentBatchPubkeys!.isNotEmpty) {
+        Log.warning(
+          '⏰ Batch fetch timeout - completing after 10s idle (${_currentBatchPubkeys!.length} profiles pending)',
+          name: 'UserProfileService',
+          category: LogCategory.system,
+        );
+        _completeBatchFetch(_currentBatchPubkeys!);
   }
-  */
+    });
+  }
 
   /// Cleanup profile request
   void _cleanupProfileRequest(String pubkey) {
@@ -605,9 +609,15 @@ class UserProfileService extends ChangeNotifier {
   Future<void> _executeBatchFetch() async {
     if (_pendingBatchPubkeys.isEmpty) return;
 
+    // Cancel any existing timeout from previous batch
+    _batchTimeoutTimer?.cancel();
+
     // Move pending to current batch
     final batchPubkeys = _pendingBatchPubkeys.toList();
     _pendingBatchPubkeys.clear();
+
+    // Track current batch for timeout handling
+    _currentBatchPubkeys = Set<String>.from(batchPubkeys);
 
     Log.debug(
       '🔄 Executing batch fetch for ${batchPubkeys.length} profiles...',
@@ -634,6 +644,18 @@ class UserProfileService extends ChangeNotifier {
       // Track which profiles we're fetching in this batch
       final thisBatchPubkeys = Set<String>.from(batchPubkeys);
 
+      // Start timeout timer - complete batch after 10 seconds even if EOSE doesn't arrive
+      _batchTimeoutTimer = Timer(const Duration(seconds: 10), () {
+        if (_currentBatchPubkeys != null && _currentBatchPubkeys!.isNotEmpty) {
+          Log.warning(
+            '⏰ Batch fetch timeout - completing without EOSE (${_currentBatchPubkeys!.length} profiles pending)',
+            name: 'UserProfileService',
+            category: LogCategory.system,
+          );
+          _completeBatchFetch(_currentBatchPubkeys!);
+        }
+      });
+
       // Subscribe to profile events using SubscriptionManager
       final subscriptionId = await _subscriptionManager.createSubscription(
         name: 'profile_batch_${DateTime.now().millisecondsSinceEpoch}',
@@ -656,12 +678,20 @@ class UserProfileService extends ChangeNotifier {
         name: 'UserProfileService',
         category: LogCategory.system,
       );
+      _batchTimeoutTimer?.cancel();
       _completeBatchFetch(batchPubkeys.toSet());
     }
   }
 
   /// Complete the batch fetch and clean up
   void _completeBatchFetch(Set<String> batchPubkeys) {
+    // Cancel timeout timer
+    _batchTimeoutTimer?.cancel();
+    _batchTimeoutTimer = null;
+
+    // Clear current batch tracking
+    _currentBatchPubkeys = null;
+
     // Cancel managed subscription
     if (_batchSubscriptionId != null) {
       _subscriptionManager.cancelSubscription(_batchSubscriptionId!);
@@ -909,6 +939,7 @@ class UserProfileService extends ChangeNotifier {
   void dispose() {
     // Cancel batch operations
     _batchDebounceTimer?.cancel();
+    _batchTimeoutTimer?.cancel();
 
     // Cancel batch subscription
     if (_batchSubscriptionId != null) {
