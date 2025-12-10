@@ -125,4 +125,32 @@ class EventKind {
   static const int GROUP_ADMINS = 39001;
 
   static const int GROUP_MEMBERS = 39002;
+
+  // ---------------------------------------------------------------------------
+  // NIP-01 Replaceable Event Helpers
+  // ---------------------------------------------------------------------------
+
+  /// Checks if an event kind is replaceable (NIP-01).
+  ///
+  /// Replaceable event kinds: 0, 3, or 10000-19999.
+  /// Only one event per pubkey+kind is stored; newer replaces older.
+  static bool isReplaceable(int kind) {
+    return kind == METADATA ||
+        kind == CONTACT_LIST ||
+        (kind >= 10000 && kind < 20000);
+  }
+
+  /// Checks if an event kind is parameterized replaceable (NIP-01).
+  ///
+  /// Parameterized replaceable event kinds: 30000-39999.
+  /// Only one event per pubkey+kind+d-tag is stored; newer replaces older.
+  static bool isParameterizedReplaceable(int kind) {
+    return kind >= 30000 && kind < 40000;
+  }
+
+  /// Checks if an event kind is any type of replaceable (standard or
+  /// parameterized).
+  static bool isAnyReplaceable(int kind) {
+    return isReplaceable(kind) || isParameterizedReplaceable(kind);
+  }
 }

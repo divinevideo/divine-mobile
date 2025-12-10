@@ -142,6 +142,20 @@ class Event {
     }
   }
 
+  /// Extracts the d-tag value from this event's tags.
+  ///
+  /// For parameterized replaceable events (NIP-01, kinds 30000-39999),
+  /// the d-tag is used along with pubkey and kind to identify unique events.
+  /// Returns empty string if no d-tag is found (per NIP-01 spec).
+  String get dTagValue {
+    for (final tag in tags) {
+      if (tag is List && tag.isNotEmpty && tag[0] == 'd') {
+        return tag.length > 1 ? tag[1].toString() : '';
+      }
+    }
+    return '';
+  }
+
   // Individual events with the same "id" are equivalent
   @override
   bool operator ==(other) => other is Event && id == other.id;

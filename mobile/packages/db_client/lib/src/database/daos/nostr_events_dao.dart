@@ -7,36 +7,9 @@ import 'dart:convert';
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/event_kind.dart';
 
 part 'nostr_events_dao.g.dart';
-
-/// Checks if an event kind is replaceable (NIP-01)
-///
-/// Replaceable events: kind 0, 3, or 10000-19999
-/// Only one event per pubkey+kind is stored; newer replaces older.
-bool _isReplaceableKind(int kind) {
-  return kind == 0 || kind == 3 || (kind >= 10000 && kind < 20000);
-}
-
-/// Checks if an event kind is parameterized replaceable (NIP-01)
-///
-/// Parameterized replaceable events: kind 30000-39999
-/// Only one event per pubkey+kind+d-tag is stored; newer replaces older.
-bool _isParameterizedReplaceableKind(int kind) {
-  return kind >= 30000 && kind < 40000;
-}
-
-/// Extracts the d-tag value from event tags
-///
-/// Returns empty string if no d-tag is found (per NIP-01 spec).
-String _getDTagValue(List<dynamic> tags) {
-  for (final tag in tags) {
-    if (tag is List && tag.isNotEmpty && tag[0] == 'd') {
-      return tag.length > 1 ? tag[1].toString() : '';
-    }
-  }
-  return '';
-}
 
 @DriftAccessor(tables: [NostrEvents, VideoMetrics])
 class NostrEventsDao extends DatabaseAccessor<AppDatabase>
@@ -58,13 +31,13 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   /// video_metrics table for fast sorted queries.
   Future<void> upsertEvent(Event event) async {
     // Handle replaceable events (kind 0, 3, 10000-19999)
-    if (_isReplaceableKind(event.kind)) {
+    if (EventKind.isReplaceable(event.kind)) {
       await _upsertReplaceableEvent(event);
       return;
     }
 
     // Handle parameterized replaceable events (kind 30000-39999)
-    if (_isParameterizedReplaceableKind(event.kind)) {
+    if (EventKind.isParameterizedReplaceable(event.kind)) {
       await _upsertParameterizedReplaceableEvent(event);
       return;
     }
@@ -136,7 +109,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   /// Only stores the event if no existing event with same pubkey+kind+d-tag
   /// exists, or if the new event has a higher created_at timestamp.
   Future<void> _upsertParameterizedReplaceableEvent(Event event) async {
-    final dTagValue = _getDTagValue(event.tags);
+    final dTagValue = event.dTagValue;
 
     // Check if a newer event already exists for this pubkey+kind+d-tag
     // We need to check tags JSON for the d-tag value
@@ -155,7 +128,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
       final tags = (jsonDecode(tagsJson) as List)
           .map((tag) => (tag as List).map((e) => e.toString()).toList())
           .toList();
-      final existingDTag = _getDTagValue(tags);
+      final existingDTag = _extractDTagFromTags(tags);
 
       if (existingDTag == dTagValue) {
         final existingCreatedAt = row.read<int>('created_at');
@@ -348,5 +321,17 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     return event
       ..id = row.read<String>('id')
       ..sig = row.read<String>('sig');
+  }
+
+  /// Extracts the d-tag value from raw tag list (for database queries).
+  ///
+  /// Returns empty string if no d-tag is found (per NIP-01 spec).
+  String _extractDTagFromTags(List<List<String>> tags) {
+    for (final tag in tags) {
+      if (tag.isNotEmpty && tag[0] == 'd') {
+        return tag.length > 1 ? tag[1] : '';
+      }
+    }
+    return '';
   }
 }
