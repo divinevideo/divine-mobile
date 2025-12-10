@@ -71,7 +71,7 @@ final class FetchUserProfileProvider
   }
 }
 
-String _$fetchUserProfileHash() => r'8fcb96c584b9590712ec8e1681ebae84e0f66627';
+String _$fetchUserProfileHash() => r'4452511d0cf207d08bbeb23e9c823aac5fdbfbe0';
 
 /// Async provider for loading a single user profile
 /// Delegates to UserProfileService which is the single source of truth

@@ -5,10 +5,10 @@ import 'dart:async';
 
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/state/user_profile_state.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:openvine/providers/tab_visibility_provider.dart';
 
 part 'user_profile_providers.g.dart';
 
@@ -21,6 +21,25 @@ String _safePubkeyTrunc(String pubkey) => pubkey.length > 8 ? pubkey : pubkey;
 Future<UserProfile?> fetchUserProfile(Ref ref, String pubkey) async {
   // Use UserProfileService as single source of truth
   final userProfileService = ref.watch(userProfileServiceProvider);
+
+  // Is the profile already present in the service cache?
+  final wasPresent = userProfileService.allProfiles.containsKey(pubkey);
+
+  if (!wasPresent) {
+    // If the profile is not cached, add a listener to invalidate this provider
+    // when the profile is added.
+    void listener() {
+      final isPresent = userProfileService.allProfiles.containsKey(pubkey);
+
+      if (!wasPresent && isPresent) {
+        ref.invalidateSelf();
+        userProfileService.removeListener(listener);
+      }
+    }
+
+    userProfileService.addListener(listener);
+    ref.onDispose(() => userProfileService.removeListener(listener));
+  }
 
   // Check if already cached or should skip
   final cached = userProfileService.getCachedProfile(pubkey);
