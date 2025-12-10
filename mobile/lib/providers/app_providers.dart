@@ -52,6 +52,7 @@ import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/services/nip17_message_service.dart';
 import 'package:openvine/services/relay_capability_service.dart';
+import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -95,6 +96,14 @@ VideoVisibilityManager videoVisibilityManager(Ref ref) {
 @Riverpod(keepAlive: true)
 BackgroundActivityManager backgroundActivityManager(Ref ref) {
   return BackgroundActivityManager();
+}
+
+/// Relay statistics service for tracking per-relay metrics
+@Riverpod(keepAlive: true)
+RelayStatisticsService relayStatisticsService(Ref ref) {
+  final service = RelayStatisticsService();
+  ref.onDispose(() => service.dispose());
+  return service;
 }
 
 /// Analytics service with opt-out support
@@ -253,6 +262,7 @@ Stream<AuthState> authStateStream(Ref ref) async* {
 @Riverpod(keepAlive: true)
 INostrService nostrService(Ref ref) {
   final keyManager = ref.watch(nostrKeyManagerProvider);
+  final statisticsService = ref.watch(relayStatisticsServiceProvider);
 
   // Use factory to create platform-appropriate service with initialization callback
   final service = NostrServiceFactory.create(
@@ -261,6 +271,7 @@ INostrService nostrService(Ref ref) {
       // Mark Nostr as initialized when the service completes initialization
       ref.read(nostrInitializationProvider.notifier).markInitialized();
     },
+    statisticsService: statisticsService,
   );
 
   // Note: Initialization is handled explicitly in main.dart to ensure proper async timing

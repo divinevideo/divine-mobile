@@ -18,6 +18,7 @@ import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/p2p_discovery_service.dart';
 import 'package:openvine/services/p2p_video_sync_service.dart';
+import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/log_batcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,7 +30,9 @@ class NostrService implements INostrService {
     this._keyManager, {
     embedded.EmbeddedNostrRelay? embeddedRelay,
     void Function()? onInitialized,
-  }) : _onInitialized = onInitialized {
+    RelayStatisticsService? statisticsService,
+  })  : _onInitialized = onInitialized,
+        _statisticsService = statisticsService {
     UnifiedLogger.info(
       '🏗️  NostrService CONSTRUCTOR called - creating NEW instance',
       name: 'NostrService',
@@ -55,6 +58,7 @@ class NostrService implements INostrService {
 
   final NostrKeyManager _keyManager;
   final void Function()? _onInitialized;
+  final RelayStatisticsService? _statisticsService;
   final Map<String, StreamController<Event>> _subscriptions = {};
   final Map<String, bool> _relayAuthStates = {};
   final _authStateController = StreamController<Map<String, bool>>.broadcast();
@@ -334,11 +338,16 @@ class NostrService implements INostrService {
                 name: 'NostrService',
                 category: LogCategory.relay,
               );
+              _statisticsService?.recordConnection(relayUrl);
             } else {
               Log.error(
                 '❌ External relay FAILED to connect: $relayUrl (${connectDuration.inMilliseconds}ms) - not in connectedRelays list!',
                 name: 'NostrService',
                 category: LogCategory.relay,
+              );
+              _statisticsService?.recordRequestFailure(
+                relayUrl,
+                'Connection failed',
               );
 
               // Report relay connection failure to Crashlytics
@@ -613,6 +622,13 @@ class NostrService implements INostrService {
     }
 
     _subscriptions[id] = controller;
+
+    // Record subscription started for all connected relays
+    final currentConnectedRelays = _embeddedRelay?.connectedRelays ?? <String>[];
+    for (final relayUrl in currentConnectedRelays) {
+      _statisticsService?.recordSubscriptionStarted(relayUrl, id);
+    }
+
     Log.debug(
       'Total active subscriptions: ${_subscriptions.length}',
       name: 'NostrService',
@@ -737,6 +753,12 @@ class NostrService implements INostrService {
               category: LogCategory.relay,
             );
           }
+          // Record event received for first connected relay
+          // (embedded relay doesn't tell us which specific relay sent the event)
+          final connectedRelays = _embeddedRelay?.connectedRelays ?? <String>[];
+          if (connectedRelays.isNotEmpty) {
+            _statisticsService?.recordEventReceived(connectedRelays.first);
+          }
           controller.add(event);
         }
       },
@@ -774,6 +796,11 @@ class NostrService implements INostrService {
               try {
                 _subscriptions[id]?.close();
                 _subscriptions.remove(id);
+                // Record subscription closed for all connected relays
+                final relays = _embeddedRelay?.connectedRelays ?? <String>[];
+                for (final relayUrl in relays) {
+                  _statisticsService?.recordSubscriptionClosed(relayUrl, id);
+                }
                 Log.debug(
                   'Closed profile subscription $id (${_subscriptions.length} remaining)',
                   name: 'NostrService',
@@ -803,6 +830,11 @@ class NostrService implements INostrService {
 
       // Remove from tracking immediately to prevent reuse during grace period
       _subscriptions.remove(id);
+      // Record subscription closed for all connected relays
+      final relays = _embeddedRelay?.connectedRelays ?? <String>[];
+      for (final relayUrl in relays) {
+        _statisticsService?.recordSubscriptionClosed(relayUrl, id);
+      }
       UnifiedLogger.debug(
         'Active subscriptions after removal: ${_subscriptions.length}',
         name: 'NostrService',
@@ -1493,9 +1525,16 @@ class NostrService implements INostrService {
 
   @override
   Future<void> closeAllSubscriptions() async {
-    for (final controller in _subscriptions.values) {
+    final relays = _embeddedRelay?.connectedRelays ?? <String>[];
+    for (final entry in _subscriptions.entries) {
+      final subscriptionId = entry.key;
+      final controller = entry.value;
       if (!controller.isClosed) {
         await controller.close();
+      }
+      // Record subscription closed for all connected relays
+      for (final relayUrl in relays) {
+        _statisticsService?.recordSubscriptionClosed(relayUrl, subscriptionId);
       }
     }
     _subscriptions.clear();

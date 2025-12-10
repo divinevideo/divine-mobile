@@ -273,6 +273,59 @@ final class BackgroundActivityManagerProvider
 String _$backgroundActivityManagerHash() =>
     r'4d3e0698e395bfb6f5b8459e9626b726a126376e';
 
+/// Relay statistics service for tracking per-relay metrics
+
+@ProviderFor(relayStatisticsService)
+const relayStatisticsServiceProvider = RelayStatisticsServiceProvider._();
+
+/// Relay statistics service for tracking per-relay metrics
+
+final class RelayStatisticsServiceProvider
+    extends
+        $FunctionalProvider<
+          RelayStatisticsService,
+          RelayStatisticsService,
+          RelayStatisticsService
+        >
+    with $Provider<RelayStatisticsService> {
+  /// Relay statistics service for tracking per-relay metrics
+  const RelayStatisticsServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'relayStatisticsServiceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$relayStatisticsServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<RelayStatisticsService> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  RelayStatisticsService create(Ref ref) {
+    return relayStatisticsService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RelayStatisticsService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RelayStatisticsService>(value),
+    );
+  }
+}
+
+String _$relayStatisticsServiceHash() =>
+    r'08039c024eda98d415d0a0088119d0f12e7fc54d';
+
 /// Analytics service with opt-out support
 
 @ProviderFor(analyticsService)
@@ -1069,7 +1122,7 @@ final class NostrServiceProvider
   }
 }
 
-String _$nostrServiceHash() => r'fcc6c77c9665ca4fe387f551b48517a756dffac6';
+String _$nostrServiceHash() => r'e83bb74d0adf803fa7119aa120a3572dc5d6b1ec';
 
 /// Subscription manager for centralized subscription management
 

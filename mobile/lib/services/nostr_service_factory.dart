@@ -4,6 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 // Conditional imports for platform-specific implementations
@@ -16,13 +17,18 @@ class NostrServiceFactory {
   static INostrService create(
     NostrKeyManager keyManager, {
     void Function()? onInitialized,
+    RelayStatisticsService? statisticsService,
   }) {
     // Use platform-specific factory function
     UnifiedLogger.info(
       'Creating platform-appropriate NostrService',
       name: 'NostrServiceFactory',
     );
-    return createEmbeddedRelayService(keyManager, onInitialized: onInitialized);
+    return createEmbeddedRelayService(
+      keyManager,
+      onInitialized: onInitialized,
+      statisticsService: statisticsService,
+    );
   }
 
   /// Initialize the created service with appropriate parameters

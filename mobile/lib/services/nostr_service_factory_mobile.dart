@@ -4,6 +4,7 @@
 import 'package:openvine/services/nostr_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/relay_statistics_service.dart';
 
 /// Create NostrService instance for mobile platforms
 ///
@@ -11,6 +12,11 @@ import 'package:openvine/services/nostr_service_interface.dart';
 INostrService createEmbeddedRelayService(
   NostrKeyManager keyManager, {
   void Function()? onInitialized,
+  RelayStatisticsService? statisticsService,
 }) {
-  return NostrService(keyManager, onInitialized: onInitialized);
+  return NostrService(
+    keyManager,
+    onInitialized: onInitialized,
+    statisticsService: statisticsService,
+  );
 }
