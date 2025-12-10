@@ -260,11 +260,10 @@ class RelayManager {
   Future<void> retryDisconnectedRelays() async {
     _log('Retrying disconnected relays');
 
-    final disconnected =
-        _configuredRelays.where((url) {
-          final status = _relayStatuses[url];
-          return status != null && !status.isConnected;
-        }).toList();
+    final disconnected = _configuredRelays.where((url) {
+      final status = _relayStatuses[url];
+      return status != null && !status.isConnected;
+    }).toList();
 
     for (final url in disconnected) {
       _updateRelayStatus(url, RelayState.connecting);
@@ -432,7 +431,8 @@ class RelayManager {
       }
 
       if (currentStatus.state != newState) {
-        final isNowConnected = newState == RelayState.connected ||
+        final isNowConnected =
+            newState == RelayState.connected ||
             newState == RelayState.authenticated;
         final lastConnected = isNowConnected
             ? DateTime.now()
