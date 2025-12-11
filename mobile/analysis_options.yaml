@@ -12,6 +12,7 @@ linter:
     - await_only_futures
     - combinators_ordering
     - directives_ordering
+    - eol_at_end_of_file
     - prefer_collection_literals
     - prefer_const_constructors
     - prefer_const_declarations
