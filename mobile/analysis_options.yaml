@@ -37,3 +37,4 @@ linter:
     - unnecessary_raw_strings
     - unnecessary_statements
     - unnecessary_string_escapes
+    - unnecessary_string_interpolations
