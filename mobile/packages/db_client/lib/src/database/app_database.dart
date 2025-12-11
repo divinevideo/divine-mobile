@@ -1,5 +1,6 @@
 // ABOUTME: Main Drift database for OpenVine's shared Nostr database.
-// ABOUTME: Provides reactive queries for events, profiles, metrics, and uploads.
+// ABOUTME: Provides reactive queries for events, profiles, metrics,
+// ABOUTME: and uploads.
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';

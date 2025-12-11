@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/services/relay_capability_service.dart';
 import 'package:openvine/services/relay_gateway_settings.dart';
+import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -24,6 +26,8 @@ class RelaySettingsScreen extends ConsumerStatefulWidget {
 class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
   late RelayGatewaySettings _gatewaySettings;
   bool _gatewayEnabled = true;
+  final Map<String, RelayCapabilities?> _capabilitiesCache = {};
+  final Map<String, bool> _capabilitiesLoading = {};
 
   @override
   void initState() {
@@ -37,6 +41,56 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
     setState(() {
       _gatewayEnabled = _gatewaySettings.isEnabled;
     });
+  }
+
+  Future<void> _fetchCapabilities(String relayUrl) async {
+    if (_capabilitiesLoading[relayUrl] == true) return;
+    if (_capabilitiesCache.containsKey(relayUrl)) return;
+
+    setState(() {
+      _capabilitiesLoading[relayUrl] = true;
+    });
+
+    try {
+      final capabilityService = ref.read(relayCapabilityServiceProvider);
+      final capabilities = await capabilityService.getRelayCapabilities(
+        relayUrl,
+      );
+      if (mounted) {
+        setState(() {
+          _capabilitiesCache[relayUrl] = capabilities;
+          _capabilitiesLoading[relayUrl] = false;
+        });
+      }
+    } catch (e) {
+      Log.debug(
+        'Failed to fetch NIP-11 for $relayUrl: $e',
+        name: 'RelaySettingsScreen',
+      );
+      if (mounted) {
+        setState(() {
+          _capabilitiesCache[relayUrl] = null;
+          _capabilitiesLoading[relayUrl] = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _openRelayWebsite(String relayUrl) async {
+    final httpUrl = relayUrl
+        .replaceFirst('wss://', 'https://')
+        .replaceFirst('ws://', 'http://');
+    final url = Uri.parse(httpUrl);
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        _showError('Could not open browser');
+      }
+    } catch (e) {
+      Log.error('Failed to launch relay URL: $e', name: 'RelaySettingsScreen');
+      _showError('Failed to open link');
+    }
   }
 
   @override
@@ -242,31 +296,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                           itemBuilder: (context, index) {
                             final relay = externalRelays[index];
 
-                            return ListTile(
-                              leading: Icon(
-                                Icons.cloud,
-                                color: Colors.green[400],
-                                size: 20,
-                              ),
-                              title: Text(
-                                relay,
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                              subtitle: Text(
-                                'External relay',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                              trailing: IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () => _removeRelay(relay),
-                              ),
-                            );
+                            return _buildRelayTile(relay);
                           },
                         ),
                       ),
@@ -333,6 +363,317 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildRelayTile(String relayUrl) {
+    // Watch the stream provider to get reactive updates when statistics change
+    final statsAsync = ref.watch(relayStatisticsStreamProvider);
+    final stats = statsAsync.whenData((allStats) => allStats[relayUrl]).value;
+
+    final isConnected = stats?.isConnected ?? false;
+    final statusSummary = stats?.statusSummary ?? 'External relay';
+
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        leading: Icon(
+          isConnected ? Icons.cloud_done : Icons.cloud_off,
+          color: isConnected ? Colors.green[400] : Colors.orange[400],
+          size: 20,
+        ),
+        title: Text(
+          relayUrl,
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          statusSummary,
+          style: TextStyle(
+            color: isConnected ? Colors.grey[500] : Colors.orange[300],
+            fontSize: 12,
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+              onPressed: () => _removeRelay(relayUrl),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.expand_more, color: Colors.grey, size: 20),
+          ],
+        ),
+        iconColor: Colors.grey,
+        collapsedIconColor: Colors.grey,
+        onExpansionChanged: (expanded) {
+          if (expanded) {
+            _fetchCapabilities(relayUrl);
+          }
+        },
+        children: [_buildRelayDetails(stats, relayUrl)],
+      ),
+    );
+  }
+
+  Widget _buildRelayDetails(RelayStatistics? stats, String relayUrl) {
+    if (stats == null) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          'No statistics available yet',
+          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+        ),
+      );
+    }
+
+    final capabilities = _capabilitiesCache[relayUrl];
+    final isLoading = _capabilitiesLoading[relayUrl] ?? false;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStatRow(
+            'Connection',
+            stats.isConnected ? 'Connected' : 'Disconnected',
+            stats.isConnected ? Colors.green[400]! : Colors.orange[400]!,
+          ),
+          if (stats.sessionDuration != null)
+            _buildStatRow(
+              'Session Duration',
+              _formatDuration(stats.sessionDuration!),
+              Colors.grey[400]!,
+            ),
+          if (stats.lastConnected != null)
+            _buildStatRow(
+              'Last Connected',
+              _formatTime(stats.lastConnected!),
+              Colors.grey[400]!,
+            ),
+          if (!stats.isConnected && stats.lastDisconnected != null)
+            _buildStatRow(
+              'Disconnected',
+              _formatTime(stats.lastDisconnected!),
+              Colors.orange[400]!,
+            ),
+          if (stats.lastDisconnectReason != null && !stats.isConnected)
+            _buildStatRow(
+              'Reason',
+              stats.lastDisconnectReason!,
+              Colors.orange[400]!,
+            ),
+          const Divider(color: Colors.grey, height: 16),
+          _buildStatRow(
+            'Active Subscriptions',
+            '${stats.activeSubscriptions}',
+            Colors.blue[400]!,
+          ),
+          _buildStatRow(
+            'Total Subscriptions',
+            '${stats.totalSubscriptions}',
+            Colors.grey[400]!,
+          ),
+          _buildStatRow(
+            'Events Received',
+            _formatCount(stats.eventsReceived),
+            Colors.green[400]!,
+          ),
+          _buildStatRow(
+            'Events Sent',
+            _formatCount(stats.eventsSent),
+            Colors.blue[400]!,
+          ),
+          const Divider(color: Colors.grey, height: 16),
+          _buildStatRow(
+            'Requests This Session',
+            '${stats.requestsThisSession}',
+            Colors.grey[400]!,
+          ),
+          _buildStatRow(
+            'Failed Requests',
+            '${stats.failedRequests}',
+            stats.failedRequests > 0 ? Colors.red[400]! : Colors.grey[400]!,
+          ),
+          if (stats.lastError != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Last Error: ${stats.lastError}',
+              style: TextStyle(color: Colors.red[300], fontSize: 12),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (stats.lastErrorTime != null)
+              Text(
+                _formatTime(stats.lastErrorTime!),
+                style: TextStyle(color: Colors.red[200], fontSize: 11),
+              ),
+          ],
+          // NIP-11 Relay Info Section
+          _buildRelayInfoSection(relayUrl, capabilities, isLoading),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRelayInfoSection(
+    String relayUrl,
+    RelayCapabilities? capabilities,
+    bool isLoading,
+  ) {
+    if (isLoading) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Divider(color: Colors.grey, height: 24),
+          Row(
+            children: [
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: VineTheme.vineGreen,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Loading relay info...',
+                style: TextStyle(color: Colors.grey[500], fontSize: 13),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    if (capabilities == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(color: Colors.grey, height: 24),
+        Text(
+          'About Relay',
+          style: TextStyle(
+            color: Colors.grey[400],
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (capabilities.name != null && capabilities.name!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              capabilities.name!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        if (capabilities.description != null &&
+            capabilities.description!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              capabilities.description!,
+              style: TextStyle(color: Colors.grey[400], fontSize: 13),
+            ),
+          ),
+        if (capabilities.supportedNips.isNotEmpty)
+          _buildStatRow(
+            'Supported NIPs',
+            capabilities.supportedNips.join(', '),
+            Colors.grey[400]!,
+          ),
+        if (capabilities.rawData['software'] != null)
+          _buildStatRow(
+            'Software',
+            _formatSoftwareVersion(capabilities.rawData),
+            Colors.grey[400]!,
+          ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: () => _openRelayWebsite(relayUrl),
+          icon: const Icon(Icons.open_in_new, size: 16, color: Colors.white),
+          label: const Text(
+            'View Website',
+            style: TextStyle(color: Colors.white, fontSize: 13),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey[700],
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatSoftwareVersion(Map<String, dynamic> rawData) {
+    final software = rawData['software'] as String?;
+    final version = rawData['version'] as String?;
+    if (software == null) return '';
+    if (version != null) {
+      return '$software v$version';
+    }
+    return software;
+  }
+
+  Widget _buildStatRow(String label, String value, Color valueColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+          Text(value, style: TextStyle(color: valueColor, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000000) {
+      return '${(count / 1000000).toStringAsFixed(1)}M';
+    } else if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    }
+    return count.toString();
+  }
+
+  String _formatDuration(Duration duration) {
+    if (duration.inDays > 0) {
+      return '${duration.inDays}d ${duration.inHours.remainder(24)}h';
+    } else if (duration.inHours > 0) {
+      return '${duration.inHours}h ${duration.inMinutes.remainder(60)}m';
+    } else if (duration.inMinutes > 0) {
+      return '${duration.inMinutes}m ${duration.inSeconds.remainder(60)}s';
+    } else {
+      return '${duration.inSeconds}s';
+    }
+  }
+
+  String _formatTime(DateTime time) {
+    final now = DateTime.now();
+    final diff = now.difference(time);
+
+    if (diff.inSeconds < 60) {
+      return '${diff.inSeconds}s ago';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m ago';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}h ago';
+    } else {
+      return '${diff.inDays}d ago';
+    }
   }
 
   Future<void> _removeRelay(String relayUrl) async {

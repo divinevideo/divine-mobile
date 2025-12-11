@@ -1,5 +1,5 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: constant_identifier_names
+// ABOUTME: SQLite-based local relay database for caching Nostr events.
+// ABOUTME: Handles event storage, querying, and batch operations with indexing.
 
 import 'dart:async';
 import 'dart:convert';
@@ -16,7 +16,7 @@ import '../utils/string_util.dart';
 import 'relay_db_extral.dart';
 
 class RelayLocalDB extends RelayDBExtral with LaterFunction {
-  static const _VERSION = 2;
+  static const _version = 2;
 
   static const _dbName = "local_relay.db";
 
@@ -35,7 +35,7 @@ class RelayLocalDB extends RelayDBExtral with LaterFunction {
 
     var database = await openDatabase(
       path,
-      version: _VERSION,
+      version: _version,
       onCreate: _onCreate,
       onUpgrade: onUpgrade,
     );

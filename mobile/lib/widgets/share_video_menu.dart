@@ -21,6 +21,21 @@ import 'package:share_plus/share_plus.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// TODO(any): Move this to a reusable widget
+Widget get _buildLoadingIndicator => Padding(
+  padding: const EdgeInsets.all(12),
+  child: Center(
+    child: const SizedBox(
+      width: 16,
+      height: 16,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        color: VineTheme.secondaryText,
+      ),
+    ),
+  ),
+);
+
 /// Comprehensive share menu for videos
 class ShareVideoMenu extends ConsumerStatefulWidget {
   const ShareVideoMenu({required this.video, super.key, this.onDismiss});
@@ -244,15 +259,21 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
   /// Build video status section showing what lists the video is in
   Widget _buildVideoStatusSection() => Consumer(
     builder: (context, ref, child) {
-      final curatedListServiceAsync = ref.watch(curatedListServiceProvider);
+      final curatedListServiceAsync = ref.watch(curatedListsStateProvider);
+      final curatedListService = ref
+          .read(curatedListsStateProvider.notifier)
+          .service;
       final bookmarkServiceAsync = ref.watch(bookmarkServiceProvider);
 
       return curatedListServiceAsync.when(
-        data: (curatedListService) {
+        data: (lists) {
           return bookmarkServiceAsync.when(
             data: (bookmarkService) {
-              final listsContaining = curatedListService
-                  .getListsContainingVideo(widget.video.id);
+              final listsContaining =
+                  curatedListService?.getListsContainingVideo(
+                    widget.video.id,
+                  ) ??
+                  [];
               final bookmarkStatus = bookmarkService.getVideoBookmarkSummary(
                 widget.video.id,
               );
@@ -283,6 +304,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
               }
 
               return Container(
+                margin: const EdgeInsets.only(top: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade900,
@@ -351,11 +373,11 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
                 ),
               );
             },
-            loading: () => const SizedBox.shrink(),
+            loading: () => _buildLoadingIndicator,
             error: (_, __) => const SizedBox.shrink(),
           );
         },
-        loading: () => const SizedBox.shrink(),
+        loading: () => _buildLoadingIndicator,
         error: (_, __) => const SizedBox.shrink(),
       );
     },
@@ -410,13 +432,15 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
       // Dynamic part: show which lists contain this video (loaded async)
       Consumer(
         builder: (context, ref, child) {
-          final listServiceAsync = ref.watch(curatedListServiceProvider);
+          final listServiceAsync = ref.watch(curatedListsStateProvider);
+          final listService = ref
+              .read(curatedListsStateProvider.notifier)
+              .service;
 
           return listServiceAsync.when(
-            data: (listService) {
-              final listsContainingVideo = listService.getListsContainingVideo(
-                widget.video.id,
-              );
+            data: (lists) {
+              final listsContainingVideo =
+                  listService?.getListsContainingVideo(widget.video.id) ?? [];
 
               if (listsContainingVideo.isEmpty) {
                 return const SizedBox.shrink();
@@ -499,7 +523,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
                 ),
               );
             },
-            loading: () => const SizedBox.shrink(),
+            loading: () => _buildLoadingIndicator,
             error: (_, __) => const SizedBox.shrink(),
           );
         },
@@ -527,8 +551,10 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
   /// Remove video from a specific list
   Future<void> _removeFromList(String listId) async {
     try {
-      final listService = await ref.read(curatedListServiceProvider.future);
-      await listService.removeVideoFromList(listId, widget.video.id);
+      final listService = await ref
+          .read(curatedListsStateProvider.notifier)
+          .service;
+      await listService?.removeVideoFromList(listId, widget.video.id);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -709,7 +735,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
             ),
           );
         },
-        loading: () => const SizedBox.shrink(),
+        loading: () => _buildLoadingIndicator,
         error: (_, __) => const SizedBox.shrink(),
       );
     },
@@ -1201,9 +1227,23 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
           ),
         );
 
-        // Close the share menu if deletion was successful
-        if (result.success && widget.onDismiss != null) {
-          widget.onDismiss!();
+        // Remove video from local feeds after successful deletion
+        if (result.success) {
+          final videoEventService = ref.read(videoEventServiceProvider);
+          videoEventService.removeVideoFromAuthorList(
+            widget.video.pubkey,
+            widget.video.id,
+          );
+          Log.info(
+            'Video removed from local feeds after deletion: ${widget.video.id}',
+            name: 'ShareVideoMenu',
+            category: LogCategory.ui,
+          );
+
+          // Close the share menu
+          if (widget.onDismiss != null) {
+            widget.onDismiss!();
+          }
         }
       }
     } catch (e) {
@@ -1566,7 +1606,6 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
 
       if (mounted) {
         Navigator.of(context).pop(); // Close dialog
-        Navigator.of(context).pop(); // Close share menu
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1668,8 +1707,10 @@ class _CreateListDialogState extends ConsumerState<_CreateListDialog> {
     if (name.isEmpty) return;
 
     try {
-      final listService = await ref.read(curatedListServiceProvider.future);
-      final newList = await listService.createList(
+      final listService = await ref
+          .read(curatedListsStateProvider.notifier)
+          .service;
+      final newList = await listService?.createList(
         name: name,
         description: _descriptionController.text.trim().isEmpty
             ? null
@@ -1679,11 +1720,11 @@ class _CreateListDialogState extends ConsumerState<_CreateListDialog> {
 
       if (newList != null && mounted) {
         // Add the video to the new list
-        await listService.addVideoToList(newList.id, widget.video.id);
+        await listService?.addVideoToList(newList.id, widget.video.id);
 
         if (mounted) {
           // Close dialog and return the list name
-          Navigator.of(context).pop(name);
+          Navigator.of(context).pop();
         }
       }
     } catch (e) {
@@ -1722,11 +1763,11 @@ class _SelectListDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Consumer(
     builder: (context, ref, child) {
-      final listServiceAsync = ref.watch(curatedListServiceProvider);
+      final listServiceAsync = ref.watch(curatedListsStateProvider);
 
       return listServiceAsync.when(
-        data: (listService) {
-          final availableLists = listService.lists.toList();
+        data: (lists) {
+          final availableLists = lists.toList();
 
           return AlertDialog(
             backgroundColor: VineTheme.cardBackground,
@@ -1741,7 +1782,7 @@ class _SelectListDialog extends StatelessWidget {
                 itemCount: availableLists.length,
                 itemBuilder: (context, index) {
                   final list = availableLists[index];
-                  final isInList = listService.isVideoInList(list.id, video.id);
+                  final isInList = list.videoEventIds.contains(video.id);
 
                   return ListTile(
                     leading: Icon(
@@ -1760,7 +1801,7 @@ class _SelectListDialog extends StatelessWidget {
                     ),
                     onTap: () => _toggleVideoInList(
                       context,
-                      listService,
+                      ref.read(curatedListsStateProvider.notifier).service!,
                       list,
                       isInList,
                     ),
@@ -1776,7 +1817,7 @@ class _SelectListDialog extends StatelessWidget {
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => _buildLoadingIndicator,
         error: (_, __) => const Center(child: Text('Error loading lists')),
       );
     },
@@ -2126,7 +2167,6 @@ class _CreateFollowSetDialogState
 
       if (newSet != null && mounted) {
         Navigator.of(context).pop(); // Close dialog
-        Navigator.of(context).pop(); // Close share menu
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2440,7 +2480,7 @@ class _EditVideoDialogState extends ConsumerState<_EditVideoDialog> {
       // Create and sign the updated event
       final content = _descriptionController.text.trim();
       final event = await authService.createAndSignEvent(
-        kind: 32222, // Addressable short looping video
+        kind: 34236, // Addressable short looping video (NIP-71)
         content: content,
         tags: tags,
       );
@@ -2680,9 +2720,6 @@ class _SelectBookmarkSetDialog extends StatelessWidget {
         // Close the bookmark sets dialog
         Navigator.of(context).pop();
 
-        // Close the share menu
-        Navigator.of(context).pop();
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
@@ -2782,7 +2819,6 @@ class _CreateBookmarkSetDialogState
 
         if (mounted) {
           Navigator.of(context).pop(); // Close create dialog
-          Navigator.of(context).pop(); // Close share menu
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -3169,11 +3205,12 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
   }
 
   Widget _buildPublicListTile(CuratedList list) {
-    final listServiceAsync = ref.watch(curatedListServiceProvider);
+    final listServiceAsync = ref.watch(curatedListsStateProvider);
+    final listService = ref.read(curatedListsStateProvider.notifier).service;
 
     return listServiceAsync.when(
-      data: (listService) {
-        final isSubscribed = listService.isSubscribedToList(list.id);
+      data: (lists) {
+        final isSubscribed = listService?.isSubscribedToList(list.id) ?? false;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
@@ -3247,25 +3284,27 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
           ),
         );
       },
-      loading: () => const SizedBox.shrink(),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (_, __) => const SizedBox.shrink(),
     );
   }
 
   Future<void> _toggleSubscription(CuratedList list) async {
     try {
-      final listService = await ref.read(curatedListServiceProvider.future);
-      final isSubscribed = listService.isSubscribedToList(list.id);
+      final listService = await ref
+          .read(curatedListsStateProvider.notifier)
+          .service;
+      final isSubscribed = listService?.isSubscribedToList(list.id) ?? false;
 
       if (isSubscribed) {
-        await listService.unsubscribeFromList(list.id);
+        await listService?.unsubscribeFromList(list.id);
         Log.info(
           'Unsubscribed from list: ${list.name}',
           name: 'PublicListsSection',
           category: LogCategory.ui,
         );
       } else {
-        await listService.subscribeToList(list.id, list);
+        await listService?.subscribeToList(list.id, list);
         Log.info(
           'Subscribed to list: ${list.name}',
           name: 'PublicListsSection',

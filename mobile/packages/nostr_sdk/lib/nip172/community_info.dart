@@ -23,7 +23,7 @@ class CommunityInfo {
   });
 
   static CommunityInfo? fromEvent(Event event) {
-    if (event.kind == EventKind.COMMUNITY_DEFINITION) {
+    if (event.kind == EventKind.communityDefinition) {
       String title = "";
       String description = "";
       String image = "";
@@ -44,7 +44,7 @@ class CommunityInfo {
 
       if (StringUtil.isNotBlank(title)) {
         var id = AId(
-          kind: EventKind.COMMUNITY_DEFINITION,
+          kind: EventKind.communityDefinition,
           pubkey: event.pubkey,
           title: title,
         );

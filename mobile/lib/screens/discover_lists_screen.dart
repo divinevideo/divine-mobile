@@ -38,12 +38,14 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
     });
 
     try {
-      final service = await ref.read(curatedListServiceProvider.future);
-      final lists = await service.fetchPublicListsFromRelays(limit: 50);
+      final service = await ref
+          .read(curatedListsStateProvider.notifier)
+          .service;
+      final lists = await service?.fetchPublicListsFromRelays(limit: 50);
 
       // Filter out empty lists and sort by video count (popularity)
       final nonEmptyLists =
-          lists.where((list) => list.videoEventIds.isNotEmpty).toList()..sort(
+          lists?.where((list) => list.videoEventIds.isNotEmpty).toList()?..sort(
             (a, b) => b.videoEventIds.length.compareTo(a.videoEventIds.length),
           );
 
@@ -53,7 +55,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
           _isLoading = false;
         });
         Log.info(
-          'Discovered ${nonEmptyLists.length} non-empty public lists (filtered from ${lists.length} total)',
+          'Discovered ${nonEmptyLists?.length} non-empty public lists (filtered from ${lists?.length} total)',
           category: LogCategory.ui,
         );
       }
@@ -73,17 +75,19 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
 
   Future<void> _toggleSubscription(CuratedList list) async {
     try {
-      final service = await ref.read(curatedListServiceProvider.future);
-      final isSubscribed = service.isSubscribedToList(list.id);
+      final service = await ref
+          .read(curatedListsStateProvider.notifier)
+          .service;
+      final isSubscribed = service?.isSubscribedToList(list.id) ?? false;
 
       if (isSubscribed) {
-        await service.unsubscribeFromList(list.id);
+        await service?.unsubscribeFromList(list.id);
         Log.info(
           'Unsubscribed from list: ${list.name}',
           category: LogCategory.ui,
         );
       } else {
-        await service.subscribeToList(list.id, list);
+        await service?.subscribeToList(list.id, list);
         Log.info('Subscribed to list: ${list.name}', category: LogCategory.ui);
       }
 
@@ -224,11 +228,12 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
   }
 
   Widget _buildListCard(CuratedList list) {
-    final serviceAsync = ref.watch(curatedListServiceProvider);
+    final serviceAsync = ref.watch(curatedListsStateProvider);
+    final service = ref.read(curatedListsStateProvider.notifier).service;
 
     return serviceAsync.when(
-      data: (service) {
-        final isSubscribed = service.isSubscribedToList(list.id);
+      data: (lists) {
+        final isSubscribed = service?.isSubscribedToList(list.id) ?? false;
 
         return Card(
           color: VineTheme.cardBackground,

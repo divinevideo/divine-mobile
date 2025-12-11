@@ -42,18 +42,18 @@ void main() {
     });
 
     test('Event kind constants are accessible', () {
-      expect(EventKind.TEXT_NOTE, equals(1));
-      expect(EventKind.METADATA, equals(0));
-      expect(EventKind.CONTACT_LIST, equals(3));
-      expect(EventKind.DIRECT_MESSAGE, equals(4));
-      expect(EventKind.REACTION, equals(7));
+      expect(EventKind.textNote, equals(1));
+      expect(EventKind.metadata, equals(0));
+      expect(EventKind.contactList, equals(3));
+      expect(EventKind.directMessage, equals(4));
+      expect(EventKind.reaction, equals(7));
     });
 
     test('Relay type constants are accessible', () {
-      expect(RelayType.NORMAL, equals(1));
-      expect(RelayType.TEMP, equals(2));
-      expect(RelayType.CACHE, equals(4));
-      expect(RelayType.ALL, isA<List<int>>());
+      expect(RelayType.normal, equals(1));
+      expect(RelayType.temp, equals(2));
+      expect(RelayType.cache, equals(4));
+      expect(RelayType.all, isA<List<int>>());
     });
   });
 }

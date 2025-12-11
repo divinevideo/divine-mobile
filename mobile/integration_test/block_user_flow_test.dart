@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/content_blocklist_service.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -47,7 +47,7 @@ void main() {
       // Using real hex pubkeys that will work with Nostr encoding
       const testUserHex =
           '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
-      final testUserNpub = NostrEncoding.encodePublicKey(testUserHex);
+      final testUserNpub = NostrKeyUtils.encodePubKey(testUserHex);
 
       // Verify user is NOT blocked initially
       expect(
@@ -183,7 +183,7 @@ void main() {
       // Define test user
       const testUserHex =
           '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
-      final testUserNpub = NostrEncoding.encodePublicKey(testUserHex);
+      final testUserNpub = NostrKeyUtils.encodePubKey(testUserHex);
 
       // Ensure user is not blocked
       expect(blocklistService.isBlocked(testUserHex), isFalse);

@@ -1,11 +1,13 @@
-// ABOUTME: Drift table definitions for OpenVine's shared Nostr database
-// ABOUTME: Defines tables for events, profiles, metrics, stats, notifications, and uploads
+// ABOUTME: Drift table definitions for OpenVine's shared Nostr database.
+// ABOUTME: Defines tables for events, profiles, metrics, stats,
+// ABOUTME: notifications, and uploads.
 
 import 'package:drift/drift.dart';
 
 /// Maps to nostr_sdk's existing 'event' table (read-only for now)
 ///
-/// This table is managed by nostr_sdk's embedded relay and contains all Nostr events.
+/// This table is managed by nostr_sdk's embedded relay and contains all
+/// Nostr events.
 /// We map to it for querying but don't create/modify it.
 @DataClassName('NostrEventRow')
 class NostrEvents extends Table {
@@ -24,7 +26,6 @@ class NostrEvents extends Table {
   @override
   Set<Column> get primaryKey => {id};
 
-  @override
   List<Index> get indexes => [
     // Index on kind for filtering video events (kind IN (34236, 6))
     Index(
@@ -35,13 +36,16 @@ class NostrEvents extends Table {
     // Index on created_at for sorting by timestamp (ORDER BY created_at DESC)
     Index(
       'idx_event_created_at',
-      'CREATE INDEX IF NOT EXISTS idx_event_created_at ON event (created_at)',
+      'CREATE INDEX IF NOT EXISTS idx_event_created_at '
+          'ON event (created_at)',
     ),
 
-    // Composite index for optimal video queries (WHERE kind = ? ORDER BY created_at DESC)
+    // Composite index for optimal video queries
+    // (WHERE kind = ? ORDER BY created_at DESC)
     Index(
       'idx_event_kind_created_at',
-      'CREATE INDEX IF NOT EXISTS idx_event_kind_created_at ON event (kind, created_at)',
+      'CREATE INDEX IF NOT EXISTS idx_event_kind_created_at '
+          'ON event (kind, created_at)',
     ),
 
     // Index on pubkey for author queries (WHERE pubkey = ?)
@@ -50,23 +54,28 @@ class NostrEvents extends Table {
       'CREATE INDEX IF NOT EXISTS idx_event_pubkey ON event (pubkey)',
     ),
 
-    // Composite index for profile page video queries (WHERE kind = ? AND pubkey = ?)
+    // Composite index for profile page video queries
+    // (WHERE kind = ? AND pubkey = ?)
     Index(
       'idx_event_kind_pubkey',
-      'CREATE INDEX IF NOT EXISTS idx_event_kind_pubkey ON event (kind, pubkey)',
+      'CREATE INDEX IF NOT EXISTS idx_event_kind_pubkey '
+          'ON event (kind, pubkey)',
     ),
 
-    // Composite index for author video timeline (WHERE pubkey = ? ORDER BY created_at DESC)
+    // Composite index for author video timeline
+    // (WHERE pubkey = ? ORDER BY created_at DESC)
     Index(
       'idx_event_pubkey_created_at',
-      'CREATE INDEX IF NOT EXISTS idx_event_pubkey_created_at ON event (pubkey, created_at)',
+      'CREATE INDEX IF NOT EXISTS idx_event_pubkey_created_at '
+          'ON event (pubkey, created_at)',
     ),
   ];
 }
 
 /// Denormalized cache of user profiles extracted from kind 0 events
 ///
-/// Profiles are parsed from kind 0 events and stored here for fast reactive queries.
+/// Profiles are parsed from kind 0 events and stored here for fast reactive
+/// queries.
 /// This avoids having to parse JSON for every profile display.
 @DataClassName('UserProfileRow')
 class UserProfiles extends Table {
@@ -93,10 +102,12 @@ class UserProfiles extends Table {
   Set<Column> get primaryKey => {pubkey};
 }
 
-/// Denormalized cache of video engagement metrics extracted from video event tags
+/// Denormalized cache of video engagement metrics extracted from video
+/// event tags.
 ///
-/// Metrics are parsed from video events (kind 34236, etc.) and stored here for fast sorted queries.
-/// This avoids having to parse JSON tags for every sort/filter operation.
+/// Metrics are parsed from video events (kind 34236, etc.) and stored here
+/// for fast sorted queries. This avoids having to parse JSON tags for every
+/// sort/filter operation.
 @DataClassName('VideoMetricRow')
 class VideoMetrics extends Table {
   @override
@@ -123,12 +134,13 @@ class VideoMetrics extends Table {
     'FOREIGN KEY (event_id) REFERENCES event(id) ON DELETE CASCADE',
   ];
 
-  @override
   List<Index> get indexes => [
-    // Index on loop_count for trending/popular queries (ORDER BY loop_count DESC)
+    // Index on loop_count for trending/popular queries
+    // (ORDER BY loop_count DESC)
     Index(
       'idx_metrics_loop_count',
-      'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count ON video_metrics (loop_count)',
+      'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count '
+          'ON video_metrics (loop_count)',
     ),
 
     // Index on likes for sorting by popularity (ORDER BY likes DESC)
@@ -183,7 +195,6 @@ class HashtagStats extends Table {
   @override
   Set<Column> get primaryKey => {hashtag};
 
-  @override
   List<Index> get indexes => [
     Index(
       'idx_hashtag_video_count',
@@ -214,7 +225,6 @@ class Notifications extends Table {
   @override
   Set<Column> get primaryKey => {id};
 
-  @override
   List<Index> get indexes => [
     Index(
       'idx_notification_timestamp',
@@ -255,7 +265,8 @@ class PendingUploads extends Table {
   TextColumn get hashtags =>
       text().nullable()(); // JSON-encoded array of strings
   TextColumn get nostrEventId => text().nullable().named('nostr_event_id')();
-  DateTimeColumn get completedAt => dateTime().nullable().named('completed_at')();
+  DateTimeColumn get completedAt =>
+      dateTime().nullable().named('completed_at')();
   IntColumn get retryCount =>
       integer().withDefault(const Constant(0)).named('retry_count')();
   IntColumn get videoWidth => integer().nullable().named('video_width')();
@@ -273,7 +284,6 @@ class PendingUploads extends Table {
   @override
   Set<Column> get primaryKey => {id};
 
-  @override
   List<Index> get indexes => [
     Index(
       'idx_pending_upload_status',

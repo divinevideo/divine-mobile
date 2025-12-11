@@ -2,7 +2,7 @@
 // ABOUTME: Ensures user's relay choices are saved to SharedPreferences and restored on launch
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -145,14 +145,33 @@ void main() {
       await service.initialize(customRelays: [relay]);
 
       // Act: Try to add the same relay again
-      await service.addRelay(relay);
+      final result = await service.addRelay(relay);
 
-      // Assert: Relay should only appear once in storage
-      final prefs = await SharedPreferences.getInstance();
-      final savedRelays = prefs.getStringList('configured_relays');
+      // Assert: Relay should only appear once in the configured list
+      // and addRelay should return true (relay is configured)
+      expect(result, isTrue);
+      expect(service.relays.where((r) => r == relay).length, equals(1));
 
-      expect(savedRelays, isNotNull);
-      expect(savedRelays!.where((r) => r == relay).length, equals(1));
+      await service.dispose();
+    });
+
+    test('addRelay should return true when relay is already configured', () async {
+      // Arrange: Set up service with a relay already configured
+      const relay = 'wss://relay.divine.video';
+      SharedPreferences.setMockInitialValues({});
+
+      final service = NostrService(keyManager);
+      await service.initialize(customRelays: [relay]);
+
+      // Verify relay is in the config
+      expect(service.relays, contains(relay));
+
+      // Act: Try to add the same relay again
+      final result = await service.addRelay(relay);
+
+      // Assert: Should return true (not false) because the relay IS configured
+      // This is important for the "Restore Default Relay" button to show success
+      expect(result, isTrue);
 
       await service.dispose();
     });

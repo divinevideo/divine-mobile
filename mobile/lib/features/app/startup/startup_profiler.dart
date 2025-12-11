@@ -61,7 +61,7 @@ class StartupPhaseMapper {
 
     // Services that depend on key storage
     if (providerName.contains('Auth')) {
-      deps.add('SecureKeyStorageService');
+      deps.add('SecureKeyStorage');
     }
 
     return deps;

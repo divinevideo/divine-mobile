@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:video_player/video_player.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -12,7 +13,7 @@ import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/models/pending_upload.dart'
     show UploadStatus, PendingUpload;
 import 'package:openvine/models/vine_draft.dart';
-import 'package:openvine/models/aspect_ratio.dart' as vine;
+import 'package:models/models.dart' as vine show AspectRatio;
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/theme/vine_theme.dart';
@@ -1198,8 +1199,8 @@ class _VideoMetadataScreenPureState
             _currentUploadId = null;
           });
 
-          // Pop back to the root (main navigation screen)
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          // Go to the profile screen to see the new video
+          context.goMyProfile();
 
           Log.info(
             '📝 Published successfully, returned to main screen',

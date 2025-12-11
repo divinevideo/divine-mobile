@@ -12,7 +12,7 @@ const hashtagStatsCacheDuration = Duration(hours: 1);
 @DriftAccessor(tables: [HashtagStats])
 class HashtagStatsDao extends DatabaseAccessor<AppDatabase>
     with _$HashtagStatsDaoMixin {
-  HashtagStatsDao(AppDatabase db) : super(db);
+  HashtagStatsDao(super.attachedDatabase);
 
   /// Upsert a single hashtag stat
   Future<void> upsertHashtag({
@@ -55,7 +55,9 @@ class HashtagStatsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Check if cache is fresh
-  Future<bool> isCacheFresh({Duration expiry = hashtagStatsCacheDuration}) async {
+  Future<bool> isCacheFresh({
+    Duration expiry = hashtagStatsCacheDuration,
+  }) async {
     final expiryTime = DateTime.now().subtract(expiry);
     final query = select(hashtagStats)
       ..where((t) => t.cachedAt.isBiggerThan(Variable(expiryTime)))
@@ -67,9 +69,12 @@ class HashtagStatsDao extends DatabaseAccessor<AppDatabase>
   /// Delete all expired hashtag stats
   Future<int> deleteExpired({Duration expiry = hashtagStatsCacheDuration}) {
     final expiryTime = DateTime.now().subtract(expiry);
-    return (delete(hashtagStats)..where((t) => t.cachedAt.isSmallerThan(
-      Variable(expiryTime),
-    ))).go();
+    return (delete(hashtagStats)..where(
+          (t) => t.cachedAt.isSmallerThan(
+            Variable(expiryTime),
+          ),
+        ))
+        .go();
   }
 
   /// Clear all hashtag stats

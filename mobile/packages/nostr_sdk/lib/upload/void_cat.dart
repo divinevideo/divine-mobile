@@ -1,5 +1,5 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: constant_identifier_names
+// ABOUTME: Handles file uploads to void.cat media hosting service.
+// ABOUTME: Supports base64 and file path inputs with SHA-256 digest verification.
 
 import 'dart:io';
 import 'dart:typed_data';
@@ -14,14 +14,14 @@ import '../utils/string_util.dart';
 import 'nostr_build_uploader.dart';
 
 class VoidCatUploader {
-  static const String UPLOAD_ACTION = "https://void.cat/upload?cli=true";
+  static const String uploadAction = "https://void.cat/upload?cli=true";
 
   static Future<String?> upload(String filePath, {String? fileName}) async {
     var extName = "";
 
     Uint8List? bytes;
-    if (BASE64.check(filePath)) {
-      bytes = BASE64.toData(filePath);
+    if (Base64Util.check(filePath)) {
+      bytes = Base64Util.toData(filePath);
     } else {
       var tempFile = File(filePath);
       bytes = await tempFile.readAsBytes();
@@ -49,7 +49,7 @@ class VoidCatUploader {
     }
 
     var response = await NostrBuildUploader.dio.post<String>(
-      UPLOAD_ACTION,
+      uploadAction,
       data: Stream.fromIterable(bytes.map((e) => [e])),
       options: Options(headers: headers),
     );

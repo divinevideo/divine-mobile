@@ -35,7 +35,7 @@ class BadgeDefinition {
     String? image;
     String? thumb;
 
-    if (event.kind == kind.EventKind.BADGE_DEFINITION) {
+    if (event.kind == kind.EventKind.badgeDefinition) {
       for (var tag in event.tags) {
         if (tag.length > 1) {
           var key = tag[0];

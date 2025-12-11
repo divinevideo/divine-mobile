@@ -30,12 +30,12 @@ class NIP95Uploader {
     String? fileName,
   }) async {
     String? base64Content;
-    if (BASE64.check(filePath)) {
+    if (Base64Util.check(filePath)) {
       base64Content = filePath;
     } else {
       var file = File(filePath);
       var data = await file.readAsBytes();
-      base64Content = BASE64.toBase64(data);
+      base64Content = Base64Util.toBase64(data);
     }
 
     if (StringUtil.isNotBlank(base64Content)) {
@@ -60,12 +60,7 @@ class NIP95Uploader {
     ];
 
     var pubkey = nostr.publicKey;
-    var event = Event(
-      pubkey,
-      EventKind.STORAGE_SHARED_FILE,
-      tags,
-      base64Content,
-    );
+    var event = Event(pubkey, EventKind.storageSharedFile, tags, base64Content);
 
     return nostr.sendEvent(event);
   }

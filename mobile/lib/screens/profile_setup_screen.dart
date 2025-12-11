@@ -1156,13 +1156,18 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               Navigator.of(context).popUntil((route) => route.isFirst);
             }
           } else {
-            // Wait for SnackBar animation to complete before popping
+            // Wait for SnackBar animation to complete before navigating
             // This prevents navigation timing race condition that causes black screens
             await Future.delayed(const Duration(milliseconds: 300));
             if (mounted) {
-              Navigator.of(
-                context,
-              ).pop(true); // Return true to indicate success
+              // Use GoRouter navigation for consistency with the rest of the app
+              // Check if we can pop (have somewhere to go back to)
+              if (context.canPop()) {
+                context.pop(true); // Return true to indicate success
+              } else {
+                // If we can't pop (edit-profile became root somehow), go home
+                context.go('/');
+              }
             }
           }
         } catch (e, stackTrace) {
@@ -1203,9 +1208,15 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               }
             } else {
               if (mounted) {
-                Navigator.of(
-                  context,
-                ).pop(false); // Return false to indicate partial success
+                // Use GoRouter navigation for consistency with the rest of the app
+                if (context.canPop()) {
+                  context.pop(
+                    false,
+                  ); // Return false to indicate partial success
+                } else {
+                  // If we can't pop, go home
+                  context.go('/');
+                }
               }
             }
           }

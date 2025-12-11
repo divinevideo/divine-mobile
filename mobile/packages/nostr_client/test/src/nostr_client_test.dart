@@ -10,11 +10,7 @@ class _MockNostr extends Mock implements Nostr {}
 
 class _MockGatewayClient extends Mock implements GatewayClient {}
 
-class _MockRelayPool extends Mock implements RelayPool {}
-
-class _MockRelay extends Mock implements Relay {}
-
-class _MockNostrSigner extends Mock implements NostrSigner {}
+class _MockRelayManager extends Mock implements RelayManager {}
 
 class _FakeEvent extends Fake implements Event {}
 
@@ -41,7 +37,7 @@ Event _createTestEvent({
   int? createdAt,
 }) {
   final eventPubkey = pubkey ?? testPublicKey;
-  final eventKind = kind ?? EventKind.TEXT_NOTE;
+  final eventKind = kind ?? EventKind.textNote;
   final eventContent = content ?? 'Test content';
   final event = Event(
     eventPubkey,
@@ -57,16 +53,6 @@ Event _createTestEvent({
   return event;
 }
 
-NostrClientConfig _createTestConfig({
-  NostrSigner? signer,
-  String? publicKey,
-}) {
-  return NostrClientConfig(
-    signer: signer ?? _MockNostrSigner(),
-    publicKey: publicKey ?? testPublicKey,
-  );
-}
-
 // =============================================================================
 // Tests
 // =============================================================================
@@ -74,8 +60,7 @@ NostrClientConfig _createTestConfig({
 void main() {
   late _MockNostr mockNostr;
   late _MockGatewayClient mockGatewayClient;
-  late _MockRelayPool mockRelayPool;
-  late NostrClientConfig config;
+  late _MockRelayManager mockRelayManager;
   late NostrClient client;
 
   setUpAll(() {
@@ -85,23 +70,22 @@ void main() {
     registerFallbackValue(_FakeRelay());
     registerFallbackValue(<Map<String, dynamic>>[]);
     registerFallbackValue(<String>[]);
-    registerFallbackValue(RelayType.ALL);
+    registerFallbackValue(RelayType.all);
   });
 
   setUp(() {
     mockNostr = _MockNostr();
     mockGatewayClient = _MockGatewayClient();
-    mockRelayPool = _MockRelayPool();
-    config = _createTestConfig();
+    mockRelayManager = _MockRelayManager();
 
     // Set up default mock behavior
     when(() => mockNostr.publicKey).thenReturn(testPublicKey);
-    when(() => mockNostr.relayPool).thenReturn(mockRelayPool);
     when(() => mockNostr.close()).thenReturn(null);
+    when(() => mockRelayManager.dispose()).thenAnswer((_) async {});
 
     client = NostrClient.forTesting(
-      config: config,
       nostr: mockNostr,
+      relayManager: mockRelayManager,
       gatewayClient: mockGatewayClient,
     );
   });
@@ -109,7 +93,7 @@ void main() {
   tearDown(() {
     reset(mockNostr);
     reset(mockGatewayClient);
-    reset(mockRelayPool);
+    reset(mockRelayManager);
   });
 
   group('NostrClient', () {
@@ -119,15 +103,11 @@ void main() {
         verify(() => mockNostr.publicKey).called(1);
       });
 
-      test('relayPool returns the nostr relay pool', () {
-        expect(client.relayPool, equals(mockRelayPool));
-        verify(() => mockNostr.relayPool).called(1);
-      });
-
       test('creates client with null gatewayClient', () {
+        final localMockRelayManager = _MockRelayManager();
         final clientWithoutGateway = NostrClient.forTesting(
-          config: config,
           nostr: mockNostr,
+          relayManager: localMockRelayManager,
         );
         expect(clientWithoutGateway.publicKey, equals(testPublicKey));
       });
@@ -194,7 +174,7 @@ void main() {
     group('queryEvents', () {
       test('uses gateway when enabled and single filter', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent(), _createTestEvent()];
         final response = GatewayResponse(
@@ -225,7 +205,7 @@ void main() {
 
       test('falls back to WebSocket when gateway returns empty', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
         const emptyResponse = GatewayResponse(
@@ -265,7 +245,7 @@ void main() {
 
       test('falls back to WebSocket when gateway throws', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
 
@@ -289,7 +269,7 @@ void main() {
 
       test('skips gateway when useGateway is false', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
 
@@ -311,8 +291,8 @@ void main() {
 
       test('skips gateway when multiple filters provided', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
-          Filter(kinds: [EventKind.METADATA], limit: 5),
+          Filter(kinds: [EventKind.textNote], limit: 10),
+          Filter(kinds: [EventKind.metadata], limit: 5),
         ];
         final events = [_createTestEvent()];
 
@@ -334,7 +314,7 @@ void main() {
 
       test('passes all parameters to WebSocket query', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
         final tempRelays = ['wss://temp.example.com'];
@@ -353,7 +333,7 @@ void main() {
           filters,
           subscriptionId: 'test-sub',
           tempRelays: tempRelays,
-          relayTypes: [RelayType.NORMAL],
+          relayTypes: [RelayType.normal],
           sendAfterAuth: true,
           useGateway: false,
         );
@@ -363,19 +343,20 @@ void main() {
             any(),
             id: 'test-sub',
             tempRelays: tempRelays,
-            relayTypes: [RelayType.NORMAL],
+            relayTypes: [RelayType.normal],
             sendAfterAuth: true,
           ),
         ).called(1);
       });
 
       test('works without gateway client', () async {
+        final localMockRelayManager = _MockRelayManager();
         final clientWithoutGateway = NostrClient.forTesting(
-          config: config,
           nostr: mockNostr,
+          relayManager: localMockRelayManager,
         );
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
 
@@ -531,7 +512,7 @@ void main() {
         const pubkey = testPublicKey;
         final profileEvent = _createTestEvent(
           pubkey: pubkey,
-          kind: EventKind.METADATA,
+          kind: EventKind.metadata,
           content: '{"name":"Test User"}',
         );
 
@@ -549,7 +530,7 @@ void main() {
         const pubkey = testPublicKey;
         final profileEvent = _createTestEvent(
           pubkey: pubkey,
-          kind: EventKind.METADATA,
+          kind: EventKind.metadata,
         );
 
         when(
@@ -574,7 +555,7 @@ void main() {
         const pubkey = testPublicKey;
         final profileEvent = _createTestEvent(
           pubkey: pubkey,
-          kind: EventKind.METADATA,
+          kind: EventKind.metadata,
         );
 
         when(
@@ -599,7 +580,7 @@ void main() {
         const pubkey = testPublicKey;
         final profileEvent = _createTestEvent(
           pubkey: pubkey,
-          kind: EventKind.METADATA,
+          kind: EventKind.metadata,
         );
 
         when(
@@ -642,7 +623,7 @@ void main() {
     group('subscribe', () {
       test('creates subscription and returns stream', () {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
 
         when(
@@ -675,10 +656,10 @@ void main() {
 
       test('creates new subscription for different filters', () {
         final filters1 = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final filters2 = [
-          Filter(kinds: [EventKind.METADATA], limit: 5),
+          Filter(kinds: [EventKind.metadata], limit: 5),
         ];
 
         when(
@@ -713,7 +694,7 @@ void main() {
 
       test('uses custom subscription ID when provided', () {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         const customId = 'my-custom-subscription';
 
@@ -746,7 +727,7 @@ void main() {
 
       test('passes all parameters correctly', () {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final tempRelays = ['wss://temp.example.com'];
         final targetRelays = ['wss://target.example.com'];
@@ -768,7 +749,7 @@ void main() {
           subscriptionId: 'test-id',
           tempRelays: tempRelays,
           targetRelays: targetRelays,
-          relayTypes: [RelayType.NORMAL],
+          relayTypes: [RelayType.normal],
           sendAfterAuth: true,
         );
 
@@ -779,7 +760,7 @@ void main() {
             id: 'test-id',
             tempRelays: tempRelays,
             targetRelays: targetRelays,
-            relayTypes: [RelayType.NORMAL],
+            relayTypes: [RelayType.normal],
             sendAfterAuth: true,
           ),
         ).called(1);
@@ -787,7 +768,7 @@ void main() {
 
       test('handles nostr returning different subscription ID', () {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
 
         // Nostr returns a different ID than what was requested
@@ -813,7 +794,7 @@ void main() {
       test('unsubscribes and closes stream', () async {
         const subscriptionId = 'test-sub-id';
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
 
         when(
@@ -848,10 +829,10 @@ void main() {
     group('closeAllSubscriptions', () {
       test('closes all active subscriptions', () async {
         final filters1 = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final filters2 = [
-          Filter(kinds: [EventKind.METADATA], limit: 5),
+          Filter(kinds: [EventKind.metadata], limit: 5),
         ];
 
         var callCount = 0;
@@ -887,21 +868,23 @@ void main() {
     });
 
     group('addRelay', () {
-      test('adds relay to pool', () async {
+      test('delegates to RelayManager', () async {
         const relayUrl = 'wss://relay.example.com';
-
-        when(() => mockRelayPool.add(any())).thenAnswer((_) async => true);
+        when(
+          () => mockRelayManager.addRelay(relayUrl),
+        ).thenAnswer((_) async => true);
 
         final result = await client.addRelay(relayUrl);
 
         expect(result, isTrue);
-        verify(() => mockRelayPool.add(any())).called(1);
+        verify(() => mockRelayManager.addRelay(relayUrl)).called(1);
       });
 
-      test('returns false when add fails', () async {
+      test('returns false when RelayManager returns false', () async {
         const relayUrl = 'wss://relay.example.com';
-
-        when(() => mockRelayPool.add(any())).thenAnswer((_) async => false);
+        when(
+          () => mockRelayManager.addRelay(relayUrl),
+        ).thenAnswer((_) async => false);
 
         final result = await client.addRelay(relayUrl);
 
@@ -910,37 +893,35 @@ void main() {
     });
 
     group('removeRelay', () {
-      test('removes relay from pool', () async {
+      test('delegates to RelayManager', () async {
         const relayUrl = 'wss://relay.example.com';
+        when(
+          () => mockRelayManager.removeRelay(relayUrl),
+        ).thenAnswer((_) async => true);
 
-        when(() => mockRelayPool.remove(any())).thenReturn(null);
+        final result = await client.removeRelay(relayUrl);
 
-        await client.removeRelay(relayUrl);
-
-        verify(() => mockRelayPool.remove(relayUrl)).called(1);
+        expect(result, isTrue);
+        verify(() => mockRelayManager.removeRelay(relayUrl)).called(1);
       });
     });
 
     group('connectedRelays', () {
-      test('returns list of connected relay URLs', () {
-        final mockRelay1 = _MockRelay();
-        final mockRelay2 = _MockRelay();
-
-        when(() => mockRelay1.url).thenReturn('wss://relay1.example.com');
-        when(() => mockRelay2.url).thenReturn('wss://relay2.example.com');
-        when(
-          () => mockRelayPool.activeRelays(),
-        ).thenReturn([mockRelay1, mockRelay2]);
+      test('delegates to RelayManager', () {
+        final expectedRelays = [
+          'wss://relay1.example.com',
+          'wss://relay2.example.com',
+        ];
+        when(() => mockRelayManager.connectedRelays).thenReturn(expectedRelays);
 
         final result = client.connectedRelays;
 
-        expect(result, hasLength(2));
-        expect(result, contains('wss://relay1.example.com'));
-        expect(result, contains('wss://relay2.example.com'));
+        expect(result, equals(expectedRelays));
+        verify(() => mockRelayManager.connectedRelays).called(1);
       });
 
       test('returns empty list when no relays connected', () {
-        when(() => mockRelayPool.activeRelays()).thenReturn([]);
+        when(() => mockRelayManager.connectedRelays).thenReturn([]);
 
         final result = client.connectedRelays;
 
@@ -948,58 +929,113 @@ void main() {
       });
     });
 
-    group('relayCount', () {
-      test('returns count of connected relays', () {
-        final mockRelay1 = _MockRelay();
-        final mockRelay2 = _MockRelay();
-        final mockRelay3 = _MockRelay();
+    group('connectedRelayCount', () {
+      test('delegates to RelayManager', () {
+        when(() => mockRelayManager.connectedRelayCount).thenReturn(3);
 
-        when(() => mockRelay1.url).thenReturn('wss://relay1.example.com');
-        when(() => mockRelay2.url).thenReturn('wss://relay2.example.com');
-        when(() => mockRelay3.url).thenReturn('wss://relay3.example.com');
-        when(
-          () => mockRelayPool.activeRelays(),
-        ).thenReturn([mockRelay1, mockRelay2, mockRelay3]);
-
-        expect(client.relayCount, equals(3));
+        expect(client.connectedRelayCount, equals(3));
+        verify(() => mockRelayManager.connectedRelayCount).called(1);
       });
 
       test('returns 0 when no relays connected', () {
-        when(() => mockRelayPool.activeRelays()).thenReturn([]);
+        when(() => mockRelayManager.connectedRelayCount).thenReturn(0);
 
-        expect(client.relayCount, equals(0));
+        expect(client.connectedRelayCount, equals(0));
       });
     });
 
     group('relayStatuses', () {
-      test('returns map of relay statuses', () {
-        final mockRelay1 = _MockRelay();
-        final mockRelay2 = _MockRelay();
-
-        when(() => mockRelay1.url).thenReturn('wss://relay1.example.com');
-        when(() => mockRelay2.url).thenReturn('wss://relay2.example.com');
+      test('delegates to RelayManager', () {
+        final expectedStatuses = {
+          'wss://relay1.example.com': RelayConnectionStatus.connected(
+            'wss://relay1.example.com',
+          ),
+          'wss://relay2.example.com': RelayConnectionStatus.connected(
+            'wss://relay2.example.com',
+          ),
+        };
         when(
-          () => mockRelayPool.activeRelays(),
-        ).thenReturn([mockRelay1, mockRelay2]);
+          () => mockRelayManager.currentStatuses,
+        ).thenReturn(expectedStatuses);
 
         final result = client.relayStatuses;
 
-        expect(result, hasLength(2));
+        expect(result, equals(expectedStatuses));
+        verify(() => mockRelayManager.currentStatuses).called(1);
       });
 
       test('returns empty map when no relays', () {
-        when(() => mockRelayPool.activeRelays()).thenReturn([]);
+        when(() => mockRelayManager.currentStatuses).thenReturn({});
 
         final result = client.relayStatuses;
 
         expect(result, isEmpty);
+      });
+    });
+
+    group('configuredRelays', () {
+      test('delegates to RelayManager', () {
+        final expectedRelays = [
+          'wss://relay1.example.com',
+          'wss://relay2.example.com',
+        ];
+        when(
+          () => mockRelayManager.configuredRelays,
+        ).thenReturn(expectedRelays);
+
+        final result = client.configuredRelays;
+
+        expect(result, equals(expectedRelays));
+        verify(() => mockRelayManager.configuredRelays).called(1);
+      });
+    });
+
+    group('configuredRelayCount', () {
+      test('delegates to RelayManager', () {
+        when(() => mockRelayManager.configuredRelayCount).thenReturn(2);
+
+        expect(client.configuredRelayCount, equals(2));
+        verify(() => mockRelayManager.configuredRelayCount).called(1);
+      });
+
+      test('returns 0 when no relays configured', () {
+        when(() => mockRelayManager.configuredRelayCount).thenReturn(0);
+
+        expect(client.configuredRelayCount, equals(0));
+      });
+    });
+
+    group('relayStatusStream', () {
+      test('delegates to RelayManager', () async {
+        final controller =
+            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        when(
+          () => mockRelayManager.statusStream,
+        ).thenAnswer((_) => controller.stream);
+
+        final result = client.relayStatusStream;
+
+        expect(result, isNotNull);
+        verify(() => mockRelayManager.statusStream).called(1);
+
+        await controller.close();
+      });
+    });
+
+    group('retryDisconnectedRelays', () {
+      test('delegates to RelayManager', () async {
+        when(mockRelayManager.retryDisconnectedRelays).thenAnswer((_) async {});
+
+        await client.retryDisconnectedRelays();
+
+        verify(mockRelayManager.retryDisconnectedRelays).called(1);
       });
     });
 
     group('sendLike', () {
       test('sends like successfully', () async {
         const eventId = 'event-to-like';
-        final likeEvent = _createTestEvent(kind: EventKind.REACTION);
+        final likeEvent = _createTestEvent(kind: EventKind.reaction);
 
         when(
           () => mockNostr.sendLike(
@@ -1023,7 +1059,7 @@ void main() {
       test('sends like with custom content', () async {
         const eventId = 'event-to-like';
         const content = '❤️';
-        final likeEvent = _createTestEvent(kind: EventKind.REACTION);
+        final likeEvent = _createTestEvent(kind: EventKind.reaction);
 
         when(
           () => mockNostr.sendLike(
@@ -1048,7 +1084,7 @@ void main() {
         const eventId = 'event-to-like';
         final tempRelays = ['wss://temp.example.com'];
         final targetRelays = ['wss://target.example.com'];
-        final likeEvent = _createTestEvent(kind: EventKind.REACTION);
+        final likeEvent = _createTestEvent(kind: EventKind.reaction);
 
         when(
           () => mockNostr.sendLike(
@@ -1095,7 +1131,7 @@ void main() {
     group('sendRepost', () {
       test('sends repost successfully', () async {
         const eventId = 'event-to-repost';
-        final repostEvent = _createTestEvent(kind: EventKind.REPOST);
+        final repostEvent = _createTestEvent(kind: EventKind.repost);
 
         when(
           () => mockNostr.sendRepost(
@@ -1123,7 +1159,7 @@ void main() {
         const content = '{"event":"data"}';
         final tempRelays = ['wss://temp.example.com'];
         final targetRelays = ['wss://target.example.com'];
-        final repostEvent = _createTestEvent(kind: EventKind.REPOST);
+        final repostEvent = _createTestEvent(kind: EventKind.repost);
 
         when(
           () => mockNostr.sendRepost(
@@ -1176,7 +1212,7 @@ void main() {
     group('deleteEvent', () {
       test('deletes event successfully', () async {
         const eventId = 'event-to-delete';
-        final deleteEvent = _createTestEvent(kind: EventKind.EVENT_DELETION);
+        final deleteEvent = _createTestEvent(kind: EventKind.eventDeletion);
 
         when(
           () => mockNostr.deleteEvent(
@@ -1200,7 +1236,7 @@ void main() {
         const eventId = 'event-to-delete';
         final tempRelays = ['wss://temp.example.com'];
         final targetRelays = ['wss://target.example.com'];
-        final deleteEvent = _createTestEvent(kind: EventKind.EVENT_DELETION);
+        final deleteEvent = _createTestEvent(kind: EventKind.eventDeletion);
 
         when(
           () => mockNostr.deleteEvent(
@@ -1245,7 +1281,7 @@ void main() {
     group('deleteEvents', () {
       test('deletes multiple events successfully', () async {
         final eventIds = ['event-1', 'event-2', 'event-3'];
-        final deleteEvent = _createTestEvent(kind: EventKind.EVENT_DELETION);
+        final deleteEvent = _createTestEvent(kind: EventKind.eventDeletion);
 
         when(
           () => mockNostr.deleteEvents(
@@ -1269,7 +1305,7 @@ void main() {
         final eventIds = ['event-1', 'event-2'];
         final tempRelays = ['wss://temp.example.com'];
         final targetRelays = ['wss://target.example.com'];
-        final deleteEvent = _createTestEvent(kind: EventKind.EVENT_DELETION);
+        final deleteEvent = _createTestEvent(kind: EventKind.eventDeletion);
 
         when(
           () => mockNostr.deleteEvents(
@@ -1315,7 +1351,7 @@ void main() {
       test('sends contact list successfully', () async {
         final contacts = ContactList();
         const content = '{"relay":"preferences"}';
-        final contactListEvent = _createTestEvent(kind: EventKind.CONTACT_LIST);
+        final contactListEvent = _createTestEvent(kind: EventKind.contactList);
 
         when(
           () => mockNostr.sendContactList(
@@ -1342,7 +1378,7 @@ void main() {
         const content = '{"relay":"preferences"}';
         final tempRelays = ['wss://temp.example.com'];
         final targetRelays = ['wss://target.example.com'];
-        final contactListEvent = _createTestEvent(kind: EventKind.CONTACT_LIST);
+        final contactListEvent = _createTestEvent(kind: EventKind.contactList);
 
         when(
           () => mockNostr.sendContactList(
@@ -1390,17 +1426,17 @@ void main() {
     });
 
     group('dispose', () {
-      test('closes all subscriptions and nostr client', () {
+      test('closes all subscriptions and nostr client', () async {
         when(() => mockNostr.unsubscribe(any())).thenReturn(null);
 
-        client.dispose();
+        await client.dispose();
 
         verify(() => mockNostr.close()).called(1);
       });
 
-      test('closes active subscriptions before disposing', () {
+      test('closes active subscriptions before disposing', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
 
         when(
@@ -1416,9 +1452,8 @@ void main() {
         ).thenReturn('test-sub-id');
         when(() => mockNostr.unsubscribe(any())).thenReturn(null);
 
-        client
-          ..subscribe(filters)
-          ..dispose();
+        client.subscribe(filters);
+        await client.dispose();
 
         verify(() => mockNostr.unsubscribe(any())).called(1);
         verify(() => mockNostr.close()).called(1);
@@ -1428,7 +1463,7 @@ void main() {
     group('gateway fallback behavior', () {
       test('handles GatewayException gracefully', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
 
@@ -1452,7 +1487,7 @@ void main() {
 
       test('handles network errors gracefully', () async {
         final filters = [
-          Filter(kinds: [EventKind.TEXT_NOTE], limit: 10),
+          Filter(kinds: [EventKind.textNote], limit: 10),
         ];
         final events = [_createTestEvent()];
 

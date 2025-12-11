@@ -1,6 +1,6 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: constant_identifier_names
+// ABOUTME: Defines follow set d-tag constants for NIP-51 follow lists.
+// ABOUTME: Used to identify different types of follow sets like private follows.
 
 class FollowSetDs {
-  static const String PRIVATE_FOLLOW = "private_follow";
+  static const String privateFollow = "private_follow";
 }

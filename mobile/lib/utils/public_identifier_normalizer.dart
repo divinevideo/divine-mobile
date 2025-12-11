@@ -1,8 +1,7 @@
 // ABOUTME: Normalizes all public identifier formats to hex pubkey
 // ABOUTME: Handles npub, nprofile, hex, and special 'me' identifier universally
 
-import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 /// Normalized result containing hex pubkey and optional relay hints
 class NormalizedPublicIdentifier {
@@ -42,14 +41,14 @@ NormalizedPublicIdentifier? normalizePublicIdentifier(
   }
 
   // Try hex format first (most common internally)
-  if (NostrEncoding.isValidHexKey(identifier)) {
+  if (NostrKeyUtils.isValidKey(identifier)) {
     return NormalizedPublicIdentifier(hexPubkey: identifier);
   }
 
   // Try npub format
   if (identifier.startsWith('npub1')) {
     try {
-      final hexKey = NostrEncoding.decodePublicKey(identifier);
+      final hexKey = NostrKeyUtils.decode(identifier);
       return NormalizedPublicIdentifier(hexPubkey: hexKey);
     } catch (e) {
       return null;
@@ -59,8 +58,8 @@ NormalizedPublicIdentifier? normalizePublicIdentifier(
   // Try nprofile format
   if (identifier.startsWith('nprofile1')) {
     try {
-      // Use Nip19.decode which handles nprofile
-      final decoded = Nip19.decode(identifier);
+      // Use NostrKeyUtils.decode which handles nprofile
+      final decoded = NostrKeyUtils.decode(identifier);
 
       // For nprofile, the decoded value is the hex pubkey
       // (relay hints are lost in basic decode, but we could parse TLV if needed)
@@ -97,7 +96,7 @@ String? normalizeToNpub(String identifier, {String? currentUserHex}) {
   if (normalized == null) return null;
 
   try {
-    return NostrEncoding.encodePublicKey(normalized.hexPubkey);
+    return NostrKeyUtils.encodePubKey(normalized.hexPubkey);
   } catch (e) {
     return null;
   }

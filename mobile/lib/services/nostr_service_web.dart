@@ -5,7 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:nostr_sdk/nostr_sdk.dart' as sdk;
 import 'package:openvine/constants/app_constants.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -660,7 +660,7 @@ abstract class NostrServiceWeb implements INostrService {
   Stream<sdk.Event> searchUsers(String query, {int? limit}) {
     final filters = [
       sdk.Filter(
-        kinds: [sdk.EventKind.METADATA], // User profile event kind
+        kinds: [sdk.EventKind.metadata], // User profile event kind
         search: query,
         limit: limit,
       ),

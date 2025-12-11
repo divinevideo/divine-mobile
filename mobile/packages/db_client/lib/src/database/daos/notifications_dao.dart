@@ -9,7 +9,7 @@ part 'notifications_dao.g.dart';
 @DriftAccessor(tables: [Notifications])
 class NotificationsDao extends DatabaseAccessor<AppDatabase>
     with _$NotificationsDaoMixin {
-  NotificationsDao(AppDatabase db) : super(db);
+  NotificationsDao(super.attachedDatabase);
 
   /// Upsert a notification
   Future<void> upsertNotification({
@@ -60,9 +60,10 @@ class NotificationsDao extends DatabaseAccessor<AppDatabase>
 
   /// Mark notification as read
   Future<bool> markAsRead(String id) async {
-    final rowsAffected = await (update(notifications)
-          ..where((t) => t.id.equals(id)))
-        .write(const NotificationsCompanion(isRead: Value(true)));
+    final rowsAffected =
+        await (update(notifications)..where((t) => t.id.equals(id))).write(
+          const NotificationsCompanion(isRead: Value(true)),
+        );
     return rowsAffected > 0;
   }
 
@@ -80,9 +81,9 @@ class NotificationsDao extends DatabaseAccessor<AppDatabase>
 
   /// Delete notifications older than a timestamp
   Future<int> deleteOlderThan(int timestamp) {
-    return (delete(notifications)
-          ..where((t) => t.timestamp.isSmallerThan(Variable(timestamp))))
-        .go();
+    return (delete(
+      notifications,
+    )..where((t) => t.timestamp.isSmallerThan(Variable(timestamp)))).go();
   }
 
   /// Watch all notifications (reactive stream)

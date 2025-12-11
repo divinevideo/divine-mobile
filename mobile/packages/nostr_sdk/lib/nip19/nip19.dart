@@ -9,7 +9,7 @@ class Nip19 {
   // static String encodePubKey(String pubkey) {
   //   var data = hex.decode(pubkey);
   //   data = Bech32.convertBits(data, 8, 5, true);
-  //   return Bech32.encode(Hrps.PUBLIC_KEY, data);
+  //   return Bech32.encode(Hrps.publicKey, data);
   // }
 
   static Map<String, int>? charMap;
@@ -44,7 +44,7 @@ class Nip19 {
   }
 
   static bool isPubkey(String str) {
-    return isKey(Hrps.PUBLIC_KEY, str);
+    return isKey(Hrps.publicKey, str);
   }
 
   static String encodePubKey(String pubkey) {
@@ -52,9 +52,9 @@ class Nip19 {
     // data = _convertBits(data, 8, 5, true);
 
     // var encoder = Bech32Encoder();
-    // Bech32 input = Bech32(Hrps.PUBLIC_KEY, data);
+    // Bech32 input = Bech32(Hrps.publicKey, data);
     // return encoder.convert(input);
-    return _encodeKey(Hrps.PUBLIC_KEY, pubkey);
+    return _encodeKey(Hrps.publicKey, pubkey);
   }
 
   static String encodeSimplePubKey(String pubkey) {
@@ -98,19 +98,19 @@ class Nip19 {
   }
 
   static bool isPrivateKey(String str) {
-    return isKey(Hrps.PRIVATE_KEY, str);
+    return isKey(Hrps.privateKey, str);
   }
 
   static String encodePrivateKey(String privateKey) {
-    return _encodeKey(Hrps.PRIVATE_KEY, privateKey);
+    return _encodeKey(Hrps.privateKey, privateKey);
   }
 
   static bool isNoteId(String str) {
-    return isKey(Hrps.NOTE_ID, str);
+    return isKey(Hrps.noteId, str);
   }
 
   static String encodeNoteId(String id) {
-    return _encodeKey(Hrps.NOTE_ID, id);
+    return _encodeKey(Hrps.noteId, id);
   }
 
   static List<int> convertBits(List<int> data, int from, int to, bool pad) {

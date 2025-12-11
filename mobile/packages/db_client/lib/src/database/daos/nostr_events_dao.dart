@@ -1,29 +1,61 @@
-// ABOUTME: Data Access Object for Nostr event operations with reactive Drift queries
-// ABOUTME: Provides CRUD operations for all Nostr events stored in the shared database
+// ABOUTME: Data Access Object for Nostr event operations with reactive
+// ABOUTME: Drift queries. Provides CRUD operations for all Nostr events
+// ABOUTME: stored in the shared database. Handles NIP-01 replaceable events.
 
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/event_kind.dart';
 
 part 'nostr_events_dao.g.dart';
 
 @DriftAccessor(tables: [NostrEvents, VideoMetrics])
 class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     with _$NostrEventsDaoMixin {
-  NostrEventsDao(AppDatabase db) : super(db);
+  NostrEventsDao(super.attachedDatabase);
 
-  /// Insert or replace event
+  /// Insert or replace event with NIP-01 replaceable event handling
   ///
-  /// Uses INSERT OR REPLACE for upsert behavior - if event with same ID exists,
-  /// it will be replaced with the new data.
+  /// For regular events: uses INSERT OR REPLACE by event ID.
+  ///
+  /// For replaceable events (kind 0, 3, 10000-19999): replaces existing event
+  /// with same pubkey+kind only if the new event has a higher created_at.
+  ///
+  /// For parameterized replaceable events (kind 30000-39999): replaces existing
+  /// event with same pubkey+kind+d-tag only if the new event has a higher
+  /// created_at.
   ///
   /// For video events (kind 34236 or 16), also upserts video metrics to the
   /// video_metrics table for fast sorted queries.
   Future<void> upsertEvent(Event event) async {
+    // Handle replaceable events (kind 0, 3, 10000-19999)
+    if (EventKind.isReplaceable(event.kind)) {
+      await _upsertReplaceableEvent(event);
+      return;
+    }
+
+    // Handle parameterized replaceable events (kind 30000-39999)
+    if (EventKind.isParameterizedReplaceable(event.kind)) {
+      await _upsertParameterizedReplaceableEvent(event);
+      return;
+    }
+
+    // Regular event: simple insert or replace by ID
+    await _insertEvent(event);
+
+    // Also upsert video metrics for video events and reposts
+    if (event.kind == 34236 || event.kind == 16) {
+      await db.videoMetricsDao.upsertVideoMetrics(event);
+    }
+  }
+
+  /// Insert event without replaceable logic (by event ID)
+  Future<void> _insertEvent(Event event) async {
     await customInsert(
-      'INSERT OR REPLACE INTO event (id, pubkey, created_at, kind, tags, content, sig, sources) '
+      'INSERT OR REPLACE INTO event '
+      '(id, pubkey, created_at, kind, tags, content, sig, sources) '
       'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       variables: [
         Variable.withString(event.id),
@@ -36,9 +68,90 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
         const Variable(null), // sources - not used yet
       ],
     );
+  }
 
-    // Also upsert video metrics for video events and reposts
-    if (event.kind == 34236 || event.kind == 16) {
+  /// Upsert replaceable event (kind 0, 3, 10000-19999)
+  ///
+  /// Only stores the event if no existing event with same pubkey+kind exists,
+  /// or if the new event has a higher created_at timestamp.
+  Future<void> _upsertReplaceableEvent(Event event) async {
+    // Check if a newer event already exists for this pubkey+kind
+    final existingRows = await customSelect(
+      'SELECT id, created_at FROM event WHERE pubkey = ? AND kind = ? LIMIT 1',
+      variables: [
+        Variable.withString(event.pubkey),
+        Variable.withInt(event.kind),
+      ],
+      readsFrom: {nostrEvents},
+    ).get();
+
+    if (existingRows.isNotEmpty) {
+      final existingCreatedAt = existingRows.first.read<int>('created_at');
+      if (event.createdAt <= existingCreatedAt) {
+        // Existing event is newer or same age, don't replace
+        return;
+      }
+      // Delete the old event before inserting the new one
+      final existingId = existingRows.first.read<String>('id');
+      await customUpdate(
+        'DELETE FROM event WHERE id = ?',
+        variables: [Variable.withString(existingId)],
+        updates: {nostrEvents},
+        updateKind: UpdateKind.delete,
+      );
+    }
+
+    await _insertEvent(event);
+  }
+
+  /// Upsert parameterized replaceable event (kind 30000-39999)
+  ///
+  /// Only stores the event if no existing event with same pubkey+kind+d-tag
+  /// exists, or if the new event has a higher created_at timestamp.
+  Future<void> _upsertParameterizedReplaceableEvent(Event event) async {
+    final dTagValue = event.dTagValue;
+
+    // Check if a newer event already exists for this pubkey+kind+d-tag
+    // We need to check tags JSON for the d-tag value
+    final existingRows = await customSelect(
+      'SELECT id, created_at, tags FROM event '
+      'WHERE pubkey = ? AND kind = ?',
+      variables: [
+        Variable.withString(event.pubkey),
+        Variable.withInt(event.kind),
+      ],
+      readsFrom: {nostrEvents},
+    ).get();
+
+    for (final row in existingRows) {
+      final tagsJson = row.read<String>('tags');
+      final tags = (jsonDecode(tagsJson) as List)
+          .map((tag) => (tag as List).map((e) => e.toString()).toList())
+          .toList();
+      final existingDTag = _extractDTagFromTags(tags);
+
+      if (existingDTag == dTagValue) {
+        final existingCreatedAt = row.read<int>('created_at');
+        if (event.createdAt <= existingCreatedAt) {
+          // Existing event is newer or same age, don't replace
+          return;
+        }
+        // Delete the old event before inserting the new one
+        final existingId = row.read<String>('id');
+        await customUpdate(
+          'DELETE FROM event WHERE id = ?',
+          variables: [Variable.withString(existingId)],
+          updates: {nostrEvents},
+          updateKind: UpdateKind.delete,
+        );
+        break;
+      }
+    }
+
+    await _insertEvent(event);
+
+    // Also upsert video metrics for video events
+    if (event.kind == 34236) {
       await db.videoMetricsDao.upsertVideoMetrics(event);
     }
   }
@@ -47,34 +160,14 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Much more efficient than calling upsertEvent() repeatedly.
   /// Uses a single database transaction to avoid lock contention.
+  /// Handles NIP-01 replaceable event semantics.
   Future<void> upsertEventsBatch(List<Event> events) async {
     if (events.isEmpty) return;
 
     await transaction(() async {
-      // Batch insert all events
+      // Batch upsert all events with replaceable logic
       for (final event in events) {
-        await customInsert(
-          'INSERT OR REPLACE INTO event (id, pubkey, created_at, kind, tags, content, sig, sources) '
-          'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          variables: [
-            Variable.withString(event.id),
-            Variable.withString(event.pubkey),
-            Variable.withInt(event.createdAt),
-            Variable.withInt(event.kind),
-            Variable.withString(jsonEncode(event.tags)),
-            Variable.withString(event.content),
-            Variable.withString(event.sig),
-            const Variable(null), // sources - not used yet
-          ],
-        );
-      }
-
-      // Batch upsert video metrics for video events and reposts
-      final videoEvents = events
-          .where((e) => e.kind == 34236 || e.kind == 16)
-          .toList();
-      for (final event in videoEvents) {
-        await db.videoMetricsDao.upsertVideoMetrics(event);
+        await upsertEvent(event);
       }
     });
   }
@@ -88,9 +181,11 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   /// - since: Minimum created_at timestamp (Unix seconds)
   /// - until: Maximum created_at timestamp (Unix seconds)
   /// - limit: Maximum number of events to return
-  /// - sortBy: Field to sort by (loop_count, likes, views, created_at). Defaults to created_at DESC.
+  /// - sortBy: Field to sort by (loop_count, likes, views, created_at).
+  ///   Defaults to created_at DESC.
   ///
-  /// Used by cache-first query strategy to return instant results before relay query.
+  /// Used by cache-first query strategy to return instant results before
+  /// relay query.
   Future<List<Event>> getVideoEventsByFilter({
     List<int>? kinds,
     List<String>? authors,
@@ -112,14 +207,14 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     } else {
       final placeholders = List.filled(effectiveKinds.length, '?').join(', ');
       conditions.add('kind IN ($placeholders)');
-      variables.addAll(effectiveKinds.map((k) => Variable.withInt(k)));
+      variables.addAll(effectiveKinds.map(Variable.withInt));
     }
 
     // Authors filter
     if (authors != null && authors.isNotEmpty) {
       final placeholders = List.filled(authors.length, '?').join(', ');
       conditions.add('pubkey IN ($placeholders)');
-      variables.addAll(authors.map((a) => Variable.withString(a)));
+      variables.addAll(authors.map(Variable.withString));
     }
 
     // Hashtags filter (search in tags JSON)
@@ -151,10 +246,11 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
 
     // Determine ORDER BY clause and whether we need to join video_metrics
     String orderByClause;
-    bool needsMetricsJoin = false;
+    var needsMetricsJoin = false;
 
     if (sortBy != null && sortBy != 'created_at') {
-      // Server-side sorting by engagement metrics requires join with video_metrics
+      // Server-side sorting by engagement metrics requires join with
+      // video_metrics
       needsMetricsJoin = true;
 
       // Map sort field names to column names
@@ -222,8 +318,20 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
       createdAt: row.read<int>('created_at'),
     );
     // Set id and sig manually since they're stored fields
-    event.id = row.read<String>('id');
-    event.sig = row.read<String>('sig');
-    return event;
+    return event
+      ..id = row.read<String>('id')
+      ..sig = row.read<String>('sig');
+  }
+
+  /// Extracts the d-tag value from raw tag list (for database queries).
+  ///
+  /// Returns empty string if no d-tag is found (per NIP-01 spec).
+  String _extractDTagFromTags(List<List<String>> tags) {
+    for (final tag in tags) {
+      if (tag.isNotEmpty && tag[0] == 'd') {
+        return tag.length > 1 ? tag[1] : '';
+      }
+    }
+    return '';
   }
 }

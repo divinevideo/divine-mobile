@@ -6,10 +6,8 @@
 import 'dart:async' as _i3;
 
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i6;
-import 'package:openvine/services/nostr_key_manager.dart' as _i2;
-import 'package:openvine/services/nostr_service_interface.dart' as _i4;
-import 'package:openvine/services/user_profile_service.dart' as _i5;
+import 'package:mockito/src/dummies.dart' as _i4;
+import 'package:nostr_key_manager/src/nostr_key_manager.dart' as _i2;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -24,6 +22,7 @@ import 'package:openvine/services/user_profile_service.dart' as _i5;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
+// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeKeychain_0 extends _i1.SmartFake implements _i2.Keychain {
   _FakeKeychain_0(Object parent, Invocation parentInvocation)
@@ -86,57 +85,11 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
           as _i3.Future<_i2.Keychain>);
 
   @override
-  _i3.Future<_i2.Keychain> importPrivateKeyWithServices(
-    String? privateKey, {
-    _i4.INostrService? nostrService,
-    _i5.UserProfileService? profileService,
-  }) =>
+  _i3.Future<_i2.Keychain> importFromNsec(String? nsec) =>
       (super.noSuchMethod(
-            Invocation.method(
-              #importPrivateKeyWithServices,
-              [privateKey],
-              {#nostrService: nostrService, #profileService: profileService},
-            ),
+            Invocation.method(#importFromNsec, [nsec]),
             returnValue: _i3.Future<_i2.Keychain>.value(
-              _FakeKeychain_0(
-                this,
-                Invocation.method(
-                  #importPrivateKeyWithServices,
-                  [privateKey],
-                  {
-                    #nostrService: nostrService,
-                    #profileService: profileService,
-                  },
-                ),
-              ),
-            ),
-          )
-          as _i3.Future<_i2.Keychain>);
-
-  @override
-  _i3.Future<_i2.Keychain> importFromNsec(
-    String? nsec, {
-    _i4.INostrService? nostrService,
-    _i5.UserProfileService? profileService,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #importFromNsec,
-              [nsec],
-              {#nostrService: nostrService, #profileService: profileService},
-            ),
-            returnValue: _i3.Future<_i2.Keychain>.value(
-              _FakeKeychain_0(
-                this,
-                Invocation.method(
-                  #importFromNsec,
-                  [nsec],
-                  {
-                    #nostrService: nostrService,
-                    #profileService: profileService,
-                  },
-                ),
-              ),
+              _FakeKeychain_0(this, Invocation.method(#importFromNsec, [nsec])),
             ),
           )
           as _i3.Future<_i2.Keychain>);
@@ -145,7 +98,7 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
   String exportPrivateKey() =>
       (super.noSuchMethod(
             Invocation.method(#exportPrivateKey, []),
-            returnValue: _i6.dummyValue<String>(
+            returnValue: _i4.dummyValue<String>(
               this,
               Invocation.method(#exportPrivateKey, []),
             ),
@@ -156,7 +109,7 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
   String exportAsNsec() =>
       (super.noSuchMethod(
             Invocation.method(#exportAsNsec, []),
-            returnValue: _i6.dummyValue<String>(
+            returnValue: _i4.dummyValue<String>(
               this,
               Invocation.method(#exportAsNsec, []),
             ),

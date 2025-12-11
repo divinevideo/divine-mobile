@@ -43,7 +43,7 @@ class RelayIsolateWorker {
       } else if (message is int) {
         // this is const msg.
         // print("msg is $message ${config.url}");
-        if (message == RelayIsolateMsgs.CONNECT) {
+        if (message == RelayIsolateMsgs.connect) {
           // print("${config.url} worker receive connect command");
           // receive the connect command!
           if (wsChannel == null || wsChannel!.closeCode != null) {
@@ -56,15 +56,15 @@ class RelayIsolateWorker {
             // wsChannel!.sink.add("ping");
             // TODO the websocket is connected, try to check or reconnect.
           }
-        } else if (message == RelayIsolateMsgs.DIS_CONNECT) {
+        } else if (message == RelayIsolateMsgs.disConnect) {
           _closeWS(wsChannel);
-          config.subToMainSendPort.send(RelayIsolateMsgs.DIS_CONNECTED);
+          config.subToMainSendPort.send(RelayIsolateMsgs.disConnected);
         }
       }
     } catch (e) {
       // catch error on handle mainToSubMessage, close, and it will reconnect again.
       _closeWS(wsChannel);
-      config.subToMainSendPort.send(RelayIsolateMsgs.DIS_CONNECTED);
+      config.subToMainSendPort.send(RelayIsolateMsgs.disConnected);
     }
   }
 
@@ -102,22 +102,22 @@ class RelayIsolateWorker {
         onError: (error) async {
           log("Websocket stream error:  $url");
           _closeWS(wsChannel);
-          subToMainSendPort.send(RelayIsolateMsgs.DIS_CONNECTED);
+          subToMainSendPort.send(RelayIsolateMsgs.disConnected);
         },
         onDone: () {
           log("Websocket stream closed by remote:  $url");
           _closeWS(wsChannel);
-          subToMainSendPort.send(RelayIsolateMsgs.DIS_CONNECTED);
+          subToMainSendPort.send(RelayIsolateMsgs.disConnected);
         },
       );
       await wsChannel!.ready;
       log("Connect complete! ${config.url}");
-      subToMainSendPort.send(RelayIsolateMsgs.CONNECTED);
+      subToMainSendPort.send(RelayIsolateMsgs.connected);
 
       return wsChannel;
     } catch (e) {
       _closeWS(wsChannel);
-      subToMainSendPort.send(RelayIsolateMsgs.DIS_CONNECTED);
+      subToMainSendPort.send(RelayIsolateMsgs.disConnected);
     }
 
     return null;

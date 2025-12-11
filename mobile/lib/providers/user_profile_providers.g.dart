@@ -8,6 +8,83 @@ part of 'user_profile_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+
+@ProviderFor(userProfileReactive)
+const userProfileReactiveProvider = UserProfileReactiveFamily._();
+
+final class UserProfileReactiveProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<UserProfile?>,
+          UserProfile?,
+          FutureOr<UserProfile?>
+        >
+    with $FutureModifier<UserProfile?>, $FutureProvider<UserProfile?> {
+  const UserProfileReactiveProvider._({
+    required UserProfileReactiveFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'userProfileReactiveProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$userProfileReactiveHash();
+
+  @override
+  String toString() {
+    return r'userProfileReactiveProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<UserProfile?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<UserProfile?> create(Ref ref) {
+    final argument = this.argument as String;
+    return userProfileReactive(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is UserProfileReactiveProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$userProfileReactiveHash() =>
+    r'7f0a97ea992b601f1b4205eae0131e1970dc1435';
+
+final class UserProfileReactiveFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<UserProfile?>, String> {
+  const UserProfileReactiveFamily._()
+    : super(
+        retry: null,
+        name: r'userProfileReactiveProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  UserProfileReactiveProvider call(String pubkey) =>
+      UserProfileReactiveProvider._(argument: pubkey, from: this);
+
+  @override
+  String toString() => r'userProfileReactiveProvider';
+}
+
 /// Async provider for loading a single user profile
 /// Delegates to UserProfileService which is the single source of truth
 

@@ -2,30 +2,31 @@
 // ABOUTME: Gathers device info, logs, errors and sanitizes sensitive data before transmission
 
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:http/http.dart' as http;
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:uuid/uuid.dart';
-import 'package:openvine/config/bug_report_config.dart';
-import 'package:openvine/models/bug_report_data.dart';
-import 'package:openvine/models/bug_report_result.dart';
-import 'package:openvine/models/log_entry.dart';
-import 'package:openvine/services/log_capture_service.dart';
-import 'package:openvine/services/error_analytics_tracker.dart';
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:openvine/services/nip17_message_service.dart';
-import 'package:openvine/services/blossom_upload_service.dart';
-import 'package:openvine/services/zendesk_support_service.dart';
-import 'package:openvine/utils/unified_logger.dart';
 // TODO: migrate to `package:web` and `dart:js_interop`.
 // ignore: deprecated_member_use
 import 'dart:html'
     if (dart.library.io) 'package:openvine/services/bug_report_service_stub.dart'
     as html;
+import 'dart:io';
+
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
+import 'package:models/models.dart' show BugReportResult;
+import 'package:openvine/config/bug_report_config.dart';
+import 'package:openvine/models/bug_report_data.dart';
+import 'package:openvine/models/log_entry.dart';
+import 'package:openvine/services/blossom_upload_service.dart';
+import 'package:openvine/services/error_analytics_tracker.dart';
+import 'package:openvine/services/log_capture_service.dart';
+import 'package:openvine/services/nip17_message_service.dart';
+import 'package:openvine/services/zendesk_support_service.dart';
+import 'package:openvine/utils/unified_logger.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:uuid/uuid.dart';
 
 /// Service for creating and managing bug reports
 class BugReportService {
@@ -195,7 +196,7 @@ class BugReportService {
           '✅ Bug report sent successfully: ${data.reportId}',
           category: LogCategory.system,
         );
-        return BugReportResult.createSuccess(
+        return BugReportResult.success(
           reportId: data.reportId,
           messageEventId: result['reportId'] as String,
         );
@@ -254,7 +255,7 @@ class BugReportService {
         '✅ Bug report sent via Zendesk REST API: ${data.reportId}',
         category: LogCategory.system,
       );
-      return BugReportResult.createSuccess(
+      return BugReportResult.success(
         reportId: data.reportId,
         messageEventId: 'zendesk-${data.reportId}',
       );
@@ -362,7 +363,7 @@ class BugReportService {
           'Bug report sent successfully: ${result.messageEventId}',
           category: LogCategory.system,
         );
-        return BugReportResult.createSuccess(
+        return BugReportResult.success(
           reportId: data.reportId,
           messageEventId: result.messageEventId!,
         );

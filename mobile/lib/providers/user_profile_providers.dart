@@ -5,15 +5,126 @@ import 'dart:async';
 
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/state/user_profile_state.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:openvine/providers/tab_visibility_provider.dart';
 
 part 'user_profile_providers.g.dart';
 
 // Helper function for safe pubkey truncation in logs
 String _safePubkeyTrunc(String pubkey) => pubkey.length > 8 ? pubkey : pubkey;
+
+@riverpod
+Future<UserProfile?> userProfileReactive(Ref ref, String pubkey) async {
+  Log.info('Checking for $pubkey');
+  final userProfileService = ref.watch(userProfileServiceProvider);
+
+  // Is the profile already present in the service cache?
+  final isCached = userProfileService.hasProfile(pubkey);
+
+  if (isCached) {
+    Log.debug(
+      '✅ Found cached profile: ${_safePubkeyTrunc(pubkey)}',
+      name: 'UserProfileReactiveProvider',
+      category: LogCategory.ui,
+    );
+
+    return userProfileService.getCachedProfile(pubkey);
+  }
+
+  // Check if profile is known to be missing (should skip fetch)
+  if (userProfileService.shouldSkipProfileFetch(pubkey)) {
+    Log.debug(
+      '⏭️ Profile marked as missing: ${_safePubkeyTrunc(pubkey)}',
+      name: 'UserProfileReactiveProvider',
+      category: LogCategory.ui,
+    );
+
+    return null;
+  }
+
+  final completer = Completer<UserProfile?>();
+
+  // If the profile is not cached, add a listener to invalidate this provider
+  // when the profile is added or marked as missing.
+  void listener() {
+    Log.debug(
+      'Listener fired! Checking for $pubkey',
+      name: 'UserProfileReactiveProvider',
+      category: LogCategory.ui,
+    );
+
+    final profileExists = userProfileService.hasProfile(pubkey);
+    final profileMissing = userProfileService.shouldSkipProfileFetch(pubkey);
+
+    if (profileExists) {
+      Log.debug(
+        '✅ Profile added to cache: ${_safePubkeyTrunc(pubkey)}',
+        name: 'UserProfileReactiveProvider',
+        category: LogCategory.ui,
+      );
+
+      userProfileService.removeListener(listener);
+      completer.complete(userProfileService.getCachedProfile(pubkey));
+    } else if (profileMissing && !completer.isCompleted) {
+      Log.debug(
+        '❌ Profile marked as missing: ${_safePubkeyTrunc(pubkey)}',
+        name: 'UserProfileReactiveProvider',
+        category: LogCategory.ui,
+      );
+
+      userProfileService.removeListener(listener);
+      completer.complete(null);
+    }
+  }
+
+  ref.onDispose(() {
+    Log.debug(
+      '🗑️ Removing listener for profile: ${_safePubkeyTrunc(pubkey)}',
+      name: 'UserProfileReactiveProvider',
+      category: LogCategory.ui,
+    );
+
+    userProfileService.removeListener(listener);
+
+    if (!completer.isCompleted) {
+      Log.debug(
+        '🗑️ Completing completer for profile: ${_safePubkeyTrunc(pubkey)}',
+        name: 'UserProfileReactiveProvider',
+        category: LogCategory.ui,
+      );
+
+      completer.complete(null);
+    }
+  });
+
+  Log.debug(
+    '🔍 Adding listener for profile: ${_safePubkeyTrunc(pubkey)}',
+    name: 'UserProfileReactiveProvider',
+    category: LogCategory.ui,
+  );
+
+  // Add the listener and fire the fetch profile request
+  userProfileService.addListener(listener);
+  unawaited(userProfileService.fetchProfile(pubkey));
+
+  // Wait for the profile to be fetched in the listener or timeout
+  return completer.future.timeout(
+    const Duration(seconds: 15),
+    onTimeout: () {
+      Log.warning(
+        '⏰ Timeout waiting for profile: ${_safePubkeyTrunc(pubkey)}',
+        name: 'UserProfileReactiveProvider',
+        category: LogCategory.ui,
+      );
+
+      userProfileService.removeListener(listener);
+
+      return null;
+    },
+  );
+}
 
 /// Async provider for loading a single user profile
 /// Delegates to UserProfileService which is the single source of truth

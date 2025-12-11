@@ -9,10 +9,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/models/aspect_ratio.dart' as vine;
+import 'package:models/models.dart' as vine show AspectRatio;
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
-import 'package:openvine/models/native_proof_data.dart';
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
@@ -1449,6 +1449,10 @@ class _UniversalCameraScreenPureState
       );
 
       if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+
         // Navigate to metadata screen
         await Navigator.of(context).push(
           MaterialPageRoute(
@@ -1458,6 +1462,8 @@ class _UniversalCameraScreenPureState
 
         // After metadata screen returns, navigate to profile
         if (mounted) {
+          disposeAllVideoControllers(ref);
+
           Log.info(
             '📹 Returned from metadata screen, navigating to profile',
             category: LogCategory.video,
@@ -1465,7 +1471,6 @@ class _UniversalCameraScreenPureState
 
           // CRITICAL: Dispose all controllers again before navigation
           // This ensures no stale controllers exist when switching to profile tab
-          disposeAllVideoControllers(ref);
           Log.info(
             '🗑️ Disposed controllers before profile navigation',
             category: LogCategory.video,
@@ -1479,9 +1484,6 @@ class _UniversalCameraScreenPureState
           );
 
           // Reset processing flag after navigation
-          setState(() {
-            _isProcessing = false;
-          });
         }
       }
     } catch (e) {

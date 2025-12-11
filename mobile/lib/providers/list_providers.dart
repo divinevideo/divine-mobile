@@ -22,8 +22,8 @@ Future<List<UserList>> userLists(Ref ref) async {
 /// Provider for all curated video lists (kind 30005)
 @riverpod
 Future<List<CuratedList>> curatedLists(Ref ref) async {
-  final service = await ref.watch(curatedListServiceProvider.future);
-  return service.lists;
+  final service = await ref.watch(curatedListsStateProvider.future);
+  return service;
 }
 
 /// Combined provider for both types of lists
@@ -46,15 +46,15 @@ Future<({List<UserList> userLists, List<CuratedList> curatedLists})> allLists(
 /// Provider for videos in a specific curated list
 @riverpod
 Future<List<String>> curatedListVideos(Ref ref, String listId) async {
-  final service = await ref.watch(curatedListServiceProvider.future);
-  final list = service.getListById(listId);
+  final service = await ref.read(curatedListsStateProvider.notifier).service;
+  final list = service?.getListById(listId);
 
   if (list == null) {
     return [];
   }
 
   // Return video IDs in the order specified by the list's playOrder setting
-  return service.getOrderedVideoIds(listId);
+  return service?.getOrderedVideoIds(listId) ?? [];
 }
 
 /// Provider for videos from all members of a user list
@@ -91,8 +91,12 @@ Stream<List<CuratedList>> publicListsContainingVideo(
   Ref ref,
   String videoId,
 ) async* {
-  final service = await ref.watch(curatedListServiceProvider.future);
-  final curatedListStream = service.streamPublicListsContainingVideo(videoId);
+  /// wait to initialize the curated list service
+  await ref.read(curatedListsStateProvider.future);
+  final curatedListStream = ref
+      .read(curatedListsStateProvider.notifier)
+      .service
+      ?.streamPublicListsContainingVideo(videoId);
   final accumulated = <CuratedList>[];
   final seenIds = <String>{};
 
@@ -100,7 +104,7 @@ Stream<List<CuratedList>> publicListsContainingVideo(
   yield const <CuratedList>[];
 
   // Stream events from Nostr relays, accumulating as they arrive
-  await for (final list in curatedListStream) {
+  await for (final list in curatedListStream ?? Stream.empty()) {
     if (!seenIds.contains(list.id)) {
       seenIds.add(list.id);
       accumulated.add(list);

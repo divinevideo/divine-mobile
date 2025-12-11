@@ -1,10 +1,10 @@
 // ABOUTME: Unit tests for ProfileStatsDao with cache expiry logic.
-// ABOUTME: Tests upsertStats, getStats with expiry, deleteExpired, and clearAll.
+// ABOUTME: Tests upsertStats, getStats with expiry, deleteExpired, clearAll.
 
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
-import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:test/test.dart';
 
@@ -132,7 +132,6 @@ void main() {
 
         final result = await dao.getStats(
           testPubkey,
-          expiry: const Duration(minutes: 5),
         );
 
         expect(result, isNotNull);
@@ -187,25 +186,28 @@ void main() {
       test('deletes only expired entries', () async {
         // Insert with old timestamps using direct database insert
         final oldTime = DateTime.now().subtract(const Duration(minutes: 10));
-        await database.into(database.profileStats).insert(
-          ProfileStatsCompanion.insert(
-            pubkey: testPubkey,
-            videoCount: const Value(10),
-            cachedAt: oldTime,
-          ),
-        );
-        await database.into(database.profileStats).insert(
-          ProfileStatsCompanion.insert(
-            pubkey: testPubkey2,
-            videoCount: const Value(20),
-            cachedAt: oldTime,
-          ),
-        );
+        await database
+            .into(database.profileStats)
+            .insert(
+              ProfileStatsCompanion.insert(
+                pubkey: testPubkey,
+                videoCount: const Value(10),
+                cachedAt: oldTime,
+              ),
+            );
+        await database
+            .into(database.profileStats)
+            .insert(
+              ProfileStatsCompanion.insert(
+                pubkey: testPubkey2,
+                videoCount: const Value(20),
+                cachedAt: oldTime,
+              ),
+            );
 
-        // Delete with 5 minute expiry - entries are 10 minutes old so should be deleted
-        final deleted = await dao.deleteExpired(
-          expiry: const Duration(minutes: 5),
-        );
+        // Delete with 5 minute expiry - entries are 10 minutes old so
+        // should be deleted
+        final deleted = await dao.deleteExpired();
 
         expect(deleted, equals(2));
         expect(await appDbClient.countProfileStats(), equals(0));

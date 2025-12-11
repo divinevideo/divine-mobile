@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/models/native_proof_data.dart';
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';

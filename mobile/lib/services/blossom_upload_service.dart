@@ -48,7 +48,7 @@ class BlossomUploadResult {
 class BlossomUploadService {
   static const String _blossomServerKey = 'blossom_server_url';
   static const String _useBlossomKey = 'use_blossom_upload';
-  static const String defaultBlossomServer = 'https://blossom.divine.video';
+  static const String defaultBlossomServer = 'https://media.divine.video';
 
   final AuthService authService;
   final INostrService nostrService;
@@ -212,7 +212,7 @@ class BlossomUploadService {
         serverUrl = customServerUrl;
       } else {
         // Use default diVine Blossom server
-        serverUrl = 'https://blossom.divine.video';
+        serverUrl = defaultBlossomServer;
       }
 
       // Parse and validate server URL
@@ -268,15 +268,16 @@ class BlossomUploadService {
 
       // Use Blossom spec: POST with raw bytes
       Log.info(
-        'Uploading using Blossom spec (POST with raw bytes)',
+        'Uploading using Blossom spec (streaming upload)',
         name: 'BlossomUploadService',
         category: LogCategory.video,
       );
 
-      // Read file bytes
-      final fileBytes = await videoFile.readAsBytes();
-      final fileSize = fileBytes.length;
-      final fileHash = HashUtil.sha256Hash(fileBytes);
+      // Use streaming hash computation to avoid loading entire file into memory
+      // This is critical for iOS where large files (40MB+) can cause memory issues
+      final hashResult = await HashUtil.sha256File(videoFile);
+      final fileSize = hashResult.size;
+      final fileHash = hashResult.hash;
 
       // Add file size metric to performance trace
       PerformanceMonitoringService.instance.setMetric(
@@ -336,7 +337,7 @@ class BlossomUploadService {
       }
 
       Log.info(
-        'Sending PUT request with raw bytes',
+        'Sending PUT request with file stream',
         name: 'BlossomUploadService',
         category: LogCategory.video,
       );
@@ -351,10 +352,13 @@ class BlossomUploadService {
         category: LogCategory.video,
       );
 
-      // PUT request with raw bytes (Blossom BUD-01 spec)
+      // PUT request with file stream (Blossom BUD-01 spec)
+      // Using stream instead of bytes to avoid loading entire file into memory
+      // This is critical for iOS where large files (40MB+) can cause memory pressure
+      final fileStream = videoFile.openRead();
       final response = await dio.put(
         '$serverUrl/upload',
-        data: fileBytes,
+        data: fileStream,
         options: Options(
           headers: headers,
           validateStatus: (status) => status != null && status < 500,
@@ -530,27 +534,84 @@ class BlossomUploadService {
         errorMessage:
             'Upload failed: ${response.statusCode} - ${xReason ?? response.data}',
       );
-    } on DioException catch (e) {
+    } on DioException catch (e, stackTrace) {
+      // Capture ALL error details for debugging
       Log.error(
-        'Blossom upload network error: ${e.message}',
+        'Blossom upload DioException:',
         name: 'BlossomUploadService',
         category: LogCategory.video,
       );
+      Log.error(
+        '  Type: ${e.type}',
+        name: 'BlossomUploadService',
+        category: LogCategory.video,
+      );
+      Log.error(
+        '  Message: ${e.message}',
+        name: 'BlossomUploadService',
+        category: LogCategory.video,
+      );
+      Log.error(
+        '  Error object: ${e.error}',
+        name: 'BlossomUploadService',
+        category: LogCategory.video,
+      );
+      Log.error(
+        '  Error type: ${e.error?.runtimeType}',
+        name: 'BlossomUploadService',
+        category: LogCategory.video,
+      );
+      Log.error(
+        '  Response: ${e.response}',
+        name: 'BlossomUploadService',
+        category: LogCategory.video,
+      );
+      Log.error(
+        '  Request URI: ${e.requestOptions.uri}',
+        name: 'BlossomUploadService',
+        category: LogCategory.video,
+      );
+      Log.error(
+        '  Stack trace: $stackTrace',
+        name: 'BlossomUploadService',
+        category: LogCategory.video,
+      );
+
+      // Build detailed error message
+      String errorDetail = e.message ?? 'Unknown error';
+      if (e.error != null) {
+        errorDetail = '$errorDetail (${e.error})';
+      }
 
       if (e.type == DioExceptionType.connectionTimeout) {
         return BlossomUploadResult(
           success: false,
           errorMessage: 'Connection timeout - check server URL',
         );
+      } else if (e.type == DioExceptionType.sendTimeout) {
+        return BlossomUploadResult(
+          success: false,
+          errorMessage: 'Send timeout - upload too slow or connection dropped',
+        );
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        return BlossomUploadResult(
+          success: false,
+          errorMessage: 'Receive timeout - server not responding',
+        );
       } else if (e.type == DioExceptionType.connectionError) {
         return BlossomUploadResult(
           success: false,
-          errorMessage: 'Cannot connect to Blossom server',
+          errorMessage: 'Cannot connect to Blossom server: $errorDetail',
+        );
+      } else if (e.type == DioExceptionType.cancel) {
+        return BlossomUploadResult(
+          success: false,
+          errorMessage: 'Upload cancelled',
         );
       } else {
         return BlossomUploadResult(
           success: false,
-          errorMessage: 'Network error: ${e.message}',
+          errorMessage: 'Network error: $errorDetail',
         );
       }
     } catch (e) {
@@ -594,7 +655,7 @@ class BlossomUploadService {
         }
         serverUrl = customServerUrl;
       } else {
-        serverUrl = 'https://blossom.divine.video';
+        serverUrl = defaultBlossomServer;
       }
 
       // Parse and validate server URL
@@ -846,7 +907,7 @@ class BlossomUploadService {
         }
         serverUrl = customServerUrl;
       } else {
-        serverUrl = 'https://blossom.divine.video';
+        serverUrl = defaultBlossomServer;
       }
 
       // Parse and validate server URL

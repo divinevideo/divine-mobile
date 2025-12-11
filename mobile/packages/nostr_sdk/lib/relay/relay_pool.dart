@@ -1,5 +1,5 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: non_constant_identifier_names
+// ABOUTME: Manages pool of Nostr relay connections for subscribing and querying events.
+// ABOUTME: Handles relay lifecycle, message routing, authentication, and event filtering.
 
 import 'dart:async';
 import 'dart:developer';
@@ -20,14 +20,14 @@ import 'relay_type.dart';
 
 class RelayPool {
   // avoid to send these events to cache relay
-  static List<int> CACHE_AVOID_EVENTS = [
-    EventKind.NOSTR_REMOTE_SIGNING,
-    EventKind.GROUP_METADATA,
-    EventKind.GROUP_ADMINS,
-    EventKind.GROUP_MEMBERS,
-    EventKind.GROUP_CHAT_MESSAGE,
-    EventKind.GROUP_NOTE,
-    EventKind.COMMENT,
+  static List<int> cacheAvoidEvents = [
+    EventKind.nostrRemoteSigning,
+    EventKind.groupMetadata,
+    EventKind.groupAdmins,
+    EventKind.groupMembers,
+    EventKind.groupChatMessage,
+    EventKind.groupNote,
+    EventKind.comment,
   ];
 
   Nostr localNostr;
@@ -68,15 +68,15 @@ class RelayPool {
     Relay relay, {
     bool autoSubscribe = false,
     bool init = false,
-    int relayType = RelayType.NORMAL,
+    int relayType = RelayType.normal,
   }) async {
-    if (relayType == RelayType.NORMAL) {
+    if (relayType == RelayType.normal) {
       if (_relays.containsKey(relay.url)) {
         return true;
       } else {
         _relays[relay.url] = relay;
       }
-    } else if (relayType == RelayType.CACHE) {
+    } else if (relayType == RelayType.cache) {
       if (_cacheRelays.containsKey(relay.url)) {
         return true;
       } else {
@@ -114,7 +114,7 @@ class RelayPool {
     List<Relay> list = [];
     var it = _relays.values;
     for (var relay in it) {
-      if (relay.relayStatus.connected == ClientConnected.CONNECTED) {
+      if (relay.relayStatus.connected == ClientConnected.connected) {
         list.add(relay);
       }
     }
@@ -130,13 +130,13 @@ class RelayPool {
     _relays.clear();
   }
 
-  void remove(String url, {int relayType = RelayType.NORMAL}) {
+  void remove(String url, {int relayType = RelayType.normal}) {
     log('Removing $url');
-    if (relayType == RelayType.NORMAL) {
+    if (relayType == RelayType.normal) {
       _relays[url]?.disconnect();
       _relays[url]?.dispose();
       _relays.remove(url);
-    } else if (relayType == RelayType.CACHE) {
+    } else if (relayType == RelayType.cache) {
       _cacheRelays[url]?.disconnect();
       _cacheRelays[url]?.dispose();
       _cacheRelays.remove(url);
@@ -154,7 +154,7 @@ class RelayPool {
     bool runBeforeConnected = false,
   }) {
     if ((!runBeforeConnected &&
-            relay.relayStatus.connected != ClientConnected.CONNECTED) ||
+            relay.relayStatus.connected != ClientConnected.connected) ||
         !relay.relayStatus.readAccess) {
       return false;
     }
@@ -178,7 +178,7 @@ class RelayPool {
           return true;
         }
       } else {
-        if (relay.relayStatus.connected == ClientConnected.CONNECTED) {
+        if (relay.relayStatus.connected == ClientConnected.connected) {
           return relay.send(message);
         } else {
           relay.pendingMessages.add(message);
@@ -199,7 +199,7 @@ class RelayPool {
     }
 
     for (var relay in _cacheRelays.values) {
-      if (relay.relayStatus.connected == ClientConnected.CONNECTED) {
+      if (relay.relayStatus.connected == ClientConnected.connected) {
         relay.send(["EVENT", event]);
       }
     }
@@ -212,10 +212,10 @@ class RelayPool {
     if (messageType == 'EVENT') {
       try {
         if (relay is! RelayLocal &&
-            (relay.relayStatus.relayType != RelayType.CACHE)) {
+            (relay.relayStatus.relayType != RelayType.cache)) {
           var event = Map<String, dynamic>.from(json[2]);
           var kind = event["kind"];
-          if (!CACHE_AVOID_EVENTS.contains(kind)) {
+          if (!cacheAvoidEvents.contains(kind)) {
             event["sources"] = [relay.url];
             _broadcaseToCache(event);
           }
@@ -234,7 +234,7 @@ class RelayPool {
         }
 
         if (relay is RelayLocal ||
-            relay.relayStatus.relayType == RelayType.CACHE) {
+            relay.relayStatus.relayType == RelayType.cache) {
           // local message read source from json
           var sources = json[2]["sources"];
           if (sources != null && sources is List) {
@@ -352,7 +352,7 @@ class RelayPool {
       ];
       Event? event = Event(
         localNostr.publicKey,
-        EventKind.AUTHENTICATION,
+        EventKind.authentication,
         tags,
         "",
       );
@@ -404,7 +404,7 @@ class RelayPool {
     String? id,
     List<String>? tempRelays,
     List<String>? targetRelays,
-    List<int> relayTypes = RelayType.ALL,
+    List<int> relayTypes = RelayType.all,
     bool sendAfterAuth =
         false, // if relay not connected, it will send after auth
   }) {
@@ -422,7 +422,7 @@ class RelayPool {
     // tempRelay, only query those relay which has bean provide
     if (tempRelays != null &&
         tempRelays.isNotEmpty &&
-        relayTypes.contains(RelayType.TEMP)) {
+        relayTypes.contains(RelayType.temp)) {
       for (var tempRelayAddr in tempRelays) {
         // check if normal relays has this temp relay, try to get relay from normal relays
         Relay? relay = _relays[tempRelayAddr];
@@ -438,7 +438,7 @@ class RelayPool {
     }
 
     // normal relay, usually will query all the normal relays, but if targetRelays has provide, it only query from the provided querys.
-    if (relayTypes.contains(RelayType.NORMAL)) {
+    if (relayTypes.contains(RelayType.normal)) {
       for (var entry in _relays.entries) {
         var relayAddr = entry.key;
         var relay = entry.value;
@@ -454,14 +454,14 @@ class RelayPool {
     }
 
     // cache relay
-    if (relayTypes.contains(RelayType.CACHE)) {
+    if (relayTypes.contains(RelayType.cache)) {
       for (var relay in _cacheRelays.values) {
         relayDoSubscribe(relay, subscription, sendAfterAuth);
       }
     }
 
     // local relay
-    if (relayTypes.contains(RelayType.LOCAL) && relayLocal != null) {
+    if (relayTypes.contains(RelayType.local) && relayLocal != null) {
       relayDoSubscribe(relayLocal!, subscription, sendAfterAuth);
     }
 
@@ -475,7 +475,7 @@ class RelayPool {
     bool runBeforeConnected = false,
   }) {
     if ((!runBeforeConnected &&
-            relay.relayStatus.connected != ClientConnected.CONNECTED) ||
+            relay.relayStatus.connected != ClientConnected.connected) ||
         !relay.relayStatus.readAccess) {
       return false;
     }
@@ -502,7 +502,7 @@ class RelayPool {
           return true;
         }
       } else {
-        if (relay.relayStatus.connected == ClientConnected.CONNECTED) {
+        if (relay.relayStatus.connected == ClientConnected.connected) {
           return relay.send(message);
         } else {
           relay.pendingMessages.add(message);
@@ -613,7 +613,7 @@ class RelayPool {
     Function? onComplete,
     List<String>? tempRelays,
     List<String>? targetRelays,
-    List<int> relayTypes = RelayType.ALL,
+    List<int> relayTypes = RelayType.all,
     bool sendAfterAuth =
         false, // if relay not connected, it will send after auth
   }) {
@@ -632,7 +632,7 @@ class RelayPool {
     // tempRelay, only query those relay which has bean provide
     if (tempRelays != null &&
         tempRelays.isNotEmpty &&
-        relayTypes.contains(RelayType.TEMP)) {
+        relayTypes.contains(RelayType.temp)) {
       for (var tempRelayAddr in tempRelays) {
         // check if normal relays has this temp relay, try to get relay from normal relays
         Relay? relay = _relays[tempRelayAddr];
@@ -648,7 +648,7 @@ class RelayPool {
     }
 
     // normal relay, usually will query all the normal relays, but if targetRelays has provide, it only query from the provided querys.
-    if (relayTypes.contains(RelayType.NORMAL)) {
+    if (relayTypes.contains(RelayType.normal)) {
       for (var entry in _relays.entries) {
         var relayAddr = entry.key;
         var relay = entry.value;
@@ -664,14 +664,14 @@ class RelayPool {
     }
 
     // cache relay
-    if (relayTypes.contains(RelayType.CACHE)) {
+    if (relayTypes.contains(RelayType.cache)) {
       for (var relay in _cacheRelays.values) {
         relayDoQuery(relay, subscription, sendAfterAuth);
       }
     }
 
     // local relay
-    if (relayTypes.contains(RelayType.LOCAL) && relayLocal != null) {
+    if (relayTypes.contains(RelayType.local) && relayLocal != null) {
       relayDoQuery(relayLocal!, subscription, sendAfterAuth);
     }
 
@@ -745,7 +745,7 @@ class RelayPool {
     if (tempRelays != null) {
       for (var tempRelayAddr in tempRelays) {
         var tempRelay = checkAndGenTempRelay(tempRelayAddr);
-        if (tempRelay.relayStatus.connected == ClientConnected.CONNECTED) {
+        if (tempRelay.relayStatus.connected == ClientConnected.connected) {
           tempRelay.send(message);
           hadSubmitSend = true;
         } else {
@@ -820,7 +820,7 @@ class RelayPool {
 
   bool readable() {
     for (var relay in _relays.values) {
-      if (relay.relayStatus.connected == ClientConnected.CONNECTED &&
+      if (relay.relayStatus.connected == ClientConnected.connected &&
           relay.relayStatus.readAccess) {
         return true;
       }
@@ -855,7 +855,7 @@ class RelayPool {
 
   bool writable() {
     for (var relay in _relays.values) {
-      if (relay.relayStatus.connected == ClientConnected.CONNECTED &&
+      if (relay.relayStatus.connected == ClientConnected.connected &&
           relay.relayStatus.writeAccess) {
         return true;
       }

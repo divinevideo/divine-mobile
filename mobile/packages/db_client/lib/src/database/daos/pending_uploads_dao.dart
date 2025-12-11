@@ -12,7 +12,7 @@ part 'pending_uploads_dao.g.dart';
 @DriftAccessor(tables: [PendingUploads])
 class PendingUploadsDao extends DatabaseAccessor<AppDatabase>
     with _$PendingUploadsDaoMixin {
-  PendingUploadsDao(AppDatabase db) : super(db);
+  PendingUploadsDao(super.attachedDatabase);
 
   /// Upsert a pending upload from domain model
   Future<void> upsertUpload(PendingUpload upload) {
@@ -85,8 +85,7 @@ class PendingUploadsDao extends DatabaseAccessor<AppDatabase>
 
   /// Get upload by ID
   Future<PendingUpload?> getUpload(String id) async {
-    final query = select(pendingUploads)
-      ..where((t) => t.id.equals(id));
+    final query = select(pendingUploads)..where((t) => t.id.equals(id));
     final row = await query.getSingleOrNull();
     return row != null ? _rowToModel(row) : null;
   }
@@ -96,7 +95,7 @@ class PendingUploadsDao extends DatabaseAccessor<AppDatabase>
     final query = select(pendingUploads)
       ..where((t) => t.status.isNotIn(['published', 'failed']))
       ..orderBy([
-        (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.asc),
+        (t) => OrderingTerm(expression: t.createdAt),
       ]);
     final rows = await query.get();
     return rows.map(_rowToModel).toList();
@@ -124,17 +123,24 @@ class PendingUploadsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Update upload status
-  Future<bool> updateStatus(String id, UploadStatus status, {
+  Future<bool> updateStatus(
+    String id,
+    UploadStatus status, {
     String? errorMessage,
     double? uploadProgress,
   }) async {
-    final rowsAffected = await (update(pendingUploads)
-          ..where((t) => t.id.equals(id)))
-        .write(PendingUploadsCompanion(
-          status: Value(status.name),
-          errorMessage: errorMessage != null ? Value(errorMessage) : const Value.absent(),
-          uploadProgress: uploadProgress != null ? Value(uploadProgress) : const Value.absent(),
-        ));
+    final rowsAffected =
+        await (update(pendingUploads)..where((t) => t.id.equals(id))).write(
+          PendingUploadsCompanion(
+            status: Value(status.name),
+            errorMessage: errorMessage != null
+                ? Value(errorMessage)
+                : const Value.absent(),
+            uploadProgress: uploadProgress != null
+                ? Value(uploadProgress)
+                : const Value.absent(),
+          ),
+        );
     return rowsAffected > 0;
   }
 
@@ -145,9 +151,9 @@ class PendingUploadsDao extends DatabaseAccessor<AppDatabase>
 
   /// Delete completed uploads (published or failed)
   Future<int> deleteCompleted() {
-    return (delete(pendingUploads)
-          ..where((t) => t.status.isIn(['published', 'failed'])))
-        .go();
+    return (delete(
+      pendingUploads,
+    )..where((t) => t.status.isIn(['published', 'failed']))).go();
   }
 
   /// Watch all uploads (reactive stream)
@@ -164,7 +170,7 @@ class PendingUploadsDao extends DatabaseAccessor<AppDatabase>
     final query = select(pendingUploads)
       ..where((t) => t.status.isNotIn(['published', 'failed']))
       ..orderBy([
-        (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.asc),
+        (t) => OrderingTerm(expression: t.createdAt),
       ]);
     return query.watch().map((rows) => rows.map(_rowToModel).toList());
   }

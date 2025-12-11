@@ -33,13 +33,13 @@ class MockRelay extends RelayBase {
 
   @override
   Future<bool> doConnect() async {
-    relayStatus.connected = ClientConnected.CONNECTED;
+    relayStatus.connected = ClientConnected.connected;
     return true;
   }
 
   @override
   Future<void> disconnect() async {
-    relayStatus.connected = ClientConnected.DISCONNECT;
+    relayStatus.connected = ClientConnected.disconnect;
   }
 
   void clearSentMessages() {
@@ -121,7 +121,7 @@ void main() {
       // Subscribe should be queued for authentication
       // ignore: unused_local_variable - subscription created to test queueing behavior
       final subscription = nostr.subscribe([
-        Filter(kinds: [EventKind.TEXT_NOTE]).toJson(),
+        Filter(kinds: [EventKind.textNote]).toJson(),
       ], (event) {});
 
       // Message should be in pending auth messages, not sent yet
@@ -140,7 +140,7 @@ void main() {
       // Send an event
       final event = Event(
         testPublicKey,
-        EventKind.TEXT_NOTE,
+        EventKind.textNote,
         [],
         'Test message',
       );
@@ -162,7 +162,7 @@ void main() {
 
       // Queue a subscription
       nostr.subscribe([
-        Filter(kinds: [EventKind.TEXT_NOTE]).toJson(),
+        Filter(kinds: [EventKind.textNote]).toJson(),
       ], (event) {});
 
       expect(relay.sentMessages.isEmpty, isTrue);
@@ -189,7 +189,7 @@ void main() {
 
       // Send subscription that should be queued for auth
       nostr.subscribe([
-        Filter(kinds: [EventKind.TEXT_NOTE]).toJson(),
+        Filter(kinds: [EventKind.textNote]).toJson(),
       ], (event) {});
 
       // Message should be queued for authentication
@@ -210,7 +210,7 @@ void main() {
       // Send an event
       final event = Event(
         testPublicKey,
-        EventKind.TEXT_NOTE,
+        EventKind.textNote,
         [],
         'Test message',
       );

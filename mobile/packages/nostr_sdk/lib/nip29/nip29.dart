@@ -11,7 +11,7 @@ class NIP29 {
     String eventId,
   ) async {
     var relays = [groupIdentifier.host];
-    var event = Event(nostr.publicKey, EventKind.GROUP_DELETE_EVENT, [
+    var event = Event(nostr.publicKey, EventKind.groupDeleteEvent, [
       ["h", groupIdentifier.groupId],
       ["e", eventId],
     ], "");
@@ -46,7 +46,7 @@ class NIP29 {
     }
 
     var relays = [groupIdentifier.host];
-    var event = Event(nostr.publicKey, EventKind.GROUP_EDIT_STATUS, tags, "");
+    var event = Event(nostr.publicKey, EventKind.groupEditStatus, tags, "");
     await nostr.sendEvent(event, tempRelays: relays, targetRelays: relays);
   }
 
@@ -56,7 +56,7 @@ class NIP29 {
     String pubkey,
   ) async {
     var relays = [groupIdentifier.host];
-    var event = Event(nostr.publicKey, EventKind.GROUP_ADD_USER, [
+    var event = Event(nostr.publicKey, EventKind.groupAddUser, [
       ["h", groupIdentifier.groupId],
       ["p", pubkey],
     ], "");
@@ -69,7 +69,7 @@ class NIP29 {
     String pubkey,
   ) async {
     var relays = [groupIdentifier.host];
-    var event = Event(nostr.publicKey, EventKind.GROUP_REMOVE_USER, [
+    var event = Event(nostr.publicKey, EventKind.groupRemoveUser, [
       ["h", groupIdentifier.groupId],
       ["p", pubkey],
     ], "");

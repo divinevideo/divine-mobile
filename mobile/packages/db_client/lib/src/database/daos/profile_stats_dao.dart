@@ -12,7 +12,7 @@ const profileStatsCacheDuration = Duration(minutes: 5);
 @DriftAccessor(tables: [ProfileStats])
 class ProfileStatsDao extends DatabaseAccessor<AppDatabase>
     with _$ProfileStatsDaoMixin {
-  ProfileStatsDao(AppDatabase db) : super(db);
+  ProfileStatsDao(super.attachedDatabase);
 
   /// Upsert profile stats (insert or update)
   Future<void> upsertStats({
@@ -41,8 +41,7 @@ class ProfileStatsDao extends DatabaseAccessor<AppDatabase>
     String pubkey, {
     Duration expiry = profileStatsCacheDuration,
   }) async {
-    final query = select(profileStats)
-      ..where((t) => t.pubkey.equals(pubkey));
+    final query = select(profileStats)..where((t) => t.pubkey.equals(pubkey));
     final result = await query.getSingleOrNull();
 
     if (result == null) return null;
@@ -66,9 +65,12 @@ class ProfileStatsDao extends DatabaseAccessor<AppDatabase>
   /// Delete all expired stats
   Future<int> deleteExpired({Duration expiry = profileStatsCacheDuration}) {
     final expiryTime = DateTime.now().subtract(expiry);
-    return (delete(profileStats)..where((t) => t.cachedAt.isSmallerThan(
-      Variable(expiryTime),
-    ))).go();
+    return (delete(profileStats)..where(
+          (t) => t.cachedAt.isSmallerThan(
+            Variable(expiryTime),
+          ),
+        ))
+        .go();
   }
 
   /// Clear all profile stats

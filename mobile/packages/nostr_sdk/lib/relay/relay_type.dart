@@ -1,22 +1,22 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: constant_identifier_names
+// ABOUTME: Defines relay type constants for categorizing relay connections.
+// ABOUTME: Used to distinguish normal, temporary, local, and cache relays.
 
 class RelayType {
-  static const int NORMAL = 1;
+  static const int normal = 1;
 
-  static const int TEMP = 2;
+  static const int temp = 2;
 
-  static const int LOCAL = 3;
+  static const int local = 3;
 
-  static const int CACHE = 4;
+  static const int cache = 4;
 
-  static const List<int> CACHE_AND_LOCAL = [LOCAL, CACHE];
+  static const List<int> cacheAndLocal = [local, cache];
 
-  static const List<int> ONLY_NORMAL = [NORMAL];
+  static const List<int> onlyNormal = [normal];
 
-  static const List<int> ONLY_TEMP = [TEMP];
+  static const List<int> onlyTemp = [temp];
 
-  static const List<int> ALL = [NORMAL, TEMP, LOCAL, CACHE];
+  static const List<int> all = [normal, temp, local, cache];
 
-  static const List<int> NETWORK = [NORMAL, TEMP];
+  static const List<int> network = [normal, temp];
 }

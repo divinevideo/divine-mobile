@@ -1,5 +1,6 @@
-// ABOUTME: Unit tests for NotificationsDao with read status and cleanup operations.
-// ABOUTME: Tests upsertNotification, getAllNotifications, markAsRead, deleteOlderThan.
+// ABOUTME: Unit tests for NotificationsDao with read status and cleanup
+// ABOUTME: operations. Tests upsertNotification, getAllNotifications,
+// ABOUTME: markAsRead, deleteOlderThan.
 
 import 'dart:io';
 
@@ -180,7 +181,6 @@ void main() {
           type: 'like',
           fromPubkey: testPubkey,
           timestamp: 1700000000,
-          isRead: false,
         );
         await dao.upsertNotification(
           id: 'notif_2',
@@ -194,7 +194,6 @@ void main() {
           type: 'comment',
           fromPubkey: testPubkey,
           timestamp: 1700000002,
-          isRead: false,
         );
 
         final count = await dao.getUnreadCount();
@@ -227,7 +226,6 @@ void main() {
           type: 'like',
           fromPubkey: testPubkey,
           timestamp: 1700000000,
-          isRead: false,
         );
 
         final result = await dao.markAsRead('notif_1');
@@ -248,14 +246,12 @@ void main() {
           type: 'like',
           fromPubkey: testPubkey,
           timestamp: 1700000000,
-          isRead: false,
         );
         await dao.upsertNotification(
           id: 'notif_2',
           type: 'follow',
           fromPubkey: testPubkey,
           timestamp: 1700000001,
-          isRead: false,
         );
 
         await dao.markAsRead('notif_1');
@@ -272,14 +268,12 @@ void main() {
           type: 'like',
           fromPubkey: testPubkey,
           timestamp: 1700000000,
-          isRead: false,
         );
         await dao.upsertNotification(
           id: 'notif_2',
           type: 'follow',
           fromPubkey: testPubkey,
           timestamp: 1700000001,
-          isRead: false,
         );
 
         final updated = await dao.markAllAsRead();
@@ -289,18 +283,22 @@ void main() {
         expect(count, equals(0));
       });
 
-      test('returns count of all rows (UPDATE touches all rows regardless of current value)', () async {
-        await dao.upsertNotification(
-          id: 'notif_1',
-          type: 'like',
-          fromPubkey: testPubkey,
-          timestamp: 1700000000,
-          isRead: true,
-        );
+      test(
+        'returns count of all rows '
+        '(UPDATE touches all rows regardless of current value)',
+        () async {
+          await dao.upsertNotification(
+            id: 'notif_1',
+            type: 'like',
+            fromPubkey: testPubkey,
+            timestamp: 1700000000,
+            isRead: true,
+          );
 
-        final updated = await dao.markAllAsRead();
-        expect(updated, equals(1));
-      });
+          final updated = await dao.markAllAsRead();
+          expect(updated, equals(1));
+        },
+      );
     });
 
     group('deleteNotification', () {
@@ -415,7 +413,6 @@ void main() {
           type: 'like',
           fromPubkey: testPubkey,
           timestamp: 1700000000,
-          isRead: false,
         );
         await dao.upsertNotification(
           id: 'notif_2',

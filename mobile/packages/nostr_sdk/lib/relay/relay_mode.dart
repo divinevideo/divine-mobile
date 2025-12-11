@@ -1,8 +1,8 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: constant_identifier_names
+// ABOUTME: Defines relay connection mode constants for Nostr relay operations.
+// ABOUTME: Supports fast mode and base mode for different connection strategies.
 
 class RelayMode {
-  static const int FAST_MODE = 1;
+  static const int fastMode = 1;
 
-  static const int BASE_MODE = 2;
+  static const int baseMode = 2;
 }

@@ -12,9 +12,9 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart' as nostr;
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/nip71_migration.dart';
-import 'package:openvine/models/nip94_metadata.dart';
+import 'package:models/models.dart' show NIP94Metadata;
 import 'package:openvine/services/crash_reporting_service.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/p2p_discovery_service.dart';
 import 'package:openvine/services/p2p_video_sync_service.dart';
@@ -807,7 +807,7 @@ class NostrServiceFunction implements INostrService {
     // Create search filter for NIP-50
     final filter = nostr.Filter()
       ..kinds =
-          [EventKind.METADATA] // Kind 0 only
+          [EventKind.metadata] // Kind 0 only
       ..search = query;
 
     if (limit != null) {

@@ -1,7 +1,8 @@
-// TODO(any): Migrate onHttpClientCreate to createHttpClient - https://github.com/divinevideo/divine-mobile/issues/356
-// ignore_for_file: deprecated_member_use
+// ABOUTME: Utility class for HTTP requests using Dio with cookie management.
+// ABOUTME: Provides GET/POST methods and handles SSL certificate configuration.
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
@@ -16,13 +17,11 @@ class DioUtil {
     if (_dio == null) {
       _dio = Dio();
       if (_dio!.httpClientAdapter is IOHttpClientAdapter) {
-        (_dio!.httpClientAdapter as IOHttpClientAdapter).onHttpClientCreate =
-            (client) {
-              client.badCertificateCallback = (cert, host, port) {
-                return true;
-              };
-              return null;
-            };
+        (_dio!.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+          final client = HttpClient();
+          client.badCertificateCallback = (cert, host, port) => true;
+          return client;
+        };
       }
 
       // _dio!.options.connectTimeout = Duration(minutes: 1);

@@ -4,8 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/video_event.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
-import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/proofmode_badge.dart';
 import 'package:openvine/widgets/proofmode_badge_row.dart';
@@ -95,8 +95,7 @@ class VideoExploreTile extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Username/Creator info
-                      _buildCreatorInfo(ref),
+                      _CreatorInfo(pubkey: video.pubkey),
                       const SizedBox(height: 4),
                       if (video.title != null) ...[
                         Text(
@@ -130,54 +129,69 @@ class VideoExploreTile extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildCreatorInfo(WidgetRef ref) {
-    final profileService = ref.watch(userProfileServiceProvider);
-    final profile = profileService.getCachedProfile(video.pubkey);
-    final displayName = profile?.bestDisplayName ?? 'Loading...';
+class _CreatorInfo extends ConsumerWidget {
+  const _CreatorInfo({required this.pubkey});
 
-    return Builder(
-      builder: (context) => GestureDetector(
-        onTap: () {
-          Log.verbose(
-            'Navigating to profile from explore tile: ${video.pubkey}',
-            name: 'VideoExploreTile',
-            category: LogCategory.ui,
-          );
-          // Navigate to profile tab using GoRouter
-          context.goProfile(video.pubkey, 0);
-        },
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.person, color: Colors.white70, size: 14),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                displayName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  decoration: TextDecoration.underline,
-                ),
-                overflow: TextOverflow.ellipsis,
+  final String pubkey;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(userProfileReactiveProvider(pubkey));
+
+    final displayName = switch (profileAsync) {
+      AsyncData(:final value) when value != null => value.bestDisplayName,
+      AsyncData() || AsyncError() => 'Unknown',
+      AsyncLoading() => 'Loading...',
+    };
+
+    final isNip05Verified = switch (profileAsync) {
+      AsyncData(:final value) when value != null =>
+        value.nip05?.isNotEmpty == true,
+      _ => false,
+    };
+
+    return GestureDetector(
+      onTap: () {
+        Log.verbose(
+          'Navigating to profile from explore tile: $pubkey',
+          name: 'VideoExploreTile',
+          category: LogCategory.ui,
+        );
+        // Navigate to profile tab using GoRouter
+        context.goProfile(pubkey, 0);
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.person, color: Colors.white70, size: 14),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              displayName,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
-            // Add NIP-05 verification badge if verified
-            if (profile?.nip05 != null && profile!.nip05!.isNotEmpty) ...[
-              const SizedBox(width: 4),
-              Container(
-                padding: const EdgeInsets.all(1),
-                decoration: const BoxDecoration(
-                  color: Colors.blue,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check, color: Colors.white, size: 8),
+          ),
+          // Add NIP-05 verification badge if verified
+          if (isNip05Verified) ...[
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.all(1),
+              decoration: const BoxDecoration(
+                color: Colors.blue,
+                shape: BoxShape.circle,
               ),
-            ],
+              child: const Icon(Icons.check, color: Colors.white, size: 8),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

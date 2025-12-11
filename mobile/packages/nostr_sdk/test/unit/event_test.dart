@@ -11,10 +11,10 @@ void main() {
     const testContent = 'Hello Nostr! This is a test event.';
 
     test('Event creation with valid parameters', () {
-      final event = Event(testPubkey, EventKind.TEXT_NOTE, [], testContent);
+      final event = Event(testPubkey, EventKind.textNote, [], testContent);
 
       expect(event.pubkey, equals(testPubkey));
-      expect(event.kind, equals(EventKind.TEXT_NOTE));
+      expect(event.kind, equals(EventKind.textNote));
       expect(event.content, equals(testContent));
       expect(event.tags, isEmpty);
       expect(event.id, isNotEmpty);
@@ -26,7 +26,7 @@ void main() {
       const customTime = 1640995200; // 2022-01-01 00:00:00 UTC
       final event = Event(
         testPubkey,
-        EventKind.TEXT_NOTE,
+        EventKind.textNote,
         [],
         testContent,
         createdAt: customTime,
@@ -42,7 +42,7 @@ void main() {
         ['p', testPubkey, '', 'mention'],
       ];
 
-      final event = Event(testPubkey, EventKind.TEXT_NOTE, tags, testContent);
+      final event = Event(testPubkey, EventKind.textNote, tags, testContent);
 
       expect(event.tags, equals(tags));
       expect(event.tags.length, equals(3));
@@ -51,7 +51,7 @@ void main() {
     test('Event ID generation is deterministic', () {
       final event1 = Event(
         testPubkey,
-        EventKind.TEXT_NOTE,
+        EventKind.textNote,
         [],
         testContent,
         createdAt: 1640995200,
@@ -59,7 +59,7 @@ void main() {
 
       final event2 = Event(
         testPubkey,
-        EventKind.TEXT_NOTE,
+        EventKind.textNote,
         [],
         testContent,
         createdAt: 1640995200,
@@ -69,14 +69,14 @@ void main() {
     });
 
     test('Event validation before signing', () {
-      final event = Event(testPubkey, EventKind.TEXT_NOTE, [], testContent);
+      final event = Event(testPubkey, EventKind.textNote, [], testContent);
 
       expect(event.isValid, isTrue);
       expect(event.isSigned, isFalse); // No signature yet
     });
 
     test('Event JSON serialization', () {
-      final event = Event(testPubkey, EventKind.TEXT_NOTE, [
+      final event = Event(testPubkey, EventKind.textNote, [
         ['t', 'test'],
       ], testContent);
 
@@ -84,7 +84,7 @@ void main() {
 
       expect(json['id'], equals(event.id));
       expect(json['pubkey'], equals(testPubkey));
-      expect(json['kind'], equals(EventKind.TEXT_NOTE));
+      expect(json['kind'], equals(EventKind.textNote));
       expect(
         json['tags'],
         equals([
@@ -97,7 +97,7 @@ void main() {
     });
 
     test('Event creation from JSON', () {
-      final originalEvent = Event(testPubkey, EventKind.TEXT_NOTE, [
+      final originalEvent = Event(testPubkey, EventKind.textNote, [
         ['t', 'test'],
       ], testContent);
 
@@ -112,20 +112,20 @@ void main() {
     });
 
     test('Event kind constants are correct', () {
-      expect(EventKind.METADATA, equals(0));
-      expect(EventKind.TEXT_NOTE, equals(1));
-      expect(EventKind.RECOMMEND_SERVER, equals(2));
-      expect(EventKind.CONTACT_LIST, equals(3));
-      expect(EventKind.DIRECT_MESSAGE, equals(4));
-      expect(EventKind.EVENT_DELETION, equals(5));
-      expect(EventKind.REPOST, equals(6));
-      expect(EventKind.REACTION, equals(7));
+      expect(EventKind.metadata, equals(0));
+      expect(EventKind.textNote, equals(1));
+      expect(EventKind.recommendServer, equals(2));
+      expect(EventKind.contactList, equals(3));
+      expect(EventKind.directMessage, equals(4));
+      expect(EventKind.eventDeletion, equals(5));
+      expect(EventKind.repost, equals(6));
+      expect(EventKind.reaction, equals(7));
     });
 
     test('Event equality based on ID', () {
       final event1 = Event(
         testPubkey,
-        EventKind.TEXT_NOTE,
+        EventKind.textNote,
         [],
         testContent,
         createdAt: 1640995200,
@@ -133,7 +133,7 @@ void main() {
 
       final event2 = Event(
         testPubkey,
-        EventKind.TEXT_NOTE,
+        EventKind.textNote,
         [],
         testContent,
         createdAt: 1640995200,
@@ -145,13 +145,13 @@ void main() {
 
     test('Invalid pubkey throws error', () {
       expect(
-        () => Event('invalid_pubkey', EventKind.TEXT_NOTE, [], testContent),
+        () => Event('invalid_pubkey', EventKind.textNote, [], testContent),
         throwsArgumentError,
       );
     });
 
     test('Proof of work functionality', () {
-      final event = Event(testPubkey, EventKind.TEXT_NOTE, [], testContent);
+      final event = Event(testPubkey, EventKind.textNote, [], testContent);
 
       final originalId = event.id;
 

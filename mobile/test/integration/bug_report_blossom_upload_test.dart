@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/auth_service.dart';

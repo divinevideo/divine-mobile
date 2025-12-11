@@ -4,7 +4,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:openvine/models/native_proof_data.dart';
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/upload_manager.dart';
 

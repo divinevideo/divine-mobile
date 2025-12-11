@@ -12,7 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 
 // Mock classes
 class MockAuthService extends Mock implements AuthService {}
@@ -79,39 +79,22 @@ void main() {
       });
 
       test('should save and retrieve Blossom enabled state', () async {
-        // Act & Assert - Initially enabled by default
-        expect(await service.isBlossomEnabled(), isTrue);
-
-        // Disable Blossom
-        await service.setBlossomEnabled(false);
+        // Act & Assert - Initially disabled by default (uses diVine's server)
         expect(await service.isBlossomEnabled(), isFalse);
 
-        // Enable Blossom
+        // Enable custom Blossom server
         await service.setBlossomEnabled(true);
         expect(await service.isBlossomEnabled(), isTrue);
+
+        // Disable custom Blossom server
+        await service.setBlossomEnabled(false);
+        expect(await service.isBlossomEnabled(), isFalse);
       });
     });
 
     group('Upload Validation', () {
-      test('should fail upload if Blossom is not enabled', () async {
-        // Arrange
-        await service.setBlossomEnabled(false);
-        await service.setBlossomServer('https://blossom.example.com');
-
-        final mockFile = MockFile();
-        when(() => mockFile.path).thenReturn('/test/video.mp4');
-
-        // Act
-        final result = await service.uploadVideo(
-          videoFile: mockFile,
-          nostrPubkey: 'testpubkey',
-          title: 'Test Video',
-        );
-
-        // Assert
-        expect(result.success, isFalse);
-        expect(result.errorMessage, contains('not enabled'));
-      });
+      // Note: When Blossom is disabled, uploads succeed using the default diVine
+      // server (blossom.divine.video), so there's no "not enabled" error case.
 
       test('should fail upload if no server is configured', () async {
         // Arrange
@@ -132,7 +115,7 @@ void main() {
 
         // Assert
         expect(result.success, isFalse);
-        expect(result.errorMessage, contains('No Blossom server configured'));
+        expect(result.errorMessage, contains('not configured'));
       });
 
       test('should fail upload with invalid server URL', () async {
@@ -216,6 +199,9 @@ void main() {
           () => mockFile.readAsBytesSync(),
         ).thenReturn(Uint8List.fromList([1, 2, 3, 4, 5]));
         when(() => mockFile.lengthSync()).thenReturn(5);
+        when(
+          () => mockFile.openRead(),
+        ).thenAnswer((_) => Stream.value(Uint8List.fromList([1, 2, 3, 4, 5])));
 
         // Mock Dio response
         final mockResponse = MockResponse();
@@ -228,7 +214,7 @@ void main() {
         });
 
         when(
-          () => mockDio.post(
+          () => mockDio.put(
             any(),
             data: any(named: 'data'),
             options: any(named: 'options'),
@@ -297,6 +283,9 @@ void main() {
             () => mockFile.readAsBytesSync(),
           ).thenReturn(Uint8List.fromList([1, 2, 3, 4, 5]));
           when(() => mockFile.lengthSync()).thenReturn(5);
+          when(() => mockFile.openRead()).thenAnswer(
+            (_) => Stream.value(Uint8List.fromList([1, 2, 3, 4, 5])),
+          );
 
           // Mock successful response
           final mockResponse = MockResponse();
@@ -310,7 +299,7 @@ void main() {
 
           // Capture the actual request to verify it uses POST with multipart/form-data
           when(
-            () => mockDio.post(
+            () => mockDio.put(
               any(),
               data: any(named: 'data'),
               options: any(named: 'options'),
@@ -328,11 +317,11 @@ void main() {
           // Assert
           expect(result.success, isTrue);
 
-          // Verify POST was called with raw bytes
+          // Verify PUT was called with stream data (for streaming upload)
           verify(
-            () => mockDio.post(
+            () => mockDio.put(
               'https://cdn.satellite.earth/upload',
-              data: any(named: 'data', that: isA<List<int>>()),
+              data: any(named: 'data', that: isA<Stream<List<int>>>()),
               options: any(
                 named: 'options',
                 that: isA<Options>()
@@ -510,7 +499,7 @@ void main() {
 
         // Mock successful Blossom response
         when(
-          () => mockDio.post(
+          () => mockDio.put(
             any(),
             data: any(named: 'data'),
             options: any(named: 'options'),
@@ -537,7 +526,7 @@ void main() {
         // Verify correct MIME type was used
         final capturedHeaders =
             verify(
-                  () => mockDio.post(
+                  () => mockDio.put(
                     any(),
                     data: any(named: 'data'),
                     options: captureAny(named: 'options'),
@@ -549,20 +538,8 @@ void main() {
         expect(capturedHeaders.headers!['Content-Type'], equals('text/plain'));
       });
 
-      test('should return null if Blossom is not enabled', () async {
-        // Arrange
-        await service.setBlossomEnabled(false);
-
-        final tempDir = await getTemporaryDirectory();
-        final testFile = File('${tempDir.path}/test_bug_report_disabled.txt');
-        await testFile.writeAsString('Test content');
-
-        // Act
-        final result = await service.uploadBugReport(bugReportFile: testFile);
-
-        // Assert
-        expect(result, isNull);
-      });
+      // Note: When Blossom is disabled, bug report uploads succeed using the
+      // default diVine server (blossom.divine.video), so there's no failure case.
     });
 
     group('Image Upload - File Extension Correction', () {
@@ -613,6 +590,9 @@ void main() {
           () => mockFile.readAsBytesSync(),
         ).thenReturn(Uint8List.fromList([0xFF, 0xD8, 0xFF]));
         when(() => mockFile.lengthSync()).thenReturn(3);
+        when(() => mockFile.openRead()).thenAnswer(
+          (_) => Stream.value(Uint8List.fromList([0xFF, 0xD8, 0xFF])),
+        );
 
         final mockResponse = MockResponse();
         when(() => mockResponse.statusCode).thenReturn(200);
@@ -628,7 +608,7 @@ void main() {
         });
 
         when(
-          () => mockDio.post(
+          () => mockDio.put(
             any(),
             data: any(named: 'data'),
             options: any(named: 'options'),
@@ -692,6 +672,9 @@ void main() {
             () => mockFile.readAsBytesSync(),
           ).thenReturn(Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]));
           when(() => mockFile.lengthSync()).thenReturn(4);
+          when(() => mockFile.openRead()).thenAnswer(
+            (_) => Stream.value(Uint8List.fromList([0x89, 0x50, 0x4E, 0x47])),
+          );
 
           final mockResponse = MockResponse();
           when(() => mockResponse.statusCode).thenReturn(200);
@@ -704,7 +687,7 @@ void main() {
           });
 
           when(
-            () => mockDio.post(
+            () => mockDio.put(
               any(),
               data: any(named: 'data'),
               options: any(named: 'options'),
@@ -763,6 +746,9 @@ void main() {
             () => mockFile.readAsBytesSync(),
           ).thenReturn(Uint8List.fromList([0xFF, 0xD8, 0xFF]));
           when(() => mockFile.lengthSync()).thenReturn(3);
+          when(() => mockFile.openRead()).thenAnswer(
+            (_) => Stream.value(Uint8List.fromList([0xFF, 0xD8, 0xFF])),
+          );
 
           final mockResponse = MockResponse();
           when(() => mockResponse.statusCode).thenReturn(200);
@@ -775,7 +761,7 @@ void main() {
           });
 
           when(
-            () => mockDio.post(
+            () => mockDio.put(
               any(),
               data: any(named: 'data'),
               options: any(named: 'options'),

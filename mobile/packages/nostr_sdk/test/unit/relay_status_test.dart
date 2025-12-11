@@ -11,7 +11,7 @@ void main() {
       final status = RelayStatus('wss://relay.example.com');
 
       expect(status.addr, equals('wss://relay.example.com'));
-      expect(status.relayType, equals(RelayType.NORMAL));
+      expect(status.relayType, equals(RelayType.normal));
       expect(status.writeAccess, isTrue);
       expect(status.readAccess, isTrue);
       expect(status.alwaysAuth, isFalse);
@@ -29,14 +29,14 @@ void main() {
     test('RelayStatus with all custom parameters', () {
       final status = RelayStatus(
         'wss://custom.relay.com',
-        relayType: RelayType.CACHE,
+        relayType: RelayType.cache,
         writeAccess: false,
         readAccess: true,
         alwaysAuth: true,
       );
 
       expect(status.addr, equals('wss://custom.relay.com'));
-      expect(status.relayType, equals(RelayType.CACHE));
+      expect(status.relayType, equals(RelayType.cache));
       expect(status.writeAccess, isFalse);
       expect(status.readAccess, isTrue);
       expect(status.alwaysAuth, isTrue);

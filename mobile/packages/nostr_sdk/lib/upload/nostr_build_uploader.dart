@@ -1,5 +1,5 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: constant_identifier_names
+// ABOUTME: Handles file uploads to nostr.build media hosting service.
+// ABOUTME: Provides shared Dio instance and upload functionality for Nostr media.
 
 import 'package:dio/dio.dart';
 
@@ -8,38 +8,12 @@ import '../utils/base64.dart';
 class NostrBuildUploader {
   static var dio = Dio();
 
-  // static final String UPLOAD_ACTION = "https://nostr.build/upload.php";
-
-  // static Future<String?> upload(String filePath, {String? fileName}) async {
-  //   MultipartFile? multipartFile;
-  //   if (BASE64.check(filePath)) {
-  //     var bytes = BASE64.toData(filePath);
-  //     multipartFile = await MultipartFile.fromBytes(
-  //       bytes,
-  //       filename: fileName,
-  //     );
-  //   } else {
-  //     multipartFile = await MultipartFile.fromFile(
-  //       filePath,
-  //       filename: fileName,
-  //     );
-  //   }
-
-  //   var formData = FormData.fromMap({"fileToUpload": multipartFile});
-  //   var response = await dio.post<String>(UPLOAD_ACTION, data: formData);
-  //   var body = response.data;
-  //   // TODO this rule need to update by api
-  //   var uploadResult = SpiderUtil.subUntil(body!, "<a id=\"theList\">", "</a>");
-
-  //   return uploadResult;
-  // }
-
-  static const String UPLOAD_ACTION = "https://nostr.build/api/v2/upload/files";
+  static const String uploadAction = "https://nostr.build/api/v2/upload/files";
 
   static Future<String?> upload(String filePath, {String? fileName}) async {
     MultipartFile? multipartFile;
-    if (BASE64.check(filePath)) {
-      var bytes = BASE64.toData(filePath);
+    if (Base64Util.check(filePath)) {
+      var bytes = Base64Util.toData(filePath);
       multipartFile = MultipartFile.fromBytes(bytes, filename: fileName);
     } else {
       multipartFile = await MultipartFile.fromFile(
@@ -49,7 +23,7 @@ class NostrBuildUploader {
     }
 
     var formData = FormData.fromMap({"file": multipartFile});
-    var response = await dio.post(UPLOAD_ACTION, data: formData);
+    var response = await dio.post(uploadAction, data: formData);
     var body = response.data;
     if (body is Map<String, dynamic> && body["status"] == "success") {
       return body["data"][0]["url"];

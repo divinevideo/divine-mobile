@@ -321,16 +321,19 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
         category: LogCategory.system,
       );
 
+      // Toggle our tracking state
+      _isFrontCamera = !_isFrontCamera;
+
       // Use CamerAwesome's built-in switchCameraSensor which properly handles
       // front/back camera switching with correct surface management
       await _cameraState!.switchCameraSensor(
         aspectRatio: CameraAspectRatios.ratio_16_9,
         zoom: 0.0,
-        flash: FlashMode.none,
+        // Internally in the CamerAwesome code a FlasMode.none is treated as "auto",
+        // And no flash mode is allowed for front camera, so we set null when changing to
+        // the front camera to ensure no errors occur.
+        flash: _isFrontCamera ? null : FlashMode.none,
       );
-
-      // Toggle our tracking state
-      _isFrontCamera = !_isFrontCamera;
 
       if (!_isFrontCamera) {
         // Switched back to rear - restore the last rear camera index

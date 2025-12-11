@@ -62,7 +62,7 @@ class EventRelation {
     id = event.id;
     pubkey = event.pubkey;
 
-    bool isComment = event.kind == EventKind.COMMENT;
+    bool isComment = event.kind == EventKind.comment;
 
     Map<String, int> pMap = {};
     var length = event.tags.length;
@@ -139,7 +139,7 @@ class EventRelation {
         } else if (tagKey == "zap" && tagLength > 3) {
           var zapInfo = EventZapInfo.fromTags(tag);
           zapInfos.add(zapInfo);
-        } else if (tagKey == "description" && event.kind == EventKind.ZAP) {
+        } else if (tagKey == "description" && event.kind == EventKind.zap) {
           innerZapContent = SpiderUtil.subUntil(value, '"content":"', '",');
         } else if (tagKey == "imeta") {
           var fileMetadata = FileMetadata.fromNIP92Tag(tag);

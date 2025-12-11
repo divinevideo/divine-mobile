@@ -1,5 +1,5 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: constant_identifier_names
+// ABOUTME: Relay implementation that runs in a separate isolate for performance.
+// ABOUTME: Handles JSON decoding and event signature checks off the main thread.
 
 import 'dart:async';
 import 'dart:convert';
@@ -34,7 +34,7 @@ class RelayIsolate extends Relay {
   @override
   Future<bool> doConnect() async {
     if (subToMainReceivePort == null) {
-      relayStatus.connected = ClientConnected.CONNECTING;
+      relayStatus.connected = ClientConnected.connecting;
       getRelayInfo(url);
 
       // never run isolate, begin to run
@@ -55,9 +55,9 @@ class RelayIsolate extends Relay {
       return await relayConnectResultComplete!.future;
     } else {
       // the isolate had bean run
-      if (relayStatus.connected == ClientConnected.CONNECTED) {
+      if (relayStatus.connected == ClientConnected.connected) {
         // relay has bean connected, return true, but also send a connect message.
-        mainToSubSendPort!.send(RelayIsolateMsgs.CONNECT);
+        mainToSubSendPort!.send(RelayIsolateMsgs.connect);
         return true;
       } else {
         // haven't connected
@@ -66,9 +66,9 @@ class RelayIsolate extends Relay {
         } else {
           // this maybe relay had disconnect after connected, try to connected again.
           if (mainToSubSendPort != null) {
-            relayStatus.connected = ClientConnected.CONNECTING;
+            relayStatus.connected = ClientConnected.connecting;
             // send connect msg
-            mainToSubSendPort!.send(RelayIsolateMsgs.CONNECT);
+            mainToSubSendPort!.send(RelayIsolateMsgs.connect);
             // wait connected msg.
             relayConnectResultComplete = Completer();
             return await relayConnectResultComplete!.future;
@@ -82,10 +82,10 @@ class RelayIsolate extends Relay {
 
   @override
   Future<void> disconnect() async {
-    if (relayStatus.connected != ClientConnected.DISCONNECT) {
-      relayStatus.connected = ClientConnected.DISCONNECT;
+    if (relayStatus.connected != ClientConnected.disconnect) {
+      relayStatus.connected = ClientConnected.disconnect;
       if (mainToSubSendPort != null) {
-        mainToSubSendPort!.send(RelayIsolateMsgs.DIS_CONNECT);
+        mainToSubSendPort!.send(RelayIsolateMsgs.disConnect);
       }
     }
   }
@@ -94,7 +94,7 @@ class RelayIsolate extends Relay {
   bool send(List message, {bool? forceSend}) {
     if (forceSend == true ||
         (mainToSubSendPort != null &&
-            relayStatus.connected == ClientConnected.CONNECTED)) {
+            relayStatus.connected == ClientConnected.connected)) {
       // Defensive serialization: Ensure all data is JSON-serializable
       final sanitizedMessage = sanitizeForJson(message);
       final encoded = jsonEncode(sanitizedMessage);
@@ -143,14 +143,14 @@ class RelayIsolate extends Relay {
       if (message is int) {
         // this is const msg.
         // print("msg is $message $url");
-        if (message == RelayIsolateMsgs.CONNECTED) {
+        if (message == RelayIsolateMsgs.connected) {
           // print("$url receive connected status!");
-          relayStatus.connected = ClientConnected.CONNECTED;
+          relayStatus.connected = ClientConnected.connected;
           if (relayStatusCallback != null) {
             relayStatusCallback!();
           }
           _relayConnectComplete(true);
-        } else if (message == RelayIsolateMsgs.DIS_CONNECTED) {
+        } else if (message == RelayIsolateMsgs.disConnected) {
           onError("Websocket error $url", reconnect: true);
           _relayConnectComplete(false);
         }
@@ -192,11 +192,11 @@ class RelayIsolateConfig {
 }
 
 class RelayIsolateMsgs {
-  static const int CONNECT = 1;
+  static const int connect = 1;
 
-  static const int DIS_CONNECT = 2;
+  static const int disConnect = 2;
 
-  static const int CONNECTED = 101;
+  static const int connected = 101;
 
-  static const int DIS_CONNECTED = 102;
+  static const int disConnected = 102;
 }

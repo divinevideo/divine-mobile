@@ -27,13 +27,12 @@ import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/mute_service.dart';
 import 'package:openvine/services/nip05_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 // NostrService now includes embedded relay functionality
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/profile_cache_service.dart';
-import 'package:openvine/services/secure_key_storage_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/hashtag_cache_service.dart';
@@ -53,6 +52,7 @@ import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/services/nip17_message_service.dart';
 import 'package:openvine/services/relay_capability_service.dart';
+import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -98,6 +98,41 @@ BackgroundActivityManager backgroundActivityManager(Ref ref) {
   return BackgroundActivityManager();
 }
 
+/// Relay statistics service for tracking per-relay metrics
+@Riverpod(keepAlive: true)
+RelayStatisticsService relayStatisticsService(Ref ref) {
+  final service = RelayStatisticsService();
+  ref.onDispose(() => service.dispose());
+  return service;
+}
+
+/// Stream provider for reactive relay statistics updates
+/// Use this provider when you need UI to rebuild when statistics change
+@riverpod
+Stream<Map<String, RelayStatistics>> relayStatisticsStream(Ref ref) async* {
+  final service = ref.watch(relayStatisticsServiceProvider);
+
+  // Emit current state immediately
+  yield service.getAllStatistics();
+
+  // Create a stream controller to emit updates on notifyListeners
+  final controller = StreamController<Map<String, RelayStatistics>>();
+
+  void listener() {
+    if (!controller.isClosed) {
+      controller.add(service.getAllStatistics());
+    }
+  }
+
+  service.addListener(listener);
+  ref.onDispose(() {
+    service.removeListener(listener);
+    controller.close();
+  });
+
+  yield* controller.stream;
+}
+
 /// Analytics service with opt-out support
 @Riverpod(keepAlive: true) // Keep alive to maintain singleton behavior
 AnalyticsService analyticsService(Ref ref) {
@@ -133,8 +168,8 @@ GeoBlockingService geoBlockingService(Ref ref) {
 
 /// Secure key storage service (foundational service)
 @Riverpod(keepAlive: true)
-SecureKeyStorageService secureKeyStorageService(Ref ref) {
-  return SecureKeyStorageService();
+SecureKeyStorage secureKeyStorage(Ref ref) {
+  return SecureKeyStorage();
 }
 
 /// Web authentication service (for web platform only)
@@ -233,7 +268,7 @@ Future<DraftStorageService> draftStorageService(Ref ref) async {
 /// Authentication service depends on secure key storage
 @Riverpod(keepAlive: true)
 AuthService authService(Ref ref) {
-  final keyStorage = ref.watch(secureKeyStorageServiceProvider);
+  final keyStorage = ref.watch(secureKeyStorageProvider);
   return AuthService(keyStorage: keyStorage);
 }
 
@@ -254,6 +289,7 @@ Stream<AuthState> authStateStream(Ref ref) async* {
 @Riverpod(keepAlive: true)
 INostrService nostrService(Ref ref) {
   final keyManager = ref.watch(nostrKeyManagerProvider);
+  final statisticsService = ref.watch(relayStatisticsServiceProvider);
 
   // Use factory to create platform-appropriate service with initialization callback
   final service = NostrServiceFactory.create(
@@ -262,6 +298,7 @@ INostrService nostrService(Ref ref) {
       // Mark Nostr as initialized when the service completes initialization
       ref.read(nostrInitializationProvider.notifier).markInitialized();
     },
+    statisticsService: statisticsService,
   );
 
   // Note: Initialization is handled explicitly in main.dart to ensure proper async timing
@@ -544,23 +581,41 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
   return service;
 }
 
-/// Curated list service for NIP-51 kind 30005 video lists
+// In app_providers.dart
+
+/// Lists state notifier - manages curated lists state
 @riverpod
-Future<CuratedListService> curatedListService(Ref ref) async {
-  final nostrService = ref.watch(nostrServiceProvider);
-  final authService = ref.watch(authServiceProvider);
-  final prefs = await ref.watch(sharedPreferencesProvider.future);
+class CuratedListsState extends _$CuratedListsState {
+  CuratedListService? _service;
 
-  final service = CuratedListService(
-    nostrService: nostrService,
-    authService: authService,
-    prefs: prefs,
-  );
+  CuratedListService? get service => _service;
 
-  // Initialize the service to create default list and sync with relays
-  await service.initialize();
+  @override
+  Future<List<CuratedList>> build() async {
+    final nostrService = ref.watch(nostrServiceProvider);
+    final authService = ref.watch(authServiceProvider);
+    final prefs = await ref.watch(sharedPreferencesProvider.future);
 
-  return service;
+    _service = CuratedListService(
+      nostrService: nostrService,
+      authService: authService,
+      prefs: prefs,
+    );
+
+    // Initialize the service to create default list and sync with relays
+    await _service!.initialize();
+
+    // Listen to changes and update state
+    _service!.addListener(_onServiceChanged);
+    ref.onDispose(() => _service?.removeListener(_onServiceChanged));
+
+    return _service!.lists;
+  }
+
+  void _onServiceChanged() {
+    // When service calls notifyListeners(), update the state
+    state = AsyncValue.data(_service!.lists);
+  }
 }
 
 /// User list service for NIP-51 kind 30000 people lists

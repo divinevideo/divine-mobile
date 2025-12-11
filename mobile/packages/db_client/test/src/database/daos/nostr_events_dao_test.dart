@@ -39,7 +39,12 @@ void main() {
     return event;
   }
 
+  /// Counter for unique d-tags in video events
+  var videoEventCounter = 0;
+
   /// Helper to create a video event (kind 34236) with metrics tags.
+  /// Each video event gets a unique d-tag since kind 34236 is parameterized
+  /// replaceable (NIP-01).
   Event createVideoEvent({
     String pubkey = testPubkey,
     int? loops,
@@ -47,8 +52,13 @@ void main() {
     int? comments,
     List<String>? hashtags,
     int? createdAt,
+    String? dTag,
   }) {
     final tags = <List<String>>[];
+
+    // Add unique d-tag for parameterized replaceable events
+    final uniqueDTag = dTag ?? 'video_${videoEventCounter++}';
+    tags.add(['d', uniqueDTag]);
 
     if (loops != null) {
       tags.add(['loops', loops.toString()]);
@@ -77,6 +87,9 @@ void main() {
   }
 
   setUp(() async {
+    // Reset counter for unique d-tags
+    videoEventCounter = 0;
+
     final tempDir = Directory.systemTemp.createTempSync('dao_test_');
     tempDbPath = '${tempDir.path}/test.db';
 
@@ -397,6 +410,265 @@ void main() {
 
         expect(results.length, equals(1));
         expect(results.first.id, equals(matchingEvent.id));
+      });
+    });
+
+    group('replaceable events', () {
+      test(
+        'kind 0 (profile): newer event replaces older for same pubkey',
+        () async {
+          final oldProfile = createEvent(
+            kind: 0,
+            content: '{"name":"old"}',
+            createdAt: 1000,
+          );
+          final newProfile = createEvent(
+            kind: 0,
+            content: '{"name":"new"}',
+            createdAt: 2000,
+          );
+
+          await dao.upsertEvent(oldProfile);
+          await dao.upsertEvent(newProfile);
+
+          // Should only have one event for this pubkey+kind
+          final results = await dao.getVideoEventsByFilter(kinds: [0]);
+          expect(results.length, equals(1));
+          expect(results.first.content, equals('{"name":"new"}'));
+          expect(results.first.createdAt, equals(2000));
+        },
+      );
+
+      test('kind 0 (profile): older event does not replace newer', () async {
+        final newProfile = createEvent(
+          kind: 0,
+          content: '{"name":"new"}',
+          createdAt: 2000,
+        );
+        final oldProfile = createEvent(
+          kind: 0,
+          content: '{"name":"old"}',
+          createdAt: 1000,
+        );
+
+        await dao.upsertEvent(newProfile);
+        await dao.upsertEvent(oldProfile); // Should be ignored
+
+        final results = await dao.getVideoEventsByFilter(kinds: [0]);
+        expect(results.length, equals(1));
+        expect(results.first.content, equals('{"name":"new"}'));
+        expect(results.first.createdAt, equals(2000));
+      });
+
+      test(
+        'kind 3 (contacts): newer event replaces older for same pubkey',
+        () async {
+          final oldContacts = createEvent(
+            kind: 3,
+            tags: [
+              ['p', 'pubkey1'],
+            ],
+            createdAt: 1000,
+          );
+          final newContacts = createEvent(
+            kind: 3,
+            tags: [
+              ['p', 'pubkey1'],
+              ['p', 'pubkey2'],
+            ],
+            createdAt: 2000,
+          );
+
+          await dao.upsertEvent(oldContacts);
+          await dao.upsertEvent(newContacts);
+
+          final results = await dao.getVideoEventsByFilter(kinds: [3]);
+          expect(results.length, equals(1));
+          expect(results.first.tags.length, equals(2));
+        },
+      );
+
+      test(
+        'kind 10002 (relay list): newer replaces older for same pubkey',
+        () async {
+          final oldRelays = createEvent(
+            kind: 10002,
+            tags: [
+              ['r', 'wss://relay1.com'],
+            ],
+            createdAt: 1000,
+          );
+          final newRelays = createEvent(
+            kind: 10002,
+            tags: [
+              ['r', 'wss://relay1.com'],
+              ['r', 'wss://relay2.com'],
+            ],
+            createdAt: 2000,
+          );
+
+          await dao.upsertEvent(oldRelays);
+          await dao.upsertEvent(newRelays);
+
+          final results = await dao.getVideoEventsByFilter(kinds: [10002]);
+          expect(results.length, equals(1));
+          expect(results.first.tags.length, equals(2));
+        },
+      );
+
+      test(
+        'replaceable events: different pubkeys are stored separately',
+        () async {
+          final profile1 = createEvent(
+            kind: 0,
+            content: '{"name":"user1"}',
+            createdAt: 1000,
+          );
+          final profile2 = createEvent(
+            pubkey: testPubkey2,
+            kind: 0,
+            content: '{"name":"user2"}',
+            createdAt: 2000,
+          );
+
+          await dao.upsertEvent(profile1);
+          await dao.upsertEvent(profile2);
+
+          final results = await dao.getVideoEventsByFilter(kinds: [0]);
+          expect(results.length, equals(2));
+        },
+      );
+
+      test(
+        'kind 30023 (long-form): newer replaces older for same pubkey+d-tag',
+        () async {
+          final oldArticle = createEvent(
+            kind: 30023,
+            tags: [
+              ['d', 'my-article'],
+            ],
+            content: 'old content',
+            createdAt: 1000,
+          );
+          final newArticle = createEvent(
+            kind: 30023,
+            tags: [
+              ['d', 'my-article'],
+            ],
+            content: 'new content',
+            createdAt: 2000,
+          );
+
+          await dao.upsertEvent(oldArticle);
+          await dao.upsertEvent(newArticle);
+
+          final results = await dao.getVideoEventsByFilter(kinds: [30023]);
+          expect(results.length, equals(1));
+          expect(results.first.content, equals('new content'));
+        },
+      );
+
+      test(
+        'kind 30023 (long-form): different d-tags are stored separately',
+        () async {
+          final article1 = createEvent(
+            kind: 30023,
+            tags: [
+              ['d', 'article-1'],
+            ],
+            content: 'article 1',
+            createdAt: 1000,
+          );
+          final article2 = createEvent(
+            kind: 30023,
+            tags: [
+              ['d', 'article-2'],
+            ],
+            content: 'article 2',
+            createdAt: 2000,
+          );
+
+          await dao.upsertEvent(article1);
+          await dao.upsertEvent(article2);
+
+          final results = await dao.getVideoEventsByFilter(kinds: [30023]);
+          expect(results.length, equals(2));
+        },
+      );
+
+      test(
+        'kind 30023 (long-form): older event does not replace newer',
+        () async {
+          final newArticle = createEvent(
+            kind: 30023,
+            tags: [
+              ['d', 'my-article'],
+            ],
+            content: 'new content',
+            createdAt: 2000,
+          );
+          final oldArticle = createEvent(
+            kind: 30023,
+            tags: [
+              ['d', 'my-article'],
+            ],
+            content: 'old content',
+            createdAt: 1000,
+          );
+
+          await dao.upsertEvent(newArticle);
+          await dao.upsertEvent(oldArticle); // Should be ignored
+
+          final results = await dao.getVideoEventsByFilter(kinds: [30023]);
+          expect(results.length, equals(1));
+          expect(results.first.content, equals('new content'));
+        },
+      );
+
+      test(
+        'regular events (kind 1): multiple events with same pubkey allowed',
+        () async {
+          final note1 = createEvent(
+            content: 'note 1',
+            createdAt: 1000,
+          );
+          final note2 = createEvent(
+            content: 'note 2',
+            createdAt: 2000,
+          );
+
+          await dao.upsertEvent(note1);
+          await dao.upsertEvent(note2);
+
+          final results = await dao.getVideoEventsByFilter(kinds: [1]);
+          expect(results.length, equals(2));
+        },
+      );
+
+      test('upsertEventsBatch handles replaceable events correctly', () async {
+        final oldProfile = createEvent(
+          kind: 0,
+          content: '{"name":"old"}',
+          createdAt: 1000,
+        );
+        final newProfile = createEvent(
+          kind: 0,
+          content: '{"name":"new"}',
+          createdAt: 2000,
+        );
+        final regularNote = createEvent(
+          content: 'note',
+          createdAt: 1500,
+        );
+
+        await dao.upsertEventsBatch([oldProfile, newProfile, regularNote]);
+
+        final profiles = await dao.getVideoEventsByFilter(kinds: [0]);
+        expect(profiles.length, equals(1));
+        expect(profiles.first.content, equals('{"name":"new"}'));
+
+        final notes = await dao.getVideoEventsByFilter(kinds: [1]);
+        expect(notes.length, equals(1));
       });
     });
   });

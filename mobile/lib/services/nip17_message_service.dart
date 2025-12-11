@@ -1,14 +1,14 @@
 // ABOUTME: Service for sending encrypted NIP-17 (gift-wrapped) private messages
 // ABOUTME: Handles three-layer encryption (kind 14 rumor → kind 13 seal → kind 1059 gift wrap)
 
+import 'package:models/models.dart' show NIP17SendResult;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/relay/relay.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
-import 'package:openvine/models/nip17_send_result.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
@@ -76,7 +76,7 @@ class NIP17MessageService {
 
       final rumorEvent = Event(
         senderPublicKey,
-        EventKind.PRIVATE_DIRECT_MESSAGE, // Kind 14
+        EventKind.privateDirectMessage, // Kind 14
         rumorTags,
         content,
       );
@@ -107,7 +107,7 @@ class NIP17MessageService {
           'Successfully broadcast NIP-17 message',
           category: LogCategory.system,
         );
-        return NIP17SendResult.createSuccess(
+        return NIP17SendResult.success(
           messageEventId: giftWrapEvent.id,
           recipientPubkey: recipientPubkey,
         );

@@ -96,7 +96,7 @@ final class CuratedListsProvider
   }
 }
 
-String _$curatedListsHash() => r'5d299cccc88df3a9b075edf11d7c0bf06a2703f8';
+String _$curatedListsHash() => r'74de3f9b86d5444e78e7f2c797370ca75f29f9f5';
 
 /// Combined provider for both types of lists
 
@@ -213,7 +213,7 @@ final class CuratedListVideosProvider
   }
 }
 
-String _$curatedListVideosHash() => r'169a900d5e9fb23b8f8f33a76e026fe7b846d052';
+String _$curatedListVideosHash() => r'80f09cbd14d104bfb09922ffb3e3ba3cd0d9c6fe';
 
 /// Provider for videos in a specific curated list
 
@@ -392,7 +392,7 @@ final class PublicListsContainingVideoProvider
 }
 
 String _$publicListsContainingVideoHash() =>
-    r'3b529d01bfb47dba5d78907674eb3cc28939c8ba';
+    r'a0633bbf1af6ec75f45e0ee145a47a910568a87a';
 
 /// Provider that streams public lists containing a specific video
 /// Accumulates results as they arrive from Nostr relays, yielding updated list

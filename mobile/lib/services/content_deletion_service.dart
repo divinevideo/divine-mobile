@@ -4,6 +4,7 @@
 import 'dart:convert';
 
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -133,8 +134,10 @@ class ContentDeletionService {
       }
 
       // Create NIP-09 delete event (kind 5)
+      // OpenVine only uses kind 34236 (addressable short videos)
       final deleteEvent = await _createDeleteEvent(
         originalEventId: video.id,
+        originalEventKind: NIP71VideoKinds.getPreferredKind(),
         reason: reason,
         additionalContext: additionalContext,
       );
@@ -242,6 +245,7 @@ class ContentDeletionService {
   /// Create NIP-09 delete event (kind 5)
   Future<Event?> _createDeleteEvent({
     required String originalEventId,
+    required int originalEventKind,
     required String reason,
     String? additionalContext,
   }) async {
@@ -256,8 +260,13 @@ class ContentDeletionService {
       }
 
       // Build NIP-09 compliant tags (kind 5)
+      // Per NIP-09: 'e' tag references event to delete, 'k' tag specifies event kind
       final tags = <List<String>>[
         ['e', originalEventId], // Event being deleted
+        [
+          'k',
+          originalEventKind.toString(),
+        ], // Kind of event being deleted (NIP-09)
         ['client', 'diVine'], // Deleting client
       ];
 

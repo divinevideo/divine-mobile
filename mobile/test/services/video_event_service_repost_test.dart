@@ -333,5 +333,91 @@ void main() {
       // Verify both events were added
       expect(videoEventService.discoveryVideos.length, 2);
     });
+
+    test(
+      'should process Kind 16 addressable repost with correct kind 34236 in a tag',
+      () async {
+        // Valid 64-char hex pubkeys for testing
+        const authorPubkey =
+            '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+        const reposterPubkey =
+            'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
+
+        // Create original addressable video event (kind 34236) with d tag
+        final originalEvent = Event(
+          authorPubkey, // pubkey
+          34236, // kind - NIP-71 addressable short video
+          [
+            ['url', 'https://example.com/video.mp4'],
+            ['d', 'unique-video-id'],
+            ['title', 'Original Addressable Video'],
+          ], // tags
+          'Original video content', // content
+          createdAt: 1000, // optional createdAt
+        );
+        // Manually set id for testing
+        originalEvent.id =
+            'aaaa567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+
+        // Create Kind 16 repost with 'a' tag using correct format: 34236:pubkey:d-tag
+        // This is the CORRECT format per Nostr spec for addressable events
+        final repostEvent = Event(
+          reposterPubkey, // pubkey
+          16, // kind - Generic repost (NIP-18)
+          [
+            ['k', '34236'], // k tag indicating original kind
+            [
+              'a',
+              '34236:$authorPubkey:unique-video-id',
+            ], // Correct: uses kind 34236
+            ['p', authorPubkey],
+          ], // tags
+          '', // content
+          createdAt: 2000, // optional createdAt
+        );
+        // Manually set id for testing
+        repostEvent.id =
+            'bbbb567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+
+        // Subscribe to profile feed (which includes reposts)
+        await videoEventService.subscribeToVideoFeed(
+          subscriptionType: SubscriptionType.profile,
+          authors: [reposterPubkey],
+          includeReposts: true,
+        );
+
+        // First add the original video so it's cached
+        eventStreamController.add(originalEvent);
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        // Then add the repost
+        eventStreamController.add(repostEvent);
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        // Get videos from profile subscription
+        final videos = videoEventService.getVideos(SubscriptionType.profile);
+
+        // Find the repost event - it should exist
+        final reposts = videos.where((e) => e.isRepost).toList();
+        expect(
+          reposts.length,
+          greaterThan(0),
+          reason: 'Repost with 34236 in a tag should be processed',
+        );
+
+        // Verify repost metadata
+        final repostVideoEvent = reposts.first;
+        expect(repostVideoEvent.isRepost, true);
+        expect(
+          repostVideoEvent.reposterId,
+          'bbbb567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+        );
+        expect(repostVideoEvent.reposterPubkey, reposterPubkey);
+
+        // Verify original content is preserved
+        expect(repostVideoEvent.pubkey, authorPubkey);
+        expect(repostVideoEvent.videoUrl, 'https://example.com/video.mp4');
+      },
+    );
   });
 }

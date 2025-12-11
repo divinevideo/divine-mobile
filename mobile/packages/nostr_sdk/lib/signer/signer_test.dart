@@ -43,7 +43,7 @@ Future<void> signerTest(NostrSigner nostrSigner) async {
 
   await Future.delayed(const Duration(seconds: 10));
 
-  Event? event = Event(pubkey, EventKind.TEXT_NOTE, [], "Hello");
+  Event? event = Event(pubkey, EventKind.textNote, [], "Hello");
   event = await nostrSigner.signEvent(event);
   log('$event');
   log(jsonEncode(event!.toJson()));

@@ -1,10 +1,11 @@
-// ABOUTME: Unit tests for HashtagStatsDao with batch operations and cache expiry.
-// ABOUTME: Tests upsertHashtag, upsertBatch, getPopularHashtags, isCacheFresh, deleteExpired.
+// ABOUTME: Unit tests for HashtagStatsDao with batch operations and cache
+// ABOUTME: expiry. Tests upsertHashtag, upsertBatch, getPopularHashtags,
+// ABOUTME: isCacheFresh, deleteExpired.
 
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
-import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:test/test.dart';
 
@@ -43,9 +44,7 @@ void main() {
           totalLikes: 250,
         );
 
-        final results = await dao.getPopularHashtags(
-          expiry: const Duration(hours: 1),
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(1));
         expect(results.first.hashtag, equals('flutter'));
         expect(results.first.videoCount, equals(100));
@@ -65,9 +64,7 @@ void main() {
           totalViews: 10000,
         );
 
-        final results = await dao.getPopularHashtags(
-          expiry: const Duration(hours: 1),
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(1));
         expect(results.first.videoCount, equals(200));
         expect(results.first.totalViews, equals(10000));
@@ -76,9 +73,7 @@ void main() {
       test('handles null optional fields', () async {
         await dao.upsertHashtag(hashtag: 'nostr');
 
-        final results = await dao.getPopularHashtags(
-          expiry: const Duration(hours: 1),
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(1));
         expect(results.first.hashtag, equals('nostr'));
         expect(results.first.videoCount, isNull);
@@ -91,9 +86,7 @@ void main() {
         await dao.upsertHashtag(hashtag: 'dart', videoCount: 80);
         await dao.upsertHashtag(hashtag: 'nostr', videoCount: 50);
 
-        final results = await dao.getPopularHashtags(
-          expiry: const Duration(hours: 1),
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(3));
       });
     });
@@ -118,9 +111,7 @@ void main() {
           ),
         ]);
 
-        final results = await dao.getPopularHashtags(
-          expiry: const Duration(hours: 1),
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(3));
       });
 
@@ -140,9 +131,7 @@ void main() {
           ),
         ]);
 
-        final results = await dao.getPopularHashtags(
-          expiry: const Duration(hours: 1),
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(2));
 
         final flutter = results.firstWhere((r) => r.hashtag == 'flutter');
@@ -156,9 +145,7 @@ void main() {
         await dao.upsertHashtag(hashtag: 'high', videoCount: 100);
         await dao.upsertHashtag(hashtag: 'medium', videoCount: 50);
 
-        final results = await dao.getPopularHashtags(
-          expiry: const Duration(hours: 1),
-        );
+        final results = await dao.getPopularHashtags();
         expect(results[0].hashtag, equals('high'));
         expect(results[1].hashtag, equals('medium'));
         expect(results[2].hashtag, equals('low'));
@@ -172,7 +159,6 @@ void main() {
 
         final results = await dao.getPopularHashtags(
           limit: 2,
-          expiry: const Duration(hours: 1),
         );
         expect(results, hasLength(2));
         expect(results[0].hashtag, equals('a'));
@@ -190,7 +176,8 @@ void main() {
           ),
         ]);
 
-        // Query with 5 minute expiry - entry is 10 minutes old so should be excluded
+        // Query with 5 minute expiry - entry is 10 minutes old so should
+        // be excluded
         final results = await dao.getPopularHashtags(
           expiry: const Duration(minutes: 5),
         );
@@ -198,9 +185,7 @@ void main() {
       });
 
       test('returns empty list when no hashtags exist', () async {
-        final results = await dao.getPopularHashtags(
-          expiry: const Duration(hours: 1),
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, isEmpty);
       });
     });
@@ -209,16 +194,12 @@ void main() {
       test('returns true when fresh data exists', () async {
         await dao.upsertHashtag(hashtag: 'flutter', videoCount: 100);
 
-        final isFresh = await dao.isCacheFresh(
-          expiry: const Duration(hours: 1),
-        );
+        final isFresh = await dao.isCacheFresh();
         expect(isFresh, isTrue);
       });
 
       test('returns false when no data exists', () async {
-        final isFresh = await dao.isCacheFresh(
-          expiry: const Duration(hours: 1),
-        );
+        final isFresh = await dao.isCacheFresh();
         expect(isFresh, isFalse);
       });
 
@@ -233,7 +214,8 @@ void main() {
           ),
         ]);
 
-        // Query with 5 minute expiry - entry is 10 minutes old so should be expired
+        // Query with 5 minute expiry - entry is 10 minutes old so should
+        // be expired
         final isFresh = await dao.isCacheFresh(
           expiry: const Duration(minutes: 5),
         );
@@ -258,16 +240,15 @@ void main() {
           ),
         ]);
 
-        // Delete with 5 minute expiry - entries are 10 minutes old so should be deleted
+        // Delete with 5 minute expiry - entries are 10 minutes old so
+        // should be deleted
         final deleted = await dao.deleteExpired(
           expiry: const Duration(minutes: 5),
         );
 
         expect(deleted, equals(2));
 
-        final results = await dao.getPopularHashtags(
-          expiry: const Duration(hours: 1),
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, isEmpty);
       });
 
@@ -275,15 +256,11 @@ void main() {
         await dao.upsertHashtag(hashtag: 'flutter', videoCount: 100);
 
         // Delete with long expiry should keep the entry
-        final deleted = await dao.deleteExpired(
-          expiry: const Duration(hours: 1),
-        );
+        final deleted = await dao.deleteExpired();
 
         expect(deleted, equals(0));
 
-        final results = await dao.getPopularHashtags(
-          expiry: const Duration(hours: 1),
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, hasLength(1));
       });
     });
@@ -298,9 +275,7 @@ void main() {
 
         expect(deleted, equals(3));
 
-        final results = await dao.getPopularHashtags(
-          expiry: const Duration(hours: 1),
-        );
+        final results = await dao.getPopularHashtags();
         expect(results, isEmpty);
       });
 

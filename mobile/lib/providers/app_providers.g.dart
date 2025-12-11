@@ -273,6 +273,109 @@ final class BackgroundActivityManagerProvider
 String _$backgroundActivityManagerHash() =>
     r'4d3e0698e395bfb6f5b8459e9626b726a126376e';
 
+/// Relay statistics service for tracking per-relay metrics
+
+@ProviderFor(relayStatisticsService)
+const relayStatisticsServiceProvider = RelayStatisticsServiceProvider._();
+
+/// Relay statistics service for tracking per-relay metrics
+
+final class RelayStatisticsServiceProvider
+    extends
+        $FunctionalProvider<
+          RelayStatisticsService,
+          RelayStatisticsService,
+          RelayStatisticsService
+        >
+    with $Provider<RelayStatisticsService> {
+  /// Relay statistics service for tracking per-relay metrics
+  const RelayStatisticsServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'relayStatisticsServiceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$relayStatisticsServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<RelayStatisticsService> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  RelayStatisticsService create(Ref ref) {
+    return relayStatisticsService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RelayStatisticsService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RelayStatisticsService>(value),
+    );
+  }
+}
+
+String _$relayStatisticsServiceHash() =>
+    r'08039c024eda98d415d0a0088119d0f12e7fc54d';
+
+/// Stream provider for reactive relay statistics updates
+/// Use this provider when you need UI to rebuild when statistics change
+
+@ProviderFor(relayStatisticsStream)
+const relayStatisticsStreamProvider = RelayStatisticsStreamProvider._();
+
+/// Stream provider for reactive relay statistics updates
+/// Use this provider when you need UI to rebuild when statistics change
+
+final class RelayStatisticsStreamProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, RelayStatistics>>,
+          Map<String, RelayStatistics>,
+          Stream<Map<String, RelayStatistics>>
+        >
+    with
+        $FutureModifier<Map<String, RelayStatistics>>,
+        $StreamProvider<Map<String, RelayStatistics>> {
+  /// Stream provider for reactive relay statistics updates
+  /// Use this provider when you need UI to rebuild when statistics change
+  const RelayStatisticsStreamProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'relayStatisticsStreamProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$relayStatisticsStreamHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<Map<String, RelayStatistics>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<Map<String, RelayStatistics>> create(Ref ref) {
+    return relayStatisticsStream(ref);
+  }
+}
+
+String _$relayStatisticsStreamHash() =>
+    r'0ab9617467aabccc62b36b0de4d79a0ce9d01c5e';
+
 /// Analytics service with opt-out support
 
 @ProviderFor(analyticsService)
@@ -438,56 +541,54 @@ String _$geoBlockingServiceHash() =>
 
 /// Secure key storage service (foundational service)
 
-@ProviderFor(secureKeyStorageService)
-const secureKeyStorageServiceProvider = SecureKeyStorageServiceProvider._();
+@ProviderFor(secureKeyStorage)
+const secureKeyStorageProvider = SecureKeyStorageProvider._();
 
 /// Secure key storage service (foundational service)
 
-final class SecureKeyStorageServiceProvider
+final class SecureKeyStorageProvider
     extends
         $FunctionalProvider<
-          SecureKeyStorageService,
-          SecureKeyStorageService,
-          SecureKeyStorageService
+          SecureKeyStorage,
+          SecureKeyStorage,
+          SecureKeyStorage
         >
-    with $Provider<SecureKeyStorageService> {
+    with $Provider<SecureKeyStorage> {
   /// Secure key storage service (foundational service)
-  const SecureKeyStorageServiceProvider._()
+  const SecureKeyStorageProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'secureKeyStorageServiceProvider',
+        name: r'secureKeyStorageProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$secureKeyStorageServiceHash();
+  String debugGetCreateSourceHash() => _$secureKeyStorageHash();
 
   @$internal
   @override
-  $ProviderElement<SecureKeyStorageService> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
+  $ProviderElement<SecureKeyStorage> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
 
   @override
-  SecureKeyStorageService create(Ref ref) {
-    return secureKeyStorageService(ref);
+  SecureKeyStorage create(Ref ref) {
+    return secureKeyStorage(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SecureKeyStorageService value) {
+  Override overrideWithValue(SecureKeyStorage value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<SecureKeyStorageService>(value),
+      providerOverride: $SyncValueProvider<SecureKeyStorage>(value),
     );
   }
 }
 
-String _$secureKeyStorageServiceHash() =>
-    r'1502fca4cf3f0a96a4ace27be757fe2406ff0522';
+String _$secureKeyStorageHash() => r'853547d439994307884d2f47f3d9769daa0a1e96';
 
 /// Web authentication service (for web platform only)
 
@@ -983,7 +1084,7 @@ final class AuthServiceProvider
   }
 }
 
-String _$authServiceHash() => r'7d7fae6e9bce96247f58dc43b2b87a289dd3e08b';
+String _$authServiceHash() => r'26555c9f1c9a9a0c322592b6425ac0a6808090d8';
 
 /// Stream provider for reactive auth state changes
 /// Widgets should watch this instead of authService.authState to get rebuilds
@@ -1071,7 +1172,7 @@ final class NostrServiceProvider
   }
 }
 
-String _$nostrServiceHash() => r'fcc6c77c9665ca4fe387f551b48517a756dffac6';
+String _$nostrServiceHash() => r'e83bb74d0adf803fa7119aa120a3572dc5d6b1ec';
 
 /// Subscription manager for centralized subscription management
 
@@ -1829,52 +1930,57 @@ final class ContentReportingServiceProvider
 String _$contentReportingServiceHash() =>
     r'90600ce05c4cc607ee58bb9166d14fb5982b7430';
 
-/// Curated list service for NIP-51 kind 30005 video lists
+/// Lists state notifier - manages curated lists state
 
-@ProviderFor(curatedListService)
-const curatedListServiceProvider = CuratedListServiceProvider._();
+@ProviderFor(CuratedListsState)
+const curatedListsStateProvider = CuratedListsStateProvider._();
 
-/// Curated list service for NIP-51 kind 30005 video lists
-
-final class CuratedListServiceProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<CuratedListService>,
-          CuratedListService,
-          FutureOr<CuratedListService>
-        >
-    with
-        $FutureModifier<CuratedListService>,
-        $FutureProvider<CuratedListService> {
-  /// Curated list service for NIP-51 kind 30005 video lists
-  const CuratedListServiceProvider._()
+/// Lists state notifier - manages curated lists state
+final class CuratedListsStateProvider
+    extends $AsyncNotifierProvider<CuratedListsState, List<CuratedList>> {
+  /// Lists state notifier - manages curated lists state
+  const CuratedListsStateProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'curatedListServiceProvider',
+        name: r'curatedListsStateProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$curatedListServiceHash();
+  String debugGetCreateSourceHash() => _$curatedListsStateHash();
 
   @$internal
   @override
-  $FutureProviderElement<CuratedListService> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<CuratedListService> create(Ref ref) {
-    return curatedListService(ref);
-  }
+  CuratedListsState create() => CuratedListsState();
 }
 
-String _$curatedListServiceHash() =>
-    r'4cb1e31f4432938d5c0f9944a55dc52266d37c96';
+String _$curatedListsStateHash() => r'81250850e632c5ba622f6e54d2d048e5736d3281';
+
+/// Lists state notifier - manages curated lists state
+
+abstract class _$CuratedListsState extends $AsyncNotifier<List<CuratedList>> {
+  FutureOr<List<CuratedList>> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref =
+        this.ref as $Ref<AsyncValue<List<CuratedList>>, List<CuratedList>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<List<CuratedList>>, List<CuratedList>>,
+              AsyncValue<List<CuratedList>>,
+              Object?,
+              Object?
+            >;
+    element.handleValue(ref, created);
+  }
+}
 
 /// User list service for NIP-51 kind 30000 people lists
 

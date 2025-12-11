@@ -25,7 +25,7 @@ import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/widgets/video_feed_item.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
-import 'package:openvine/utils/nostr_encoding.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -159,7 +159,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
           }
 
           // Get current user's npub and redirect (preserve grid/feed mode from context)
-          final currentUserNpub = NostrEncoding.encodePublicKey(
+          final currentUserNpub = NostrKeyUtils.encodePubKey(
             authService.currentPublicKeyHex!,
           );
           final videoIndex = ctx
@@ -686,7 +686,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                       children: [
                         Flexible(
                           child: SelectableText(
-                            NostrEncoding.encodePublicKey(userIdHex),
+                            NostrKeyUtils.encodePubKey(userIdHex),
                             style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 12,
@@ -1003,7 +1003,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
               final videoEvent = videos[index];
               return GestureDetector(
                 onTap: () {
-                  final npub = NostrEncoding.encodePublicKey(userIdHex);
+                  final npub = NostrKeyUtils.encodePubKey(userIdHex);
                   Log.info(
                     '🎯 ProfileScreenRouter GRID TAP: gridIndex=$index, '
                     'npub=$npub, videoId=${videoEvent.id}',
@@ -1206,7 +1206,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                   final videoEvent = reposts[index];
                   return GestureDetector(
                     onTap: () {
-                      final npub = NostrEncoding.encodePublicKey(userIdHex);
+                      final npub = NostrKeyUtils.encodePubKey(userIdHex);
                       Log.info(
                         '🎯 ProfileScreenRouter REPOSTS TAB TAP: gridIndex=$index, '
                         'npub=$npub, videoId=${videoEvent.id}',
@@ -1466,7 +1466,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
       final displayName = profile?.bestDisplayName ?? 'User';
 
       // Convert hex pubkey to npub format for sharing
-      final npub = NostrEncoding.encodePublicKey(userIdHex);
+      final npub = NostrKeyUtils.encodePubKey(userIdHex);
 
       // Create share text with divine.video URL format
       final shareText =
@@ -1576,7 +1576,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
 
   Future<void> _copyNpubToClipboard(String userIdHex) async {
     try {
-      final npub = NostrEncoding.encodePublicKey(userIdHex);
+      final npub = NostrKeyUtils.encodePubKey(userIdHex);
       await Clipboard.setData(ClipboardData(text: npub));
 
       if (mounted) {

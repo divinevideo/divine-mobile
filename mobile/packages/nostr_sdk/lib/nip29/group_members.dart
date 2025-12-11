@@ -10,7 +10,7 @@ class GroupMembers extends GroupObject {
     : super(groupId, createdAt);
 
   static GroupMembers? loadFromEvent(Event e) {
-    if (e.kind != EventKind.GROUP_MEMBERS) {
+    if (e.kind != EventKind.groupMembers) {
       return null;
     }
 

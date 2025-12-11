@@ -9,7 +9,6 @@
 import 'dart:convert';
 
 import 'package:meta/meta.dart';
-import 'package:models/src/nostr_encoding.dart';
 import 'package:nostr_sdk/event.dart';
 
 /// Model representing a Nostr user profile from kind 0 events
@@ -130,44 +129,10 @@ class UserProfile {
   final DateTime createdAt;
   final String eventId;
 
-  /// Get the best available display name
-  String get bestDisplayName {
-    if (displayName?.isNotEmpty ?? false) return displayName!;
-    if (name?.isNotEmpty ?? false) return name!;
-    // Fallback to truncated npub (e.g., "npub1abc...xyz")
-    return truncatedNpub;
-  }
-
   /// Get shortened pubkey for display
   String get shortPubkey {
     if (pubkey.length <= 16) return pubkey;
     return pubkey;
-  }
-
-  /// Get npub encoding of pubkey
-  String get npub {
-    try {
-      return NostrEncoding.encodePublicKey(pubkey);
-    } on NostrEncodingException {
-      // Fallback to shortened pubkey if encoding fails
-      return shortPubkey;
-    }
-  }
-
-  /// Get truncated npub for display (e.g., "npub1abc...xyz")
-  String get truncatedNpub {
-    try {
-      final fullNpub = NostrEncoding.encodePublicKey(pubkey);
-      if (fullNpub.length <= 16) return fullNpub;
-      // Show first 10 chars + "..." + last 6 chars (npub1abc...xyz format)
-      final suffix = fullNpub.substring(fullNpub.length - 6);
-      return '${fullNpub.substring(0, 10)}...$suffix';
-    } on NostrEncodingException {
-      // Fallback to shortened hex pubkey if encoding fails
-      if (pubkey.length <= 16) return pubkey;
-      final suffix = pubkey.substring(pubkey.length - 6);
-      return '${pubkey.substring(0, 8)}...$suffix';
-    }
   }
 
   /// Check if profile has basic information
@@ -278,5 +243,5 @@ class UserProfile {
   @override
   String toString() =>
       'UserProfile(pubkey: $shortPubkey, '
-      'name: $bestDisplayName, hasAvatar: $hasAvatar)';
+      'name: $displayName, hasAvatar: $hasAvatar)';
 }

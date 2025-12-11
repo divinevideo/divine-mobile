@@ -31,12 +31,16 @@ class GatewayResponse {
 
   /// List of events returned by the gateway
   final List<Event> events;
+
   /// Whether End of Stored Events was reached
   final bool eose;
+
   /// Whether the query is complete (all matching events returned)
   final bool complete;
+
   /// Whether the response came from cache
   final bool cached;
+
   /// Age of cached data in seconds (null if not cached)
   final int? cacheAgeSeconds;
 

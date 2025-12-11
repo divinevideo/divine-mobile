@@ -30,12 +30,7 @@ class NIP58 {
     }
     tags.add(eList);
 
-    var newEvent = Event(
-      nostr.publicKey,
-      EventKind.BADGE_ACCEPT,
-      tags,
-      content,
-    );
+    var newEvent = Event(nostr.publicKey, EventKind.badgeAccept, tags, content);
 
     return await nostr.sendEvent(newEvent);
   }

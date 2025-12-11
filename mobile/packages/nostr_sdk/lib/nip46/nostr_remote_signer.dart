@@ -73,7 +73,7 @@ class NostrRemoteSigner extends NostrSigner {
         relay.relayStatus.noteReceive();
 
         final event = Event.fromJson(json[2]);
-        if (event.kind == EventKind.NOSTR_REMOTE_SIGNING) {
+        if (event.kind == EventKind.nostrRemoteSigning) {
           var response = await NostrRemoteResponse.decrypt(
             event.content,
             localNostrSigner,
@@ -99,7 +99,7 @@ class NostrRemoteSigner extends NostrSigner {
   Future<Relay> _connectToRelay(String relayAddr) async {
     RelayStatus relayStatus = RelayStatus(relayAddr);
     Relay? relay;
-    if (relayMode == RelayMode.BASE_MODE) {
+    if (relayMode == RelayMode.baseMode) {
       relay = RelayBase(relayAddr, relayStatus);
     } else {
       relay = RelayIsolate(relayAddr, relayStatus);
@@ -107,7 +107,7 @@ class NostrRemoteSigner extends NostrSigner {
     relay.onMessage = onMessage;
     addPenddingQueryMsg(relay);
     relay.relayStatusCallback = () {
-      if (relayStatus.connected == ClientConnected.DISCONNECT) {
+      if (relayStatus.connected == ClientConnected.disconnect) {
         if (relay!.pendingMessages.isEmpty) {
           addPenddingQueryMsg(relay);
         }
@@ -135,7 +135,7 @@ class NostrRemoteSigner extends NostrSigner {
     var filter = Filter(
       since: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       p: [pubkey],
-      kinds: [EventKind.NOSTR_REMOTE_SIGNING],
+      kinds: [EventKind.nostrRemoteSigning],
     );
     List<dynamic> queryMsg = ["REQ", StringUtil.rndNameStr(12)];
     queryMsg.add(filter.toJson());
@@ -153,7 +153,7 @@ class NostrRemoteSigner extends NostrSigner {
       info.remoteSignerPubkey,
     );
     if (StringUtil.isNotBlank(senderPubkey) && content != null) {
-      Event? event = Event(senderPubkey!, EventKind.NOSTR_REMOTE_SIGNING, [
+      Event? event = Event(senderPubkey!, EventKind.nostrRemoteSigning, [
         getRemoteSignerPubkeyTags(),
       ], content);
       event = await localNostrSigner.signEvent(event);

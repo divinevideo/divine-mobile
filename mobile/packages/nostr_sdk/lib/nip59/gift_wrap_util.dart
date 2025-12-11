@@ -56,7 +56,7 @@ class GiftWrapUtil {
     }
     var sealEvent = Event(
       nostr.publicKey,
-      EventKind.SEAL_EVENT_KIND,
+      EventKind.sealEventKind,
       [],
       sealEventContent,
     );
@@ -71,7 +71,7 @@ class GiftWrapUtil {
     );
     var giftWrapEvent = Event(
       randomPubkey,
-      EventKind.GIFT_WRAP,
+      EventKind.giftWrap,
       [
         ["p", receiverPublicKey],
       ],

@@ -1,5 +1,5 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: non_constant_identifier_names
+// ABOUTME: Web browser NIP-07 signer implementation for window.nostr API.
+// ABOUTME: Handles signing and encryption via browser extension like Alby or nos2x.
 
 import 'dart:async';
 
@@ -10,10 +10,10 @@ import 'nip07_signer_method.dart'
     if (dart.library.js) 'nip07_signer_method_web.dart';
 
 class NIP07Signer extends NostrSigner {
-  static String URI_PRE = "websigner";
+  static String uriPre = "websigner";
 
   static bool isWebNostrSignerKey(String key) {
-    if (key.startsWith(URI_PRE)) {
+    if (key.startsWith(uriPre)) {
       return true;
     }
     return false;

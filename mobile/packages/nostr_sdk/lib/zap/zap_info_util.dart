@@ -34,7 +34,7 @@ class ZapInfoUtil {
   }
 
   static int getNumFromZapEvent(Event event) {
-    if (event.kind == EventKind.ZAP) {
+    if (event.kind == EventKind.zap) {
       for (var tag in event.tags) {
         if (tag.length > 1) {
           var tagType = tag[0] as String;

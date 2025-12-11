@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:models/models.dart' show BugReportResult;
 import 'package:openvine/models/bug_report_data.dart';
-import 'package:openvine/models/bug_report_result.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 
@@ -180,7 +180,7 @@ void main() {
 
       when(mockBugReportService.sendBugReport(any)).thenAnswer((_) async {
         await Future.delayed(const Duration(milliseconds: 100));
-        return BugReportResult.createSuccess(
+        return BugReportResult.success(
           reportId: 'test-123',
           messageEventId: 'test-event-id',
         );

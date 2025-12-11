@@ -1,5 +1,6 @@
 // ABOUTME: Unit tests for PendingUploadsDao with domain model conversion.
-// ABOUTME: Tests upsertUpload, getUpload, getPendingUploads, updateStatus, watchUploads.
+// ABOUTME: Tests upsertUpload, getUpload, getPendingUploads, updateStatus,
+// ABOUTME: watchUploads.
 
 import 'dart:io';
 
@@ -39,7 +40,7 @@ void main() {
       localVideoPath: localVideoPath,
       nostrPubkey: nostrPubkey,
       status: status,
-      createdAt: createdAt ?? DateTime(2024, 1, 1, 12, 0),
+      createdAt: createdAt ?? DateTime(2024, 1, 1, 12),
       title: title,
       description: description,
       hashtags: hashtags,
@@ -92,8 +93,7 @@ void main() {
 
       test('updates existing upload with same ID', () async {
         final upload1 = createTestUpload(
-          status: UploadStatus.pending,
-          uploadProgress: 0.0,
+          uploadProgress: 0,
         );
         await dao.upsertUpload(upload1);
 
@@ -119,16 +119,15 @@ void main() {
           localVideoPath: '/path/to/video.mp4',
           nostrPubkey: testPubkey,
           status: UploadStatus.published,
-          createdAt: DateTime(2024, 1, 1),
+          createdAt: DateTime(2024),
           cloudinaryPublicId: 'cloud_123',
           videoId: 'video_456',
           cdnUrl: 'https://cdn.example.com/video.mp4',
-          errorMessage: null,
-          uploadProgress: 1.0,
+          uploadProgress: 1,
           thumbnailPath: '/path/to/thumb.jpg',
           title: 'Test Video',
           description: 'Test description',
-          hashtags: ['test'],
+          hashtags: const ['test'],
           nostrEventId: testEventId,
           completedAt: DateTime(2024, 1, 1, 12, 30),
           retryCount: 3,
@@ -187,7 +186,7 @@ void main() {
     group('getPendingUploads', () {
       test('returns only uploads not published or failed', () async {
         await dao.upsertUpload(
-          createTestUpload(id: 'pending', status: UploadStatus.pending),
+          createTestUpload(id: 'pending'),
         );
         await dao.upsertUpload(
           createTestUpload(id: 'uploading', status: UploadStatus.uploading),
@@ -205,7 +204,10 @@ void main() {
         final results = await dao.getPendingUploads();
 
         expect(results, hasLength(3));
-        expect(results.map((r) => r.id), containsAll(['pending', 'uploading', 'processing']));
+        expect(
+          results.map((r) => r.id),
+          containsAll(['pending', 'uploading', 'processing']),
+        );
         expect(results.map((r) => r.id), isNot(contains('published')));
         expect(results.map((r) => r.id), isNot(contains('failed')));
       });
@@ -214,22 +216,19 @@ void main() {
         await dao.upsertUpload(
           createTestUpload(
             id: 'first',
-            createdAt: DateTime(2024, 1, 1),
-            status: UploadStatus.pending,
+            createdAt: DateTime(2024),
           ),
         );
         await dao.upsertUpload(
           createTestUpload(
             id: 'third',
             createdAt: DateTime(2024, 1, 3),
-            status: UploadStatus.pending,
           ),
         );
         await dao.upsertUpload(
           createTestUpload(
             id: 'second',
             createdAt: DateTime(2024, 1, 2),
-            status: UploadStatus.pending,
           ),
         );
 
@@ -255,7 +254,7 @@ void main() {
         await dao.upsertUpload(
           createTestUpload(
             id: 'first',
-            createdAt: DateTime(2024, 1, 1),
+            createdAt: DateTime(2024),
           ),
         );
         await dao.upsertUpload(
@@ -288,10 +287,10 @@ void main() {
     group('getUploadsByStatus', () {
       test('filters by status', () async {
         await dao.upsertUpload(
-          createTestUpload(id: 'pending1', status: UploadStatus.pending),
+          createTestUpload(id: 'pending1'),
         );
         await dao.upsertUpload(
-          createTestUpload(id: 'pending2', status: UploadStatus.pending),
+          createTestUpload(id: 'pending2'),
         );
         await dao.upsertUpload(
           createTestUpload(id: 'uploading', status: UploadStatus.uploading),
@@ -305,7 +304,7 @@ void main() {
 
       test('returns empty list when no uploads match status', () async {
         await dao.upsertUpload(
-          createTestUpload(id: 'pending', status: UploadStatus.pending),
+          createTestUpload(id: 'pending'),
         );
 
         final results = await dao.getUploadsByStatus(UploadStatus.failed);
@@ -316,7 +315,7 @@ void main() {
     group('updateStatus', () {
       test('updates status for existing upload', () async {
         await dao.upsertUpload(
-          createTestUpload(status: UploadStatus.pending),
+          createTestUpload(),
         );
 
         final result = await dao.updateStatus(
@@ -358,7 +357,7 @@ void main() {
 
     group('deleteUpload', () {
       test('deletes upload by ID', () async {
-        await dao.upsertUpload(createTestUpload(id: 'upload_1'));
+        await dao.upsertUpload(createTestUpload());
         await dao.upsertUpload(createTestUpload(id: 'upload_2'));
 
         final deleted = await dao.deleteUpload('upload_1');
@@ -378,7 +377,7 @@ void main() {
     group('deleteCompleted', () {
       test('deletes only published and failed uploads', () async {
         await dao.upsertUpload(
-          createTestUpload(id: 'pending', status: UploadStatus.pending),
+          createTestUpload(id: 'pending'),
         );
         await dao.upsertUpload(
           createTestUpload(id: 'published', status: UploadStatus.published),
@@ -397,7 +396,7 @@ void main() {
 
       test('returns 0 when no completed uploads', () async {
         await dao.upsertUpload(
-          createTestUpload(status: UploadStatus.pending),
+          createTestUpload(),
         );
 
         final deleted = await dao.deleteCompleted();
@@ -407,7 +406,7 @@ void main() {
 
     group('watchAllUploads', () {
       test('emits initial list', () async {
-        await dao.upsertUpload(createTestUpload(id: 'upload_1'));
+        await dao.upsertUpload(createTestUpload());
         await dao.upsertUpload(createTestUpload(id: 'upload_2'));
 
         final stream = dao.watchAllUploads();
@@ -418,7 +417,7 @@ void main() {
 
       test('emits sorted by createdAt descending', () async {
         await dao.upsertUpload(
-          createTestUpload(id: 'old', createdAt: DateTime(2024, 1, 1)),
+          createTestUpload(id: 'old', createdAt: DateTime(2024)),
         );
         await dao.upsertUpload(
           createTestUpload(id: 'new', createdAt: DateTime(2024, 1, 2)),
@@ -435,7 +434,7 @@ void main() {
     group('watchPendingUploads', () {
       test('emits only pending uploads', () async {
         await dao.upsertUpload(
-          createTestUpload(id: 'pending', status: UploadStatus.pending),
+          createTestUpload(id: 'pending'),
         );
         await dao.upsertUpload(
           createTestUpload(id: 'published', status: UploadStatus.published),
@@ -453,14 +452,12 @@ void main() {
           createTestUpload(
             id: 'second',
             createdAt: DateTime(2024, 1, 2),
-            status: UploadStatus.pending,
           ),
         );
         await dao.upsertUpload(
           createTestUpload(
             id: 'first',
-            createdAt: DateTime(2024, 1, 1),
-            status: UploadStatus.pending,
+            createdAt: DateTime(2024),
           ),
         );
 
@@ -474,7 +471,7 @@ void main() {
 
     group('clearAll', () {
       test('deletes all uploads', () async {
-        await dao.upsertUpload(createTestUpload(id: 'upload_1'));
+        await dao.upsertUpload(createTestUpload());
         await dao.upsertUpload(createTestUpload(id: 'upload_2'));
 
         final deleted = await dao.clearAll();

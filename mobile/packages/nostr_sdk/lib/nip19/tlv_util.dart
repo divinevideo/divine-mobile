@@ -1,5 +1,5 @@
-// TODO(any): Rename constants to lowerCamelCase - https://github.com/divinevideo/divine-mobile/issues/354
-// ignore_for_file: constant_identifier_names
+// ABOUTME: Utility class for reading and writing TLV (Type-Length-Value) encoded data.
+// ABOUTME: Used by NIP-19 for encoding structured data in bech32 strings.
 
 class TLVUtil {
   static TLVData? readTLVEntry(List<int> data, {int startIndex = 0}) {
@@ -39,8 +39,8 @@ class TLVData {
 }
 
 class TLVType {
-  static const int Default = 0;
-  static const int Relay = 1;
-  static const int Author = 2;
-  static const int Kind = 3;
+  static const int defaultType = 0;
+  static const int relay = 1;
+  static const int author = 2;
+  static const int kind = 3;
 }
