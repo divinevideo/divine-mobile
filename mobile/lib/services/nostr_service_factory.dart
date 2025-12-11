@@ -3,13 +3,12 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
+// Conditional imports for platform-specific implementations
+import 'package:openvine/services/nostr_service_factory_mobile.dart'
+    if (dart.library.html) 'nostr_service_factory_web.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
-
-// Conditional imports for platform-specific implementations
-import 'nostr_service_factory_mobile.dart'
-    if (dart.library.html) 'nostr_service_factory_web.dart';
 
 /// Factory class for creating platform-appropriate NostrService implementations
 class NostrServiceFactory {

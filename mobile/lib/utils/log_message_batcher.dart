@@ -3,7 +3,7 @@
 
 import 'dart:async';
 import 'dart:collection';
-import 'unified_logger.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 /// Batches similar log messages and outputs summaries instead of individual messages
 class LogMessageBatcher {

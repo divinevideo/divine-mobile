@@ -2,11 +2,12 @@
 // ABOUTME: Provides cross-platform camera functionality for iOS, Android, and macOS
 
 import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:camera_macos/camera_macos.dart';
 import 'package:flutter/material.dart'; // For Offset
+import 'package:openvine/services/camera_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
-import 'camera_service.dart';
 
 /// Concrete implementation of CameraService with macOS support
 class CameraServiceImpl extends CameraService {
