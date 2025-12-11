@@ -179,7 +179,7 @@ class NsecBunkerClient {
       );
 
       // Create and connect NostrRemoteSigner
-      _remoteSigner = NostrRemoteSigner(RelayMode.BASE_MODE, _signerInfo!);
+      _remoteSigner = NostrRemoteSigner(RelayMode.baseMode, _signerInfo!);
       await _remoteSigner!.connect();
 
       _log.info('Connected to bunker relay');
