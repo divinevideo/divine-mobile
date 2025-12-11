@@ -106,7 +106,7 @@ workflows:
         beta_groups: []
 
   ios-simulator-build:
-    name: iOS Simulator Build (QA)
+    name: iOS Simulator Build
     working_directory: mobile
     max_build_duration: 60
     instance_type: mac_mini_m2
