@@ -31,12 +31,11 @@ void main() {
     final mockAuth = createMockAuthService();
     when(mockAuth.currentPublicKeyHex).thenReturn(pubkey);
     when(mockAuth.isAuthenticated).thenReturn(pubkey != null);
-    final authState =
-        pubkey != null ? AuthState.authenticated : AuthState.unauthenticated;
+    final authState = pubkey != null
+        ? AuthState.authenticated
+        : AuthState.unauthenticated;
     when(mockAuth.authState).thenReturn(authState);
-    when(mockAuth.authStateStream).thenAnswer(
-      (_) => Stream.value(authState),
-    );
+    when(mockAuth.authStateStream).thenAnswer((_) => Stream.value(authState));
     return mockAuth;
   }
 
@@ -132,7 +131,9 @@ void main() {
           fetchUserProfileProvider(testUserHex).overrideWith((ref) async {
             return mockProfile;
           }),
-          authServiceProvider.overrideWithValue(createTestAuthService(testUserHex)),
+          authServiceProvider.overrideWithValue(
+            createTestAuthService(testUserHex),
+          ),
         ],
       );
       addTearDown(c.dispose);
@@ -205,7 +206,9 @@ void main() {
           fetchUserProfileProvider(testUserHex).overrideWith((ref) async {
             return mockProfile;
           }),
-          authServiceProvider.overrideWithValue(createTestAuthService(testUserHex)), // Own profile
+          authServiceProvider.overrideWithValue(
+            createTestAuthService(testUserHex),
+          ), // Own profile
         ],
       );
       addTearDown(c.dispose);
@@ -241,7 +244,9 @@ void main() {
             fetchUserProfileProvider(testUserHex).overrideWith((ref) async {
               return mockProfile;
             }),
-            authServiceProvider.overrideWithValue(createTestAuthService(testUserHex)), // Own profile
+            authServiceProvider.overrideWithValue(
+              createTestAuthService(testUserHex),
+            ), // Own profile
           ],
         );
         addTearDown(c.dispose);
@@ -282,7 +287,9 @@ void main() {
           fetchUserProfileProvider(testUserHex).overrideWith((ref) async {
             return mockProfile;
           }),
-          authServiceProvider.overrideWithValue(createTestAuthService(testUserHex)),
+          authServiceProvider.overrideWithValue(
+            createTestAuthService(testUserHex),
+          ),
         ],
       );
       addTearDown(c.dispose);

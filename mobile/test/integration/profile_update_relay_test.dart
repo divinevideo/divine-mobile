@@ -38,9 +38,7 @@ void main() {
       keyManager = NostrKeyManager();
       nostrService = NostrService(keyManager);
       mockCleanupService = MockUserDataCleanupService();
-      authService = AuthService(
-        userDataCleanupService: mockCleanupService,
-      );
+      authService = AuthService(userDataCleanupService: mockCleanupService);
       subscriptionManager = SubscriptionManager(nostrService);
       userProfileService = UserProfileService(
         nostrService,

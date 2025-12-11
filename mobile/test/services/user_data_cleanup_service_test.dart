@@ -38,21 +38,25 @@ void main() {
         expect(service.shouldClearDataForUser(pubkey), isFalse);
       });
 
-      test('returns true when orphaned user data exists without stored pubkey',
-          () async {
-        // No pubkey stored, but user-specific data exists
-        await prefs.setStringList('curated_lists', ['list1', 'list2']);
+      test(
+        'returns true when orphaned user data exists without stored pubkey',
+        () async {
+          // No pubkey stored, but user-specific data exists
+          await prefs.setStringList('curated_lists', ['list1', 'list2']);
 
-        expect(service.shouldClearDataForUser('any_pubkey'), isTrue);
-      });
+          expect(service.shouldClearDataForUser('any_pubkey'), isTrue);
+        },
+      );
 
-      test('returns true when any user-specific key exists without pubkey',
-          () async {
-        // Test with a different user-specific key
-        await prefs.setString('seen_video_ids', 'video1,video2');
+      test(
+        'returns true when any user-specific key exists without pubkey',
+        () async {
+          // Test with a different user-specific key
+          await prefs.setString('seen_video_ids', 'video1,video2');
 
-        expect(service.shouldClearDataForUser('any_pubkey'), isTrue);
-      });
+          expect(service.shouldClearDataForUser('any_pubkey'), isTrue);
+        },
+      );
     });
 
     group('clearUserSpecificData', () {
@@ -100,8 +104,7 @@ void main() {
 
       test('clears mute/moderation keys', () async {
         await prefs.setStringList('muted_items', ['user1', 'user2']);
-        await prefs.setStringList(
-            'content_moderation_local_mutes', ['mute1']);
+        await prefs.setStringList('content_moderation_local_mutes', ['mute1']);
 
         await service.clearUserSpecificData();
 
