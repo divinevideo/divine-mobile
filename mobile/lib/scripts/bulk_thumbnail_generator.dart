@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/services/nostr_service.dart';
+import 'package:openvine/services/nostr_service_factory.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/thumbnail_api_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -155,7 +155,7 @@ Examples:
 
       // Create Nostr service to connect to relay
       final keyManager = NostrKeyManager();
-      final nostrService = NostrService(keyManager);
+      final nostrService = NostrServiceFactory.create(keyManager);
 
       // Initialize with only the relay we want to query
       await nostrService.initialize(customRelays: [relayUrl]);

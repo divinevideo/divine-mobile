@@ -3,8 +3,9 @@
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/nostr_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:openvine/services/nostr_service_factory.dart';
+import 'package:openvine/services/nostr_service_interface.dart';
 
 /// Setup real integration test environment with minimal mocking
 /// Only mocks platform channels that can't be tested, uses real Nostr connections
@@ -24,17 +25,16 @@ class RealIntegrationTestHelper {
   }
 
   /// Create a real NostrService with embedded relay
-  static Future<NostrService> createRealNostrService() async {
+  static Future<INostrService> createRealNostrService() async {
     await setupTestEnvironment();
 
     final keyManager = NostrKeyManager();
     // Note: May need to set up test keys differently based on actual API
 
-    final nostrService = NostrService(keyManager);
+    final nostrService = NostrServiceFactory.create(keyManager);
     await nostrService.initialize();
 
-    // Embedded relay is automatically started during initialization
-    // No need for external relay connections
+    // NostrClient handles relay connections internally
 
     return nostrService;
   }

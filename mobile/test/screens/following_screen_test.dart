@@ -12,14 +12,14 @@ import 'package:nostr_sdk/nostr_sdk.dart' as nostr_sdk;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/following_screen.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service.dart';
+import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/social_service.dart';
 
 import 'following_screen_test.mocks.dart';
 
-@GenerateMocks([NostrService, AuthService, SocialService])
+@GenerateMocks([INostrService, AuthService, SocialService])
 void main() {
-  late MockNostrService mockNostrService;
+  late MockINostrService mockNostrService;
   late MockAuthService mockAuthService;
   late MockSocialService mockSocialService;
   late StreamController<nostr_sdk.Event> eventStreamController;
@@ -35,7 +35,7 @@ void main() {
   }
 
   setUp(() {
-    mockNostrService = MockNostrService();
+    mockNostrService = MockINostrService();
     mockAuthService = MockAuthService();
     mockSocialService = MockSocialService();
     eventStreamController = StreamController<nostr_sdk.Event>();

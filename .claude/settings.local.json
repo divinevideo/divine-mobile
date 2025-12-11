@@ -29,7 +29,10 @@
       "Bash(brew upgrade:*)",
       "Bash(pod install:*)",
       "Bash(xcrun simctl:*)",
-      "Bash(dart fix:*)"
+      "Bash(dart fix:*)",
+      "mcp__dart__run_tests",
+      "Bash(dart run build_runner build:*)",
+      "mcp__dart__analyze_files"
     ],
     "deny": [],
     "ask": []

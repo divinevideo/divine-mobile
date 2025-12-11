@@ -101,12 +101,6 @@ dependencies:
   nostr_key_manager:
     path: packages/nostr_key_manager
   
-  # Embedded Nostr Relay - Local embedded relay replacing external relay infrastructure
-  flutter_embedded_nostr_relay:
-    git:
-      url: https://github.com/rabble/flutter_embedded_nostr_relay.git
-      path: flutter_embedded_nostr_relay
-
   # Logging
   logging: ^1.2.0
 

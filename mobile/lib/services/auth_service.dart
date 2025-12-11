@@ -115,6 +115,12 @@ class AuthService {
   /// Current public key (hex format)
   String? get currentPublicKeyHex => _currentKeyContainer?.publicKeyHex;
 
+  /// Current secure key container (null if not authenticated)
+  ///
+  /// Used by NostrClientProvider to create AuthServiceSigner.
+  /// The container provides secure access to private key operations.
+  SecureKeyContainer? get currentKeyContainer => _currentKeyContainer;
+
   /// Check if user is authenticated
   bool get isAuthenticated => _authState == AuthState.authenticated;
 

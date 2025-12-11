@@ -22,13 +22,31 @@ class NostrClient {
   /// {@macro nostr_client}
   ///
   /// Creates a new NostrClient instance with the given configuration.
-  /// Requires a [RelayManager] for relay management, persistence, and
-  /// status tracking.
-  NostrClient({
+  /// The RelayManager is created internally using the Nostr instance's
+  /// RelayPool to ensure they share the same connection pool.
+  factory NostrClient({
     required NostrClientConfig config,
+    required RelayManagerConfig relayManagerConfig,
+    GatewayClient? gatewayClient,
+  }) {
+    final nostr = _createNostr(config);
+    final relayManager = RelayManager(
+      config: relayManagerConfig,
+      relayPool: nostr.relayPool,
+    );
+    return NostrClient._internal(
+      nostr: nostr,
+      relayManager: relayManager,
+      gatewayClient: gatewayClient,
+    );
+  }
+
+  /// Internal constructor used by factory and testing constructors
+  NostrClient._internal({
+    required Nostr nostr,
     required RelayManager relayManager,
     GatewayClient? gatewayClient,
-  }) : _nostr = _createNostr(config),
+  }) : _nostr = nostr,
        _relayManager = relayManager,
        _gatewayClient = gatewayClient;
 
@@ -62,8 +80,40 @@ class NostrClient {
   final GatewayClient? _gatewayClient;
   final RelayManager _relayManager;
 
+  /// Tracks whether dispose() has been called
+  bool _isDisposed = false;
+
   /// Public key of the client
   String get publicKey => _nostr.publicKey;
+
+  /// Whether the client has been initialized
+  ///
+  /// Returns true if the relay manager is initialized
+  bool get isInitialized => _relayManager.isInitialized;
+
+  /// Whether the client has been disposed
+  ///
+  /// After disposal, the client should not be used
+  bool get isDisposed => _isDisposed;
+
+  /// Whether the client has keys configured
+  ///
+  /// Returns true if the public key is not empty
+  bool get hasKeys => publicKey.isNotEmpty;
+
+  /// Initializes the client by connecting to configured relays
+  ///
+  /// This must be called before using the client to ensure relay connections
+  /// are established. Can be called multiple times safely.
+  Future<void> initialize() async {
+    await _relayManager.initialize();
+  }
+
+  /// Alias for [configuredRelayCount] for API compatibility
+  int get relayCount => configuredRelayCount;
+
+  /// Alias for [configuredRelays] for API compatibility
+  List<String> get relays => configuredRelays;
 
   /// Map of subscription IDs to their filter hashes (for deduplication)
   final Map<String, String> _subscriptionFilters = {};
@@ -372,6 +422,122 @@ class NostrClient {
     );
   }
 
+  /// Searches for video events using NIP-50 search
+  ///
+  /// Returns a stream of video events (kind 34236) matching the search query.
+  /// Uses NIP-50 search parameter for full-text search on compatible relays.
+  Stream<Event> searchVideos(
+    String query, {
+    List<String>? authors,
+    DateTime? since,
+    DateTime? until,
+    int? limit,
+  }) {
+    final filter = Filter(
+      kinds: const [34236, 16], // Video events + generic repost
+      authors: authors,
+      since: since != null ? since.millisecondsSinceEpoch ~/ 1000 : null,
+      until: until != null ? until.millisecondsSinceEpoch ~/ 1000 : null,
+      limit: limit ?? 100,
+      search: query,
+    );
+
+    return subscribe([filter]);
+  }
+
+  /// Searches for user profiles using NIP-50 search
+  ///
+  /// Returns a stream of profile events (kind 0) matching the search query.
+  /// Uses NIP-50 search parameter for full-text search on compatible relays.
+  Stream<Event> searchUsers(
+    String query, {
+    int? limit,
+  }) {
+    final filter = Filter(
+      kinds: const [EventKind.metadata],
+      limit: limit ?? 100,
+      search: query,
+    );
+
+    return subscribe([filter]);
+  }
+
+  /// Broadcasts an event to relays with result tracking
+  ///
+  /// Similar to [publishEvent] but returns detailed per-relay tracking.
+  /// Use this when you need visibility into which relays accepted the event.
+  ///
+  /// Note: Per-relay tracking is currently based on the connected relays
+  /// at broadcast time. The underlying nostr_sdk doesn't provide individual
+  /// relay responses, so results are inferred from overall success/failure.
+  Future<NostrBroadcastResult> broadcast(
+    Event event, {
+    List<String>? targetRelays,
+  }) async {
+    final relays = connectedRelays;
+    final totalRelays = targetRelays?.length ?? relays.length;
+
+    try {
+      final sentEvent = await _nostr.sendEvent(
+        event,
+        targetRelays: targetRelays,
+      );
+
+      if (sentEvent != null) {
+        // Event was accepted by at least one relay
+        // Since nostr_sdk doesn't provide per-relay tracking,
+        // we mark all connected relays as successful
+        final results = <String, bool>{};
+        final relayList = targetRelays ?? relays;
+        for (final relay in relayList) {
+          results[relay] = true;
+        }
+
+        return NostrBroadcastResult(
+          event: sentEvent,
+          successCount: totalRelays,
+          totalRelays: totalRelays,
+          results: results,
+          errors: {},
+        );
+      } else {
+        // Event was not accepted by any relay
+        final results = <String, bool>{};
+        final errors = <String, String>{};
+        final relayList = targetRelays ?? relays;
+        for (final relay in relayList) {
+          results[relay] = false;
+          errors[relay] = 'Failed to send';
+        }
+
+        return NostrBroadcastResult(
+          event: null,
+          successCount: 0,
+          totalRelays: totalRelays,
+          results: results,
+          errors: errors,
+        );
+      }
+    } on Exception catch (e) {
+      // Exception during broadcast
+      final results = <String, bool>{};
+      final errors = <String, String>{};
+      final relayList = targetRelays ?? relays;
+      for (final relay in relayList) {
+        results[relay] = false;
+        errors[relay] = e.toString();
+      }
+
+      return NostrBroadcastResult(
+        event: null,
+        successCount: 0,
+        totalRelays: totalRelays,
+        results: results,
+        errors: errors,
+      );
+    }
+  }
+
   /// Disposes the client and cleans up resources
   ///
   /// Closes all subscriptions, disconnects from relays, and cleans up
@@ -381,6 +547,7 @@ class NostrClient {
     await _relayManager.dispose();
     _nostr.close();
     _subscriptionFilters.clear();
+    _isDisposed = true;
   }
 
   /// Generates a deterministic hash for filters

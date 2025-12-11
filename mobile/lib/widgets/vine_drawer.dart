@@ -8,7 +8,6 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
 import 'package:openvine/screens/relay_settings_screen.dart';
-// import 'package:openvine/screens/p2p_sync_screen.dart'; // Hidden for release
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
@@ -190,21 +189,6 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                       );
                     },
                   ),
-                  // P2P Sync hidden for release - not ready for production
-                  // _buildDrawerItem(
-                  //   icon: Icons.sync,
-                  //   title: 'P2P Sync',
-                  //   subtitle: 'Peer-to-peer synchronization',
-                  //   onTap: () {
-                  //     Navigator.pop(context); // Close drawer
-                  //     Navigator.push(
-                  //       context,
-                  //       MaterialPageRoute(
-                  //         builder: (context) => const P2PSyncScreen(),
-                  //       ),
-                  //     );
-                  //   },
-                  // ),
                   _buildDrawerItem(
                     icon: Icons.notifications,
                     title: 'Notifications',

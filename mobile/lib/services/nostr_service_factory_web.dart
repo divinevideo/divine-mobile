@@ -1,18 +1,47 @@
-// ABOUTME: Web-specific NostrService factory using direct relay connections
-// ABOUTME: Connects directly to external relays since embedded relay not supported on web
+// ABOUTME: Web-specific factory for creating NostrClientServiceAdapter
+// ABOUTME: Returns adapter wrapping NostrClient for INostrService compatibility
 
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/services/nostr_client_service_adapter.dart';
+import 'package:openvine/services/nostr_key_manager_signer.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:openvine/services/nostr_service_direct_web.dart';
 import 'package:openvine/services/relay_statistics_service.dart';
 
-/// Create web-specific NostrService that connects directly to external relays
+/// Create NostrClientServiceAdapter instance for web platform
+///
+/// Uses NostrClient internally with NostrKeyManagerSigner for signing
 INostrService createEmbeddedRelayService(
   NostrKeyManager keyManager, {
   void Function()? onInitialized,
   RelayStatisticsService? statisticsService,
 }) {
-  // Return web implementation that connects directly to external relays
-  // Note: Web implementation doesn't yet support onInitialized or statisticsService
-  return NostrServiceDirectWeb(keyManager);
+  // Create signer from key manager
+  final signer = NostrKeyManagerSigner(keyManager);
+
+  // Create NostrClient config
+  final config = NostrClientConfig(
+    signer: signer,
+    publicKey: keyManager.publicKey ?? '',
+  );
+
+  // Create relay manager config
+  final relayManagerConfig = RelayManagerConfig(
+    defaultRelayUrl: AppConstants.defaultRelayUrl,
+    storage: InMemoryRelayStorage(),
+  );
+
+  // Create the NostrClient
+  final client = NostrClient(
+    config: config,
+    relayManagerConfig: relayManagerConfig,
+  );
+
+  // Wrap in adapter for INostrService compatibility
+  return NostrClientServiceAdapter(
+    client: client,
+    keyManager: keyManager,
+    onInitialized: onInitialized,
+  );
 }
