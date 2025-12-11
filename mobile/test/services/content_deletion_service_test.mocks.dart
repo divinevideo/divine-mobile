@@ -7,12 +7,11 @@ import 'dart:async' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i5;
+import 'package:models/models.dart' as _i8;
+import 'package:nostr_key_manager/nostr_key_manager.dart' as _i2;
 import 'package:nostr_sdk/event.dart' as _i6;
 import 'package:nostr_sdk/filter.dart' as _i7;
-import 'package:openvine/models/nip94_metadata.dart' as _i8;
-import 'package:openvine/services/nostr_key_manager.dart' as _i2;
 import 'package:openvine/services/nostr_service_interface.dart' as _i3;
-import 'package:openvine/services/user_profile_service.dart' as _i9;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -27,6 +26,7 @@ import 'package:openvine/services/user_profile_service.dart' as _i9;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
+// ignore_for_file: invalid_use_of_internal_member
 
 class _FakeNostrKeyManager_0 extends _i1.SmartFake
     implements _i2.NostrKeyManager {
@@ -322,6 +322,14 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
           as _i4.Stream<_i6.Event>);
 
   @override
+  _i4.Stream<_i6.Event> searchUsers(String? query, {int? limit}) =>
+      (super.noSuchMethod(
+            Invocation.method(#searchUsers, [query], {#limit: limit}),
+            returnValue: _i4.Stream<_i6.Event>.empty(),
+          )
+          as _i4.Stream<_i6.Event>);
+
+  @override
   _i4.Future<Map<String, dynamic>?> getRelayStats() =>
       (super.noSuchMethod(
             Invocation.method(#getRelayStats, []),
@@ -395,57 +403,11 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
           as _i4.Future<_i2.Keychain>);
 
   @override
-  _i4.Future<_i2.Keychain> importPrivateKeyWithServices(
-    String? privateKey, {
-    _i3.INostrService? nostrService,
-    _i9.UserProfileService? profileService,
-  }) =>
+  _i4.Future<_i2.Keychain> importFromNsec(String? nsec) =>
       (super.noSuchMethod(
-            Invocation.method(
-              #importPrivateKeyWithServices,
-              [privateKey],
-              {#nostrService: nostrService, #profileService: profileService},
-            ),
+            Invocation.method(#importFromNsec, [nsec]),
             returnValue: _i4.Future<_i2.Keychain>.value(
-              _FakeKeychain_2(
-                this,
-                Invocation.method(
-                  #importPrivateKeyWithServices,
-                  [privateKey],
-                  {
-                    #nostrService: nostrService,
-                    #profileService: profileService,
-                  },
-                ),
-              ),
-            ),
-          )
-          as _i4.Future<_i2.Keychain>);
-
-  @override
-  _i4.Future<_i2.Keychain> importFromNsec(
-    String? nsec, {
-    _i3.INostrService? nostrService,
-    _i9.UserProfileService? profileService,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #importFromNsec,
-              [nsec],
-              {#nostrService: nostrService, #profileService: profileService},
-            ),
-            returnValue: _i4.Future<_i2.Keychain>.value(
-              _FakeKeychain_2(
-                this,
-                Invocation.method(
-                  #importFromNsec,
-                  [nsec],
-                  {
-                    #nostrService: nostrService,
-                    #profileService: profileService,
-                  },
-                ),
-              ),
+              _FakeKeychain_2(this, Invocation.method(#importFromNsec, [nsec])),
             ),
           )
           as _i4.Future<_i2.Keychain>);
@@ -545,35 +507,4 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
             returnValue: <String, dynamic>{},
           )
           as Map<String, dynamic>);
-}
-
-/// A class which mocks [Keychain].
-///
-/// See the documentation for Mockito's code generation for more information.
-class MockKeychain extends _i1.Mock implements _i2.Keychain {
-  MockKeychain() {
-    _i1.throwOnMissingStub(this);
-  }
-
-  @override
-  String get private =>
-      (super.noSuchMethod(
-            Invocation.getter(#private),
-            returnValue: _i5.dummyValue<String>(
-              this,
-              Invocation.getter(#private),
-            ),
-          )
-          as String);
-
-  @override
-  String get public =>
-      (super.noSuchMethod(
-            Invocation.getter(#public),
-            returnValue: _i5.dummyValue<String>(
-              this,
-              Invocation.getter(#public),
-            ),
-          )
-          as String);
 }

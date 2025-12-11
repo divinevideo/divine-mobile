@@ -4,31 +4,32 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/content_deletion_service.dart';
-import 'package:openvine/services/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'content_deletion_service_test.mocks.dart';
 
-@GenerateMocks([INostrService, NostrKeyManager, Keychain])
+@GenerateMocks([INostrService, NostrKeyManager])
 void main() {
   group('ContentDeletionService', () {
     late MockINostrService mockNostrService;
     late MockNostrKeyManager mockKeyManager;
-    late MockKeychain mockKeychain;
     late ContentDeletionService service;
     late SharedPreferences prefs;
     late String testPrivateKey;
     late String testPublicKey;
+    late Keychain testKeychain;
 
     setUp(() async {
       // Generate valid keys for testing
       testPrivateKey = generatePrivateKey();
       testPublicKey = getPublicKey(testPrivateKey);
+      testKeychain = Keychain(testPrivateKey);
 
       // Setup SharedPreferences mock
       SharedPreferences.setMockInitialValues({});
@@ -36,13 +37,10 @@ void main() {
 
       mockNostrService = MockINostrService();
       mockKeyManager = MockNostrKeyManager();
-      mockKeychain = MockKeychain();
 
       // Setup common mocks with valid keys
       when(mockNostrService.keyManager).thenReturn(mockKeyManager);
-      when(mockKeyManager.keyPair).thenReturn(mockKeychain);
-      when(mockKeychain.public).thenReturn(testPublicKey);
-      when(mockKeychain.private).thenReturn(testPrivateKey);
+      when(mockKeyManager.keyPair).thenReturn(testKeychain);
       when(mockNostrService.isInitialized).thenReturn(true);
       when(mockNostrService.hasKeys).thenReturn(true);
       when(mockNostrService.publicKey).thenReturn(testPublicKey);
