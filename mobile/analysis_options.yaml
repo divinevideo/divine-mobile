@@ -1,3 +1,4 @@
 linter:
   rules:
     - unnecessary_await_in_return
+    - unnecessary_const
