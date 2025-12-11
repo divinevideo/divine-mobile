@@ -4,6 +4,7 @@ linter:
     - prefer_asserts_in_initializer_lists
     - prefer_conditional_assignment
     - prefer_const_constructors_in_immutables
+    - prefer_contains
     - unnecessary_await_in_return
     - unnecessary_const
     - unnecessary_constructor_name
