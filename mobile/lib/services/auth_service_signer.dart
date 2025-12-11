@@ -81,12 +81,12 @@ class AuthServiceSigner implements NostrSigner {
   @override
   Future<String?> nip44Encrypt(String pubkey, String plaintext) async {
     try {
-      return _keyContainer.withPrivateKey<Future<String?>>(
-        (privateKeyHex) async {
-          final conversationKey = NIP44V2.shareSecret(privateKeyHex, pubkey);
-          return NIP44V2.encrypt(plaintext, conversationKey);
-        },
-      );
+      return _keyContainer.withPrivateKey<Future<String?>>((
+        privateKeyHex,
+      ) async {
+        final conversationKey = NIP44V2.shareSecret(privateKeyHex, pubkey);
+        return NIP44V2.encrypt(plaintext, conversationKey);
+      });
     } on Exception catch (e) {
       Log.error(
         'NIP-44 encryption failed: $e',
@@ -100,12 +100,12 @@ class AuthServiceSigner implements NostrSigner {
   @override
   Future<String?> nip44Decrypt(String pubkey, String ciphertext) async {
     try {
-      return _keyContainer.withPrivateKey<Future<String?>>(
-        (privateKeyHex) async {
-          final sealKey = NIP44V2.shareSecret(privateKeyHex, pubkey);
-          return NIP44V2.decrypt(ciphertext, sealKey);
-        },
-      );
+      return _keyContainer.withPrivateKey<Future<String?>>((
+        privateKeyHex,
+      ) async {
+        final sealKey = NIP44V2.shareSecret(privateKeyHex, pubkey);
+        return NIP44V2.decrypt(ciphertext, sealKey);
+      });
     } on Exception catch (e) {
       Log.error(
         'NIP-44 decryption failed: $e',

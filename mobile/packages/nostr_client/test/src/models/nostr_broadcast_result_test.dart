@@ -108,10 +108,13 @@ void main() {
           },
         );
 
-        expect(result.failedRelays, containsAll([
-          'wss://relay2.example.com',
-          'wss://relay3.example.com',
-        ]));
+        expect(
+          result.failedRelays,
+          containsAll([
+            'wss://relay2.example.com',
+            'wss://relay3.example.com',
+          ]),
+        );
         expect(result.failedRelays.length, equals(2));
       });
 
@@ -145,10 +148,13 @@ void main() {
           errors: {},
         );
 
-        expect(result.successfulRelays, containsAll([
-          'wss://relay1.example.com',
-          'wss://relay2.example.com',
-        ]));
+        expect(
+          result.successfulRelays,
+          containsAll([
+            'wss://relay1.example.com',
+            'wss://relay2.example.com',
+          ]),
+        );
         expect(result.successfulRelays.length, equals(2));
       });
 

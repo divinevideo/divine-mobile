@@ -150,22 +150,22 @@ class NostrClient {
     // Apply limit to filters if specified
     final adjustedFilters = limit != null
         ? filters
-            .map(
-              (f) => Filter(
-                ids: f.ids,
-                authors: f.authors,
-                kinds: f.kinds,
-                since: f.since,
-                until: f.until,
-                limit: limit,
-                search: f.search,
-                e: f.e,
-                p: f.p,
-                t: f.t,
-                d: f.d,
-              ),
-            )
-            .toList()
+              .map(
+                (f) => Filter(
+                  ids: f.ids,
+                  authors: f.authors,
+                  kinds: f.kinds,
+                  since: f.since,
+                  until: f.until,
+                  limit: limit,
+                  search: f.search,
+                  e: f.e,
+                  p: f.p,
+                  t: f.t,
+                  d: f.d,
+                ),
+              )
+              .toList()
         : filters;
     return queryEvents(adjustedFilters);
   }
@@ -437,7 +437,8 @@ class NostrClient {
     final statuses = relayStatuses;
     final result = <String, bool>{};
     for (final entry in statuses.entries) {
-      result[entry.key] = entry.value.state == RelayState.connected ||
+      result[entry.key] =
+          entry.value.state == RelayState.connected ||
           entry.value.state == RelayState.authenticated;
     }
     return result;

@@ -34,8 +34,9 @@ void main() {
 
     when(() => mockKeyContainer.publicKeyHex).thenReturn(testPublicKey);
     when(() => mockKeyContainer.isDisposed).thenReturn(false);
-    when(() => mockAuthService.authStateStream)
-        .thenAnswer((_) => authStateController.stream);
+    when(
+      () => mockAuthService.authStateStream,
+    ).thenAnswer((_) => authStateController.stream);
   });
 
   tearDown(() async {
@@ -44,8 +45,9 @@ void main() {
 
   group('NostrClientProvider', () {
     test('returns null when not authenticated', () async {
-      when(() => mockAuthService.authState)
-          .thenReturn(AuthState.unauthenticated);
+      when(
+        () => mockAuthService.authState,
+      ).thenReturn(AuthState.unauthenticated);
       when(() => mockAuthService.isAuthenticated).thenReturn(false);
 
       final container = ProviderContainer(
@@ -63,10 +65,12 @@ void main() {
     test('creates client when authenticated with key container', () async {
       when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
-      when(() => mockAuthService.currentKeyContainer)
-          .thenReturn(mockKeyContainer);
-      when(() => mockKeyContainer.withPrivateKey<dynamic>(any()))
-          .thenAnswer((invocation) {
+      when(
+        () => mockAuthService.currentKeyContainer,
+      ).thenReturn(mockKeyContainer);
+      when(() => mockKeyContainer.withPrivateKey<dynamic>(any())).thenAnswer((
+        invocation,
+      ) {
         final callback =
             invocation.positionalArguments[0] as dynamic Function(String);
         return callback(
@@ -105,8 +109,9 @@ void main() {
     });
 
     test('returns null during authenticating state', () async {
-      when(() => mockAuthService.authState)
-          .thenReturn(AuthState.authenticating);
+      when(
+        () => mockAuthService.authState,
+      ).thenReturn(AuthState.authenticating);
       when(() => mockAuthService.isAuthenticated).thenReturn(false);
 
       final container = ProviderContainer(

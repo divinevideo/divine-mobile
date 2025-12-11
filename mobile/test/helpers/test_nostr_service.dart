@@ -46,11 +46,11 @@ class TestNostrService implements NostrClient {
 
   @override
   Map<String, RelayConnectionStatus> get relayStatuses => {
-        'wss://test.relay': RelayConnectionStatus(
-          url: 'wss://test.relay',
-          state: _isConnected ? RelayState.connected : RelayState.disconnected,
-        ),
-      };
+    'wss://test.relay': RelayConnectionStatus(
+      url: 'wss://test.relay',
+      state: _isConnected ? RelayState.connected : RelayState.disconnected,
+    ),
+  };
 
   @override
   String get primaryRelay => 'wss://test.relay';
@@ -216,7 +216,11 @@ class TestNostrService implements NostrClient {
   }
 
   @override
-  Future<Event?> fetchEventById(String eventId, {String? relayUrl, bool useGateway = false}) async {
+  Future<Event?> fetchEventById(
+    String eventId, {
+    String? relayUrl,
+    bool useGateway = false,
+  }) async {
     // Search through stored events for matching ID
     for (final event in _storedEvents) {
       if (event.id == eventId) {

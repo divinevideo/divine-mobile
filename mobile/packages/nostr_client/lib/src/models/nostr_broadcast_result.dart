@@ -44,8 +44,7 @@ class NostrBroadcastResult {
   bool get isCompleteSuccess => successCount == totalRelays;
 
   /// Success rate as a fraction (0.0 to 1.0)
-  double get successRate =>
-      totalRelays > 0 ? successCount / totalRelays : 0.0;
+  double get successRate => totalRelays > 0 ? successCount / totalRelays : 0.0;
 
   /// List of relay URLs that failed to receive the event
   List<String> get failedRelays =>

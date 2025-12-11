@@ -36,10 +36,7 @@ class NostrServiceFactory {
     );
 
     // Create the NostrClient
-    return NostrClient(
-      config: config,
-      relayManagerConfig: relayManagerConfig,
-    );
+    return NostrClient(config: config, relayManagerConfig: relayManagerConfig);
   }
 
   /// Initialize the created client

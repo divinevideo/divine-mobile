@@ -339,7 +339,6 @@ class ContentDeletionService {
   /// Check if this is the user's own content
   bool _isUserOwnContent(VideoEvent video) {
     final userPubkey = _nostrService.publicKey;
-    if (userPubkey == null) return false;
 
     return video.pubkey == userPubkey;
   }

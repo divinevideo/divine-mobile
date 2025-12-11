@@ -111,7 +111,7 @@ class NotificationServiceEnhanced {
       return;
     }
 
-    final userPubkey = _nostrService!.publicKey!;
+    final userPubkey = _nostrService!.publicKey;
 
     // Subscribe to reactions (likes) on user's videos
     _subscribeToReactions(userPubkey);

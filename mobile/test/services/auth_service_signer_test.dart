@@ -40,22 +40,21 @@ void main() {
 
       test('throws when container is disposed', () async {
         when(() => mockKeyContainer.isDisposed).thenReturn(true);
-        when(() => mockKeyContainer.publicKeyHex)
-            .thenThrow(const SecureKeyException('Container has been disposed'));
+        when(
+          () => mockKeyContainer.publicKeyHex,
+        ).thenThrow(const SecureKeyException('Container has been disposed'));
 
         final signer = AuthServiceSigner(mockKeyContainer);
 
-        expect(
-          () => signer.getPublicKey(),
-          throwsA(isA<SecureKeyException>()),
-        );
+        expect(() => signer.getPublicKey(), throwsA(isA<SecureKeyException>()));
       });
     });
 
     group('signEvent', () {
       test('signs event using secure container', () async {
-        when(() => mockKeyContainer.withPrivateKey<Event>(any()))
-            .thenAnswer((invocation) {
+        when(() => mockKeyContainer.withPrivateKey<Event>(any())).thenAnswer((
+          invocation,
+        ) {
           final callback =
               invocation.positionalArguments[0] as Event Function(String);
           return callback(testPrivateKey);
@@ -77,8 +76,9 @@ void main() {
       });
 
       test('returns null when signing fails', () async {
-        when(() => mockKeyContainer.withPrivateKey<Event>(any()))
-            .thenThrow(const SecureKeyException('Failed to sign'));
+        when(
+          () => mockKeyContainer.withPrivateKey<Event>(any()),
+        ).thenThrow(const SecureKeyException('Failed to sign'));
 
         final signer = AuthServiceSigner(mockKeyContainer);
         final event = Event(
@@ -106,8 +106,9 @@ void main() {
 
     group('encrypt/decrypt (NIP-04)', () {
       test('encrypt encrypts plaintext', () async {
-        when(() => mockKeyContainer.withPrivateKey<String?>(any()))
-            .thenAnswer((invocation) {
+        when(() => mockKeyContainer.withPrivateKey<String?>(any())).thenAnswer((
+          invocation,
+        ) {
           final callback =
               invocation.positionalArguments[0] as String? Function(String);
           return callback(testPrivateKey);
@@ -123,8 +124,9 @@ void main() {
       });
 
       test('decrypt decrypts ciphertext', () async {
-        when(() => mockKeyContainer.withPrivateKey<String?>(any()))
-            .thenAnswer((invocation) {
+        when(() => mockKeyContainer.withPrivateKey<String?>(any())).thenAnswer((
+          invocation,
+        ) {
           final callback =
               invocation.positionalArguments[0] as String? Function(String);
           return callback(testPrivateKey);
@@ -146,10 +148,12 @@ void main() {
 
     group('nip44Encrypt/nip44Decrypt', () {
       test('nip44Encrypt encrypts plaintext', () async {
-        when(() => mockKeyContainer.withPrivateKey<Future<String?>>(any()))
-            .thenAnswer((invocation) {
-          final callback = invocation.positionalArguments[0]
-              as Future<String?> Function(String);
+        when(
+          () => mockKeyContainer.withPrivateKey<Future<String?>>(any()),
+        ).thenAnswer((invocation) {
+          final callback =
+              invocation.positionalArguments[0]
+                  as Future<String?> Function(String);
           return callback(testPrivateKey);
         });
 
@@ -163,10 +167,12 @@ void main() {
       });
 
       test('nip44Decrypt decrypts ciphertext', () async {
-        when(() => mockKeyContainer.withPrivateKey<Future<String?>>(any()))
-            .thenAnswer((invocation) {
-          final callback = invocation.positionalArguments[0]
-              as Future<String?> Function(String);
+        when(
+          () => mockKeyContainer.withPrivateKey<Future<String?>>(any()),
+        ).thenAnswer((invocation) {
+          final callback =
+              invocation.positionalArguments[0]
+                  as Future<String?> Function(String);
           return callback(testPrivateKey);
         });
 
@@ -178,8 +184,7 @@ void main() {
         expect(ciphertext, isNotNull);
 
         // Then decrypt
-        final decrypted =
-            await signer.nip44Decrypt(testPublicKey, ciphertext!);
+        final decrypted = await signer.nip44Decrypt(testPublicKey, ciphertext!);
 
         expect(decrypted, equals(plaintext));
       });

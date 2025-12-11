@@ -22,7 +22,6 @@ import 'package:openvine/services/curation_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/user_list_service.dart';
 import 'package:openvine/providers/analytics_providers.dart';
-import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/mute_service.dart';
 import 'package:openvine/services/nip05_service.dart';

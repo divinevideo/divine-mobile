@@ -1511,10 +1511,13 @@ void main() {
     });
 
     group('state properties', () {
-      test('isInitialized returns false when relay manager not initialized', () {
-        when(() => mockRelayManager.isInitialized).thenReturn(false);
-        expect(client.isInitialized, isFalse);
-      });
+      test(
+        'isInitialized returns false when relay manager not initialized',
+        () {
+          when(() => mockRelayManager.isInitialized).thenReturn(false);
+          expect(client.isInitialized, isFalse);
+        },
+      );
 
       test('isInitialized returns true when relay manager is initialized', () {
         when(() => mockRelayManager.isInitialized).thenReturn(true);
@@ -1559,8 +1562,9 @@ void main() {
           'wss://relay1.example.com',
           'wss://relay2.example.com',
         ];
-        when(() => mockRelayManager.configuredRelays)
-            .thenReturn(expectedRelays);
+        when(
+          () => mockRelayManager.configuredRelays,
+        ).thenReturn(expectedRelays);
 
         expect(client.relays, equals(expectedRelays));
         verify(() => mockRelayManager.configuredRelays).called(1);
@@ -1575,7 +1579,9 @@ void main() {
           'wss://relay2.example.com',
         ];
 
-        when(() => mockRelayManager.connectedRelays).thenReturn(connectedRelays);
+        when(
+          () => mockRelayManager.connectedRelays,
+        ).thenReturn(connectedRelays);
         when(
           () => mockNostr.sendEvent(
             any(),
@@ -1599,7 +1605,9 @@ void main() {
           'wss://relay2.example.com',
         ];
 
-        when(() => mockRelayManager.connectedRelays).thenReturn(connectedRelays);
+        when(
+          () => mockRelayManager.connectedRelays,
+        ).thenReturn(connectedRelays);
         when(
           () => mockNostr.sendEvent(
             any(),
@@ -1642,7 +1650,9 @@ void main() {
           'wss://relay2.example.com',
         ];
 
-        when(() => mockRelayManager.connectedRelays).thenReturn(connectedRelays);
+        when(
+          () => mockRelayManager.connectedRelays,
+        ).thenReturn(connectedRelays);
         when(
           () => mockNostr.sendEvent(
             any(),
@@ -1665,7 +1675,9 @@ void main() {
         final event = _createTestEvent();
         final connectedRelays = ['wss://relay1.example.com'];
 
-        when(() => mockRelayManager.connectedRelays).thenReturn(connectedRelays);
+        when(
+          () => mockRelayManager.connectedRelays,
+        ).thenReturn(connectedRelays);
         when(
           () => mockNostr.sendEvent(
             any(),
@@ -1702,8 +1714,7 @@ void main() {
           ),
         ).thenAnswer((invocation) {
           // Get the callback and call it with test event
-          final callback =
-              invocation.positionalArguments[1] as Function(Event);
+          final callback = invocation.positionalArguments[1] as Function(Event);
           Future.microtask(() => callback(videoEvent));
           return 'search-sub-id';
         });
@@ -1717,7 +1728,7 @@ void main() {
 
       test('passes correct filter parameters', () async {
         const query = 'test';
-        final since = DateTime(2024, 1, 1);
+        final since = DateTime(2024);
         final until = DateTime(2024, 12, 31);
         const limit = 50;
 
@@ -1779,8 +1790,7 @@ void main() {
             sendAfterAuth: any(named: 'sendAfterAuth'),
           ),
         ).thenAnswer((invocation) {
-          final callback =
-              invocation.positionalArguments[1] as Function(Event);
+          final callback = invocation.positionalArguments[1] as Function(Event);
           Future.microtask(() => callback(profileEvent));
           return 'search-sub-id';
         });
