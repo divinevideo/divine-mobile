@@ -53,7 +53,7 @@ void main() {
           // Manually fetch profile after import (app-specific behavior)
           if (mockNostrService.isInitialized && keyManager.publicKey != null) {
             await mockProfileService.fetchProfile(
-              keyManager.publicKey!,
+              keyManager.publicKey,
               forceRefresh: false,
             );
           }
@@ -125,7 +125,7 @@ void main() {
         try {
           if (mockNostrService.isInitialized && keyManager.publicKey != null) {
             await mockProfileService.fetchProfile(
-              keyManager.publicKey!,
+              keyManager.publicKey,
               forceRefresh: false,
             );
           }
@@ -181,7 +181,7 @@ void main() {
           // Manually fetch profile after import (app-specific behavior)
           if (mockNostrService.isInitialized && keyManager.publicKey != null) {
             await mockProfileService.fetchProfile(
-              keyManager.publicKey!,
+              keyManager.publicKey,
               forceRefresh: false,
             );
           }
@@ -211,7 +211,7 @@ void main() {
           // Manually fetch profile after import (app-specific behavior)
           if (mockNostrService.isInitialized && keyManager.publicKey != null) {
             await mockProfileService.fetchProfile(
-              keyManager.publicKey!,
+              keyManager.publicKey,
               forceRefresh: false,
             );
           }
@@ -241,7 +241,7 @@ void main() {
         // Manually fetch profile after import (app-specific behavior)
         if (mockNostrService.isInitialized && keyManager.publicKey != null) {
           await mockProfileService.fetchProfile(
-            keyManager.publicKey!,
+            keyManager.publicKey,
             forceRefresh: false,
           );
         }

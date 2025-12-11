@@ -317,7 +317,7 @@ void main() {
       final dataStates = states.where((s) => s.hasValue).toList();
       expect(dataStates.isNotEmpty, isTrue);
       expect(
-        dataStates.last.value!,
+        dataStates.last.value,
         isEmpty,
         reason: 'Should emit empty when not on explore tab',
       );

@@ -89,8 +89,8 @@ Future<String> createTestCacheDatabase(
   // Insert test cache entries
   for (final entry in cacheEntries) {
     await database.insert('cacheObject', {
-      'key': entry['key']!,
-      'relativePath': entry['relativePath']!,
+      'key': entry['key'],
+      'relativePath': entry['relativePath'],
       'validTill': DateTime.now()
           .add(const Duration(days: 30))
           .millisecondsSinceEpoch,

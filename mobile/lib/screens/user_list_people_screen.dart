@@ -280,7 +280,7 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
               startingVideo: videos[_activeVideoIndex!],
               videoList: videos,
               contextTitle: widget.userList.name,
-              startingIndex: _activeVideoIndex!,
+              startingIndex: _activeVideoIndex,
               useLocalActiveState:
                   true, // Use local state since not using URL routing
             ),
