@@ -35,3 +35,4 @@ linter:
     - unnecessary_overrides
     - unnecessary_parenthesis
     - unnecessary_raw_strings
+    - unnecessary_statements
