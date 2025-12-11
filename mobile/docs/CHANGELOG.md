@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Profile Edit Navigation Crash (2025-12-11)
+
+#### Bug Fixes
+- **Fixed black screen of death when saving profile edits** - Navigation crash occurred when the edit-profile route became the root route
+  - Changed from Flutter Navigator to GoRouter's `context.pop()` for consistency
+  - Added `context.canPop()` check before attempting to pop
+  - If can't pop (route is root), gracefully navigates to home with `context.go('/')` instead of crashing
+
+#### Technical Details
+- Modified `lib/screens/profile_setup_screen.dart`:
+  - Success path (line ~1165): Use GoRouter `context.canPop()` and `context.pop()` with fallback to `context.go('/')`
+  - Error path (line ~1212): Same defensive navigation pattern
+
 ### Fixed - macOS Segment Recording and Upload (2025-12-01)
 
 #### Bug Fixes
