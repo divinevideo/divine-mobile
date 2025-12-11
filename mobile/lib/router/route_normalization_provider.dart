@@ -34,6 +34,4 @@ final routeNormalizationProvider = Provider<void>((ref) {
   // Attach listener and ensure cleanup on dispose
   router.routerDelegate.addListener(listener);
   ref.onDispose(() => router.routerDelegate.removeListener(listener));
-
-  return null;
 });

@@ -3,6 +3,7 @@ linter:
     - always_put_required_named_parameters_first
     - avoid_final_parameters
     - avoid_js_rounded_ints
+    - avoid_returning_null_for_void
     - annotate_overrides
     - directives_ordering
     - prefer_collection_literals
