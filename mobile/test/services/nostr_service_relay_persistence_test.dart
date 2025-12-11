@@ -155,29 +155,26 @@ void main() {
       await service.dispose();
     });
 
-    test(
-      'addRelay should return true when relay is already configured',
-      () async {
-        // Arrange: Set up service with a relay already configured
-        const relay = 'wss://relay.divine.video';
-        SharedPreferences.setMockInitialValues({});
+    test('addRelay should return true when relay is already configured', () async {
+      // Arrange: Set up service with a relay already configured
+      const relay = 'wss://relay.divine.video';
+      SharedPreferences.setMockInitialValues({});
 
-        final service = NostrService(keyManager);
-        await service.initialize(customRelays: [relay]);
+      final service = NostrService(keyManager);
+      await service.initialize(customRelays: [relay]);
 
-        // Verify relay is in the config
-        expect(service.relays, contains(relay));
+      // Verify relay is in the config
+      expect(service.relays, contains(relay));
 
-        // Act: Try to add the same relay again
-        final result = await service.addRelay(relay);
+      // Act: Try to add the same relay again
+      final result = await service.addRelay(relay);
 
-        // Assert: Should return true (not false) because the relay IS configured
-        // This is important for the "Restore Default Relay" button to show success
-        expect(result, isTrue);
+      // Assert: Should return true (not false) because the relay IS configured
+      // This is important for the "Restore Default Relay" button to show success
+      expect(result, isTrue);
 
-        await service.dispose();
-      },
-    );
+      await service.dispose();
+    });
 
     test(
       'should clear old relay3.openvine.co from storage during migration',

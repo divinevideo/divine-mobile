@@ -33,8 +33,11 @@ void main() {
 
         // Verify streaming hash matches buffered hash
         final bufferedHash = HashUtil.sha256Hash(testBytes);
-        expect(fileHash, equals(bufferedHash),
-            reason: 'Streaming hash should match buffered hash');
+        expect(
+          fileHash,
+          equals(bufferedHash),
+          reason: 'Streaming hash should match buffered hash',
+        );
         print('✅ Streaming hash matches buffered hash');
 
         // Create auth event (simplified - without real signing)
@@ -88,8 +91,11 @@ void main() {
 
         // Verify response
         if (response.statusCode == 200 || response.statusCode == 201) {
-          expect(response.data, isA<Map>(),
-              reason: 'Response should be JSON object');
+          expect(
+            response.data,
+            isA<Map>(),
+            reason: 'Response should be JSON object',
+          );
 
           final data = response.data as Map;
           print('✅ Upload successful!');
@@ -99,25 +105,35 @@ void main() {
           print('   Type: ${data['type']}');
 
           // Verify SHA256 matches
-          expect(data['sha256'], equals(fileHash),
-              reason: 'Server SHA256 should match client calculated hash');
+          expect(
+            data['sha256'],
+            equals(fileHash),
+            reason: 'Server SHA256 should match client calculated hash',
+          );
         } else if (response.statusCode == 401) {
           print('⚠️  Authentication failed (expected with dummy keys)');
           print('   This is OK - it confirms auth is being checked');
           print('   Response: ${response.data}');
 
           // Auth failure is expected with dummy keys, but proves streaming works
-          expect(response.statusCode, equals(401),
-              reason: 'Should get 401 with invalid auth (proves endpoint exists)');
+          expect(
+            response.statusCode,
+            equals(401),
+            reason: 'Should get 401 with invalid auth (proves endpoint exists)',
+          );
         } else if (response.statusCode == 409) {
           print('✅ File already exists (409) - this is success!');
           print('   Hash: $fileHash');
 
-          expect(response.statusCode, equals(409),
-              reason: '409 means file exists - upload succeeded previously');
+          expect(
+            response.statusCode,
+            equals(409),
+            reason: '409 means file exists - upload succeeded previously',
+          );
         } else {
           fail(
-              'Unexpected status code: ${response.statusCode}\nResponse: ${response.data}');
+            'Unexpected status code: ${response.statusCode}\nResponse: ${response.data}',
+          );
         }
       } finally {
         // Clean up
@@ -142,8 +158,11 @@ void main() {
         print('📍 Upload endpoint response: ${response.statusCode}');
         print('   Data: ${response.data}');
 
-        expect(response.statusCode, lessThan(500),
-            reason: 'Upload endpoint should be accessible');
+        expect(
+          response.statusCode,
+          lessThan(500),
+          reason: 'Upload endpoint should be accessible',
+        );
       } catch (e) {
         print('⚠️  Error checking endpoint: $e');
         rethrow;
@@ -167,10 +186,16 @@ void main() {
         print('📊 Buffered hash:  $bufferedHash');
         print('📊 File size: ${streamResult.size} bytes');
 
-        expect(streamResult.hash, equals(bufferedHash),
-            reason: 'Streaming and buffered hashes must match');
-        expect(streamResult.size, equals(testBytes.length),
-            reason: 'File size should be accurate');
+        expect(
+          streamResult.hash,
+          equals(bufferedHash),
+          reason: 'Streaming and buffered hashes must match',
+        );
+        expect(
+          streamResult.size,
+          equals(testBytes.length),
+          reason: 'File size should be accurate',
+        );
 
         print('✅ Streaming hash computation verified!');
       } finally {

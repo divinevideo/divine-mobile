@@ -199,9 +199,9 @@ void main() {
           () => mockFile.readAsBytesSync(),
         ).thenReturn(Uint8List.fromList([1, 2, 3, 4, 5]));
         when(() => mockFile.lengthSync()).thenReturn(5);
-        when(() => mockFile.openRead()).thenAnswer(
-          (_) => Stream.value(Uint8List.fromList([1, 2, 3, 4, 5])),
-        );
+        when(
+          () => mockFile.openRead(),
+        ).thenAnswer((_) => Stream.value(Uint8List.fromList([1, 2, 3, 4, 5])));
 
         // Mock Dio response
         final mockResponse = MockResponse();

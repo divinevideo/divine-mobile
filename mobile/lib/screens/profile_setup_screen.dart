@@ -1210,7 +1210,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               if (mounted) {
                 // Use GoRouter navigation for consistency with the rest of the app
                 if (context.canPop()) {
-                  context.pop(false); // Return false to indicate partial success
+                  context.pop(
+                    false,
+                  ); // Return false to indicate partial success
                 } else {
                   // If we can't pop, go home
                   context.go('/');
