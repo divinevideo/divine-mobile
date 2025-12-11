@@ -19,6 +19,7 @@ linter:
     - eol_at_end_of_file
     - noop_primitive_operations
     - prefer_adjacent_string_concatenation
+    - prefer_asserts_in_initializer_lists
     - prefer_collection_literals
     - prefer_const_constructors
     - prefer_const_declarations
