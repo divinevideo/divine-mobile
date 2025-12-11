@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:meta/meta.dart';
+import 'package:nostr_client/src/event_cache.dart';
 import 'package:nostr_client/src/models/models.dart';
 import 'package:nostr_client/src/relay_manager.dart';
 import 'package:nostr_gateway/nostr_gateway.dart';
@@ -24,13 +25,18 @@ class NostrClient {
   /// Creates a new NostrClient instance with the given configuration.
   /// Requires a [RelayManager] for relay management, persistence, and
   /// status tracking.
+  ///
+  /// Optional [eventCache] enables local caching of events for faster
+  /// queries and auto-caching of subscription events.
   NostrClient({
     required NostrClientConfig config,
     required RelayManager relayManager,
     GatewayClient? gatewayClient,
+    EventCache? eventCache,
   }) : _nostr = _createNostr(config),
        _relayManager = relayManager,
-       _gatewayClient = gatewayClient;
+       _gatewayClient = gatewayClient,
+       _eventCache = eventCache;
 
   /// Creates a NostrClient with injected dependencies for testing
   @visibleForTesting
@@ -38,9 +44,11 @@ class NostrClient {
     required Nostr nostr,
     required RelayManager relayManager,
     GatewayClient? gatewayClient,
+    EventCache? eventCache,
   }) : _nostr = nostr,
        _relayManager = relayManager,
-       _gatewayClient = gatewayClient;
+       _gatewayClient = gatewayClient,
+       _eventCache = eventCache;
 
   static Nostr _createNostr(NostrClientConfig config) {
     RelayBase tempRelayGenerator(String url) => RelayBase(
@@ -61,6 +69,7 @@ class NostrClient {
   final Nostr _nostr;
   final GatewayClient? _gatewayClient;
   final RelayManager _relayManager;
+  final EventCache? _eventCache;
 
   /// Public key of the client
   String get publicKey => _nostr.publicKey;
@@ -224,6 +233,20 @@ class NostrClient {
     final actualId = _nostr.subscribe(
       filtersJson,
       (event) {
+        // Auto-cache incoming events if cache is enabled
+        // Fire-and-forget to not block event emission
+        final cache = _eventCache;
+        if (cache != null) {
+          try {
+            // ignore: discarded_futures, intentional fire-and-forget caching
+            cache.cacheEvent(event).catchError((_) {
+              // Ignore async cache errors - don't disrupt the event stream
+            });
+          } on Exception {
+            // Ignore sync cache errors - don't disrupt the event stream
+          }
+        }
+
         if (!controller.isClosed) {
           controller.add(event);
         }

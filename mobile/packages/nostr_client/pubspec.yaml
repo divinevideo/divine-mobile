@@ -10,6 +10,8 @@ resolution: workspace
 
 dependencies:
   crypto: ^3.0.7
+  db_client:
+    path: ../db_client
   equatable: ^2.0.7
   meta: ^1.17.0
   nostr_gateway:

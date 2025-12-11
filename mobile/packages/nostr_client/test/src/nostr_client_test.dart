@@ -12,6 +12,8 @@ class _MockGatewayClient extends Mock implements GatewayClient {}
 
 class _MockRelayManager extends Mock implements RelayManager {}
 
+class _MockEventCache extends Mock implements EventCache {}
+
 class _FakeEvent extends Fake implements Event {}
 
 class _FakeFilter extends Fake implements Filter {}
@@ -1507,6 +1509,163 @@ void main() {
         final result = await client.queryEvents(filters);
 
         expect(result, equals(events));
+      });
+    });
+
+    group('EventCache integration', () {
+      late _MockEventCache mockEventCache;
+      late NostrClient clientWithCache;
+
+      setUp(() {
+        mockEventCache = _MockEventCache();
+        clientWithCache = NostrClient.forTesting(
+          nostr: mockNostr,
+          relayManager: mockRelayManager,
+          gatewayClient: mockGatewayClient,
+          eventCache: mockEventCache,
+        );
+      });
+
+      tearDown(() {
+        reset(mockEventCache);
+      });
+
+      group('constructor with eventCache', () {
+        test('creates client with eventCache', () {
+          expect(clientWithCache.publicKey, equals(testPublicKey));
+        });
+
+        test('creates client without eventCache (backward compat)', () {
+          final clientWithoutCache = NostrClient.forTesting(
+            nostr: mockNostr,
+            relayManager: mockRelayManager,
+          );
+          expect(clientWithoutCache.publicKey, equals(testPublicKey));
+        });
+      });
+
+      group('subscribe with auto-caching', () {
+        test('caches events received from subscription', () async {
+          final filters = [
+            Filter(kinds: [EventKind.textNote], limit: 10),
+          ];
+          final event = _createTestEvent();
+
+          // Capture the callback passed to nostr.subscribe
+          void Function(Event)? capturedCallback;
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+            ),
+          ).thenAnswer((invocation) {
+            capturedCallback =
+                invocation.positionalArguments[1] as void Function(Event);
+            return 'test-sub-id';
+          });
+
+          when(() => mockEventCache.cacheEvent(any())).thenAnswer((_) async {});
+
+          // Subscribe to get the stream
+          final stream = clientWithCache.subscribe(filters);
+          final receivedEvents = <Event>[];
+          final subscription = stream.listen(receivedEvents.add);
+
+          // Simulate receiving an event from nostr_sdk
+          capturedCallback?.call(event);
+
+          // Give async operations time to complete
+          await Future<void>.delayed(Duration.zero);
+
+          expect(receivedEvents, contains(event));
+          verify(() => mockEventCache.cacheEvent(event)).called(1);
+
+          await subscription.cancel();
+        });
+
+        test('does not cache when eventCache is null', () async {
+          final filters = [
+            Filter(kinds: [EventKind.textNote], limit: 10),
+          ];
+          final event = _createTestEvent();
+
+          // Use client without cache
+          void Function(Event)? capturedCallback;
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+            ),
+          ).thenAnswer((invocation) {
+            capturedCallback =
+                invocation.positionalArguments[1] as void Function(Event);
+            return 'test-sub-id';
+          });
+
+          final stream = client.subscribe(filters);
+          final receivedEvents = <Event>[];
+          final subscription = stream.listen(receivedEvents.add);
+
+          capturedCallback?.call(event);
+          await Future<void>.delayed(Duration.zero);
+
+          expect(receivedEvents, contains(event));
+          // Should not interact with cache since client has no eventCache
+          verifyNever(() => mockEventCache.cacheEvent(any()));
+
+          await subscription.cancel();
+        });
+
+        test('still emits event even if caching fails', () async {
+          final filters = [
+            Filter(kinds: [EventKind.textNote], limit: 10),
+          ];
+          final event = _createTestEvent();
+
+          void Function(Event)? capturedCallback;
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+            ),
+          ).thenAnswer((invocation) {
+            capturedCallback =
+                invocation.positionalArguments[1] as void Function(Event);
+            return 'test-sub-id';
+          });
+
+          // Make caching fail
+          when(
+            () => mockEventCache.cacheEvent(any()),
+          ).thenThrow(Exception('Cache error'));
+
+          final stream = clientWithCache.subscribe(filters);
+          final receivedEvents = <Event>[];
+          final subscription = stream.listen(receivedEvents.add);
+
+          capturedCallback?.call(event);
+          await Future<void>.delayed(Duration.zero);
+
+          // Event should still be emitted even if caching failed
+          expect(receivedEvents, contains(event));
+
+          await subscription.cancel();
+        });
       });
     });
   });
