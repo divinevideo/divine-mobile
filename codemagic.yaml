@@ -112,7 +112,7 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       flutter: 3.38.3
-      xcode: latest
+      xcode: 16.1  # Pinned to avoid FFmpeg Kit linker issues with newer Xcode
       cocoapods: default
       groups:
         - zendesk_credentials
