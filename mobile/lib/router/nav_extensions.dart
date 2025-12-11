@@ -26,6 +26,8 @@ extension NavX on BuildContext {
     ),
   );
 
+  void goMyProfile() => goProfile('me');
+
   void goProfile(String identifier, [int index = 0]) {
     debugPrint('🧭 goProfile called: identifier=$identifier, index=$index');
 
