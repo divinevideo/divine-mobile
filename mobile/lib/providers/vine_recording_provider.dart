@@ -12,12 +12,12 @@ import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/vine_recording_controller.dart'
     show
-        VineRecordingController,
-        VineRecordingState,
-        RecordingSegment,
-        MacOSCameraInterface,
         CameraPlatformInterface,
-        MobileCameraInterface;
+        MacOSCameraInterface,
+        MobileCameraInterface,
+        RecordingSegment,
+        VineRecordingController,
+        VineRecordingState;
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';

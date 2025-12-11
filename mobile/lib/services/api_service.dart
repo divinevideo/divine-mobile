@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart'; // ABOUTME: Handles ready events polli
 import 'package:http/http.dart' as http;
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/services/network/rate_limiter.dart'
-    show RateLimiter, RateLimitStatus;
+    show RateLimitStatus, RateLimiter;
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 

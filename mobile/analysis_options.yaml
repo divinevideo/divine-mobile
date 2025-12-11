@@ -10,6 +10,7 @@ linter:
     - avoid_unnecessary_containers
     - avoid_void_async
     - await_only_futures
+    - combinators_ordering
     - directives_ordering
     - prefer_collection_literals
     - prefer_const_constructors

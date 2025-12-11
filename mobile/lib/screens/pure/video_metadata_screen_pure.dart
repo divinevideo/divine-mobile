@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart' as vine show AspectRatio;
 import 'package:openvine/models/pending_upload.dart'
-    show UploadStatus, PendingUpload;
+    show PendingUpload, UploadStatus;
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
