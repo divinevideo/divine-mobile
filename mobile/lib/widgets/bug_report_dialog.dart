@@ -151,7 +151,7 @@ class _BugReportDialogState extends State<BugReportDialog> {
               if (_isSubmitting)
                 const Center(
                   child: Padding(
-                    padding: EdgeInsets.all(16.0),
+                    padding: EdgeInsets.all(16),
                     child: CircularProgressIndicator(
                       color: VineTheme.vineGreen,
                     ),

@@ -43,7 +43,7 @@ class _VideoMetadataScreenPureState
   int _expirationHours = 24;
   bool _isPublishing = false;
   String _publishingStatus = '';
-  double _uploadProgress = 0.0;
+  double _uploadProgress = 0;
   String? _currentUploadId;
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;

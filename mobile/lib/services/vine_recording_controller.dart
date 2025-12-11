@@ -77,9 +77,9 @@ class MobileCameraInterface extends CameraPlatformInterface {
   bool _operationInProgress = false;
 
   // Zoom support
-  double _minZoomLevel = 1.0;
-  double _maxZoomLevel = 1.0;
-  double _currentZoomLevel = 1.0;
+  double _minZoomLevel = 1;
+  double _maxZoomLevel = 1;
+  double _currentZoomLevel = 1;
 
   @override
   Future<void> initialize() async {
@@ -552,7 +552,7 @@ class MobileCameraInterface extends CameraPlatformInterface {
               valueColor: AlwaysStoppedAnimation<Color>(
                 Color(0xFF00B488),
               ), // Vine green
-              strokeWidth: 3.0,
+              strokeWidth: 3,
             ),
             SizedBox(height: 16),
             Text(
@@ -1283,7 +1283,7 @@ class VineRecordingController {
                 valueColor: AlwaysStoppedAnimation<Color>(
                   Color(0xFF00B488),
                 ), // Vine green
-                strokeWidth: 3.0,
+                strokeWidth: 3,
               ),
               SizedBox(height: 16),
               Text(

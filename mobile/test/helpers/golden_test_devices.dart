@@ -10,7 +10,7 @@ class GoldenTestDevices {
   static const iphoneSE = Device(
     name: 'iphone_se',
     size: Size(375, 667),
-    devicePixelRatio: 2.0,
+    devicePixelRatio: 2,
   );
 
   /// iPhone 11 - Standard phone
@@ -20,7 +20,7 @@ class GoldenTestDevices {
   static const iphone14ProMax = Device(
     name: 'iphone_14_pro_max',
     size: Size(430, 932),
-    devicePixelRatio: 3.0,
+    devicePixelRatio: 3,
   );
 
   /// iPad - Tablet portrait

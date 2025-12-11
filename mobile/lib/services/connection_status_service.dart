@@ -42,7 +42,7 @@ class ConnectionStatusService extends ChangeNotifier {
 
   /// Connection health as a percentage (0.0 to 1.0)
   double get connectionHealth {
-    if (_relayStatuses.isEmpty) return 0.0;
+    if (_relayStatuses.isEmpty) return 0;
     return connectedRelayCount / totalRelayCount;
   }
 

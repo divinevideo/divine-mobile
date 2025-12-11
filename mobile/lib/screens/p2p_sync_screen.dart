@@ -72,7 +72,7 @@ class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen>
     P2PActions actions,
   ) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -89,7 +89,7 @@ class _P2PSyncScreenState extends ConsumerState<P2PSyncScreen>
   Widget _buildStatusCard(BuildContext context, P2PSyncStatus status) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

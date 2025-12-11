@@ -26,7 +26,7 @@ void main() {
 
         const idleState = VineRecordingUIState(
           recordingState: VineRecordingState.idle,
-          progress: 0.0,
+          progress: 0,
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: true,
@@ -44,7 +44,7 @@ void main() {
       test('VineRecordingUIState isInitialized should work correctly', () {
         const idleState = VineRecordingUIState(
           recordingState: VineRecordingState.idle,
-          progress: 0.0,
+          progress: 0,
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: true,
@@ -57,7 +57,7 @@ void main() {
 
         const errorState = VineRecordingUIState(
           recordingState: VineRecordingState.error,
-          progress: 0.0,
+          progress: 0,
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: false,
@@ -70,7 +70,7 @@ void main() {
 
         const processingState = VineRecordingUIState(
           recordingState: VineRecordingState.processing,
-          progress: 1.0,
+          progress: 1,
           totalRecordedDuration: Duration(seconds: 6),
           remainingDuration: Duration.zero,
           canRecord: false,
@@ -89,7 +89,7 @@ void main() {
       test('VineRecordingUIState isError should work correctly', () {
         const errorState = VineRecordingUIState(
           recordingState: VineRecordingState.error,
-          progress: 0.0,
+          progress: 0,
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: false,
@@ -102,7 +102,7 @@ void main() {
 
         const idleState = VineRecordingUIState(
           recordingState: VineRecordingState.idle,
-          progress: 0.0,
+          progress: 0,
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: true,
@@ -137,7 +137,7 @@ void main() {
       test('VineRecordingUIState errorMessage should work correctly', () {
         const errorState = VineRecordingUIState(
           recordingState: VineRecordingState.error,
-          progress: 0.0,
+          progress: 0,
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: false,
@@ -150,7 +150,7 @@ void main() {
 
         const idleState = VineRecordingUIState(
           recordingState: VineRecordingState.idle,
-          progress: 0.0,
+          progress: 0,
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: true,

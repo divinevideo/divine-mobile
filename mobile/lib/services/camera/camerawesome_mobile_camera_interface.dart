@@ -68,7 +68,7 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
         _availableSensors.add(
           PhysicalCameraSensor(
             type: 'digital',
-            zoomFactor: 2.0,
+            zoomFactor: 2,
             deviceId: physicalCamera.deviceId, // Same device, digital zoom
             displayName: '2x',
             isDigital: true,
@@ -328,7 +328,7 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       // front/back camera switching with correct surface management
       await _cameraState!.switchCameraSensor(
         aspectRatio: CameraAspectRatios.ratio_16_9,
-        zoom: 0.0,
+        zoom: 0,
         // Internally in the CamerAwesome code a FlasMode.none is treated as "auto",
         // And no flash mode is allowed for front camera, so we set null when changing to
         // the front camera to ensure no errors occur.
@@ -444,7 +444,7 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
 
       // Reset zoom to 1x when switching physical sensors
       try {
-        await _cameraState!.sensorConfig.setZoom(0.0);
+        await _cameraState!.sensorConfig.setZoom(0);
       } catch (e) {
         Log.error(
           'Failed to reset zoom: $e',
@@ -522,7 +522,7 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
     if (_currentSensorIndex < _availableSensors.length) {
       return _availableSensors[_currentSensorIndex].zoomFactor;
     }
-    return 1.0;
+    return 1;
   }
 
   /// Stream of camera state changes

@@ -25,7 +25,7 @@ void main() {
       // Default circuit breaker behavior
       when(mockCircuitBreaker.allowRequests).thenReturn(true);
       when(mockCircuitBreaker.state).thenReturn(CircuitBreakerState.closed);
-      when(mockCircuitBreaker.failureRate).thenReturn(0.0);
+      when(mockCircuitBreaker.failureRate).thenReturn(0);
     });
 
     test('BlossomUploadService has uploadImage method', () {
@@ -84,7 +84,7 @@ void main() {
         // Simulate progress updates
         onProgress?.call(0.1);
         onProgress?.call(0.5);
-        onProgress?.call(1.0);
+        onProgress?.call(1);
 
         return const BlossomUploadResult(
           success: true,

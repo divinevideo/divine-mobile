@@ -93,7 +93,7 @@ class VideoProcessingService {
               category: LogCategory.video,
             );
 
-            onProgress?.call(1.0); // 100% complete
+            onProgress?.call(1); // 100% complete
 
             return VideoProcessingResult(
               success: true,

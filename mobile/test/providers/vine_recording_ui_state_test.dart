@@ -11,7 +11,7 @@ void main() {
     test('hasSegments should be false when no segments', () {
       const state = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
-        progress: 0.0,
+        progress: 0,
         totalRecordedDuration: Duration.zero,
         remainingDuration: Duration(seconds: 6),
         canRecord: true,
@@ -66,7 +66,7 @@ void main() {
 
       const idleState = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
-        progress: 0.0,
+        progress: 0,
         totalRecordedDuration: Duration.zero,
         remainingDuration: Duration(seconds: 6),
         canRecord: true,
@@ -141,7 +141,7 @@ void main() {
     test('canRecord should reflect ability to start recording', () {
       const canRecordState = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
-        progress: 0.0,
+        progress: 0,
         totalRecordedDuration: Duration.zero,
         remainingDuration: Duration(seconds: 6),
         canRecord: true,
@@ -154,7 +154,7 @@ void main() {
 
       const cannotRecordState = VineRecordingUIState(
         recordingState: VineRecordingState.recording,
-        progress: 1.0,
+        progress: 1,
         totalRecordedDuration: Duration(seconds: 6),
         remainingDuration: Duration.zero,
         canRecord: false,
@@ -173,7 +173,7 @@ void main() {
       final states = [
         const VineRecordingUIState(
           recordingState: VineRecordingState.idle,
-          progress: 0.0,
+          progress: 0,
           totalRecordedDuration: Duration.zero,
           remainingDuration: Duration(seconds: 6),
           canRecord: true,
@@ -197,7 +197,7 @@ void main() {
         ),
         const VineRecordingUIState(
           recordingState: VineRecordingState.completed,
-          progress: 1.0,
+          progress: 1,
           totalRecordedDuration: Duration(seconds: 6),
           remainingDuration: Duration.zero,
           canRecord: false,

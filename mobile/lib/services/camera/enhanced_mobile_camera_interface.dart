@@ -17,9 +17,9 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
   bool _isRecording = false;
 
   // Zoom and focus tracking
-  double _currentZoomLevel = 1.0;
-  double _minZoomLevel = 1.0;
-  double _maxZoomLevel = 1.0;
+  double _currentZoomLevel = 1;
+  double _minZoomLevel = 1;
+  double _maxZoomLevel = 1;
 
   // Flash mode tracking
   FlashMode _currentFlashMode = FlashMode.auto;
@@ -378,7 +378,7 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
               valueColor: AlwaysStoppedAnimation<Color>(
                 Color(0xFF00B488),
               ), // Vine green
-              strokeWidth: 3.0,
+              strokeWidth: 3,
             ),
             SizedBox(height: 16),
             Text(

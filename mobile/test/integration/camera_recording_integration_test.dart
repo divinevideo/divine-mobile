@@ -156,7 +156,7 @@ void main() {
         await controller.startRecording();
 
         // Apply zoom
-        await cameraInterface.setZoom(2.0);
+        await cameraInterface.setZoom(2);
         await tester.pump(const Duration(milliseconds: 500));
 
         // Set focus point

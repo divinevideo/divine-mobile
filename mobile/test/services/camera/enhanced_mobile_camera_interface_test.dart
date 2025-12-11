@@ -187,10 +187,10 @@ void main() {
         await cameraInterface.initialize();
 
         // Set various zoom levels
-        await cameraInterface.setZoom(1.0); // Min zoom
-        await cameraInterface.setZoom(2.0); // Mid zoom
+        await cameraInterface.setZoom(1); // Min zoom
+        await cameraInterface.setZoom(2); // Mid zoom
         await cameraInterface.setZoom(
-          5.0,
+          5,
         ); // High zoom (will be clamped to max)
 
         // Verify zoom operations complete without error
@@ -207,7 +207,7 @@ void main() {
 
         // Test extreme values - should be clamped
         await cameraInterface.setZoom(0.5); // Below min
-        await cameraInterface.setZoom(100.0); // Above max
+        await cameraInterface.setZoom(100); // Above max
 
         // Should complete without throwing
       });

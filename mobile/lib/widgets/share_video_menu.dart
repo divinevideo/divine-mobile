@@ -2596,7 +2596,7 @@ class _SelectBookmarkSetDialog extends StatelessWidget {
                   // List of existing bookmark sets
                   if (bookmarkSets.isEmpty)
                     const Padding(
-                      padding: EdgeInsets.all(16.0),
+                      padding: EdgeInsets.all(16),
                       child: Text(
                         'No bookmark sets yet. Create your first one!',
                         style: TextStyle(color: VineTheme.secondaryText),

@@ -94,7 +94,7 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
     if (_isLoading) {
       return const Center(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16),
           child: CircularProgressIndicator(color: VineTheme.vineGreen),
         ),
       );
@@ -103,7 +103,7 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
     if (_error != null) {
       return const Center(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -131,7 +131,7 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
     if (_relatedVideos.isEmpty) {
       return const Center(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -164,7 +164,7 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

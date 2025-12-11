@@ -84,7 +84,7 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
               urlIndex = 0;
               return Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(32.0),
+                  padding: const EdgeInsets.all(32),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

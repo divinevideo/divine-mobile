@@ -20,6 +20,7 @@ linter:
     - prefer_final_fields
     - prefer_final_in_for_each
     - prefer_final_locals
+    - prefer_int_literals
     - unnecessary_await_in_return
     - unnecessary_breaks
     - unnecessary_brace_in_string_interps

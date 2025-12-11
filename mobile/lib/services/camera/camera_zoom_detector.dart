@@ -101,7 +101,7 @@ class CameraZoomDetector {
           cameras.add(
             PhysicalCameraSensor(
               type: 'wide',
-              zoomFactor: 1.0,
+              zoomFactor: 1,
               deviceId: sensorData.wideAngle!.uid,
               displayName: sensorData.wideAngle!.name,
             ),
@@ -113,7 +113,7 @@ class CameraZoomDetector {
           cameras.add(
             PhysicalCameraSensor(
               type: 'telephoto',
-              zoomFactor: 3.0,
+              zoomFactor: 3,
               deviceId: sensorData.telephoto!.uid,
               displayName: sensorData.telephoto!.name,
             ),
@@ -134,7 +134,7 @@ class CameraZoomDetector {
             cameras.add(
               PhysicalCameraSensor(
                 type: 'front',
-                zoomFactor: 1.0,
+                zoomFactor: 1,
                 deviceId: frontCamera.name,
                 displayName: 'Front Camera',
               ),

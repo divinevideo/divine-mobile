@@ -101,7 +101,7 @@ class _TestCameraScreenState extends State<TestCameraScreen> {
         backgroundColor: Colors.black,
         body: Center(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: Text(
               _errorMessage!,
               style: const TextStyle(color: Colors.white, fontSize: 16),

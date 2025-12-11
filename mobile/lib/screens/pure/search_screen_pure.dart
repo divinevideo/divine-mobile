@@ -340,7 +340,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
         border: InputBorder.none,
         prefixIcon: _isSearching
             ? const Padding(
-                padding: EdgeInsets.all(12.0),
+                padding: EdgeInsets.all(12),
                 child: SizedBox(
                   width: 20,
                   height: 20,

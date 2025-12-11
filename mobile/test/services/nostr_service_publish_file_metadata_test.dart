@@ -143,7 +143,7 @@ void main() {
           altText: 'High resolution test video',
           summary: 'A summary of the video',
           durationMs: 60000,
-          fps: 60.0,
+          fps: 60,
           thumbnailUrl: 'https://example.com/thumb.jpg',
           originalHash:
               'a3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',

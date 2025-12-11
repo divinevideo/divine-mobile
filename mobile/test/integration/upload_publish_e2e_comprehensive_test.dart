@@ -523,7 +523,7 @@ void _configureMockBlossomService(MockBlossomUploadService mock) {
     final onProgress =
         invocation.namedArguments[#onProgress] as Function(double)?;
     onProgress?.call(0.5);
-    onProgress?.call(1.0);
+    onProgress?.call(1);
 
     return const BlossomUploadResult(
       success: true,

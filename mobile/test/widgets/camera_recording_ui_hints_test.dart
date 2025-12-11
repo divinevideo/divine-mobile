@@ -30,7 +30,7 @@ void main() {
       // Create a mock recording state
       const mockState = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
-        progress: 0.0,
+        progress: 0,
         totalRecordedDuration: Duration.zero,
         remainingDuration: Duration(seconds: 6),
         canRecord: true,

@@ -26,7 +26,7 @@ class UploadProgressDialog extends StatefulWidget {
 
 class _UploadProgressDialogState extends State<UploadProgressDialog> {
   Timer? _pollTimer;
-  double _progress = 0.0;
+  double _progress = 0;
   UploadStatus _status = UploadStatus.pending;
 
   @override
@@ -76,7 +76,7 @@ class _UploadProgressDialogState extends State<UploadProgressDialog> {
     return Dialog(
       backgroundColor: VineTheme.cardBackground,
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

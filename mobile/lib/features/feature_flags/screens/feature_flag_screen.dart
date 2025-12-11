@@ -44,8 +44,8 @@ class FeatureFlagScreen extends ConsumerWidget {
 
                 return Card(
                   margin: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 4.0,
+                    horizontal: 16,
+                    vertical: 4,
                   ),
                   child: ListTile(
                     title: Text(
@@ -66,7 +66,7 @@ class FeatureFlagScreen extends ConsumerWidget {
                       children: [
                         if (hasUserOverride)
                           Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
+                            padding: const EdgeInsets.only(right: 8),
                             child: Icon(
                               Icons.edit,
                               size: 16,

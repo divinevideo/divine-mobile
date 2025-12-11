@@ -115,7 +115,7 @@ void main() {
         title: 'Test Video',
         hashtags: ['test'],
         status: UploadStatus.readyToPublish, // Completed processing
-        uploadProgress: 1.0,
+        uploadProgress: 1,
         cdnUrl: 'https://stream.cloudflare.com/test.mp4',
         thumbnailPath: 'https://stream.cloudflare.com/thumb.jpg',
         createdAt: DateTime.now(),

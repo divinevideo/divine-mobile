@@ -429,7 +429,7 @@ class ReportAggregationService with NostrListServiceMixin {
         lastReportedAt: DateTime.now(),
         recommendation: const ModerationRecommendation(
           action: ModerationAction.allow,
-          confidence: 1.0,
+          confidence: 1,
           reason: 'No reports',
         ),
       );
@@ -484,7 +484,7 @@ class ReportAggregationService with NostrListServiceMixin {
     if (reasonCounts['csam'] != null && reasonCounts['csam']! >= 1) {
       return const ModerationRecommendation(
         action: ModerationAction.block,
-        confidence: 1.0,
+        confidence: 1,
         reason: 'CSAM reports',
       );
     }
@@ -518,7 +518,7 @@ class ReportAggregationService with NostrListServiceMixin {
     // Low reports - allow
     return const ModerationRecommendation(
       action: ModerationAction.allow,
-      confidence: 1.0,
+      confidence: 1,
       reason: 'Insufficient reports',
     );
   }

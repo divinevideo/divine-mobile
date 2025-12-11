@@ -212,11 +212,11 @@ void main() {
         );
 
         // Mute
-        await controller.setVolume(0.0);
+        await controller.setVolume(0);
         expect(controller.value.volume, 0.0, reason: 'Should be able to mute');
 
         // Max volume
-        await controller.setVolume(1.0);
+        await controller.setVolume(1);
         expect(
           controller.value.volume,
           1.0,

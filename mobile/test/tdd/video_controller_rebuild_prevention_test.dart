@@ -153,8 +153,8 @@ class _MockVideoController extends VideoPlayerController {
       isPlaying: isPlaying,
       isLooping: false,
       isBuffering: false,
-      volume: 1.0,
-      playbackSpeed: 1.0,
+      volume: 1,
+      playbackSpeed: 1,
     );
   }
 }

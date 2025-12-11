@@ -188,7 +188,7 @@ void main() {
                 videos: testVideos.take(2).toList(),
                 onVideoTap: (videos, index) {},
                 crossAxisCount: 3,
-                childAspectRatio: 1.0,
+                childAspectRatio: 1,
               ),
             ),
           ),

@@ -431,7 +431,7 @@ class BlossomUploadService {
           }
 
           if (url != null && url.isNotEmpty) {
-            onProgress?.call(1.0);
+            onProgress?.call(1);
 
             Log.info(
               '✅ Blossom upload successful',
@@ -503,7 +503,7 @@ class BlossomUploadService {
           category: LogCategory.video,
         );
 
-        onProgress?.call(1.0);
+        onProgress?.call(1);
 
         return BlossomUploadResult(
           success: true,
@@ -753,7 +753,7 @@ class BlossomUploadService {
         // Add appropriate file extension based on MIME type
         final extension = _getFileExtensionFromMimeType(mimeType);
         final existingUrl = 'https://cdn.divine.video/$fileHash$extension';
-        onProgress?.call(1.0);
+        onProgress?.call(1);
 
         return BlossomUploadResult(
           success: true,
@@ -797,7 +797,7 @@ class BlossomUploadService {
               );
             }
 
-            onProgress?.call(1.0);
+            onProgress?.call(1);
 
             Log.info(
               '  URL: $correctedUrl',
@@ -1033,7 +1033,7 @@ class BlossomUploadService {
           final cdnUrl = urlRaw?.toString();
 
           if (cdnUrl != null && cdnUrl.isNotEmpty) {
-            onProgress?.call(1.0);
+            onProgress?.call(1);
 
             Log.info(
               '✅ Bug report upload successful',
@@ -1070,7 +1070,7 @@ class BlossomUploadService {
           category: LogCategory.system,
         );
 
-        onProgress?.call(1.0);
+        onProgress?.call(1);
         return existingUrl;
       }
 

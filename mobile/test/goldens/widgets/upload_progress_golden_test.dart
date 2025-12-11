@@ -51,7 +51,7 @@ void main() {
       localVideoPath: '/path/to/video.mp4',
       nostrPubkey: 'test_pubkey_123',
       status: UploadStatus.processing,
-      uploadProgress: 1.0,
+      uploadProgress: 1,
       createdAt: DateTime.now().subtract(const Duration(minutes: 10)),
       title: 'Processing Video',
     );
@@ -61,7 +61,7 @@ void main() {
       localVideoPath: '/path/to/video.mp4',
       nostrPubkey: 'test_pubkey_123',
       status: UploadStatus.published,
-      uploadProgress: 1.0,
+      uploadProgress: 1,
       createdAt: DateTime.now().subtract(const Duration(hours: 2)),
       title: 'Published Video',
     );
@@ -71,7 +71,7 @@ void main() {
       localVideoPath: '/path/to/video.mp4',
       nostrPubkey: 'test_pubkey_123',
       status: UploadStatus.pending,
-      uploadProgress: 0.0,
+      uploadProgress: 0,
       createdAt: DateTime.now(),
       title: 'Queued for Upload',
     );

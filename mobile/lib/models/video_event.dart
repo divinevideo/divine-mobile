@@ -696,7 +696,7 @@ class VideoEvent {
     final reposts = event.originalReposts ?? 0;
 
     // Calculate weighted score
-    double score = 0.0;
+    double score = 0;
     score += loops * 1.0; // Base weight for views/loops
     score += comments * 3.0; // Comments show high engagement
     score += likes * 2.0; // Likes show appreciation

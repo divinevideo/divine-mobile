@@ -823,7 +823,7 @@ class UploadManager {
           );
         }
 
-        _updateUploadProgress(upload.id, 1.0);
+        _updateUploadProgress(upload.id, 1);
       }
 
       // Store thumbnail URL in upload for later use
@@ -2274,7 +2274,7 @@ Upload Timeout Failure:
           // Update upload to ready state
           final readyUpload = currentUpload.copyWith(
             status: UploadStatus.readyToPublish,
-            uploadProgress: 1.0,
+            uploadProgress: 1,
             completedAt: DateTime.now(),
           );
           await _updateUpload(readyUpload);

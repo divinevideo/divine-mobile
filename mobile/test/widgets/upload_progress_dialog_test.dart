@@ -150,7 +150,7 @@ void main() {
         // Simulate upload completion by updating mock upload
         mockManager.mockUpload = mockUpload.copyWith(
           status: UploadStatus.readyToPublish,
-          uploadProgress: 1.0,
+          uploadProgress: 1,
         );
 
         // Wait for polling cycle to detect completion
