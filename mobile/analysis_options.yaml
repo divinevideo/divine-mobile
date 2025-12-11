@@ -22,4 +22,5 @@ linter:
     - unnecessary_await_in_return
     - unnecessary_breaks
     - unnecessary_brace_in_string_interps
+    - unnecessary_const
     - use_colored_box
