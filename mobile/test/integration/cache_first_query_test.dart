@@ -18,7 +18,7 @@ class MockNostrServiceWithDelay implements INostrService {
   final StreamController<Event> _eventController =
       StreamController<Event>.broadcast();
   final List<String> _eventDeliveryOrder = []; // Track when events arrive
-  bool _isInitialized = true;
+  final bool _isInitialized = true;
   bool _eoseCalled = false;
 
   @override

@@ -5,4 +5,5 @@ linter:
     - prefer_collection_literals
     - prefer_const_constructors
     - prefer_const_declarations
+    - prefer_final_fields
     - unnecessary_breaks

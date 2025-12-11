@@ -18,7 +18,7 @@ class MockNostrService implements INostrService {
   final StreamController<Event> _eventController =
       StreamController<Event>.broadcast();
   final List<Filter> _subscriptionFilters = [];
-  bool _isInitialized = true;
+  final bool _isInitialized = true;
 
   @override
   bool get isInitialized => _isInitialized;

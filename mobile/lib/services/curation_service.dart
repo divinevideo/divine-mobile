@@ -57,7 +57,7 @@ class CurationService {
   // Divine Team curation state
   bool _hasFetchedEditorsList =
       false; // Legacy name, now tracks Divine Team fetch
-  List<VideoEvent> _editorPicksVideoCache =
+  final List<VideoEvent> _editorPicksVideoCache =
       []; // Dedicated cache for Divine Team videos
 
   /// Current curation sets
