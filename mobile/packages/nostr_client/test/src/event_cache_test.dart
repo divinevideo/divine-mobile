@@ -1,5 +1,5 @@
 // ABOUTME: Tests for EventCache wrapper class.
-// ABOUTME: Verifies caching, staleness checks, and NIP-01 replaceable handling.
+// ABOUTME: Verifies caching and NIP-01 replaceable event handling.
 
 import 'dart:io';
 
@@ -222,28 +222,6 @@ void main() {
 
         expect(cached, isEmpty);
       });
-    });
-
-    group('isStale', () {
-      test('returns false for immutable events (kind 1)', () async {
-        final note = createEvent();
-        await eventCache.cacheEvent(note);
-
-        final isStale = eventCache.isStale(note);
-        expect(isStale, isFalse);
-      });
-
-      test('returns false for fresh replaceable events', () async {
-        final profile = createEvent(kind: 0);
-        await eventCache.cacheEvent(profile);
-
-        // Immediately after caching, should not be stale
-        final isStale = eventCache.isStale(profile);
-        expect(isStale, isFalse);
-      });
-
-      // Note: Testing actual staleness would require mocking time
-      // or waiting, which we avoid per project guidelines
     });
 
     group('clearAll', () {

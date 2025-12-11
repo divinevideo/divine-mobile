@@ -1,5 +1,5 @@
 // ABOUTME: Caches Nostr events locally for fast queries.
-// ABOUTME: Wraps db_client with TTL-based staleness and filter-based lookups.
+// ABOUTME: Wraps db_client with filter-based lookups and NIP-01 handling.
 
 import 'dart:convert';
 
@@ -10,10 +10,13 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 /// Caches Nostr events locally for fast queries.
 ///
 /// Wraps [AppDbClient] and provides:
-/// - Cache-first queries with freshness checks
+/// - Cache-first queries for instant results
 /// - Auto-caching of subscription events
-/// - TTL-based staleness per event kind
 /// - NIP-01 replaceable event handling (via db_client)
+///
+/// The cache always returns the latest version of replaceable events
+/// (kind 0, 3, 10000-19999, 30000-39999) since db_client handles
+/// the replacement logic at write time.
 ///
 /// Usage:
 /// ```dart
@@ -24,11 +27,6 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 ///
 /// // Query cache first
 /// final cached = await cache.getCachedEvents(filter);
-///
-/// // Check staleness for replaceable events
-/// if (!cache.isStale(profile)) {
-///   return profile;
-/// }
 /// ```
 /// {@endtemplate}
 class EventCache {
@@ -36,19 +34,6 @@ class EventCache {
   EventCache(this._dbClient);
 
   final AppDbClient _dbClient;
-
-  /// TTL per event kind for staleness checks.
-  ///
-  /// Events with TTL are considered stale after the duration passes.
-  /// Events without TTL (null) are never considered stale.
-  static const _ttlByKind = <int, Duration>{
-    0: Duration(hours: 1), // profiles
-    3: Duration(hours: 1), // contacts
-    10002: Duration(hours: 1), // relay list
-  };
-
-  /// Default TTL for parameterized replaceable events (30000-39999).
-  static const _parameterizedReplaceableTtl = Duration(hours: 1);
 
   // ---------------------------------------------------------------------------
   // Cache Operations
@@ -166,53 +151,6 @@ class EventCache {
 
     // No supported filter criteria
     return [];
-  }
-
-  // ---------------------------------------------------------------------------
-  // Staleness Checks
-  // ---------------------------------------------------------------------------
-
-  /// Check if a cached event is stale based on kind-specific TTL.
-  ///
-  /// Returns `false` for:
-  /// - Immutable events (kind 1, 7, etc.) - never stale
-  /// - Fresh replaceable events within TTL
-  ///
-  /// Returns `true` for:
-  /// - Replaceable events older than their TTL
-  ///
-  /// Note: This method uses the event's createdAt as a proxy for cache time.
-  /// For more accurate staleness, consider tracking actual cache timestamps.
-  bool isStale(Event event) {
-    final ttl = _getTtlForKind(event.kind);
-    if (ttl == null) return false; // No TTL = never stale
-
-    // Use current time vs event creation as proxy for staleness
-    // In a production system, we'd track actual cache insertion time
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final age = Duration(seconds: now - event.createdAt);
-    return age > ttl;
-  }
-
-  /// Get TTL for a specific event kind.
-  Duration? _getTtlForKind(int kind) {
-    // Check explicit TTL first
-    if (_ttlByKind.containsKey(kind)) {
-      return _ttlByKind[kind];
-    }
-
-    // Parameterized replaceable events (30000-39999) have default TTL
-    if (EventKind.isParameterizedReplaceable(kind)) {
-      return _parameterizedReplaceableTtl;
-    }
-
-    // Regular replaceable events (10000-19999) have default TTL
-    if (EventKind.isReplaceable(kind) && kind >= 10000) {
-      return const Duration(hours: 1);
-    }
-
-    // Immutable events have no TTL
-    return null;
   }
 
   // ---------------------------------------------------------------------------
