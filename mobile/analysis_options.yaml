@@ -28,3 +28,4 @@ linter:
     - unnecessary_late
     - use_colored_box
     - unnecessary_new
+    - unnecessary_null_aware_assignments
