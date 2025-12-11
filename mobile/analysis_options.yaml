@@ -6,6 +6,7 @@ linter:
     - missing_code_block_language_in_doc_comment
     - no_adjacent_strings_in_list
     - no_duplicate_case_values
+    - no_leading_underscores_for_library_prefixes
     - prefer_adjacent_string_concatenation
     - prefer_asserts_in_initializer_lists
     - prefer_conditional_assignment
