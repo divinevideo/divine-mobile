@@ -315,6 +315,12 @@ class NostrService implements INostrService {
         );
 
         for (final relayUrl in relaysToAdd) {
+          // Add to configured list BEFORE trying to connect
+          // This ensures the relay appears in UI even if connection is slow/hanging
+          if (!_configuredRelays.contains(relayUrl)) {
+            _configuredRelays.add(relayUrl);
+          }
+
           try {
             final connectStart = DateTime.now();
             Log.info(
@@ -326,7 +332,6 @@ class NostrService implements INostrService {
             await _embeddedRelay!.addExternalRelay(relayUrl);
 
             final connectDuration = DateTime.now().difference(connectStart);
-            _configuredRelays.add(relayUrl);
 
             // Check if the relay is actually connected
             final connectedRelays = _embeddedRelay!.connectedRelays;
@@ -1270,27 +1275,43 @@ class NostrService implements INostrService {
       name: 'NostrService',
     );
 
-    if (_configuredRelays.contains(relayUrl)) {
-      UnifiedLogger.warning(
-        '⚠️  Relay already in configuration: $relayUrl',
+    final alreadyConfigured = _configuredRelays.contains(relayUrl);
+
+    if (alreadyConfigured) {
+      UnifiedLogger.info(
+        '✅ Relay already in configuration: $relayUrl',
         name: 'NostrService',
       );
-      return false; // Already added
+
+      // Check if it's connected - if not, try to reconnect
+      final connectedRelays = _embeddedRelay?.connectedRelays ?? [];
+      if (!connectedRelays.contains(relayUrl)) {
+        UnifiedLogger.info(
+          '🔄 Relay configured but not connected, attempting reconnection...',
+          name: 'NostrService',
+        );
+      } else {
+        UnifiedLogger.info(
+          '✅ Relay already connected: $relayUrl',
+          name: 'NostrService',
+        );
+        return true; // Already configured and connected
+      }
+    } else {
+      // Add to configured list
+      _configuredRelays.add(relayUrl);
+      UnifiedLogger.info(
+        '✅ Added relay to configuration: $relayUrl',
+        name: 'NostrService',
+      );
+      UnifiedLogger.info(
+        '   New relay count: ${_configuredRelays.length}',
+        name: 'NostrService',
+      );
+
+      // Persist to SharedPreferences
+      await _saveRelayConfig(_configuredRelays);
     }
-
-    // Add to configured list even if embedded relay isn't ready
-    _configuredRelays.add(relayUrl);
-    UnifiedLogger.info(
-      '✅ Added relay to configuration: $relayUrl',
-      name: 'NostrService',
-    );
-    UnifiedLogger.info(
-      '   New relay count: ${_configuredRelays.length}',
-      name: 'NostrService',
-    );
-
-    // Persist to SharedPreferences
-    await _saveRelayConfig(_configuredRelays);
 
     // Try to connect if embedded relay is available
     if (_embeddedRelay != null) {

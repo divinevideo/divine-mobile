@@ -140,13 +140,9 @@ public class NativeCameraPlugin: NSObject, FlutterPlugin {
         print("✅ [NativeCamera] Capture session created successfully")
         
         captureSession.beginConfiguration()
-        
-        // Set session preset
-        if captureSession.canSetSessionPreset(.medium) {
-            captureSession.sessionPreset = .medium
-        }
-        
-        // Get default video device - simple approach that was working
+
+        // Get default video device first - we need it before setting preset
+        // because external cameras (like Sony ZV-E10) may not support all presets
         guard let videoDevice = AVCaptureDevice.default(for: .video) else {
             print("❌ [NativeCamera] No camera available")
 
@@ -175,15 +171,39 @@ public class NativeCameraPlugin: NSObject, FlutterPlugin {
         self.videoDevice = videoDevice
         
         do {
-            // Add video input
+            // Add video input FIRST, before setting preset
+            // External cameras (like Sony ZV-E10) may fail canAddInput if preset is set first
             videoInput = try AVCaptureDeviceInput(device: videoDevice)
             if let videoInput = videoInput, captureSession.canAddInput(videoInput) {
                 captureSession.addInput(videoInput)
                 print("✅ [NativeCamera] Video input added successfully")
             } else {
+                print("❌ [NativeCamera] canAddInput returned false for video input")
                 result(FlutterError(code: "INPUT_FAILED", message: "Failed to add video input", details: nil))
                 return
             }
+
+            // Now set session preset AFTER adding input - try high quality first
+            // Order: 1080p > 720p > high > medium
+            if captureSession.canSetSessionPreset(.hd1920x1080) {
+                captureSession.sessionPreset = .hd1920x1080
+                print("🎥 [NativeCamera] Using 1080p preset (1920x1080)")
+            } else if captureSession.canSetSessionPreset(.hd1280x720) {
+                captureSession.sessionPreset = .hd1280x720
+                print("🎥 [NativeCamera] Using 720p preset (1280x720)")
+            } else if captureSession.canSetSessionPreset(.high) {
+                captureSession.sessionPreset = .high
+                print("🎥 [NativeCamera] Using high preset")
+            } else if captureSession.canSetSessionPreset(.medium) {
+                captureSession.sessionPreset = .medium
+                print("⚠️ [NativeCamera] Falling back to medium preset - limited camera capabilities")
+            }
+
+            // Log the actual capture format dimensions
+            let format = videoDevice.activeFormat
+            let dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+            print("📐 [NativeCamera] Active format dimensions: \(dimensions.width)x\(dimensions.height)")
+            print("📐 [NativeCamera] Session preset: \(captureSession.sessionPreset.rawValue)")
 
             // Add audio input for recording with sound
             if let audioDevice = AVCaptureDevice.default(for: .audio) {
@@ -392,12 +412,15 @@ public class NativeCameraPlugin: NSObject, FlutterPlugin {
     }
     
     private func getAvailableCameras(result: @escaping FlutterResult) {
+        // Include both built-in and external cameras (like Sony ZV-E10, webcams, etc.)
         let devices = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera],
+            deviceTypes: [.builtInWideAngleCamera, .externalUnknown],
             mediaType: .video,
             position: .unspecified
         ).devices
-        
+
+        print("🔵 [NativeCamera] Found \(devices.count) cameras: \(devices.map { $0.localizedName })")
+
         let cameras = devices.enumerated().map { index, device in
             return [
                 "index": index,
@@ -405,7 +428,7 @@ public class NativeCameraPlugin: NSObject, FlutterPlugin {
                 "position": positionString(device.position)
             ]
         }
-        
+
         result(cameras)
     }
     
