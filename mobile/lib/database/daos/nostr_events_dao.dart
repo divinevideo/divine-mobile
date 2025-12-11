@@ -12,7 +12,7 @@ part 'nostr_events_dao.g.dart';
 @DriftAccessor(tables: [NostrEvents, VideoMetrics])
 class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     with _$NostrEventsDaoMixin {
-  NostrEventsDao(AppDatabase db) : super(db);
+  NostrEventsDao(super.db);
 
   /// Insert or replace event
   ///

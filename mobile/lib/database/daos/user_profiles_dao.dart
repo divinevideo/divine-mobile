@@ -12,7 +12,7 @@ part 'user_profiles_dao.g.dart';
 @DriftAccessor(tables: [UserProfiles])
 class UserProfilesDao extends DatabaseAccessor<AppDatabase>
     with _$UserProfilesDaoMixin {
-  UserProfilesDao(AppDatabase db) : super(db);
+  UserProfilesDao(super.db);
 
   /// Get single profile (one-time fetch)
   ///

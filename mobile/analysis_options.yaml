@@ -50,6 +50,7 @@ linter:
     - unrelated_type_equality_checks
     - use_function_type_syntax_for_parameters
     - use_key_in_widget_constructors
+    - use_super_parameters
     - use_string_in_part_of_directives
     - use_test_throws_matchers
     - use_to_and_as_if_applicable
