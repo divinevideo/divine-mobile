@@ -2,6 +2,7 @@ linter:
   rules:
     - prefer_adjacent_string_concatenation
     - prefer_asserts_in_initializer_lists
+    - prefer_conditional_assignment
     - unnecessary_await_in_return
     - unnecessary_const
     - unnecessary_constructor_name
