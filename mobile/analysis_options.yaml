@@ -7,6 +7,7 @@ linter:
     - annotate_overrides
     - avoid_type_to_string
     - avoid_types_as_parameter_names
+    - avoid_unnecessary_containers
     - directives_ordering
     - prefer_collection_literals
     - prefer_const_constructors
