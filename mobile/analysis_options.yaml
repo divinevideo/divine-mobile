@@ -1,5 +1,6 @@
 linter:
   rules:
+    - prefer_adjacent_string_concatenation
     - unnecessary_await_in_return
     - unnecessary_const
     - unnecessary_constructor_name
