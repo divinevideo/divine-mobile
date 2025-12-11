@@ -991,16 +991,21 @@ class _VideoMetadataScreenPureState
   }
 
   String _formatExpirationDuration() {
-    if (_expirationHours >= 87600)
+    if (_expirationHours >= 87600) {
       return '${(_expirationHours / 87600).round()} decade${_expirationHours >= 175200 ? 's' : ''}';
-    if (_expirationHours >= 8760)
+    }
+    if (_expirationHours >= 8760) {
       return '${(_expirationHours / 8760).round()} year${_expirationHours >= 17520 ? 's' : ''}';
-    if (_expirationHours >= 720)
+    }
+    if (_expirationHours >= 720) {
       return '${(_expirationHours / 720).round()} month${_expirationHours >= 1440 ? 's' : ''}';
-    if (_expirationHours >= 168)
+    }
+    if (_expirationHours >= 168) {
       return '${(_expirationHours / 168).round()} week${_expirationHours >= 336 ? 's' : ''}';
-    if (_expirationHours >= 24)
+    }
+    if (_expirationHours >= 24) {
       return '${(_expirationHours / 24).round()} day${_expirationHours >= 48 ? 's' : ''}';
+    }
     return '$_expirationHours hour${_expirationHours != 1 ? 's' : ''}';
   }
 

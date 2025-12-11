@@ -1031,30 +1031,34 @@ class VideoEvent {
     // Only reject URLs that are ACTUALLY from the dead vine.co domain
     if (urlLower.contains('//vine.co/') ||
         urlLower.contains('//www.vine.co/') ||
-        urlLower.startsWith('vine.co/'))
+        urlLower.startsWith('vine.co/')) {
       return -1;
+    }
 
     // POSTEL'S LAW: Deprioritize known broken URL patterns
     // The cdn.divine.video/*/manifest/video.m3u8 pattern is often broken
     // Prefer stream.divine.video HLS or direct MP4 files
     if (urlLower.contains('cdn.divine.video') &&
-        urlLower.contains('/manifest/'))
+        urlLower.contains('/manifest/')) {
       return 5;
+    }
 
     // ALWAYS prefer MP4 over HLS for short videos (6 seconds)
     // HLS adaptive bitrate is pointless for content this short
     // MP4 is simpler, faster (single file vs manifest + segments)
 
     // Direct MP4 from cdn.divine.video (blob storage) - highest priority
-    if (urlLower.contains('.mp4') && urlLower.contains('cdn.divine.video'))
+    if (urlLower.contains('.mp4') && urlLower.contains('cdn.divine.video')) {
       return 115;
+    }
 
     // Any other MP4 - still preferred
     if (urlLower.contains('.mp4')) return 110;
 
     // BunnyStream HLS (stream.divine.video) - reliable streaming
-    if (urlLower.contains('.m3u8') && urlLower.contains('stream.divine.video'))
+    if (urlLower.contains('.m3u8') && urlLower.contains('stream.divine.video')) {
       return 105;
+    }
 
     // Generic HLS fallback
     if (urlLower.contains('.m3u8') || urlLower.contains('hls')) return 100;

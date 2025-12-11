@@ -542,8 +542,9 @@ class _VideoLoadingSession {
     if (firstFrameReady != null) return VideoLoadingStage.preparingFirstFrame;
     if (videoInitStart != null) return VideoLoadingStage.loadingVideo;
     if (networkInitStart != null) return VideoLoadingStage.initializingNetwork;
-    if (controllerCreationStart != null)
+    if (controllerCreationStart != null) {
       return VideoLoadingStage.creatingController;
+    }
     return VideoLoadingStage.starting;
   }
 }

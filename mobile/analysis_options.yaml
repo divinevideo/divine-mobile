@@ -14,6 +14,7 @@ linter:
     - avoid_void_async
     - await_only_futures
     - combinators_ordering
+    - curly_braces_in_flow_control_structures
     - directives_ordering
     - eol_at_end_of_file
     - noop_primitive_operations
