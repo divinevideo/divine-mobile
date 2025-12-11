@@ -131,7 +131,7 @@ workflows:
       - *pod_install
       - *build_ios_simulator
     artifacts:
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - build/ios/iphonesimulator/Runner.app
       - /tmp/xcodebuild_logs/*.log
 
   android-build:
