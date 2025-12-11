@@ -2,13 +2,14 @@
 // ABOUTME: Verifies hashtag feed shows grid when embedded and list when standalone
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+
 import '../builders/test_video_event_builder.dart';
 
 class MockVideoEventService extends Mock implements VideoEventService {}

@@ -1,9 +1,9 @@
 // ABOUTME: Test that embedded relay can work WITHOUT WebSocket server
 // ABOUTME: Validates iOS local network permission is not needed
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
     as embedded;
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Embedded Relay WITHOUT WebSocket', () {

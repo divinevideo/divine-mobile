@@ -2,9 +2,9 @@
 // ABOUTME: Covers sort, int# filters, cursor, and factory constructors
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nostr_sdk/filter.dart';
 import 'package:models/models.dart'
     show DivineFilter, IntRangeFilter, SortConfig, SortDirection;
+import 'package:nostr_sdk/filter.dart';
 
 void main() {
   group('DivineFilter', () {

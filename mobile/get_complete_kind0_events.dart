@@ -3,7 +3,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:nostr_sdk/client_utils/keys.dart';
-import 'package:openvine/utils/unified_logger.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nostr.dart';
@@ -11,6 +10,7 @@ import 'package:nostr_sdk/relay/event_filter.dart';
 import 'package:nostr_sdk/relay/relay_base.dart';
 import 'package:nostr_sdk/relay/relay_status.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 void main() async {
   Log.info(

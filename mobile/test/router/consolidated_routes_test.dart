@@ -2,8 +2,8 @@
 // ABOUTME: Verifies single route handles both grid and feed modes without GlobalKey conflicts
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/route_utils.dart';
 

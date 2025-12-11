@@ -2,9 +2,10 @@
 // ABOUTME: Works on all platforms including iOS devices where shell scripts don't work
 
 import 'dart:io';
+
 import 'package:hive_ce/hive.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// Service to recover from corrupted app data and caches
 class CacheRecoveryService {

@@ -2,20 +2,20 @@
 // ABOUTME: Verifies tapping grid item navigates to correct video index and autoplays
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/models/video_event.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/user_profile.dart';
-import 'package:openvine/providers/app_lifecycle_provider.dart';
+import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/active_video_provider.dart';
+import 'package:openvine/providers/app_lifecycle_provider.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/profile_feed_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
+import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/state/video_feed_state.dart';
 import 'package:openvine/widgets/video_feed_item.dart';
-import 'package:openvine/services/auth_service.dart' hide UserProfile;
 
 // Mock auth service for testing
 class MockAuthService extends AuthService {

@@ -2,14 +2,15 @@
 // ABOUTME: Runs unit and integration tests with proper setup and reporting
 
 import 'dart:io';
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:camera/camera.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
+import 'integration/camera_recording_integration_test.dart' as integration_test;
 // Import all camera test files
 import 'services/camera/enhanced_mobile_camera_interface_test.dart'
     as enhanced_camera_test;
-import 'integration/camera_recording_integration_test.dart' as integration_test;
 
 void main() async {
   // Initialize Flutter test environment

@@ -3,10 +3,10 @@
 
 import 'dart:async';
 
+import 'package:models/models.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:models/models.dart';
 
 /// Result of broadcasting an event to relays
 class NostrBroadcastResult {

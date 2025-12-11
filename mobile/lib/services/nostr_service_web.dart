@@ -3,13 +3,14 @@
 
 import 'dart:async';
 import 'dart:convert';
+
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as sdk;
 import 'package:openvine/constants/app_constants.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/utils/unified_logger.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Web implementation of NostrService that connects directly to external relays
 /// Uses browser's WebSocket API instead of trying to run a local relay

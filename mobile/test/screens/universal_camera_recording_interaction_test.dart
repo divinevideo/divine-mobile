@@ -3,10 +3,10 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
+import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

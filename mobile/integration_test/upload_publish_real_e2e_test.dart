@@ -2,13 +2,15 @@
 // ABOUTME: Uses actual Blossom server, real Nostr relays, and real video file - NO MOCKS
 
 import 'dart:io';
-import 'package:integration_test/integration_test.dart';
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:integration_test/integration_test.dart';
 import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/providers/app_providers.dart';
+
 import '../test/helpers/real_integration_test_helper.dart';
 
 void main() {

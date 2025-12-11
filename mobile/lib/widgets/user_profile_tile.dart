@@ -1,13 +1,13 @@
 // ABOUTME: Reusable tile widget for displaying user profile information in lists
 // ABOUTME: Shows avatar, name, and follow button with tap handling for navigation
 
-import 'package:openvine/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/helpers/follow_actions_helper.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/optimistic_follow_provider.dart';
 import 'package:openvine/theme/vine_theme.dart';
-import 'package:openvine/helpers/follow_actions_helper.dart';
+import 'package:openvine/widgets/user_avatar.dart';
 
 class UserProfileTile extends ConsumerWidget {
   const UserProfileTile({

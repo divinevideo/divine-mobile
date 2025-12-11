@@ -2,8 +2,8 @@
 // ABOUTME: Ensures best video URL is selected from events with multiple imeta tags
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/models/video_event.dart';
 
 void main() {
   group('VideoEvent Multiple Imeta Parsing (Postel\'s Law)', () {

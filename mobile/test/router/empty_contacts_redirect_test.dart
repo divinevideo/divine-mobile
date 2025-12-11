@@ -2,8 +2,8 @@
 // ABOUTME: Verifies the cache checking logic for following list detection
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

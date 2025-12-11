@@ -2,14 +2,14 @@
 // ABOUTME: Tests the core FollowActionsHelper logic with minimal mocking
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mockito/mockito.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
-import 'package:openvine/services/social_service.dart';
-import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/providers/app_providers.dart';
+import 'package:mockito/mockito.dart';
 import 'package:openvine/helpers/follow_actions_helper.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/social_service.dart';
 
 import 'follow_actions_helper_simple_test.mocks.dart';
 

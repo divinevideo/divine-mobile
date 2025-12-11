@@ -2,13 +2,13 @@
 // ABOUTME: Ensures settings are part of main app flow with consistent scaffold structure
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/screens/settings_screen.dart';
-import 'package:openvine/screens/relay_settings_screen.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
 import 'package:openvine/screens/p2p_sync_screen.dart';
+import 'package:openvine/screens/relay_settings_screen.dart';
+import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
 void main() {

@@ -2,10 +2,11 @@
 // ABOUTME: Provides test setup, cleanup, and device capability detection
 
 import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 /// Helper class for camera integration tests
 class CameraTestHelper {

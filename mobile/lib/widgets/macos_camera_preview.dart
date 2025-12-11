@@ -1,9 +1,10 @@
 // ABOUTME: macOS camera preview widget using platform view for native camera display
 // ABOUTME: Renders the actual camera feed from AVFoundation through a platform view
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:io';
 
 /// Widget that displays the native macOS camera preview
 class MacOSCameraPreview extends StatefulWidget {

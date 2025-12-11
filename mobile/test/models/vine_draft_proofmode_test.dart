@@ -3,9 +3,10 @@
 
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/vine_draft.dart';
 import 'package:models/models.dart' show NativeProofData;
+import 'package:openvine/models/vine_draft.dart';
 
 void main() {
   group('VineDraft NativeProof serialization', () {

@@ -3,12 +3,14 @@
 
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_factory.dart';
+import 'package:openvine/services/nostr_service_interface.dart';
+
 import '../helpers/service_init_helper.dart';
 
 void main() {

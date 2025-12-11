@@ -2,10 +2,11 @@
 // ABOUTME: Tests Hive-based persistent caching of profile statistics
 
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
-import 'package:openvine/services/profile_stats_cache_service.dart';
 import 'package:openvine/providers/profile_stats_provider.dart';
+import 'package:openvine/services/profile_stats_cache_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

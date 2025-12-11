@@ -2,23 +2,24 @@
 // ABOUTME: Tests all functionality including content moderation, social sharing, and list management
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
-import 'package:openvine/widgets/share_video_menu.dart';
-import 'package:openvine/models/video_event.dart';
-import 'package:openvine/services/nostr_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/subscription_manager.dart';
+import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/content_moderation_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/nostr_service.dart';
 import 'package:openvine/services/social_service.dart';
+import 'package:openvine/services/subscription_manager.dart';
+import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:openvine/widgets/share_video_menu.dart';
 
 @GenerateNiceMocks([
   MockSpec<ContentDeletionService>(),

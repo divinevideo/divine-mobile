@@ -2,9 +2,10 @@
 // ABOUTME: Validates timing logs, breadcrumbs, and timeout detection
 
 import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
 import 'package:openvine/features/app/startup/startup_coordinator.dart';
 import 'package:openvine/features/app/startup/startup_phase.dart';
 import 'package:openvine/features/app/startup/startup_profiler.dart';

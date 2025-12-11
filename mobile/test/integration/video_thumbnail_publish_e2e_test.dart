@@ -3,14 +3,15 @@
 
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/upload_manager.dart';
-import 'package:nostr_sdk/event.dart';
-import 'package:crypto/crypto.dart';
+import 'package:openvine/services/video_event_publisher.dart';
 
 /// Mock implementation of INostrService for testing
 class MockNostrService implements INostrService {

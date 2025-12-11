@@ -2,8 +2,8 @@
 // ABOUTME: Tests preference persistence and retrieval in AgeVerificationService
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/services/age_verification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('AdultContentPreference', () {

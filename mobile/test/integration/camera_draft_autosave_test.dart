@@ -2,15 +2,16 @@
 // ABOUTME: Tests TDD fix for bug where recordings are lost when navigating away from camera
 
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/vine_recording_provider.dart';
+import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/vine_recording_controller.dart';
-import 'package:openvine/providers/vine_recording_provider.dart';
-import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

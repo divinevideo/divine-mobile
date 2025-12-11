@@ -5,17 +5,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import 'package:openvine/utils/unified_logger.dart';
-import 'package:openvine/widgets/vine_drawer.dart';
-import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/active_video_provider.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/utils/npub_hex.dart';
+import 'package:openvine/utils/unified_logger.dart';
+import 'package:openvine/widgets/vine_drawer.dart';
+
+import 'last_tab_position_provider.dart';
+import 'nav_extensions.dart';
 import 'page_context_provider.dart';
 import 'route_utils.dart';
-import 'nav_extensions.dart';
-import 'last_tab_position_provider.dart';
 
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.child, required this.currentIndex});

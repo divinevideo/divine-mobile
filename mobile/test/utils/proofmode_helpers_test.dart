@@ -3,8 +3,8 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/widgets/proofmode_badge.dart';
 import 'package:openvine/utils/proofmode_helpers.dart';
+import 'package:openvine/widgets/proofmode_badge.dart';
 
 void main() {
   group('ProofMode VideoEvent Extensions', () {

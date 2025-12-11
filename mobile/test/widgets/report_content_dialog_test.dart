@@ -2,18 +2,18 @@
 // ABOUTME: Tests Apple compliance requirements and user blocking functionality
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart' as nostr;
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/widgets/share_video_menu.dart';
-import 'package:openvine/services/content_reporting_service.dart';
-import 'package:openvine/services/content_blocklist_service.dart';
-import 'package:openvine/services/mute_service.dart';
-import 'package:openvine/services/content_moderation_service.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/services/content_blocklist_service.dart';
+import 'package:openvine/services/content_moderation_service.dart';
+import 'package:openvine/services/content_reporting_service.dart';
+import 'package:openvine/services/mute_service.dart';
+import 'package:openvine/widgets/share_video_menu.dart';
 
 import 'report_content_dialog_test.mocks.dart';
 

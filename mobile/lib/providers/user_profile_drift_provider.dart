@@ -1,9 +1,9 @@
 // ABOUTME: Drift-based UserProfile provider using reactive streams - replaces manual cache management
 // ABOUTME: Provides automatic reactivity via Drift's watchProfile() - when database changes, all watchers auto-update
 
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'user_profile_drift_provider.g.dart';
 

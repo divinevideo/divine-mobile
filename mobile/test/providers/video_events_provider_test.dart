@@ -1,5 +1,4 @@
 // ABOUTME: Tests for VideoEvents stream provider that manages Nostr subscriptions
-import 'package:openvine/utils/unified_logger.dart';
 // ABOUTME: Verifies reactive video event streaming and feed mode filtering
 
 import 'dart:async';
@@ -16,6 +15,7 @@ import 'package:openvine/providers/social_providers.dart' as social;
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/subscription_manager.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 // Mock classes
 class MockNostrService extends Mock implements INostrService {}

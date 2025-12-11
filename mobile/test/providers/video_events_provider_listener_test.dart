@@ -3,19 +3,19 @@
 
 import 'dart:async';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/providers/video_events_providers.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
+import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/state/seen_videos_state.dart';
 
 import 'video_events_provider_listener_test.mocks.dart';

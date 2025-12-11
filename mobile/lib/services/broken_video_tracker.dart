@@ -2,9 +2,10 @@
 // ABOUTME: Prevents repeated display of videos with non-functional URLs
 
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class BrokenVideoTracker {
   static const String _storageKey = 'broken_video_urls';

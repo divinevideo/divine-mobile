@@ -2,15 +2,16 @@
 // ABOUTME: Verifies that NativeProofData is correctly added as tags to video events
 
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:models/models.dart' show NativeProofData;
-import 'package:openvine/services/video_event_publisher.dart';
-import 'package:openvine/services/upload_manager.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:openvine/services/auth_service.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/models/pending_upload.dart';
+import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/upload_manager.dart';
+import 'package:openvine/services/video_event_publisher.dart';
 
 // Mock classes
 class MockAuthService extends Mock implements AuthService {}

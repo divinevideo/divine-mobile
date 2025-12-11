@@ -1,6 +1,7 @@
 // ABOUTME: Riverpod provider for content curation with reactive updates
 // ABOUTME: Manages only editor picks - trending/popular handled by infinite feeds
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/curation_set.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -9,7 +10,6 @@ import 'package:openvine/services/analytics_api_service.dart';
 import 'package:openvine/state/curation_state.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 part 'curation_providers.g.dart';
 

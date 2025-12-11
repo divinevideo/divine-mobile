@@ -2,8 +2,9 @@
 // Run with: dart run test/fixtures/generate_test_blurhash.dart
 
 import 'dart:io';
-import 'package:openvine/services/video_thumbnail_service.dart';
+
 import 'package:openvine/services/blurhash_service.dart';
+import 'package:openvine/services/video_thumbnail_service.dart';
 
 Future<void> main() async {
   final testVideoPath = 'test/fixtures/test_video.mp4';

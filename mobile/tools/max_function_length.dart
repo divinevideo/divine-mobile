@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart';
 // ABOUTME: Tool to check that Dart functions don't exceed maximum line count
 // ABOUTME: Enforces 30 line limit per function for better maintainability
 
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 
 const int maxFunctionLines = 30;
 const List<String> excludePatterns = [

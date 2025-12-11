@@ -1,5 +1,4 @@
 // ABOUTME: Test to verify the revine fix works correctly
-import 'package:openvine/utils/unified_logger.dart';
 // ABOUTME: Tests that enabling includeReposts allows Kind 6 events to be processed
 
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 import 'mocks/mock_nostr_service.dart';
 

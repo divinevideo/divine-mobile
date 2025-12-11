@@ -2,15 +2,15 @@
 // ABOUTME: Ensures hashtag videos are properly fetched and loading states work correctly
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mockito/mockito.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
-import 'package:openvine/screens/hashtag_feed_screen.dart';
-import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/hashtag_service.dart';
+import 'package:mockito/mockito.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/screens/hashtag_feed_screen.dart';
+import 'package:openvine/services/hashtag_service.dart';
+import 'package:openvine/services/video_event_service.dart';
 
 import 'hashtag_feed_screen_tdd_test.mocks.dart';
 

@@ -2,12 +2,13 @@
 // ABOUTME: Tests actual camera functionality with minimal mocking for better reliability
 
 import 'dart:io';
+
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:camera/camera.dart';
 import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -1,16 +1,16 @@
 // ABOUTME: Integration test for flutter_embedded_nostr_relay package
-import 'package:openvine/utils/unified_logger.dart';
 // ABOUTME: Verifies SQLite persistence and event storage functionality
 
 import 'package:flutter/services.dart';
+import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
+    as embedded;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/nostr_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
+import 'package:openvine/services/nostr_service.dart';
+import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
-    as embedded;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

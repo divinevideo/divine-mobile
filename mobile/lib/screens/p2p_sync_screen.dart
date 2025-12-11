@@ -2,11 +2,11 @@
 // ABOUTME: User interface for discovering, connecting to, and syncing with nearby divine devices
 
 import 'package:flutter/material.dart';
-import 'package:openvine/theme/vine_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/mixins/async_value_ui_helpers_mixin.dart';
 import 'package:openvine/providers/p2p_sync_provider.dart';
 import 'package:openvine/services/p2p_discovery_service.dart';
+import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/camera_fab.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
 

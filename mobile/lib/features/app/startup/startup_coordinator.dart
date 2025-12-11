@@ -1,8 +1,7 @@
 // ABOUTME: Coordinates app startup sequence with progressive initialization
-import 'package:flutter/foundation.dart'; // ABOUTME: Manages service dependencies and tracks performance metrics
-
 import 'dart:async';
 
+import 'package:flutter/foundation.dart'; // ABOUTME: Manages service dependencies and tracks performance metrics
 import 'package:openvine/features/app/startup/startup_metrics.dart';
 import 'package:openvine/features/app/startup/startup_phase.dart';
 import 'package:openvine/services/crash_reporting_service.dart';

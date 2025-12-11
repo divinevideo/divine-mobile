@@ -1,9 +1,9 @@
 // ABOUTME: Test camera screen using exact code from experimental camera app
 // ABOUTME: to verify camera orientation fix works
 
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:camera/camera.dart';
 
 class TestCameraScreen extends StatefulWidget {
   const TestCameraScreen({super.key});

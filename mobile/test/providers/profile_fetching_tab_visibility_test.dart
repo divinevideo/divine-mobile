@@ -1,8 +1,8 @@
 // ABOUTME: Tests for profile fetching behavior with tab visibility constraints
 // ABOUTME: Ensures profiles are only fetched when appropriate tabs are active
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/tab_visibility_provider.dart';
 
 void main() {

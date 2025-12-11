@@ -2,12 +2,13 @@
 // ABOUTME: Tests initialize() manifest loading and getCachedVideoSync() synchronous cache checks
 
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/video_cache_manager.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart' as sqflite_ffi;
 import 'package:sqflite/sqflite.dart' as sqflite;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart' as sqflite_ffi;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

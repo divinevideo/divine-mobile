@@ -1,23 +1,23 @@
 // ABOUTME: Integration test for /profile/me/ redirect with full app context
 // ABOUTME: Tests redirect logic + profile screen rendering in realistic scenario
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/router/app_router.dart';
-import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/app_lifecycle_provider.dart';
-import 'package:openvine/ui/overlay_policy.dart';
-import 'package:openvine/models/video_event.dart';
-import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:openvine/services/subscription_manager.dart';
-import 'package:openvine/services/video_prewarmer.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart'
     as ff;
+import 'package:openvine/models/video_event.dart';
+import 'package:openvine/providers/app_lifecycle_provider.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/app_router.dart';
 import 'package:openvine/services/analytics_service.dart';
+import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/subscription_manager.dart';
+import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/services/video_prewarmer.dart';
+import 'package:openvine/ui/overlay_policy.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

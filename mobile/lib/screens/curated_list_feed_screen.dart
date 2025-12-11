@@ -9,8 +9,8 @@ import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/pure/explore_video_screen_pure.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
-import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
+import 'package:openvine/widgets/composable_video_grid.dart';
 
 class CuratedListFeedScreen extends ConsumerStatefulWidget {
   const CuratedListFeedScreen({

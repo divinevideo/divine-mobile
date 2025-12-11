@@ -2,12 +2,12 @@
 // ABOUTME: Displays active uploads as a small overlay that can be tapped for details
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/pending_upload.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/upload_progress_indicator.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/providers/app_providers.dart';
 
 /// Global upload indicator that shows active uploads
 class GlobalUploadIndicator extends ConsumerWidget {

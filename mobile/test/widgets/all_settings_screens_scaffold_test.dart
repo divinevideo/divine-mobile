@@ -2,10 +2,10 @@
 // ABOUTME: Ensures all settings screens use consistent Vine theme (green AppBar, black background)
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/screens/relay_settings_screen.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
+import 'package:openvine/screens/relay_settings_screen.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
 void main() {

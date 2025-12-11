@@ -2,9 +2,10 @@
 // ABOUTME: Provides hashtag statistics, trending data, and filtered video queries
 
 import 'dart:async';
+
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/hashtag_cache_service.dart';
+import 'package:openvine/services/video_event_service.dart';
 
 /// Model for hashtag statistics
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod

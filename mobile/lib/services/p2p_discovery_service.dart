@@ -6,9 +6,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
     as embedded;
+import 'package:permission_handler/permission_handler.dart';
 
 /// P2P Discovery Service for finding and connecting to nearby divine users
 class P2PDiscoveryService extends ChangeNotifier {

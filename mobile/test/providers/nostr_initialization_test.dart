@@ -1,8 +1,8 @@
 // ABOUTME: Tests for NostrInitialization state notifier
 // ABOUTME: Ensures proper tracking of Nostr service initialization state
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 
 void main() {

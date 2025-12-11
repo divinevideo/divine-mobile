@@ -1,8 +1,8 @@
 // ABOUTME: Tests for tab visibility provider that manages active tab state
 // ABOUTME: Ensures proper tab switching and visibility state management
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/tab_visibility_provider.dart';
 
 void main() {

@@ -2,8 +2,8 @@
 // ABOUTME: Verifies default explore navigation is /explore (grid) not /explore/0 (feed)
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/router/app_router.dart';
 
 void main() {

@@ -2,6 +2,7 @@
 // ABOUTME: Provides Apple-compliant reporting, NIP-51 list management, and social sharing features
 
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,8 +18,8 @@ import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/unified_logger.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // TODO(any): Move this to a reusable widget

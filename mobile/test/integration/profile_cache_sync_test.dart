@@ -1,8 +1,8 @@
 // ABOUTME: Test that profile caches stay in sync across services
 // ABOUTME: Verifies AuthService.refreshCurrentProfile syncs with UserProfileService cache
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/user_profile.dart' as model;
 import 'package:openvine/providers/app_providers.dart';
 

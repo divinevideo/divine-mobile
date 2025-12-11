@@ -1,19 +1,20 @@
 // ABOUTME: Unit test verifying VideoMetadataScreenPure has correct service dependencies
 // ABOUTME: Ensures upload manager and auth service are properly wired
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/screens/pure/video_metadata_screen_pure.dart';
-import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
-import 'package:openvine/services/upload_manager.dart';
+import 'package:openvine/models/vine_draft.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/screens/pure/video_metadata_screen_pure.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
-import 'package:openvine/models/vine_draft.dart';
+import 'package:openvine/services/upload_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
 
 class MockUploadManager extends Mock implements UploadManager {}
 

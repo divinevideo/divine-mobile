@@ -1,11 +1,12 @@
 // ABOUTME: Integration test for macOS camera functionality - runs with actual camera hardware
 // ABOUTME: These tests need to run on a real macOS device with camera access
 
+import 'dart:io';
+
+import 'package:camera/camera.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:camera/camera.dart';
 import 'package:openvine/services/camera_service_impl.dart';
-import 'dart:io';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

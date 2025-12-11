@@ -1,8 +1,8 @@
 // ABOUTME: Edge case and error recovery tests for camera functionality
 // ABOUTME: Tests unusual scenarios, error conditions, and recovery mechanisms
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/vine_recording_controller.dart';
 
 void main() {

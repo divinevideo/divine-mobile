@@ -2,9 +2,10 @@
 // ABOUTME: Tests that Kind 0 events are fetched when video authors are discovered
 
 import 'dart:async';
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
     as embedded;
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 void main() {

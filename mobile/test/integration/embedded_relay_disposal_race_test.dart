@@ -2,9 +2,9 @@
 // ABOUTME: Tests that embedded relay properly handles disposal while external relay events are still arriving
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/nostr_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/filter.dart';
+import 'package:openvine/services/nostr_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 void main() {

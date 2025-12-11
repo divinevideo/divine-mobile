@@ -2,14 +2,16 @@
 // ABOUTME: Tests video creation → Blossom upload → Nostr publish → relay verification
 
 import 'dart:io';
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:nostr_sdk/client_utils/keys.dart' as keys;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:openvine/models/pending_upload.dart';
+import 'package:openvine/providers/app_providers.dart';
+
 import '../helpers/real_integration_test_helper.dart';
 
 void main() {

@@ -5,8 +5,8 @@ import 'dart:async';
 
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/profile_stats_cache_service.dart';
-import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/string_utils.dart';
+import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'profile_stats_provider.g.dart';

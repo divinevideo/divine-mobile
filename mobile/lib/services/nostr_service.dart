@@ -8,19 +8,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
     as embedded;
 import 'package:logging/logging.dart' as logging;
+import 'package:models/models.dart' show NIP94Metadata;
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart' as nostr;
 import 'package:openvine/constants/app_constants.dart';
-import 'package:models/models.dart' show NIP94Metadata;
 import 'package:openvine/services/crash_reporting_service.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/p2p_discovery_service.dart';
 import 'package:openvine/services/p2p_video_sync_service.dart';
 import 'package:openvine/services/relay_statistics_service.dart';
-import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/log_batcher.dart';
+import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Production implementation of NostrService using EmbeddedNostrRelay directly

@@ -3,12 +3,12 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:openvine/services/content_moderation_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:openvine/services/content_moderation_service.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nostr_sdk/event.dart';
 
 // Mock classes
 class MockNostrService extends Mock implements INostrService {}

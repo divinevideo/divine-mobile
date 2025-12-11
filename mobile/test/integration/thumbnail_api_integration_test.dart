@@ -1,10 +1,11 @@
 // ABOUTME: Integration tests for ThumbnailApiService that hit real OpenVine API servers
-import 'package:openvine/utils/unified_logger.dart';
 // ABOUTME: Tests actual network calls, server responses, and end-to-end thumbnail generation
 
 import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/thumbnail_api_service.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 void main() {
   group('ThumbnailApiService Integration Tests', () {

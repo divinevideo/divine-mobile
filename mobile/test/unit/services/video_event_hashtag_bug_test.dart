@@ -2,9 +2,9 @@
 // ABOUTME: Minimal reproduction case showing the deduplication issue
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/utils/unified_logger.dart';
-import 'package:nostr_sdk/event.dart';
 
 void main() {
   group('VideoEventService getVideoEventsByHashtags Bug', () {

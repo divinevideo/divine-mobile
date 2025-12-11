@@ -2,12 +2,12 @@
 // ABOUTME: Tests complete Nostr event flow to UI display with real Riverpod providers
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/screens/video_feed_screen.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/providers/video_feed_provider.dart';
+import 'package:openvine/screens/video_feed_screen.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

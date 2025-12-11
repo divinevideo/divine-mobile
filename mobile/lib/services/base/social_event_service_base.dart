@@ -2,8 +2,8 @@
 // ABOUTME: Handles event creation, signing, broadcasting, and caching with consistent error handling
 
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 
 /// Base class for services that broadcast and manage social events (reactions, reposts, etc)

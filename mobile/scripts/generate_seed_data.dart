@@ -3,8 +3,8 @@
 //
 // USAGE: dart run scripts/generate_seed_data.dart
 
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 
 const String editorPicksEventId =
     '5e2797304dda04159f8f9f6c36cc5d7f473abe3931f21d7b68fed1ab6a04db3a';

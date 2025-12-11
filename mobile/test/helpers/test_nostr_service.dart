@@ -2,12 +2,13 @@
 // ABOUTME: Provides minimal Nostr functionality without real relay connections
 
 import 'dart:async';
+
+import 'package:models/models.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/utils/nostr_timestamp.dart';
-import 'package:models/models.dart';
 
 /// Test implementation of NostrService that doesn't connect to real relays
 class TestNostrService implements INostrService {

@@ -2,8 +2,8 @@
 // ABOUTME: Verifies getEventCount() returns correct count for empty and populated database
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/database/app_database.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/database/app_database.dart';
 
 void main() {
   group('NostrEventsDao.getEventCount', () {

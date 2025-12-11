@@ -2,12 +2,13 @@
 // ABOUTME: Tests the race condition between camera initialization and preview widget access
 
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
+import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
 import 'package:openvine/widgets/macos_camera_preview.dart';
 
 void main() {

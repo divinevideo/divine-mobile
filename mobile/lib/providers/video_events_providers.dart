@@ -4,18 +4,18 @@
 import 'dart:async';
 
 import 'package:openvine/models/video_event.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/seen_videos_notifier.dart';
-import 'package:openvine/state/seen_videos_state.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
+import 'package:openvine/providers/seen_videos_notifier.dart';
+import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
+import 'package:openvine/state/seen_videos_state.dart';
 import 'package:openvine/utils/unified_logger.dart';
-import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:rxdart/rxdart.dart';
 
 part 'video_events_providers.g.dart';
 

@@ -1,8 +1,8 @@
 // ABOUTME: Test suite for native macOS camera implementation
 // ABOUTME: Verifies recording completion, error handling, and proper cleanup
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/camera/native_macos_camera.dart';
 
 void main() {

@@ -2,20 +2,20 @@
 // ABOUTME: Tests that the unfollow button correctly removes user from contact list
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mockito/mockito.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
-import 'package:openvine/router/app_router.dart';
-import 'package:openvine/services/social_service.dart';
-import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/subscription_manager.dart';
+import 'package:mockito/mockito.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/router/app_router.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/social_service.dart';
+import 'package:openvine/services/subscription_manager.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
-import 'profile_screen_unfollow_test.mocks.dart';
 import '../helpers/test_provider_overrides.dart';
+import 'profile_screen_unfollow_test.mocks.dart';
 
 @GenerateMocks([INostrService, AuthService, SubscriptionManager, SocialService])
 void main() {

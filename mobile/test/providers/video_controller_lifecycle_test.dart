@@ -1,8 +1,8 @@
 // ABOUTME: Tests for video controller lifecycle using Riverpod's onCancel/onResume hooks
 // ABOUTME: Validates 30-second cache timeout and proper disposal behavior
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/individual_video_providers.dart';
 
 void main() {

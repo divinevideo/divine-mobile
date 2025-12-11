@@ -2,9 +2,10 @@
 // ABOUTME: Tests serialization, deserialization, and helper methods for NativeProofData storage
 
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:models/models.dart' show NativeProofData;
+import 'package:openvine/models/pending_upload.dart';
 
 void main() {
   group('PendingUpload ProofMode Integration', () {

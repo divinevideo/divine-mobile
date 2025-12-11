@@ -1,14 +1,14 @@
 // ABOUTME: Tests for videoEventsProvider buffering behavior
 // ABOUTME: Validates new video buffering system and banner functionality
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/providers/tab_visibility_provider.dart';
+import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 import '../helpers/test_provider_overrides.mocks.dart';

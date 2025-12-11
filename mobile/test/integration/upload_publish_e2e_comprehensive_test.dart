@@ -2,8 +2,9 @@
 // ABOUTME: Tests the complete flow from local video file through Blossom upload to Nostr event creation
 
 import 'dart:io';
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
@@ -15,8 +16,8 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/video_event_publisher.dart';
-import '../helpers/real_integration_test_helper.dart';
 
+import '../helpers/real_integration_test_helper.dart';
 import 'upload_publish_e2e_comprehensive_test.mocks.dart';
 
 @GenerateMocks([BlossomUploadService, AuthService, INostrService])

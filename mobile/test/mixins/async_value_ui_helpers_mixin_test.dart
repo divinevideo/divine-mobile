@@ -2,8 +2,8 @@
 // ABOUTME: Verifies AsyncValue UI handling with consistent loading/error states
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/mixins/async_value_ui_helpers_mixin.dart';
 
 void main() {

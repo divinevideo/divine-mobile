@@ -2,11 +2,11 @@
 // ABOUTME: Tests the complete flow from screen load to recording, catching preview widget crashes
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
+import 'package:openvine/screens/pure/universal_camera_screen_pure.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

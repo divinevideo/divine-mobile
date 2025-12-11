@@ -2,12 +2,14 @@
 // ABOUTME: Uses real BlossomUploadService to see what fields the server returns
 
 import 'dart:io';
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/providers/app_providers.dart';
-import 'package:nostr_sdk/client_utils/keys.dart' as keys;
+import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:nostr_sdk/client_utils/keys.dart' as keys;
+import 'package:openvine/providers/app_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../helpers/real_integration_test_helper.dart';
 
 void main() {

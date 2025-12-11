@@ -1,12 +1,12 @@
 // ABOUTME: Test for NostrService using direct function calls instead of WebSocket
 // ABOUTME: Validates that we can connect without local network permissions
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
     as embedded;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 
 @GenerateMocks([NostrKeyManager, embedded.EmbeddedNostrRelay])
 import 'nostr_function_channel_test.mocks.dart';

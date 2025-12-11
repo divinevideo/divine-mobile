@@ -3,8 +3,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/widgets/proofmode_badge.dart';
 import 'package:openvine/utils/proofmode_helpers.dart';
+import 'package:openvine/widgets/proofmode_badge.dart';
 
 /// Reusable badge row for displaying ProofMode verification and Vine badges
 class ProofModeBadgeRow extends StatelessWidget {

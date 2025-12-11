@@ -1,9 +1,9 @@
 // ABOUTME: Test that AuthService creates events with correct backdated timestamps
-import 'package:openvine/utils/unified_logger.dart';
 // ABOUTME: Verifies Kind 0 profile events use 5-minute backdate
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/utils/nostr_timestamp.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 void main() {
   group('AuthService Event Creation', () {

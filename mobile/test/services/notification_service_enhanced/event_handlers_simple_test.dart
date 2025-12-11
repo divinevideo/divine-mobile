@@ -10,10 +10,11 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/models/notification_model.dart';
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/services/notification_service_enhanced.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/notification_service_enhanced.dart';
 import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+
 import '../../helpers/real_integration_test_helper.dart';
 
 /// Fake NostrService for testing

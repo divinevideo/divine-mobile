@@ -2,8 +2,9 @@
 // ABOUTME: Provides patterns for querying event counts and handling subscription lifecycle
 
 import 'dart:async';
-import 'package:nostr_sdk/filter.dart';
+
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
 /// Utilities for common subscription patterns and event counting

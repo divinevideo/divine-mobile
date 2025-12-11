@@ -1,8 +1,8 @@
 // ABOUTME: TDD test for Lists tab in ExploreScreen
 // ABOUTME: Ensures Lists tab replaces Divine Team tab - simple unit tests
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 
 void main() {

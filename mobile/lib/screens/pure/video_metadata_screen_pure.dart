@@ -2,23 +2,24 @@
 // ABOUTME: Adds metadata to recorded videos before publishing without VideoManager dependencies
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/utils/unified_logger.dart';
-import 'package:video_player/video_player.dart';
-import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/vine_recording_provider.dart';
+import 'package:models/models.dart' as vine show AspectRatio;
 import 'package:openvine/models/pending_upload.dart'
     show UploadStatus, PendingUpload;
 import 'package:openvine/models/vine_draft.dart';
-import 'package:models/models.dart' as vine show AspectRatio;
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/theme/vine_theme.dart';
+import 'package:openvine/utils/unified_logger.dart';
+import 'package:openvine/utils/video_duration_extractor.dart';
 import 'package:openvine/widgets/upload_progress_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:openvine/utils/video_duration_extractor.dart';
+import 'package:video_player/video_player.dart';
 
 /// Pure video metadata screen using revolutionary single-controller Riverpod architecture
 class VideoMetadataScreenPure extends ConsumerStatefulWidget {

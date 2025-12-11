@@ -25,23 +25,23 @@ import 'package:flutter/widgets.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/models/video_event.dart';
+import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/content_blocklist_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
+import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
+import 'package:openvine/services/relay_gateway_service.dart';
+import 'package:openvine/services/relay_gateway_settings.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
-import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/utils/log_batcher.dart';
-import 'package:openvine/constants/nip71_migration.dart';
-import 'package:openvine/services/event_router.dart';
-import 'package:openvine/services/age_verification_service.dart';
-import 'package:openvine/services/relay_gateway_service.dart';
-import 'package:openvine/services/relay_gateway_settings.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 /// Pagination state for tracking cursor position and loading status per subscription
 class PaginationState {

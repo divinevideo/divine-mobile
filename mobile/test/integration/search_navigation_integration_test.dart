@@ -11,8 +11,8 @@ import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
 import 'package:openvine/screens/pure/search_screen_pure.dart';
-import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/video_event_service.dart';
 
 import 'search_navigation_integration_test.mocks.dart';
 

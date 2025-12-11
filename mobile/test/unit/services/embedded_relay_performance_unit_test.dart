@@ -2,10 +2,10 @@
 // ABOUTME: Tests service operation timing without requiring full embedded relay initialization
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/nostr_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:openvine/utils/unified_logger.dart';
 import 'package:nostr_sdk/filter.dart' as nostr;
+import 'package:openvine/services/nostr_service.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 void main() {
   group('NostrService Performance Unit Tests', () {

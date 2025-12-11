@@ -2,13 +2,14 @@
 // ABOUTME: Tests provider emits null for missing profiles, emits profiles from DB, and auto-updates
 
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:riverpod/riverpod.dart';
 import 'package:openvine/database/app_database.dart';
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/user_profile_drift_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:riverpod/riverpod.dart';
 
 void main() {
   group('UserProfile Drift Provider', () {

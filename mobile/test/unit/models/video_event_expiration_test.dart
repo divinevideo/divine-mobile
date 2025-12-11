@@ -2,8 +2,8 @@
 // ABOUTME: Ensures events with expiration tags are properly parsed and filtered
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/video_event.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/models/video_event.dart';
 
 void main() {
   group('VideoEvent NIP-40 Expiration', () {

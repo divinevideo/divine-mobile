@@ -2,10 +2,11 @@
 // ABOUTME: Uploads real file to blossom.divine.video to see what fields are returned
 
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/nostr_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';

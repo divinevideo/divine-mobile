@@ -2,8 +2,9 @@
 // ABOUTME: Provides seamless authentication for web users with multiple Nostr login methods
 
 import 'dart:async';
-import 'package:openvine/services/nip07_service.dart';
+
 import 'package:nostr_key_manager/nostr_key_manager.dart' show NsecBunkerClient;
+import 'package:openvine/services/nip07_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Available authentication methods for web

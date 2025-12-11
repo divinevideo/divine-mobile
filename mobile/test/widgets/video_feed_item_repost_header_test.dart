@@ -3,11 +3,11 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
-import 'package:openvine/widgets/video_feed_item.dart';
 import 'package:openvine/models/video_event.dart';
+import 'package:openvine/widgets/video_feed_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../helpers/widget_test_helper.dart';
 
+import '../helpers/widget_test_helper.dart';
 import 'video_feed_item_repost_header_test.mocks.dart';
 
 @GenerateMocks([SharedPreferences])

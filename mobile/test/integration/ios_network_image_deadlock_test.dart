@@ -1,9 +1,9 @@
 // ABOUTME: Test to reproduce and verify iOS network image loading deadlock issues
 // ABOUTME: Ensures network images load properly on iOS without causing hangs or timeouts
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('iOS Network Image Deadlock Prevention', () {

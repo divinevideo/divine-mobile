@@ -1,11 +1,11 @@
 // ABOUTME: Gate providers for coordinating app readiness state
 // ABOUTME: Ensures subscriptions only start when Nostr is initialized and app is foregrounded
 
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'readiness_gate_providers.g.dart';
 

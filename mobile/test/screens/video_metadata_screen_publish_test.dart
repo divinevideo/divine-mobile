@@ -2,18 +2,19 @@
 // ABOUTME: Validates waiting for upload completion, error dialogs, and retry functionality
 
 import 'dart:io';
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/screens/pure/video_metadata_screen_pure.dart';
-import 'package:openvine/models/vine_draft.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
 import 'package:openvine/models/pending_upload.dart';
+import 'package:openvine/models/vine_draft.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/screens/pure/video_metadata_screen_pure.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/upload_manager.dart';
-import 'package:openvine/providers/app_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
 
 import 'video_metadata_screen_publish_test.mocks.dart';
 

@@ -2,8 +2,8 @@
 // ABOUTME: Ensures proper creation, storage, and retrieval of user lists
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/user_list_service.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/services/user_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

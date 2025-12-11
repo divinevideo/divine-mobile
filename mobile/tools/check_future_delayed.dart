@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart';
 // ABOUTME: Script to check for Future.delayed usage in the codebase
 // ABOUTME: Run this as part of CI/CD to enforce no Future.delayed pattern
 
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 
 void main(List<String> args) async {
   final libDir = Directory('lib');

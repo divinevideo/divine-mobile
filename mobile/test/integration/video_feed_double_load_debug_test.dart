@@ -2,8 +2,8 @@
 // ABOUTME: Monitors widget lifecycle and timing to find root cause
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/screens/video_feed_screen.dart';
 
 void main() {

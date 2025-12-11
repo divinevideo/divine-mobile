@@ -1,9 +1,8 @@
 // ABOUTME: Analytics service for tracking video views with user opt-out support
-import 'package:flutter/foundation.dart'; // ABOUTME: Sends anonymous view data to divine analytics backend when enabled
-
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart'; // ABOUTME: Sends anonymous view data to divine analytics backend when enabled
 import 'package:http/http.dart' as http;
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/background_activity_manager.dart';

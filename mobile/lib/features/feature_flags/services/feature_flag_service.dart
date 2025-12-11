@@ -1,11 +1,10 @@
 // ABOUTME: Core feature flag service managing flag state and persistence
 import 'package:flutter/foundation.dart'; // ABOUTME: Handles initialization, flag management, and state notifications with SharedPreferences
-
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag_state.dart';
 import 'package:openvine/features/feature_flags/models/flag_metadata.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service managing feature flag state with change notifications for Riverpod reactivity
 class FeatureFlagService extends ChangeNotifier {

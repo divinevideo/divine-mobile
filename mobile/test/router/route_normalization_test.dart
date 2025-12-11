@@ -2,11 +2,11 @@
 // ABOUTME: Ensures negative indices, encoding, and unknown paths are normalized
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/providers/home_feed_provider.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/route_normalization_provider.dart';
-import 'package:openvine/providers/home_feed_provider.dart';
 
 void main() {
   // Disable HomeFeed timer in tests by setting poll interval to 1 year

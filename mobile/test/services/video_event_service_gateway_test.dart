@@ -10,6 +10,9 @@ import 'package:http/testing.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
+// Generate mocks for INostrService
+@GenerateMocks([INostrService])
+import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/relay_gateway_service.dart';
 import 'package:openvine/services/relay_gateway_settings.dart';
 import 'package:openvine/services/subscription_manager.dart';
@@ -17,10 +20,6 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'video_event_service_gateway_test.mocks.dart';
-
-// Generate mocks for INostrService
-@GenerateMocks([INostrService])
-import 'package:openvine/services/nostr_service_interface.dart';
 
 void main() {
   group('VideoEventService Gateway Integration', () {

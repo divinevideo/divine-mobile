@@ -1,13 +1,14 @@
 // ABOUTME: Tests for macOS camera functionality using the latest camera package
 // ABOUTME: Verifies camera initialization, recording, and platform-specific features work on macOS
 
+import 'dart:io';
+
+import 'package:camera/camera.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
-import 'package:camera/camera.dart';
 // For Offset
 import 'package:openvine/services/camera_service_impl.dart';
-import 'dart:io';
 
 import 'camera_service_macos_test.mocks.dart';
 

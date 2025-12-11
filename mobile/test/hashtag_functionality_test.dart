@@ -2,10 +2,10 @@
 // ABOUTME: Ensures hashtags are sorted by video count and relay queries work correctly
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/models/video_event.dart';
-import 'package:mocktail/mocktail.dart';
 
 // Mock class for VideoEventService
 class MockVideoEventService extends Mock implements VideoEventService {}

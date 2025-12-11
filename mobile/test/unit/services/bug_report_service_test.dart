@@ -2,11 +2,12 @@
 // ABOUTME: Tests data gathering, sensitive data removal, and report packaging
 
 import 'dart:io' show Platform;
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/bug_report_service.dart';
-import 'package:openvine/models/bug_report_data.dart';
 import 'package:openvine/config/bug_report_config.dart';
+import 'package:openvine/models/bug_report_data.dart';
+import 'package:openvine/services/bug_report_service.dart';
 
 void main() {
   group('BugReportService', () {

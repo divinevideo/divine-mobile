@@ -6,7 +6,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:riverpod/riverpod.dart' show Ref;
+import 'package:models/models.dart' as model show AspectRatio;
+import 'package:models/models.dart' show NativeProofData;
+import 'package:openvine/models/vine_draft.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/vine_recording_controller.dart'
     show
         VineRecordingController,
@@ -15,13 +18,10 @@ import 'package:openvine/services/vine_recording_controller.dart'
         MacOSCameraInterface,
         CameraPlatformInterface,
         MobileCameraInterface;
-import 'package:openvine/models/vine_draft.dart';
-import 'package:models/models.dart' show NativeProofData;
-import 'package:models/models.dart' as model show AspectRatio;
-import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/unified_logger.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
+import 'package:riverpod/riverpod.dart' show Ref;
 
 /// Result returned from stopRecording containing video file, draft ID, and native proof
 class RecordingResult {

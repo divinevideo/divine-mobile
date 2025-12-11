@@ -4,26 +4,25 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-// camera_macos removed - using NativeMacOSCamera for both preview and recording
-import 'package:path_provider/path_provider.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
-
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:models/models.dart' as model show AspectRatio;
-import 'package:openvine/services/camera/native_macos_camera.dart';
-import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
+import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/services/camera/camerawesome_mobile_camera_interface.dart';
+import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
+import 'package:openvine/services/camera/native_macos_camera.dart';
+import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/web_camera_service_stub.dart'
     if (dart.library.html) 'web_camera_service.dart'
     as camera_service;
-import 'package:openvine/services/native_proofmode_service.dart';
-import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/macos_camera_preview.dart';
+// camera_macos removed - using NativeMacOSCamera for both preview and recording
+import 'package:path_provider/path_provider.dart';
 
 /// Represents a single recording segment in the Vine-style recording
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod

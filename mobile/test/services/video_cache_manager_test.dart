@@ -2,14 +2,15 @@
 // ABOUTME: Tests startup cache loading, sync lookups, and cache management
 
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/video_cache_manager.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite/sqflite.dart' as sqflite;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 // Mock PathProviderPlatform for testing
 class MockPathProviderPlatform extends Fake

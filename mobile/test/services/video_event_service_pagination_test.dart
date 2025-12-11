@@ -1,15 +1,16 @@
 // ABOUTME: Tests for video pagination and relay loading in VideoEventService
 // ABOUTME: Verifies that the service properly loads videos from relays when scrolling
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
-import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
-import 'package:openvine/services/subscription_manager.dart';
+import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'dart:async';
+import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/subscription_manager.dart';
+import 'package:openvine/services/video_event_service.dart';
 
 @GenerateMocks([INostrService, SubscriptionManager])
 import 'video_event_service_pagination_test.mocks.dart';

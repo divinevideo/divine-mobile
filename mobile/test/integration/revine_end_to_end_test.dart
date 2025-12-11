@@ -1,9 +1,9 @@
 // ABOUTME: End-to-end test for revine functionality to verify the complete fix
-import 'package:openvine/utils/unified_logger.dart';
 // ABOUTME: Tests from revining a video to seeing it appear in the user's profile
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_event.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 void main() {
   group('Revine End-to-End Integration Test', () {

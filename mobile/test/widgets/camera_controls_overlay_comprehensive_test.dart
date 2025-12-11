@@ -3,11 +3,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
-import 'package:openvine/widgets/camera_controls_overlay.dart';
+import 'package:mockito/mockito.dart';
 import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
 import 'package:openvine/services/vine_recording_controller.dart';
+import 'package:openvine/widgets/camera_controls_overlay.dart';
 
 import 'camera_controls_overlay_comprehensive_test.mocks.dart';
 

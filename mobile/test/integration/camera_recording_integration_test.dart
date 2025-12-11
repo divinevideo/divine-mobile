@@ -2,13 +2,14 @@
 // ABOUTME: Tests real camera hardware, file I/O, and complete recording flow
 
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:openvine/services/vine_recording_controller.dart';
 import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:openvine/services/vine_recording_controller.dart';
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

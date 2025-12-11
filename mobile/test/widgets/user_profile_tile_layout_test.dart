@@ -3,15 +3,16 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/widgets/user_profile_tile.dart';
-import 'package:openvine/widgets/user_avatar.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/user_profile.dart';
-import 'package:openvine/services/user_profile_service.dart';
-import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
+import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/user_profile_tile.dart';
+
 import '../helpers/test_provider_overrides.dart';
 
 void main() {

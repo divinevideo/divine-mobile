@@ -2,8 +2,8 @@
 // ABOUTME: Provides mock services that work in test environment without SharedPreferences or platform channels
 
 import 'package:flutter/services.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 // TODO: Re-enable these imports when provider references are restored
 // import 'package:openvine/providers/app_providers.dart';
 // import 'package:openvine/providers/video_events_providers.dart';
@@ -13,6 +13,7 @@ import 'package:openvine/services/nostr_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
+
 import 'test_nostr_service.dart';
 
 /// Helper class for initializing services in test environment

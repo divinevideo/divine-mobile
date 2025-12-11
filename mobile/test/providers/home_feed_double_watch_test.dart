@@ -1,8 +1,8 @@
 // ABOUTME: Tests for HomeFeed double-watch fix
 // ABOUTME: Verifies that HomeFeed only rebuilds once per social state change
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/home_feed_provider.dart';
 import 'package:openvine/providers/social_providers.dart' as social;
 import 'package:openvine/state/video_feed_state.dart';

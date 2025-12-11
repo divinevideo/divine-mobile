@@ -1,12 +1,13 @@
 // ABOUTME: Live integration test for Blossom upload with REAL auth
 // ABOUTME: Tests streaming upload to server with generated throwaway keys
 
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nostr_sdk/event.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/utils/hash_util.dart';
 
 void main() {

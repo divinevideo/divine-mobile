@@ -1,8 +1,8 @@
 // ABOUTME: Integration tests for NIP-50 search functionality end-to-end testing
 // ABOUTME: Tests complete search workflow from providers to state management
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/search_provider.dart';
 import 'package:openvine/state/search_state.dart';
 

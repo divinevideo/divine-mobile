@@ -2,11 +2,11 @@
 // ABOUTME: Verifies no "ref after unmount" crashes when navigating away before video loads
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/widgets/video_feed_item.dart';
 import 'package:openvine/services/visibility_tracker.dart';
+import 'package:openvine/widgets/video_feed_item.dart';
 
 void main() {
   testWidgets(

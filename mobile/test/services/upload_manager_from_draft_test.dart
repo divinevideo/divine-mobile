@@ -2,13 +2,14 @@
 // ABOUTME: Verifies ProofMode data flows correctly from draft to upload
 
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:openvine/models/vine_draft.dart';
-import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
-import '../helpers/test_helpers.dart';
+import 'package:openvine/services/upload_manager.dart';
 
+import '../helpers/test_helpers.dart';
 @GenerateMocks([BlossomUploadService])
 import 'upload_manager_from_draft_test.mocks.dart';
 

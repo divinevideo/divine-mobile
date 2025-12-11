@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart';
 // ABOUTME: Tool to check that all Dart files have proper ABOUTME comments
 // ABOUTME: Enforces documentation standards for better code understanding
 
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 
 void main(List<String> args) {
   debugPrint('Checking ABOUTME comments...\n');

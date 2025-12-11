@@ -3,8 +3,8 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:openvine/services/nostr_service_factory.dart';
 import 'package:openvine/services/nostr_service.dart';
+import 'package:openvine/services/nostr_service_factory.dart';
 
 void main() {
   group('P2P Initialization Disabled Tests', () {

@@ -7,8 +7,9 @@ import 'package:golden_toolkit/golden_toolkit.dart';
 import 'package:openvine/services/thumbnail_api_service.dart'
     show ThumbnailSize;
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
-import '../../helpers/golden_test_devices.dart';
+
 import '../../builders/test_video_event_builder.dart';
+import '../../helpers/golden_test_devices.dart';
 
 void main() {
   group('VideoThumbnailWidget Golden Tests', () {

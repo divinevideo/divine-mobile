@@ -5,9 +5,9 @@ import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/services/thumbnail_api_service.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/services/m3u8_resolver_service.dart';
+import 'package:openvine/services/thumbnail_api_service.dart';
 
 /// Represents a video event (NIP-71 compliant kinds 22, 34236)
 class VideoEvent {

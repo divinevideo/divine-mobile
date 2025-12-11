@@ -1,13 +1,13 @@
 // ABOUTME: Unit tests for search provider with Riverpod state management
 // ABOUTME: Tests NIP-50 search functionality integration with UI state
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/providers/search_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/search_provider.dart';
+import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/state/search_state.dart';
 
 import 'search_provider_test.mocks.dart';

@@ -1,9 +1,9 @@
 // ABOUTME: Test timestamp backdating functionality
-import 'package:openvine/utils/unified_logger.dart';
 // ABOUTME: Verifies NostrTimestamp generates acceptable timestamps for relays
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/utils/nostr_timestamp.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 void main() {
   group('NostrTimestamp', () {

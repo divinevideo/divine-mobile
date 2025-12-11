@@ -1,8 +1,8 @@
 // ABOUTME: Lightweight video content state for single-controller architecture
 // ABOUTME: Stores video metadata and thumbnails without heavy VideoPlayerController instances
 
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:flutter/foundation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'video_content_state.freezed.dart';
 

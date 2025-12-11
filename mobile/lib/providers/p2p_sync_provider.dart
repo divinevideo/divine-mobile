@@ -2,9 +2,9 @@
 // ABOUTME: Riverpod provider for P2P discovery, connections, and sync state
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/services/p2p_discovery_service.dart';
-import 'package:openvine/services/nostr_service.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/services/nostr_service.dart';
+import 'package:openvine/services/p2p_discovery_service.dart';
 
 /// Provider for P2P discovery service
 final p2pDiscoveryServiceProvider = Provider<P2PDiscoveryService?>((ref) {

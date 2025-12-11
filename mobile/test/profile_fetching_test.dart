@@ -1,9 +1,11 @@
 // ABOUTME: Test for verifying profile fetching when videos are displayed
 // ABOUTME: Ensures Kind 0 events are fetched and cached when viewing videos
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/models/user_profile.dart';
@@ -11,7 +13,6 @@ import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/profile_cache_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
-import 'dart:convert';
 
 @GenerateMocks([INostrService, SubscriptionManager, ProfileCacheService])
 import 'profile_fetching_test.mocks.dart';

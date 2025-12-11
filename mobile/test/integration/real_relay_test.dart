@@ -2,9 +2,10 @@
 // ABOUTME: Tests the actual pagination fix against the real OpenVine relay
 
 import 'dart:async';
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
     as embedded;
+import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 void main() {
