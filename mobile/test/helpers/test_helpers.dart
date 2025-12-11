@@ -460,7 +460,7 @@ Future<void> setupTestEnvironment() async {
 /// Get test SharedPreferences instance
 Future<SharedPreferences> getTestSharedPreferences() async {
   SharedPreferences.setMockInitialValues({});
-  return await SharedPreferences.getInstance();
+  return SharedPreferences.getInstance();
 }
 
 /// Mock FlutterSecureStorage for testing

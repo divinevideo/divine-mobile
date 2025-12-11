@@ -66,7 +66,7 @@ final p2pActionsProvider = Provider<P2PActions>((ref) {
   return P2PActions(
     startDiscovery: () async {
       if (nostrService is NostrService) {
-        return await nostrService.startP2PDiscovery();
+        return nostrService.startP2PDiscovery();
       }
       return false;
     },
@@ -77,7 +77,7 @@ final p2pActionsProvider = Provider<P2PActions>((ref) {
     },
     startAdvertising: () async {
       if (nostrService is NostrService) {
-        return await nostrService.startP2PAdvertising();
+        return nostrService.startP2PAdvertising();
       }
       return false;
     },
@@ -88,7 +88,7 @@ final p2pActionsProvider = Provider<P2PActions>((ref) {
     },
     connectToPeer: (peer) async {
       if (nostrService is NostrService) {
-        return await nostrService.connectToP2PPeer(peer);
+        return nostrService.connectToP2PPeer(peer);
       }
       return false;
     },

@@ -198,7 +198,7 @@ class StartupPerformanceService {
   }) async {
     // If UI is already ready, execute immediately
     if (_uiReadyTime != null) {
-      return await work();
+      return work();
     }
 
     final completer = Completer<T>();
