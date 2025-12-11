@@ -154,7 +154,7 @@ class CurationService {
 
     try {
       Log.info(
-        "📋 Fetching Divine Team videos from relay...",
+        '📋 Fetching Divine Team videos from relay...',
         name: 'CurationService',
         category: LogCategory.system,
       );
@@ -187,7 +187,7 @@ class CurationService {
               receivedCount++;
 
               Log.verbose(
-                "📹 Fetched Divine Team video ($receivedCount): ${video.title ?? video.id}",
+                '📹 Fetched Divine Team video ($receivedCount): ${video.title ?? video.id}',
                 name: 'CurationService',
                 category: LogCategory.system,
               );
@@ -197,7 +197,7 @@ class CurationService {
             _videoEventService.addVideoEvent(video);
           } catch (e) {
             Log.error(
-              "Failed to parse Divine Team video event: $e",
+              'Failed to parse Divine Team video event: $e',
               name: 'CurationService',
               category: LogCategory.system,
             );
@@ -205,7 +205,7 @@ class CurationService {
         },
         onError: (error) {
           Log.error(
-            "Error fetching Divine Team videos: $error",
+            'Error fetching Divine Team videos: $error',
             name: 'CurationService',
             category: LogCategory.system,
           );
@@ -226,7 +226,7 @@ class CurationService {
       await streamSubscription.cancel();
 
       Log.info(
-        "✅ Fetched $receivedCount Divine Team videos from relay",
+        '✅ Fetched $receivedCount Divine Team videos from relay',
         name: 'CurationService',
         category: LogCategory.system,
       );
@@ -235,7 +235,7 @@ class CurationService {
       _populateSampleSets();
     } catch (e) {
       Log.error(
-        "Error fetching Divine Team videos: $e",
+        'Error fetching Divine Team videos: $e',
         name: 'CurationService',
         category: LogCategory.system,
       );
@@ -251,7 +251,7 @@ class CurationService {
     if (!_hasFetchedEditorsList) {
       _fetchDivineTeamVideos();
       Log.debug(
-        "⏳ Divine Team videos not fetched yet, starting fetch in background",
+        '⏳ Divine Team videos not fetched yet, starting fetch in background',
         name: 'CurationService',
         category: LogCategory.system,
       );
@@ -269,7 +269,7 @@ class CurationService {
     final currentCount = picks.length;
     if (_lastEditorVideoCount != currentCount) {
       Log.debug(
-        "🔍 Selecting Divine Team videos from cache...",
+        '🔍 Selecting Divine Team videos from cache...',
         name: 'CurationService',
         category: LogCategory.system,
       );

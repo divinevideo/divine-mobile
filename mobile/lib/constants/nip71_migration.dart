@@ -45,5 +45,5 @@ class VideoEventConfig {
   static const bool useNIP71Only = true;
 
   /// Implementation phase indicator
-  static const String implementationPhase = "nip71_compliant";
+  static const String implementationPhase = 'nip71_compliant';
 }

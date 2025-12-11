@@ -988,7 +988,7 @@ class VideoEventService extends ChangeNotifier {
             name: 'VideoEventService',
             category: LogCategory.video,
           );
-          if (filterJson.containsKey("sort")) {
+          if (filterJson.containsKey('sort')) {
             Log.info(
               '🎯 SORT DEBUG: Sort config: ${filterJson["sort"]}',
               name: 'VideoEventService',

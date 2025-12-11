@@ -1006,7 +1006,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           // Refresh list providers
           ref.invalidate(userListsProvider);
           ref.invalidate(curatedListsProvider);
-        } else if (tabName == "New Videos") {
+        } else if (tabName == 'New Videos') {
           // Refresh popular now feed - call refresh() to force new subscription
           await ref.read(popularNowFeedProvider.notifier).refresh();
         } else {

@@ -1759,7 +1759,7 @@ class VineRecordingController {
     switch (aspectRatio) {
       case model.AspectRatio.square:
         // Center crop to 1:1 (existing production logic)
-        return "crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2";
+        return 'crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2';
 
       case model.AspectRatio.vertical:
         // Center crop to 9:16 vertical
