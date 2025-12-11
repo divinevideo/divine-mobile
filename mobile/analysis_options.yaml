@@ -27,3 +27,4 @@ linter:
     - unnecessary_lambdas
     - unnecessary_late
     - use_colored_box
+    - unnecessary_new
