@@ -137,7 +137,7 @@ class _ProofModeExplanation extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'This video\'s authenticity is verified using ProofMode technology.',
+          "This video's authenticity is verified using ProofMode technology.",
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -235,7 +235,7 @@ class _VerificationLevelCard extends StatelessWidget {
         color: Colors.blue[700]!,
         title: 'Verified',
         description:
-            'This video has cryptographic signatures proving it hasn\'t been altered since recording, but we can\'t verify the capture device.',
+            "This video has cryptographic signatures proving it hasn't been altered since recording, but we can't verify the capture device.",
       );
     } else if (video.hasBasicProof) {
       return _VerificationConfig(
@@ -251,7 +251,7 @@ class _VerificationLevelCard extends StatelessWidget {
         color: Colors.grey[600]!,
         title: 'Unverified',
         description:
-            'We can\'t be sure this video is real and was recorded using Divine on a user\'s phone.',
+            "We can't be sure this video is real and was recorded using Divine on a user's phone.",
       );
     }
   }

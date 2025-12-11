@@ -148,7 +148,7 @@ class _FollowingScreenState extends ConsumerState<FollowingScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: buildAppBar(context, '${widget.displayName}\'s Following'),
+      appBar: buildAppBar(context, "${widget.displayName}'s Following"),
       body: buildListBody(
         context,
         _following,

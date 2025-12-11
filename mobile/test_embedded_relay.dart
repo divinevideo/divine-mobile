@@ -365,7 +365,7 @@ void main() async {
       category: LogCategory.relay,
     );
     Log.info(
-      '2. There\'s a bug in author filtering in the embedded relay',
+      "2. There's a bug in author filtering in the embedded relay",
       name: 'EmbeddedRelayTest',
       category: LogCategory.relay,
     );

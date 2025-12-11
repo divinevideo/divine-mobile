@@ -1538,7 +1538,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
         backgroundColor: VineTheme.cardBackground,
         title: const Text('Block @', style: TextStyle(color: Colors.white)),
         content: const Text(
-          'You won\'t see their content in feeds. They won\'t be notified. You can still visit their profile.',
+          "You won't see their content in feeds. They won't be notified. You can still visit their profile.",
           style: TextStyle(color: Colors.grey),
         ),
         actions: [
@@ -1646,7 +1646,7 @@ class _BlockConfirmationDialog extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'You won\'t see content from this user in your feeds.',
+          "You won't see content from this user in your feeds.",
           style: TextStyle(color: VineTheme.whiteText, fontSize: 16),
         ),
         const SizedBox(height: 16),

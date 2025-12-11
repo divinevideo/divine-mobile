@@ -451,7 +451,7 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
               ),
               const SizedBox(height: 16),
               const Text(
-                'divine doesn\'t give you an algorithmic feed.\nYou choose who you follow.',
+                "divine doesn't give you an algorithmic feed.\nYou choose who you follow.",
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: 16,

@@ -211,7 +211,7 @@ class _CommentsScreenState extends ConsumerState<CommentsScreen> {
                                       ),
                                       const SizedBox(height: 8),
                                       const Text(
-                                        'We\'re still working on importing old comments from the archive. They\'re not ready yet.',
+                                        "We're still working on importing old comments from the archive. They're not ready yet.",
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           color: Colors.white70,

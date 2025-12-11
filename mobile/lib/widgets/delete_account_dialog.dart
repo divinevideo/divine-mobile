@@ -228,7 +228,7 @@ Future<void> showDeleteAccountCompletionDialog({
       ),
       content: const Text(
         'Your deletion request has been sent to Nostr relays.\n\n'
-        'You\'ve been signed out and your keys have been removed from this device.',
+        "You've been signed out and your keys have been removed from this device.",
         style: TextStyle(color: Colors.white, fontSize: 16, height: 1.5),
       ),
       actions: [

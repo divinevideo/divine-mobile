@@ -118,7 +118,7 @@ class _FollowersScreenState extends ConsumerState<FollowersScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: buildAppBar(context, '${widget.displayName}\'s Followers'),
+      appBar: buildAppBar(context, "${widget.displayName}'s Followers"),
       body: buildListBody(
         context,
         _followers,

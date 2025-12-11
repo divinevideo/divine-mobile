@@ -1081,7 +1081,7 @@ class CuratedListService extends ChangeNotifier {
     if (userPubkey == null) return;
 
     Log.info(
-      '📋 Fetching user\'s curated lists from relays...',
+      "📋 Fetching user's curated lists from relays...",
       name: 'CuratedListService',
       category: LogCategory.system,
     );

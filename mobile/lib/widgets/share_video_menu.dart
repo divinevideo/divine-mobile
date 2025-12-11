@@ -969,7 +969,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
             style: TextStyle(color: VineTheme.whiteText),
           ),
           content: const Text(
-            'You won\'t see their content in feeds. They won\'t be notified.',
+            "You won't see their content in feeds. They won't be notified.",
             style: TextStyle(color: Colors.grey),
           ),
           actions: [
