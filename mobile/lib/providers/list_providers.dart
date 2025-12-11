@@ -46,7 +46,7 @@ Future<({List<UserList> userLists, List<CuratedList> curatedLists})> allLists(
 /// Provider for videos in a specific curated list
 @riverpod
 Future<List<String>> curatedListVideos(Ref ref, String listId) async {
-  final service = await ref.read(curatedListsStateProvider.notifier).service;
+  final service = ref.read(curatedListsStateProvider.notifier).service;
   final list = service?.getListById(listId);
 
   if (list == null) {

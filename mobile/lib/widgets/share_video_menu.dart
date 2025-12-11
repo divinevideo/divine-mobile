@@ -552,7 +552,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
   /// Remove video from a specific list
   Future<void> _removeFromList(String listId) async {
     try {
-      final listService = await ref
+      final listService = ref
           .read(curatedListsStateProvider.notifier)
           .service;
       await listService?.removeVideoFromList(listId, widget.video.id);
@@ -1708,7 +1708,7 @@ class _CreateListDialogState extends ConsumerState<_CreateListDialog> {
     if (name.isEmpty) return;
 
     try {
-      final listService = await ref
+      final listService = ref
           .read(curatedListsStateProvider.notifier)
           .service;
       final newList = await listService?.createList(
@@ -3291,7 +3291,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
 
   Future<void> _toggleSubscription(CuratedList list) async {
     try {
-      final listService = await ref
+      final listService = ref
           .read(curatedListsStateProvider.notifier)
           .service;
       final isSubscribed = listService?.isSubscribedToList(list.id) ?? false;

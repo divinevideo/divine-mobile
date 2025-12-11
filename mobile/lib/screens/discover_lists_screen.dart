@@ -38,7 +38,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
     });
 
     try {
-      final service = await ref
+      final service = ref
           .read(curatedListsStateProvider.notifier)
           .service;
       final lists = await service?.fetchPublicListsFromRelays(limit: 50);
@@ -75,7 +75,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
 
   Future<void> _toggleSubscription(CuratedList list) async {
     try {
-      final service = await ref
+      final service = ref
           .read(curatedListsStateProvider.notifier)
           .service;
       final isSubscribed = service?.isSubscribedToList(list.id) ?? false;
