@@ -62,7 +62,7 @@ void main() {
           ['expiration', '1234570000'],
         ]);
         when(() => mockEvent.sig).thenReturn('signature123');
-        when(() => mockEvent.toJson()).thenReturn({
+        when(mockEvent.toJson).thenReturn({
           'id': 'event123',
           'kind': 24242,
           'pubkey': 'pubkey123',
@@ -118,7 +118,7 @@ void main() {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
 
         final mockEvent = MockEvent();
-        when(() => mockEvent.toJson()).thenReturn({
+        when(mockEvent.toJson).thenReturn({
           'id': 'event123',
           'kind': 24242,
           'pubkey': 'pubkey123',
@@ -172,7 +172,7 @@ void main() {
 
       final mockEvent = MockEvent();
       when(() => mockEvent.id).thenReturn('event123');
-      when(() => mockEvent.toJson()).thenReturn({
+      when(mockEvent.toJson).thenReturn({
         'id': 'event123',
         'kind': 24242,
         'tags': [
@@ -214,7 +214,7 @@ void main() {
 
       final mockEvent = MockEvent();
       when(() => mockEvent.id).thenReturn('event123');
-      when(() => mockEvent.toJson()).thenReturn({
+      when(mockEvent.toJson).thenReturn({
         'id': 'event123',
         'kind': 24242,
         'tags': [
@@ -262,7 +262,7 @@ void main() {
 
       final mockEvent = MockEvent();
       when(() => mockEvent.id).thenReturn('event123');
-      when(() => mockEvent.toJson()).thenReturn({
+      when(mockEvent.toJson).thenReturn({
         'id': 'event123',
         'kind': 24242,
         'tags': [

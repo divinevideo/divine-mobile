@@ -56,7 +56,7 @@ void main() {
               return _MockFeatureFlagService(enableVideoEditor: true);
             }),
             // Override social provider
-            socialProvider.overrideWith(() => _MockSocialNotifier()),
+            socialProvider.overrideWith(_MockSocialNotifier.new),
             // Force overlay to always be visible
             overlayPolicyProvider.overrideWith((ref) => OverlayPolicy.alwaysOn),
           ],
@@ -101,7 +101,7 @@ void main() {
             featureFlagServiceProvider.overrideWith((ref) {
               return _MockFeatureFlagService(enableVideoEditor: true);
             }),
-            socialProvider.overrideWith(() => _MockSocialNotifier()),
+            socialProvider.overrideWith(_MockSocialNotifier.new),
             overlayPolicyProvider.overrideWith((ref) => OverlayPolicy.alwaysOn),
           ],
         );
@@ -146,7 +146,7 @@ void main() {
           featureFlagServiceProvider.overrideWith((ref) {
             return _MockFeatureFlagService(enableVideoEditor: false);
           }),
-          socialProvider.overrideWith(() => _MockSocialNotifier()),
+          socialProvider.overrideWith(_MockSocialNotifier.new),
           overlayPolicyProvider.overrideWith((ref) => OverlayPolicy.alwaysOn),
         ],
       );

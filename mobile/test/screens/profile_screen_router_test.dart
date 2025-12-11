@@ -114,7 +114,7 @@ void main() {
     final prefetchedPubkeys = <String>[];
 
     final mockNotifier = FakeUserProfileNotifier(
-      onPrefetch: (pubkeys) => prefetchedPubkeys.addAll(pubkeys),
+      onPrefetch: prefetchedPubkeys.addAll,
     );
 
     final c = ProviderContainer(

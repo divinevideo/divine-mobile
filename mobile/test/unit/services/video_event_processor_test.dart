@@ -38,9 +38,7 @@ void main() {
 
         // Subscribe to video event stream
         final videoEventCompleter = Completer<VideoEvent>();
-        final subscription = processor.videoEventStream.listen((event) {
-          videoEventCompleter.complete(event);
-        });
+        final subscription = processor.videoEventStream.listen(videoEventCompleter.complete);
 
         // ACT
         processor.processEvent(validEvent);
@@ -132,9 +130,7 @@ void main() {
 
         // Subscribe to video event stream
         final videoEventCompleter = Completer<VideoEvent>();
-        final subscription = processor.videoEventStream.listen((event) {
-          videoEventCompleter.complete(event);
-        });
+        final subscription = processor.videoEventStream.listen(videoEventCompleter.complete);
 
         // ACT
         processor.processEvent(eventWithoutUrl);
@@ -170,9 +166,7 @@ void main() {
 
         // Subscribe to video event stream
         final videoEventCompleter = Completer<VideoEvent>();
-        final subscription = processor.videoEventStream.listen((event) {
-          videoEventCompleter.complete(event);
-        });
+        final subscription = processor.videoEventStream.listen(videoEventCompleter.complete);
 
         // ACT
         processor.connectToEventStream(eventStreamController.stream);
@@ -193,9 +187,7 @@ void main() {
 
         // Subscribe to error stream
         final errorCompleter = Completer<String>();
-        final subscription = processor.errorStream.listen((error) {
-          errorCompleter.complete(error);
-        });
+        final subscription = processor.errorStream.listen(errorCompleter.complete);
 
         // ACT
         processor.connectToEventStream(eventStreamController.stream);
@@ -271,9 +263,7 @@ void main() {
 
         // Subscribe to video event stream
         final videoEventCompleter = Completer<VideoEvent>();
-        final subscription = processor.videoEventStream.listen((event) {
-          videoEventCompleter.complete(event);
-        });
+        final subscription = processor.videoEventStream.listen(videoEventCompleter.complete);
 
         // ACT
         processor.processEvent(imetaEvent);
@@ -305,9 +295,7 @@ void main() {
 
         // Subscribe to video event stream
         final videoEventCompleter = Completer<VideoEvent>();
-        final subscription = processor.videoEventStream.listen((event) {
-          videoEventCompleter.complete(event);
-        });
+        final subscription = processor.videoEventStream.listen(videoEventCompleter.complete);
 
         // ACT
         processor.processEvent(minimalEvent);
@@ -343,9 +331,7 @@ void main() {
 
         // Subscribe to video event stream
         final receivedEvents = <VideoEvent>[];
-        final subscription = processor.videoEventStream.listen((event) {
-          receivedEvents.add(event);
-        });
+        final subscription = processor.videoEventStream.listen(receivedEvents.add);
 
         // ACT
         for (final event in events) {

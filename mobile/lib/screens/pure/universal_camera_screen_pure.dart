@@ -200,7 +200,7 @@ class _UniversalCameraScreenPureState
   Future<void> _initializeServices() async {
     // Use Future.microtask to safely initialize after build completes
     // This ensures provider reads happen outside the build phase while still completing promptly
-    Future.microtask(() => _performAsyncInitialization());
+    Future.microtask(_performAsyncInitialization);
   }
 
   /// Perform async initialization after the first frame
@@ -515,7 +515,7 @@ class _UniversalCameraScreenPureState
                       ? (_) => _stopRecording()
                       : null,
                   onTapCancel: !kIsWeb && recordingState.isRecording
-                      ? () => _stopRecording()
+                      ? _stopRecording
                       : null,
                   behavior: HitTestBehavior.translucent,
                   child: const SizedBox.expand(),
@@ -913,7 +913,7 @@ class _UniversalCameraScreenPureState
               ? (_) => _stopRecording()
               : null,
           onTapCancel: !kIsWeb && recordingState.isRecording
-              ? () => _stopRecording()
+              ? _stopRecording
               : null,
           child: Container(
             width: 80,

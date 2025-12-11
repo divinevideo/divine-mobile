@@ -18,9 +18,7 @@ import '../helpers/test_provider_overrides.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(() {
-    _setupPlatformMocks();
-  });
+  setUpAll(_setupPlatformMocks);
 
   group('UserProfileTile - Layout & Display Bug Tests', () {
     late TestUserProfileService testUserProfileService;

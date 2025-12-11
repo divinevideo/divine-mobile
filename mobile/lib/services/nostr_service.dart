@@ -552,7 +552,7 @@ class NostrService implements INostrService {
   @override
   bool get isVineRelayAuthenticated {
     final connectedRelays = _embeddedRelay?.connectedRelays ?? [];
-    return _configuredRelays.any((relay) => connectedRelays.contains(relay));
+    return _configuredRelays.any(connectedRelays.contains);
   }
 
   @override

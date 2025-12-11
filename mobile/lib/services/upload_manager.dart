@@ -676,9 +676,7 @@ class UploadManager {
         baseDelay: _retryConfig.initialDelay,
         maxDelay: _retryConfig.maxDelay,
         backoffMultiplier: _retryConfig.backoffMultiplier,
-        retryWhen: (error) {
-          return _isRetriableError(error);
-        },
+        retryWhen: _isRetriableError,
         debugName: 'Upload-${upload.id}',
       );
     } catch (e) {

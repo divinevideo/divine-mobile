@@ -178,9 +178,7 @@ final videoControllerFallbackProvider =
         }
       });
 
-      ref.onDispose(() {
-        syncController.dispose();
-      });
+      ref.onDispose(syncController.dispose);
 
       return syncController;
     });

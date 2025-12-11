@@ -119,9 +119,7 @@ VideoPlayerController individualVideoController(
   ref.onCancel(() {
     // Last listener removed - start 5-minute cache timeout
     // Longer timeout reduces jittery scrolling caused by rapid codec initialization/disposal
-    cacheTimer = Timer(const Duration(minutes: 5), () {
-      link.close(); // Allow autoDispose after 5 minutes of no listeners
-    });
+    cacheTimer = Timer(const Duration(minutes: 5), link.close);
   });
 
   ref.onResume(() {

@@ -192,16 +192,16 @@ void main() {
 
         final mockFile = MockFile();
         when(() => mockFile.path).thenReturn('/test/video.mp4');
-        when(() => mockFile.existsSync()).thenReturn(true);
+        when(mockFile.existsSync).thenReturn(true);
         when(
-          () => mockFile.readAsBytes(),
+          mockFile.readAsBytes,
         ).thenAnswer((_) async => Uint8List.fromList([1, 2, 3, 4, 5]));
         when(
-          () => mockFile.readAsBytesSync(),
+          mockFile.readAsBytesSync,
         ).thenReturn(Uint8List.fromList([1, 2, 3, 4, 5]));
-        when(() => mockFile.lengthSync()).thenReturn(5);
+        when(mockFile.lengthSync).thenReturn(5);
         when(
-          () => mockFile.openRead(),
+          mockFile.openRead,
         ).thenAnswer((_) => Stream.value(Uint8List.fromList([1, 2, 3, 4, 5])));
 
         // Mock Dio response
@@ -276,15 +276,15 @@ void main() {
 
           final mockFile = MockFile();
           when(() => mockFile.path).thenReturn('/test/video.mp4');
-          when(() => mockFile.existsSync()).thenReturn(true);
+          when(mockFile.existsSync).thenReturn(true);
           when(
-            () => mockFile.readAsBytes(),
+            mockFile.readAsBytes,
           ).thenAnswer((_) async => Uint8List.fromList([1, 2, 3, 4, 5]));
           when(
-            () => mockFile.readAsBytesSync(),
+            mockFile.readAsBytesSync,
           ).thenReturn(Uint8List.fromList([1, 2, 3, 4, 5]));
-          when(() => mockFile.lengthSync()).thenReturn(5);
-          when(() => mockFile.openRead()).thenAnswer(
+          when(mockFile.lengthSync).thenReturn(5);
+          when(mockFile.openRead).thenAnswer(
             (_) => Stream.value(Uint8List.fromList([1, 2, 3, 4, 5])),
           );
 
@@ -583,15 +583,15 @@ void main() {
 
         final mockFile = MockFile();
         when(() => mockFile.path).thenReturn('/test/avatar.jpg');
-        when(() => mockFile.existsSync()).thenReturn(true);
+        when(mockFile.existsSync).thenReturn(true);
         when(
-          () => mockFile.readAsBytes(),
+          mockFile.readAsBytes,
         ).thenAnswer((_) async => Uint8List.fromList([0xFF, 0xD8, 0xFF]));
         when(
-          () => mockFile.readAsBytesSync(),
+          mockFile.readAsBytesSync,
         ).thenReturn(Uint8List.fromList([0xFF, 0xD8, 0xFF]));
-        when(() => mockFile.lengthSync()).thenReturn(3);
-        when(() => mockFile.openRead()).thenAnswer(
+        when(mockFile.lengthSync).thenReturn(3);
+        when(mockFile.openRead).thenAnswer(
           (_) => Stream.value(Uint8List.fromList([0xFF, 0xD8, 0xFF])),
         );
 
@@ -665,15 +665,15 @@ void main() {
 
           final mockFile = MockFile();
           when(() => mockFile.path).thenReturn('/test/screenshot.png');
-          when(() => mockFile.existsSync()).thenReturn(true);
-          when(() => mockFile.readAsBytes()).thenAnswer(
+          when(mockFile.existsSync).thenReturn(true);
+          when(mockFile.readAsBytes).thenAnswer(
             (_) async => Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]),
           );
           when(
-            () => mockFile.readAsBytesSync(),
+            mockFile.readAsBytesSync,
           ).thenReturn(Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]));
-          when(() => mockFile.lengthSync()).thenReturn(4);
-          when(() => mockFile.openRead()).thenAnswer(
+          when(mockFile.lengthSync).thenReturn(4);
+          when(mockFile.openRead).thenAnswer(
             (_) => Stream.value(Uint8List.fromList([0x89, 0x50, 0x4E, 0x47])),
           );
 
@@ -739,15 +739,15 @@ void main() {
 
           final mockFile = MockFile();
           when(() => mockFile.path).thenReturn('/test/photo.jpg');
-          when(() => mockFile.existsSync()).thenReturn(true);
+          when(mockFile.existsSync).thenReturn(true);
           when(
-            () => mockFile.readAsBytes(),
+            mockFile.readAsBytes,
           ).thenAnswer((_) async => Uint8List.fromList([0xFF, 0xD8, 0xFF]));
           when(
-            () => mockFile.readAsBytesSync(),
+            mockFile.readAsBytesSync,
           ).thenReturn(Uint8List.fromList([0xFF, 0xD8, 0xFF]));
-          when(() => mockFile.lengthSync()).thenReturn(3);
-          when(() => mockFile.openRead()).thenAnswer(
+          when(mockFile.lengthSync).thenReturn(3);
+          when(mockFile.openRead).thenAnswer(
             (_) => Stream.value(Uint8List.fromList([0xFF, 0xD8, 0xFF])),
           );
 

@@ -74,7 +74,7 @@ void main() {
         await manager.createSubscription(
           name: 'test_subscription',
           filters: [filter],
-          onEvent: (event) => deliveredEvents.add(event),
+          onEvent: deliveredEvents.add,
         );
 
         // Wait for microtasks to complete (cached events delivered async)
@@ -129,7 +129,7 @@ void main() {
         await manager.createSubscription(
           name: 'test_subscription',
           filters: [filter],
-          onEvent: (event) => deliveredEvents.add(event),
+          onEvent: deliveredEvents.add,
           onComplete: () => completeCalled = true,
         );
 
@@ -235,7 +235,7 @@ void main() {
       await manager.createSubscription(
         name: 'test_subscription',
         filters: [filter1, filter2],
-        onEvent: (event) => deliveredEvents.add(event),
+        onEvent: deliveredEvents.add,
       );
 
       await Future.delayed(Duration.zero);

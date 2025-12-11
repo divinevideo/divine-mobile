@@ -75,7 +75,7 @@ ConnectionStatusService connectionStatusService(Ref ref) {
 @Riverpod(keepAlive: true)
 RelayCapabilityService relayCapabilityService(Ref ref) {
   final service = RelayCapabilityService();
-  ref.onDispose(() => service.dispose());
+  ref.onDispose(service.dispose);
   return service;
 }
 
@@ -102,7 +102,7 @@ BackgroundActivityManager backgroundActivityManager(Ref ref) {
 @Riverpod(keepAlive: true)
 RelayStatisticsService relayStatisticsService(Ref ref) {
   final service = RelayStatisticsService();
-  ref.onDispose(() => service.dispose());
+  ref.onDispose(service.dispose);
   return service;
 }
 
@@ -139,13 +139,11 @@ AnalyticsService analyticsService(Ref ref) {
   final service = AnalyticsService();
 
   // Ensure cleanup on disposal
-  ref.onDispose(() {
-    service.dispose();
-  });
+  ref.onDispose(service.dispose);
 
   // Initialize asynchronously but don't block the provider
   // Use a microtask to avoid blocking the provider creation
-  Future.microtask(() => service.initialize());
+  Future.microtask(service.initialize);
 
   return service;
 }
@@ -378,9 +376,7 @@ UserProfileService userProfileService(Ref ref) {
   subscriptionManager.setCacheLookup(hasProfileCached: service.hasProfile);
 
   // Ensure cleanup on disposal
-  ref.onDispose(() {
-    service.dispose();
-  });
+  ref.onDispose(service.dispose);
 
   return service;
 }

@@ -142,7 +142,7 @@ void main() {
         final testContainer = ProviderContainer(
           overrides: [
             // Mock videoEventsProvider to return empty stream instead of loading indefinitely
-            videoEventsProvider.overrideWith(() => VideoEventsMock()),
+            videoEventsProvider.overrideWith(VideoEventsMock.new),
           ],
         );
 

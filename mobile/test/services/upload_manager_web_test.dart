@@ -161,7 +161,7 @@ void main() {
       await uploadManager.initialize();
 
       // Should not throw
-      expect(() => uploadManager.dispose(), returnsNormally);
+      expect(uploadManager.dispose, returnsNormally);
     }, skip: !kIsWeb ? 'Web-only test' : null);
 
     test(

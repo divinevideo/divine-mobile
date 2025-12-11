@@ -75,7 +75,7 @@ void main() {
               const RouteContext(type: RouteType.explore, videoIndex: 0),
             );
           }),
-          seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
+          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
         ],
       );
 
@@ -136,7 +136,7 @@ void main() {
               const RouteContext(type: RouteType.explore, videoIndex: 0),
             );
           }),
-          seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
+          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
         ],
       );
 
@@ -181,7 +181,7 @@ void main() {
               const RouteContext(type: RouteType.explore, videoIndex: 0),
             );
           }),
-          seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
+          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
         ],
       );
 
@@ -263,7 +263,7 @@ void main() {
               const RouteContext(type: RouteType.explore, videoIndex: 0),
             );
           }),
-          seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
+          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
         ],
       );
 
@@ -301,7 +301,7 @@ void main() {
               ), // NOT explore
             );
           }),
-          seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
+          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
         ],
       );
 

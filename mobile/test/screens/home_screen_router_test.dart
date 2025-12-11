@@ -316,7 +316,7 @@ void main() {
 
       // Create mock notifier that tracks prefetch calls
       final mockNotifier = FakeUserProfileNotifier(
-        onPrefetch: (pubkeys) => prefetchedPubkeys.addAll(pubkeys),
+        onPrefetch: prefetchedPubkeys.addAll,
       );
 
       final container = ProviderContainer(

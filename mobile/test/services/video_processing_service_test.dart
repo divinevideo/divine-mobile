@@ -206,7 +206,7 @@ void main() {
         videoId: videoId,
         maxAttempts: 5,
         pollInterval: const Duration(milliseconds: 100),
-        onProgress: (progress) => progressCalls.add(progress),
+        onProgress: progressCalls.add,
       );
 
       expect(result.success, true);

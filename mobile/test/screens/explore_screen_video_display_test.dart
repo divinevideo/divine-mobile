@@ -84,7 +84,7 @@ void main() {
               const RouteContext(type: RouteType.explore, videoIndex: null),
             );
           }),
-          seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
+          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
           videoEventsProvider.overrideWith(
             () => _MockVideoEventsWithData(testVideos),
           ),
@@ -126,7 +126,7 @@ void main() {
               const RouteContext(type: RouteType.explore, videoIndex: null),
             );
           }),
-          seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
+          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
           videoEventsProvider.overrideWith(() => _MockVideoEventsWithData([])),
         ],
       );
@@ -163,7 +163,7 @@ void main() {
               const RouteContext(type: RouteType.explore, videoIndex: null),
             );
           }),
-          seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
+          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
           // Return a never-completing stream to simulate loading
           videoEventsProvider.overrideWith(() {
             return _MockVideoEventsLoading();
@@ -201,7 +201,7 @@ void main() {
               const RouteContext(type: RouteType.explore, videoIndex: null),
             );
           }),
-          seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
+          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
           videoEventsProvider.overrideWith(
             () => _MockVideoEventsWithData(testVideos),
           ),

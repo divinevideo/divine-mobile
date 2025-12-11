@@ -44,7 +44,7 @@ final videosForHomeRouteProvider = Provider<AsyncValue<VideoFeedState>>((ref) {
       return ref.watch(homeFeedProvider);
     },
     loading: () => const AsyncValue.loading(),
-    error: (e, st) => AsyncValue.error(e, st),
+    error: AsyncValue.error,
   );
 });
 
@@ -107,11 +107,11 @@ final videosForExploreRouteProvider = Provider<AsyncValue<VideoFeedState>>((
           );
         },
         loading: () => const AsyncValue.loading(),
-        error: (e, st) => AsyncValue.error(e, st),
+        error: AsyncValue.error,
       );
     },
     loading: () => const AsyncValue.loading(),
-    error: (e, st) => AsyncValue.error(e, st),
+    error: AsyncValue.error,
   );
 });
 
@@ -143,6 +143,6 @@ final videosForSearchRouteProvider = Provider<AsyncValue<VideoFeedState>>((
       );
     },
     loading: () => const AsyncValue.loading(),
-    error: (e, st) => AsyncValue.error(e, st),
+    error: AsyncValue.error,
   );
 });

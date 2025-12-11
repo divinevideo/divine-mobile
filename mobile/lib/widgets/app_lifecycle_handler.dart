@@ -100,7 +100,7 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
 
         // Pause all videos and clear visibility state
         // Execute async to prevent blocking scene update
-        Future.microtask(() => visibilityManager.pauseAllVideos());
+        Future.microtask(visibilityManager.pauseAllVideos);
 
       case AppLifecycleState.detached:
         // App is being terminated

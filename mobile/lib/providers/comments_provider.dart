@@ -197,9 +197,7 @@ class CommentsNotifier extends _$CommentsNotifier {
       );
 
       // Clean up subscription when provider is disposed
-      ref.onDispose(() {
-        subscription.cancel();
-      });
+      ref.onDispose(subscription.cancel);
 
       // Wait briefly for initial comments to arrive, then complete
       // This prevents waiting forever for stream completion while still

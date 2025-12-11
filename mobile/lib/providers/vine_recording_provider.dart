@@ -521,9 +521,7 @@ final vineRecordingProvider =
       final controller = VineRecordingController();
       final notifier = VineRecordingNotifier(controller, ref);
 
-      ref.onDispose(() {
-        notifier.dispose();
-      });
+      ref.onDispose(notifier.dispose);
 
       return notifier;
     });

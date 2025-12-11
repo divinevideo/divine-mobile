@@ -41,7 +41,7 @@ void main() {
           ), // Start with gates closed
           isDiscoveryTabActiveProvider.overrideWith((ref) => false),
           isExploreTabActiveProvider.overrideWith((ref) => false),
-          seenVideosProvider.overrideWith(() => SeenVideosNotifier()),
+          seenVideosProvider.overrideWith(SeenVideosNotifier.new),
         ],
       );
     });
@@ -62,17 +62,17 @@ void main() {
 
       // Verify buffering control methods exist
       expect(
-        () => notifier.enableBuffering(),
+        notifier.enableBuffering,
         returnsNormally,
         reason: 'enableBuffering() should exist',
       );
       expect(
-        () => notifier.disableBuffering(),
+        notifier.disableBuffering,
         returnsNormally,
         reason: 'disableBuffering() should exist',
       );
       expect(
-        () => notifier.loadBufferedVideos(),
+        notifier.loadBufferedVideos,
         returnsNormally,
         reason: 'loadBufferedVideos() should exist',
       );
@@ -120,7 +120,7 @@ void main() {
 
         // Load buffered videos when buffer is empty (should do nothing gracefully)
         expect(
-          () => notifier.loadBufferedVideos(),
+          notifier.loadBufferedVideos,
           returnsNormally,
           reason: 'loadBufferedVideos should handle empty buffer gracefully',
         );
@@ -144,7 +144,7 @@ void main() {
 
       // Then disable buffering
       expect(
-        () => notifier.disableBuffering(),
+        notifier.disableBuffering,
         returnsNormally,
         reason: 'disableBuffering should work after enableBuffering',
       );
@@ -158,7 +158,7 @@ void main() {
 
       // Enable buffering BEFORE provider is fully loaded
       expect(
-        () => notifier.enableBuffering(),
+        notifier.enableBuffering,
         returnsNormally,
         reason: 'Should be able to enable buffering before provider loads',
       );

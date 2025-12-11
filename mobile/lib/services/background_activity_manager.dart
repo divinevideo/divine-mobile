@@ -168,7 +168,7 @@ class BackgroundActivityManager {
         try {
           // Give each service max 1 second to suspend
           await Future.any([
-            Future(() => service.onAppBackgrounded()),
+            Future(service.onAppBackgrounded),
             Future.delayed(const Duration(seconds: 1)),
           ]);
         } catch (e) {

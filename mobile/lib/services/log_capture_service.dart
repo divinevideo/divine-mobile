@@ -90,7 +90,7 @@ class LogCaptureService {
       return [];
     }
 
-    return _memoryBuffer.map((entry) => _formatLogEntry(entry)).toList();
+    return _memoryBuffer.map(_formatLogEntry).toList();
   }
 
   /// Get statistics about log storage

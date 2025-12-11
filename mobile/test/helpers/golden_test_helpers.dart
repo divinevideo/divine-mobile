@@ -21,9 +21,7 @@ class GoldenTestHelper {
       widthToHeightRatio: widthToHeightRatio,
     );
 
-    scenarios.forEach((name, widget) {
-      builder.addScenario(name, widget);
-    });
+    scenarios.forEach(builder.addScenario);
 
     await tester.pumpWidgetBuilder(
       builder.build(),

@@ -71,14 +71,10 @@ void main() async {
 
   // Run test suites
   group('Camera Test Suite', () {
-    group('Enhanced Mobile Camera Interface Tests', () {
-      enhanced_camera_test.main();
-    });
+    group('Enhanced Mobile Camera Interface Tests', enhanced_camera_test.main);
 
     group('VineRecordingController Platform Tests', () {});
 
-    group('Camera Recording Integration Tests', () {
-      integration_test.main();
-    });
+    group('Camera Recording Integration Tests', integration_test.main);
   });
 }

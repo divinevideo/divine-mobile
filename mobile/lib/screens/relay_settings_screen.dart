@@ -142,7 +142,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 GestureDetector(
-                  onTap: () => _launchNostrDocs(),
+                  onTap: _launchNostrDocs,
                   child: const Text(
                     'Learn more about Nostr →',
                     style: TextStyle(
@@ -154,7 +154,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                 ),
                 const SizedBox(height: 4),
                 GestureDetector(
-                  onTap: () => _launchNostrWatch(),
+                  onTap: _launchNostrWatch,
                   child: const Text(
                     'Find public relays at nostr.watch →',
                     style: TextStyle(
@@ -206,7 +206,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                         ),
                         const SizedBox(height: 32),
                         ElevatedButton.icon(
-                          onPressed: () => _restoreDefaultRelay(),
+                          onPressed: _restoreDefaultRelay,
                           icon: const Icon(Icons.restore, color: Colors.white),
                           label: const Text(
                             'Restore Default Relay',
@@ -222,7 +222,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                         ),
                         const SizedBox(height: 12),
                         ElevatedButton.icon(
-                          onPressed: () => _showAddRelayDialog(),
+                          onPressed: _showAddRelayDialog,
                           icon: const Icon(Icons.add, color: Colors.white),
                           label: const Text(
                             'Add Custom Relay',
@@ -248,7 +248,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                           children: [
                             Expanded(
                               child: ElevatedButton.icon(
-                                onPressed: () => _showAddRelayDialog(),
+                                onPressed: _showAddRelayDialog,
                                 icon: const Icon(
                                   Icons.add,
                                   color: Colors.white,
@@ -269,7 +269,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: ElevatedButton.icon(
-                                onPressed: () => _retryConnection(),
+                                onPressed: _retryConnection,
                                 icon: const Icon(
                                   Icons.refresh,
                                   color: Colors.white,
@@ -798,7 +798,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
             ),
             const SizedBox(height: 8),
             GestureDetector(
-              onTap: () => _launchNostrWatch(),
+              onTap: _launchNostrWatch,
               child: const Text(
                 'Browse public relays at nostr.watch',
                 style: TextStyle(

@@ -400,7 +400,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     return HashtagFeedScreen(
       hashtag: hashtag,
       embedded: true,
-      onVideoTap: (videos, index) => _enterFeedMode(videos, index),
+      onVideoTap: _enterFeedMode,
     );
   }
 

@@ -99,7 +99,7 @@ void main() {
 
     testWidgets('shows loading indicator when data is loading', (tester) async {
       await tester.pumpWidget(
-        buildTestWidget(videoEventsBuilder: () => _MockVideoEventsLoading()),
+        buildTestWidget(videoEventsBuilder: _MockVideoEventsLoading.new),
       );
       await tester.pump();
 
@@ -108,7 +108,7 @@ void main() {
 
     testWidgets('shows error message when loading fails', (tester) async {
       await tester.pumpWidget(
-        buildTestWidget(videoEventsBuilder: () => _MockVideoEventsError()),
+        buildTestWidget(videoEventsBuilder: _MockVideoEventsError.new),
       );
       await tester.pumpAndSettle();
 

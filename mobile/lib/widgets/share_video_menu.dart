@@ -1072,7 +1072,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
   void _showDeleteDialog() {
     showDialog(
       context: context,
-      builder: (dialogContext) => _buildDeleteDialog(dialogContext),
+      builder: _buildDeleteDialog,
     );
   }
 
@@ -3144,7 +3144,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
               // Show lists as they arrive via Riverpod streaming
               return Column(
                 children: lists
-                    .map((list) => _buildPublicListTile(list))
+                    .map(_buildPublicListTile)
                     .toList(),
               );
             }
@@ -3154,7 +3154,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
             }
             return _buildEmptyState();
           },
-          loading: () => _buildLoadingIndicator(),
+          loading: _buildLoadingIndicator,
           error: (error, _) {
             Log.error(
               'Error loading public lists: $error',

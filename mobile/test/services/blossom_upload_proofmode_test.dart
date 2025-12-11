@@ -109,14 +109,14 @@ void main() {
 
         final mockFile = MockFile();
         when(() => mockFile.path).thenReturn('/test/image.jpg');
-        when(() => mockFile.existsSync()).thenReturn(true);
+        when(mockFile.existsSync).thenReturn(true);
         when(
-          () => mockFile.readAsBytes(),
+          mockFile.readAsBytes,
         ).thenAnswer((_) async => Uint8List.fromList([1, 2, 3]));
         when(
-          () => mockFile.readAsBytesSync(),
+          mockFile.readAsBytesSync,
         ).thenReturn(Uint8List.fromList([1, 2, 3]));
-        when(() => mockFile.lengthSync()).thenReturn(3);
+        when(mockFile.lengthSync).thenReturn(3);
 
         // Mock 409 Conflict response (file already exists)
         final mockResponse = MockResponse();

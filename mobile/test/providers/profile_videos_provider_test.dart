@@ -402,10 +402,7 @@ void main() {
         subscription.close();
       });
 
-      test('should clear all cache globally', () {
-        clearAllProfileVideosCache();
-        // Just verify it doesn't throw - internal cache state is private
-      });
+      test('should clear all cache globally', clearAllProfileVideosCache);
     });
 
     group('Load More Videos', () {

@@ -97,7 +97,7 @@ void main() {
         imageFile: testFile,
         nostrPubkey: testPubkey,
         mimeType: 'image/jpeg',
-        onProgress: (progress) => progressValues.add(progress),
+        onProgress: progressValues.add,
       );
 
       expect(progressValues, [0.1, 0.5, 1.0]);

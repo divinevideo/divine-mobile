@@ -208,12 +208,8 @@ class StartupPerformanceService {
       if (_uiReadyTime != null) {
         // Execute the deferred work
         work()
-            .then((result) {
-              completer.complete(result);
-            })
-            .catchError((error) {
-              completer.completeError(error);
-            });
+            .then(completer.complete)
+            .catchError(completer.completeError);
       } else {
         // Check again on next frame
         WidgetsBinding.instance.addPostFrameCallback((_) => checkUIReady());

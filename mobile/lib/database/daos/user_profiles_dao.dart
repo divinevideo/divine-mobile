@@ -74,7 +74,7 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
   /// Returns all cached profiles. Use sparingly - prefer filtered queries.
   Future<List<UserProfile>> getAllProfiles() async {
     final rows = await select(userProfiles).get();
-    return rows.map((row) => UserProfile.fromDrift(row)).toList();
+    return rows.map(UserProfile.fromDrift).toList();
   }
 
   /// Watch all profiles (reactive stream)
@@ -82,7 +82,7 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
   /// Stream emits whenever any profile changes. Use sparingly - prefer filtered queries.
   Stream<List<UserProfile>> watchAllProfiles() {
     return select(userProfiles).watch().map(
-      (rows) => rows.map((row) => UserProfile.fromDrift(row)).toList(),
+      (rows) => rows.map(UserProfile.fromDrift).toList(),
     );
   }
 }

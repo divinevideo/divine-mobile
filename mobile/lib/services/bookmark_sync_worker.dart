@@ -98,7 +98,7 @@ class BookmarkSyncWorker {
     _isInitialized = true;
 
     // Initial sync on startup
-    Future.delayed(const Duration(seconds: 2), () => syncSets());
+    Future.delayed(const Duration(seconds: 2), syncSets);
   }
 
   /// Sync all bookmark sets that have local changes

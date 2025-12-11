@@ -9,6 +9,6 @@ part 'database_provider.g.dart';
 @Riverpod(keepAlive: true) // Singleton - lives for app lifetime
 AppDatabase database(Ref ref) {
   final db = AppDatabase();
-  ref.onDispose(() => db.close());
+  ref.onDispose(db.close);
   return db;
 }

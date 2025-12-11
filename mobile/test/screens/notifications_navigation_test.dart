@@ -80,7 +80,7 @@ void main() {
               (ref) => mockNotificationService,
             ),
             // Override videoEventsProvider to prevent timer issues in tests
-            videoEventsProvider.overrideWith(() => MockVideoEventsNoTimers()),
+            videoEventsProvider.overrideWith(MockVideoEventsNoTimers.new),
           ],
         );
         addTearDown(c.dispose);
@@ -121,7 +121,7 @@ void main() {
             (ref) => mockNotificationService,
           ),
           // Override videoEventsProvider to prevent timer issues in tests
-          videoEventsProvider.overrideWith(() => MockVideoEventsNoTimers()),
+          videoEventsProvider.overrideWith(MockVideoEventsNoTimers.new),
         ],
       );
       addTearDown(c.dispose);

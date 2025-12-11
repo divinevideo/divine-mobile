@@ -100,7 +100,7 @@ void main() async {
           final testContainer = ProviderContainer(
             overrides: [
               ...getStandardTestOverrides(),
-              videoEventsProvider.overrideWith(() => VideoEventsMock()),
+              videoEventsProvider.overrideWith(VideoEventsMock.new),
             ],
           );
 
@@ -136,7 +136,7 @@ void main() async {
           final testContainer = ProviderContainer(
             overrides: [
               ...getStandardTestOverrides(),
-              videoEventsProvider.overrideWith(() => VideoEventsMock()),
+              videoEventsProvider.overrideWith(VideoEventsMock.new),
             ],
           );
 
@@ -172,7 +172,7 @@ void main() async {
           final testContainer = ProviderContainer(
             overrides: [
               ...getStandardTestOverrides(),
-              videoEventsProvider.overrideWith(() => VideoEventsMock()),
+              videoEventsProvider.overrideWith(VideoEventsMock.new),
             ],
           );
 
@@ -208,7 +208,7 @@ void main() async {
           final testContainer = ProviderContainer(
             overrides: [
               ...getStandardTestOverrides(),
-              videoEventsProvider.overrideWith(() => VideoEventsMock()),
+              videoEventsProvider.overrideWith(VideoEventsMock.new),
             ],
           );
 
@@ -244,7 +244,7 @@ void main() async {
           final testContainer = ProviderContainer(
             overrides: [
               ...getStandardTestOverrides(),
-              videoEventsProvider.overrideWith(() => VideoEventsMock()),
+              videoEventsProvider.overrideWith(VideoEventsMock.new),
             ],
           );
 
@@ -280,7 +280,7 @@ void main() async {
           final testContainer = ProviderContainer(
             overrides: [
               ...getStandardTestOverrides(),
-              videoEventsProvider.overrideWith(() => VideoEventsMock()),
+              videoEventsProvider.overrideWith(VideoEventsMock.new),
             ],
           );
 

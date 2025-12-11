@@ -302,9 +302,7 @@ class UserProfileService extends ChangeNotifier {
 
       // Cancel existing debounce timer and create new one
       _batchDebounceTimer?.cancel();
-      _batchDebounceTimer = Timer(const Duration(milliseconds: 100), () {
-        _executeBatchFetch();
-      });
+      _batchDebounceTimer = Timer(const Duration(milliseconds: 100), _executeBatchFetch);
 
       // Return the completer's future - it will complete when batch fetch finishes
       return completer.future;
