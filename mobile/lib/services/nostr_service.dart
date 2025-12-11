@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
     as embedded;
 import 'package:logging/logging.dart' as logging;
@@ -577,14 +578,19 @@ class NostrService implements INostrService {
     final filterHash = _generateFilterHash(filters);
     final id = 'sub_$filterHash';
 
-    // Check if we already have this exact subscription
+    // If we already have this subscription, close it and create a fresh one.
+    // This ensures the embedded relay re-queries its SQLite cache and delivers
+    // all cached events to the new subscriber (not just the most recent one).
     if (_subscriptions.containsKey(id) && !_subscriptions[id]!.isClosed) {
-      Log.info(
-        '🔄 Reusing existing subscription $id with identical filters',
+      Log.debug(
+        '🔄 Closing existing subscription $id to create fresh one',
         name: 'NostrService',
         category: LogCategory.relay,
       );
-      return _subscriptions[id]!.stream;
+      _subscriptions[id]!.close();
+      _subscriptions.remove(id);
+      // Also unsubscribe from the embedded relay to avoid duplicate events
+      _embeddedRelay?.unsubscribe(id);
     }
 
     // Check for too many concurrent subscriptions
@@ -605,7 +611,8 @@ class NostrService implements INostrService {
       );
     }
 
-    final controller = StreamController<Event>.broadcast();
+    // Use BehaviorSubject so the most recent event is replayed to new listeners
+    final controller = StreamController<Event>();
     // Per-subscription de-duplication to avoid duplicate EVENTs from multiple relays/filters
     final seenEventIds = <String>{};
     // Track replaceable events (kind, pubkey) -> (eventId, timestamp) for deduplication
