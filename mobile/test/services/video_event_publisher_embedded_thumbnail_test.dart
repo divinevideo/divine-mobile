@@ -38,7 +38,7 @@ class EmbeddedThumbnailGenerator {
         // Create base64 data URI
         final base64Thumbnail = base64.encode(thumbnailBytes);
         final thumbnailDataUri = 'data:image/jpeg;base64,$base64Thumbnail';
-        final thumbnailSizeKB = (thumbnailBytes.length / 1024);
+        final thumbnailSizeKB = thumbnailBytes.length / 1024;
 
         result['success'] = true;
         result['dataUri'] = thumbnailDataUri;

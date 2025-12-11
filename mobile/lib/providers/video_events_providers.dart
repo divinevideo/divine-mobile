@@ -44,7 +44,7 @@ class VideoEvents extends _$VideoEvents {
   Timer? _debounceTimer;
   List<VideoEvent>? _pendingEvents;
   List<VideoEvent>? _lastEmittedEvents;
-  bool get _canEmit => _subject != null && !(_subject!.isClosed);
+  bool get _canEmit => _subject != null && !_subject!.isClosed;
 
   // Buffer for new videos that arrive while user is browsing
   final List<VideoEvent> _bufferedEvents = [];
