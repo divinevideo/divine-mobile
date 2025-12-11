@@ -3,6 +3,7 @@ linter:
     - prefer_adjacent_string_concatenation
     - prefer_asserts_in_initializer_lists
     - prefer_conditional_assignment
+    - prefer_const_constructors_in_immutables
     - unnecessary_await_in_return
     - unnecessary_const
     - unnecessary_constructor_name
