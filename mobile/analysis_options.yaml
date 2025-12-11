@@ -11,3 +11,4 @@ linter:
     - unnecessary_nullable_for_final_variable_declarations
     - unnecessary_overrides
     - use_key_in_widget_constructors
+    - use_string_in_part_of_directives
