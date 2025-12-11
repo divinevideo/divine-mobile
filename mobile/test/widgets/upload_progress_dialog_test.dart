@@ -104,7 +104,7 @@ void main() {
       'dialog auto-closes when upload reaches readyToPublish status',
       (WidgetTester tester) async {
         // Arrange: Start with uploading status
-        var mockUpload = PendingUpload.create(
+        final mockUpload = PendingUpload.create(
           localVideoPath: '/test/video.mp4',
           nostrPubkey: 'test_pubkey',
         ).copyWith(status: UploadStatus.uploading, uploadProgress: 0.8);
@@ -168,7 +168,7 @@ void main() {
     ) async {
       // Arrange: Track how many times getUpload was called
       int pollCount = 0;
-      var mockUpload = PendingUpload.create(
+      final mockUpload = PendingUpload.create(
         localVideoPath: '/test/video.mp4',
         nostrPubkey: 'test_pubkey',
       ).copyWith(status: UploadStatus.uploading, uploadProgress: 0.3);

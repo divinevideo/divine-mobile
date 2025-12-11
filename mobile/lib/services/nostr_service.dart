@@ -276,7 +276,7 @@ class NostrService implements INostrService {
       }
 
       // Initialize embeddedRelayFailed for web platform
-      bool embeddedRelayFailed = kIsWeb;
+      const bool embeddedRelayFailed = kIsWeb;
 
       // MIGRATION: Remove old relay3.openvine.co if present
       if (!embeddedRelayFailed && _embeddedRelay != null) {

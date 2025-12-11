@@ -70,7 +70,7 @@ void main() {
       'can subscribe to real video events',
       (tester) async {
         // Test real subscription to live relay
-        int initialCount = videoEventService.discoveryVideos.length;
+        final int initialCount = videoEventService.discoveryVideos.length;
 
         // Subscribe to video feed
         await videoEventService.subscribeToVideoFeed(
@@ -83,7 +83,7 @@ void main() {
         await tester.pump();
 
         // Check if we got any new events
-        int finalCount = videoEventService.discoveryVideos.length;
+        final int finalCount = videoEventService.discoveryVideos.length;
 
         // May not receive events immediately, but subscription should work
         expect(finalCount, greaterThanOrEqualTo(initialCount));

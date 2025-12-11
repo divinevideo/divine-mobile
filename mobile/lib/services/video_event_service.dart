@@ -1257,7 +1257,7 @@ class VideoEventService extends ChangeNotifier {
         // Phase 3.3: Cache-first strategy - load cached events BEFORE relay subscription
         // This provides instant UI feedback while relay fetches fresh data
         // Now FAST with proper database indexes on kind, created_at, and composite indexes!
-        List<Event> cachedEvents = await _loadCachedEvents(
+        final List<Event> cachedEvents = await _loadCachedEvents(
           kinds: NIP71VideoKinds.getAllVideoKinds(),
           authors: authors,
           hashtags: lowercaseHashtags,

@@ -200,7 +200,7 @@ void main() {
         tester,
       ) async {
         // Create a stateful test widget to control zoom slider visibility
-        bool showZoomSlider = true;
+        const bool showZoomSlider = true;
         double currentZoom = 0.5;
 
         await tester.pumpWidget(

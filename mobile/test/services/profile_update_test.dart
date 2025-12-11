@@ -270,7 +270,7 @@ void main() {
       service.handleProfileEventForTesting(profileEvent);
 
       // Verify profile is cached
-      var cachedProfile = service.getCachedProfile(pubkey);
+      final cachedProfile = service.getCachedProfile(pubkey);
       expect(cachedProfile, isNotNull);
       expect(cachedProfile!.name, equals('Test User'));
 

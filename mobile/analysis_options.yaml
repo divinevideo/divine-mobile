@@ -18,5 +18,6 @@ linter:
     - prefer_const_declarations
     - prefer_final_fields
     - prefer_final_in_for_each
+    - prefer_final_locals
     - unnecessary_breaks
     - use_colored_box

@@ -69,7 +69,7 @@ Future<void> main() async {
     }
 
     Map<String, dynamic>? editorPicksEvent;
-    List<String> editorPicksVideoIds = [];
+    final List<String> editorPicksVideoIds = [];
 
     if (editorPicksEvents.isNotEmpty) {
       editorPicksEvent = editorPicksEvents.first;
@@ -102,7 +102,7 @@ Future<void> main() async {
     }
 
     // Step 2: Fetch Editor's Picks videos (if we have any)
-    List<Map<String, dynamic>> editorPicksVideos = [];
+    final List<Map<String, dynamic>> editorPicksVideos = [];
     if (editorPicksVideoIds.isNotEmpty) {
       print('[SEED GEN] Fetching Editor\'s Picks videos...');
 
