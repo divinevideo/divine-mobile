@@ -2,6 +2,7 @@
 // ABOUTME: Shows embedded relay status, external relay connections, and network health
 
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_sdk/filter.dart' as nostr;
@@ -354,7 +355,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
                       isConnected,
                       status?['authenticated'] ?? false,
                     );
-                  }).toList(),
+                  }),
                 ],
               ),
 
@@ -430,7 +431,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
                         entry.value,
                         textColor: isOk ? Colors.green : Colors.red,
                       );
-                    }).toList(),
+                    }),
                 ],
               ),
 

@@ -38,3 +38,4 @@ linter:
     - unnecessary_statements
     - unnecessary_string_escapes
     - unnecessary_string_interpolations
+    - unnecessary_to_list_in_spreads
