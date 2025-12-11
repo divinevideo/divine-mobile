@@ -54,7 +54,7 @@ _MockRelay _createMockRelay(
   when(() => mockRelay.url).thenReturn(url);
   when(() => mockRelay.relayStatus).thenReturn(mockStatus);
   when(() => mockStatus.connected).thenReturn(
-    connected ? ClientConnected.CONNECTED : ClientConnected.DISCONNECT,
+    connected ? ClientConnected.connected : ClientConnected.disconnect,
   );
   when(() => mockStatus.authed).thenReturn(authed);
 

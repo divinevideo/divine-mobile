@@ -427,9 +427,9 @@ class RelayManager {
         final connected = relay.relayStatus.connected;
         final authed = relay.relayStatus.authed;
 
-        if (connected == ClientConnected.CONNECTED) {
+        if (connected == ClientConnected.connected) {
           newState = authed ? RelayState.authenticated : RelayState.connected;
-        } else if (connected == ClientConnected.CONNECTING) {
+        } else if (connected == ClientConnected.connecting) {
           newState = RelayState.connecting;
         } else {
           newState = RelayState.disconnected;

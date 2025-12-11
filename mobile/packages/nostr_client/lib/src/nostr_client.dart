@@ -60,6 +60,7 @@ class NostrClient {
 
   final Nostr _nostr;
   final GatewayClient? _gatewayClient;
+  final RelayManager _relayManager;
 
   /// Public key of the client
   String get publicKey => _nostr.publicKey;
