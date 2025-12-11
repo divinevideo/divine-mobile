@@ -29,15 +29,17 @@ void main() {
     String content = 'test content',
     int? createdAt,
   }) {
-    final event = Event(
-      pubkey,
-      kind,
-      tags,
-      content,
-      createdAt: createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    )
-      // Sign with a dummy signature for testing
-      ..sig = 'b' * 128;
+    final event =
+        Event(
+            pubkey,
+            kind,
+            tags,
+            content,
+            createdAt:
+                createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          )
+          // Sign with a dummy signature for testing
+          ..sig = 'b' * 128;
     return event;
   }
 
@@ -96,25 +98,26 @@ void main() {
       test(
         'does not replace newer with older for replaceable events',
         () async {
-        final newer = createEvent(
-          kind: 0,
-          content: 'new profile',
-          createdAt: 2000,
-        );
-        final older = createEvent(
-          kind: 0,
-          content: 'old profile',
-          createdAt: 1000,
-        );
+          final newer = createEvent(
+            kind: 0,
+            content: 'new profile',
+            createdAt: 2000,
+          );
+          final older = createEvent(
+            kind: 0,
+            content: 'old profile',
+            createdAt: 1000,
+          );
 
-        await eventCache.cacheEvent(newer);
-        await eventCache.cacheEvent(older);
+          await eventCache.cacheEvent(newer);
+          await eventCache.cacheEvent(older);
 
-        // Should still have newer event
-        final cached = await eventCache.getCachedProfile(testPubkey);
-        expect(cached, isNotNull);
-        expect(cached!.content, equals('new profile'));
-      });
+          // Should still have newer event
+          final cached = await eventCache.getCachedProfile(testPubkey);
+          expect(cached, isNotNull);
+          expect(cached!.content, equals('new profile'));
+        },
+      );
     });
 
     group('cacheEvents', () {
@@ -221,6 +224,48 @@ void main() {
         final cached = await eventCache.getCachedEvents(filter);
 
         expect(cached, isEmpty);
+      });
+
+      test('sorts by createdAt descending across multiple authors', () async {
+        final pubkey2 = 'b' * 64;
+        // Alice's event is older
+        final aliceEvent = createEvent(
+          content: 'from alice',
+          createdAt: 1000,
+        );
+        // Bob's event is newer
+        final bobEvent = createEvent(
+          pubkey: pubkey2,
+          content: 'from bob',
+          createdAt: 2000,
+        );
+
+        await eventCache.cacheEvents([aliceEvent, bobEvent]);
+
+        // Query both authors with limit 1 - should return Bob's newer event
+        final filter = Filter(authors: [testPubkey, pubkey2], limit: 1);
+        final cached = await eventCache.getCachedEvents(filter);
+
+        expect(cached.length, equals(1));
+        expect(cached.first.pubkey, equals(pubkey2));
+        expect(cached.first.content, equals('from bob'));
+      });
+
+      test('returns events sorted by createdAt descending', () async {
+        final events = [
+          createEvent(content: 'oldest', createdAt: 1000),
+          createEvent(content: 'newest', createdAt: 3000),
+          createEvent(content: 'middle', createdAt: 2000),
+        ];
+        await eventCache.cacheEvents(events);
+
+        final filter = Filter(kinds: [1]);
+        final cached = await eventCache.getCachedEvents(filter);
+
+        expect(cached.length, equals(3));
+        expect(cached[0].content, equals('newest'));
+        expect(cached[1].content, equals('middle'));
+        expect(cached[2].content, equals('oldest'));
       });
     });
 

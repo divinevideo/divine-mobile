@@ -1728,44 +1728,46 @@ void main() {
           verify(() => mockEventCache.cacheEvents(gatewayEvents)).called(1);
         });
 
-        test('falls back to websocket when cache and gateway are empty',
-            () async {
-          final filters = [
-            Filter(kinds: [EventKind.textNote], limit: 10),
-          ];
-          final wsEvents = [_createTestEvent(content: 'from websocket')];
+        test(
+          'falls back to websocket when cache and gateway are empty',
+          () async {
+            final filters = [
+              Filter(kinds: [EventKind.textNote], limit: 10),
+            ];
+            final wsEvents = [_createTestEvent(content: 'from websocket')];
 
-          when(
-            () => mockEventCache.getCachedEvents(any()),
-          ).thenAnswer((_) async => []);
-          when(
-            () => mockGatewayClient.query(any()),
-          ).thenAnswer(
-            (_) async => const GatewayResponse(
-              events: [],
-              eose: true,
-              complete: true,
-              cached: false,
-            ),
-          );
-          when(
-            () => mockNostr.queryEvents(
-              any(),
-              id: any(named: 'id'),
-              tempRelays: any(named: 'tempRelays'),
-              relayTypes: any(named: 'relayTypes'),
-              sendAfterAuth: any(named: 'sendAfterAuth'),
-            ),
-          ).thenAnswer((_) async => wsEvents);
-          when(
-            () => mockEventCache.cacheEvents(any()),
-          ).thenAnswer((_) async {});
+            when(
+              () => mockEventCache.getCachedEvents(any()),
+            ).thenAnswer((_) async => []);
+            when(
+              () => mockGatewayClient.query(any()),
+            ).thenAnswer(
+              (_) async => const GatewayResponse(
+                events: [],
+                eose: true,
+                complete: true,
+                cached: false,
+              ),
+            );
+            when(
+              () => mockNostr.queryEvents(
+                any(),
+                id: any(named: 'id'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                sendAfterAuth: any(named: 'sendAfterAuth'),
+              ),
+            ).thenAnswer((_) async => wsEvents);
+            when(
+              () => mockEventCache.cacheEvents(any()),
+            ).thenAnswer((_) async {});
 
-          final result = await clientWithCache.queryEvents(filters);
+            final result = await clientWithCache.queryEvents(filters);
 
-          expect(result, equals(wsEvents));
-          verify(() => mockEventCache.cacheEvents(wsEvents)).called(1);
-        });
+            expect(result, equals(wsEvents));
+            verify(() => mockEventCache.cacheEvents(wsEvents)).called(1);
+          },
+        );
 
         test('works without eventCache (backward compat)', () async {
           final filters = [

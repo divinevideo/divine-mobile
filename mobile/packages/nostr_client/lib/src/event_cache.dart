@@ -112,11 +112,10 @@ class EventCache {
           final rows = await _dbClient.getEventsByAuthor(
             author,
             kind: kind,
-            limit: filter.limit,
           );
           results.addAll(rows);
         }
-        return results.map(_rowToEvent).toList();
+        return _sortAndLimit(results.map(_rowToEvent).toList(), filter.limit);
       } else {
         // Filter by kind only
         final rows = await _dbClient.getEventsByKind(
@@ -131,10 +130,7 @@ class EventCache {
       // Filter by authors only
       final results = <NostrEventRow>[];
       for (final author in filter.authors!) {
-        final rows = await _dbClient.getEventsByAuthor(
-          author,
-          limit: filter.limit,
-        );
+        final rows = await _dbClient.getEventsByAuthor(author);
         results.addAll(rows);
       }
       // Filter by kinds if specified
@@ -142,11 +138,7 @@ class EventCache {
       if (filter.kinds != null) {
         events = events.where((e) => filter.kinds!.contains(e.kind)).toList();
       }
-      // Apply limit
-      if (filter.limit != null && events.length > filter.limit!) {
-        events = events.sublist(0, filter.limit);
-      }
-      return events;
+      return _sortAndLimit(events, filter.limit);
     }
 
     // No supported filter criteria
@@ -173,21 +165,31 @@ class EventCache {
     return filter.kinds!.any((k) => k == 34236 || k == 16);
   }
 
+  /// Sort events by createdAt descending and apply limit.
+  List<Event> _sortAndLimit(List<Event> events, int? limit) {
+    events.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (limit != null && events.length > limit) {
+      return events.sublist(0, limit);
+    }
+    return events;
+  }
+
   /// Convert database row to Event.
   Event _rowToEvent(NostrEventRow row) {
     final tags = (jsonDecode(row.tags) as List)
         .map((tag) => (tag as List).map((e) => e.toString()).toList())
         .toList();
 
-    final event = Event(
-      row.pubkey,
-      row.kind,
-      tags,
-      row.content,
-      createdAt: row.createdAt,
-    )
-      ..id = row.id
-      ..sig = row.sig;
+    final event =
+        Event(
+            row.pubkey,
+            row.kind,
+            tags,
+            row.content,
+            createdAt: row.createdAt,
+          )
+          ..id = row.id
+          ..sig = row.sig;
     return event;
   }
 }
