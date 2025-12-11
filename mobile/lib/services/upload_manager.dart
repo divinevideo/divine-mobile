@@ -748,7 +748,7 @@ class UploadManager {
           category: LogCategory.video,
         );
       } else {
-        blossomServer = 'https://blossom.divine.video';
+        blossomServer = BlossomUploadService.defaultBlossomServer;
         Log.info(
           '🌸 Uploading to default diVine Blossom server: $blossomServer',
           name: 'UploadManager',

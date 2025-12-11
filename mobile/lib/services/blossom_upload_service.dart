@@ -48,7 +48,7 @@ class BlossomUploadResult {
 class BlossomUploadService {
   static const String _blossomServerKey = 'blossom_server_url';
   static const String _useBlossomKey = 'use_blossom_upload';
-  static const String defaultBlossomServer = 'https://blossom.divine.video';
+  static const String defaultBlossomServer = 'https://media.divine.video';
 
   final AuthService authService;
   final INostrService nostrService;
@@ -212,7 +212,7 @@ class BlossomUploadService {
         serverUrl = customServerUrl;
       } else {
         // Use default diVine Blossom server
-        serverUrl = 'https://blossom.divine.video';
+        serverUrl = defaultBlossomServer;
       }
 
       // Parse and validate server URL
@@ -655,7 +655,7 @@ class BlossomUploadService {
         }
         serverUrl = customServerUrl;
       } else {
-        serverUrl = 'https://blossom.divine.video';
+        serverUrl = defaultBlossomServer;
       }
 
       // Parse and validate server URL
@@ -907,7 +907,7 @@ class BlossomUploadService {
         }
         serverUrl = customServerUrl;
       } else {
-        serverUrl = 'https://blossom.divine.video';
+        serverUrl = defaultBlossomServer;
       }
 
       // Parse and validate server URL
