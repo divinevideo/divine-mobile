@@ -2851,7 +2851,7 @@ class VineRecordingController {
   }
 
   /// Handle macOS recording auto-completion after max duration
-  void _handleMacOSAutoCompletion() async {
+  Future<void> _handleMacOSAutoCompletion() async {
     final macOSInterface = _cameraInterface as MacOSCameraInterface;
 
     // Stop the native recording first to get the file path

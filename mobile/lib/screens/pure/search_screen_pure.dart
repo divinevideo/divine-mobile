@@ -101,7 +101,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
     });
   }
 
-  void _performSearch(String query, {bool updateUrl = true}) async {
+  Future<void> _performSearch(String query, {bool updateUrl = true}) async {
     if (query.isEmpty) {
       setState(() {
         _videoResults = [];

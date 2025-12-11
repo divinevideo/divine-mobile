@@ -922,7 +922,7 @@ class _CrashProbeHotspotState extends State<_CrashProbeHotspot> {
   int _taps = 0;
   DateTime? _windowStart;
 
-  void _onTap() async {
+  Future<void> _onTap() async {
     final now = DateTime.now();
     if (_windowStart == null ||
         now.difference(_windowStart!) > const Duration(seconds: 5)) {
