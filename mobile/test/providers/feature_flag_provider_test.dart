@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 
 import 'feature_flag_provider_test.mocks.dart';
 

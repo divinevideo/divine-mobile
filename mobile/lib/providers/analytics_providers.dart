@@ -6,10 +6,10 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:openvine/models/video_event.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/state/analytics_state.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 part 'analytics_providers.g.dart';
 
@@ -20,11 +20,6 @@ http.Client httpClient(Ref ref) {
   ref.onDispose(client.close);
   return client;
 }
-
-// SharedPreferences provider
-@riverpod
-Future<SharedPreferences> sharedPreferences(Ref ref) =>
-    SharedPreferences.getInstance();
 
 // Analytics service provider with state management
 @riverpod
@@ -60,7 +55,7 @@ class Analytics extends _$Analytics {
 
     try {
       // Load analytics preference from storage
-      final prefs = await ref.read(sharedPreferencesProvider.future);
+      final prefs = ref.read(sharedPreferencesProvider);
       final analyticsEnabled = prefs.getBool(_analyticsEnabledKey) ?? true;
 
       state = state.copyWith(
@@ -94,7 +89,7 @@ class Analytics extends _$Analytics {
     if (state.analyticsEnabled == enabled) return;
 
     try {
-      final prefs = await ref.read(sharedPreferencesProvider.future);
+      final prefs = ref.read(sharedPreferencesProvider);
       await prefs.setBool(_analyticsEnabledKey, enabled);
 
       state = state.copyWith(analyticsEnabled: enabled, error: null);

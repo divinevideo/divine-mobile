@@ -33,7 +33,7 @@ import 'package:openvine/widgets/app_lifecycle_handler.dart';
 import 'package:openvine/widgets/geo_blocking_gate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'dart:io'
     if (dart.library.html) 'package:openvine/utils/platform_io_web.dart'
     as io;

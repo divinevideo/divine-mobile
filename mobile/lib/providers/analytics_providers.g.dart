@@ -50,47 +50,6 @@ final class HttpClientProvider
 
 String _$httpClientHash() => r'3e1d65fa831165b685a1881b712e31312635f7c7';
 
-@ProviderFor(sharedPreferences)
-const sharedPreferencesProvider = SharedPreferencesProvider._();
-
-final class SharedPreferencesProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<SharedPreferences>,
-          SharedPreferences,
-          FutureOr<SharedPreferences>
-        >
-    with
-        $FutureModifier<SharedPreferences>,
-        $FutureProvider<SharedPreferences> {
-  const SharedPreferencesProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'sharedPreferencesProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$sharedPreferencesHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<SharedPreferences> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<SharedPreferences> create(Ref ref) {
-    return sharedPreferences(ref);
-  }
-}
-
-String _$sharedPreferencesHash() => r'106b441400813a2b4bba3261097e11e5688efb98';
-
 @ProviderFor(Analytics)
 const analyticsProvider = AnalyticsProvider._();
 
@@ -123,7 +82,7 @@ final class AnalyticsProvider
   }
 }
 
-String _$analyticsHash() => r'e3659247ed7efe0dc0534deea0e788346d54f0de';
+String _$analyticsHash() => r'aa407f80e193bc8c15e8a5152a43d1347c50ee12';
 
 abstract class _$Analytics extends $Notifier<AnalyticsState> {
   AnalyticsState build();

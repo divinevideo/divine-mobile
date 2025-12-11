@@ -17,8 +17,7 @@ import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/services/video_prewarmer.dart';
 import 'package:openvine/services/visibility_tracker.dart';
 import 'package:openvine/services/analytics_service.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart'
-    as ff;
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Helper to wait for a condition to become true
@@ -83,7 +82,7 @@ void main() {
         analyticsServiceProvider.overrideWithValue(
           NoopAnalyticsService(),
         ), // Prevent timer leaks from analytics retry delays
-        ff.sharedPreferencesProvider.overrideWithValue(
+        sharedPreferencesProvider.overrideWithValue(
           prefs,
         ), // Override feature flag shared prefs provider
       ],

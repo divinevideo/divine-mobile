@@ -15,8 +15,7 @@ import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_prewarmer.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart'
-    as ff;
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -62,7 +61,7 @@ void main() {
             overlayPolicyProvider.overrideWithValue(OverlayPolicy.alwaysOn),
             videoPrewarmerProvider.overrideWithValue(NoopPrewarmer()),
             analyticsServiceProvider.overrideWithValue(NoopAnalyticsService()),
-            ff.sharedPreferencesProvider.overrideWithValue(prefs),
+            sharedPreferencesProvider.overrideWithValue(prefs),
           ],
         );
 
@@ -133,7 +132,7 @@ void main() {
           appForegroundProvider.overrideWithValue(const AsyncValue.data(true)),
           videoPrewarmerProvider.overrideWithValue(NoopPrewarmer()),
           analyticsServiceProvider.overrideWithValue(NoopAnalyticsService()),
-          ff.sharedPreferencesProvider.overrideWithValue(prefs),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
       );
 
@@ -184,7 +183,7 @@ void main() {
           appForegroundProvider.overrideWithValue(const AsyncValue.data(true)),
           videoPrewarmerProvider.overrideWithValue(NoopPrewarmer()),
           analyticsServiceProvider.overrideWithValue(NoopAnalyticsService()),
-          ff.sharedPreferencesProvider.overrideWithValue(prefs),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
       );
 

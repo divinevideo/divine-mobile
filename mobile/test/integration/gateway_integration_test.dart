@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/providers/relay_gateway_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/relay_gateway_service.dart';
 import 'package:openvine/services/relay_gateway_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
