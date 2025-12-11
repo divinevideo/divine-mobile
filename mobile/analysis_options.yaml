@@ -33,6 +33,7 @@ linter:
     - null_closures
     - only_throw_errors
     - overridden_fields
+    - package_names
     - prefer_adjacent_string_concatenation
     - prefer_asserts_in_initializer_lists
     - prefer_collection_literals
