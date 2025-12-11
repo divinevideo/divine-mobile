@@ -49,7 +49,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
 
     return Column(
       children: [
-        Container(
+        ColoredBox(
           color: VineTheme.vineGreen,
           child: TabBar(
             controller: _tabController,

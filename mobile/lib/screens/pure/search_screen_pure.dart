@@ -384,7 +384,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
 
     // Embedded mode: return content without scaffold
     if (widget.embedded) {
-      return Container(
+      return ColoredBox(
         color: VineTheme.backgroundColor, // Ensure visible background
         child: Column(
           children: [
@@ -393,7 +393,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
               padding: const EdgeInsets.all(8),
               child: searchBar,
             ),
-            Container(color: VineTheme.cardBackground, child: tabBar),
+            ColoredBox(color: VineTheme.cardBackground, child: tabBar),
             Expanded(child: tabContent),
           ],
         ),

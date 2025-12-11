@@ -90,9 +90,9 @@ void main() {
                 imageUrl: 'https://api.openvine.co/nonexistent-image.jpg',
                 fit: BoxFit.cover,
                 placeholder: (context, url) =>
-                    Container(color: Colors.grey, child: const Text('Loading')),
+                    const ColoredBox(color: Colors.grey, child: Text('Loading')),
                 errorWidget: (context, url, error) =>
-                    Container(color: Colors.red, child: const Text('Error')),
+                    const ColoredBox(color: Colors.red, child: Text('Error')),
               ),
             ),
           ),

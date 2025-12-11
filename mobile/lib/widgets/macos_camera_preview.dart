@@ -40,7 +40,7 @@ class CameraPreviewPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return ColoredBox(
       color: Colors.black,
       child: Center(
         child: Column(

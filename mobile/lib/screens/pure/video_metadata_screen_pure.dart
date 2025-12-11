@@ -846,7 +846,7 @@ class _VideoMetadataScreenPureState
                 ),
                 // Publishing progress overlay
                 if (_isPublishing)
-                  Container(
+                  ColoredBox(
                     color: Colors.black.withValues(alpha: 0.8),
                     child: Center(
                       child: Container(

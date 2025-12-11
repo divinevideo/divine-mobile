@@ -136,7 +136,7 @@ class ComposableVideoGrid extends ConsumerWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Container(
+                    ColoredBox(
                       color: VineTheme.cardBackground,
                       child: video.thumbnailUrl != null
                           ? VideoThumbnailWidget(
@@ -146,9 +146,9 @@ class ComposableVideoGrid extends ConsumerWidget {
                               fit: BoxFit.cover,
                               borderRadius: BorderRadius.circular(0),
                             )
-                          : Container(
+                          : const ColoredBox(
                               color: VineTheme.cardBackground,
-                              child: const Icon(
+                              child: Icon(
                                 Icons.videocam,
                                 size: 40,
                                 color: VineTheme.secondaryText,

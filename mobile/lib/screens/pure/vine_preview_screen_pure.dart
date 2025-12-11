@@ -265,7 +265,7 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
           // Video preview section
           Expanded(
             flex: 3,
-            child: Container(
+            child: ColoredBox(
               key: const Key('video-preview'),
               color: Colors.black,
               child: Center(

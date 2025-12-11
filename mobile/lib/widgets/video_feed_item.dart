@@ -622,7 +622,7 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                       // Always use BoxFit.contain to show the full video without cropping
                       // This applies to all aspect ratios: portrait, landscape, and square
                       return SizedBox.expand(
-                        child: Container(
+                        child: ColoredBox(
                           color: Colors.black,
                           child: FittedBox(
                             fit: BoxFit.contain,
@@ -683,9 +683,9 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
             else
               // Not active: show black screen instead of thumbnail
               // (thumbnails are from wrong timestamp - backend issue)
-              Container(
+              const ColoredBox(
                 color: Colors.black,
-                child: const Center(
+                child: Center(
                   child: Icon(
                     Icons.play_circle_outline,
                     size: 64,

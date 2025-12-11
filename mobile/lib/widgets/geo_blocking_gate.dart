@@ -58,9 +58,9 @@ class _GeoBlockingGateState extends ConsumerState<GeoBlockingGate> {
   Widget build(BuildContext context) {
     // Show loading indicator while checking
     if (_isChecking) {
-      return Container(
+      return const ColoredBox(
         color: Colors.black,
-        child: const Center(
+        child: Center(
           child: CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
           ),

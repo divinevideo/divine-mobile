@@ -98,7 +98,7 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
     }
 
     // Use tab-specific video list from parent (preserves grid sort order)
-    return Container(
+    return ColoredBox(
       color: Colors.black,
       child: PageView.builder(
         itemCount: videos.length,

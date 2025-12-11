@@ -603,7 +603,7 @@ class _UniversalCameraScreenPureState
               // Countdown overlay
               if (_countdownValue != null)
                 Positioned.fill(
-                  child: Container(
+                  child: ColoredBox(
                     color: Colors.black.withValues(alpha: 0.5),
                     child: Center(
                       child: Text(
@@ -621,7 +621,7 @@ class _UniversalCameraScreenPureState
               // Processing overlay
               if (_isProcessing)
                 Positioned.fill(
-                  child: Container(
+                  child: ColoredBox(
                     color: Colors.black.withValues(alpha: 0.7),
                     child: const Center(
                       child: Column(

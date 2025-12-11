@@ -72,7 +72,7 @@ class VideoErrorOverlay extends ConsumerWidget {
         ),
         // Error overlay (only show on active video)
         if (isActive)
-          Container(
+          ColoredBox(
             color: Colors.black54,
             child: Center(
               child: Column(

@@ -242,7 +242,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     return Column(
       children: [
         // Tabs always visible
-        Container(
+        ColoredBox(
           color: VineTheme.cardBackground,
           child: TabBar(
             controller: _tabController,

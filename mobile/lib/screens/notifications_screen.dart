@@ -43,7 +43,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     return Column(
       children: [
         // Tab bar for filtering notifications
-        Container(
+        ColoredBox(
           color: VineTheme.cardBackground,
           child: TabBar(
             controller: _tabController,
@@ -96,7 +96,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
                   : service.getNotificationsByType(_selectedFilter!);
 
               if (notifications.isEmpty) {
-                return Container(
+                return ColoredBox(
                   color: Colors.black,
                   child: Center(
                     child: Column(
@@ -132,7 +132,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
                 );
               }
 
-              return Container(
+              return ColoredBox(
                 color: Colors.black,
                 child: RefreshIndicator(
                   semanticsLabel: 'checking for new notifications',

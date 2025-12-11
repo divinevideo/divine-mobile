@@ -92,7 +92,7 @@ class UserAvatar extends StatelessWidget {
   }
 
   Widget _buildIconFallback() {
-    return Container(
+    return ColoredBox(
       color: VineTheme.vineGreen.withValues(alpha: 0.2),
       child: Center(
         child: Icon(Icons.person, color: VineTheme.vineGreen, size: size * 0.5),

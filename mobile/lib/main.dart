@@ -307,9 +307,9 @@ Future<void> _startOpenVineApp() async {
   // This is only for early startup errors before MaterialApp is ready
   ErrorWidget.builder = (FlutterErrorDetails details) {
     // Use only basic Container and Decoration - no Text widgets at all
-    return Container(
-      color: const Color(0xFF1A1A1A),
-      child: const Center(
+    return const ColoredBox(
+      color: Color(0xFF1A1A1A),
+      child: Center(
         child: SizedBox(
           width: 100,
           height: 100,

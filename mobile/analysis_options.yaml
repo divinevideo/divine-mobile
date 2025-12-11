@@ -7,3 +7,4 @@ linter:
     - prefer_const_declarations
     - prefer_final_fields
     - unnecessary_breaks
+    - use_colored_box
