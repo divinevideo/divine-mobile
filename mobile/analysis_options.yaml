@@ -25,4 +25,5 @@ linter:
     - unnecessary_const
     - unnecessary_constructor_name
     - unnecessary_lambdas
+    - unnecessary_late
     - use_colored_box
