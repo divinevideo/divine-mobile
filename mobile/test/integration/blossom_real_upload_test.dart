@@ -5,7 +5,8 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/utils/hash_util.dart';
 
 void main() {
@@ -13,14 +14,11 @@ void main() {
     const serverUrl = 'https://media.divine.video';
 
     test('LIVE: Upload with real Nostr auth', () async {
-      // Generate throwaway keys for testing using nostr_sdk
-      final keys = Keys.generate();
-      final privateKeyHex = keys.secretKey().toHex();
-      final publicKeyHex = keys.publicKey().toHex();
+      // Generate throwaway keys for testing using nostr_key_manager
+      final keyPair = Keychain.generate();
+      final publicKeyHex = keyPair.public;
 
       print('Generated throwaway keys:');
-      print('   nsec: ${keys.secretKey().toBech32()}');
-      print('   npub: ${keys.publicKey().toBech32()}');
       print('   pubkey (hex): $publicKeyHex');
 
       // Create a test video file
@@ -42,30 +40,34 @@ void main() {
         print('File size: $fileSize bytes');
 
         // Create a REAL signed auth event (kind 24242 for Blossom)
-        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        final now = DateTime.now();
+        final expiration = now.add(const Duration(minutes: 5));
+        final expirationTimestamp = expiration.millisecondsSinceEpoch ~/ 1000;
 
-        // Create unsigned event using nostr_sdk EventBuilder
-        final unsignedEvent = EventBuilder(
-          kind: 24242, // Blossom auth kind
-          content: 'Upload authorization',
-          tags: [
-            ['t', 'upload'],
-            ['expiration', (now + 300).toString()], // 5 min expiry
-            ['x', fileHash],
-            ['size', fileSize.toString()],
-          ],
-        ).toUnsignedEvent(keys.publicKey());
+        // Create event tags
+        final tags = [
+          ['t', 'upload'],
+          ['expiration', expirationTimestamp.toString()],
+          ['x', fileHash],
+          ['size', fileSize.toString()],
+        ];
 
-        // Sign the event
-        final signedEvent = unsignedEvent.sign(keys);
+        // Create and sign the event using nostr_sdk Event class
+        final event = Event(
+          keyPair.public,
+          24242, // Blossom auth kind
+          tags,
+          'Upload authorization',
+        );
+        event.sign(keyPair.private);
 
         print('Signed auth event:');
-        print('   id: ${signedEvent.id().toHex()}');
-        print('   pubkey: ${signedEvent.author().toHex()}');
-        print('   sig length: ${signedEvent.signature().toHex().length}');
+        print('   id: ${event.id}');
+        print('   pubkey: ${event.pubkey}');
+        print('   sig length: ${event.sig.length}');
 
         // Convert to JSON for auth header
-        final eventJson = jsonEncode(signedEvent.asJson());
+        final eventJson = jsonEncode(event.toJson());
         final authHeader = 'Nostr ${base64.encode(utf8.encode(eventJson))}';
 
         print('Uploading to $serverUrl/upload...');
@@ -113,7 +115,7 @@ void main() {
           expect(data['sha256'], equals(fileHash));
         } else if (statusCode == 409) {
           print('File already exists (409) - upload worked previously');
-          print('   Expected URL: https://cdn.divine.video/$fileHash');
+          print('   Hash: $fileHash');
         } else if (statusCode == 401) {
           print('Auth rejected (401) - server checked our signature');
           print('   Response: $responseData');
@@ -141,17 +143,13 @@ void main() {
     });
 
     test('Print generated keys for manual testing', () {
-      final keys = Keys.generate();
-      final privateKeyHex = keys.secretKey().toHex();
-      final publicKeyHex = keys.publicKey().toHex();
+      final keyPair = Keychain.generate();
 
       print('');
       print('THROWAWAY NOSTR KEYS FOR TESTING');
       print('═══════════════════════════════════════════════════════');
-      print('Private key (nsec): ${keys.secretKey().toBech32()}');
-      print('Private key (hex):  $privateKeyHex');
-      print('Public key (npub):  ${keys.publicKey().toBech32()}');
-      print('Public key (hex):   $publicKeyHex');
+      print('Private key (hex):  ${keyPair.private}');
+      print('Public key (hex):   ${keyPair.public}');
       print('═══════════════════════════════════════════════════════');
       print('');
     });
