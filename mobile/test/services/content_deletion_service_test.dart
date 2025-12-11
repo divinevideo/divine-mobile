@@ -14,11 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'content_deletion_service_test.mocks.dart';
 
-@GenerateMocks([
-  INostrService,
-  NostrKeyManager,
-  Keychain,
-])
+@GenerateMocks([INostrService, NostrKeyManager, Keychain])
 void main() {
   group('ContentDeletionService', () {
     late MockINostrService mockNostrService;
@@ -115,51 +111,53 @@ void main() {
       expect(capturedEvent.kind, equals(5));
     });
 
-    test('deleteContent should include k tag with video kind per NIP-09',
-        () async {
-      // Arrange
-      final video = createTestVideoEvent(testPublicKey);
+    test(
+      'deleteContent should include k tag with video kind per NIP-09',
+      () async {
+        // Arrange
+        final video = createTestVideoEvent(testPublicKey);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
-        (_) async => NostrBroadcastResult(
-          event: Event(
-            testPublicKey,
-            5,
-            [
-              ['e', video.id],
-              ['k', '34236'],
-            ],
-            'CONTENT DELETION',
-            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+          (_) async => NostrBroadcastResult(
+            event: Event(
+              testPublicKey,
+              5,
+              [
+                ['e', video.id],
+                ['k', '34236'],
+              ],
+              'CONTENT DELETION',
+              createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            ),
+            successCount: 1,
+            totalRelays: 1,
+            results: {'relay1': true},
+            errors: {},
           ),
-          successCount: 1,
-          totalRelays: 1,
-          results: {'relay1': true},
-          errors: {},
-        ),
-      );
+        );
 
-      // Act
-      await service.deleteContent(
-        video: video,
-        reason: 'Personal choice',
-      );
+        // Act
+        await service.deleteContent(video: video, reason: 'Personal choice');
 
-      // Assert - verify the delete event has the 'k' tag
-      final capturedEvent =
-          verify(mockNostrService.broadcastEvent(captureAny)).captured.single
-              as Event;
+        // Assert - verify the delete event has the 'k' tag
+        final capturedEvent =
+            verify(mockNostrService.broadcastEvent(captureAny)).captured.single
+                as Event;
 
-      // Find the 'k' tag
-      final kTag = capturedEvent.tags.firstWhere(
-        (tag) => tag.isNotEmpty && tag[0] == 'k',
-        orElse: () => <String>[],
-      );
+        // Find the 'k' tag
+        final kTag = capturedEvent.tags.firstWhere(
+          (tag) => tag.isNotEmpty && tag[0] == 'k',
+          orElse: () => <String>[],
+        );
 
-      expect(kTag, isNotEmpty, reason: 'Delete event should have k tag');
-      expect(kTag[1], equals('34236'),
-          reason: 'k tag should contain video event kind');
-    });
+        expect(kTag, isNotEmpty, reason: 'Delete event should have k tag');
+        expect(
+          kTag[1],
+          equals('34236'),
+          reason: 'k tag should contain video event kind',
+        );
+      },
+    );
 
     test('deleteContent should save deletion to history', () async {
       // Arrange
@@ -185,10 +183,7 @@ void main() {
       );
 
       // Act
-      await service.deleteContent(
-        video: video,
-        reason: 'Privacy concerns',
-      );
+      await service.deleteContent(video: video, reason: 'Privacy concerns');
 
       // Assert
       expect(service.hasBeenDeleted(video.id), isTrue);
@@ -197,60 +192,64 @@ void main() {
       expect(service.deletionHistory.first.reason, equals('Privacy concerns'));
     });
 
-    test('deleteContent should fail when trying to delete other user content',
-        () async {
-      // Arrange - create video from different user
-      final otherUserPubkey = getPublicKey(generatePrivateKey());
-      final video = createTestVideoEvent(otherUserPubkey);
+    test(
+      'deleteContent should fail when trying to delete other user content',
+      () async {
+        // Arrange - create video from different user
+        final otherUserPubkey = getPublicKey(generatePrivateKey());
+        final video = createTestVideoEvent(otherUserPubkey);
 
-      // Act
-      final result = await service.deleteContent(
-        video: video,
-        reason: 'Personal choice',
-      );
+        // Act
+        final result = await service.deleteContent(
+          video: video,
+          reason: 'Personal choice',
+        );
 
-      // Assert
-      expect(result.success, isFalse);
-      expect(result.error, contains('Can only delete your own content'));
+        // Assert
+        expect(result.success, isFalse);
+        expect(result.error, contains('Can only delete your own content'));
 
-      // Verify broadcast was NOT called
-      verifyNever(mockNostrService.broadcastEvent(any));
-    });
+        // Verify broadcast was NOT called
+        verifyNever(mockNostrService.broadcastEvent(any));
+      },
+    );
 
-    test('deleteContent should still save locally even if broadcast fails',
-        () async {
-      // Arrange
-      final video = createTestVideoEvent(testPublicKey);
+    test(
+      'deleteContent should still save locally even if broadcast fails',
+      () async {
+        // Arrange
+        final video = createTestVideoEvent(testPublicKey);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
-        (_) async => NostrBroadcastResult(
-          event: Event(
-            testPublicKey,
-            5,
-            [
-              ['e', video.id],
-              ['k', '34236'],
-            ],
-            'CONTENT DELETION',
-            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+          (_) async => NostrBroadcastResult(
+            event: Event(
+              testPublicKey,
+              5,
+              [
+                ['e', video.id],
+                ['k', '34236'],
+              ],
+              'CONTENT DELETION',
+              createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            ),
+            successCount: 0, // Broadcast failed
+            totalRelays: 3,
+            results: {'relay1': false, 'relay2': false, 'relay3': false},
+            errors: {'relay1': 'error', 'relay2': 'error', 'relay3': 'error'},
           ),
-          successCount: 0, // Broadcast failed
-          totalRelays: 3,
-          results: {'relay1': false, 'relay2': false, 'relay3': false},
-          errors: {'relay1': 'error', 'relay2': 'error', 'relay3': 'error'},
-        ),
-      );
+        );
 
-      // Act
-      final result = await service.deleteContent(
-        video: video,
-        reason: 'Personal choice',
-      );
+        // Act
+        final result = await service.deleteContent(
+          video: video,
+          reason: 'Personal choice',
+        );
 
-      // Assert - should still succeed locally (deletion saved to history)
-      expect(result.success, isTrue);
-      expect(service.hasBeenDeleted(video.id), isTrue);
-    });
+        // Assert - should still succeed locally (deletion saved to history)
+        expect(result.success, isTrue);
+        expect(service.hasBeenDeleted(video.id), isTrue);
+      },
+    );
 
     test('quickDelete should use predefined reason text', () async {
       // Arrange

@@ -263,7 +263,10 @@ class ContentDeletionService {
       // Per NIP-09: 'e' tag references event to delete, 'k' tag specifies event kind
       final tags = <List<String>>[
         ['e', originalEventId], // Event being deleted
-        ['k', originalEventKind.toString()], // Kind of event being deleted (NIP-09)
+        [
+          'k',
+          originalEventKind.toString(),
+        ], // Kind of event being deleted (NIP-09)
         ['client', 'diVine'], // Deleting client
       ];
 
