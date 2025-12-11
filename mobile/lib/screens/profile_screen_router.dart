@@ -74,14 +74,14 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
     // Fetch profile (shows cached immediately, refreshes in background)
     if (!userProfileService.hasProfile(userIdHex)) {
       Log.debug(
-        '📥 Fetching uncached profile: ${userIdHex}',
+        '📥 Fetching uncached profile: $userIdHex',
         name: 'ProfileScreenRouter',
         category: LogCategory.ui,
       );
       userProfileService.fetchProfile(userIdHex);
     } else {
       Log.debug(
-        '📋 Using cached profile: ${userIdHex}',
+        '📋 Using cached profile: $userIdHex',
         name: 'ProfileScreenRouter',
         category: LogCategory.ui,
       );

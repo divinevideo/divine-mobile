@@ -181,7 +181,7 @@ class FollowActionsHelper {
     await optimisticMethods.followUser(pubkey);
 
     Log.info(
-      '👤 Followed user: ${pubkey}...',
+      '👤 Followed user: $pubkey...',
       name: contextName ?? 'FollowActionsHelper',
       category: LogCategory.ui,
     );
@@ -222,7 +222,7 @@ class FollowActionsHelper {
     await optimisticMethods.unfollowUser(pubkey);
 
     Log.info(
-      '👤 Unfollowed user: ${pubkey}...',
+      '👤 Unfollowed user: $pubkey...',
       name: contextName ?? 'FollowActionsHelper',
       category: LogCategory.ui,
     );

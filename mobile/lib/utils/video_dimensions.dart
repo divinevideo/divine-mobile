@@ -14,11 +14,11 @@ String getDimensionTag(AspectRatio aspectRatio, int baseResolution) {
   switch (aspectRatio) {
     case AspectRatio.square:
       // 1:1 - width and height are equal
-      return '${baseResolution}x${baseResolution}';
+      return '${baseResolution}x$baseResolution';
 
     case AspectRatio.vertical:
       // 9:16 - width is 9/16 of height
       final width = (baseResolution * 9 / 16).floor();
-      return '${width}x${baseResolution}';
+      return '${width}x$baseResolution';
   }
 }

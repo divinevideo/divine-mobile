@@ -319,7 +319,7 @@ Error Counts:
 
       final estimatedSize = bugReportService.estimateReportSize(bugReportData);
 
-      print('📊 Estimated report size: ${estimatedSize} bytes');
+      print('📊 Estimated report size: $estimatedSize bytes');
       print('   Max allowed: ${BugReportConfig.maxReportSizeBytes} bytes');
 
       expect(estimatedSize, greaterThan(0), reason: 'Size should be positive');

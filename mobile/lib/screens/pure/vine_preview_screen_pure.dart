@@ -99,7 +99,7 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
 
       final fileSize = await _currentDraft!.videoFile.length();
       Log.info(
-        '🎬 Initializing video preview for file: ${_currentDraft!.videoFile.path} (${fileSize} bytes)',
+        '🎬 Initializing video preview for file: ${_currentDraft!.videoFile.path} ($fileSize bytes)',
         category: LogCategory.video,
       );
 

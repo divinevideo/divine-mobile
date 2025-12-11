@@ -26,7 +26,7 @@ class ProfileFeed extends _$ProfileFeed {
   @override
   Future<VideoFeedState> build(String userId) async {
     Log.info(
-      'ProfileFeed: BUILD START for user=${userId}...',
+      'ProfileFeed: BUILD START for user=$userId...',
       name: 'ProfileFeedProvider',
       category: LogCategory.video,
     );
@@ -90,7 +90,7 @@ class ProfileFeed extends _$ProfileFeed {
     );
 
     Log.info(
-      'ProfileFeed: Initial load complete - ${authorVideos.length} videos for user=${userId}...',
+      'ProfileFeed: Initial load complete - ${authorVideos.length} videos for user=$userId...',
       name: 'ProfileFeedProvider',
       category: LogCategory.video,
     );
@@ -111,7 +111,7 @@ class ProfileFeed extends _$ProfileFeed {
     if (!ref.mounted) return;
 
     Log.info(
-      'ProfileFeed: loadMore() called for user=${userId}... - isLoadingMore: ${currentState.isLoadingMore}',
+      'ProfileFeed: loadMore() called for user=$userId... - isLoadingMore: ${currentState.isLoadingMore}',
       name: 'ProfileFeedProvider',
       category: LogCategory.video,
     );
@@ -170,7 +170,7 @@ class ProfileFeed extends _$ProfileFeed {
       final newEventsLoaded = eventCountAfter - eventCountBefore;
 
       Log.info(
-        'ProfileFeed: Loaded $newEventsLoaded new events for user=${userId}... (total: $eventCountAfter)',
+        'ProfileFeed: Loaded $newEventsLoaded new events for user=$userId... (total: $eventCountAfter)',
         name: 'ProfileFeedProvider',
         category: LogCategory.video,
       );

@@ -45,7 +45,7 @@ void main() async {
       } else if (type == 'NOTICE') {
         print('📢 NOTICE: ${decoded[1]}\n');
       } else {
-        print('📨 ${type}: ${decoded}\n');
+        print('📨 $type: $decoded\n');
       }
     },
     onError: (error) => print('❌ WebSocket error: $error'),

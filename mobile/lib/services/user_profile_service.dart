@@ -129,7 +129,7 @@ class UserProfileService extends ChangeNotifier {
       const Duration(minutes: 10),
     );
     Log.debug(
-      'Marked profile as missing: ${pubkey}... (retry after 10 minutes)',
+      'Marked profile as missing: $pubkey... (retry after 10 minutes)',
       name: 'UserProfileService',
       category: LogCategory.system,
     );
@@ -206,7 +206,7 @@ class UserProfileService extends ChangeNotifier {
     // If forcing refresh, clean up existing state first
     if (forceRefresh) {
       Log.debug(
-        '🔄 Force refresh requested for ${pubkey}... - clearing cache and subscriptions',
+        '🔄 Force refresh requested for $pubkey... - clearing cache and subscriptions',
         name: 'UserProfileService',
         category: LogCategory.system,
       );
@@ -238,7 +238,7 @@ class UserProfileService extends ChangeNotifier {
       if (cachedProfile != null &&
           _persistentCache?.shouldRefreshProfile(pubkey) == true) {
         Log.debug(
-          'Profile cached but stale for ${pubkey}... - will refresh in background',
+          'Profile cached but stale for $pubkey... - will refresh in background',
           name: 'UserProfileService',
           category: LogCategory.system,
         );
@@ -247,7 +247,7 @@ class UserProfileService extends ChangeNotifier {
       }
 
       Log.verbose(
-        'Returning cached profile for ${pubkey}...',
+        'Returning cached profile for $pubkey...',
         name: 'UserProfileService',
         category: LogCategory.system,
       );
@@ -260,7 +260,7 @@ class UserProfileService extends ChangeNotifier {
       // Return existing completer's future if available
       if (_profileFetchCompleters.containsKey(pubkey)) {
         Log.debug(
-          'Reusing existing fetch request for ${pubkey}...',
+          'Reusing existing fetch request for $pubkey...',
           name: 'UserProfileService',
           category: LogCategory.system,
         );
@@ -273,7 +273,7 @@ class UserProfileService extends ChangeNotifier {
     // (Note: forceRefresh already cleaned up existing subscriptions above)
     if (_activeSubscriptionIds.containsKey(pubkey)) {
       Log.warning(
-        'Active subscription already exists for ${pubkey}... (skipping duplicate)',
+        'Active subscription already exists for $pubkey... (skipping duplicate)',
         name: 'UserProfileService',
         category: LogCategory.system,
       );
@@ -283,7 +283,7 @@ class UserProfileService extends ChangeNotifier {
     // Check connection
     if (!_connectionService.isOnline) {
       Log.debug(
-        'Offline - cannot fetch profile for ${pubkey}...',
+        'Offline - cannot fetch profile for $pubkey...',
         name: 'UserProfileService',
         category: LogCategory.system,
       );
@@ -310,7 +310,7 @@ class UserProfileService extends ChangeNotifier {
       return completer.future;
     } catch (e) {
       Log.error(
-        'Failed to fetch profile for ${pubkey}: $e',
+        'Failed to fetch profile for $pubkey: $e',
         name: 'UserProfileService',
         category: LogCategory.system,
       );
@@ -815,7 +815,7 @@ class UserProfileService extends ChangeNotifier {
       notifyListeners();
 
       Log.debug(
-        '📱️ Removed profile from cache: ${pubkey}...',
+        '📱️ Removed profile from cache: $pubkey...',
         name: 'UserProfileService',
         category: LogCategory.system,
       );
@@ -835,7 +835,7 @@ class UserProfileService extends ChangeNotifier {
     if (_lastBackgroundRefresh != null &&
         now.difference(_lastBackgroundRefresh!).inSeconds < 30) {
       Log.debug(
-        'Rate limiting background refresh for ${pubkey}...',
+        'Rate limiting background refresh for $pubkey...',
         name: 'UserProfileService',
         category: LogCategory.system,
       );
@@ -844,7 +844,7 @@ class UserProfileService extends ChangeNotifier {
 
     try {
       Log.debug(
-        'Background refresh for stale profile ${pubkey}...',
+        'Background refresh for stale profile $pubkey...',
         name: 'UserProfileService',
         category: LogCategory.system,
       );
@@ -855,7 +855,7 @@ class UserProfileService extends ChangeNotifier {
       await fetchProfile(pubkey, forceRefresh: true);
     } catch (e) {
       Log.error(
-        'Background refresh failed for ${pubkey}: $e',
+        'Background refresh failed for $pubkey: $e',
         name: 'UserProfileService',
         category: LogCategory.system,
       );

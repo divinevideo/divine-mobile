@@ -43,7 +43,7 @@ void main() {
       testPrivateKey = keys.generatePrivateKey();
       testPublicKey = keys.getPublicKey(testPrivateKey);
 
-      print('🔑 Test keypair: ${testPublicKey}...');
+      print('🔑 Test keypair: $testPublicKey...');
 
       // Create test video file
       testVideoFile = File(

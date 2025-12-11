@@ -164,7 +164,7 @@ class AlertAnalyticsTracker {
     );
 
     UnifiedLogger.warning(
-      '📹 Video playback alert: $alertType for video ${videoId}',
+      '📹 Video playback alert: $alertType for video $videoId',
       name: 'AlertAnalytics',
     );
   }

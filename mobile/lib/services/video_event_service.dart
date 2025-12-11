@@ -552,7 +552,7 @@ class VideoEventService extends ChangeNotifier {
   List<VideoEvent> getVideosByAuthor(String pubkey) {
     final result = <VideoEvent>[];
     Log.debug(
-      '🔍 Searching for videos by author ${pubkey} across ${_eventLists.length} subscription types',
+      '🔍 Searching for videos by author $pubkey across ${_eventLists.length} subscription types',
       name: 'VideoEventService',
       category: LogCategory.video,
     );
@@ -578,7 +578,7 @@ class VideoEventService extends ChangeNotifier {
       result.addAll(matchingVideos);
     }
     Log.debug(
-      '✅ Total videos found for ${pubkey}: ${result.length}',
+      '✅ Total videos found for $pubkey: ${result.length}',
       name: 'VideoEventService',
       category: LogCategory.video,
     );
@@ -2082,7 +2082,7 @@ class VideoEventService extends ChangeNotifier {
         // Handle 'e' tag (event ID reference) - existing behavior
         if (originalEventId != null) {
           Log.verbose(
-            'Repost references event: ${originalEventId}...',
+            'Repost references event: $originalEventId...',
             name: 'VideoEventService',
             category: LogCategory.video,
           );
@@ -2549,7 +2549,7 @@ class VideoEventService extends ChangeNotifier {
     }
 
     Log.info(
-      'Querying historical videos for user=${pubkey}... until=${until != null ? DateTime.fromMillisecondsSinceEpoch(until * 1000) : 'none'} limit=$limit',
+      'Querying historical videos for user=$pubkey... until=${until != null ? DateTime.fromMillisecondsSinceEpoch(until * 1000) : 'none'} limit=$limit',
       name: 'VideoEventService',
       category: LogCategory.video,
     );
@@ -2581,7 +2581,7 @@ class VideoEventService extends ChangeNotifier {
       // Set timeout for receiving events
       final timeoutTimer = Timer(const Duration(seconds: 5), () {
         Log.info(
-          'Historical query timeout for user=${pubkey}... - received $receivedCount events',
+          'Historical query timeout for user=$pubkey... - received $receivedCount events',
           name: 'VideoEventService',
           category: LogCategory.video,
         );
@@ -2601,7 +2601,7 @@ class VideoEventService extends ChangeNotifier {
           timeoutTimer.cancel();
           if (!completer.isCompleted) {
             Log.info(
-              'Historical query stream completed for user=${pubkey}... - received $receivedCount events',
+              'Historical query stream completed for user=$pubkey... - received $receivedCount events',
               name: 'VideoEventService',
               category: LogCategory.video,
             );
@@ -2612,7 +2612,7 @@ class VideoEventService extends ChangeNotifier {
           timeoutTimer.cancel();
           if (!completer.isCompleted) {
             Log.error(
-              'Historical query stream error for user=${pubkey}...: $error',
+              'Historical query stream error for user=$pubkey...: $error',
               name: 'VideoEventService',
               category: LogCategory.video,
             );
@@ -2626,7 +2626,7 @@ class VideoEventService extends ChangeNotifier {
       await streamSubscription.cancel();
 
       Log.info(
-        'Historical user videos query completed - received $receivedCount events for user=${pubkey}...',
+        'Historical user videos query completed - received $receivedCount events for user=$pubkey...',
         name: 'VideoEventService',
         category: LogCategory.video,
       );
@@ -2635,7 +2635,7 @@ class VideoEventService extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       Log.error(
-        'Failed to query historical user videos for user=${pubkey}...: $e',
+        'Failed to query historical user videos for user=$pubkey...: $e',
         name: 'VideoEventService',
         category: LogCategory.video,
       );

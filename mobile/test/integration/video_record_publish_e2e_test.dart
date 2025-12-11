@@ -43,7 +43,7 @@ void main() {
       testPrivateKey = keys.generatePrivateKey();
       testPublicKey = keys.getPublicKey(testPrivateKey);
 
-      print('🔑 Generated test keypair: ${testPublicKey}...');
+      print('🔑 Generated test keypair: $testPublicKey...');
 
       // Create a test video file with valid MP4 structure
       testVideoFile = File(
@@ -81,7 +81,7 @@ void main() {
         final nostrService = container.read(nostrServiceProvider);
 
         print('📤 Starting E2E test: upload → publish → verify');
-        print('   Test user: ${testPublicKey}...');
+        print('   Test user: $testPublicKey...');
         print('   Video file: ${testVideoFile.path}');
 
         // ACT 1: Start upload (this triggers both Blossom upload AND Nostr publishing)

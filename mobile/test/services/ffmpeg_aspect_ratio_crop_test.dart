@@ -117,7 +117,7 @@ void main() {
         width,
         equals(height),
         reason:
-            'Square crop should produce 1:1 aspect ratio, got ${width}x${height}',
+            'Square crop should produce 1:1 aspect ratio, got ${width}x$height',
       );
       expect(
         width,
@@ -182,7 +182,7 @@ void main() {
         aspectRatio,
         closeTo(expected916, 0.01),
         reason:
-            'Vertical crop should produce 9:16 aspect ratio, got ${width}x${height} (ratio: $aspectRatio)',
+            'Vertical crop should produce 9:16 aspect ratio, got ${width}x$height (ratio: $aspectRatio)',
       );
 
       // From 1920x1080 input, crop width to match 9:16

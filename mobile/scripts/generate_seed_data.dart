@@ -270,7 +270,7 @@ Future<void> main() async {
       '[SEED GEN]    Total events: ${finalVideos.length + profileEvents.length + (editorPicksEvent != null ? 1 : 0)}',
     );
     print(
-      '[SEED GEN]    File size: ${fileSizeMB.toStringAsFixed(2)} MB (${fileSize} bytes)',
+      '[SEED GEN]    File size: ${fileSizeMB.toStringAsFixed(2)} MB ($fileSize bytes)',
     );
 
     // Step 8: Download media files for top videos
@@ -480,7 +480,7 @@ Future<Map<String, dynamic>> _downloadMediaFiles(
     final tags = video['tags'] as List;
 
     print(
-      '[SEED GEN]   Processing video ${i + 1}/${videos.length} (${eventId})...',
+      '[SEED GEN]   Processing video ${i + 1}/${videos.length} ($eventId)...',
     );
 
     // Extract video URL and thumbnail from tags

@@ -51,7 +51,7 @@ class MockAuthService implements AuthService {
 
     // Create minimal event for testing using fromJson
     return Event.fromJson({
-      'id': 'test_event_${timestamp}_${kind}',
+      'id': 'test_event_${timestamp}_$kind',
       'pubkey': 'test_pubkey_1234567890abcdef',
       'created_at': timestamp,
       'kind': kind,
@@ -204,7 +204,7 @@ void main() {
                 .substring('image data:image/jpeg;base64,'.length)
                 .length;
             print(
-              '   - image: data:image/jpeg;base64,... (${dataUriLength} chars, ${base64Length} base64 chars)',
+              '   - image: data:image/jpeg;base64,... ($dataUriLength chars, $base64Length base64 chars)',
             );
           } else if (component.startsWith('blurhash ')) {
             print('   - ${component.substring(0, 30)}...');
@@ -251,7 +251,7 @@ void main() {
 
             final thumbnailSizeKB = (decodedBytes.length / 1024)
                 .toStringAsFixed(1);
-            print('✅ Thumbnail decoded successfully: ${thumbnailSizeKB} KB\n');
+            print('✅ Thumbnail decoded successfully: $thumbnailSizeKB KB\n');
           } catch (e) {
             fail('Failed to decode base64 thumbnail: $e');
           }

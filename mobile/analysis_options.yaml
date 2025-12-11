@@ -21,4 +21,5 @@ linter:
     - prefer_final_locals
     - unnecessary_await_in_return
     - unnecessary_breaks
+    - unnecessary_brace_in_string_interps
     - use_colored_box

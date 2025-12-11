@@ -157,7 +157,7 @@ class ModerationLabelService with NostrListServiceMixin {
       await _loadLabelsFromLabeler(labelerPubkey);
 
       Log.info(
-        'Subscribed to labeler: ${labelerPubkey}... (${_allLabels.length} total labels)',
+        'Subscribed to labeler: $labelerPubkey... (${_allLabels.length} total labels)',
         name: 'ModerationLabelService',
         category: LogCategory.system,
       );
@@ -196,7 +196,7 @@ class ModerationLabelService with NostrListServiceMixin {
       await _saveLabelCache();
 
       Log.info(
-        'Unsubscribed from labeler: ${labelerPubkey}...',
+        'Unsubscribed from labeler: $labelerPubkey...',
         name: 'ModerationLabelService',
         category: LogCategory.system,
       );
@@ -261,7 +261,7 @@ class ModerationLabelService with NostrListServiceMixin {
   Future<void> _loadLabelsFromLabeler(String labelerPubkey) async {
     try {
       Log.debug(
-        'Loading labels from: ${labelerPubkey}...',
+        'Loading labels from: $labelerPubkey...',
         name: 'ModerationLabelService',
         category: LogCategory.system,
       );
@@ -276,7 +276,7 @@ class ModerationLabelService with NostrListServiceMixin {
 
       if (events.isEmpty) {
         Log.debug(
-          'No labels found from labeler: ${labelerPubkey}...',
+          'No labels found from labeler: $labelerPubkey...',
           name: 'ModerationLabelService',
           category: LogCategory.system,
         );
@@ -291,7 +291,7 @@ class ModerationLabelService with NostrListServiceMixin {
       await _saveLabelCache();
 
       Log.debug(
-        'Loaded ${events.length} label events from ${labelerPubkey}...',
+        'Loaded ${events.length} label events from $labelerPubkey...',
         name: 'ModerationLabelService',
         category: LogCategory.system,
       );

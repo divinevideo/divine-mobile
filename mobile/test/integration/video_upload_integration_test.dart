@@ -36,7 +36,7 @@ void main() {
       testPrivateKey = keys.generatePrivateKey();
       testPublicKey = keys.getPublicKey(testPrivateKey);
 
-      print('🔑 Generated test keypair: ${testPublicKey}...');
+      print('🔑 Generated test keypair: $testPublicKey...');
 
       // Create a small test video file in current directory
       testVideoFile = File(
@@ -78,7 +78,7 @@ void main() {
         // Get real upload manager from providers
         final uploadManager = container.read(uploadManagerProvider);
 
-        print('📤 Starting upload test with test user: ${testPublicKey}...');
+        print('📤 Starting upload test with test user: $testPublicKey...');
 
         // ACT: Call the actual upload function with test keypair
         final upload = await uploadManager.startUpload(

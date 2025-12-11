@@ -312,7 +312,7 @@ class SocialNotifier extends _$SocialNotifier {
     }
 
     Log.debug(
-      '❤️ Toggling like for event: ${eventId}...',
+      '❤️ Toggling like for event: $eventId...',
       name: 'SocialNotifier',
       category: LogCategory.system,
     );
@@ -353,7 +353,7 @@ class SocialNotifier extends _$SocialNotifier {
         );
 
         Log.info(
-          'Like published for event: ${eventId}...',
+          'Like published for event: $eventId...',
           name: 'SocialNotifier',
           category: LogCategory.system,
         );
@@ -389,7 +389,7 @@ class SocialNotifier extends _$SocialNotifier {
           );
 
           Log.info(
-            'Unlike (deletion) published for event: ${eventId}...',
+            'Unlike (deletion) published for event: $eventId...',
             name: 'SocialNotifier',
             category: LogCategory.system,
           );
@@ -696,7 +696,7 @@ class SocialNotifier extends _$SocialNotifier {
       );
 
       Log.info(
-        'Reposted event: ${eventId}...',
+        'Reposted event: $eventId...',
         name: 'SocialNotifier',
         category: LogCategory.system,
       );
@@ -754,7 +754,7 @@ class SocialNotifier extends _$SocialNotifier {
     }
 
     Log.debug(
-      '🔄 Toggling repost for event: ${eventId}...',
+      '🔄 Toggling repost for event: $eventId...',
       name: 'SocialNotifier',
       category: LogCategory.system,
     );
@@ -789,7 +789,7 @@ class SocialNotifier extends _$SocialNotifier {
         );
 
         Log.info(
-          'Repost published for video: ${eventId}...',
+          'Repost published for video: $eventId...',
           name: 'SocialNotifier',
           category: LogCategory.system,
         );
@@ -816,7 +816,7 @@ class SocialNotifier extends _$SocialNotifier {
         state = state.copyWith(repostedEventIds: newRepostedEventIds);
 
         Log.info(
-          'Unrepost published for video: ${eventId}...',
+          'Unrepost published for video: $eventId...',
           name: 'SocialNotifier',
           category: LogCategory.system,
         );
@@ -1462,7 +1462,7 @@ class SocialNotifier extends _$SocialNotifier {
 
     try {
       Log.debug(
-        '🔍 Checking reactions for video: ${videoId}...',
+        '🔍 Checking reactions for video: $videoId...',
         name: 'SocialNotifier',
         category: LogCategory.system,
       );
@@ -1492,7 +1492,7 @@ class SocialNotifier extends _$SocialNotifier {
       await Future.wait(futures);
 
       Log.debug(
-        '✅ Completed reaction check for video: ${videoId}...',
+        '✅ Completed reaction check for video: $videoId...',
         name: 'SocialNotifier',
         category: LogCategory.system,
       );
@@ -1536,7 +1536,7 @@ class SocialNotifier extends _$SocialNotifier {
             },
           );
           Log.debug(
-            'Found existing like for video: ${videoId}... - processed immediately',
+            'Found existing like for video: $videoId... - processed immediately',
             name: 'SocialNotifier',
             category: LogCategory.system,
           );
@@ -1602,7 +1602,7 @@ class SocialNotifier extends _$SocialNotifier {
           },
         );
         Log.debug(
-          'Found existing repost for video: ${videoId}... - processed immediately',
+          'Found existing repost for video: $videoId... - processed immediately',
           name: 'SocialNotifier',
           category: LogCategory.system,
         );

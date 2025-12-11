@@ -28,7 +28,7 @@ void main() {
         isRepost: false,
       );
 
-      Log.info('   ✓ Original video created by ${authorPubkey}...');
+      Log.info('   ✓ Original video created by $authorPubkey...');
       Log.info('   ✓ Video URL: ${originalVideo.videoUrl}');
       Log.info('   ✓ isRepost: ${originalVideo.isRepost}\n');
 

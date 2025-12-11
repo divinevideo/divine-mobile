@@ -43,7 +43,7 @@ class VideoLoadingMetrics {
 
     // Use both UnifiedLogger AND print to ensure visibility
     final message =
-        '🎬 STARTED tracking video loading #$_metricsCount for ${videoId}... - $videoUrl';
+        '🎬 STARTED tracking video loading #$_metricsCount for $videoId... - $videoUrl';
     UnifiedLogger.info(message, name: 'VideoLoadingMetrics');
     // ignore: avoid_print
     print(message);
@@ -53,10 +53,10 @@ class VideoLoadingMetrics {
 
     // Force a visible print to stdout
     // ignore: avoid_print
-    print('METRICS_TEST_OUTPUT: Video metrics started for ${videoId}');
+    print('METRICS_TEST_OUTPUT: Video metrics started for $videoId');
 
     // Notify visual overlay
-    _notifyEvent('🎬 STARTED #$_metricsCount: ${videoId}');
+    _notifyEvent('🎬 STARTED #$_metricsCount: $videoId');
   }
 
   /// Mark when video controller creation begins
@@ -67,7 +67,7 @@ class VideoLoadingMetrics {
     session.controllerCreationStart = DateTime.now();
 
     UnifiedLogger.debug(
-      'Controller creation started for ${videoId}...',
+      'Controller creation started for $videoId...',
       name: 'VideoLoadingMetrics',
     );
   }
@@ -84,7 +84,7 @@ class VideoLoadingMetrics {
         .inMilliseconds;
 
     UnifiedLogger.debug(
-      'Controller creation completed for ${videoId}... in ${duration}ms',
+      'Controller creation completed for $videoId... in ${duration}ms',
       name: 'VideoLoadingMetrics',
     );
   }
@@ -97,7 +97,7 @@ class VideoLoadingMetrics {
     session.networkInitStart = DateTime.now();
 
     UnifiedLogger.debug(
-      'Network initialization started for ${videoId}...',
+      'Network initialization started for $videoId...',
       name: 'VideoLoadingMetrics',
     );
   }
@@ -114,7 +114,7 @@ class VideoLoadingMetrics {
         .inMilliseconds;
 
     UnifiedLogger.info(
-      'First network response for ${videoId}... in ${duration}ms',
+      'First network response for $videoId... in ${duration}ms',
       name: 'VideoLoadingMetrics',
     );
   }
@@ -127,7 +127,7 @@ class VideoLoadingMetrics {
     session.videoInitStart = DateTime.now();
 
     UnifiedLogger.debug(
-      'Video initialization started for ${videoId}...',
+      'Video initialization started for $videoId...',
       name: 'VideoLoadingMetrics',
     );
   }
@@ -144,7 +144,7 @@ class VideoLoadingMetrics {
         .inMilliseconds;
 
     UnifiedLogger.info(
-      'Video initialization completed for ${videoId}... in ${duration}ms',
+      'Video initialization completed for $videoId... in ${duration}ms',
       name: 'VideoLoadingMetrics',
     );
   }
@@ -161,7 +161,7 @@ class VideoLoadingMetrics {
         .inMilliseconds;
 
     UnifiedLogger.info(
-      'First frame ready for ${videoId}... in ${totalDuration}ms total',
+      'First frame ready for $videoId... in ${totalDuration}ms total',
       name: 'VideoLoadingMetrics',
     );
   }
@@ -179,7 +179,7 @@ class VideoLoadingMetrics {
         .inMilliseconds;
 
     final message =
-        '▶️ PLAYBACK STARTED for ${videoId}... in ${totalDuration}ms total';
+        '▶️ PLAYBACK STARTED for $videoId... in ${totalDuration}ms total';
     UnifiedLogger.info(message, name: 'VideoLoadingMetrics');
     // ignore: avoid_print
     print(message);
@@ -205,7 +205,7 @@ class VideoLoadingMetrics {
         .inMilliseconds;
 
     UnifiedLogger.error(
-      'Video loading failed for ${videoId}... after ${totalDuration}ms: $errorType - $errorMessage',
+      'Video loading failed for $videoId... after ${totalDuration}ms: $errorType - $errorMessage',
       name: 'VideoLoadingMetrics',
     );
 
@@ -224,7 +224,7 @@ class VideoLoadingMetrics {
     session.bufferingEvents.add(_BufferingEvent(startTime: DateTime.now()));
 
     UnifiedLogger.debug(
-      'Buffering started for ${videoId}...',
+      'Buffering started for $videoId...',
       name: 'VideoLoadingMetrics',
     );
   }
@@ -246,7 +246,7 @@ class VideoLoadingMetrics {
         .inMilliseconds;
 
     UnifiedLogger.debug(
-      'Buffering ended for ${videoId}... after ${duration}ms',
+      'Buffering ended for $videoId... after ${duration}ms',
       name: 'VideoLoadingMetrics',
     );
   }
@@ -266,7 +266,7 @@ class VideoLoadingMetrics {
     if (segmentCount != null) session.segmentCount = segmentCount;
 
     UnifiedLogger.debug(
-      'Network stats for ${videoId}... - '
+      'Network stats for $videoId... - '
       'Downloaded: ${bytesDownloaded ?? 'N/A'} bytes, '
       'Bandwidth: ${bandwidth?.toStringAsFixed(2) ?? 'N/A'} Mbps, '
       'Segments: ${segmentCount ?? 'N/A'}',
@@ -293,7 +293,7 @@ class VideoLoadingMetrics {
     );
 
     UnifiedLogger.debug(
-      'Segment $segmentIndex loaded for ${videoId}... (${segmentSizeBytes} bytes in ${loadTimeMs}ms)',
+      'Segment $segmentIndex loaded for $videoId... ($segmentSizeBytes bytes in ${loadTimeMs}ms)',
       name: 'VideoLoadingMetrics',
     );
   }
@@ -310,7 +310,7 @@ class VideoLoadingMetrics {
     session.failedSegments.add(segmentIndex);
 
     UnifiedLogger.warning(
-      'Segment $segmentIndex failed for ${videoId}... - $errorMessage',
+      'Segment $segmentIndex failed for $videoId... - $errorMessage',
       name: 'VideoLoadingMetrics',
     );
   }
@@ -323,7 +323,7 @@ class VideoLoadingMetrics {
     session.totalSegments = totalSegments;
 
     UnifiedLogger.debug(
-      'Video ${videoId}... has $totalSegments segments',
+      'Video $videoId... has $totalSegments segments',
       name: 'VideoLoadingMetrics',
     );
   }

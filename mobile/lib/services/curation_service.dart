@@ -226,7 +226,7 @@ class CurationService {
       await streamSubscription.cancel();
 
       Log.info(
-        "✅ Fetched ${receivedCount} Divine Team videos from relay",
+        "✅ Fetched $receivedCount Divine Team videos from relay",
         name: 'CurationService',
         category: LogCategory.system,
       );

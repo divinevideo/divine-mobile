@@ -61,7 +61,7 @@ mixin NostrListServiceMixin {
       }
 
       Log.info(
-        'Fetching all published events from embedded relay for pubkey: ${ourPubkey}...',
+        'Fetching all published events from embedded relay for pubkey: $ourPubkey...',
         name: 'NostrListServiceMixin',
         category: LogCategory.system,
       );

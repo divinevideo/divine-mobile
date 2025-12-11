@@ -53,7 +53,7 @@ class ContentBlocklistService {
       if (hexPubkey != null) {
         _runtimeBlocklist.add(hexPubkey);
         Log.debug(
-          'Added to blocklist: ${npub.substring(0, 16)}... -> ${hexPubkey}...',
+          'Added to blocklist: ${npub.substring(0, 16)}... -> $hexPubkey...',
           name: 'ContentBlocklistService',
           category: LogCategory.system,
         );
@@ -87,7 +87,7 @@ class ContentBlocklistService {
       _runtimeBlocklist.add(pubkey);
 
       Log.debug(
-        'Added user to blocklist: ${pubkey}...',
+        'Added user to blocklist: $pubkey...',
         name: 'ContentBlocklistService',
         category: LogCategory.system,
       );
@@ -101,13 +101,13 @@ class ContentBlocklistService {
       _runtimeBlocklist.remove(pubkey);
 
       Log.info(
-        'Removed user from blocklist: ${pubkey}...',
+        'Removed user from blocklist: $pubkey...',
         name: 'ContentBlocklistService',
         category: LogCategory.system,
       );
     } else if (_internalBlocklist.contains(pubkey)) {
       Log.warning(
-        'Cannot unblock user from internal blocklist: ${pubkey}...',
+        'Cannot unblock user from internal blocklist: $pubkey...',
         name: 'ContentBlocklistService',
         category: LogCategory.system,
       );

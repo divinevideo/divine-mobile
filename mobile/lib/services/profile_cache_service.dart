@@ -79,7 +79,7 @@ class ProfileCacheService {
       if (lastFetched == null ||
           DateTime.now().difference(lastFetched) > _cacheExpiry) {
         debugPrint(
-          '🗑️ Removing expired profile for ${pubkey}... (last fetched: ${lastFetched ?? 'never'})',
+          '🗑️ Removing expired profile for $pubkey... (last fetched: ${lastFetched ?? 'never'})',
         );
         _profileBox!.delete(pubkey);
         _fetchTimestamps?.delete(pubkey);
@@ -87,7 +87,7 @@ class ProfileCacheService {
       }
 
       Log.debug(
-        '📱 Retrieved cached profile for ${pubkey}... (${profile.bestDisplayName})',
+        '📱 Retrieved cached profile for $pubkey... (${profile.bestDisplayName})',
         name: 'ProfileCacheService',
         category: LogCategory.storage,
       );
@@ -183,7 +183,7 @@ class ProfileCacheService {
     try {
       await _profileBox!.delete(pubkey);
       Log.debug(
-        '📱️ Removed cached profile for ${pubkey}...',
+        '📱️ Removed cached profile for $pubkey...',
         name: 'ProfileCacheService',
         category: LogCategory.storage,
       );

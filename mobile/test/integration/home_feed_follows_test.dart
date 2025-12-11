@@ -109,7 +109,7 @@ void main() {
           '👥 Following ${authorPubkeys.length} authors from discovery feed',
         );
         for (final pubkey in authorPubkeys) {
-          Log.info('   - ${pubkey}...');
+          Log.info('   - $pubkey...');
         }
 
         // Subscribe to home feed with these authors

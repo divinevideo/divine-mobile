@@ -116,7 +116,7 @@ class CameraMetricsTracker {
         .inMilliseconds;
 
     UnifiedLogger.info(
-      '⏹️  Recording stopped: ${durationMs}ms duration, ${fileSizeBytes} bytes, ${success ?? true ? "success" : "failed"}',
+      '⏹️  Recording stopped: ${durationMs}ms duration, $fileSizeBytes bytes, ${success ?? true ? "success" : "failed"}',
       name: 'CameraMetrics',
     );
 
@@ -172,7 +172,7 @@ class CameraMetricsTracker {
     _uploadSessions[uploadId] = session;
 
     UnifiedLogger.info(
-      '📤 Upload started: $uploadType (${fileSizeBytes} bytes)',
+      '📤 Upload started: $uploadType ($fileSizeBytes bytes)',
       name: 'CameraMetrics',
     );
   }

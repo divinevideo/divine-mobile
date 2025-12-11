@@ -46,7 +46,7 @@ extension NostrEventExt on Event {
     }
 
     if (dTag == null) {
-      throw Exception('List event missing d tag: ${id}');
+      throw Exception('List event missing d tag: $id');
     }
 
     // Use title or fall back to content or default
