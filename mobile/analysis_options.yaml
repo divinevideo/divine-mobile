@@ -5,6 +5,7 @@ linter:
     - avoid_js_rounded_ints
     - avoid_returning_null_for_void
     - annotate_overrides
+    - avoid_type_to_string
     - directives_ordering
     - prefer_collection_literals
     - prefer_const_constructors
