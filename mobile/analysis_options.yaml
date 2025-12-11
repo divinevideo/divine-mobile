@@ -13,3 +13,4 @@ linter:
     - use_key_in_widget_constructors
     - use_string_in_part_of_directives
     - use_test_throws_matchers
+    - use_to_and_as_if_applicable
