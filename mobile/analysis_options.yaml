@@ -27,6 +27,7 @@ linter:
     - no_logic_in_create_state
     - no_runtimeType_toString
     - no_self_assignments
+    - no_wildcard_variable_uses
     - noop_primitive_operations
     - prefer_adjacent_string_concatenation
     - prefer_asserts_in_initializer_lists
