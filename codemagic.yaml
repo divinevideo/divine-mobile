@@ -61,11 +61,10 @@ definitions:
     - &build_ios_simulator
       name: Build iOS Simulator app
       script: |
-        # First, generate Flutter project files (this will fail on linking but generates necessary files)
         flutter build ios --simulator --no-codesign \
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
-          --dart-define=ZENDESK_URL=$ZENDESK_URL || true
+          --dart-define=ZENDESK_URL=$ZENDESK_URL
 workflows:
   ios-build:
     name: iOS Build
