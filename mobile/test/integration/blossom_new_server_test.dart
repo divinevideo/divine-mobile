@@ -1,5 +1,5 @@
-// ABOUTME: Live integration test for streaming upload to new Blossom server
-// ABOUTME: Tests separately-robust-roughy.edgecompute.app with streaming upload
+// ABOUTME: Live integration test for streaming upload to media.divine.video Blossom server
+// ABOUTME: Tests streaming upload functionality for video uploads
 
 import 'dart:io';
 import 'dart:convert';
@@ -9,7 +9,7 @@ import 'package:openvine/utils/hash_util.dart';
 
 void main() {
   group('New Blossom Server Streaming Upload', () {
-    const serverUrl = 'https://separately-robust-roughy.edgecompute.app';
+    const serverUrl = 'https://media.divine.video';
 
     test('LIVE: Streaming upload to new Blossom server', () async {
       // Create a test video file (larger to test streaming)
