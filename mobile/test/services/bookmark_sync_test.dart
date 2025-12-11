@@ -7,6 +7,7 @@ import 'package:openvine/services/bookmark_sync_worker.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -30,7 +31,10 @@ void main() {
       final nostrService = NostrService(keyManager);
       await nostrService.initialize();
 
-      final authService = AuthService(keyStorage: null);
+      final authService = AuthService(
+        userDataCleanupService: UserDataCleanupService(prefs),
+        keyStorage: null,
+      );
 
       bookmarkService = BookmarkService(
         nostrService: nostrService,

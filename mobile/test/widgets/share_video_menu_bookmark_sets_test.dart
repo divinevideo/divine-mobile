@@ -9,6 +9,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/bookmark_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,7 +36,10 @@ void main() {
       nostrService = NostrService(keyManager);
       await nostrService.initialize();
 
-      authService = AuthService(keyStorage: null);
+      authService = AuthService(
+        userDataCleanupService: UserDataCleanupService(prefs),
+        keyStorage: null,
+      );
       bookmarkService = BookmarkService(
         nostrService: nostrService,
         authService: authService,

@@ -12,12 +12,21 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/state/social_state.dart';
 import 'package:openvine/ui/overlay_policy.dart';
 import 'package:openvine/widgets/video_feed_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+late UserDataCleanupService _testCleanupService;
+
 void main() {
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    _testCleanupService = UserDataCleanupService(prefs);
+  });
+
   group('VideoEditorRoute - Edit Button Tests', () {
     late VideoEvent testVideo;
     late String testUserPubkey;
@@ -47,6 +56,7 @@ void main() {
             // Override auth service to return our test user as authenticated
             authServiceProvider.overrideWith((ref) {
               return _MockAuthService(
+                cleanupService: _testCleanupService,
                 pubkey: testUserPubkey,
                 authenticated: true,
               );
@@ -94,6 +104,7 @@ void main() {
           overrides: [
             authServiceProvider.overrideWith((ref) {
               return _MockAuthService(
+                cleanupService: _testCleanupService,
                 pubkey: 'different-user-pubkey', // Different user!
                 authenticated: true,
               );
@@ -138,6 +149,7 @@ void main() {
         overrides: [
           authServiceProvider.overrideWith((ref) {
             return _MockAuthService(
+              cleanupService: _testCleanupService,
               pubkey: testUserPubkey,
               authenticated: true,
             );
@@ -179,7 +191,11 @@ void main() {
 // Mock classes for testing
 
 class _MockAuthService extends AuthService {
-  _MockAuthService({required this.pubkey, required this.authenticated});
+  _MockAuthService({
+    required UserDataCleanupService cleanupService,
+    required this.pubkey,
+    required this.authenticated,
+  }) : super(userDataCleanupService: cleanupService);
 
   final String? pubkey;
   final bool authenticated;

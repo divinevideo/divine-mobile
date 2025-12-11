@@ -19,6 +19,7 @@ import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curation_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/user_list_service.dart';
 // Removed legacy explore_video_manager.dart import
 import 'package:openvine/providers/analytics_providers.dart';
@@ -57,6 +58,8 @@ import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/relay_gateway_providers.dart'
+    as relay_gateway;
 import 'package:openvine/services/event_router.dart';
 
 part 'app_providers.g.dart';
@@ -265,11 +268,15 @@ Future<DraftStorageService> draftStorageService(Ref ref) async {
 // DEPENDENT SERVICES (With dependencies)
 // =============================================================================
 
-/// Authentication service depends on secure key storage
+/// Authentication service depends on secure key storage and user data cleanup
 @Riverpod(keepAlive: true)
 AuthService authService(Ref ref) {
   final keyStorage = ref.watch(secureKeyStorageProvider);
-  return AuthService(keyStorage: keyStorage);
+  final userDataCleanupService = ref.watch(userDataCleanupServiceProvider);
+  return AuthService(
+    userDataCleanupService: userDataCleanupService,
+    keyStorage: keyStorage,
+  );
 }
 
 /// Stream provider for reactive auth state changes
@@ -283,6 +290,14 @@ Stream<AuthState> authStateStream(Ref ref) async* {
 
   // Then emit all future changes
   yield* authService.authStateStream;
+}
+
+/// User data cleanup service for handling identity changes
+/// Prevents data leakage between different Nostr accounts
+@riverpod
+UserDataCleanupService userDataCleanupService(Ref ref) {
+  final prefs = ref.watch(relay_gateway.sharedPreferencesProvider);
+  return UserDataCleanupService(prefs);
 }
 
 /// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities

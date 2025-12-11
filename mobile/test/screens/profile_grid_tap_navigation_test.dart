@@ -16,9 +16,14 @@ import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/state/video_feed_state.dart';
 import 'package:openvine/widgets/video_feed_item.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/user_data_cleanup_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Mock auth service for testing
 class MockAuthService extends AuthService {
+  MockAuthService(UserDataCleanupService cleanupService)
+      : super(userDataCleanupService: cleanupService);
+
   @override
   String? currentPublicKeyHex;
 
@@ -26,7 +31,15 @@ class MockAuthService extends AuthService {
   bool get isAuthenticated => currentPublicKeyHex != null;
 }
 
+late UserDataCleanupService _testCleanupService;
+
 void main() {
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    _testCleanupService = UserDataCleanupService(prefs);
+  });
+
   Widget shell(ProviderContainer c) => UncontrolledProviderScope(
     container: c,
     child: MaterialApp.router(routerConfig: c.read(goRouterProvider)),
@@ -120,7 +133,7 @@ void main() {
             return mockProfile;
           }),
           authServiceProvider.overrideWith((ref) {
-            final mockAuth = MockAuthService();
+            final mockAuth = MockAuthService(_testCleanupService);
             mockAuth.currentPublicKeyHex = testUserHex;
             return mockAuth;
           }),
@@ -197,7 +210,7 @@ void main() {
             return mockProfile;
           }),
           authServiceProvider.overrideWith((ref) {
-            final mockAuth = MockAuthService();
+            final mockAuth = MockAuthService(_testCleanupService);
             mockAuth.currentPublicKeyHex = testUserHex;
             return mockAuth;
           }), // Own profile
@@ -237,7 +250,7 @@ void main() {
               return mockProfile;
             }),
             authServiceProvider.overrideWith((ref) {
-              final mockAuth = MockAuthService();
+              final mockAuth = MockAuthService(_testCleanupService);
               mockAuth.currentPublicKeyHex = testUserHex;
               return mockAuth;
             }), // Own profile
@@ -282,7 +295,7 @@ void main() {
             return mockProfile;
           }),
           authServiceProvider.overrideWith((ref) {
-            final mockAuth = MockAuthService();
+            final mockAuth = MockAuthService(_testCleanupService);
             mockAuth.currentPublicKeyHex = testUserHex;
             return mockAuth;
           }),

@@ -8,10 +8,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   setUpAll(() async {
@@ -27,9 +29,13 @@ void main() {
     late NostrKeyManager keyManager;
 
     setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
       keyManager = NostrKeyManager();
       nostrService = NostrService(keyManager);
-      authService = AuthService();
+      authService = AuthService(
+        userDataCleanupService: UserDataCleanupService(prefs),
+      );
       subscriptionManager = SubscriptionManager(nostrService);
       userProfileService = UserProfileService(
         nostrService,

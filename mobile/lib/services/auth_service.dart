@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart'
     show SecureKeyContainer, SecureKeyStorage;
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/user_profile_service.dart' as ups;
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/nostr_timestamp.dart';
@@ -82,9 +83,13 @@ class UserProfile {
 /// Main authentication service for the divine app
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class AuthService {
-  AuthService({SecureKeyStorage? keyStorage})
-    : _keyStorage = keyStorage ?? SecureKeyStorage();
+  AuthService({
+    required UserDataCleanupService userDataCleanupService,
+    SecureKeyStorage? keyStorage,
+  }) : _keyStorage = keyStorage ?? SecureKeyStorage(),
+       _userDataCleanupService = userDataCleanupService;
   final SecureKeyStorage _keyStorage;
+  final UserDataCleanupService _userDataCleanupService;
 
   AuthState _authState = AuthState.checking;
   SecureKeyContainer? _currentKeyContainer;
@@ -795,6 +800,19 @@ class AuthService {
     // This allows the router to know which user's following list to check
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // Check if we need to clear user-specific data due to identity change
+      if (_userDataCleanupService.shouldClearDataForUser(
+        keyContainer.publicKeyHex,
+      )) {
+        Log.info(
+          'Identity change detected, clearing user-specific cached data',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
+        await _userDataCleanupService.clearUserSpecificData();
+      }
+
       await prefs.setString(
         'current_user_pubkey_hex',
         keyContainer.publicKeyHex,
