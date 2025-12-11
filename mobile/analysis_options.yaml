@@ -31,3 +31,4 @@ linter:
     - unnecessary_null_aware_assignments
     - unnecessary_null_checks
     - unnecessary_null_in_if_null_operators
+    - unnecessary_nullable_for_final_variable_declarations
