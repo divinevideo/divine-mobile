@@ -23,4 +23,5 @@ linter:
     - unnecessary_breaks
     - unnecessary_brace_in_string_interps
     - unnecessary_const
+    - unnecessary_constructor_name
     - use_colored_box
