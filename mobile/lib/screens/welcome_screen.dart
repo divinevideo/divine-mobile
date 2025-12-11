@@ -32,7 +32,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     final authState = authStateAsync.when(
       data: (state) => state,
       loading: () => AuthState.checking,
-      error: (_, __) => AuthState.unauthenticated,
+      error: (_, _) => AuthState.unauthenticated,
     );
 
     return Scaffold(

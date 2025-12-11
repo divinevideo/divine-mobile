@@ -35,13 +35,13 @@ extension SearchStateExtension on SearchState {
     initial: () => [],
     loading: (_) => [],
     success: (results, _) => results,
-    error: (_, __) => [],
+    error: (_, _) => [],
   );
 
   String? get errorMessage => when(
     initial: () => null,
     loading: (_) => null,
-    success: (_, __) => null,
+    success: (_, _) => null,
     error: (message, _) => message,
   );
 }

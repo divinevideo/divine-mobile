@@ -169,7 +169,11 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
         'Quick report suspected AI-generated content',
         style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
       ),
-      trailing: const Icon(Icons.arrow_forward_ios, color: Colors.orange, size: 16),
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        color: Colors.orange,
+        size: 16,
+      ),
       onTap: _quickReportAI,
     ),
   );
@@ -375,11 +379,11 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
               );
             },
             loading: () => _buildLoadingIndicator,
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           );
         },
         loading: () => _buildLoadingIndicator,
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
       );
     },
   );
@@ -525,7 +529,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
               );
             },
             loading: () => _buildLoadingIndicator,
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           );
         },
       ),
@@ -552,9 +556,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
   /// Remove video from a specific list
   Future<void> _removeFromList(String listId) async {
     try {
-      final listService = ref
-          .read(curatedListsStateProvider.notifier)
-          .service;
+      final listService = ref.read(curatedListsStateProvider.notifier).service;
       await listService?.removeVideoFromList(listId, widget.video.id);
 
       if (mounted) {
@@ -737,7 +739,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
           );
         },
         loading: () => _buildLoadingIndicator,
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
       );
     },
   );
@@ -1070,10 +1072,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
 
   /// Show delete confirmation dialog
   void _showDeleteDialog() {
-    showDialog(
-      context: context,
-      builder: _buildDeleteDialog,
-    );
+    showDialog(context: context, builder: _buildDeleteDialog);
   }
 
   void _showAllListsDialog(List<CuratedList> lists) {
@@ -1124,7 +1123,10 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close', style: TextStyle(color: VineTheme.vineGreen)),
+            child: const Text(
+              'Close',
+              style: TextStyle(color: VineTheme.vineGreen),
+            ),
           ),
         ],
       ),
@@ -1708,9 +1710,7 @@ class _CreateListDialogState extends ConsumerState<_CreateListDialog> {
     if (name.isEmpty) return;
 
     try {
-      final listService = ref
-          .read(curatedListsStateProvider.notifier)
-          .service;
+      final listService = ref.read(curatedListsStateProvider.notifier).service;
       final newList = await listService?.createList(
         name: name,
         description: _descriptionController.text.trim().isEmpty
@@ -1819,7 +1819,7 @@ class _SelectListDialog extends StatelessWidget {
           );
         },
         loading: () => _buildLoadingIndicator,
-        error: (_, __) => const Center(child: Text('Error loading lists')),
+        error: (_, _) => const Center(child: Text('Error loading lists')),
       );
     },
   );
@@ -1863,7 +1863,8 @@ class _SelectListDialog extends StatelessWidget {
 /// Public report content dialog that can be used from anywhere
 class ReportContentDialog extends ConsumerStatefulWidget {
   const ReportContentDialog({
-    required this.video, super.key,
+    required this.video,
+    super.key,
     this.isFromShareMenu = false,
   });
   final VideoEvent video;
@@ -2668,7 +2669,7 @@ class _SelectBookmarkSetDialog extends StatelessWidget {
             child: CircularProgressIndicator(color: VineTheme.vineGreen),
           ),
         ),
-        error: (_, __) => const AlertDialog(
+        error: (_, _) => const AlertDialog(
           backgroundColor: VineTheme.cardBackground,
           title: Text('Error', style: TextStyle(color: VineTheme.whiteText)),
           content: Text(
@@ -2864,10 +2865,7 @@ class _ReportConfirmationDialog extends StatelessWidget {
       children: [
         Icon(Icons.check_circle, color: VineTheme.vineGreen, size: 28),
         SizedBox(width: 12),
-        Text(
-          'Report Received',
-          style: TextStyle(color: VineTheme.whiteText),
-        ),
+        Text('Report Received', style: TextStyle(color: VineTheme.whiteText)),
       ],
     ),
     content: Column(
@@ -2934,7 +2932,10 @@ class _ReportConfirmationDialog extends StatelessWidget {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Close', style: TextStyle(color: VineTheme.vineGreen)),
+        child: const Text(
+          'Close',
+          style: TextStyle(color: VineTheme.vineGreen),
+        ),
       ),
     ],
   );
@@ -2956,10 +2957,7 @@ class _ViewSourceDialog extends ConsumerWidget {
         children: [
           Icon(Icons.code, color: VineTheme.vineGreen),
           SizedBox(width: 12),
-          Text(
-            'Event Source',
-            style: TextStyle(color: VineTheme.whiteText),
-          ),
+          Text('Event Source', style: TextStyle(color: VineTheme.whiteText)),
         ],
       ),
       content: SizedBox(
@@ -3142,11 +3140,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
           data: (lists) {
             if (lists.isNotEmpty) {
               // Show lists as they arrive via Riverpod streaming
-              return Column(
-                children: lists
-                    .map(_buildPublicListTile)
-                    .toList(),
-              );
+              return Column(children: lists.map(_buildPublicListTile).toList());
             }
             // Empty list - check if minimum time has elapsed
             if (!_minTimeElapsed) {
@@ -3227,7 +3221,11 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.video_library, color: VineTheme.vineGreen, size: 20),
+                const Icon(
+                  Icons.video_library,
+                  color: VineTheme.vineGreen,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -3285,15 +3283,13 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
   Future<void> _toggleSubscription(CuratedList list) async {
     try {
-      final listService = ref
-          .read(curatedListsStateProvider.notifier)
-          .service;
+      final listService = ref.read(curatedListsStateProvider.notifier).service;
       final isSubscribed = listService?.isSubscribedToList(list.id) ?? false;
 
       if (isSubscribed) {

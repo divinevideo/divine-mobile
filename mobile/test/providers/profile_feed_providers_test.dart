@@ -169,7 +169,7 @@ void main() {
       // Establish listener to ensure provider is watching for changes
       final subscription = container.listen(
         videosForProfileRouteProvider,
-        (_, __) {},
+        (_, _) {},
       );
 
       // Populate service AFTER listener is established
@@ -218,7 +218,7 @@ void main() {
       // Establish listener to ensure provider is watching for changes
       final subscription = container.listen(
         videosForProfileRouteProvider,
-        (_, __) {},
+        (_, _) {},
       );
 
       // Populate service AFTER listener is established
@@ -285,7 +285,7 @@ void main() {
       // Establish listener to ensure provider is watching for changes
       final subscription = container.listen(
         videosForProfileRouteProvider,
-        (_, __) {},
+        (_, _) {},
       );
 
       // Populate service with multiple authors AFTER listener is established
@@ -351,7 +351,7 @@ void main() {
       // Establish listener to ensure provider is watching for changes
       final subscription = container.listen(
         videosForProfileRouteProvider,
-        (_, __) {},
+        (_, _) {},
       );
 
       // Populate service AFTER listener is established

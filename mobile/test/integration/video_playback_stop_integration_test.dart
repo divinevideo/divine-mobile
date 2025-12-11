@@ -88,11 +88,7 @@ void main() {
           activeVideoIds.add(next);
         }, fireImmediately: true);
 
-        container.listen(
-          pageContextProvider,
-          (_, __) {},
-          fireImmediately: true,
-        );
+        container.listen(pageContextProvider, (_, _) {}, fireImmediately: true);
 
         // Start at home video 0
         locationController.add('/home/0');
@@ -149,11 +145,7 @@ void main() {
           activeVideoIds.add(next);
         }, fireImmediately: true);
 
-        container.listen(
-          pageContextProvider,
-          (_, __) {},
-          fireImmediately: true,
-        );
+        container.listen(pageContextProvider, (_, _) {}, fireImmediately: true);
 
         // Start at home video 0
         locationController.add('/home/0');
@@ -216,7 +208,7 @@ void main() {
         activeVideoIds.add(next);
       }, fireImmediately: true);
 
-      container.listen(pageContextProvider, (_, __) {}, fireImmediately: true);
+      container.listen(pageContextProvider, (_, _) {}, fireImmediately: true);
 
       // Start with app in foreground and video playing
       lifecycleController.add(true);
@@ -272,7 +264,7 @@ void main() {
         activeVideoIds.add(next);
       }, fireImmediately: true);
 
-      container.listen(pageContextProvider, (_, __) {}, fireImmediately: true);
+      container.listen(pageContextProvider, (_, _) {}, fireImmediately: true);
 
       // Start at home video 0
       locationController.add('/home/0');
@@ -332,11 +324,7 @@ void main() {
           activeVideoIds.add(next);
         }, fireImmediately: true);
 
-        container.listen(
-          pageContextProvider,
-          (_, __) {},
-          fireImmediately: true,
-        );
+        container.listen(pageContextProvider, (_, _) {}, fireImmediately: true);
 
         // Navigate to video without lifecycle being ready
         locationController.add('/home/0');

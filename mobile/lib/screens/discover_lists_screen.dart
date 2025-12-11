@@ -38,9 +38,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
     });
 
     try {
-      final service = ref
-          .read(curatedListsStateProvider.notifier)
-          .service;
+      final service = ref.read(curatedListsStateProvider.notifier).service;
       final lists = await service?.fetchPublicListsFromRelays(limit: 50);
 
       // Filter out empty lists and sort by video count (popularity)
@@ -75,9 +73,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
 
   Future<void> _toggleSubscription(CuratedList list) async {
     try {
-      final service = ref
-          .read(curatedListsStateProvider.notifier)
-          .service;
+      final service = ref.read(curatedListsStateProvider.notifier).service;
       final isSubscribed = service?.isSubscribedToList(list.id) ?? false;
 
       if (isSubscribed) {
@@ -169,7 +165,10 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
                 _errorMessage!,
-                style: const TextStyle(color: VineTheme.secondaryText, fontSize: 12),
+                style: const TextStyle(
+                  color: VineTheme.secondaryText,
+                  fontSize: 12,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -316,7 +315,10 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
                               ? VineTheme.vineGreen
                               : VineTheme.backgroundColor,
                           side: isSubscribed
-                              ? const BorderSide(color: VineTheme.vineGreen, width: 1)
+                              ? const BorderSide(
+                                  color: VineTheme.vineGreen,
+                                  width: 1,
+                                )
                               : null,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -369,7 +371,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
         );
       },
       loading: () => CuratedListCard(curatedList: list, onTap: () {}),
-      error: (_, __) => CuratedListCard(curatedList: list, onTap: () {}),
+      error: (_, _) => CuratedListCard(curatedList: list, onTap: () {}),
     );
   }
 }

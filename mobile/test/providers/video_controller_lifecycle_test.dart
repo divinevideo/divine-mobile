@@ -27,7 +27,7 @@ void main() {
       // Act - create a subscription (listener)
       final subscription = container.listen(
         individualVideoControllerProvider(params),
-        (_, __) {},
+        (_, _) {},
       );
 
       // Wait a bit
@@ -53,7 +53,7 @@ void main() {
       // Act - create then remove listener
       final subscription = container.listen(
         individualVideoControllerProvider(params),
-        (_, __) {},
+        (_, _) {},
       );
 
       await Future.delayed(const Duration(milliseconds: 50));
@@ -79,7 +79,7 @@ void main() {
       // Act - create listener, remove it, then add another before timeout
       final subscription1 = container.listen(
         individualVideoControllerProvider(params),
-        (_, __) {},
+        (_, _) {},
       );
 
       await Future.delayed(const Duration(milliseconds: 50));
@@ -89,7 +89,7 @@ void main() {
 
       final subscription2 = container.listen(
         individualVideoControllerProvider(params),
-        (_, __) {}, // Triggers onResume
+        (_, _) {}, // Triggers onResume
       );
 
       // Assert - controller should still be alive
@@ -111,12 +111,12 @@ void main() {
       // Act - create two listeners
       final subscription1 = container.listen(
         individualVideoControllerProvider(params),
-        (_, __) {},
+        (_, _) {},
       );
 
       final subscription2 = container.listen(
         individualVideoControllerProvider(params),
-        (_, __) {},
+        (_, _) {},
       );
 
       await Future.delayed(const Duration(milliseconds: 50));
@@ -147,7 +147,7 @@ void main() {
         // Act - create then remove listener
         final subscription = container.listen(
           individualVideoControllerProvider(params),
-          (_, __) {},
+          (_, _) {},
         );
 
         await Future.delayed(const Duration(milliseconds: 50));

@@ -380,22 +380,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/welcome',
         name: 'welcome',
-        builder: (_, __) => const WelcomeScreen(),
+        builder: (_, _) => const WelcomeScreen(),
       ),
       GoRoute(
         path: '/import-key',
         name: 'import-key',
-        builder: (_, __) => const KeyImportScreen(),
+        builder: (_, _) => const KeyImportScreen(),
       ),
       GoRoute(
         path: '/camera',
         name: 'camera',
-        builder: (_, __) => const UniversalCameraScreenPure(),
+        builder: (_, _) => const UniversalCameraScreenPure(),
       ),
       GoRoute(
         path: '/settings',
         name: 'settings',
-        builder: (_, __) => const SettingsScreen(),
+        builder: (_, _) => const SettingsScreen(),
       ),
       GoRoute(
         path: '/edit-profile',
@@ -426,7 +426,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/drafts',
         name: 'drafts',
-        builder: (_, __) => const VineDraftsScreen(),
+        builder: (_, _) => const VineDraftsScreen(),
       ),
       // Followers screen
       GoRoute(

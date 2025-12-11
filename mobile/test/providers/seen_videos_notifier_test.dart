@@ -118,7 +118,7 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 100));
 
       var listenerCallCount = 0;
-      container.listen(seenVideosProvider, (_, __) => listenerCallCount++);
+      container.listen(seenVideosProvider, (_, _) => listenerCallCount++);
 
       const videoId = 'listener_test_video';
       await notifier.markVideoAsSeen(videoId);

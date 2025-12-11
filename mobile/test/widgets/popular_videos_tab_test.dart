@@ -92,7 +92,7 @@ void main() {
           videoEventsProvider.overrideWith(videoEventsBuilder),
         ],
         child: MaterialApp(
-          home: Scaffold(body: PopularVideosTab(onVideoTap: (_, __) {})),
+          home: Scaffold(body: PopularVideosTab(onVideoTap: (_, _) {})),
         ),
       );
     }
