@@ -180,7 +180,6 @@ extension LogBatcher on Log {
   }) {
     if (LogMessageBatcher.instance.tryBatchMessage(
       message,
-      level: LogLevel.info,
       category: category,
     )) {
       return; // Message was batched

@@ -47,7 +47,6 @@ class PopularNowFeed extends _$PopularNowFeed {
       return const VideoFeedState(
         videos: [],
         hasMoreContent: true, // Assume there's content to load when ready
-        isLoadingMore: false,
       );
     }
 
@@ -88,7 +87,6 @@ class PopularNowFeed extends _$PopularNowFeed {
       return const VideoFeedState(
         videos: [],
         hasMoreContent: false,
-        isLoadingMore: false,
       );
     }
 

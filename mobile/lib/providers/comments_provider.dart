@@ -112,7 +112,7 @@ class CommentsNotifier extends _$CommentsNotifier {
       return;
     }
 
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true);
 
     // Use Completer to track stream completion while updating UI reactively
     final completer = Completer<void>();
@@ -360,7 +360,7 @@ class CommentsNotifier extends _$CommentsNotifier {
     }
 
     try {
-      state = state.copyWith(error: null);
+      state = state.copyWith();
 
       // Get current user's public key for optimistic update
       final currentUserPubkey = authService.currentPublicKeyHex;

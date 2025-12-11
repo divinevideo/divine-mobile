@@ -450,23 +450,23 @@ class ContentReportingService {
       // Format ticket description with NIP-56 report details
       final description = StringBuffer();
       description.writeln('Content Report - NIP-56');
-      description.writeln('');
+      description.writeln();
       description.writeln('Report ID: $reportId');
       description.writeln('Event ID: $eventId');
       description.writeln('Author Pubkey: $authorPubkey');
-      description.writeln('');
+      description.writeln();
       description.writeln('Violation Type: ${reason.name}');
-      description.writeln('');
+      description.writeln();
       description.writeln('Reporter Details:');
       description.writeln(details);
 
       if (additionalContext != null) {
-        description.writeln('');
+        description.writeln();
         description.writeln('Additional Context:');
         description.writeln(additionalContext);
       }
 
-      description.writeln('');
+      description.writeln();
       description.writeln('---');
       description.writeln('Reported via diVine mobile app');
       description.writeln('NIP-56 Nostr event created: $eventId');

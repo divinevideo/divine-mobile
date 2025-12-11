@@ -259,7 +259,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(
                                 color: Colors.grey[700]!,
-                                width: 1,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
@@ -305,7 +304,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(
                                 color: Colors.grey[700]!,
-                                width: 1,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
@@ -587,7 +585,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                                       borderRadius: BorderRadius.circular(12),
                                       borderSide: BorderSide(
                                         color: Colors.grey[700]!,
-                                        width: 1,
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
@@ -1489,7 +1486,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       final result = await uploadService.uploadImage(
         imageFile: _selectedImage!,
         nostrPubkey: authService.currentPublicKeyHex!,
-        mimeType: 'image/jpeg',
         onProgress: (progress) {
           // Only log at major milestones to reduce noise
           if (progress == 1.0 || progress == 0.0) {

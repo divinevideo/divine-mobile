@@ -157,7 +157,6 @@ class IdentityManagerService {
             displayName: _savedIdentities[i].displayName,
             savedAt: _savedIdentities[i].savedAt,
             lastUsedAt: _savedIdentities[i].lastUsedAt,
-            isActive: false,
           );
         }
       }

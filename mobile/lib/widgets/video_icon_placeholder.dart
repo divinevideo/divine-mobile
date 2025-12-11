@@ -87,7 +87,6 @@ class _VideoIconPlaceholderState extends State<VideoIconPlaceholder>
         borderRadius: BorderRadius.circular(widget.borderRadius),
         border: Border.all(
           color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-          width: 1,
         ),
       ),
       child: widget.showLoading

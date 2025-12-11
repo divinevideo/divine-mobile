@@ -362,23 +362,23 @@ class ZendeskSupportService {
     buffer.writeln('## Bug Report');
     buffer.writeln('**Report ID:** $reportId');
     buffer.writeln('**App Version:** $appVersion');
-    buffer.writeln('');
+    buffer.writeln();
     buffer.writeln('### User Description');
     buffer.writeln(userDescription);
-    buffer.writeln('');
+    buffer.writeln();
     buffer.writeln('### Device Information');
     deviceInfo.forEach((key, value) {
       buffer.writeln('- **$key:** $value');
     });
     if (currentScreen != null) {
-      buffer.writeln('');
+      buffer.writeln();
       buffer.writeln('**Current Screen:** $currentScreen');
     }
     if (userPubkey != null) {
       buffer.writeln('**User Pubkey:** $userPubkey');
     }
     if (errorCounts != null && errorCounts.isNotEmpty) {
-      buffer.writeln('');
+      buffer.writeln();
       buffer.writeln('### Recent Error Summary');
       final sortedErrors = errorCounts.entries.toList()
         ..sort((a, b) => b.value.compareTo(a.value));
@@ -387,7 +387,7 @@ class ZendeskSupportService {
       }
     }
     if (logsSummary != null && logsSummary.isNotEmpty) {
-      buffer.writeln('');
+      buffer.writeln();
       buffer.writeln('### Recent Logs (Summary)');
       buffer.writeln('```');
       buffer.writeln(logsSummary);

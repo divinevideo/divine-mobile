@@ -6,7 +6,6 @@ import 'dart:convert';
 
 import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart'
     as embedded;
-import 'package:logging/logging.dart' as logging;
 import 'package:models/models.dart' show NIP94Metadata;
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
@@ -96,12 +95,7 @@ class NostrServiceFunction implements INostrService {
       );
 
       await _embeddedRelay!.initialize(
-        logLevel: logging
-            .Level
-            .INFO, // Temporary: restore INFO to debug startup issue
-        enableGarbageCollection: true,
-        useFunctionChannel:
-            true, // Enable function channel instead of WebSocket
+        
       );
 
       Log.info(
@@ -255,7 +249,6 @@ class NostrServiceFunction implements INostrService {
     return subscribeToEventsWithId(
       subscriptionId: subscriptionId,
       filters: filters,
-      onEvent: null,
       onEose: onEose,
     );
   }

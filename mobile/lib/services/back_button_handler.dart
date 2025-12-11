@@ -50,7 +50,6 @@ class BackButtonHandler {
         hashtag: ctx.hashtag,
         searchTerm: ctx.searchTerm,
         npub: ctx.npub,
-        videoIndex: null,
       );
       final newRoute = buildRoute(gridCtx);
       _router!.go(newRoute);

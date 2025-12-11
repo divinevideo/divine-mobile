@@ -171,7 +171,6 @@ class _BugReportDialogState extends State<BugReportDialog> {
                       color: _isSuccess == true
                           ? VineTheme.vineGreen
                           : Colors.red,
-                      width: 1,
                     ),
                   ),
                   child: Text(

@@ -767,7 +767,6 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         final videoService = ref.read(videoEventServiceProvider);
         await videoService.subscribeToVideoFeed(
           subscriptionType: SubscriptionType.discovery,
-          replace: true,
         );
       } else {
         _showError(
@@ -829,7 +828,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(null),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
           ),
           TextButton(

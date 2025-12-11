@@ -63,7 +63,6 @@ extension NostrEventExt on Event {
       videoEventIds: videoEventIds,
       createdAt: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
-      isPublic: true, // Lists from relays are public
       nostrEventId: id,
       tags: tags,
       isCollaborative: isCollaborative,

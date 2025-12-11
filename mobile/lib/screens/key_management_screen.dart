@@ -455,7 +455,6 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
               '✅ Private key copied to clipboard!\n\nStore it somewhere safe.',
             ),
             backgroundColor: VineTheme.vineGreen,
-            duration: Duration(seconds: 4),
           ),
         );
       }

@@ -77,8 +77,6 @@ class VideoFeedBuilder {
     return VideoFeedState(
       videos: sortedVideos,
       hasMoreContent: sortedVideos.length >= 10,
-      isLoadingMore: false,
-      error: null,
       lastUpdated: DateTime.now(),
     );
   }
@@ -120,8 +118,6 @@ class VideoFeedBuilder {
           final state = VideoFeedState(
             videos: sortedVideos,
             hasMoreContent: sortedVideos.length >= 10,
-            isLoadingMore: false,
-            error: null,
             lastUpdated: DateTime.now(),
           );
 

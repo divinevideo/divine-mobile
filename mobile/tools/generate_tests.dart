@@ -172,7 +172,7 @@ String _toSnakeCase(String input) => input
 String _toPascalCase(String input) => input
     .split('_')
     .map((word) => word[0].toUpperCase() + word.substring(1))
-    .join('');
+    .join();
 
 Future<String> _generateFromPattern(
   File inputFile,

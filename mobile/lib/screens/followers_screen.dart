@@ -124,12 +124,11 @@ class _FollowersScreenState extends ConsumerState<FollowersScreen>
         _followers,
         _navigateToProfile,
         emptyMessage: 'No followers yet',
-        emptyIcon: Icons.people_outline,
       ),
     );
   }
 
   void _navigateToProfile(String pubkey) {
-    context.goProfile(pubkey, 0);
+    context.goProfile(pubkey);
   }
 }

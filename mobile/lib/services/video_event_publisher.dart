@@ -393,7 +393,6 @@ class VideoEventPublisher {
               await VideoThumbnailService.extractThumbnailBytes(
                 videoPath: upload.localVideoPath,
                 timeMs: 500,
-                quality: 75,
               ).timeout(
                 const Duration(seconds: 10),
                 onTimeout: () {

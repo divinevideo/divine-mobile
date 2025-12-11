@@ -1619,7 +1619,6 @@ class _UniversalCameraScreenPureState
               'Please open System Settings manually and grant camera permission to Divine.',
             ),
             backgroundColor: Colors.orange,
-            duration: Duration(seconds: 4),
           ),
         );
       }
@@ -1647,7 +1646,6 @@ class _UniversalCameraScreenPureState
           left: 10,
           right: 10,
         ),
-        duration: const Duration(seconds: 4),
       ),
     );
   }

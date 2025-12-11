@@ -54,7 +54,6 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
           child: TabBar(
             controller: _tabController,
             indicatorColor: VineTheme.whiteText,
-            indicatorWeight: 2,
             labelColor: VineTheme.whiteText,
             unselectedLabelColor: VineTheme.whiteText.withValues(alpha: 0.7),
             labelStyle: const TextStyle(
@@ -277,7 +276,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
 
   void _openUserProfile(String pubkey) {
     // Navigate to profile tab using GoRouter
-    context.goProfile(pubkey, 0);
+    context.goProfile(pubkey);
   }
 
   void _openComments(VideoEvent video) {
@@ -370,7 +369,7 @@ class _NotificationItem extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              UserAvatar(imageUrl: profile?.picture, name: userName, size: 40),
+              UserAvatar(imageUrl: profile?.picture, name: userName),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -480,7 +479,6 @@ class _FollowingItem extends StatelessWidget {
       leading: UserAvatar(
         imageUrl: profile?.picture,
         name: profile?.bestDisplayName,
-        size: 40,
       ),
       title: Row(
         children: [

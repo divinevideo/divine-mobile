@@ -284,7 +284,6 @@ class UploadInitializationHelper {
       condition: () =>
           !_isInitializing && _cachedBox != null && _cachedBox!.isOpen,
       timeout: const Duration(seconds: 30),
-      checkInterval: const Duration(milliseconds: 100),
       debugName: 'upload_box_initialization',
     );
 

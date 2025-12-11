@@ -282,7 +282,6 @@ class VideoEvents extends _$VideoEvents {
       );
       // Use NIP-50 search for trending/popular discovery (otherstuff-relay)
       service.subscribeToDiscovery(
-        limit: 100,
         nip50Sort: NIP50SortMode.hot, // Recent events with high engagement
       );
       // NOTE: We don't set a local _isSubscribed flag here because we rely on
@@ -456,7 +455,6 @@ class VideoEvents extends _$VideoEvents {
     // Subscribe to discovery videos using NIP-50 search for trending/popular
     // NostrService now handles deduplication automatically
     videoEventService.subscribeToDiscovery(
-      limit: 100,
       nip50Sort: NIP50SortMode.hot, // Recent events with high engagement
     );
   }

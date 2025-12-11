@@ -129,7 +129,7 @@ void clearAllProfileVideosCache() {
 
 /// Notifier for managing profile videos state
 /// keepAlive: false allows disposal when profile not visible - prevents ghost video playback
-@Riverpod(keepAlive: false)
+@Riverpod()
 class ProfileVideosNotifier extends _$ProfileVideosNotifier {
   String? _currentPubkey;
   Completer<void>? _loadingCompleter;
@@ -181,7 +181,6 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
           videos: cached,
           isLoading: false,
           hasMore: _profileVideosHasMoreCache[pubkey] ?? true,
-          error: null,
         );
       });
       _loadingCompleter!.complete();
@@ -200,9 +199,7 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
       state = state.copyWith(
         isLoading: true,
         videos: [],
-        error: null,
         hasMore: true,
-        lastTimestamp: null,
       );
     });
 
@@ -464,7 +461,7 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
 
     // Defer state modification to avoid modifying provider during build
     await Future.microtask(() {
-      state = state.copyWith(isLoadingMore: true, error: null);
+      state = state.copyWith(isLoadingMore: true);
     });
 
     try {
@@ -653,14 +650,13 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
       videos: [],
       isLoading: false,
       hasMore: true,
-      error: null,
     );
     await loadVideosForUser(pubkey);
   }
 
   /// Clear error state
   void clearError() {
-    state = state.copyWith(error: null);
+    state = state.copyWith();
   }
 
   /// Add a new video to the current list (for optimistic updates)

@@ -1228,7 +1228,6 @@ class UploadManager {
     final resumedUpload = upload.copyWith(
       status: UploadStatus.pending,
       uploadProgress: 0, // Reset progress since we're starting over
-      errorMessage: null,
     );
 
     await _updateUpload(resumedUpload);
@@ -1273,8 +1272,6 @@ class UploadManager {
     // Reset status and error
     final resetUpload = upload.copyWith(
       status: UploadStatus.pending,
-      errorMessage: null,
-      uploadProgress: null,
     );
 
     await _updateUpload(resetUpload);
@@ -1303,7 +1300,6 @@ class UploadManager {
     final cancelledUpload = upload.copyWith(
       status: UploadStatus.failed,
       errorMessage: 'Upload cancelled by user',
-      uploadProgress: null,
     );
 
     await _updateUpload(cancelledUpload);
@@ -1391,7 +1387,6 @@ class UploadManager {
       // Reset to pending and restart
       final resetUpload = upload.copyWith(
         status: UploadStatus.pending,
-        uploadProgress: null,
       );
 
       await _updateUpload(resetUpload);
@@ -1745,7 +1740,6 @@ class UploadManager {
     final updatedUpload = upload.copyWith(
       status: UploadStatus.pending,
       retryCount: newRetryCount,
-      errorMessage: null,
     );
 
     await _updateUpload(updatedUpload);
@@ -2174,7 +2168,6 @@ Upload Timeout Failure:
       final thumbnailResult = await _blossomService.uploadImage(
         imageFile: thumbnailFile,
         nostrPubkey: nostrPubkey,
-        mimeType: 'image/jpeg',
         onProgress: (progress) {
           // Map thumbnail progress to 85%-100% of total upload
           _updateUploadProgress(upload.id, 0.85 + (progress * 0.15));

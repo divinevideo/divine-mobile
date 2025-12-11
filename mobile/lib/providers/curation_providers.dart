@@ -271,7 +271,6 @@ class AnalyticsPopular extends _$AnalyticsPopular {
       final service = ref.read(analyticsApiServiceProvider);
       // Popular uses 7 day window to get recent popular content
       final videos = await service.getTrendingVideos(
-        timeWindow: '7d',
         forceRefresh: true,
       );
 

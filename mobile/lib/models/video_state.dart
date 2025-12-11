@@ -96,7 +96,6 @@ class VideoState {
     return VideoState._internal(
       event: event,
       loadingState: VideoLoadingState.loading,
-      errorMessage: null, // Clear error when starting new load
       retryCount: retryCount,
       lastUpdated: DateTime.now(),
     );
@@ -109,7 +108,6 @@ class VideoState {
     return VideoState._internal(
       event: event,
       loadingState: VideoLoadingState.ready,
-      errorMessage: null,
       retryCount: retryCount,
       lastUpdated: DateTime.now(),
     );

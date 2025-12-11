@@ -23,7 +23,6 @@ import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/badge_explanation_modal.dart';
 import 'package:openvine/widgets/clickable_hashtag_text.dart';
-import 'package:openvine/widgets/proofmode_badge.dart';
 import 'package:openvine/widgets/proofmode_badge_row.dart';
 import 'package:openvine/widgets/share_video_menu.dart';
 import 'package:openvine/widgets/video_error_overlay.dart';
@@ -623,7 +622,6 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                         child: ColoredBox(
                           color: Colors.black,
                           child: FittedBox(
-                            fit: BoxFit.contain,
                             alignment: Alignment.topCenter,
                             child: SizedBox(
                               width: value.size.width == 0
@@ -955,7 +953,6 @@ class VideoOverlayActions extends ConsumerWidget {
                                         : VineTheme.vineGreen)
                                     ?.withValues(alpha: 0.5) ??
                                 Colors.transparent,
-                            width: 1,
                           ),
                         ),
                         child: isFollowInProgress
@@ -991,7 +988,7 @@ class VideoOverlayActions extends ConsumerWidget {
             onTap: () {
               _showBadgeExplanationModal(context, ref, video);
             },
-            child: ProofModeBadgeRow(video: video, size: BadgeSize.small),
+            child: ProofModeBadgeRow(video: video),
           ),
         ),
         // No gradient - using text background opacity instead for cleaner appearance
@@ -1027,14 +1024,11 @@ class VideoOverlayActions extends ConsumerWidget {
                         height: 1.3,
                         shadows: [
                           Shadow(
-                            offset: Offset(0, 0),
                             blurRadius: 8,
-                            color: Colors.black,
                           ),
                           Shadow(
                             offset: Offset(2, 2),
                             blurRadius: 4,
-                            color: Colors.black,
                           ),
                         ],
                       ),
@@ -1045,14 +1039,11 @@ class VideoOverlayActions extends ConsumerWidget {
                         height: 1.3,
                         shadows: [
                           Shadow(
-                            offset: Offset(0, 0),
                             blurRadius: 8,
-                            color: Colors.black,
                           ),
                           Shadow(
                             offset: Offset(2, 2),
                             blurRadius: 4,
-                            color: Colors.black,
                           ),
                         ],
                       ),
@@ -1071,14 +1062,11 @@ class VideoOverlayActions extends ConsumerWidget {
                           fontWeight: FontWeight.w500,
                           shadows: [
                             Shadow(
-                              offset: Offset(0, 0),
                               blurRadius: 6,
-                              color: Colors.black,
                             ),
                             Shadow(
                               offset: Offset(1, 1),
                               blurRadius: 3,
-                              color: Colors.black,
                             ),
                           ],
                         ),
@@ -1149,14 +1137,11 @@ class VideoOverlayActions extends ConsumerWidget {
                             fontWeight: FontWeight.bold,
                             shadows: [
                               Shadow(
-                                offset: Offset(0, 0),
                                 blurRadius: 6,
-                                color: Colors.black,
                               ),
                               Shadow(
                                 offset: Offset(1, 1),
                                 blurRadius: 3,
-                                color: Colors.black,
                               ),
                             ],
                           ),
@@ -1228,14 +1213,11 @@ class VideoOverlayActions extends ConsumerWidget {
                             fontWeight: FontWeight.bold,
                             shadows: [
                               Shadow(
-                                offset: Offset(0, 0),
                                 blurRadius: 6,
-                                color: Colors.black,
                               ),
                               Shadow(
                                 offset: Offset(1, 1),
                                 blurRadius: 3,
-                                color: Colors.black,
                               ),
                             ],
                           ),
@@ -1302,14 +1284,11 @@ class VideoOverlayActions extends ConsumerWidget {
                                 fontWeight: FontWeight.bold,
                                 shadows: [
                                   Shadow(
-                                    offset: Offset(0, 0),
                                     blurRadius: 6,
-                                    color: Colors.black,
                                   ),
                                   Shadow(
                                     offset: Offset(1, 1),
                                     blurRadius: 3,
-                                    color: Colors.black,
                                   ),
                                 ],
                               ),
@@ -1349,14 +1328,11 @@ class VideoOverlayActions extends ConsumerWidget {
                           fontWeight: FontWeight.bold,
                           shadows: [
                             Shadow(
-                              offset: Offset(0, 0),
                               blurRadius: 6,
-                              color: Colors.black,
                             ),
                             Shadow(
                               offset: Offset(1, 1),
                               blurRadius: 3,
-                              color: Colors.black,
                             ),
                           ],
                         ),
@@ -1397,14 +1373,11 @@ class VideoOverlayActions extends ConsumerWidget {
                           fontWeight: FontWeight.bold,
                           shadows: [
                             Shadow(
-                              offset: Offset(0, 0),
                               blurRadius: 6,
-                              color: Colors.black,
                             ),
                             Shadow(
                               offset: Offset(1, 1),
                               blurRadius: 3,
-                              color: Colors.black,
                             ),
                           ],
                         ),
@@ -1533,7 +1506,6 @@ class VideoOverlayActions extends ConsumerWidget {
 
     await showDialog<void>(
       context: context,
-      barrierDismissible: true,
       builder: (context) => BadgeExplanationModal(video: video),
     );
 

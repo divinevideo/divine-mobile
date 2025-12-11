@@ -19,7 +19,7 @@ class ProofModeIndicator extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.green.shade700.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.shade400, width: 1),
+        border: Border.all(color: Colors.green.shade400),
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
@@ -684,7 +684,7 @@ class VineRecordingUIWithProvider extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.black54,
-                        border: Border.all(color: Colors.white54, width: 1),
+                        border: Border.all(color: Colors.white54),
                       ),
                       child: const Icon(
                         Icons.flip_camera_ios,
@@ -873,7 +873,7 @@ class _VineRecordingUIState extends State<VineRecordingUI> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.black54,
-                        border: Border.all(color: Colors.white54, width: 1),
+                        border: Border.all(color: Colors.white54),
                       ),
                       child: const Icon(
                         Icons.flip_camera_ios,

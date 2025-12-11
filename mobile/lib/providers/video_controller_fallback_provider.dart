@@ -109,7 +109,6 @@ class VideoControllerWithFallback {
       Uri.parse(videoUrl),
       videoPlayerOptions: VideoPlayerOptions(
         mixWithOthers: true,
-        allowBackgroundPlayback: false,
       ),
     );
   }

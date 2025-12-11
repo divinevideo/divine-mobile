@@ -405,7 +405,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                           TabBar(
                             controller: _tabController,
                             indicatorColor: Colors.white,
-                            indicatorWeight: 2,
                             indicatorSize: TabBarIndicatorSize.tab,
                             dividerColor: Colors.transparent,
                             labelColor: Colors.white,
@@ -572,7 +571,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
           Row(
             children: [
               // Profile picture
-              UserAvatar(imageUrl: profilePictureUrl, name: null, size: 86),
+              UserAvatar(imageUrl: profilePictureUrl, size: 86),
 
               const SizedBox(width: 20),
 
@@ -587,7 +586,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                           : null,
                       'Videos',
                       profileStatsAsync.isLoading,
-                      onTap: null, // Videos aren't tappable
                     ),
                     _buildStatColumn(
                       profileStatsAsync.hasValue
@@ -679,7 +677,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                     decoration: BoxDecoration(
                       color: Colors.grey[800],
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.grey[600]!, width: 1),
+                      border: Border.all(color: Colors.grey[600]!),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -982,7 +980,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
               crossAxisCount: 3,
               crossAxisSpacing: 2,
               mainAxisSpacing: 2,
-              childAspectRatio: 1,
             ),
             delegate: SliverChildBuilderDelegate((context, index) {
               if (index >= videos.length) {
@@ -1196,7 +1193,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
                   crossAxisCount: 3,
                   crossAxisSpacing: 2,
                   mainAxisSpacing: 2,
-                  childAspectRatio: 1,
                 ),
                 delegate: SliverChildBuilderDelegate((context, index) {
                   if (index >= reposts.length) {
@@ -1567,7 +1563,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
         // Show success confirmation using root navigator
         showDialog(
           context: context,
-          useRootNavigator: true,
           builder: (context) => const _BlockConfirmationDialog(),
         );
       }

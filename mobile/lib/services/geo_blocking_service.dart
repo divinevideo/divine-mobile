@@ -142,7 +142,6 @@ class GeoBlockingService {
       country: 'UNKNOWN',
       region: 'UNKNOWN',
       city: 'UNKNOWN',
-      reason: null,
     );
   }
 

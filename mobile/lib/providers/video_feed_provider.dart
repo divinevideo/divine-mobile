@@ -61,8 +61,6 @@ class VideoFeed extends _$VideoFeed {
     final feedState = VideoFeedState(
       videos: sortedVideos,
       hasMoreContent: sortedVideos.length >= 20,
-      isLoadingMore: false,
-      error: null,
       lastUpdated: DateTime.now(),
     );
 

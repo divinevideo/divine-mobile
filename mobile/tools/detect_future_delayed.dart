@@ -31,8 +31,8 @@ class FutureDelayedOccurrence {
 void main(List<String> args) async {
   final parser = ArgParser()
     ..addFlag('suggest', defaultsTo: true, help: 'Show replacement suggestions')
-    ..addFlag('include-tests', defaultsTo: false, help: 'Include test files')
-    ..addFlag('fix', defaultsTo: false, help: 'Automatically fix simple cases')
+    ..addFlag('include-tests', help: 'Include test files')
+    ..addFlag('fix', help: 'Automatically fix simple cases')
     ..addOption(
       'format',
       defaultsTo: 'text',

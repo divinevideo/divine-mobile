@@ -152,5 +152,5 @@ final videoControllerAutoCleanupProvider = Provider<void>((ref) {
       disposeAllVideoControllers(ref.container);
     }
     previousActiveVideoId = next;
-  }, fireImmediately: false);
+  });
 });

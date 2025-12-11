@@ -107,9 +107,8 @@ class UserListService {
       name: 'Divine Team',
       description: 'Curated content from the diVine team',
       pubkeys: AppConstants.divineTeamPubkeys,
-      createdAt: DateTime(2024, 1, 1), // Fixed date for default lists
-      updatedAt: DateTime(2024, 1, 1),
-      isPublic: true,
+      createdAt: DateTime(2024), // Fixed date for default lists
+      updatedAt: DateTime(2024),
       isEditable: false, // Users cannot edit Divine Team
     ),
   ];
@@ -163,7 +162,6 @@ class UserListService {
         createdAt: now,
         updatedAt: now,
         isPublic: isPublic,
-        isEditable: true, // User-created lists are always editable
       );
 
       _userCreatedLists.add(newList);

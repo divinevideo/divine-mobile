@@ -47,7 +47,6 @@ class ProofModeBadgeRow extends StatelessWidget {
     return Wrap(
       spacing: spacing,
       runSpacing: spacing,
-      alignment: WrapAlignment.start,
       children: badges,
     );
   }

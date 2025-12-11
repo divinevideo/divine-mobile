@@ -98,7 +98,7 @@ class AppShell extends ConsumerWidget {
       case 1:
         // Always reset to grid mode (null) when tapping Explore tab
         // This prevents the "No videos available" bug when returning from another tab
-        context.goExplore(null);
+        context.goExplore();
       case 2:
         context.goNotifications(
           lastIndex ?? 0,
@@ -164,7 +164,7 @@ class AppShell extends ConsumerWidget {
         // Pop any pushed routes first (like CuratedListFeedScreen)
         Navigator.of(context).popUntil((route) => route.isFirst);
         // Navigate to main explore view
-        context.goExplore(null);
+        context.goExplore();
       },
       child: titleWidget,
     );
@@ -209,7 +209,6 @@ class AppShell extends ConsumerWidget {
                       type: ctx.type,
                       hashtag: ctx.hashtag,
                       searchTerm: ctx.searchTerm,
-                      videoIndex: null, // Remove index to enter grid mode
                     );
                     context.go(buildRoute(gridCtx));
                   } else {

@@ -103,7 +103,6 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   return Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Divine logo
                       Image.asset(

@@ -121,7 +121,6 @@ class CameraServiceImpl extends CameraService {
       _controller = CameraController(
         _selectedCamera!,
         resolution,
-        enableAudio: true,
       );
 
       await _controller!.initialize();
@@ -306,7 +305,6 @@ class CameraServiceImpl extends CameraService {
       _controller = CameraController(
         _selectedCamera!,
         ResolutionPreset.medium,
-        enableAudio: true,
       );
 
       await _controller!.initialize();

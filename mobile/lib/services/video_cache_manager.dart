@@ -373,7 +373,7 @@ class VideoCacheManager extends CacheManager {
       }
 
       // Wait for current batch to complete before starting next
-      await Future.wait(batch, eagerError: false);
+      await Future.wait(batch);
     }
 
     Log.info(

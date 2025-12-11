@@ -334,7 +334,7 @@ class SettingsScreen extends ConsumerWidget {
 
     // Sign out (keeps keys for re-login)
     // Router will automatically redirect to /welcome when auth state becomes unauthenticated
-    await authService.signOut(deleteKeys: false);
+    await authService.signOut();
   }
 
   /// Handle removing keys from device only (no relay broadcast)

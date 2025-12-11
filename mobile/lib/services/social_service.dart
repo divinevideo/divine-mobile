@@ -823,7 +823,6 @@ class SocialService {
           await ContactListCompletionHelper.queryContactList(
             eventStream: eventStream,
             pubkey: currentUserPubkey,
-            fallbackTimeoutSeconds: 10,
           );
 
       if (contactListEvent != null) {
@@ -1132,7 +1131,6 @@ class SocialService {
         mode: CompletionMode.exhaustive,
         fallbackTimeoutSeconds: 8,
         serviceName: 'FollowersQuery',
-        logCategory: LogCategory.system,
       );
 
       final followerPubkeys = <String>{};
@@ -1847,7 +1845,6 @@ class SocialService {
           }
         },
         timeout: const Duration(seconds: 5), // Short timeout for count
-        priority: 5, // Higher priority for counts
       );
 
       final result = await completer.future;

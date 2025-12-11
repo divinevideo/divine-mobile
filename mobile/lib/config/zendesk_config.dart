@@ -8,7 +8,6 @@ class ZendeskConfig {
   /// Set via: --dart-define=ZENDESK_APP_ID=xxx
   static const String appId = String.fromEnvironment(
     'ZENDESK_APP_ID',
-    defaultValue: '',
   );
 
   /// App identifier for Zendesk (can be any string, e.g., "divine.video")
@@ -16,7 +15,6 @@ class ZendeskConfig {
   /// Set via: --dart-define=ZENDESK_CLIENT_ID=xxx
   static const String clientId = String.fromEnvironment(
     'ZENDESK_CLIENT_ID',
-    defaultValue: '',
   );
 
   /// Zendesk instance URL
@@ -31,7 +29,6 @@ class ZendeskConfig {
   /// Set via: --dart-define=ZENDESK_API_TOKEN=xxx
   static const String apiToken = String.fromEnvironment(
     'ZENDESK_API_TOKEN',
-    defaultValue: '',
   );
 
   /// Email for API authentication (used with API token)

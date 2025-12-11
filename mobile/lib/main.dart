@@ -275,7 +275,6 @@ Future<void> _startOpenVineApp() async {
         // Use our batcher for these specific messages
         LogMessageBatcher.instance.tryBatchMessage(
           message,
-          level: LogLevel.info,
           category: LogCategory.relay,
         );
         return; // Don't print the individual message
@@ -808,7 +807,6 @@ class _DivineAppState extends ConsumerState<DivineApp> {
 
     const bool crashProbe = bool.fromEnvironment(
       'CRASHLYTICS_PROBE',
-      defaultValue: false,
     );
 
     final router = ref.read(goRouterProvider);
@@ -835,7 +833,6 @@ class _DivineAppState extends ConsumerState<DivineApp> {
           hashtag: ctx.hashtag,
           searchTerm: ctx.searchTerm,
           npub: ctx.npub,
-          videoIndex: null,
         );
         final newRoute = buildRoute(gridCtx);
         router.go(newRoute);

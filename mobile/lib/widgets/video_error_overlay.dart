@@ -63,8 +63,6 @@ class VideoErrorOverlay extends ConsumerWidget {
         // Show thumbnail as background
         VideoThumbnailWidget(
           video: video,
-          fit: BoxFit.cover,
-          showPlayIcon: false,
         ),
         // Error overlay (only show on active video)
         if (isActive)

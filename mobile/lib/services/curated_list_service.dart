@@ -921,7 +921,6 @@ class CuratedListService extends ChangeNotifier {
       id: defaultListId,
       name: 'My List',
       description: 'My favorite vines and videos',
-      isPublic: true,
     );
   }
 
@@ -1516,7 +1515,6 @@ class CuratedListService extends ChangeNotifier {
         videoEventIds: videoEventIds,
         createdAt: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
         updatedAt: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
-        isPublic: true, // Lists from relays are public
         nostrEventId: event.id,
         tags: tags,
         isCollaborative: isCollaborative,

@@ -141,7 +141,6 @@ class ComposableVideoGrid extends ConsumerWidget {
                               video: video,
                               width: double.infinity,
                               height: double.infinity,
-                              fit: BoxFit.cover,
                               borderRadius: BorderRadius.circular(0),
                             )
                           : const ColoredBox(

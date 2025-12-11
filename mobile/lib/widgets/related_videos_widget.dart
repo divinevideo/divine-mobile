@@ -58,7 +58,6 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
       final videos = await service.getRelatedVideos(
         videoId: widget.currentVideo.id,
         algorithm: widget.algorithm,
-        limit: 20,
       );
 
       if (mounted) {

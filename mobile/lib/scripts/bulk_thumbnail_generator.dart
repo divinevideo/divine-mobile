@@ -307,7 +307,6 @@ Examples:
       final thumbnailUrl = await ThumbnailApiService.getThumbnailWithFallback(
         event.id,
         timeSeconds: timeOffset,
-        size: ThumbnailSize.medium,
       );
 
       if (thumbnailUrl != null) {
@@ -381,7 +380,6 @@ Examples:
       timestamp: DateTime.now(),
       videoUrl:
           'https://blossom.primal.net/87444ba2b07f28f29a8df3e9b358712e434a9d94bc67b08db5d4de61e6205344.mp4',
-      thumbnailUrl: null, // No thumbnail
       duration: 5,
       hashtags: ['sample', 'test'],
     ),

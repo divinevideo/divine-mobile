@@ -269,7 +269,6 @@ class _WebAuthScreenState extends ConsumerState<WebAuthScreen>
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
                                       color: Colors.red,
-                                      width: 1,
                                     ),
                                   ),
                                   child: Row(

@@ -30,7 +30,7 @@ class ProofModeBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: config.backgroundColor,
         borderRadius: BorderRadius.circular(dimensions.borderRadius),
-        border: Border.all(color: config.borderColor, width: 1),
+        border: Border.all(color: config.borderColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -146,7 +146,6 @@ class OriginalContentBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(dimensions.borderRadius),
         border: Border.all(
           color: const Color(0xFF0097A7), // Darker cyan border
-          width: 1,
         ),
       ),
       child: Row(

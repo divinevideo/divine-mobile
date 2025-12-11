@@ -228,8 +228,6 @@ class _PopularVideosTrendingContent extends ConsumerWidget {
         Expanded(
           child: ComposableVideoGrid(
             videos: videos,
-            childAspectRatio: 0.72,
-            thumbnailAspectRatio: 1,
             onVideoTap: onVideoTap,
             onRefresh: () async {
               Log.info(

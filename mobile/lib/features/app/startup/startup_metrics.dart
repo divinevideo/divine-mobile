@@ -54,7 +54,7 @@ class StartupMetrics {
     final buffer = StringBuffer();
     buffer.writeln('=== Startup Performance Report ===');
     buffer.writeln('Total time: ${totalDuration.inMilliseconds}ms');
-    buffer.writeln('');
+    buffer.writeln();
 
     buffer.writeln('Service Timings:');
     for (final entry in servicesByDuration) {
@@ -65,7 +65,7 @@ class StartupMetrics {
     }
 
     if (errors.isNotEmpty) {
-      buffer.writeln('');
+      buffer.writeln();
       buffer.writeln('Errors:');
       for (final error in errors) {
         buffer.writeln('  ${error.serviceName}: ${error.error}');
@@ -74,7 +74,7 @@ class StartupMetrics {
 
     final bottlenecks = getBottlenecks();
     if (bottlenecks.isNotEmpty) {
-      buffer.writeln('');
+      buffer.writeln();
       buffer.writeln('Bottlenecks (>100ms):');
       for (final service in bottlenecks) {
         buffer.writeln(

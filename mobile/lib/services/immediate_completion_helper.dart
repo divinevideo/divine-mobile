@@ -269,7 +269,6 @@ class ContactListCompletionHelper {
       mode: CompletionMode.first,
       fallbackTimeoutSeconds: fallbackTimeoutSeconds,
       serviceName: 'ContactListQuery',
-      logCategory: LogCategory.system,
     );
 
     final result =

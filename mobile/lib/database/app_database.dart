@@ -33,7 +33,7 @@ class AppDatabase extends _$AppDatabase {
   /// Test constructor - allows custom database path for testing
   AppDatabase.test(String path)
     : super(
-        NativeDatabase(File(path), logStatements: false),
+        NativeDatabase(File(path)),
       ); // Disabled - too verbose
 
   @override
@@ -45,7 +45,6 @@ class AppDatabase extends _$AppDatabase {
       final dbPath = await _getSharedDatabasePath();
       return NativeDatabase(
         File(dbPath),
-        logStatements: false, // Disabled - too verbose for production
       );
     });
   }

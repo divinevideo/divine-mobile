@@ -70,7 +70,6 @@ class FeedNavigation {
       MaterialPageRoute(
         builder: (context) => VideoFeedScreen(
           startingVideo: startingVideo,
-          context: FeedContext.general,
         ),
       ),
     );

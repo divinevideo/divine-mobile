@@ -48,7 +48,6 @@ class _TestCameraScreenState extends State<TestCameraScreen> {
       _controller = CameraController(
         camera,
         ResolutionPreset.high,
-        enableAudio: true,
       );
 
       await _controller!.initialize();

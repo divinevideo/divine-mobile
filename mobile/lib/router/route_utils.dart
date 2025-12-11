@@ -78,7 +78,6 @@ RouteContext parseRoute(String path) {
       return RouteContext(
         type: RouteType.profile,
         npub: npub,
-        videoIndex: null,
       );
 
     case 'notifications':

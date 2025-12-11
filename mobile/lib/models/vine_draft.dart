@@ -47,7 +47,6 @@ class VineDraft {
       createdAt: now,
       lastModified: now,
       publishStatus: PublishStatus.draft,
-      publishError: null,
       publishAttempts: 0,
       proofManifestJson: proofManifestJson,
       aspectRatio: aspectRatio,

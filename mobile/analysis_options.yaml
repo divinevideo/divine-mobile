@@ -4,6 +4,7 @@ linter:
     - always_use_package_imports
     - avoid_final_parameters
     - avoid_js_rounded_ints
+    - avoid_redundant_argument_values
     - avoid_returning_null_for_void
     - annotate_overrides
     - avoid_type_to_string

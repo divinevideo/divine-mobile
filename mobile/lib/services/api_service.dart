@@ -121,7 +121,6 @@ class ApiService {
             uri,
             headers: await _getHeaders(
               url: uri.toString(),
-              method: HttpMethod.get,
             ),
           )
           .timeout(_defaultTimeout);

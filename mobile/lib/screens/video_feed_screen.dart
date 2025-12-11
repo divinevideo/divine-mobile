@@ -570,7 +570,6 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
           key: ValueKey('video-${videos[index].id}'),
           video: videos[index],
           index: index,
-          hasBottomNavigation: true,
           contextTitle: '', // Home feed has no context title
         );
       },

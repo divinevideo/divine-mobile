@@ -24,7 +24,7 @@ void main() async {
     category: LogCategory.relay,
   );
   final embeddedRelay = embedded.EmbeddedNostrRelay();
-  await embeddedRelay.initialize(enableGarbageCollection: true);
+  await embeddedRelay.initialize();
   Log.info(
     '   ✅ Embedded relay initialized',
     name: 'EmbeddedRelayTest',

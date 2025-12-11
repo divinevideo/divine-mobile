@@ -237,7 +237,6 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
         final videoService = ref.read(videoEventServiceProvider);
         await videoService.subscribeToVideoFeed(
           subscriptionType: SubscriptionType.discovery,
-          replace: true,
         );
       }
     } catch (e) {

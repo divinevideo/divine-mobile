@@ -80,7 +80,6 @@ class ProfileFeed extends _$ProfileFeed {
       return const VideoFeedState(
         videos: [],
         hasMoreContent: false,
-        isLoadingMore: false,
       );
     }
 
@@ -98,7 +97,6 @@ class ProfileFeed extends _$ProfileFeed {
     return VideoFeedState(
       videos: authorVideos,
       hasMoreContent: authorVideos.length >= 10,
-      isLoadingMore: false,
       lastUpdated: DateTime.now(),
     );
   }
@@ -160,7 +158,6 @@ class ProfileFeed extends _$ProfileFeed {
       await videoEventService.queryHistoricalUserVideos(
         userId,
         until: until,
-        limit: 50,
       );
 
       // Check if provider is still mounted after async gap
@@ -186,7 +183,6 @@ class ProfileFeed extends _$ProfileFeed {
         VideoFeedState(
           videos: updatedVideos,
           hasMoreContent: newEventsLoaded > 0,
-          isLoadingMore: false,
           lastUpdated: DateTime.now(),
         ),
       );

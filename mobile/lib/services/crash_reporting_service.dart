@@ -105,7 +105,6 @@ class CrashReportingService {
         exception,
         stack,
         reason: reason,
-        fatal: false,
       );
     } catch (e) {
       Log.error(

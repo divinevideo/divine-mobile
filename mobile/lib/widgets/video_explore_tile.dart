@@ -7,7 +7,6 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/utils/unified_logger.dart';
-import 'package:openvine/widgets/proofmode_badge.dart';
 import 'package:openvine/widgets/proofmode_badge_row.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 
@@ -55,8 +54,6 @@ class VideoExploreTile extends ConsumerWidget {
                   video: video,
                   width: constraints.maxWidth,
                   height: constraints.maxHeight,
-                  fit: BoxFit.cover,
-                  showPlayIcon: false,
                   borderRadius: BorderRadius.circular(borderRadius),
                 );
               },
@@ -66,7 +63,7 @@ class VideoExploreTile extends ConsumerWidget {
             Positioned(
               top: 8,
               left: 8,
-              child: ProofModeBadgeRow(video: video, size: BadgeSize.small),
+              child: ProofModeBadgeRow(video: video),
             ),
 
             // Video info overlay - conditionally shown
@@ -160,7 +157,7 @@ class _CreatorInfo extends ConsumerWidget {
           category: LogCategory.ui,
         );
         // Navigate to profile tab using GoRouter
-        context.goProfile(pubkey, 0);
+        context.goProfile(pubkey);
       },
       child: Row(
         mainAxisSize: MainAxisSize.min,

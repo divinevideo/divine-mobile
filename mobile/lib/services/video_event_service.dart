@@ -1913,7 +1913,6 @@ class VideoEventService extends ChangeNotifier {
             _addVideoToSubscription(
               videoEvent,
               subscriptionType,
-              isHistorical: false,
             );
 
             // Keep only the most recent events to prevent memory issues
@@ -2048,7 +2047,6 @@ class VideoEventService extends ChangeNotifier {
               _addVideoToSubscription(
                 repostVideoEvent,
                 subscriptionType,
-                isHistorical: false,
               );
               final totalEvents = getEventCount(subscriptionType);
               Log.verbose(
@@ -2141,7 +2139,6 @@ class VideoEventService extends ChangeNotifier {
             _addVideoToSubscription(
               repostEvent,
               subscriptionType,
-              isHistorical: false,
             );
             final totalEvents = getEventCount(subscriptionType);
             Log.verbose(
@@ -2680,7 +2677,6 @@ class VideoEventService extends ChangeNotifier {
     bool force = false,
   }) async => subscribeToVideoFeed(
     subscriptionType: SubscriptionType.discovery,
-    authors: null, // No author filter
     limit: limit,
     includeReposts: true,
     sortBy: sortBy,
@@ -2758,7 +2754,6 @@ class VideoEventService extends ChangeNotifier {
     // Preserve the current reposts setting when refreshing
     return subscribeToVideoFeed(
       subscriptionType: SubscriptionType.discovery,
-      includeReposts: false,
       force: true, // Force refresh to get fresh data from relay
     );
   }
@@ -3562,7 +3557,6 @@ class VideoEventService extends ChangeNotifier {
                 _addVideoToSubscription(
                   repostVideoEvent,
                   SubscriptionType.discovery,
-                  isHistorical: false,
                 );
 
                 // Keep list size manageable
@@ -3729,7 +3723,6 @@ class VideoEventService extends ChangeNotifier {
                 _addVideoToSubscription(
                   repostVideoEvent,
                   subscriptionType,
-                  isHistorical: false,
                 );
 
                 Log.debug(
@@ -4424,7 +4417,6 @@ class VideoEventService extends ChangeNotifier {
           since: params['since'] as int?,
           until: params['until'] as int?,
           limit: params['limit'] as int? ?? 50,
-          replace: true,
         ).catchError((e) {
           Log.error(
             'Failed to reconnect $subscriptionType subscription: $e',
@@ -4478,7 +4470,7 @@ class VideoEventService extends ChangeNotifier {
       context.writeln(
         'Connected Relay Count: ${_nostrService.connectedRelayCount}',
       );
-      context.writeln('');
+      context.writeln();
       context.writeln('Filters:');
       for (var i = 0; i < filters.length; i++) {
         final filter = filters[i];
@@ -4493,7 +4485,7 @@ class VideoEventService extends ChangeNotifier {
         context.writeln('    Until: ${filter.until}');
         context.writeln('    Limit: ${filter.limit}');
       }
-      context.writeln('');
+      context.writeln();
       context.writeln('Current State:');
       context.writeln(
         '  Total videos in feed: ${getVideos(subscriptionType).length}',
@@ -4562,7 +4554,7 @@ class VideoEventService extends ChangeNotifier {
       context.writeln(
         'Connected Relay Count: ${_nostrService.connectedRelayCount}',
       );
-      context.writeln('');
+      context.writeln();
       context.writeln('Filters:');
       for (var i = 0; i < filters.length; i++) {
         final filter = filters[i];
@@ -4577,7 +4569,7 @@ class VideoEventService extends ChangeNotifier {
         context.writeln('    Until: ${filter.until}');
         context.writeln('    Limit: ${filter.limit}');
       }
-      context.writeln('');
+      context.writeln();
       context.writeln('Current State:');
       context.writeln(
         '  Total videos in feed: ${getVideos(subscriptionType).length}',
@@ -4586,7 +4578,7 @@ class VideoEventService extends ChangeNotifier {
         '  Is loading: ${isLoadingForSubscription(subscriptionType)}',
       );
       context.writeln('  Has subscription: ${isSubscribed(subscriptionType)}');
-      context.writeln('');
+      context.writeln();
       context.writeln('Likely Causes:');
       if (!relayConnected) {
         context.writeln('  ❌ RELAY CONNECTION FAILURE - No relays connected!');
@@ -4748,7 +4740,6 @@ class VideoEventService extends ChangeNotifier {
     _addVideoToSubscription(
       videoEvent,
       SubscriptionType.discovery,
-      isHistorical: false,
     );
   }
 

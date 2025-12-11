@@ -24,7 +24,6 @@ final videosForProfileRouteProvider = Provider<AsyncValue<VideoFeedState>>((
       VideoFeedState(
         videos: [],
         hasMoreContent: false,
-        isLoadingMore: false,
       ),
     );
   }
@@ -37,7 +36,6 @@ final videosForProfileRouteProvider = Provider<AsyncValue<VideoFeedState>>((
       VideoFeedState(
         videos: [],
         hasMoreContent: false,
-        isLoadingMore: false,
       ),
     );
   }
@@ -62,6 +60,6 @@ final videosForProfileRouteProvider = Provider<AsyncValue<VideoFeedState>>((
   );
 
   return AsyncValue.data(
-    VideoFeedState(videos: items, hasMoreContent: false, isLoadingMore: false),
+    VideoFeedState(videos: items, hasMoreContent: false),
   );
 });

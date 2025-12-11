@@ -12,34 +12,28 @@ class BuildConfiguration {
       case FeatureFlag.newCameraUI:
         return const bool.fromEnvironment(
           'FF_NEW_CAMERA_UI',
-          defaultValue: false,
         );
       case FeatureFlag.enhancedVideoPlayer:
         return const bool.fromEnvironment(
           'FF_ENHANCED_VIDEO_PLAYER',
-          defaultValue: false,
         );
       case FeatureFlag.enhancedAnalytics:
         return const bool.fromEnvironment(
           'FF_ENHANCED_ANALYTICS',
-          defaultValue: false,
         );
       case FeatureFlag.newProfileLayout:
         return const bool.fromEnvironment(
           'FF_NEW_PROFILE_LAYOUT',
-          defaultValue: false,
         );
       case FeatureFlag.livestreamingBeta:
         return const bool.fromEnvironment(
           'FF_LIVESTREAMING_BETA',
-          defaultValue: false,
         );
       case FeatureFlag.debugTools:
         return const bool.fromEnvironment('FF_DEBUG_TOOLS', defaultValue: true);
       case FeatureFlag.routerDrivenHome:
         return const bool.fromEnvironment(
           'FF_ROUTER_DRIVEN_HOME',
-          defaultValue: false,
         );
       case FeatureFlag.enableVideoEditorV1:
         // Video editor now works on all platforms (uses dialog-based editor)

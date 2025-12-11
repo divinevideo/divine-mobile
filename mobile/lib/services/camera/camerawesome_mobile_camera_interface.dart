@@ -493,10 +493,8 @@ class CamerAwesomeMobileCameraInterface extends CameraPlatformInterface {
       ),
       sensorConfig: SensorConfig.single(
         sensor: Sensor.position(SensorPosition.back),
-        flashMode: FlashMode.none,
         aspectRatio: CameraAspectRatios.ratio_16_9,
       ),
-      enablePhysicalButton: false,
       previewFit: CameraPreviewFit.contain,
       builder: (state, preview) {
         // CameraLayoutBuilder signature: (CameraState, AnalysisPreview)

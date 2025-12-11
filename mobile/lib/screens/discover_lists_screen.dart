@@ -39,7 +39,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
 
     try {
       final service = ref.read(curatedListsStateProvider.notifier).service;
-      final lists = await service?.fetchPublicListsFromRelays(limit: 50);
+      final lists = await service?.fetchPublicListsFromRelays();
 
       // Filter out empty lists and sort by video count (popularity)
       final nonEmptyLists =
@@ -317,7 +317,6 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
                           side: isSubscribed
                               ? const BorderSide(
                                   color: VineTheme.vineGreen,
-                                  width: 1,
                                 )
                               : null,
                           padding: const EdgeInsets.symmetric(

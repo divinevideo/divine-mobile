@@ -178,7 +178,7 @@ class _VineDraftsScreenState extends ConsumerState<VineDraftsScreen> {
     decoration: BoxDecoration(
       color: Colors.grey[900],
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.grey[700]!, width: 1),
+      border: Border.all(color: Colors.grey[700]!),
     ),
     child: InkWell(
       borderRadius: BorderRadius.circular(12),

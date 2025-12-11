@@ -464,7 +464,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: VineTheme.vineGreen.withValues(alpha: 0.3),
-                width: 1,
               ),
             ),
             child: const Column(

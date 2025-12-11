@@ -179,7 +179,6 @@ class GlobalUploadIndicator extends ConsumerWidget {
                 itemCount: uploads.length,
                 itemBuilder: (context, index) => UploadProgressIndicator(
                   upload: uploads[index],
-                  showActions: true,
                   onCancel: () {
                     // Use captured uploadManagerNotifier instead of ref
                     uploadManagerNotifier.cancelUpload(uploads[index].id);

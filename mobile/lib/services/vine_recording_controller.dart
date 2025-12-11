@@ -106,7 +106,6 @@ class MobileCameraInterface extends CameraPlatformInterface {
     _controller = CameraController(
       camera,
       ResolutionPreset.high,
-      enableAudio: true,
     );
     await _controller!.initialize();
 
@@ -155,7 +154,6 @@ class MobileCameraInterface extends CameraPlatformInterface {
     _controller = CameraController(
       camera,
       ResolutionPreset.high,
-      enableAudio: true,
     );
     await _controller!.initialize();
 

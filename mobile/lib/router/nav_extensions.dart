@@ -77,7 +77,6 @@ extension NavX on BuildContext {
         RouteContext(
           type: RouteType.profile,
           npub: npub,
-          videoIndex: null, // Grid mode - no active video
         ),
       ),
     );

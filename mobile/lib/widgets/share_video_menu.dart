@@ -102,7 +102,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
   Widget _buildHeader() => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      border: Border(bottom: BorderSide(color: Colors.grey.shade800, width: 1)),
+      border: Border(bottom: BorderSide(color: Colors.grey.shade800)),
     ),
     child: Row(
       children: [
@@ -222,7 +222,6 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
           // Show success confirmation dialog using root navigator
           showDialog(
             context: context,
-            useRootNavigator: true,
             builder: (context) => const _ReportConfirmationDialog(),
           );
         } else {
@@ -684,7 +683,6 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
               color: Colors.orange.withAlpha(26), // 0.1 opacity
               border: Border.all(
                 color: Colors.orange.withAlpha(77), // 0.3 opacity
-                width: 1,
               ),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -1445,7 +1443,7 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
           );
           // Still add the contact without profile data
           contacts.add(
-            ShareableUser(pubkey: pubkey, displayName: null, picture: null),
+            ShareableUser(pubkey: pubkey),
           );
         }
       }
@@ -1486,7 +1484,6 @@ class _SendToUserDialogState extends ConsumerState<_SendToUserDialog> {
       leading: UserAvatar(
         imageUrl: user.picture,
         name: user.displayName,
-        size: 40,
       ),
       title: Text(
         user.displayName ?? 'Anonymous',
@@ -2056,7 +2053,6 @@ class ReportContentDialogState extends ConsumerState<ReportContentDialog> {
           // Show success confirmation dialog using root navigator
           showDialog(
             context: context,
-            useRootNavigator: true,
             builder: (context) => const _ReportConfirmationDialog(),
           );
         } else {

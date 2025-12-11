@@ -31,7 +31,7 @@ Duration homeFeedPollInterval(Ref ref) => const Duration(minutes: 10);
 /// - Pauses when all listeners detach (ref.onCancel)
 /// - Resumes when a new listener attaches (ref.onResume)
 /// - Cancels on dispose
-@Riverpod(keepAlive: false) // Auto-dispose when no listeners
+@Riverpod() // Auto-dispose when no listeners
 class HomeFeed extends _$HomeFeed {
   Timer? _profileFetchTimer;
   Timer? _autoRefreshTimer;
@@ -162,9 +162,6 @@ class HomeFeed extends _$HomeFeed {
       return const VideoFeedState(
         videos: [],
         hasMoreContent: false,
-        isLoadingMore: false,
-        error: null,
-        lastUpdated: null,
       );
     }
 
@@ -176,7 +173,6 @@ class HomeFeed extends _$HomeFeed {
     // Request server-side sorting by created_at (newest first) if relay supports it
     await videoEventService.subscribeToHomeFeed(
       followingPubkeys,
-      limit: 100,
       sortBy: VideoSortField.createdAt, // Newest videos first (timeline order)
     );
 
@@ -225,9 +221,6 @@ class HomeFeed extends _$HomeFeed {
       return const VideoFeedState(
         videos: [],
         hasMoreContent: false,
-        isLoadingMore: false,
-        error: null,
-        lastUpdated: null,
       );
     }
 
@@ -282,17 +275,12 @@ class HomeFeed extends _$HomeFeed {
       return const VideoFeedState(
         videos: [],
         hasMoreContent: false,
-        isLoadingMore: false,
-        error: null,
-        lastUpdated: null,
       );
     }
 
     final feedState = VideoFeedState(
       videos: followingVideos,
       hasMoreContent: followingVideos.length >= 10,
-      isLoadingMore: false,
-      error: null,
       lastUpdated: DateTime.now(),
     );
 
@@ -450,7 +438,6 @@ class HomeFeed extends _$HomeFeed {
       // Force new subscription to get fresh data from relay
       await videoEventService.subscribeToHomeFeed(
         followingPubkeys,
-        limit: 100,
         sortBy: VideoSortField.createdAt,
         force: true, // Force refresh bypasses duplicate detection
       );

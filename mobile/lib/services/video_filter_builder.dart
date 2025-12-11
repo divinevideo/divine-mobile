@@ -210,7 +210,6 @@ class VideoFilterBuilder {
       baseFilter: baseFilter,
       relayUrl: relayUrl,
       sortBy: VideoSortField.loopCount,
-      sortDirection: SortDirection.desc,
       intFilters: minLoops != null
           ? {'loop_count': IntRangeFilter(gte: minLoops)}
           : null,
@@ -227,7 +226,6 @@ class VideoFilterBuilder {
       baseFilter: baseFilter,
       relayUrl: relayUrl,
       sortBy: VideoSortField.likes,
-      sortDirection: SortDirection.desc,
       intFilters: minLikes != null
           ? {'likes': IntRangeFilter(gte: minLikes)}
           : null,
@@ -244,7 +242,6 @@ class VideoFilterBuilder {
       baseFilter: baseFilter,
       relayUrl: relayUrl,
       sortBy: VideoSortField.views,
-      sortDirection: SortDirection.desc,
       intFilters: minViews != null
           ? {'views': IntRangeFilter(gte: minViews)}
           : null,
@@ -260,7 +257,6 @@ class VideoFilterBuilder {
       baseFilter: baseFilter,
       relayUrl: relayUrl,
       sortBy: VideoSortField.createdAt,
-      sortDirection: SortDirection.desc,
     );
   }
 }

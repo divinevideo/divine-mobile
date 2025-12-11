@@ -13,7 +13,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'latest_videos_provider.g.dart';
 
 /// Provider for the latest videos from the network
-@Riverpod(keepAlive: false)
+@Riverpod()
 class LatestVideos extends _$LatestVideos {
   Timer? _refreshTimer;
   StreamSubscription? _subscription;
