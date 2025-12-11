@@ -346,6 +346,7 @@ class _FakeAppForeground extends AppForeground {
 
 // Fake NostrService with mutable state for testing reactive updates
 class _FakeNostrService implements INostrService {
+  @override
   bool isInitialized = false;
 
   @override

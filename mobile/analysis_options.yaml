@@ -1,4 +1,5 @@
 linter:
   rules:
+    - annotate_overrides
     - directives_ordering
     - unnecessary_breaks

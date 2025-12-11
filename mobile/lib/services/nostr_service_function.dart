@@ -589,6 +589,7 @@ class NostrServiceFunction implements INostrService {
     );
   }
 
+  @override
   Future<Event?> fetchEventById(String eventId, {String? relayUrl}) async {
     final filters = [
       nostr.Filter(ids: [eventId]),

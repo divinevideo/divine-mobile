@@ -1649,6 +1649,7 @@ class NostrService implements INostrService {
   }
 
   /// Get embedded relay statistics for performance monitoring
+  @override
   Future<Map<String, dynamic>?> getRelayStats() async {
     if (!_isInitialized || _embeddedRelay == null) return null;
 
