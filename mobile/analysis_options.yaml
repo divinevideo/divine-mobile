@@ -10,3 +10,4 @@ linter:
     - unnecessary_null_in_if_null_operators
     - unnecessary_nullable_for_final_variable_declarations
     - unnecessary_overrides
+    - use_key_in_widget_constructors
