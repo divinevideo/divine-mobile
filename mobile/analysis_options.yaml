@@ -2,6 +2,7 @@ linter:
   rules:
     - library_prefixes
     - library_private_types_in_public_api
+    - literal_only_boolean_expressions
     - prefer_adjacent_string_concatenation
     - prefer_asserts_in_initializer_lists
     - prefer_conditional_assignment
