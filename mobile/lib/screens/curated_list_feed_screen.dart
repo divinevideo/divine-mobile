@@ -218,7 +218,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
               startingVideo: listVideos[_activeVideoIndex!],
               videoList: listVideos,
               contextTitle: widget.listName,
-              startingIndex: _activeVideoIndex!,
+              startingIndex: _activeVideoIndex,
               useLocalActiveState:
                   true, // Use local state since not using URL routing
             ),

@@ -724,7 +724,7 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                     // If profile not cached, fetch it
                     if (reposterProfile == null &&
                         !userProfileService.shouldSkipProfileFetch(
-                          video.reposterPubkey!,
+                          video.reposterPubkey,
                         )) {
                       Future.microtask(() {
                         userProfileService.fetchProfile(video.reposterPubkey!);

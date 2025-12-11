@@ -6,3 +6,4 @@ linter:
     - unnecessary_late
     - unnecessary_new
     - unnecessary_null_aware_assignments
+    - unnecessary_null_checks

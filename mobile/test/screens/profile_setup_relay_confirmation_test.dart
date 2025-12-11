@@ -120,7 +120,7 @@ void main() {
           tags: [],
         );
 
-        final broadcastResult = await mockNostrService.broadcastEvent(event!);
+        final broadcastResult = await mockNostrService.broadcastEvent(event);
         expect(broadcastResult.isSuccessful, isTrue);
 
         // THE CRITICAL PART: Wait for relay to return updated profile
@@ -244,7 +244,7 @@ void main() {
         tags: [],
       );
 
-      await mockNostrService.broadcastEvent(event!);
+      await mockNostrService.broadcastEvent(event);
 
       // Try to get updated profile with retries
       UserProfile? confirmedProfile;
@@ -344,7 +344,7 @@ void main() {
           tags: [],
         );
 
-        await mockNostrService.broadcastEvent(event!);
+        await mockNostrService.broadcastEvent(event);
 
         // Try to get updated profile
         UserProfile? confirmedProfile;

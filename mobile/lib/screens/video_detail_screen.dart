@@ -178,6 +178,6 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
     }
 
     // Display video in full-screen player (with navigation disabled to preserve /video/:id route)
-    return VideoFeedScreen(startingVideo: _video!, disableNavigation: true);
+    return VideoFeedScreen(startingVideo: _video, disableNavigation: true);
   }
 }
