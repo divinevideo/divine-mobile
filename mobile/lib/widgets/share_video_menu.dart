@@ -1863,8 +1863,7 @@ class _SelectListDialog extends StatelessWidget {
 /// Public report content dialog that can be used from anywhere
 class ReportContentDialog extends ConsumerStatefulWidget {
   const ReportContentDialog({
-    super.key,
-    required this.video,
+    required this.video, super.key,
     this.isFromShareMenu = false,
   });
   final VideoEvent video;

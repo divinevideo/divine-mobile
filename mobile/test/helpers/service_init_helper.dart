@@ -156,10 +156,7 @@ class ServiceInitHelper {
 /// Bundle of commonly used services for tests
 class ServiceBundle {
   ServiceBundle({
-    this.keyManager,
-    required this.nostrService,
-    required this.subscriptionManager,
-    required this.videoEventService,
+    required this.nostrService, required this.subscriptionManager, required this.videoEventService, this.keyManager,
   });
 
   final NostrKeyManager? keyManager;

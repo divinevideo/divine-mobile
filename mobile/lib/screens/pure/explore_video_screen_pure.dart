@@ -14,10 +14,7 @@ import 'package:openvine/widgets/video_feed_item.dart';
 /// Pure explore video screen using VideoFeedItem directly in PageView
 class ExploreVideoScreenPure extends ConsumerStatefulWidget {
   const ExploreVideoScreenPure({
-    super.key,
-    required this.startingVideo,
-    required this.videoList,
-    required this.contextTitle,
+    required this.startingVideo, required this.videoList, required this.contextTitle, super.key,
     this.startingIndex,
     this.onLoadMore,
     this.onNavigate,

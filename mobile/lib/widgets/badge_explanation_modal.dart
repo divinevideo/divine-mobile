@@ -7,7 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Modal dialog explaining the origin and authenticity of video content
 class BadgeExplanationModal extends StatelessWidget {
-  const BadgeExplanationModal({super.key, required this.video});
+  const BadgeExplanationModal({required this.video, super.key});
 
   final VideoEvent video;
 

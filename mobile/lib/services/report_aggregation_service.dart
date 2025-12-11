@@ -201,11 +201,8 @@ class ReportAggregationService with NostrListServiceMixin {
   /// Add a report to the aggregation
   Future<void> addReport({
     required String reportEventId,
-    String? targetEventId,
+    required String reporterPubkey, required String reportType, required DateTime timestamp, String? targetEventId,
     String? targetPubkey,
-    required String reporterPubkey,
-    required String reportType,
-    required DateTime timestamp,
   }) async {
     try {
       final report = ReportRecord(

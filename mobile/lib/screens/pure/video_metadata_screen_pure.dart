@@ -23,7 +23,7 @@ import 'package:video_player/video_player.dart';
 
 /// Pure video metadata screen using revolutionary single-controller Riverpod architecture
 class VideoMetadataScreenPure extends ConsumerStatefulWidget {
-  const VideoMetadataScreenPure({super.key, required this.draftId});
+  const VideoMetadataScreenPure({required this.draftId, super.key});
 
   final String draftId;
 

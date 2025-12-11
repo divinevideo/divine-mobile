@@ -8,7 +8,7 @@ import 'package:openvine/theme/vine_theme.dart';
 class GeoBlockedScreen extends StatelessWidget {
   final GeoBlockResponse geoInfo;
 
-  const GeoBlockedScreen({super.key, required this.geoInfo});
+  const GeoBlockedScreen({required this.geoInfo, super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -11,8 +11,7 @@ import 'package:openvine/theme/vine_theme.dart';
 /// Tapping a hashtag navigates to the hashtag feed.
 class TrendingHashtagsSection extends StatelessWidget {
   const TrendingHashtagsSection({
-    super.key,
-    required this.hashtags,
+    required this.hashtags, super.key,
     this.isLoading = false,
     this.onHashtagTap,
   });

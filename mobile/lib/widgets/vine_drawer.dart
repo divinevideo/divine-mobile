@@ -387,8 +387,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
   Widget _buildDrawerItem({
     required IconData icon,
     required String title,
-    String? subtitle,
-    required VoidCallback onTap,
+    required VoidCallback onTap, String? subtitle,
   }) => ListTile(
     leading: Icon(icon, color: VineTheme.vineGreen, size: 24),
     title: Text(

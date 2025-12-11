@@ -16,9 +16,7 @@ class RelatedVideosWidget extends ConsumerStatefulWidget {
   final String algorithm;
 
   const RelatedVideosWidget({
-    super.key,
-    required this.currentVideo,
-    required this.onVideoTap,
+    required this.currentVideo, required this.onVideoTap, super.key,
     this.algorithm = 'hashtag',
   });
 

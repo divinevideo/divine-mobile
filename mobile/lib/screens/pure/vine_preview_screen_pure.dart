@@ -11,7 +11,7 @@ import 'package:video_player/video_player.dart';
 
 /// Pure vine preview screen using revolutionary single-controller Riverpod architecture
 class VinePreviewScreenPure extends ConsumerStatefulWidget {
-  const VinePreviewScreenPure({super.key, required this.draftId});
+  const VinePreviewScreenPure({required this.draftId, super.key});
 
   final String draftId;
 

@@ -17,11 +17,7 @@ import 'package:openvine/widgets/video_thumbnail_widget.dart';
 /// - Other: Error icon + error message + "Retry" button
 class VideoErrorOverlay extends ConsumerWidget {
   const VideoErrorOverlay({
-    super.key,
-    required this.video,
-    required this.controllerParams,
-    required this.errorDescription,
-    required this.isActive,
+    required this.video, required this.controllerParams, required this.errorDescription, required this.isActive, super.key,
   });
 
   final VideoEvent video;

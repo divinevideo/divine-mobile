@@ -39,10 +39,9 @@ class RelayCapabilities {
 
   RelayCapabilities({
     required this.relayUrl,
-    this.name,
+    required this.rawData, this.name,
     this.description,
     this.supportedNips = const [],
-    required this.rawData,
     this.hasDivineExtensions = false,
     this.sortFields = const [],
     this.intFilterFields = const [],

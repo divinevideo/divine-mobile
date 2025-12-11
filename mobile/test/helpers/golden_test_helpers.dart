@@ -203,7 +203,7 @@ extension GoldenTestExtensions on WidgetTester {
 
 /// Convenience wrapper for creating themed widgets
 class ThemedWidget extends StatelessWidget {
-  const ThemedWidget({super.key, required this.child, this.theme});
+  const ThemedWidget({required this.child, super.key, this.theme});
 
   final Widget child;
   final ThemeData? theme;

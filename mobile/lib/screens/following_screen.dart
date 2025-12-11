@@ -11,9 +11,7 @@ import 'package:openvine/utils/unified_logger.dart';
 
 class FollowingScreen extends ConsumerStatefulWidget {
   const FollowingScreen({
-    super.key,
-    required this.pubkey,
-    required this.displayName,
+    required this.pubkey, required this.displayName, super.key,
   });
 
   final String pubkey;

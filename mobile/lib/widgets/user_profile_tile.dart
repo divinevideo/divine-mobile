@@ -11,8 +11,7 @@ import 'package:openvine/widgets/user_avatar.dart';
 
 class UserProfileTile extends ConsumerWidget {
   const UserProfileTile({
-    super.key,
-    required this.pubkey,
+    required this.pubkey, super.key,
     this.onTap,
     this.showFollowButton = true,
   });

@@ -21,10 +21,8 @@ class VineDraft {
     required this.createdAt,
     required this.lastModified,
     required this.publishStatus,
-    this.publishError,
-    required this.publishAttempts,
+    required this.publishAttempts, required this.aspectRatio, this.publishError,
     this.proofManifestJson,
-    required this.aspectRatio,
   });
 
   factory VineDraft.create({

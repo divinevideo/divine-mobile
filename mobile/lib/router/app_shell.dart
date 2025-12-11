@@ -18,7 +18,7 @@ import 'page_context_provider.dart';
 import 'route_utils.dart';
 
 class AppShell extends ConsumerWidget {
-  const AppShell({super.key, required this.child, required this.currentIndex});
+  const AppShell({required this.child, required this.currentIndex, super.key});
 
   final Widget child;
   final int currentIndex;

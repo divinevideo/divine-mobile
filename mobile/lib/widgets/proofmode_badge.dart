@@ -10,8 +10,7 @@ enum VerificationLevel { verifiedMobile, verifiedWeb, basicProof, unverified }
 /// ProofMode verification badge widget
 class ProofModeBadge extends StatelessWidget {
   const ProofModeBadge({
-    super.key,
-    required this.level,
+    required this.level, super.key,
     this.size = BadgeSize.small,
   });
 

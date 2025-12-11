@@ -14,9 +14,7 @@ import 'package:openvine/theme/vine_theme.dart';
 /// - Auto-closes when upload status becomes readyToPublish
 class UploadProgressDialog extends StatefulWidget {
   const UploadProgressDialog({
-    super.key,
-    required this.uploadId,
-    required this.uploadManager,
+    required this.uploadId, required this.uploadManager, super.key,
   });
 
   final String uploadId;

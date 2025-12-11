@@ -17,9 +17,7 @@ import 'package:openvine/widgets/video_thumbnail_widget.dart';
 /// and provides consistent styling across Explore, Hashtag, and Search screens
 class ComposableVideoGrid extends ConsumerWidget {
   const ComposableVideoGrid({
-    super.key,
-    required this.videos,
-    required this.onVideoTap,
+    required this.videos, required this.onVideoTap, super.key,
     this.crossAxisCount = 2,
     this.childAspectRatio = 0.72,
     this.thumbnailAspectRatio = 1.0,

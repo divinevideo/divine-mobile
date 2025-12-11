@@ -34,9 +34,7 @@ import 'package:visibility_detector/visibility_detector.dart';
 /// Video feed item using individual controller architecture
 class VideoFeedItem extends ConsumerStatefulWidget {
   const VideoFeedItem({
-    super.key,
-    required this.video,
-    required this.index,
+    required this.video, required this.index, super.key,
     this.onTap,
     this.forceShowOverlay = false,
     this.hasBottomNavigation = true,
@@ -802,10 +800,7 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
 /// Video overlay actions widget with working functionality
 class VideoOverlayActions extends ConsumerWidget {
   const VideoOverlayActions({
-    super.key,
-    required this.video,
-    required this.isVisible,
-    required this.isActive,
+    required this.video, required this.isVisible, required this.isActive, super.key,
     this.hasBottomNavigation = true,
     this.contextTitle,
   });

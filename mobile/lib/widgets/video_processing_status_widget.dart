@@ -12,7 +12,7 @@ import 'package:openvine/utils/unified_logger.dart';
 class VideoProcessingStatusWidget extends ConsumerWidget {
   final String uploadId;
 
-  const VideoProcessingStatusWidget({super.key, required this.uploadId});
+  const VideoProcessingStatusWidget({required this.uploadId, super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

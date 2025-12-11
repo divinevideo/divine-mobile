@@ -10,8 +10,7 @@ import 'package:openvine/utils/unified_logger.dart';
 /// Dialog for collecting and submitting bug reports
 class BugReportDialog extends StatefulWidget {
   const BugReportDialog({
-    super.key,
-    required this.bugReportService,
+    required this.bugReportService, super.key,
     this.currentScreen,
     this.userPubkey,
     this.testMode = false, // If true, sends to yourself instead of support

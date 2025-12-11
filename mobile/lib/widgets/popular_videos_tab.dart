@@ -23,8 +23,7 @@ import 'package:openvine/widgets/trending_hashtags_section.dart';
 /// - Loading/error/data states
 class PopularVideosTab extends ConsumerStatefulWidget {
   const PopularVideosTab({
-    super.key,
-    required this.onVideoTap,
+    required this.onVideoTap, super.key,
     this.screenAnalytics,
     this.feedTracker,
     this.errorTracker,

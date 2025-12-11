@@ -58,23 +58,23 @@ class NIP04 {
 /// Nostr event structure for cross-platform use
 class NostrEvent {
   NostrEvent({
-    this.id,
     required this.pubkey,
-    required this.created_at, // ignore: non_constant_identifier_names
+    required this.created_at,
     required this.kind,
     required this.tags,
     required this.content,
+    this.id,
     this.sig,
   });
 
   /// Factory to create a new NostrEvent
   factory NostrEvent.create({
-    String? id,
-    required String pubkey, // ignore: non_constant_identifier_names
-    required int created_at, // ignore: non_constant_identifier_names
+    required String pubkey,
+    required int created_at,
     required int kind,
     required List<List<String>> tags,
     required String content,
+    String? id,
     String? sig,
   }) {
     return NostrEvent(

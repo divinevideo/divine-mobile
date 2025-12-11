@@ -8,7 +8,7 @@ import 'package:openvine/models/video_event.dart';
 /// Video editor screen - V1 placeholder implementation
 /// Future versions will support editing video metadata and trimming
 class VideoEditorScreen extends ConsumerWidget {
-  const VideoEditorScreen({super.key, required this.video});
+  const VideoEditorScreen({required this.video, super.key});
 
   final VideoEvent video;
 

@@ -9,8 +9,7 @@ import 'package:openvine/widgets/proofmode_badge.dart';
 /// Reusable badge row for displaying ProofMode verification and Vine badges
 class ProofModeBadgeRow extends StatelessWidget {
   const ProofModeBadgeRow({
-    super.key,
-    required this.video,
+    required this.video, super.key,
     this.size = BadgeSize.small,
     this.spacing = 8.0,
     this.mainAxisAlignment = MainAxisAlignment.start,
