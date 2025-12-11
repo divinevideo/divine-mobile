@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mockito/annotations.dart';
 import 'package:openvine/widgets/share_video_menu.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/bookmark_service.dart';
@@ -14,6 +15,9 @@ import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'share_video_menu_bookmark_sets_test.mocks.dart';
+
+@GenerateMocks([UserDataCleanupService])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -24,6 +28,7 @@ void main() {
     late BookmarkService bookmarkService;
     late SharedPreferences prefs;
     late VideoEvent testVideo;
+    late MockUserDataCleanupService mockCleanupService;
 
     setUpAll(() async {
       // Initialize services
@@ -36,8 +41,10 @@ void main() {
       nostrService = NostrService(keyManager);
       await nostrService.initialize();
 
+      mockCleanupService = MockUserDataCleanupService();
+
       authService = AuthService(
-        userDataCleanupService: UserDataCleanupService(prefs),
+        userDataCleanupService: mockCleanupService,
         keyStorage: null,
       );
       bookmarkService = BookmarkService(

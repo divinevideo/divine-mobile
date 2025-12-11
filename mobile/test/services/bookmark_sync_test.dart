@@ -2,6 +2,7 @@
 // ABOUTME: Verifies offline queueing, connectivity-based sync, and hash-based change detection
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 import 'package:openvine/services/bookmark_service.dart';
 import 'package:openvine/services/bookmark_sync_worker.dart';
 import 'package:openvine/services/connection_status_service.dart';
@@ -11,6 +12,9 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'bookmark_sync_test.mocks.dart';
+
+@GenerateMocks([UserDataCleanupService])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -19,6 +23,7 @@ void main() {
     late ConnectionStatusService connectionStatusService;
     late BookmarkSyncWorker syncWorker;
     late SharedPreferences prefs;
+    late MockUserDataCleanupService mockCleanupService;
 
     setUp(() async {
       // Initialize services
@@ -31,8 +36,10 @@ void main() {
       final nostrService = NostrService(keyManager);
       await nostrService.initialize();
 
+      mockCleanupService = MockUserDataCleanupService();
+
       final authService = AuthService(
-        userDataCleanupService: UserDataCleanupService(prefs),
+        userDataCleanupService: mockCleanupService,
         keyStorage: null,
       );
 

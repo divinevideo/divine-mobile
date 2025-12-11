@@ -8,6 +8,7 @@ import 'dart:async' as _i4;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:nostr_key_manager/src/secure_key_container.dart' as _i2;
 import 'package:nostr_key_manager/src/secure_key_storage.dart' as _i3;
+import 'package:openvine/services/user_data_cleanup_service.dart' as _i5;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -309,4 +310,31 @@ class MockSecureKeyStorage extends _i1.Mock implements _i3.SecureKeyStorage {
     Invocation.method(#disconnectBunker, []),
     returnValueForMissingStub: null,
   );
+}
+
+/// A class which mocks [UserDataCleanupService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockUserDataCleanupService extends _i1.Mock
+    implements _i5.UserDataCleanupService {
+  MockUserDataCleanupService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  bool shouldClearDataForUser(String? currentPubkeyHex) =>
+      (super.noSuchMethod(
+            Invocation.method(#shouldClearDataForUser, [currentPubkeyHex]),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  _i4.Future<void> clearUserSpecificData() =>
+      (super.noSuchMethod(
+            Invocation.method(#clearUserSpecificData, []),
+            returnValue: _i4.Future<void>.value(),
+            returnValueForMissingStub: _i4.Future<void>.value(),
+          )
+          as _i4.Future<void>);
 }
