@@ -1,5 +1,6 @@
-// ABOUTME: Tests for VideoEvent parsing from Nostr events, including streaming formats
-// ABOUTME: Verifies support for divine.video schema and open protocol URL validation
+// ABOUTME: Tests for VideoEvent parsing from Nostr events
+// ABOUTME: Verifies divine.video schema and open protocol URL validation
+// ignore_for_file: lines_longer_than_80_chars
 
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';

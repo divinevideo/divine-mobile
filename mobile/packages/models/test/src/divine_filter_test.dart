@@ -3,6 +3,7 @@
 
 // No need for const constructors in tests
 // ignore_for_file: prefer_const_constructors
+// ignore_for_file: avoid_dynamic_calls
 
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';

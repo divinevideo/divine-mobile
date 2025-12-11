@@ -1,5 +1,6 @@
 // ABOUTME: Unit tests for ProofMode integration with PendingUpload model
-// ABOUTME: Tests serialization, deserialization, and helper methods for NativeProofData storage
+// ABOUTME: Tests serialization/deserialization and helper methods for NativeProofData
+// ignore_for_file: lines_longer_than_80_chars
 
 import 'dart:convert';
 

@@ -3,6 +3,7 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+// ignore_for_file: unused_shown_name
 import 'dart:async' as _i5;
 
 import 'package:mockito/mockito.dart' as _i1;
