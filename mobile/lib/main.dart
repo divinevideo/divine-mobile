@@ -687,7 +687,6 @@ class _DivineAppState extends ConsumerState<DivineApp> {
                   category: LogCategory.ui,
                 );
               }
-              break;
             case DeepLinkType.profile:
               if (deepLink.npub != null) {
                 final index = deepLink.index ?? 0;
@@ -718,7 +717,6 @@ class _DivineAppState extends ConsumerState<DivineApp> {
                   category: LogCategory.ui,
                 );
               }
-              break;
             case DeepLinkType.hashtag:
               if (deepLink.hashtag != null) {
                 // Include index if present, otherwise use grid view
@@ -751,7 +749,6 @@ class _DivineAppState extends ConsumerState<DivineApp> {
                   category: LogCategory.ui,
                 );
               }
-              break;
             case DeepLinkType.search:
               if (deepLink.searchTerm != null) {
                 // Include index if present, otherwise use grid view
@@ -784,14 +781,12 @@ class _DivineAppState extends ConsumerState<DivineApp> {
                   category: LogCategory.ui,
                 );
               }
-              break;
             case DeepLinkType.unknown:
               Log.warning(
                 '📱 Unknown deep link type',
                 name: 'DeepLinkHandler',
                 category: LogCategory.ui,
               );
-              break;
           }
         },
         loading: () {
@@ -859,7 +854,6 @@ class _DivineAppState extends ConsumerState<DivineApp> {
             router.go('/home/0');
             return;
           }
-          break;
 
         case RouteType.explore:
         case RouteType.notifications:

@@ -55,19 +55,14 @@ final activeVideoIdProvider = Provider<String?>((ref) {
   switch (ctx.type) {
     case RouteType.home:
       videosAsync = ref.watch(videosForHomeRouteProvider);
-      break;
     case RouteType.profile:
       videosAsync = ref.watch(videosForProfileRouteProvider);
-      break;
     case RouteType.hashtag:
       videosAsync = ref.watch(hashtagFeedProvider);
-      break;
     case RouteType.explore:
       videosAsync = ref.watch(videosForExploreRouteProvider);
-      break;
     case RouteType.search:
       videosAsync = ref.watch(videosForSearchRouteProvider);
-      break;
     case RouteType.notifications:
     case RouteType.camera:
     case RouteType.settings:

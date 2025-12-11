@@ -56,42 +56,34 @@ class VideoProcessingStatusWidget extends ConsumerWidget {
         icon = Icons.schedule;
         color = Colors.orange;
         title = 'Waiting to upload';
-        break;
       case UploadStatus.uploading:
         icon = Icons.cloud_upload;
         color = VineTheme.vineGreen;
         title = 'Uploading video';
-        break;
       case UploadStatus.processing:
         icon = Icons.hourglass_empty;
         color = Colors.blue;
         title = 'Processing video';
-        break;
       case UploadStatus.readyToPublish:
         icon = Icons.check_circle;
         color = Colors.green;
         title = 'Processing complete';
-        break;
       case UploadStatus.published:
         icon = Icons.check_circle;
         color = Colors.green;
         title = 'Published successfully';
-        break;
       case UploadStatus.failed:
         icon = Icons.error;
         color = Colors.red;
         title = 'Upload failed';
-        break;
       case UploadStatus.retrying:
         icon = Icons.refresh;
         color = Colors.orange;
         title = 'Retrying upload';
-        break;
       case UploadStatus.paused:
         icon = Icons.pause;
         color = Colors.grey;
         title = 'Upload paused';
-        break;
     }
 
     return Row(
@@ -150,32 +142,24 @@ class VideoProcessingStatusWidget extends ConsumerWidget {
     switch (upload.status) {
       case UploadStatus.pending:
         message = 'Your video is queued for upload';
-        break;
       case UploadStatus.uploading:
         message = 'Uploading to server...';
-        break;
       case UploadStatus.processing:
         message = 'Processing video - this may take a few minutes';
         textColor = Colors.blue;
-        break;
       case UploadStatus.readyToPublish:
         message = 'Video processed successfully and ready to publish';
         textColor = Colors.green;
-        break;
       case UploadStatus.published:
         message = 'Video published to your profile';
         textColor = Colors.green;
-        break;
       case UploadStatus.failed:
         message = upload.errorMessage ?? 'Upload failed - please try again';
         textColor = Colors.red;
-        break;
       case UploadStatus.retrying:
         message = 'Retrying upload...';
-        break;
       case UploadStatus.paused:
         message = 'Upload paused by user';
-        break;
     }
 
     return Text(

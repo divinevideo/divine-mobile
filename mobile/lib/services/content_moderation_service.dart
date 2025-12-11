@@ -529,19 +529,15 @@ class ContentModerationService with NostrListServiceMixin {
         case 'p': // Mute pubkey
           internalType = 'pubkey';
           filterReason = ContentFilterReason.harassment;
-          break;
         case 'e': // Mute event
           internalType = 'event';
           filterReason = ContentFilterReason.spam;
-          break;
         case 'word': // Mute keyword
           internalType = 'keyword';
           filterReason = ContentFilterReason.spam;
-          break;
         case 't': // Mute hashtag
           internalType = 'keyword'; // Treat hashtags as keywords
           filterReason = ContentFilterReason.spam;
-          break;
         default:
           // Skip unknown tag types
           continue;

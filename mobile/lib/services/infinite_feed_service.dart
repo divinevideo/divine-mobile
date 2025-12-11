@@ -75,13 +75,10 @@ class InfiniteFeedService {
       switch (feedType) {
         case FeedType.trending:
           newVideos = await _loadTrendingVideos();
-          break;
         case FeedType.popularNow:
           newVideos = await _loadPopularNowVideos();
-          break;
         case FeedType.recent:
           newVideos = await _loadRecentVideos();
-          break;
       }
 
       // Filter out videos we've already seen
@@ -224,10 +221,8 @@ class InfiniteFeedService {
       case FeedType.popularNow:
         // Popular/Trending: prioritize by loops (new vines without loops first, then by loop count desc, then newest)
         unseenVideos.sort(VideoEvent.compareByLoopsThenTime);
-        break;
       case FeedType.recent:
         unseenVideos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        break;
     }
 
     // If we don't have enough local videos, try to fetch more from Nostr
@@ -344,13 +339,10 @@ class InfiniteFeedService {
       switch (feedType) {
         case FeedType.trending:
           newVideos = await _loadTrendingVideos();
-          break;
         case FeedType.popularNow:
           newVideos = await _loadPopularNowVideos();
-          break;
         case FeedType.recent:
           newVideos = await _loadRecentVideos();
-          break;
       }
 
       // Restore the page counter

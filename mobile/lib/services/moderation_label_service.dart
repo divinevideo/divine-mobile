@@ -323,22 +323,18 @@ class ModerationLabelService with NostrListServiceMixin {
             if (tag.length > 1) {
               currentNamespace = tag[1];
             }
-            break;
           case 'l': // Label
             if (tag.length > 1) {
               parsedLabels.add(tag[1]);
             }
-            break;
           case 'e': // Target event
             if (tag.length > 1) {
               targetEvents.add(tag[1]);
             }
-            break;
           case 'p': // Target pubkey
             if (tag.length > 1) {
               targetPubkeys.add(tag[1]);
             }
-            break;
         }
       }
 

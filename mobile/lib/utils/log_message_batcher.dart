@@ -117,19 +117,14 @@ class LogMessageBatcher {
     switch (batchInfo.level) {
       case LogLevel.verbose:
         Log.verbose(message, category: batchInfo.category);
-        break;
       case LogLevel.debug:
         Log.debug(message, category: batchInfo.category);
-        break;
       case LogLevel.info:
         Log.info(message, category: batchInfo.category);
-        break;
       case LogLevel.warning:
         Log.warning(message, category: batchInfo.category);
-        break;
       case LogLevel.error:
         Log.error(message, category: batchInfo.category);
-        break;
     }
   }
 

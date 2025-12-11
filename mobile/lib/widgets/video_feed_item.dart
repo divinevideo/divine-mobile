@@ -420,10 +420,8 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
     switch (policy) {
       case OverlayPolicy.alwaysOn:
         overlayVisible = true;
-        break;
       case OverlayPolicy.alwaysOff:
         overlayVisible = false;
-        break;
       case OverlayPolicy.auto:
         // keep computed overlayVisible
         break;

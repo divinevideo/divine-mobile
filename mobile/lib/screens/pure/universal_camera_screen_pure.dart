@@ -1321,12 +1321,10 @@ class _UniversalCameraScreenPureState
       switch (_flashMode) {
         case FlashMode.off:
           _flashMode = FlashMode.torch;
-          break;
         case FlashMode.torch:
         case FlashMode.auto:
         case FlashMode.always:
           _flashMode = FlashMode.off;
-          break;
       }
     });
 
@@ -1379,13 +1377,10 @@ class _UniversalCameraScreenPureState
       switch (_timerDuration) {
         case TimerDuration.off:
           _timerDuration = TimerDuration.threeSeconds;
-          break;
         case TimerDuration.threeSeconds:
           _timerDuration = TimerDuration.tenSeconds;
-          break;
         case TimerDuration.tenSeconds:
           _timerDuration = TimerDuration.off;
-          break;
       }
     });
     Log.info(

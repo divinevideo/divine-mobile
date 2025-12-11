@@ -271,12 +271,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
         if (notification.navigationTarget != null) {
           _navigateToVideo(context, notification.navigationTarget!);
         }
-        break;
       case 'open_profile':
         if (notification.navigationTarget != null) {
           _navigateToProfile(context, notification.navigationTarget!);
         }
-        break;
       case 'none':
         // System notifications don't need navigation
         break;

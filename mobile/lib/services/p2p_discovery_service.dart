@@ -175,12 +175,10 @@ class P2PDiscoveryService extends ChangeNotifier {
       switch (peer.transportType) {
         case P2PTransportType.ble:
           transportConnection = await _bleTransport.connect(peer.transportPeer);
-          break;
         case P2PTransportType.wifiDirect:
           transportConnection = await _wifiDirectTransport.connect(
             peer.transportPeer,
           );
-          break;
       }
 
       final connection = P2PConnection(

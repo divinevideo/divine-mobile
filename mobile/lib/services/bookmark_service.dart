@@ -775,16 +775,12 @@ class BookmarkService with NostrListServiceMixin {
         switch (tag[0]) {
           case 'd':
             dTag = tag[1];
-            break;
           case 'title':
             title = tag[1];
-            break;
           case 'description':
             description = tag[1];
-            break;
           case 'image':
             imageUrl = tag[1];
-            break;
         }
       }
     }

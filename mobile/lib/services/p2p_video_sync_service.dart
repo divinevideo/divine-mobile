@@ -129,13 +129,10 @@ class P2PVideoSyncService extends ChangeNotifier {
     switch (messageType) {
       case 'video_sync_offer':
         await _handleSyncOffer(peerId, message);
-        break;
       case 'video_sync_request':
         await _handleSyncRequest(peerId, message);
-        break;
       case 'video_data':
         await _handleVideoData(peerId, message);
-        break;
       default:
         debugPrint('P2P Video Sync: Unknown message type: $messageType');
     }

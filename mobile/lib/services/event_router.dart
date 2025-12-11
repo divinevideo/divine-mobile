@@ -89,7 +89,6 @@ class EventRouter {
     switch (event.kind) {
       case 0: // Profile metadata
         await _handleProfileEvent(event);
-        break;
 
       case 3: // Contacts
         // TODO: Future implementation

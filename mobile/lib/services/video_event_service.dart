@@ -4133,7 +4133,6 @@ class VideoEventService extends ChangeNotifier {
           // Real-time events: add to top (newer content)
           eventList.insert(0, videoEvent);
         }
-        break;
 
       case SubscriptionType.discovery:
         final isClassicVine =
@@ -4148,7 +4147,6 @@ class VideoEventService extends ChangeNotifier {
           // Real-time regular content added chronologically at top
           eventList.insert(0, videoEvent);
         }
-        break;
 
       case SubscriptionType.profile:
       case SubscriptionType.hashtag:
@@ -4160,14 +4158,12 @@ class VideoEventService extends ChangeNotifier {
           // Real-time events: add to top
           eventList.insert(0, videoEvent);
         }
-        break;
 
       case SubscriptionType.editorial:
       case SubscriptionType.popularNow:
       case SubscriptionType.trending:
         // Editorial/trending: maintain order from server (always append)
         eventList.add(videoEvent);
-        break;
     }
 
     // Populate keyed buckets for route-aware feeds

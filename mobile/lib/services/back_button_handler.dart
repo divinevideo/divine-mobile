@@ -72,7 +72,6 @@ class BackButtonHandler {
           return true; // Handled
         }
         // From own profile, fall through to default (stay in app)
-        break;
 
       case RouteType.explore:
       case RouteType.notifications:

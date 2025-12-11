@@ -383,17 +383,14 @@ class ReportAggregationService with NostrListServiceMixin {
             if (tag.length > 1) {
               targetEventId = tag[1];
             }
-            break;
           case 'p': // Reported pubkey
             if (tag.length > 1) {
               targetPubkey = tag[1];
             }
-            break;
           case 'report': // Report type
             if (tag.length > 1) {
               reportType = tag[1];
             }
-            break;
         }
       }
 

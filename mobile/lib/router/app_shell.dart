@@ -96,22 +96,18 @@ class AppShell extends ConsumerWidget {
     switch (tabIndex) {
       case 0:
         context.goHome(lastIndex ?? 0); // Home always has an index
-        break;
       case 1:
         // Always reset to grid mode (null) when tapping Explore tab
         // This prevents the "No videos available" bug when returning from another tab
         context.goExplore(null);
-        break;
       case 2:
         context.goNotifications(
           lastIndex ?? 0,
         ); // Notifications always has an index
-        break;
       case 3:
         // Always navigate to current user's profile when tapping Profile tab
         // Navigation system will resolve 'me' to actual npub
         context.goProfileGrid('me');
-        break;
     }
   }
 

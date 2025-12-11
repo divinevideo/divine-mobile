@@ -77,7 +77,6 @@ class BackgroundActivityManager {
         if (!wasInForeground) {
           _onAppResumed();
         }
-        break;
 
       case AppLifecycleState.inactive:
         // On desktop platforms, inactive is a normal state during UI operations
@@ -87,7 +86,6 @@ class BackgroundActivityManager {
           name: 'BackgroundActivityManager',
           category: LogCategory.system,
         );
-        break;
 
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
@@ -95,12 +93,10 @@ class BackgroundActivityManager {
         if (wasInForeground) {
           _onAppBackgrounded();
         }
-        break;
 
       case AppLifecycleState.detached:
         _isAppInForeground = false;
         _onAppTerminating();
-        break;
     }
 
     if (wasInForeground != _isAppInForeground) {}
