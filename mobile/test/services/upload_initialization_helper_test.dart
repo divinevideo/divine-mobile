@@ -90,7 +90,7 @@ void main() {
 
     test('detects permanent permission errors (errno=1)', () {
       // Create a FileSystemException with errno=1 (EPERM)
-      final permError = FileSystemException(
+      final permError = const FileSystemException(
         'Operation not permitted',
         '/some/path',
         OSError('Operation not permitted', 1),
@@ -104,7 +104,7 @@ void main() {
 
     test('detects permanent permission errors (errno=13)', () {
       // Create a FileSystemException with errno=13 (EACCES)
-      final permError = FileSystemException(
+      final permError = const FileSystemException(
         'Permission denied',
         '/some/path',
         OSError('Permission denied', 13),

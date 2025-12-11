@@ -103,15 +103,15 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
     }
 
     if (_error != null) {
-      return Center(
+      return const Center(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 48),
-              const SizedBox(height: 8),
-              const Text(
+              Icon(Icons.error_outline, color: Colors.red, size: 48),
+              SizedBox(height: 8),
+              Text(
                 'Failed to load related videos',
                 style: TextStyle(
                   color: VineTheme.primaryText,
@@ -119,8 +119,8 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 4),
-              const Text(
+              SizedBox(height: 4),
+              Text(
                 'Try again later',
                 style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
               ),
@@ -131,19 +131,19 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
     }
 
     if (_relatedVideos.isEmpty) {
-      return Center(
+      return const Center(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.video_library_outlined,
                 color: VineTheme.secondaryText,
                 size: 48,
               ),
-              const SizedBox(height: 8),
-              const Text(
+              SizedBox(height: 8),
+              Text(
                 'No related videos found',
                 style: TextStyle(
                   color: VineTheme.primaryText,
@@ -151,8 +151,8 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 4),
-              const Text(
+              SizedBox(height: 4),
+              Text(
                 'Explore more content in the app',
                 style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
               ),
@@ -170,7 +170,7 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 'Related Videos',
                 style: TextStyle(
                   color: VineTheme.primaryText,
@@ -192,7 +192,7 @@ class _RelatedVideosWidgetState extends ConsumerState<RelatedVideosWidget> {
                     widget.algorithm == 'hashtag'
                         ? 'By Hashtags'
                         : 'Co-watched',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: VineTheme.vineGreen,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

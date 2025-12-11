@@ -302,7 +302,7 @@ void main() {
             .customSelect(
               'SELECT * FROM user_profiles WHERE pubkey = ?',
               variables: [
-                Variable(
+                const Variable(
                   'test_pubkey_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
                 ),
               ],

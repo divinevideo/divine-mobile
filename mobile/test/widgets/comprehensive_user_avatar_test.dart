@@ -425,10 +425,10 @@ void main() {
     group('Multiple Avatars', () {
       testWidgets('renders multiple avatars correctly', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: Column(
-                children: const [
+                children: [
                   UserAvatar(name: 'User One', size: 40),
                   UserAvatar(name: 'User Two', size: 50),
                   UserAvatar(
@@ -507,9 +507,9 @@ void main() {
                 child: Container(
                   color: Colors.white,
                   padding: const EdgeInsets.all(20),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       UserAvatar(name: 'Light Theme', size: 60),
                       SizedBox(width: 20),
                       UserAvatar(name: '', size: 60),
@@ -523,9 +523,9 @@ void main() {
                 child: Container(
                   color: Colors.grey[900],
                   padding: const EdgeInsets.all(20),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       UserAvatar(name: 'Dark Theme', size: 60),
                       SizedBox(width: 20),
                       UserAvatar(name: '', size: 60),
@@ -543,23 +543,23 @@ void main() {
       testGoldens('UserAvatar - across devices', (tester) async {
         final widget = Scaffold(
           appBar: AppBar(title: const Text('User Avatars')),
-          body: Padding(
-            padding: const EdgeInsets.all(16),
+          body: const Padding(
+            padding: EdgeInsets.all(16),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: const [
+                  children: [
                     UserAvatar(name: 'Alice', size: 50),
                     UserAvatar(name: 'Bob', size: 50),
                     UserAvatar(name: 'Charlie', size: 50),
                   ],
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: const [
+                  children: [
                     UserAvatar(name: '', size: 50),
                     UserAvatar(size: 50),
                     UserAvatar(name: 'Z', size: 50),

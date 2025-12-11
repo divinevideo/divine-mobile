@@ -60,7 +60,7 @@ void main() {
         // This proves we're using function calls, not WebSocket
         expect(
           () => session.sendMessage(
-            embedded.ReqMessage(
+            const embedded.ReqMessage(
               subscriptionId: 'test',
               filters: [
                 embedded.Filter(kinds: [1]),
@@ -89,7 +89,7 @@ void main() {
 
         // Send a subscription request
         await session.sendMessage(
-          embedded.ReqMessage(
+          const embedded.ReqMessage(
             subscriptionId: 'sub1',
             filters: [
               embedded.Filter(kinds: [1]),

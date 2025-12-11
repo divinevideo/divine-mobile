@@ -106,15 +106,15 @@ void main() {
             home: Scaffold(
               body: Column(
                 children: [
-                  FeatureFlagWidget(
+                  const FeatureFlagWidget(
                     flag: FeatureFlag.newCameraUI,
-                    disabled: const Text('Standard Camera'),
-                    child: const Text('Enhanced Camera'),
+                    disabled: Text('Standard Camera'),
+                    child: Text('Enhanced Camera'),
                   ),
-                  FeatureFlagWidget(
+                  const FeatureFlagWidget(
                     flag: FeatureFlag.enhancedVideoPlayer,
-                    disabled: const Text('Standard Player'),
-                    child: const Text('Enhanced Player'),
+                    disabled: Text('Standard Player'),
+                    child: Text('Enhanced Player'),
                   ),
                   Builder(
                     builder: (context) => ElevatedButton(
@@ -228,16 +228,16 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
-          child: MaterialApp(
+          child: const MaterialApp(
             home: Scaffold(
               body: Column(
                 children: [
                   FeatureFlagWidget(
                     flag: FeatureFlag.newCameraUI,
-                    disabled: const Text('Standard Camera'),
-                    child: const Text('Enhanced Camera'),
+                    disabled: Text('Standard Camera'),
+                    child: Text('Enhanced Camera'),
                   ),
-                  const Expanded(child: FeatureFlagScreen()),
+                  Expanded(child: FeatureFlagScreen()),
                 ],
               ),
             ),
@@ -319,10 +319,10 @@ void main() {
             home: Scaffold(
               body: Column(
                 children: [
-                  FeatureFlagWidget(
+                  const FeatureFlagWidget(
                     flag: FeatureFlag.newCameraUI,
-                    disabled: const Text('Standard Camera'),
-                    child: const Text('Enhanced Camera'),
+                    disabled: Text('Standard Camera'),
+                    child: Text('Enhanced Camera'),
                   ),
                   Builder(
                     builder: (context) => ElevatedButton(
@@ -388,10 +388,10 @@ class TestHomeScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Home')),
       body: Column(
         children: [
-          FeatureFlagWidget(
+          const FeatureFlagWidget(
             flag: FeatureFlag.newCameraUI,
-            disabled: const Text('Standard Camera UI'),
-            child: const Text('Enhanced Camera UI'),
+            disabled: Text('Standard Camera UI'),
+            child: Text('Enhanced Camera UI'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pushNamed(context, '/settings'),
@@ -409,11 +409,11 @@ class TestContentScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+    return const Scaffold(
       body: FeatureFlagWidget(
         flag: FeatureFlag.newCameraUI,
-        disabled: const Text('Standard Camera'),
-        child: const Text('New Camera Feature Enabled'),
+        disabled: Text('Standard Camera'),
+        child: Text('New Camera Feature Enabled'),
       ),
     );
   }

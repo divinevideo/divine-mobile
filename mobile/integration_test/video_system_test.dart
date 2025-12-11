@@ -18,7 +18,7 @@ void main() {
     ) async {
       // Setup app with ProviderScope for Riverpod
       await tester.pumpWidget(
-        ProviderScope(child: MaterialApp(home: const VideoFeedScreen())),
+        const ProviderScope(child: MaterialApp(home: VideoFeedScreen())),
       );
 
       // Wait for initialization
@@ -36,7 +36,7 @@ void main() {
 
     testWidgets('Video feed handles empty state correctly', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(child: MaterialApp(home: const VideoFeedScreen())),
+        const ProviderScope(child: MaterialApp(home: VideoFeedScreen())),
       );
 
       await tester.pumpAndSettle();
@@ -48,7 +48,7 @@ void main() {
 
     testWidgets('Providers maintain state correctly', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(child: MaterialApp(home: const VideoFeedScreen())),
+        const ProviderScope(child: MaterialApp(home: VideoFeedScreen())),
       );
 
       await tester.pumpAndSettle();

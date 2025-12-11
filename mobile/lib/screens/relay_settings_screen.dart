@@ -143,7 +143,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: () => _launchNostrDocs(),
-                  child: Text(
+                  child: const Text(
                     'Learn more about Nostr →',
                     style: TextStyle(
                       color: VineTheme.vineGreen,
@@ -155,7 +155,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
                 const SizedBox(height: 4),
                 GestureDetector(
                   onTap: () => _launchNostrWatch(),
-                  child: Text(
+                  child: const Text(
                     'Find public relays at nostr.watch →',
                     style: TextStyle(
                       color: VineTheme.vineGreen,
@@ -326,7 +326,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.bolt, color: VineTheme.vineGreen, size: 20),
+              const Icon(Icons.bolt, color: VineTheme.vineGreen, size: 20),
               const SizedBox(width: 8),
               const Text(
                 'REST Gateway',
@@ -799,7 +799,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
             const SizedBox(height: 8),
             GestureDetector(
               onTap: () => _launchNostrWatch(),
-              child: Text(
+              child: const Text(
                 'Browse public relays at nostr.watch',
                 style: TextStyle(
                   color: VineTheme.vineGreen,

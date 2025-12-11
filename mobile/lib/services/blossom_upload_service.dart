@@ -204,7 +204,7 @@ class BlossomUploadService {
       if (isCustomServerEnabled) {
         final customServerUrl = await getBlossomServer();
         if (customServerUrl == null || customServerUrl.isEmpty) {
-          return BlossomUploadResult(
+          return const BlossomUploadResult(
             success: false,
             errorMessage: 'Custom Blossom server enabled but not configured',
           );
@@ -218,7 +218,7 @@ class BlossomUploadService {
       // Parse and validate server URL
       final uri = Uri.tryParse(serverUrl);
       if (uri == null) {
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'Invalid Blossom server URL',
         );
@@ -226,7 +226,7 @@ class BlossomUploadService {
 
       // Check authentication after URL validation
       if (!authService.isAuthenticated) {
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'Not authenticated',
         );
@@ -251,7 +251,7 @@ class BlossomUploadService {
           name: 'BlossomUploadService',
           category: LogCategory.video,
         );
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'User not authenticated - please sign in to upload',
         );
@@ -303,7 +303,7 @@ class BlossomUploadService {
       );
 
       if (authEvent == null) {
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'Failed to create Blossom authentication',
         );
@@ -488,7 +488,7 @@ class BlossomUploadService {
           name: 'BlossomUploadService',
           category: LogCategory.video,
         );
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'Upload response missing URL field',
         );
@@ -584,17 +584,17 @@ class BlossomUploadService {
       }
 
       if (e.type == DioExceptionType.connectionTimeout) {
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'Connection timeout - check server URL',
         );
       } else if (e.type == DioExceptionType.sendTimeout) {
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'Send timeout - upload too slow or connection dropped',
         );
       } else if (e.type == DioExceptionType.receiveTimeout) {
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'Receive timeout - server not responding',
         );
@@ -604,7 +604,7 @@ class BlossomUploadService {
           errorMessage: 'Cannot connect to Blossom server: $errorDetail',
         );
       } else if (e.type == DioExceptionType.cancel) {
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'Upload cancelled',
         );
@@ -648,7 +648,7 @@ class BlossomUploadService {
       if (isCustomServerEnabled) {
         final customServerUrl = await getBlossomServer();
         if (customServerUrl == null || customServerUrl.isEmpty) {
-          return BlossomUploadResult(
+          return const BlossomUploadResult(
             success: false,
             errorMessage: 'Custom Blossom server enabled but not configured',
           );
@@ -661,7 +661,7 @@ class BlossomUploadService {
       // Parse and validate server URL
       final uri = Uri.tryParse(serverUrl);
       if (uri == null) {
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'Invalid Blossom server URL',
         );
@@ -669,7 +669,7 @@ class BlossomUploadService {
 
       // Check authentication
       if (!authService.isAuthenticated) {
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'Not authenticated',
         );
@@ -704,7 +704,7 @@ class BlossomUploadService {
       );
 
       if (authEvent == null) {
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'Failed to create Blossom authentication',
         );
@@ -816,13 +816,13 @@ class BlossomUploadService {
               videoId: imageId,
             );
           } else {
-            return BlossomUploadResult(
+            return const BlossomUploadResult(
               success: false,
               errorMessage: 'Invalid Blossom response: missing URL field',
             );
           }
         } else {
-          return BlossomUploadResult(
+          return const BlossomUploadResult(
             success: false,
             errorMessage: 'Invalid Blossom response format',
           );
@@ -833,7 +833,7 @@ class BlossomUploadService {
           name: 'BlossomUploadService',
           category: LogCategory.video,
         );
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: false,
           errorMessage: 'Authentication failed',
         );

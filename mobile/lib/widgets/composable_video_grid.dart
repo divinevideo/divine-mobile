@@ -44,7 +44,7 @@ class ComposableVideoGrid extends ConsumerWidget {
 
     return brokenTrackerAsync.when(
       loading: () =>
-          Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
+          const Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
       error: (error, stack) {
         // Fallback: show all videos if tracker fails
         return _buildGrid(context, ref, videos);
@@ -148,7 +148,7 @@ class ComposableVideoGrid extends ConsumerWidget {
                             )
                           : Container(
                               color: VineTheme.cardBackground,
-                              child: Icon(
+                              child: const Icon(
                                 Icons.videocam,
                                 size: 40,
                                 color: VineTheme.secondaryText,
@@ -159,13 +159,13 @@ class ComposableVideoGrid extends ConsumerWidget {
                     Center(
                       child: Container(
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: VineTheme.darkOverlay,
                           shape: BoxShape.circle,
                         ),
                         child: Semantics(
                           identifier: 'play_button',
-                          child: Icon(
+                          child: const Icon(
                             Icons.play_arrow,
                             size: 24,
                             color: VineTheme.whiteText,
@@ -190,7 +190,7 @@ class ComposableVideoGrid extends ConsumerWidget {
                           ),
                           child: Text(
                             '${video.duration}s',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: VineTheme.whiteText,
                               fontSize: 10,
                               fontWeight: FontWeight.w500,
@@ -218,7 +218,7 @@ class ComposableVideoGrid extends ConsumerWidget {
                       Flexible(
                         child: Text(
                           video.title ?? video.content,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: VineTheme.primaryText,
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
@@ -239,7 +239,7 @@ class ComposableVideoGrid extends ConsumerWidget {
 
                           return Row(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.favorite,
                                 size: 10,
                                 color: VineTheme.likeRed,
@@ -247,14 +247,14 @@ class ComposableVideoGrid extends ConsumerWidget {
                               const SizedBox(width: 2),
                               Text(
                                 StringUtils.formatCompactNumber(totalLikes),
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: VineTheme.secondaryText,
                                   fontSize: 9,
                                 ),
                               ),
                               if (video.originalLoops != null) ...[
                                 const SizedBox(width: 6),
-                                Icon(
+                                const Icon(
                                   Icons.repeat,
                                   size: 10,
                                   color: VineTheme.secondaryText,
@@ -264,7 +264,7 @@ class ComposableVideoGrid extends ConsumerWidget {
                                   StringUtils.formatCompactNumber(
                                     video.originalLoops!,
                                   ),
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: VineTheme.secondaryText,
                                     fontSize: 9,
                                   ),
@@ -313,9 +313,9 @@ class ComposableVideoGrid extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Icon(Icons.more_vert, color: VineTheme.whiteText),
+                  const Icon(Icons.more_vert, color: VineTheme.whiteText),
                   const SizedBox(width: 12),
-                  Expanded(
+                  const Expanded(
                     child: Text(
                       'Video Options',
                       style: TextStyle(
@@ -327,7 +327,7 @@ class ComposableVideoGrid extends ConsumerWidget {
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.close, color: VineTheme.secondaryText),
+                    icon: const Icon(Icons.close, color: VineTheme.secondaryText),
                   ),
                 ],
               ),
@@ -342,16 +342,16 @@ class ComposableVideoGrid extends ConsumerWidget {
                   color: VineTheme.cardBackground,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.edit, color: VineTheme.vineGreen, size: 20),
+                child: const Icon(Icons.edit, color: VineTheme.vineGreen, size: 20),
               ),
-              title: Text(
+              title: const Text(
                 'Edit Video',
                 style: TextStyle(
                   color: VineTheme.whiteText,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              subtitle: Text(
+              subtitle: const Text(
                 'Update title, description, and hashtags',
                 style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
               ),
@@ -370,16 +370,16 @@ class ComposableVideoGrid extends ConsumerWidget {
                   color: VineTheme.cardBackground,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                child: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
               ),
-              title: Text(
+              title: const Text(
                 'Delete Video',
                 style: TextStyle(
                   color: VineTheme.whiteText,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              subtitle: Text(
+              subtitle: const Text(
                 'Permanently remove this content',
                 style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
               ),
@@ -406,11 +406,11 @@ class ComposableVideoGrid extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: VineTheme.cardBackground,
-        title: Text(
+        title: const Text(
           'Delete Video',
           style: TextStyle(color: VineTheme.whiteText),
         ),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -428,12 +428,12 @@ class ComposableVideoGrid extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text('Delete'),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -458,7 +458,7 @@ class ComposableVideoGrid extends ConsumerWidget {
       // Show loading snackbar
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Row(
               children: [
                 SizedBox(
@@ -493,7 +493,7 @@ class ComposableVideoGrid extends ConsumerWidget {
                   result.success ? Icons.check_circle : Icons.error,
                   color: Colors.white,
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     result.success
@@ -537,7 +537,7 @@ class _CreatorName extends ConsumerWidget {
 
     return Text(
       displayName,
-      style: TextStyle(
+      style: const TextStyle(
         color: VineTheme.secondaryText,
         fontSize: 10,
         fontWeight: FontWeight.w400,

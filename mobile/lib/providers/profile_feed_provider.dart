@@ -77,7 +77,7 @@ class ProfileFeed extends _$ProfileFeed {
 
     // Check if provider is still mounted after async gap
     if (!ref.mounted) {
-      return VideoFeedState(
+      return const VideoFeedState(
         videos: [],
         hasMoreContent: false,
         isLoadingMore: false,

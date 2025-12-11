@@ -28,7 +28,7 @@ class UserListCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.group, color: VineTheme.vineGreen, size: 24),
+                  const Icon(Icons.group, color: VineTheme.vineGreen, size: 24),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -46,7 +46,7 @@ class UserListCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             userList.description!,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: VineTheme.secondaryText,
                               fontSize: 14,
                             ),
@@ -57,13 +57,13 @@ class UserListCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right, color: VineTheme.secondaryText),
+                  const Icon(Icons.chevron_right, color: VineTheme.secondaryText),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
                 '${userList.pubkeys.length} ${userList.pubkeys.length == 1 ? 'person' : 'people'}',
-                style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
+                style: const TextStyle(color: VineTheme.secondaryText, fontSize: 12),
               ),
             ],
           ),
@@ -99,7 +99,7 @@ class CuratedListCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.video_library,
                     color: VineTheme.vineGreen,
                     size: 24,
@@ -121,7 +121,7 @@ class CuratedListCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             curatedList.description!,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: VineTheme.secondaryText,
                               fontSize: 14,
                             ),
@@ -132,7 +132,7 @@ class CuratedListCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right, color: VineTheme.secondaryText),
+                  const Icon(Icons.chevron_right, color: VineTheme.secondaryText),
                 ],
               ),
               const SizedBox(height: 8),
@@ -140,14 +140,14 @@ class CuratedListCard extends StatelessWidget {
                 children: [
                   Text(
                     '${curatedList.videoEventIds.length} ${curatedList.videoEventIds.length == 1 ? 'video' : 'videos'}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: VineTheme.secondaryText,
                       fontSize: 12,
                     ),
                   ),
                   if (curatedList.tags.isNotEmpty) ...[
                     const SizedBox(width: 8),
-                    Text(
+                    const Text(
                       '•',
                       style: TextStyle(
                         color: VineTheme.secondaryText,
@@ -158,7 +158,7 @@ class CuratedListCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         curatedList.tags.take(3).map((t) => '#$t').join(' '),
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: VineTheme.vineGreen,
                           fontSize: 12,
                         ),

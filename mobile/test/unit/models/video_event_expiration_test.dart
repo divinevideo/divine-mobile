@@ -9,7 +9,7 @@ void main() {
   group('VideoEvent NIP-40 Expiration', () {
     test('parses expiration tag from event', () {
       // Create event with expiration tag set to 1 hour from now
-      final oneHourFromNow = DateTime.now().add(Duration(hours: 1));
+      final oneHourFromNow = DateTime.now().add(const Duration(hours: 1));
       final expirationTimestamp = oneHourFromNow.millisecondsSinceEpoch ~/ 1000;
 
       final event = Event.fromJson({
@@ -67,7 +67,7 @@ void main() {
     });
 
     test('isExpired returns false for events with future expiration', () {
-      final oneHourFromNow = DateTime.now().add(Duration(hours: 1));
+      final oneHourFromNow = DateTime.now().add(const Duration(hours: 1));
       final expirationTimestamp = oneHourFromNow.millisecondsSinceEpoch ~/ 1000;
 
       final event = Event.fromJson({
@@ -89,7 +89,7 @@ void main() {
     });
 
     test('isExpired returns true for events with past expiration', () {
-      final oneHourAgo = DateTime.now().subtract(Duration(hours: 1));
+      final oneHourAgo = DateTime.now().subtract(const Duration(hours: 1));
       final expirationTimestamp = oneHourAgo.millisecondsSinceEpoch ~/ 1000;
 
       final event = Event.fromJson({

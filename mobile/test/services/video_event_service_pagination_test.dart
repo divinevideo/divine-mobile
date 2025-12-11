@@ -84,7 +84,7 @@ void main() {
 
         // Wait for processing
         await loadMoreFuture;
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         // Assert - Verify the filter was created correctly
         final capturedFilters = verify(
@@ -134,7 +134,7 @@ void main() {
         streamController.close();
 
         await firstLoad;
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         // Now try to load more - it should reset and allow loading
         final secondController = StreamController<Event>.broadcast();
@@ -211,7 +211,7 @@ void main() {
         );
         firstStreamController.close();
 
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         // Reset mock for next query
         reset(mockNostrService);

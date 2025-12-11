@@ -116,7 +116,7 @@ void main() {
             hashtagServiceProvider.overrideWithValue(mockHashtagService),
             videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             home: HashtagFeedScreen(
               hashtag: 'funny',
               embedded: false, // NOT embedded

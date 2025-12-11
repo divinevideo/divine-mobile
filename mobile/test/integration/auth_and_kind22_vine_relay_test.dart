@@ -460,9 +460,9 @@ void main() {
       'Configurable AUTH timeout works correctly',
       () async {
         final timeouts = [
-          Duration(seconds: 5),
-          Duration(seconds: 10),
-          Duration(seconds: 20),
+          const Duration(seconds: 5),
+          const Duration(seconds: 10),
+          const Duration(seconds: 20),
         ];
 
         for (final timeout in timeouts) {

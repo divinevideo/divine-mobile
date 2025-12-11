@@ -60,7 +60,7 @@ void main() {
             until: anyNamed('until'),
             limit: anyNamed('limit'),
           ),
-        ).thenAnswer((_) => Stream<Event>.empty());
+        ).thenAnswer((_) => const Stream<Event>.empty());
 
         final hashtag = '#bitcoin';
 
@@ -91,7 +91,7 @@ void main() {
               until: anyNamed('until'),
               limit: anyNamed('limit'),
             ),
-          ).thenAnswer((_) => Stream<Event>.empty());
+          ).thenAnswer((_) => const Stream<Event>.empty());
 
           final searchQuery = 'nostr';
           final authors = ['author1', 'author2'];
@@ -163,10 +163,10 @@ void main() {
               until: anyNamed('until'),
               limit: anyNamed('limit'),
             ),
-          ).thenAnswer((_) => Stream<Event>.empty());
+          ).thenAnswer((_) => const Stream<Event>.empty());
 
           final searchQuery = 'bitcoin';
-          final since = DateTime.now().subtract(Duration(days: 7));
+          final since = DateTime.now().subtract(const Duration(days: 7));
           final until = DateTime.now();
 
           await videoEventService.searchVideosWithTimeRange(
@@ -200,7 +200,7 @@ void main() {
               until: anyNamed('until'),
               limit: anyNamed('limit'),
             ),
-          ).thenAnswer((_) => Stream<Event>.empty());
+          ).thenAnswer((_) => const Stream<Event>.empty());
 
           final searchQuery = 'music language:en nsfw:false';
 

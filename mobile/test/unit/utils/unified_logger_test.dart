@@ -14,7 +14,7 @@ void main() {
 
       // Clear logs and wait for async file operations to complete
       await logService.clearAllLogs();
-      await Future.delayed(Duration(milliseconds: 50));
+      await Future.delayed(const Duration(milliseconds: 50));
 
       // Set restrictive category filtering (only system and auth)
       // This mimics the default production configuration
@@ -56,7 +56,7 @@ void main() {
         ); // NOT enabled for console
 
         // Wait for async file captures to complete
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         // Then: ALL 7 logs should be captured to file, regardless of category filtering
         final capturedLogs = logService.getRecentLogs();
@@ -107,7 +107,7 @@ void main() {
         Log.error('Error log', category: LogCategory.system);
 
         // Wait for async file captures to complete
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         // Then: ALL 5 logs should be captured to file, regardless of level filtering
         final capturedLogs = logService.getRecentLogs();
@@ -143,7 +143,7 @@ void main() {
       Log.info('Log without category');
 
       // Wait for async file capture to complete
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // Then: Log should still be captured
       final capturedLogs = logService.getRecentLogs();
@@ -170,7 +170,7 @@ void main() {
       );
 
       // Wait for async file capture to complete
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // Then: Error details should be captured
       final capturedLogs = logService.getRecentLogs();
@@ -206,7 +206,7 @@ void main() {
         Log.error('API call failed', category: LogCategory.api);
 
         // Wait for async file captures
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         // Then: When user exports logs, they should get ALL 7 new entries
         final exportedLogs = logService.getRecentLogs();

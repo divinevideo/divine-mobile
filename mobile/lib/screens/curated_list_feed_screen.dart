@@ -56,7 +56,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       body: videoIdsAsync.when(
         data: (videoIds) {
           if (videoIds.isEmpty) {
-            return Center(
+            return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -65,7 +65,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
                     size: 64,
                     color: VineTheme.secondaryText,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
                     'No videos in this list',
                     style: TextStyle(
@@ -74,7 +74,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     'Add some videos to get started',
                     style: TextStyle(
@@ -95,23 +95,23 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
           // Otherwise show grid
           return _buildVideoGrid(videoIds);
         },
-        loading: () => Center(
+        loading: () => const Center(
           child: CircularProgressIndicator(color: VineTheme.vineGreen),
         ),
         error: (error, stack) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error, size: 64, color: VineTheme.likeRed),
+              const Icon(Icons.error, size: 64, color: VineTheme.likeRed),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'Failed to load list',
                 style: TextStyle(color: VineTheme.likeRed, fontSize: 18),
               ),
               const SizedBox(height: 8),
               Text(
                 error.toString(),
-                style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
+                style: const TextStyle(color: VineTheme.secondaryText, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -143,7 +143,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         }
 
         if (listVideos.isEmpty) {
-          return Center(
+          return const Center(
             child: Text(
               'Videos not loaded yet',
               style: TextStyle(color: VineTheme.secondaryText),
@@ -167,7 +167,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
             ref.invalidate(videoEventsProvider);
             await ref.read(videoEventsProvider.future);
           },
-          emptyBuilder: () => Center(
+          emptyBuilder: () => const Center(
             child: Text(
               'No videos available',
               style: TextStyle(color: VineTheme.secondaryText),
@@ -176,8 +176,8 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         );
       },
       loading: () =>
-          Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
-      error: (error, stack) => Center(
+          const Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
+      error: (error, stack) => const Center(
         child: Text(
           'Error loading videos',
           style: TextStyle(color: VineTheme.likeRed),
@@ -203,7 +203,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         }
 
         if (listVideos.isEmpty || _activeVideoIndex! >= listVideos.length) {
-          return Center(
+          return const Center(
             child: Text(
               'Video not available',
               style: TextStyle(color: VineTheme.secondaryText),
@@ -253,8 +253,8 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         );
       },
       loading: () =>
-          Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
-      error: (error, stack) => Center(
+          const Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
+      error: (error, stack) => const Center(
         child: Text(
           'Error loading videos',
           style: TextStyle(color: VineTheme.likeRed),

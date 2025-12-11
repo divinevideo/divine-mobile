@@ -13,7 +13,7 @@ void main() {
 
       expect(
         config.getDefault(FeatureFlag.debugTools),
-        equals(bool.fromEnvironment('FF_DEBUG_TOOLS', defaultValue: true)),
+        equals(const bool.fromEnvironment('FF_DEBUG_TOOLS', defaultValue: true)),
       );
     });
 

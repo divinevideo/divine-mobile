@@ -30,7 +30,7 @@ class UserAvatar extends StatelessWidget {
         Container(
           width: size,
           height: size,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             shape: BoxShape.circle,
             color: VineTheme.vineGreen,
           ),

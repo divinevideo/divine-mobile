@@ -95,7 +95,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(home: ExploreScreen()),
+          child: const MaterialApp(home: ExploreScreen()),
         ),
       );
 
@@ -135,7 +135,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(home: ExploreScreen()),
+          child: const MaterialApp(home: ExploreScreen()),
         ),
       );
 
@@ -175,7 +175,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(home: ExploreScreen()),
+          child: const MaterialApp(home: ExploreScreen()),
         ),
       );
 
@@ -212,7 +212,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(home: ExploreScreen()),
+          child: const MaterialApp(home: ExploreScreen()),
         ),
       );
 

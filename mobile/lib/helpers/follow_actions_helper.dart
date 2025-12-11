@@ -194,14 +194,14 @@ class FollowActionsHelper {
               Container(
                 width: 20,
                 height: 20,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: VineTheme.vineGreen,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.check, color: Colors.white, size: 14),
               ),
               const SizedBox(width: 12),
-              Text(
+              const Text(
                 'Successfully followed user',
                 style: TextStyle(color: VineTheme.vineGreen),
               ),
@@ -235,14 +235,14 @@ class FollowActionsHelper {
               Container(
                 width: 20,
                 height: 20,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: VineTheme.vineGreen,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.check, color: Colors.white, size: 14),
               ),
               const SizedBox(width: 12),
-              Text(
+              const Text(
                 'Successfully unfollowed user',
                 style: TextStyle(color: VineTheme.vineGreen),
               ),

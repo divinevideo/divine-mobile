@@ -74,7 +74,7 @@ void main() {
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-            MethodChannel('dev.fluttercommunity.plus/package_info'),
+            const MethodChannel('dev.fluttercommunity.plus/package_info'),
             (methodCall) async {
               if (methodCall.method == 'getAll') {
                 return <String, dynamic>{
@@ -91,7 +91,7 @@ void main() {
       // Mock Firebase Core
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-            MethodChannel('plugins.flutter.io/firebase_core'),
+            const MethodChannel('plugins.flutter.io/firebase_core'),
             (methodCall) async {
               if (methodCall.method == 'Firebase#initializeCore') {
                 return [
@@ -114,7 +114,7 @@ void main() {
       // Mock Firebase Analytics
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-            MethodChannel('plugins.flutter.io/firebase_analytics'),
+            const MethodChannel('plugins.flutter.io/firebase_analytics'),
             (methodCall) async => null,
           );
 

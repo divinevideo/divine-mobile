@@ -85,23 +85,23 @@ void main() {
 
     group('Search State Management', () {
       test('should create SearchState.initial()', () {
-        final state = SearchState.initial();
+        final state = const SearchState.initial();
         expect(state.isInitial, isTrue);
         expect(state.query, isNull);
         expect(state.results, isEmpty);
       });
 
       test('should create SearchState with different states', () {
-        final loadingState = SearchState.loading('test');
+        final loadingState = const SearchState.loading('test');
         expect(loadingState.isLoading, isTrue);
         expect(loadingState.query, equals('test'));
 
-        final successState = SearchState.success([], 'test');
+        final successState = const SearchState.success([], 'test');
         expect(successState.hasResults, isTrue);
         expect(successState.query, equals('test'));
         expect(successState.results, isEmpty);
 
-        final errorState = SearchState.error('error', 'test');
+        final errorState = const SearchState.error('error', 'test');
         expect(errorState.hasError, isTrue);
         expect(errorState.query, equals('test'));
         expect(errorState.errorMessage, equals('error'));

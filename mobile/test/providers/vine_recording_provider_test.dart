@@ -131,7 +131,7 @@ void main() {
           aspectRatio: AspectRatio.square,
         );
 
-        expect(state.recordingDuration, Duration(seconds: 3));
+        expect(state.recordingDuration, const Duration(seconds: 3));
       });
 
       test('VineRecordingUIState errorMessage should work correctly', () {

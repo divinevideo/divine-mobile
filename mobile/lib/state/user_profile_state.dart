@@ -34,7 +34,7 @@ sealed class UserProfileState with _$UserProfileState {
   const UserProfileState._();
 
   /// Create initial state
-  static final UserProfileState initial = UserProfileState();
+  static final UserProfileState initial = const UserProfileState();
 
   /// Check if profile request is pending
   bool isRequestPending(String pubkey) => pendingRequests.contains(pubkey);

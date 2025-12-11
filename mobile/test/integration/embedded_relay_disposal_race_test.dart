@@ -69,7 +69,7 @@ void main() {
         );
 
         // Step 4: Wait briefly for events to start flowing
-        await Future.delayed(Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 500));
         Log.info('   Received ${events.length} events so far');
 
         // Step 5: THE CRITICAL TEST - Dispose while events are actively flowing
@@ -92,7 +92,7 @@ void main() {
         }
 
         // Give a moment for any late errors to surface
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         // Cancel the stream subscription
         await streamSubscription.cancel();
@@ -166,7 +166,7 @@ void main() {
           );
 
           // Let it run briefly
-          await Future.delayed(Duration(milliseconds: 200));
+          await Future.delayed(const Duration(milliseconds: 200));
 
           // Dispose (simulating hot reload)
           try {
@@ -183,7 +183,7 @@ void main() {
             await nostrService.initialize();
           }
 
-          await Future.delayed(Duration(milliseconds: 100));
+          await Future.delayed(const Duration(milliseconds: 100));
         }
 
         Log.info('\nTotal errors across all cycles: ${errors.length}');

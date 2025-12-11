@@ -347,7 +347,7 @@ void main() {
           onProgress: anyNamed('onProgress'),
         ),
       ).thenAnswer(
-        (_) async => BlossomUploadResult(
+        (_) async => const BlossomUploadResult(
           success: false,
           errorMessage: 'Thumbnail upload failed',
         ),
@@ -503,7 +503,7 @@ void _configureMockBlossomService(MockBlossomUploadService mock) {
     onProgress?.call(0.6);
     onProgress?.call(0.8);
 
-    return BlossomUploadResult(
+    return const BlossomUploadResult(
       success: true,
       videoId: 'test_video_hash_abc123',
       fallbackUrl: 'https://cdn.divine.video/test_video_hash_abc123.mp4',
@@ -525,7 +525,7 @@ void _configureMockBlossomService(MockBlossomUploadService mock) {
     onProgress?.call(0.5);
     onProgress?.call(1.0);
 
-    return BlossomUploadResult(
+    return const BlossomUploadResult(
       success: true,
       videoId: 'test_thumbnail_hash_xyz789',
       fallbackUrl: 'https://cdn.divine.video/test_thumbnail_hash_xyz789.jpg',

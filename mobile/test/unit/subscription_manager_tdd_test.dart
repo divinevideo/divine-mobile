@@ -129,12 +129,12 @@ void main() {
           category: LogCategory.system,
         );
         testEventController.add(testEvent1);
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
         testEventController.add(testEvent2);
 
         // Wait for events to be forwarded to callback
         try {
-          await completer.future.timeout(Duration(seconds: 5));
+          await completer.future.timeout(const Duration(seconds: 5));
         } catch (e) {
           Log.warning(
             '⏰ TDD: Timeout - events were not forwarded to callback',
@@ -217,10 +217,10 @@ void main() {
         );
 
         testEventController.add(testEvent1);
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
         testEventController.add(testEvent2);
 
-        await completer.future.timeout(Duration(seconds: 2));
+        await completer.future.timeout(const Duration(seconds: 2));
         subscription.cancel();
 
         Log.debug(

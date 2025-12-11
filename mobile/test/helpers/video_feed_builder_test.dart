@@ -90,11 +90,11 @@ void main() {
           subscriptionType: SubscriptionType.popularNow,
           subscribe: (service) async {
             // Simulate delayed video arrival
-            Future.delayed(Duration(milliseconds: 100), () {
+            Future.delayed(const Duration(milliseconds: 100), () {
               videos.add(_createMockVideo(id: 'video1'));
               mockService.notifyListeners();
             });
-            Future.delayed(Duration(milliseconds: 200), () {
+            Future.delayed(const Duration(milliseconds: 200), () {
               videos.add(_createMockVideo(id: 'video2'));
               mockService.notifyListeners();
             });
@@ -130,7 +130,7 @@ void main() {
             subscriptionType: SubscriptionType.discovery,
             subscribe: (service) async {
               // Continuously add videos - never stabilize
-              Timer.periodic(Duration(milliseconds: 100), (timer) {
+              Timer.periodic(const Duration(milliseconds: 100), (timer) {
                 // Keep changing count
               });
             },

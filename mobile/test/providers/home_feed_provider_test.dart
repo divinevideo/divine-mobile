@@ -194,11 +194,11 @@ void main() {
             ),
             social.socialProvider.overrideWith(() {
               return TestSocialNotifier(
-                SocialState(
-                  followingPubkeys: const ['author1', 'author2'], // Same list!
+                const SocialState(
+                  followingPubkeys: ['author1', 'author2'], // Same list!
                   isInitialized: true,
-                  likedEventIds: const {'like1'}, // Different likes
-                  repostedEventIds: const {'repost1'}, // Different reposts
+                  likedEventIds: {'like1'}, // Different likes
+                  repostedEventIds: {'repost1'}, // Different reposts
                 ),
               );
             }),

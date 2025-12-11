@@ -59,7 +59,7 @@ void main() {
           bypassLimits: anyNamed('bypassLimits'),
           onEose: anyNamed('onEose'),
         ),
-      ).thenAnswer((_) => Stream.empty());
+      ).thenAnswer((_) => const Stream.empty());
 
       // Mock event creation
       when(

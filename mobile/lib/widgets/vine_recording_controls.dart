@@ -21,11 +21,11 @@ class ProofModeIndicator extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.green.shade400, width: 1),
       ),
-      child: Row(
+      child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.verified_user, color: Colors.white, size: 14),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           Text(
             'ProofMode',
             style: TextStyle(
@@ -700,8 +700,8 @@ class VineRecordingUIWithProvider extends StatelessWidget {
                 child: Column(
                   children: [
                     // ProofMode indicator at top
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
                       child: ProofModeIndicator(),
                     ),
                     // Progress bar below

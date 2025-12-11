@@ -37,7 +37,7 @@ void main() {
       // Mock subscribeToEvents to avoid MissingStubError when fetching Editor's Picks list
       when(
         mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
-      ).thenAnswer((_) => Stream<Event>.empty());
+      ).thenAnswer((_) => const Stream<Event>.empty());
     });
 
     test("should show videos from Classic Vines pubkey in Editor's Picks", () {

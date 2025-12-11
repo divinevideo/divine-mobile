@@ -24,7 +24,7 @@ void main() {
       when(mockNostrService.connectedRelayCount).thenReturn(1);
       when(
         mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
-      ).thenAnswer((_) => Stream<Event>.empty());
+      ).thenAnswer((_) => const Stream<Event>.empty());
 
       videoEventService = VideoEventService(
         mockNostrService,
@@ -40,7 +40,7 @@ void main() {
       videoEventService.subscribeToDiscovery(limit: 100);
 
       // Give it a moment to process
-      Future.delayed(Duration(milliseconds: 100), () {
+      Future.delayed(const Duration(milliseconds: 100), () {
         // Second identical subscription
         videoEventService.subscribeToDiscovery(limit: 100);
 

@@ -316,9 +316,9 @@ void main() {
           ),
         ).thenAnswer((invocation) async {
           final onEvent =
-              invocation.namedArguments[Symbol('onEvent')] as Function;
+              invocation.namedArguments[const Symbol('onEvent')] as Function;
           final onComplete =
-              invocation.namedArguments[Symbol('onComplete')] as Function;
+              invocation.namedArguments[const Symbol('onComplete')] as Function;
 
           // Simulate 2 like events and 1 non-like event
           const pk1 =
@@ -375,9 +375,9 @@ void main() {
           ),
         ).thenAnswer((invocation) async {
           final onEvent =
-              invocation.namedArguments[Symbol('onEvent')] as Function;
+              invocation.namedArguments[const Symbol('onEvent')] as Function;
           final onComplete =
-              invocation.namedArguments[Symbol('onComplete')] as Function;
+              invocation.namedArguments[const Symbol('onComplete')] as Function;
 
           // Simulate 3 like events
           const pk1 =

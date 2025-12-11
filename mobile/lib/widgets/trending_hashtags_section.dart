@@ -34,8 +34,8 @@ class TrendingHashtagsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               'Trending Hashtags',
               style: TextStyle(
@@ -67,8 +67,8 @@ class _HashtagLoadingPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16),
       child: Text(
         'Loading hashtags...',
         style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),

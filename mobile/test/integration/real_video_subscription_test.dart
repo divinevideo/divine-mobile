@@ -78,7 +78,7 @@ void main() {
       );
 
       final connectionCompleter = Completer<void>();
-      Timer.periodic(Duration(milliseconds: 200), (timer) {
+      Timer.periodic(const Duration(milliseconds: 200), (timer) {
         if (nostrService.connectedRelayCount > 0) {
           timer.cancel();
           connectionCompleter.complete();
@@ -86,7 +86,7 @@ void main() {
       });
 
       try {
-        await connectionCompleter.future.timeout(Duration(seconds: 15));
+        await connectionCompleter.future.timeout(const Duration(seconds: 15));
       } catch (e) {
         Log.warning(
           'Connection timeout, proceeding anyway: $e',
@@ -211,7 +211,7 @@ void main() {
           );
 
           // Wait for events with reasonable timeout
-          await completer.future.timeout(Duration(seconds: 15));
+          await completer.future.timeout(const Duration(seconds: 15));
 
           Log.info(
             '🎉 SUCCESS! Received ${receivedVideos.length} videos from real relay',

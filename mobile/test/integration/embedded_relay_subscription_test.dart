@@ -68,7 +68,7 @@ void main() {
 
       // Listen for events with timeout
       final eventFuture = subscription
-          .timeout(Duration(seconds: 5))
+          .timeout(const Duration(seconds: 5))
           .take(5) // Take up to 5 events
           .toList()
           .catchError((error) {
@@ -113,7 +113,7 @@ void main() {
         filters: [openFilter],
       );
       final openEvents = await openSubscription
-          .timeout(Duration(seconds: 5))
+          .timeout(const Duration(seconds: 5))
           .take(5)
           .toList()
           .catchError((error) {
@@ -164,7 +164,7 @@ void main() {
 
       final subscription = nostrService.subscribeToEvents(filters: [filter]);
       final events = await subscription
-          .timeout(Duration(seconds: 10))
+          .timeout(const Duration(seconds: 10))
           .take(10)
           .toList()
           .catchError((error) => <Event>[]);

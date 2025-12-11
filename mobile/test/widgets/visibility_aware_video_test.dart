@@ -176,8 +176,8 @@ void main() {
           overrides: [
             videoVisibilityManagerProvider.overrideWithValue(visibilityManager),
           ],
-          child: MaterialApp(
-            home: const _TestVideoWidget(videoId: 'test-video'),
+          child: const MaterialApp(
+            home: _TestVideoWidget(videoId: 'test-video'),
           ),
         ),
       );

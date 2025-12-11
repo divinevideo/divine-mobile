@@ -132,7 +132,7 @@ void main() {
       mockNostrService.emitEvent(videoEvent);
 
       // Wait for event processing
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // Verify event was cached to database via EventRouter
       final cachedEvent = await db.nostrEventsDao.getEvent(
@@ -173,7 +173,7 @@ void main() {
         mockNostrService.emitEvent(profileEvent);
 
         // Wait for event processing
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         // Verify event was cached to NostrEvents table
         final cachedEvent = await db.nostrEventsDao.getEvent(
@@ -226,7 +226,7 @@ void main() {
       mockNostrService.emitEvent(contactsEvent);
 
       // Wait for event processing
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // Verify event was cached to database
       final cachedEvent = await db.nostrEventsDao.getEvent(
@@ -265,7 +265,7 @@ void main() {
       mockNostrService.emitEvent(reactionEvent);
 
       // Wait for event processing
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // Verify event was cached to database
       final cachedEvent = await db.nostrEventsDao.getEvent(
@@ -299,7 +299,7 @@ void main() {
       mockNostrService.emitEvent(unknownEvent);
 
       // Wait for event processing
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // Verify event was cached to database
       final cachedEvent = await db.nostrEventsDao.getEvent(
@@ -339,7 +339,7 @@ void main() {
       }
 
       // Wait for all events to process
-      await Future.delayed(Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 200));
 
       // Verify all events were cached
       for (int i = 0; i < 5; i++) {

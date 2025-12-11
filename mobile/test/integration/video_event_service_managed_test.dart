@@ -80,7 +80,7 @@ void main() {
         );
 
         testEventController.add(testEvent);
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         // VideoEventService should have received the event through SubscriptionManager
         expect(videoEventService.hasEvents(SubscriptionType.discovery), true);

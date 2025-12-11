@@ -82,11 +82,11 @@ class IOSUploadDebugHelper {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: Row(
+        title: const Row(
           children: [
-            const Icon(Icons.error, color: Colors.red),
-            const SizedBox(width: 8),
-            const Expanded(
+            Icon(Icons.error, color: Colors.red),
+            SizedBox(width: 8),
+            Expanded(
               child: Text(
                 'iOS Upload Error',
                 style: TextStyle(color: VineTheme.primaryText),

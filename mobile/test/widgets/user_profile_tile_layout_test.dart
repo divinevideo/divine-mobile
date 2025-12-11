@@ -469,10 +469,10 @@ void main() {
                 ),
                 authServiceProvider.overrideWithValue(testAuthService),
               ],
-              child: Scaffold(
+              child: const Scaffold(
                 body: SizedBox(
                   width: 200, // Very narrow
-                  child: const UserProfileTile(pubkey: testPubkey),
+                  child: UserProfileTile(pubkey: testPubkey),
                 ),
               ),
             ),
@@ -502,10 +502,10 @@ void main() {
                 ),
                 authServiceProvider.overrideWithValue(testAuthService),
               ],
-              child: Scaffold(
+              child: const Scaffold(
                 body: SizedBox(
                   width: 1000, // Very wide
-                  child: const UserProfileTile(pubkey: testPubkey),
+                  child: UserProfileTile(pubkey: testPubkey),
                 ),
               ),
             ),

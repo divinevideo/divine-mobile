@@ -1128,7 +1128,7 @@ class SocialService {
       );
 
       // Use exhaustive mode to collect all followers
-      final config = CompletionConfig(
+      final config = const CompletionConfig(
         mode: CompletionMode.exhaustive,
         fallbackTimeoutSeconds: 8,
         serviceName: 'FollowersQuery',

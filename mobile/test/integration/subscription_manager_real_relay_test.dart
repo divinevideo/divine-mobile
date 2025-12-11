@@ -85,7 +85,7 @@ void main() {
 
       // Wait for connection using proper async pattern
       final connectionCompleter = Completer<void>();
-      Timer.periodic(Duration(milliseconds: 100), (timer) {
+      Timer.periodic(const Duration(milliseconds: 100), (timer) {
         if (nostrService.connectedRelays.isNotEmpty) {
           timer.cancel();
           connectionCompleter.complete();
@@ -93,7 +93,7 @@ void main() {
       });
 
       try {
-        await connectionCompleter.future.timeout(Duration(seconds: 10));
+        await connectionCompleter.future.timeout(const Duration(seconds: 10));
       } catch (e) {
         Log.warning('Connection timeout, proceeding anyway: $e');
       }
@@ -165,7 +165,7 @@ void main() {
 
         // Wait for events with timeout
         try {
-          await completer.future.timeout(Duration(seconds: 15));
+          await completer.future.timeout(const Duration(seconds: 15));
         } catch (e) {
           Log.warning(
             '⏰ TEST: Timeout waiting for SubscriptionManager events',
@@ -231,7 +231,7 @@ void main() {
         );
 
         try {
-          await directCompleter.future.timeout(Duration(seconds: 15));
+          await directCompleter.future.timeout(const Duration(seconds: 15));
         } catch (e) {
           Log.warning(
             '⏰ TEST: Timeout waiting for direct subscription events',
@@ -366,11 +366,11 @@ void main() {
         // Wait for both
         await Future.wait([
           managedCompleter.future.timeout(
-            Duration(seconds: 10),
+            const Duration(seconds: 10),
             onTimeout: () {},
           ),
           directCompleter.future.timeout(
-            Duration(seconds: 10),
+            const Duration(seconds: 10),
             onTimeout: () {},
           ),
         ]);

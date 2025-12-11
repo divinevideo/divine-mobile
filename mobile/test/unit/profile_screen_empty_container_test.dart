@@ -206,11 +206,11 @@ void main() {
                       color: Colors.green, // Should match VineTheme.vineGreen
                       strokeWidth: 2,
                     )
-                  : Column(
+                  : const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, color: Colors.red),
-                        const SizedBox(height: 4),
+                        Icon(Icons.error_outline, color: Colors.red),
+                        SizedBox(height: 4),
                         Text(
                           'Failed to load',
                           style: TextStyle(

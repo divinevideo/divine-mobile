@@ -13,7 +13,7 @@ void main() {
   group('ProofMode End-to-End Flow', () {
     test('Draft with ProofMode → Upload with ProofMode → Publish with tags', () {
       // Step 1: Create native proof data (simulating what native library returns)
-      final nativeProof = NativeProofData(
+      final nativeProof = const NativeProofData(
         videoHash: 'abc123def456',
         sensorDataCsv: 'timestamp,lat,lon\n2025-01-01,40.7,-74.0',
         pgpSignature:

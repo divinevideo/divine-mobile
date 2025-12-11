@@ -78,7 +78,7 @@ class CameraServiceImpl extends CameraService {
       // CameraMacOSArguments requires a size parameter
       _macOSController = CameraMacOSController(
         CameraMacOSArguments(
-          size: Size(1280, 720), // HD resolution
+          size: const Size(1280, 720), // HD resolution
           devices: macOSCameras,
         ),
       );
@@ -269,7 +269,7 @@ class CameraServiceImpl extends CameraService {
         // Create new controller (will use default camera)
         _macOSController = CameraMacOSController(
           CameraMacOSArguments(
-            size: Size(1280, 720), // HD resolution
+            size: const Size(1280, 720), // HD resolution
             devices: devices,
           ),
         );

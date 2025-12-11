@@ -108,9 +108,9 @@ class UploadProgressIndicator extends StatelessWidget {
       case UploadStatus.processing:
         return const Icon(Icons.settings, color: Colors.blue);
       case UploadStatus.readyToPublish:
-        return Icon(Icons.publish, color: VineTheme.vineGreen);
+        return const Icon(Icons.publish, color: VineTheme.vineGreen);
       case UploadStatus.published:
-        return Icon(Icons.check_circle, color: VineTheme.vineGreen);
+        return const Icon(Icons.check_circle, color: VineTheme.vineGreen);
       case UploadStatus.failed:
         return const Icon(Icons.error, color: Colors.red);
       case UploadStatus.paused:

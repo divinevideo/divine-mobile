@@ -20,9 +20,9 @@ final videosForProfileRouteProvider = Provider<AsyncValue<VideoFeedState>>((
     category: LogCategory.system,
   );
   if (ctx == null || ctx.type != RouteType.profile) {
-    return AsyncValue.data(
+    return const AsyncValue.data(
       VideoFeedState(
-        videos: const [],
+        videos: [],
         hasMoreContent: false,
         isLoadingMore: false,
       ),
@@ -33,9 +33,9 @@ final videosForProfileRouteProvider = Provider<AsyncValue<VideoFeedState>>((
   final npub = (ctx.npub ?? '').trim();
   final hex = npubToHexOrNull(npub);
   if (hex == null) {
-    return AsyncValue.data(
+    return const AsyncValue.data(
       VideoFeedState(
-        videos: const [],
+        videos: [],
         hasMoreContent: false,
         isLoadingMore: false,
       ),

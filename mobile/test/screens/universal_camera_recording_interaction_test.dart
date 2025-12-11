@@ -31,7 +31,7 @@ void main() {
         // NOT press-and-hold like mobile
 
         await tester.pumpWidget(
-          ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
+          const ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
         );
 
         // Wait for camera to initialize
@@ -75,7 +75,7 @@ void main() {
         // Not segmented recording like mobile
 
         await tester.pumpWidget(
-          ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
+          const ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
         );
 
         await tester.pumpAndSettle();
@@ -106,7 +106,7 @@ void main() {
         // until the first is complete
 
         await tester.pumpWidget(
-          ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
+          const ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
         );
 
         await tester.pumpAndSettle();
@@ -142,7 +142,7 @@ void main() {
         // Press to record, release to pause
 
         await tester.pumpWidget(
-          ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
+          const ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
         );
 
         await tester.pumpAndSettle();
@@ -189,7 +189,7 @@ void main() {
         // to create segmented recording
 
         await tester.pumpWidget(
-          ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
+          const ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
         );
 
         await tester.pumpAndSettle();
@@ -245,7 +245,7 @@ void main() {
         // Mobile UI should show how many segments have been recorded
 
         await tester.pumpWidget(
-          ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
+          const ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
         );
 
         await tester.pumpAndSettle();
@@ -280,7 +280,7 @@ void main() {
         // when user has recorded content
 
         await tester.pumpWidget(
-          ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
+          const ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
         );
 
         await tester.pumpAndSettle();
@@ -297,7 +297,7 @@ void main() {
         // Both platforms should show running timer during recording
 
         await tester.pumpWidget(
-          ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
+          const ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
         );
 
         await tester.pumpAndSettle();
@@ -322,7 +322,7 @@ void main() {
         // Both web and mobile should auto-stop at 6.3 seconds max
 
         await tester.pumpWidget(
-          ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
+          const ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
         );
 
         await tester.pumpAndSettle();

@@ -33,8 +33,8 @@ class HashtagFeed extends _$HashtagFeed {
     // Get hashtag from route context
     final ctx = ref.watch(pageContextProvider).asData?.value;
     if (ctx == null || ctx.type != RouteType.hashtag) {
-      return VideoFeedState(
-        videos: const [],
+      return const VideoFeedState(
+        videos: [],
         hasMoreContent: false,
         isLoadingMore: false,
       );
@@ -43,8 +43,8 @@ class HashtagFeed extends _$HashtagFeed {
     final raw = (ctx.hashtag ?? '').trim();
     final tag = raw.toLowerCase(); // normalize
     if (tag.isEmpty) {
-      return VideoFeedState(
-        videos: const [],
+      return const VideoFeedState(
+        videos: [],
         hasMoreContent: false,
         isLoadingMore: false,
       );
@@ -141,8 +141,8 @@ class HashtagFeed extends _$HashtagFeed {
     stabilityTimer?.cancel();
 
     if (!ref.mounted) {
-      return VideoFeedState(
-        videos: const [],
+      return const VideoFeedState(
+        videos: [],
         hasMoreContent: false,
         isLoadingMore: false,
       );

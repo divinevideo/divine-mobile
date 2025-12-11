@@ -360,9 +360,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
         );
       },
       loading: () =>
-          Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
+          const Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
       error: (e, s) => Center(
-        child: Text('Error: $e', style: TextStyle(color: VineTheme.likeRed)),
+        child: Text('Error: $e', style: const TextStyle(color: VineTheme.likeRed)),
       ),
     );
   }
@@ -378,7 +378,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
     // Safety check: ensure we have videos and valid index
     if (videos.isEmpty || startIndex >= videos.length) {
-      return Center(
+      return const Center(
         child: Text(
           'No videos available',
           style: TextStyle(color: VineTheme.whiteText),
@@ -436,8 +436,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                   ),
                 );
               },
-              icon: Icon(Icons.search, color: VineTheme.backgroundColor),
-              label: Text(
+              icon: const Icon(Icons.search, color: VineTheme.backgroundColor),
+              label: const Text(
                 'Discover Lists',
                 style: TextStyle(
                   color: VineTheme.backgroundColor,
@@ -467,7 +467,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 width: 1,
               ),
             ),
-            child: Column(
+            child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
@@ -477,7 +477,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                       color: VineTheme.vineGreen,
                       size: 20,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Text(
                       'About Lists',
                       style: TextStyle(
@@ -488,7 +488,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Text(
                   'Lists help you organize and curate Divine content in two ways:',
                   style: TextStyle(
@@ -497,12 +497,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(Icons.group, color: VineTheme.vineGreen, size: 18),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,7 +515,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             'Follow groups of creators and see their latest videos',
                             style: TextStyle(
@@ -529,7 +529,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -538,7 +538,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                       color: VineTheme.vineGreen,
                       size: 18,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -551,7 +551,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             'Create playlists of your favorite videos to watch later',
                             style: TextStyle(
@@ -585,8 +585,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 children: [
                   // My Lists section
                   if (myLists.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
                       ),
@@ -597,7 +597,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                             color: VineTheme.vineGreen,
                             size: 20,
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Text(
                             'My Lists',
                             style: TextStyle(
@@ -635,8 +635,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
                   // People Lists section
                   if (userLists.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
                       ),
@@ -647,7 +647,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                             color: VineTheme.vineGreen,
                             size: 20,
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Text(
                             'People Lists',
                             style: TextStyle(
@@ -683,8 +683,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 ],
               );
             },
-            loading: () => Padding(
-              padding: const EdgeInsets.all(16),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16),
               child: Center(
                 child: CircularProgressIndicator(color: VineTheme.vineGreen),
               ),
@@ -693,7 +693,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               padding: const EdgeInsets.all(16),
               child: Text(
                 'Error loading lists: $error',
-                style: TextStyle(color: VineTheme.likeRed),
+                style: const TextStyle(color: VineTheme.likeRed),
               ),
             ),
           ),
@@ -712,8 +712,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     final service = ref.read(curatedListsStateProvider.notifier).service;
     // Wait for both to load subscribed lists
     if (!allListsAsync.hasValue || !serviceAsync.hasValue) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -724,7 +724,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                   color: VineTheme.vineGreen,
                   size: 20,
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Text(
                   'Subscribed Lists',
                   style: TextStyle(
@@ -735,7 +735,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Center(
               child: CircularProgressIndicator(color: VineTheme.vineGreen),
             ),
@@ -758,8 +758,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
               Icon(
@@ -767,7 +767,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 color: VineTheme.vineGreen,
                 size: 20,
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text(
                 'Subscribed Lists',
                 style: TextStyle(
@@ -820,12 +820,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     if (editorsPicks.isEmpty) {
       return Container(
         key: const Key('editors-pick-content'),
-        child: Center(
+        child: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.star, size: 64, color: VineTheme.secondaryText),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Text(
                 'Divine Team',
                 style: TextStyle(
@@ -834,7 +834,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
                 'Curated content coming soon',
                 style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
@@ -925,7 +925,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           }
         }
 
-        return Center(
+        return const Center(
           child: CircularProgressIndicator(color: VineTheme.vineGreen),
         );
       },
@@ -957,16 +957,16 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error, size: 64, color: VineTheme.likeRed),
+              const Icon(Icons.error, size: 64, color: VineTheme.likeRed),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'Failed to load videos',
                 style: TextStyle(color: VineTheme.likeRed, fontSize: 18),
               ),
               const SizedBox(height: 8),
               Text(
                 '$error',
-                style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
+                style: const TextStyle(color: VineTheme.secondaryText, fontSize: 12),
               ),
             ],
           ),
@@ -1019,18 +1019,18 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.video_library, size: 64, color: VineTheme.secondaryText),
+            const Icon(Icons.video_library, size: 64, color: VineTheme.secondaryText),
             const SizedBox(height: 16),
             Text(
               'No videos in $tabName',
-              style: TextStyle(
+              style: const TextStyle(
                 color: VineTheme.primaryText,
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Check back later for new content',
               style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
             ),
@@ -1135,7 +1135,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                const Icon(
                   Icons.arrow_upward,
                   color: VineTheme.backgroundColor,
                   size: 18,
@@ -1143,7 +1143,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 const SizedBox(width: 8),
                 Text(
                   '$bufferedCount new ${bufferedCount == 1 ? 'video' : 'videos'}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: VineTheme.backgroundColor,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,

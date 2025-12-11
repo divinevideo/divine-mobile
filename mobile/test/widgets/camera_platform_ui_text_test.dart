@@ -12,7 +12,7 @@ void main() {
     ) async {
       // Build a simple widget that shows the platform-specific text
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: Center(
               child: Text(kIsWeb ? 'Tap to record' : 'Hold to record'),

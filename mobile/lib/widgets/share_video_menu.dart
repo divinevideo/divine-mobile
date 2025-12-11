@@ -23,10 +23,10 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // TODO(any): Move this to a reusable widget
-Widget get _buildLoadingIndicator => Padding(
-  padding: const EdgeInsets.all(12),
+Widget get _buildLoadingIndicator => const Padding(
+  padding: EdgeInsets.all(12),
   child: Center(
-    child: const SizedBox(
+    child: SizedBox(
       width: 16,
       height: 16,
       child: CircularProgressIndicator(
@@ -156,20 +156,20 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
           color: Colors.orange.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(Icons.psychology_alt, color: Colors.orange, size: 20),
+        child: const Icon(Icons.psychology_alt, color: Colors.orange, size: 20),
       ),
-      title: Text(
+      title: const Text(
         'Report AI Content',
         style: TextStyle(
           color: VineTheme.whiteText,
           fontWeight: FontWeight.w600,
         ),
       ),
-      subtitle: Text(
+      subtitle: const Text(
         'Quick report suspected AI-generated content',
         style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
       ),
-      trailing: Icon(Icons.arrow_forward_ios, color: Colors.orange, size: 16),
+      trailing: const Icon(Icons.arrow_forward_ios, color: Colors.orange, size: 16),
       onTap: _quickReportAI,
     ),
   );
@@ -180,7 +180,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
       // Show loading snackbar
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Row(
               children: [
                 SizedBox(
@@ -315,15 +315,15 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    const Row(
                       children: [
                         Icon(
                           Icons.info_outline,
                           color: VineTheme.vineGreen,
                           size: 18,
                         ),
-                        const SizedBox(width: 8),
-                        const Text(
+                        SizedBox(width: 8),
+                        Text(
                           'Video Status',
                           style: TextStyle(
                             color: VineTheme.whiteText,
@@ -357,8 +357,8 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
                       const SizedBox(height: 8),
                       InkWell(
                         onTap: () => _showAllListsDialog(listsContaining),
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 26),
+                        child: const Padding(
+                          padding: EdgeInsets.only(left: 26),
                           child: Text(
                             'View all lists →',
                             style: TextStyle(
@@ -463,7 +463,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
                     children: [
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.playlist_add_check,
                             color: VineTheme.vineGreen,
                             size: 18,
@@ -1124,7 +1124,7 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Close', style: TextStyle(color: VineTheme.vineGreen)),
+            child: const Text('Close', style: TextStyle(color: VineTheme.vineGreen)),
           ),
         ],
       ),
@@ -2567,7 +2567,7 @@ class _SelectBookmarkSetDialog extends StatelessWidget {
                         color: VineTheme.vineGreen.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.add, color: VineTheme.vineGreen),
+                      child: const Icon(Icons.add, color: VineTheme.vineGreen),
                     ),
                     title: const Text(
                       'Create New Set',
@@ -2861,11 +2861,11 @@ class _ReportConfirmationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AlertDialog(
     backgroundColor: VineTheme.cardBackground,
-    title: Row(
+    title: const Row(
       children: [
         Icon(Icons.check_circle, color: VineTheme.vineGreen, size: 28),
-        const SizedBox(width: 12),
-        const Text(
+        SizedBox(width: 12),
+        Text(
           'Report Received',
           style: TextStyle(color: VineTheme.whiteText),
         ),
@@ -2899,11 +2899,11 @@ class _ReportConfirmationDialog extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: VineTheme.vineGreen),
             ),
-            child: Row(
+            child: const Row(
               children: [
                 Icon(Icons.info_outline, color: VineTheme.vineGreen, size: 20),
-                const SizedBox(width: 8),
-                const Expanded(
+                SizedBox(width: 8),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -2935,7 +2935,7 @@ class _ReportConfirmationDialog extends StatelessWidget {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: Text('Close', style: TextStyle(color: VineTheme.vineGreen)),
+        child: const Text('Close', style: TextStyle(color: VineTheme.vineGreen)),
       ),
     ],
   );
@@ -2953,11 +2953,11 @@ class _ViewSourceDialog extends ConsumerWidget {
 
     return AlertDialog(
       backgroundColor: VineTheme.cardBackground,
-      title: Row(
+      title: const Row(
         children: [
-          const Icon(Icons.code, color: VineTheme.vineGreen),
-          const SizedBox(width: 12),
-          const Text(
+          Icon(Icons.code, color: VineTheme.vineGreen),
+          SizedBox(width: 12),
+          Text(
             'Event Source',
             style: TextStyle(color: VineTheme.whiteText),
           ),
@@ -3173,8 +3173,8 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
   }
 
   Widget _buildLoadingIndicator() {
-    return Padding(
-      padding: const EdgeInsets.all(12),
+    return const Padding(
+      padding: EdgeInsets.all(12),
       child: Row(
         children: [
           SizedBox(
@@ -3185,7 +3185,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
               color: VineTheme.secondaryText,
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Text(
             'Checking public lists...',
             style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
@@ -3196,8 +3196,8 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
   }
 
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.all(12),
+    return const Padding(
+      padding: EdgeInsets.all(12),
       child: Text(
         'Not yet in any lists...',
         style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
@@ -3228,7 +3228,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
             ),
             child: Row(
               children: [
-                Icon(Icons.video_library, color: VineTheme.vineGreen, size: 20),
+                const Icon(Icons.video_library, color: VineTheme.vineGreen, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -3246,7 +3246,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
                       ),
                       Text(
                         '${list.videoEventIds.length} videos',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: VineTheme.secondaryText,
                           fontSize: 12,
                         ),
@@ -3271,7 +3271,7 @@ class _PublicListsSectionState extends ConsumerState<_PublicListsSection> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(6),
                       side: isSubscribed
-                          ? BorderSide(color: VineTheme.vineGreen)
+                          ? const BorderSide(color: VineTheme.vineGreen)
                           : BorderSide.none,
                     ),
                   ),

@@ -77,7 +77,7 @@ void main() {
       'SPEC: should render default error widget when AsyncValue has error',
       (tester) async {
         final mixin = TestAsyncValueUIHelpersMixin();
-        final asyncValue = AsyncValue<String>.error(
+        final asyncValue = const AsyncValue<String>.error(
           'Test error',
           StackTrace.empty,
         );
@@ -102,7 +102,7 @@ void main() {
       tester,
     ) async {
       final mixin = TestAsyncValueUIHelpersMixin();
-      final asyncValue = AsyncValue<String>.error(
+      final asyncValue = const AsyncValue<String>.error(
         'Test error',
         StackTrace.empty,
       );
@@ -154,7 +154,7 @@ void main() {
       'SPEC: default error widget should show error icon and message',
       (tester) async {
         final mixin = TestAsyncValueUIHelpersMixin();
-        final asyncValue = AsyncValue<String>.error(
+        final asyncValue = const AsyncValue<String>.error(
           'Network timeout',
           StackTrace.empty,
         );
@@ -204,7 +204,7 @@ void main() {
 
     testWidgets('SPEC: should work with complex data types', (tester) async {
       final mixin = TestAsyncValueUIHelpersMixin();
-      final asyncValue = AsyncValue.data({'key': 'value', 'count': 42});
+      final asyncValue = const AsyncValue.data({'key': 'value', 'count': 42});
 
       await tester.pumpWidget(
         MaterialApp(

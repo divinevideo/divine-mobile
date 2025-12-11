@@ -50,7 +50,7 @@ void main() {
         await controller.startRecording();
         expect(controller.state, equals(VineRecordingState.recording));
 
-        await Future.delayed(Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 500));
 
         await controller.stopRecording();
         expect(
@@ -68,7 +68,7 @@ void main() {
       try {
         await controller.initialize();
         await controller.startRecording();
-        await Future.delayed(Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 500));
         await controller.stopRecording();
 
         final (videoFile, _) = await controller.finishRecording();

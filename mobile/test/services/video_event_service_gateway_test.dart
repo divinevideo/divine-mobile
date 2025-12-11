@@ -46,7 +46,7 @@ void main() {
           bypassLimits: anyNamed('bypassLimits'),
           onEose: anyNamed('onEose'),
         ),
-      ).thenAnswer((_) => Stream<Event>.empty());
+      ).thenAnswer((_) => const Stream<Event>.empty());
     });
 
     test('uses gateway for discovery feed when enabled', () async {

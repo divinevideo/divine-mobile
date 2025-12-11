@@ -52,7 +52,7 @@ void main() {
                 (ref) => Future.value(draftStorage),
               ),
             ],
-            child: MaterialApp(home: UniversalCameraScreenPure()),
+            child: const MaterialApp(home: UniversalCameraScreenPure()),
           ),
         );
 
@@ -149,7 +149,7 @@ void main() {
               (ref) => Future.value(draftStorage),
             ),
           ],
-          child: MaterialApp(home: UniversalCameraScreenPure()),
+          child: const MaterialApp(home: UniversalCameraScreenPure()),
         ),
       );
 
@@ -190,7 +190,7 @@ void main() {
               (ref) => Future.value(draftStorage),
             ),
           ],
-          child: MaterialApp(home: UniversalCameraScreenPure()),
+          child: const MaterialApp(home: UniversalCameraScreenPure()),
         ),
       );
 

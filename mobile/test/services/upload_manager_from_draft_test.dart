@@ -49,7 +49,7 @@ void main() {
       final upload = await uploadManager.startUploadFromDraft(
         draft: draft,
         nostrPubkey: 'test-pubkey',
-        videoDuration: Duration(seconds: 5),
+        videoDuration: const Duration(seconds: 5),
       );
 
       expect(upload.title, equals('Test Video'));
@@ -89,7 +89,7 @@ void main() {
       final upload = await uploadManager.startUploadFromDraft(
         draft: updatedDraft,
         nostrPubkey: 'test-pubkey',
-        videoDuration: Duration(seconds: 5),
+        videoDuration: const Duration(seconds: 5),
       );
 
       expect(upload.title, equals('Updated Title'));
@@ -114,7 +114,7 @@ void main() {
       final upload = await uploadManager.startUploadFromDraft(
         draft: draft,
         nostrPubkey: 'test-pubkey',
-        videoDuration: Duration(seconds: 5),
+        videoDuration: const Duration(seconds: 5),
       );
 
       expect(upload.title, equals('Test Video'));

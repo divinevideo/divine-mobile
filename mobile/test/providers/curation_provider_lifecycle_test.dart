@@ -130,7 +130,7 @@ void main() {
 
         // Wait for async initialization
         await Future.microtask(() {});
-        await Future.delayed(Duration(milliseconds: 10));
+        await Future.delayed(const Duration(milliseconds: 10));
 
         // ACT: Read after initialization
         final loadedState = container.read(curationProvider);

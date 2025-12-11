@@ -53,7 +53,7 @@ void main() {
 
   group('buildRoute() - Search with terms', () {
     test('buildRoute with searchTerm only returns /search/bitcoin', () {
-      final context = RouteContext(
+      final context = const RouteContext(
         type: RouteType.search,
         searchTerm: 'bitcoin',
       );
@@ -66,7 +66,7 @@ void main() {
     test(
       'buildRoute with searchTerm and videoIndex returns /search/lightning/3',
       () {
-        final context = RouteContext(
+        final context = const RouteContext(
           type: RouteType.search,
           searchTerm: 'lightning',
           videoIndex: 3,
@@ -79,7 +79,7 @@ void main() {
     );
 
     test('buildRoute with no term or index returns /search', () {
-      final context = RouteContext(type: RouteType.search);
+      final context = const RouteContext(type: RouteType.search);
 
       final result = buildRoute(context);
 
@@ -87,7 +87,7 @@ void main() {
     });
 
     test('buildRoute with legacy format (index only) returns /search/5', () {
-      final context = RouteContext(type: RouteType.search, videoIndex: 5);
+      final context = const RouteContext(type: RouteType.search, videoIndex: 5);
 
       final result = buildRoute(context);
 
@@ -97,7 +97,7 @@ void main() {
 
   group('Round-trip consistency', () {
     test('parseRoute(buildRoute(context)) preserves searchTerm', () {
-      final original = RouteContext(
+      final original = const RouteContext(
         type: RouteType.search,
         searchTerm: 'nostr',
       );
@@ -111,7 +111,7 @@ void main() {
     });
 
     test('parseRoute(buildRoute(context)) preserves searchTerm + index', () {
-      final original = RouteContext(
+      final original = const RouteContext(
         type: RouteType.search,
         searchTerm: 'bitcoin',
         videoIndex: 42,
@@ -181,7 +181,7 @@ void main() {
 
   group('Phase 3: URL Encoding - buildRoute() edge cases', () {
     test('buildRoute encodes spaces in search term', () {
-      final context = RouteContext(
+      final context = const RouteContext(
         type: RouteType.search,
         searchTerm: 'hello world',
       );
@@ -192,7 +192,7 @@ void main() {
     });
 
     test('buildRoute encodes hash symbol in search term', () {
-      final context = RouteContext(
+      final context = const RouteContext(
         type: RouteType.search,
         searchTerm: '#bitcoin',
       );
@@ -203,7 +203,7 @@ void main() {
     });
 
     test('buildRoute encodes forward slash in search term', () {
-      final context = RouteContext(
+      final context = const RouteContext(
         type: RouteType.search,
         searchTerm: '/special',
       );
@@ -214,7 +214,7 @@ void main() {
     });
 
     test('buildRoute encodes emoji in search term', () {
-      final context = RouteContext(type: RouteType.search, searchTerm: '🚀');
+      final context = const RouteContext(type: RouteType.search, searchTerm: '🚀');
 
       final result = buildRoute(context);
 
@@ -222,7 +222,7 @@ void main() {
     });
 
     test('buildRoute encodes spaces with index', () {
-      final context = RouteContext(
+      final context = const RouteContext(
         type: RouteType.search,
         searchTerm: 'hello world',
         videoIndex: 5,
@@ -234,7 +234,7 @@ void main() {
     });
 
     test('buildRoute encodes hash symbol with index', () {
-      final context = RouteContext(
+      final context = const RouteContext(
         type: RouteType.search,
         searchTerm: '#bitcoin',
         videoIndex: 3,
@@ -248,7 +248,7 @@ void main() {
 
   group('Phase 3: Round-trip with URL encoding', () {
     test('Round-trip preserves search term with spaces', () {
-      final original = RouteContext(
+      final original = const RouteContext(
         type: RouteType.search,
         searchTerm: 'hello world',
       );
@@ -262,7 +262,7 @@ void main() {
     });
 
     test('Round-trip preserves search term with hash symbol', () {
-      final original = RouteContext(
+      final original = const RouteContext(
         type: RouteType.search,
         searchTerm: '#bitcoin',
       );
@@ -276,7 +276,7 @@ void main() {
     });
 
     test('Round-trip preserves search term with forward slash', () {
-      final original = RouteContext(
+      final original = const RouteContext(
         type: RouteType.search,
         searchTerm: '/special',
       );
@@ -290,7 +290,7 @@ void main() {
     });
 
     test('Round-trip preserves search term with emoji', () {
-      final original = RouteContext(type: RouteType.search, searchTerm: '🚀');
+      final original = const RouteContext(type: RouteType.search, searchTerm: '🚀');
 
       final url = buildRoute(original);
       final parsed = parseRoute(url);
@@ -303,7 +303,7 @@ void main() {
     test(
       'Round-trip preserves complex search term with multiple special chars',
       () {
-        final original = RouteContext(
+        final original = const RouteContext(
           type: RouteType.search,
           searchTerm: 'hello world #bitcoin 🚀',
           videoIndex: 7,

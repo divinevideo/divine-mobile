@@ -630,7 +630,7 @@ Future<void> _waitForRelayConnection(NostrService nostrService) async {
   final connectionCompleter = Completer<void>();
   late Timer timer;
 
-  timer = Timer.periodic(Duration(milliseconds: 500), (t) {
+  timer = Timer.periodic(const Duration(milliseconds: 500), (t) {
     if (nostrService.connectedRelayCount > 0) {
       timer.cancel();
       connectionCompleter.complete();
@@ -638,7 +638,7 @@ Future<void> _waitForRelayConnection(NostrService nostrService) async {
   });
 
   try {
-    await connectionCompleter.future.timeout(Duration(seconds: 20));
+    await connectionCompleter.future.timeout(const Duration(seconds: 20));
     Log.info(
       '✅ Connected to ${nostrService.connectedRelayCount} relays for ShareVideoMenu testing',
       name: 'ShareVideoMenuTest',
@@ -665,7 +665,7 @@ Future<List<VideoEvent>> _fetchRealVideoEvents(
 
   try {
     await videoEventService.subscribeToDiscovery();
-    await Future.delayed(Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 3));
 
     final videos = videoEventService.discoveryVideos;
     Log.info(

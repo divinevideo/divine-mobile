@@ -53,7 +53,7 @@ void main() {
             // Mock social provider with following list
             social.socialProvider.overrideWith(() {
               return _TestSocialNotifier(
-                SocialState(
+                const SocialState(
                   followingPubkeys: ['author1', 'author2'],
                   isInitialized: true,
                   isLoading: false,
@@ -182,8 +182,8 @@ class _TestHomeFeedNotifier extends HomeFeed {
   Future<VideoFeedState> build() async {
     return _state.when(
       data: (data) => data,
-      loading: () => VideoFeedState(
-        videos: const [],
+      loading: () => const VideoFeedState(
+        videos: [],
         hasMoreContent: false,
         isLoadingMore: false,
         error: null,

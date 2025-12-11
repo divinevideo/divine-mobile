@@ -82,7 +82,7 @@ void main() {
           videoEventServiceProvider.overrideWithValue(mockVideoService),
           socialProvider.overrideWith(() {
             return _TestSocialNotifier(
-              SocialState(followingPubkeys: ['author1'], isInitialized: true),
+              const SocialState(followingPubkeys: ['author1'], isInitialized: true),
             );
           }),
         ],
@@ -154,7 +154,7 @@ void main() {
           videoEventServiceProvider.overrideWithValue(mockVideoService),
           socialProvider.overrideWith(() {
             return _TestSocialNotifier(
-              SocialState(followingPubkeys: ['author1'], isInitialized: true),
+              const SocialState(followingPubkeys: ['author1'], isInitialized: true),
             );
           }),
         ],
@@ -204,7 +204,7 @@ void main() {
           videoEventServiceProvider.overrideWithValue(mockVideoService),
           socialProvider.overrideWith(() {
             return _TestSocialNotifier(
-              SocialState(followingPubkeys: ['author1'], isInitialized: true),
+              const SocialState(followingPubkeys: ['author1'], isInitialized: true),
             );
           }),
         ],

@@ -44,8 +44,8 @@ class PopularNowFeed extends _$PopularNowFeed {
         name: 'PopularNowFeedProvider',
         category: LogCategory.video,
       );
-      return VideoFeedState(
-        videos: const [],
+      return const VideoFeedState(
+        videos: [],
         hasMoreContent: true, // Assume there's content to load when ready
         isLoadingMore: false,
       );
@@ -85,8 +85,8 @@ class PopularNowFeed extends _$PopularNowFeed {
 
     // Check if still mounted after async gap
     if (!ref.mounted) {
-      return VideoFeedState(
-        videos: const [],
+      return const VideoFeedState(
+        videos: [],
         hasMoreContent: false,
         isLoadingMore: false,
       );

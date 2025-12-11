@@ -33,7 +33,7 @@ void main() {
         // Verify the session can handle messages WITHOUT network
         expect(() async {
           await session.sendMessage(
-            embedded.ReqMessage(
+            const embedded.ReqMessage(
               subscriptionId: 'test',
               filters: [
                 embedded.Filter(kinds: [1]),
@@ -61,7 +61,7 @@ void main() {
 
       // Send a REQ message
       await session.sendMessage(
-        embedded.ReqMessage(
+        const embedded.ReqMessage(
           subscriptionId: 'sub1',
           filters: [
             embedded.Filter(kinds: [1], limit: 10),
@@ -70,7 +70,7 @@ void main() {
       );
 
       // Wait for EOSE (end of stored events)
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // We should have received at least an EOSE
       final eoseResponses = responses.whereType<embedded.EoseResponse>();

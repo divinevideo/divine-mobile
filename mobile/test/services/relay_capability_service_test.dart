@@ -202,7 +202,7 @@ void main() {
       test('respects cache TTL and refetches after expiration', () async {
         final shortTtlService = RelayCapabilityService(
           httpClient: mockHttpClient,
-          cacheTtl: Duration(milliseconds: 100),
+          cacheTtl: const Duration(milliseconds: 100),
         );
 
         const nip11Response = '{"name": "Test Relay"}';
@@ -220,7 +220,7 @@ void main() {
         );
 
         // Wait for cache to expire
-        await Future.delayed(Duration(milliseconds: 150));
+        await Future.delayed(const Duration(milliseconds: 150));
 
         // Second call after expiration
         await shortTtlService.getRelayCapabilities(

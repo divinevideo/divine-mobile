@@ -134,12 +134,12 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(color: VineTheme.vineGreen),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               'Discovering public lists...',
               style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
@@ -154,9 +154,9 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error, size: 64, color: VineTheme.likeRed),
+            const Icon(Icons.error, size: 64, color: VineTheme.likeRed),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Failed to load lists',
               style: TextStyle(
                 color: VineTheme.likeRed,
@@ -169,7 +169,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
                 _errorMessage!,
-                style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
+                style: const TextStyle(color: VineTheme.secondaryText, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -189,12 +189,12 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
     }
 
     if (_discoveredLists == null || _discoveredLists!.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.search, size: 64, color: VineTheme.secondaryText),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               'No public lists found',
               style: TextStyle(
@@ -203,7 +203,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               'Check back later for new lists',
               style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
@@ -263,7 +263,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.video_library,
                         color: VineTheme.vineGreen,
                         size: 24,
@@ -285,7 +285,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 list.description!,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: VineTheme.secondaryText,
                                   fontSize: 14,
                                 ),
@@ -316,7 +316,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
                               ? VineTheme.vineGreen
                               : VineTheme.backgroundColor,
                           side: isSubscribed
-                              ? BorderSide(color: VineTheme.vineGreen, width: 1)
+                              ? const BorderSide(color: VineTheme.vineGreen, width: 1)
                               : null,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -333,14 +333,14 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
                     children: [
                       Text(
                         '${list.videoEventIds.length} ${list.videoEventIds.length == 1 ? 'video' : 'videos'}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: VineTheme.secondaryText,
                           fontSize: 12,
                         ),
                       ),
                       if (list.tags.isNotEmpty) ...[
                         const SizedBox(width: 8),
-                        Text(
+                        const Text(
                           '•',
                           style: TextStyle(
                             color: VineTheme.secondaryText,
@@ -351,7 +351,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
                         Expanded(
                           child: Text(
                             list.tags.take(3).map((t) => '#$t').join(' '),
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: VineTheme.vineGreen,
                               fontSize: 12,
                             ),

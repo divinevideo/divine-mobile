@@ -140,7 +140,7 @@ class RelayCapabilityService {
 
   RelayCapabilityService({http.Client? httpClient, Duration? cacheTtl})
     : _httpClient = httpClient ?? http.Client(),
-      _cacheTtl = cacheTtl ?? Duration(hours: 24);
+      _cacheTtl = cacheTtl ?? const Duration(hours: 24);
 
   /// Get capabilities for a relay (with caching)
   Future<RelayCapabilities> getRelayCapabilities(String relayWsUrl) async {
@@ -170,7 +170,7 @@ class RelayCapabilityService {
             Uri.parse(httpUrl),
             headers: {'Accept': 'application/nostr+json'},
           )
-          .timeout(Duration(seconds: 10));
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         throw RelayCapabilityException(

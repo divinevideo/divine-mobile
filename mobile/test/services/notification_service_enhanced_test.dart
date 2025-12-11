@@ -31,7 +31,7 @@ void main() {
       when(mockNostrService.publicKey).thenReturn('test-pubkey-123');
       when(
         mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
-      ).thenAnswer((_) => Stream.empty());
+      ).thenAnswer((_) => const Stream.empty());
     });
 
     tearDown(() {

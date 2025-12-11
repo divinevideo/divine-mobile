@@ -444,7 +444,7 @@ abstract class NostrServiceWeb implements INostrService {
   }
 
   Stream<sdk.Event> discoverRelaysFromEvents(List<sdk.Event> events) {
-    return Stream.empty();
+    return const Stream.empty();
   }
 
   Future<void> connectToRelay(String relayUrl) async {

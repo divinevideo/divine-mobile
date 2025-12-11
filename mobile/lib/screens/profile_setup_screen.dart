@@ -1189,9 +1189,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
+                content: const Text(
                   'Profile may not have updated correctly. Please check your profile and try again if needed.',
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: Colors.white),
                 ),
                 backgroundColor: Colors.red.shade700,
                 duration: const Duration(seconds: 5),

@@ -76,14 +76,14 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
         border: Border.all(color: VineTheme.vineGreen.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Icon(Icons.info_outline, color: VineTheme.vineGreen, size: 24),
-              const SizedBox(width: 12),
-              const Text(
+              SizedBox(width: 12),
+              Text(
                 'What are Nostr keys?',
                 style: TextStyle(
                   color: VineTheme.vineGreen,
@@ -93,8 +93,8 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const Text(
+          SizedBox(height: 12),
+          Text(
             'Your Nostr identity is a cryptographic key pair:\n\n'
             '• Your public key (npub) is like your username - share it freely\n'
             '• Your private key (nsec) is like your password - keep it secret!\n\n'

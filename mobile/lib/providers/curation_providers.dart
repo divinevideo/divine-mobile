@@ -46,7 +46,7 @@ class Curation extends _$Curation {
     // Initialize with empty state
     _initializeCuration();
 
-    return CurationState(editorsPicks: [], isLoading: true);
+    return const CurationState(editorsPicks: [], isLoading: true);
   }
 
   Future<void> _initializeCuration() async {

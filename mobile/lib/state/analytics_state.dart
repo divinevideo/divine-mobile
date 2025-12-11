@@ -22,5 +22,5 @@ sealed class AnalyticsState with _$AnalyticsState {
   const AnalyticsState._();
 
   /// Create initial state
-  static final AnalyticsState initial = AnalyticsState();
+  static final AnalyticsState initial = const AnalyticsState();
 }

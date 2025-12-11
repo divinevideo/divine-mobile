@@ -28,11 +28,11 @@ void main() {
       tester,
     ) async {
       // Create a mock recording state
-      final mockState = VineRecordingUIState(
+      final mockState = const VineRecordingUIState(
         recordingState: VineRecordingState.idle,
         progress: 0.0,
         totalRecordedDuration: Duration.zero,
-        remainingDuration: const Duration(seconds: 6),
+        remainingDuration: Duration(seconds: 6),
         canRecord: true,
         isCameraInitialized: true,
         canSwitchCamera: true,
@@ -62,7 +62,7 @@ void main() {
                   return Column(
                     children: [
                       if (!state.isRecording && !state.hasSegments)
-                        Text(kIsWeb ? 'Tap to record' : 'Hold to record'),
+                        const Text(kIsWeb ? 'Tap to record' : 'Hold to record'),
                     ],
                   );
                 },
@@ -212,11 +212,11 @@ void main() {
     });
 
     testWidgets('should hide hint when recording is active', (tester) async {
-      final mockState = VineRecordingUIState(
+      final mockState = const VineRecordingUIState(
         recordingState: VineRecordingState.recording,
         progress: 0.2,
-        totalRecordedDuration: const Duration(milliseconds: 500),
-        remainingDuration: const Duration(milliseconds: 5500),
+        totalRecordedDuration: Duration(milliseconds: 500),
+        remainingDuration: Duration(milliseconds: 5500),
         canRecord: false,
         isCameraInitialized: true,
         canSwitchCamera: false,
@@ -245,7 +245,7 @@ void main() {
                   return Column(
                     children: [
                       if (!state.isRecording && !state.hasSegments)
-                        Text(kIsWeb ? 'Tap to record' : 'Hold to record'),
+                        const Text(kIsWeb ? 'Tap to record' : 'Hold to record'),
                     ],
                   );
                 },
@@ -301,7 +301,7 @@ void main() {
                   return Column(
                     children: [
                       if (!state.isRecording && !state.hasSegments)
-                        Text(kIsWeb ? 'Tap to record' : 'Hold to record'),
+                        const Text(kIsWeb ? 'Tap to record' : 'Hold to record'),
                     ],
                   );
                 },

@@ -69,7 +69,7 @@ void main() async {
       name: 'EmbeddedRelayTest',
       category: LogCategory.relay,
     );
-    await Future.delayed(Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 2));
     final connectedRelaysAfter = embeddedRelay.connectedRelays;
     Log.info(
       '   Connected relays after wait: $connectedRelaysAfter',
@@ -84,7 +84,7 @@ void main() async {
     name: 'EmbeddedRelayTest',
     category: LogCategory.relay,
   );
-  final openFilter = embedded.Filter(
+  final openFilter = const embedded.Filter(
     kinds: [32222], // Video events
     limit: 5,
   );
@@ -182,7 +182,7 @@ void main() async {
   final subscription = embeddedRelay.subscribe(
     subscriptionId: subscriptionId,
     filters: [
-      embedded.Filter(kinds: [32222], limit: 5),
+      const embedded.Filter(kinds: [32222], limit: 5),
     ],
     onEvent: (event) {
       receivedCount++;
@@ -209,7 +209,7 @@ void main() async {
 
   // Wait for events with timeout
   try {
-    await completer.future.timeout(Duration(seconds: 5));
+    await completer.future.timeout(const Duration(seconds: 5));
     Log.info(
       '   ✅ Subscription received $receivedCount events',
       name: 'EmbeddedRelayTest',

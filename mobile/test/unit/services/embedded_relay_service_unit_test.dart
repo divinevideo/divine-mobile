@@ -100,7 +100,7 @@ void main() {
     test('service can handle auth timeout setting', () {
       // Should not throw - method is no-op for embedded relay
       expect(
-        () => embeddedRelayService.setAuthTimeout(Duration(seconds: 30)),
+        () => embeddedRelayService.setAuthTimeout(const Duration(seconds: 30)),
         returnsNormally,
       );
     });

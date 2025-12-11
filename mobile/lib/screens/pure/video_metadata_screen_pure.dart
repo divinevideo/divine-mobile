@@ -1310,11 +1310,11 @@ Video: ${_currentDraft?.videoFile.path ?? 'Unknown'}
                   context: context,
                   builder: (context) => AlertDialog(
                     backgroundColor: Colors.grey[900],
-                    title: Row(
+                    title: const Row(
                       children: [
-                        const Icon(Icons.bug_report, color: Colors.red),
-                        const SizedBox(width: 8),
-                        const Expanded(
+                        Icon(Icons.bug_report, color: Colors.red),
+                        SizedBox(width: 8),
+                        Expanded(
                           child: Text(
                             'Error Details',
                             style: TextStyle(color: Colors.white),

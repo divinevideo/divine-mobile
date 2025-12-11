@@ -53,7 +53,7 @@ void main() async {
   );
 
   // Wait for connection to stabilize
-  await Future.delayed(Duration(milliseconds: 500));
+  await Future.delayed(const Duration(milliseconds: 500));
 
   // Test 1: Basic REQ without divine extensions (baseline)
   print('━━━ TEST 1: Standard REQ (no divine extensions) ━━━');
@@ -68,11 +68,11 @@ void main() async {
   print('📤 Sending: $standardReq\n');
   ws.add(standardReq);
 
-  await Future.delayed(Duration(seconds: 3));
+  await Future.delayed(const Duration(seconds: 3));
 
   // Close standard subscription
   ws.add(json.encode(['CLOSE', 'test_standard']));
-  await Future.delayed(Duration(milliseconds: 500));
+  await Future.delayed(const Duration(milliseconds: 500));
 
   // Test 2: REQ with divine extensions (sort by loop_count)
   print('\n━━━ TEST 2: Divine Extensions REQ (sort by loop_count) ━━━');
@@ -88,11 +88,11 @@ void main() async {
   print('📤 Sending: $divineReq\n');
   ws.add(divineReq);
 
-  await Future.delayed(Duration(seconds: 3));
+  await Future.delayed(const Duration(seconds: 3));
 
   // Close divine subscription
   ws.add(json.encode(['CLOSE', 'test_divine']));
-  await Future.delayed(Duration(milliseconds: 500));
+  await Future.delayed(const Duration(milliseconds: 500));
 
   // Test 3: REQ with int# filter
   print('\n━━━ TEST 3: Divine Extensions with int# filter ━━━');
@@ -111,11 +111,11 @@ void main() async {
   print('📤 Sending: $intFilterReq\n');
   ws.add(intFilterReq);
 
-  await Future.delayed(Duration(seconds: 3));
+  await Future.delayed(const Duration(seconds: 3));
 
   // Close int filter subscription
   ws.add(json.encode(['CLOSE', 'test_int_filter']));
-  await Future.delayed(Duration(milliseconds: 500));
+  await Future.delayed(const Duration(milliseconds: 500));
 
   // Cleanup
   print('\n🧹 Closing connection...');

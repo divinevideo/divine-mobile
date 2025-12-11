@@ -73,7 +73,7 @@ void main() {
         // ACT: Wait for initialization
         container.read(curationProvider);
         // Wait for initialization
-        await Future.delayed(Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 50));
 
         final stateAfterInit = container.read(curationProvider);
         expect(
@@ -156,7 +156,7 @@ void main() {
 
         // ACT: Initialize and wait for async work
         container.read(curationProvider);
-        await Future.delayed(Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 50));
 
         final stateBeforeNav = container.read(curationProvider);
         expect(

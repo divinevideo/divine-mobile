@@ -70,7 +70,7 @@ void main() {
       );
 
       // Wait for connection to stabilize
-      await Future.delayed(Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 3));
 
       subscriptionManager = SubscriptionManager(nostrService);
     });
@@ -140,7 +140,7 @@ void main() {
 
         // Wait for events with reasonable timeout
         try {
-          await completer.future.timeout(Duration(seconds: 15));
+          await completer.future.timeout(const Duration(seconds: 15));
         } catch (e) {
           Log.warning(
             '⏰ TDD: Timeout waiting for events from SubscriptionManager',
@@ -211,7 +211,7 @@ void main() {
         );
 
         try {
-          await directCompleter.future.timeout(Duration(seconds: 15));
+          await directCompleter.future.timeout(const Duration(seconds: 15));
         } catch (e) {
           Log.warning(
             '⏰ TDD: Timeout waiting for direct events',

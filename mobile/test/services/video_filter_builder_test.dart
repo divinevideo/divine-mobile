@@ -153,8 +153,8 @@ void main() {
           relayUrl: testRelayUrl,
           sortBy: VideoSortField.likes,
           intFilters: {
-            'likes': IntRangeFilter(gte: 50, lte: 500),
-            'loop_count': IntRangeFilter(gte: 1000),
+            'likes': const IntRangeFilter(gte: 50, lte: 500),
+            'loop_count': const IntRangeFilter(gte: 1000),
           },
         );
 
@@ -280,7 +280,7 @@ void main() {
           relayUrl: testRelayUrl,
           sortBy: VideoSortField.loopCount,
           intFilters: {
-            'views': IntRangeFilter(gte: 500), // Not supported!
+            'views': const IntRangeFilter(gte: 500), // Not supported!
           },
         );
 

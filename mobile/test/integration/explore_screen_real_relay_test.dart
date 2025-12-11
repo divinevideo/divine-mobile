@@ -118,7 +118,7 @@ void main() {
                 () => TabVisibility()..setActiveTab(2),
               ), // Explore tab active
             ],
-            child: MaterialApp(home: Scaffold(body: ExploreScreen())),
+            child: const MaterialApp(home: Scaffold(body: ExploreScreen())),
           ),
         );
 
@@ -211,7 +211,7 @@ void main() {
                 () => TabVisibility()..setActiveTab(0),
               ), // Feed tab active
             ],
-            child: MaterialApp(home: Scaffold(body: ExploreScreen())),
+            child: const MaterialApp(home: Scaffold(body: ExploreScreen())),
           ),
         );
 
@@ -229,7 +229,7 @@ void main() {
                 () => TabVisibility()..setActiveTab(2),
               ), // Explore tab now active
             ],
-            child: MaterialApp(home: Scaffold(body: ExploreScreen())),
+            child: const MaterialApp(home: Scaffold(body: ExploreScreen())),
           ),
         );
 

@@ -72,7 +72,7 @@ void main() {
       socialNotifier.updateFollowingList(['pubkey1', 'pubkey2', 'pubkey3']);
 
       // Wait for initial build
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // HomeFeed should reflect the social state
       final socialState = container.read(social.socialProvider);
@@ -107,7 +107,7 @@ void main() {
       socialNotifier.updateFollowingList(['pubkey1', 'pubkey2']);
 
       // Wait for the rebuild to propagate
-      await Future.delayed(Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 500));
 
       // Should have triggered at least one rebuild
       // Note: Due to async nature, the rebuild might not always be caught
@@ -130,7 +130,7 @@ void main() {
 
         // Set initial state
         socialNotifier.updateFollowingList(['pubkey1']);
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         int rebuildCount = 0;
         container.listen<AsyncValue<VideoFeedState>>(homeFeedProvider, (
@@ -143,7 +143,7 @@ void main() {
         // Update follower stats (should not trigger HomeFeed rebuild ideally,
         // but with current implementation it might since we watch the whole provider)
         socialNotifier.updateFollowerStats('somepubkey', {'followers': 100});
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         // Note: With the current ref.watch(socialProvider) implementation,
         // this WILL rebuild HomeFeed. To optimize further, we'd need to use

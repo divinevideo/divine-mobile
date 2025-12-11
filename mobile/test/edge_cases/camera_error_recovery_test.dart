@@ -78,7 +78,7 @@ void main() {
             expect(e.toString(), contains('Camera'));
             break;
           }
-          await Future.delayed(Duration(seconds: 1));
+          await Future.delayed(const Duration(seconds: 1));
         }
       }
 
@@ -164,7 +164,7 @@ void main() {
 
       await controller.initialize();
       await controller.startRecording();
-      await Future.delayed(Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 500));
       await controller.stopRecording();
 
       // finishRecording should handle non-existent file gracefully
@@ -214,7 +214,7 @@ void main() {
       await controller.startRecording();
 
       // Wait for auto-stop at max duration (6.3 seconds)
-      await Future.delayed(Duration(seconds: 7));
+      await Future.delayed(const Duration(seconds: 7));
 
       // Should have auto-stopped
       expect(
@@ -259,7 +259,7 @@ void main() {
       // Rapid start/stop cycles
       for (int i = 0; i < 20; i++) {
         await controller.startRecording();
-        await Future.delayed(Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 50));
         await controller.stopRecording();
       }
 

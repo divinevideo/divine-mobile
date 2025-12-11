@@ -51,7 +51,7 @@ void main() {
         final onComplete =
             invocation.namedArguments[const Symbol('onComplete')]
                 as void Function();
-        Future.delayed(Duration(milliseconds: 10), onComplete);
+        Future.delayed(const Duration(milliseconds: 10), onComplete);
         return 'test-subscription-id';
       });
 

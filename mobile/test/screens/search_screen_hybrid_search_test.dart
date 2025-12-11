@@ -498,6 +498,6 @@ void main() {
 
 extension StreamToAsyncValue on Stream<List<VideoEvent>> {
   AsyncValue<List<VideoEvent>> asyncValue() {
-    return AsyncValue.data(const []);
+    return const AsyncValue.data([]);
   }
 }

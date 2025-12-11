@@ -178,7 +178,7 @@ void main() {
 
       // Act
       fakeNostrService.injectEvent(reactionEvent);
-      await Future.delayed(Duration(milliseconds: 200)); // Let handlers run
+      await Future.delayed(const Duration(milliseconds: 200)); // Let handlers run
 
       // Assert
       expect(service.notifications.length, 1);
@@ -202,7 +202,7 @@ void main() {
 
       // Act
       fakeNostrService.injectEvent(reactionEvent);
-      await Future.delayed(Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 200));
 
       // Assert
       expect(service.notifications, isEmpty);
@@ -220,7 +220,7 @@ void main() {
 
       // Act
       fakeNostrService.injectEvent(reactionEvent);
-      await Future.delayed(Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 200));
 
       // Assert
       expect(service.notifications, isEmpty);
@@ -273,7 +273,7 @@ void main() {
 
       // Act
       fakeNostrService.injectEvent(commentEvent);
-      await Future.delayed(Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 200));
 
       // Assert
       expect(service.notifications.length, 1);
@@ -306,7 +306,7 @@ void main() {
 
       // Act
       fakeNostrService.injectEvent(followEvent);
-      await Future.delayed(Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 200));
 
       // Assert
       expect(service.notifications.length, 1);
@@ -338,9 +338,9 @@ void main() {
 
       // Act - inject same event twice
       fakeNostrService.injectEvent(followEvent);
-      await Future.delayed(Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 200));
       fakeNostrService.injectEvent(followEvent);
-      await Future.delayed(Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 200));
 
       // Assert - only one notification
       expect(service.notifications.length, 1);
@@ -366,7 +366,7 @@ void main() {
       final followEvent = Event(actorPubkey, 3, [], '', createdAt: 1700000000);
 
       fakeNostrService.injectEvent(followEvent);
-      await Future.delayed(Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 200));
 
       expect(
         service.notifications,
@@ -417,9 +417,9 @@ void main() {
       );
 
       fakeNostrService.injectEvent(followEvent1);
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
       fakeNostrService.injectEvent(followEvent2);
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       expect(service.notifications.length, 2);
       expect(service.unreadCount, 2);
@@ -452,7 +452,7 @@ void main() {
       final followEvent = Event(actorPubkey, 3, [], '', createdAt: 1700000000);
 
       fakeNostrService.injectEvent(followEvent);
-      await Future.delayed(Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 200));
 
       expect(service.notifications, isNotEmpty);
 
@@ -484,7 +484,7 @@ void main() {
 
         final followEvent1 = Event(pubkey1, 3, [], '', createdAt: 1700000000);
         fakeNostrService.injectEvent(followEvent1);
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         expect(
           service.notifications,
@@ -510,7 +510,7 @@ void main() {
 
         final followEvent2 = Event(pubkey2, 3, [], '', createdAt: 1700000001);
         fakeNostrService.injectEvent(followEvent2);
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         expect(service.notifications.last.actorName, 'DisplayValue');
 
@@ -531,7 +531,7 @@ void main() {
 
         final followEvent3 = Event(pubkey3, 3, [], '', createdAt: 1700000002);
         fakeNostrService.injectEvent(followEvent3);
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         expect(service.notifications.last.actorName, 'username');
 
@@ -542,7 +542,7 @@ void main() {
 
         final followEvent4 = Event(pubkey4, 3, [], '', createdAt: 1700000003);
         fakeNostrService.injectEvent(followEvent4);
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         expect(service.notifications.last.actorName, 'Unknown user');
       },

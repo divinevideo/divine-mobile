@@ -27,7 +27,7 @@ void main() {
         'should throw NIP94ValidationException for invalid metadata',
         () async {
           // Arrange - Create invalid metadata (empty sha256Hash)
-          final invalidMetadata = NIP94Metadata(
+          final invalidMetadata = const NIP94Metadata(
             url: 'https://example.com/video.mp4',
             mimeType: 'video/mp4',
             sha256Hash: '', // Invalid - empty hash
@@ -48,7 +48,7 @@ void main() {
 
       test('should throw StateError when no keys available', () async {
         // Arrange - Valid metadata but no keys
-        final validMetadata = NIP94Metadata(
+        final validMetadata = const NIP94Metadata(
           url: 'https://example.com/video.mp4',
           mimeType: 'video/mp4',
           sha256Hash:
@@ -80,7 +80,7 @@ void main() {
           final publicKey = getPublicKey(privateKey);
           nostrService.setCurrentUserPubkey(publicKey);
 
-          final metadata = NIP94Metadata(
+          final metadata = const NIP94Metadata(
             url: 'https://example.com/video.mp4',
             mimeType: 'video/mp4',
             sha256Hash:
@@ -132,7 +132,7 @@ void main() {
         final publicKey = getPublicKey(privateKey);
         nostrService.setCurrentUserPubkey(publicKey);
 
-        final metadata = NIP94Metadata(
+        final metadata = const NIP94Metadata(
           url: 'https://example.com/video.mp4',
           mimeType: 'video/mp4',
           sha256Hash:
@@ -179,7 +179,7 @@ void main() {
         final publicKey = getPublicKey(privateKey);
         nostrService.setCurrentUserPubkey(publicKey);
 
-        final metadata = NIP94Metadata(
+        final metadata = const NIP94Metadata(
           url: 'https://example.com/video.mp4',
           mimeType: 'video/mp4',
           sha256Hash:
@@ -206,7 +206,7 @@ void main() {
         final publicKey = getPublicKey(privateKey);
         nostrService.setCurrentUserPubkey(publicKey);
 
-        final metadata = NIP94Metadata(
+        final metadata = const NIP94Metadata(
           url: 'https://example.com/video.mp4',
           mimeType: 'video/mp4',
           sha256Hash:
@@ -237,7 +237,7 @@ void main() {
         final publicKey = getPublicKey(privateKey);
         nostrService.setCurrentUserPubkey(publicKey);
 
-        final minimalMetadata = NIP94Metadata(
+        final minimalMetadata = const NIP94Metadata(
           url: 'https://example.com/minimal.mp4',
           mimeType: 'video/mp4',
           sha256Hash:
@@ -276,7 +276,7 @@ void main() {
         final publicKey = getPublicKey(privateKey);
         nostrService.setCurrentUserPubkey(publicKey);
 
-        final metadata = NIP94Metadata(
+        final metadata = const NIP94Metadata(
           url: 'https://example.com/video.mp4',
           mimeType: 'video/mp4',
           sha256Hash:
@@ -302,7 +302,7 @@ void main() {
 
       test('should validate all metadata fields before publishing', () async {
         // Arrange - Invalid hash length
-        final invalidHashMetadata = NIP94Metadata(
+        final invalidHashMetadata = const NIP94Metadata(
           url: 'https://example.com/video.mp4',
           mimeType: 'video/mp4',
           sha256Hash: 'invalid_hash', // Invalid - wrong length

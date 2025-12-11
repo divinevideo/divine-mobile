@@ -27,7 +27,7 @@ void main() {
           const plainText = 'This is plain text without hashtags';
 
           await tester.pumpWidget(
-            MaterialApp(
+            const MaterialApp(
               home: Scaffold(body: ClickableHashtagText(text: plainText)),
             ),
           );
@@ -50,7 +50,7 @@ void main() {
         const textWithHashtag = 'Check out this #vine video';
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(body: ClickableHashtagText(text: textWithHashtag)),
           ),
         );
@@ -73,7 +73,7 @@ void main() {
         const textWithHashtag = 'Text #hashtag more text';
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(body: ClickableHashtagText(text: textWithHashtag)),
           ),
         );
@@ -106,7 +106,7 @@ void main() {
         const textWithHashtags = '#first and #second hashtags';
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(body: ClickableHashtagText(text: textWithHashtags)),
           ),
         );
@@ -129,7 +129,7 @@ void main() {
         const testStyle = TextStyle(fontSize: 16, color: Colors.red);
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: ClickableHashtagText(text: 'Plain text', style: testStyle),
             ),
@@ -146,7 +146,7 @@ void main() {
         const hashtagStyle = TextStyle(fontSize: 18, color: Colors.green);
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: ClickableHashtagText(
                 text: 'Text with #hashtag',
@@ -171,7 +171,7 @@ void main() {
         tester,
       ) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: ClickableHashtagText(text: 'Text with #hashtag'),
             ),
@@ -196,7 +196,7 @@ void main() {
             'This is very long text with #hashtag that should wrap multiple lines';
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: SizedBox(
                 width: 200, // Force text wrapping
@@ -253,7 +253,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             navigatorObservers: [mockObserver],
-            home: Scaffold(body: ClickableHashtagText(text: 'Check out #test')),
+            home: const Scaffold(body: ClickableHashtagText(text: 'Check out #test')),
           ),
         );
 
@@ -321,7 +321,7 @@ void main() {
     group('Edge Cases', () {
       testWidgets('handles empty text', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(body: ClickableHashtagText(text: '')),
           ),
         );
@@ -332,7 +332,7 @@ void main() {
 
       testWidgets('handles text with only spaces', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(body: ClickableHashtagText(text: '   ')),
           ),
         );
@@ -345,7 +345,7 @@ void main() {
         tester,
       ) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: ClickableHashtagText(text: 'Test #vine_2024 and #test_123'),
             ),
@@ -363,7 +363,7 @@ void main() {
 
       testWidgets('handles consecutive hashtags', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: ClickableHashtagText(text: '#first#second hashtags'),
             ),
@@ -381,7 +381,7 @@ void main() {
 
       testWidgets('ignores hashtags in URLs', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: ClickableHashtagText(
                 text: 'Visit https://example.com/#anchor not a hashtag',
@@ -403,7 +403,7 @@ void main() {
 
       testWidgets('handles single hashtag character', (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(
               body: ClickableHashtagText(text: 'Just a # character'),
             ),
@@ -431,7 +431,7 @@ void main() {
         );
 
         await tester.pumpWidget(
-          MaterialApp(
+          const MaterialApp(
             home: Scaffold(body: ClickableHashtagText(text: textWithHashtags)),
           ),
         );

@@ -92,7 +92,7 @@ Future<String> createTestCacheDatabase(
       'key': entry['key']!,
       'relativePath': entry['relativePath']!,
       'validTill': DateTime.now()
-          .add(Duration(days: 30))
+          .add(const Duration(days: 30))
           .millisecondsSinceEpoch,
       'touched': DateTime.now().millisecondsSinceEpoch,
     });

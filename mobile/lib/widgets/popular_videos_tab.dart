@@ -254,12 +254,12 @@ class _PopularVideosEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.video_library, size: 64, color: VineTheme.secondaryText),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             'No videos in Popular Videos',
             style: TextStyle(
@@ -268,7 +268,7 @@ class _PopularVideosEmptyState extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             'Check back later for new content',
             style: TextStyle(color: VineTheme.secondaryText, fontSize: 14),
@@ -285,12 +285,12 @@ class _PopularVideosErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.error, size: 64, color: VineTheme.likeRed),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             'Failed to load trending videos',
             style: TextStyle(color: VineTheme.likeRed, fontSize: 18),
@@ -307,6 +307,6 @@ class _PopularVideosLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(child: CircularProgressIndicator(color: VineTheme.vineGreen));
+    return const Center(child: CircularProgressIndicator(color: VineTheme.vineGreen));
   }
 }

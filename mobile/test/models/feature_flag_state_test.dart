@@ -8,7 +8,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag_state.dart';
 void main() {
   group('FeatureFlagState', () {
     test('should store flag values', () {
-      final state = FeatureFlagState({
+      final state = const FeatureFlagState({
         FeatureFlag.newCameraUI: true,
         FeatureFlag.enhancedVideoPlayer: false,
       });
@@ -18,13 +18,13 @@ void main() {
     });
 
     test('should return false for undefined flags', () {
-      final state = FeatureFlagState({});
+      final state = const FeatureFlagState({});
       expect(state.isEnabled(FeatureFlag.newCameraUI), isFalse);
       expect(state.isEnabled(FeatureFlag.debugTools), isFalse);
     });
 
     test('should be immutable', () {
-      final state1 = FeatureFlagState({});
+      final state1 = const FeatureFlagState({});
       final state2 = state1.copyWith(FeatureFlag.newCameraUI, true);
 
       expect(state1.isEnabled(FeatureFlag.newCameraUI), isFalse);
@@ -32,7 +32,7 @@ void main() {
     });
 
     test('should provide all flag values', () {
-      final state = FeatureFlagState({
+      final state = const FeatureFlagState({
         FeatureFlag.newCameraUI: true,
         FeatureFlag.enhancedVideoPlayer: false,
         FeatureFlag.debugTools: true,
@@ -45,7 +45,7 @@ void main() {
     });
 
     test('should handle copyWith for multiple flags', () {
-      final state1 = FeatureFlagState({FeatureFlag.newCameraUI: false});
+      final state1 = const FeatureFlagState({FeatureFlag.newCameraUI: false});
 
       final state2 = state1.copyWith(FeatureFlag.newCameraUI, true);
       final state3 = state2.copyWith(FeatureFlag.enhancedVideoPlayer, true);
@@ -59,17 +59,17 @@ void main() {
     });
 
     test('should support equality comparison', () {
-      final state1 = FeatureFlagState({
+      final state1 = const FeatureFlagState({
         FeatureFlag.newCameraUI: true,
         FeatureFlag.debugTools: false,
       });
 
-      final state2 = FeatureFlagState({
+      final state2 = const FeatureFlagState({
         FeatureFlag.newCameraUI: true,
         FeatureFlag.debugTools: false,
       });
 
-      final state3 = FeatureFlagState({
+      final state3 = const FeatureFlagState({
         FeatureFlag.newCameraUI: false,
         FeatureFlag.debugTools: false,
       });

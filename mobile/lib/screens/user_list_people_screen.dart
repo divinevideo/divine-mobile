@@ -52,7 +52,7 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
                   if (widget.userList.description != null)
                     Text(
                       widget.userList.description!,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: VineTheme.secondaryText,
                         fontSize: 12,
                       ),
@@ -64,12 +64,12 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
             )
           : null,
       body: widget.userList.pubkeys.isEmpty
-          ? Center(
+          ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.group, size: 64, color: VineTheme.secondaryText),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Text(
                     'No people in this list',
                     style: TextStyle(
@@ -78,7 +78,7 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     'Add some people to get started',
                     style: TextStyle(
@@ -117,7 +117,7 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
           child: videosAsync.when(
             data: (videos) {
               if (videos.isEmpty) {
-                return Center(
+                return const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -126,7 +126,7 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
                         size: 64,
                         color: VineTheme.secondaryText,
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       Text(
                         'No videos yet',
                         style: TextStyle(
@@ -135,7 +135,7 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Text(
                         'Videos from list members will appear here',
                         style: TextStyle(
@@ -165,7 +165,7 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
                     userListMemberVideosProvider(widget.userList.pubkeys),
                   );
                 },
-                emptyBuilder: () => Center(
+                emptyBuilder: () => const Center(
                   child: Text(
                     'No videos available',
                     style: TextStyle(color: VineTheme.secondaryText),
@@ -173,23 +173,23 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
                 ),
               );
             },
-            loading: () => Center(
+            loading: () => const Center(
               child: CircularProgressIndicator(color: VineTheme.vineGreen),
             ),
             error: (error, stack) => Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error, size: 64, color: VineTheme.likeRed),
+                  const Icon(Icons.error, size: 64, color: VineTheme.likeRed),
                   const SizedBox(height: 16),
-                  Text(
+                  const Text(
                     'Failed to load videos',
                     style: TextStyle(color: VineTheme.likeRed, fontSize: 18),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     error.toString(),
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: VineTheme.secondaryText,
                       fontSize: 12,
                     ),
@@ -266,7 +266,7 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
     return videosAsync.when(
       data: (videos) {
         if (videos.isEmpty || _activeVideoIndex! >= videos.length) {
-          return Center(
+          return const Center(
             child: Text(
               'Video not available',
               style: TextStyle(color: VineTheme.secondaryText),
@@ -350,7 +350,7 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
                             if (widget.userList.description != null)
                               Text(
                                 widget.userList.description!,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: VineTheme.secondaryText,
                                   fontSize: 12,
                                 ),
@@ -388,8 +388,8 @@ class _UserListPeopleScreenState extends ConsumerState<UserListPeopleScreen> {
         );
       },
       loading: () =>
-          Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
-      error: (error, stack) => Center(
+          const Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
+      error: (error, stack) => const Center(
         child: Text(
           'Error loading videos',
           style: TextStyle(color: VineTheme.likeRed),

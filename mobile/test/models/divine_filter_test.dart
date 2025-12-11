@@ -12,7 +12,7 @@ void main() {
       test('includes sort configuration in JSON', () {
         final filter = DivineFilter(
           baseFilter: Filter(kinds: [34236], limit: 50),
-          sort: SortConfig(field: 'loop_count', direction: SortDirection.desc),
+          sort: const SortConfig(field: 'loop_count', direction: SortDirection.desc),
         );
 
         final json = filter.toJson();
@@ -26,8 +26,8 @@ void main() {
         final filter = DivineFilter(
           baseFilter: Filter(kinds: [34236]),
           intFilters: {
-            'loop_count': IntRangeFilter(gte: 1000),
-            'likes': IntRangeFilter(gte: 50, lte: 500),
+            'loop_count': const IntRangeFilter(gte: 1000),
+            'likes': const IntRangeFilter(gte: 50, lte: 500),
           },
         );
 
@@ -55,8 +55,8 @@ void main() {
             authors: ['pubkey123'],
             limit: 100,
           ),
-          sort: SortConfig(field: 'likes', direction: SortDirection.asc),
-          intFilters: {'views': IntRangeFilter(gte: 500)},
+          sort: const SortConfig(field: 'likes', direction: SortDirection.asc),
+          intFilters: {'views': const IntRangeFilter(gte: 500)},
           cursor: 'pagination_cursor',
         );
 
@@ -83,7 +83,7 @@ void main() {
 
     group('IntRangeFilter', () {
       test('supports all range operators', () {
-        final filter = IntRangeFilter(gte: 10, lte: 100, gt: 5, lt: 105);
+        final filter = const IntRangeFilter(gte: 10, lte: 100, gt: 5, lt: 105);
 
         final json = filter.toJson();
 
@@ -94,7 +94,7 @@ void main() {
       });
 
       test('omits null operators', () {
-        final filter = IntRangeFilter(gte: 100);
+        final filter = const IntRangeFilter(gte: 100);
 
         final json = filter.toJson();
 
@@ -107,7 +107,7 @@ void main() {
 
     group('SortConfig', () {
       test('defaults to descending direction', () {
-        final sort = SortConfig(field: 'loop_count');
+        final sort = const SortConfig(field: 'loop_count');
 
         final json = sort.toJson();
 
@@ -116,7 +116,7 @@ void main() {
       });
 
       test('supports ascending direction', () {
-        final sort = SortConfig(
+        final sort = const SortConfig(
           field: 'created_at',
           direction: SortDirection.asc,
         );
@@ -132,8 +132,8 @@ void main() {
       test('creates copy with updated cursor', () {
         final original = DivineFilter(
           baseFilter: Filter(kinds: [34236]),
-          sort: SortConfig(field: 'loop_count'),
-          intFilters: {'likes': IntRangeFilter(gte: 50)},
+          sort: const SortConfig(field: 'loop_count'),
+          intFilters: {'likes': const IntRangeFilter(gte: 50)},
         );
 
         final withCursor = original.withCursor('new_cursor_value');
@@ -249,10 +249,10 @@ void main() {
       test('popular hashtag videos', () {
         final filter = DivineFilter(
           baseFilter: Filter(kinds: [34236], t: ['comedy'], limit: 20),
-          sort: SortConfig(field: 'likes', direction: SortDirection.desc),
+          sort: const SortConfig(field: 'likes', direction: SortDirection.desc),
           intFilters: {
-            'likes': IntRangeFilter(gte: 50),
-            'loop_count': IntRangeFilter(gte: 1000),
+            'likes': const IntRangeFilter(gte: 50),
+            'loop_count': const IntRangeFilter(gte: 1000),
           },
         );
 

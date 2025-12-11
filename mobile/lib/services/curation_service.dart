@@ -960,7 +960,7 @@ class CurationService {
         name: 'CurationService',
         category: LogCategory.system,
       );
-      return CurationPublishResult(
+      return const CurationPublishResult(
         success: false,
         successCount: 0,
         totalRelays: 0,
@@ -1004,7 +1004,7 @@ class CurationService {
           lastFailureReason: 'Failed to create and sign event',
         );
 
-        return CurationPublishResult(
+        return const CurationPublishResult(
           success: false,
           successCount: 0,
           totalRelays: 0,
@@ -1036,7 +1036,7 @@ class CurationService {
           lastFailureReason: 'Timeout after 5 seconds',
         );
 
-        return CurationPublishResult(
+        return const CurationPublishResult(
           success: false,
           successCount: 0,
           totalRelays: 0,

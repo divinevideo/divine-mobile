@@ -421,18 +421,18 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
 
   Widget _buildVideosTab() {
     if (_isSearching) {
-      return Center(
+      return const Center(
         child: CircularProgressIndicator(color: VineTheme.vineGreen),
       );
     }
 
     if (_currentQuery.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.search, size: 64, color: VineTheme.secondaryText),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               'Search for videos',
               style: TextStyle(color: VineTheme.primaryText, fontSize: 18),
@@ -457,7 +457,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
               color: VineTheme.cardBackground,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Row(
+            child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 SizedBox(
@@ -468,7 +468,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
                     color: VineTheme.vineGreen,
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Text(
                   'Searching servers...',
                   style: TextStyle(color: VineTheme.whiteText),
@@ -497,7 +497,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.video_library,
                     size: 64,
                     color: VineTheme.secondaryText,
@@ -507,7 +507,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
                     _isSearchingExternal
                         ? 'Searching servers for "$_currentQuery"...'
                         : 'No videos found for "$_currentQuery"',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: VineTheme.primaryText,
                       fontSize: 18,
                     ),
@@ -523,18 +523,18 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
 
   Widget _buildUsersTab() {
     if (_isSearching) {
-      return Center(
+      return const Center(
         child: CircularProgressIndicator(color: VineTheme.vineGreen),
       );
     }
 
     if (_currentQuery.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.people, size: 64, color: VineTheme.secondaryText),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               'Search for users',
               style: TextStyle(color: VineTheme.primaryText, fontSize: 18),
@@ -553,11 +553,11 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person_off, size: 64, color: VineTheme.secondaryText),
+            const Icon(Icons.person_off, size: 64, color: VineTheme.secondaryText),
             const SizedBox(height: 16),
             Text(
               'No users found for "$_currentQuery"',
-              style: TextStyle(color: VineTheme.primaryText, fontSize: 18),
+              style: const TextStyle(color: VineTheme.primaryText, fontSize: 18),
             ),
           ],
         ),
@@ -610,18 +610,18 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
 
   Widget _buildHashtagsTab() {
     if (_isSearching) {
-      return Center(
+      return const Center(
         child: CircularProgressIndicator(color: VineTheme.vineGreen),
       );
     }
 
     if (_currentQuery.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.tag, size: 64, color: VineTheme.secondaryText),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               'Search for hashtags',
               style: TextStyle(color: VineTheme.primaryText, fontSize: 18),
@@ -640,11 +640,11 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.tag_outlined, size: 64, color: VineTheme.secondaryText),
+            const Icon(Icons.tag_outlined, size: 64, color: VineTheme.secondaryText),
             const SizedBox(height: 16),
             Text(
               'No hashtags found for "$_currentQuery"',
-              style: TextStyle(color: VineTheme.primaryText, fontSize: 18),
+              style: const TextStyle(color: VineTheme.primaryText, fontSize: 18),
             ),
           ],
         ),
@@ -659,15 +659,15 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
         return Card(
           color: VineTheme.cardBackground,
           child: ListTile(
-            leading: Icon(Icons.tag, color: VineTheme.vineGreen),
+            leading: const Icon(Icons.tag, color: VineTheme.vineGreen),
             title: Text(
               '#$hashtag',
-              style: TextStyle(
+              style: const TextStyle(
                 color: VineTheme.primaryText,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            subtitle: Text(
+            subtitle: const Text(
               'Tap to view videos with this hashtag',
               style: TextStyle(color: VineTheme.secondaryText),
             ),

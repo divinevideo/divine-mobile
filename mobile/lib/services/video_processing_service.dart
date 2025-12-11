@@ -108,7 +108,7 @@ class VideoProcessingService {
               name: 'VideoProcessingService',
               category: LogCategory.video,
             );
-            return VideoProcessingResult(
+            return const VideoProcessingResult(
               success: false,
               errorMessage: 'Invalid blob descriptor format from server',
             );

@@ -301,9 +301,9 @@ class _NotificationSettingsScreenState
     ),
   );
 
-  Widget _buildInfoCard() => Card(
+  Widget _buildInfoCard() => const Card(
     color: VineTheme.cardBackground,
-    child: const Padding(
+    child: Padding(
       padding: EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

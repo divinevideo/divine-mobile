@@ -89,7 +89,7 @@ void main() {
     final c = ProviderContainer(
       overrides: [
         videosForProfileRouteProvider.overrideWith((ref) {
-          return AsyncValue.data(
+          return const AsyncValue.data(
             VideoFeedState(
               videos: [],
               hasMoreContent: false,

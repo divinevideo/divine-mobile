@@ -63,7 +63,7 @@ void main() {
 
       // Test the trace wrapper
       final result = await service.trace('test_operation', () async {
-        await Future.delayed(Duration(milliseconds: 10));
+        await Future.delayed(const Duration(milliseconds: 10));
         return 'success';
       });
 

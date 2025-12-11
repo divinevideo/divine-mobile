@@ -46,7 +46,7 @@ void main() {
             overrides: [
               uploadManagerProvider.overrideWith((ref) => mockUploadManager),
             ],
-            child: MaterialApp(
+            child: const MaterialApp(
               home: Scaffold(
                 body: VideoProcessingStatusWidget(uploadId: 'test_upload_123'),
               ),
@@ -88,7 +88,7 @@ void main() {
             overrides: [
               uploadManagerProvider.overrideWith((ref) => mockUploadManager),
             ],
-            child: MaterialApp(
+            child: const MaterialApp(
               home: Scaffold(
                 body: VideoProcessingStatusWidget(uploadId: 'test_upload_456'),
               ),
@@ -131,7 +131,7 @@ void main() {
           overrides: [
             uploadManagerProvider.overrideWith((ref) => mockUploadManager),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             home: Scaffold(
               body: VideoProcessingStatusWidget(uploadId: 'test_upload_789'),
             ),
@@ -172,7 +172,7 @@ void main() {
           overrides: [
             uploadManagerProvider.overrideWith((ref) => mockUploadManager),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             home: Scaffold(
               body: VideoProcessingStatusWidget(uploadId: 'test_upload_error'),
             ),
@@ -213,7 +213,7 @@ void main() {
           overrides: [
             uploadManagerProvider.overrideWith((ref) => mockUploadManager),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             home: Scaffold(
               body: VideoProcessingStatusWidget(uploadId: 'dynamic_upload'),
             ),
@@ -248,7 +248,7 @@ void main() {
           overrides: [
             uploadManagerProvider.overrideWith((ref) => mockUploadManager),
           ],
-          child: MaterialApp(
+          child: const MaterialApp(
             home: Scaffold(
               body: VideoProcessingStatusWidget(uploadId: 'dynamic_upload'),
             ),

@@ -41,14 +41,14 @@ void main() {
             Log.info('Connected to ${connected.length} relay(s)', name: 'Test');
             break;
           }
-          await Future.delayed(Duration(milliseconds: 100));
+          await Future.delayed(const Duration(milliseconds: 100));
         }
 
         // Subscribe to kind 34236 events (NIP-71 kind 34236 addressable video events)
         Log.info('📹 Subscribing to kind 34236 events...', name: 'Test');
 
         // First batch - get most recent videos
-        final filter1 = embedded.Filter(kinds: [34236], limit: 10);
+        final filter1 = const embedded.Filter(kinds: [34236], limit: 10);
 
         final events1 = <embedded.NostrEvent>[];
         final completer1 = Completer<void>();
@@ -72,7 +72,7 @@ void main() {
 
         // Wait for events with timeout
         await completer1.future.timeout(
-          Duration(seconds: 10),
+          const Duration(seconds: 10),
           onTimeout: () {
             Log.info(
               'Timeout waiting for first batch (got ${events1.length} events)',
@@ -134,7 +134,7 @@ void main() {
           );
 
           await completer2.future.timeout(
-            Duration(seconds: 10),
+            const Duration(seconds: 10),
             onTimeout: () {
               Log.info(
                 'Timeout waiting for second batch (got ${events2.length} events)',
@@ -170,7 +170,7 @@ void main() {
 
         Log.info('🎉 Test completed successfully!', name: 'Test');
       },
-      timeout: Timeout(Duration(seconds: 30)),
+      timeout: const Timeout(Duration(seconds: 30)),
     );
   });
 }

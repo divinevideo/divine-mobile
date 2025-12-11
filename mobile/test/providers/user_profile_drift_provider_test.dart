@@ -52,7 +52,7 @@ void main() {
       );
 
       // Wait for initial value
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // Should be AsyncData with null value
       final state = listener.read();
@@ -84,7 +84,7 @@ void main() {
       );
 
       // Wait for stream to emit
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       // Should have profile data
       final state = listener.read();
@@ -109,7 +109,7 @@ void main() {
       });
 
       // Wait for initial null
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
       expect(updates.length, greaterThanOrEqualTo(1));
       expect(updates.first, isNull);
 
@@ -124,7 +124,7 @@ void main() {
       await testDb.userProfilesDao.upsertProfile(profile1);
 
       // Wait for update
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
       expect(updates.length, greaterThanOrEqualTo(2));
       expect(updates.last?.displayName, 'First Name');
 
@@ -139,7 +139,7 @@ void main() {
       await testDb.userProfilesDao.upsertProfile(profile2);
 
       // Wait for update
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
       expect(updates.length, greaterThanOrEqualTo(3));
       expect(updates.last?.displayName, 'Updated Name');
 

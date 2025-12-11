@@ -432,10 +432,10 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
               ],
             );
           },
-          onLoading: () => Center(
+          onLoading: () => const Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 CircularProgressIndicator(color: VineTheme.vineGreen),
                 SizedBox(height: 24),
                 Text(
@@ -460,10 +460,10 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
           onError: (error, stack) => Center(child: Text('Error: $error')),
         );
       },
-      onLoading: () => Center(
+      onLoading: () => const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             CircularProgressIndicator(color: VineTheme.vineGreen),
             SizedBox(height: 24),
             Text(
@@ -1119,13 +1119,13 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
   }
 
   Widget _buildLikedGrid(SocialService socialService) {
-    return CustomScrollView(
+    return const CustomScrollView(
       slivers: [
         SliverFillRemaining(
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 Icon(Icons.favorite_border, color: Colors.grey, size: 64),
                 SizedBox(height: 16),
                 Text(
@@ -1156,13 +1156,13 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
     return repostsAsync.when(
       data: (reposts) {
         if (reposts.isEmpty) {
-          return CustomScrollView(
+          return const CustomScrollView(
             slivers: [
               SliverFillRemaining(
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Icon(Icons.repeat, color: Colors.grey, size: 64),
                       SizedBox(height: 16),
                       Text(
@@ -1636,11 +1636,11 @@ class _BlockConfirmationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AlertDialog(
     backgroundColor: VineTheme.cardBackground,
-    title: Row(
+    title: const Row(
       children: [
         Icon(Icons.check_circle, color: VineTheme.vineGreen, size: 28),
-        const SizedBox(width: 12),
-        const Text(
+        SizedBox(width: 12),
+        Text(
           'User Blocked',
           style: TextStyle(color: VineTheme.whiteText),
         ),
@@ -1674,11 +1674,11 @@ class _BlockConfirmationDialog extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: VineTheme.vineGreen),
             ),
-            child: Row(
+            child: const Row(
               children: [
                 Icon(Icons.info_outline, color: VineTheme.vineGreen, size: 20),
-                const SizedBox(width: 8),
-                const Expanded(
+                SizedBox(width: 8),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1710,7 +1710,7 @@ class _BlockConfirmationDialog extends StatelessWidget {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: Text('Close', style: TextStyle(color: VineTheme.vineGreen)),
+        child: const Text('Close', style: TextStyle(color: VineTheme.vineGreen)),
       ),
     ],
   );

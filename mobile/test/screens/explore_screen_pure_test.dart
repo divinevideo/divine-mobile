@@ -32,13 +32,13 @@ void main() {
       test('ExploreScreen class should exist', () {
         // GREEN: Should now pass - class exists
         expect(() {
-          ExploreScreen();
+          const ExploreScreen();
         }, returnsNormally);
       });
 
       test('ExploreScreen should have constructor', () {
         // GREEN: Constructor works
-        final screen = ExploreScreen();
+        final screen = const ExploreScreen();
         expect(screen, isA<ConsumerStatefulWidget>());
       });
     });
@@ -149,7 +149,7 @@ void main() {
         await tester.pumpWidget(
           UncontrolledProviderScope(
             container: testContainer,
-            child: MaterialApp(home: ExploreScreen()),
+            child: const MaterialApp(home: ExploreScreen()),
           ),
         );
 

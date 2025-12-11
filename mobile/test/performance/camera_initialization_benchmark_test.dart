@@ -97,7 +97,7 @@ void main() {
         // Simulate 50 recording segments
         for (int i = 0; i < 50; i++) {
           await controller.startRecording();
-          await Future.delayed(Duration(milliseconds: 100));
+          await Future.delayed(const Duration(milliseconds: 100));
           await controller.stopRecording();
         }
 

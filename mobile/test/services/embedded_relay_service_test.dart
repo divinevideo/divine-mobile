@@ -108,7 +108,7 @@ void main() {
         expect(result.isSuccessful, true);
 
         // Wait for event to be processed
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         expect(receivedEvent, true);
         expect(capturedEvent?.kind, 34236);
@@ -142,7 +142,7 @@ void main() {
         });
 
         await service.broadcastEvent(followedUserEvent);
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         expect(receivedEvent, true);
       });

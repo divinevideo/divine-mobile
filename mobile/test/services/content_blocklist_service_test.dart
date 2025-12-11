@@ -112,7 +112,7 @@ void main() {
 
         when(
           mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
-        ).thenAnswer((_) => Stream.empty());
+        ).thenAnswer((_) => const Stream.empty());
 
         await service.syncMuteListsInBackground(mockNostrService, ourPubkey);
 
@@ -138,7 +138,7 @@ void main() {
 
       when(
         mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
-      ).thenAnswer((_) => Stream.empty());
+      ).thenAnswer((_) => const Stream.empty());
 
       await service.syncMuteListsInBackground(mockNostrService, ourPubkey);
       await service.syncMuteListsInBackground(mockNostrService, ourPubkey);

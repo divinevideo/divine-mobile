@@ -159,7 +159,7 @@ class HomeFeed extends _$HomeFeed {
     if (followingPubkeys.isEmpty) {
       // Return empty state if not following anyone
       keepAliveLink.close();
-      return VideoFeedState(
+      return const VideoFeedState(
         videos: [],
         hasMoreContent: false,
         isLoadingMore: false,
@@ -222,7 +222,7 @@ class HomeFeed extends _$HomeFeed {
     // Check if provider is still mounted after async gap
     if (!ref.mounted) {
       keepAliveLink.close();
-      return VideoFeedState(
+      return const VideoFeedState(
         videos: [],
         hasMoreContent: false,
         isLoadingMore: false,
@@ -279,7 +279,7 @@ class HomeFeed extends _$HomeFeed {
     // Check if provider is still mounted after async gap
     if (!ref.mounted) {
       keepAliveLink.close();
-      return VideoFeedState(
+      return const VideoFeedState(
         videos: [],
         hasMoreContent: false,
         isLoadingMore: false,

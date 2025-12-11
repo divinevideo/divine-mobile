@@ -20,7 +20,7 @@ void main() {
 
     testWidgets('should have a Save Draft button in app bar', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
         ),
       );
@@ -33,7 +33,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
         ),
       );
@@ -67,7 +67,7 @@ void main() {
       'should save draft without hashtags (UI interaction is complex)',
       (tester) async {
         await tester.pumpWidget(
-          ProviderScope(
+          const ProviderScope(
             child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
           ),
         );
@@ -85,7 +85,7 @@ void main() {
 
     testWidgets('should save draft with empty fields', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
         ),
       );
@@ -106,7 +106,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(home: VideoMetadataScreenPure(draftId: '')),
         ),
       );

@@ -9,11 +9,11 @@ import 'package:openvine/services/vine_recording_controller.dart';
 void main() {
   group('VineRecordingUIState Tests', () {
     test('hasSegments should be false when no segments', () {
-      final state = VineRecordingUIState(
+      final state = const VineRecordingUIState(
         recordingState: VineRecordingState.idle,
         progress: 0.0,
         totalRecordedDuration: Duration.zero,
-        remainingDuration: const Duration(seconds: 6),
+        remainingDuration: Duration(seconds: 6),
         canRecord: true,
         isCameraInitialized: true,
         canSwitchCamera: false,
@@ -51,11 +51,11 @@ void main() {
     });
 
     test('isRecording getter should match recording state', () {
-      final recordingState = VineRecordingUIState(
+      final recordingState = const VineRecordingUIState(
         recordingState: VineRecordingState.recording,
         progress: 0.3,
-        totalRecordedDuration: const Duration(seconds: 1),
-        remainingDuration: const Duration(seconds: 5),
+        totalRecordedDuration: Duration(seconds: 1),
+        remainingDuration: Duration(seconds: 5),
         canRecord: false,
         isCameraInitialized: true,
         canSwitchCamera: false,
@@ -64,11 +64,11 @@ void main() {
         aspectRatio: AspectRatio.square,
       );
 
-      final idleState = VineRecordingUIState(
+      final idleState = const VineRecordingUIState(
         recordingState: VineRecordingState.idle,
         progress: 0.0,
         totalRecordedDuration: Duration.zero,
-        remainingDuration: const Duration(seconds: 6),
+        remainingDuration: Duration(seconds: 6),
         canRecord: true,
         isCameraInitialized: true,
         canSwitchCamera: false,
@@ -82,11 +82,11 @@ void main() {
     });
 
     test('recordingDuration should match totalRecordedDuration', () {
-      final state = VineRecordingUIState(
+      final state = const VineRecordingUIState(
         recordingState: VineRecordingState.paused,
         progress: 0.5,
-        totalRecordedDuration: const Duration(seconds: 3),
-        remainingDuration: const Duration(seconds: 3),
+        totalRecordedDuration: Duration(seconds: 3),
+        remainingDuration: Duration(seconds: 3),
         canRecord: true,
         isCameraInitialized: true,
         canSwitchCamera: false,
@@ -139,11 +139,11 @@ void main() {
     });
 
     test('canRecord should reflect ability to start recording', () {
-      final canRecordState = VineRecordingUIState(
+      final canRecordState = const VineRecordingUIState(
         recordingState: VineRecordingState.idle,
         progress: 0.0,
         totalRecordedDuration: Duration.zero,
-        remainingDuration: const Duration(seconds: 6),
+        remainingDuration: Duration(seconds: 6),
         canRecord: true,
         isCameraInitialized: true,
         canSwitchCamera: false,
@@ -152,10 +152,10 @@ void main() {
         aspectRatio: AspectRatio.square,
       );
 
-      final cannotRecordState = VineRecordingUIState(
+      final cannotRecordState = const VineRecordingUIState(
         recordingState: VineRecordingState.recording,
         progress: 1.0,
-        totalRecordedDuration: const Duration(seconds: 6),
+        totalRecordedDuration: Duration(seconds: 6),
         remainingDuration: Duration.zero,
         canRecord: false,
         isCameraInitialized: true,
@@ -171,11 +171,11 @@ void main() {
 
     test('progress should be between 0 and 1', () {
       final states = [
-        VineRecordingUIState(
+        const VineRecordingUIState(
           recordingState: VineRecordingState.idle,
           progress: 0.0,
           totalRecordedDuration: Duration.zero,
-          remainingDuration: const Duration(seconds: 6),
+          remainingDuration: Duration(seconds: 6),
           canRecord: true,
           isCameraInitialized: true,
           canSwitchCamera: false,
@@ -183,11 +183,11 @@ void main() {
           hasSegments: false,
           aspectRatio: AspectRatio.square,
         ),
-        VineRecordingUIState(
+        const VineRecordingUIState(
           recordingState: VineRecordingState.recording,
           progress: 0.5,
-          totalRecordedDuration: const Duration(seconds: 3),
-          remainingDuration: const Duration(seconds: 3),
+          totalRecordedDuration: Duration(seconds: 3),
+          remainingDuration: Duration(seconds: 3),
           canRecord: false,
           isCameraInitialized: true,
           canSwitchCamera: false,
@@ -195,10 +195,10 @@ void main() {
           hasSegments: false,
           aspectRatio: AspectRatio.square,
         ),
-        VineRecordingUIState(
+        const VineRecordingUIState(
           recordingState: VineRecordingState.completed,
           progress: 1.0,
-          totalRecordedDuration: const Duration(seconds: 6),
+          totalRecordedDuration: Duration(seconds: 6),
           remainingDuration: Duration.zero,
           canRecord: false,
           isCameraInitialized: true,

@@ -45,7 +45,7 @@ void main() {
           mimeType: 'image/jpeg',
         ),
       ).thenAnswer(
-        (_) async => BlossomUploadResult(
+        (_) async => const BlossomUploadResult(
           success: true,
           videoId: 'image-hash',
           thumbnailUrl: 'https://blossom.example.com/image-hash.jpg',
@@ -86,7 +86,7 @@ void main() {
         onProgress?.call(0.5);
         onProgress?.call(1.0);
 
-        return BlossomUploadResult(
+        return const BlossomUploadResult(
           success: true,
           videoId: 'image-hash',
           thumbnailUrl: 'https://blossom.example.com/image-hash.jpg',
@@ -104,7 +104,7 @@ void main() {
     });
 
     test('BlossomUploadResult includes thumbnailUrl field', () {
-      final result = BlossomUploadResult(
+      final result = const BlossomUploadResult(
         success: true,
         videoId: 'video-123',
         thumbnailUrl: 'https://cdn.example.com/thumbnail.jpg',
@@ -116,7 +116,7 @@ void main() {
     });
 
     test('BlossomUploadResult thumbnailUrl is optional', () {
-      final result = BlossomUploadResult(
+      final result = const BlossomUploadResult(
         success: true,
         videoId: 'video-123',
         thumbnailUrl: 'https://cdn.example.com/video.mp4',
@@ -137,7 +137,7 @@ void main() {
           mimeType: 'image/jpeg',
         ),
       ).thenAnswer(
-        (_) async => BlossomUploadResult(
+        (_) async => const BlossomUploadResult(
           success: false,
           errorMessage: 'Not authenticated',
         ),
@@ -165,7 +165,7 @@ void main() {
         ),
       ).thenAnswer(
         (_) async =>
-            BlossomUploadResult(success: false, errorMessage: 'Network error'),
+            const BlossomUploadResult(success: false, errorMessage: 'Network error'),
       );
 
       final result = await mockBlossomService.uploadImage(
@@ -189,7 +189,7 @@ void main() {
           mimeType: 'image/png',
         ),
       ).thenAnswer(
-        (_) async => BlossomUploadResult(
+        (_) async => const BlossomUploadResult(
           success: true,
           videoId: 'image-hash',
           thumbnailUrl: 'https://blossom.example.com/image-hash.png',
@@ -218,7 +218,7 @@ void main() {
           mimeType: 'image/jpeg',
         ),
       ).thenAnswer(
-        (_) async => BlossomUploadResult(
+        (_) async => const BlossomUploadResult(
           success: true,
           videoId: fileHash,
           thumbnailUrl: 'https://blossom.example.com/$fileHash',

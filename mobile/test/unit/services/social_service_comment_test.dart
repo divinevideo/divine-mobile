@@ -470,7 +470,7 @@ void main() {
         ).thenAnswer((invocation) async {
           // Get the onEvent callback and call it with our test event
           final onEvent =
-              invocation.namedArguments[Symbol('onEvent')] as Function(Event);
+              invocation.namedArguments[const Symbol('onEvent')] as Function(Event);
           onEvent(testCommentEvent);
           return 'test_subscription_id';
         });

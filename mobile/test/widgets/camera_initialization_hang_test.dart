@@ -25,7 +25,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(home: UniversalCameraScreenPure()),
+          child: const MaterialApp(home: UniversalCameraScreenPure()),
         ),
       );
 
@@ -74,7 +74,7 @@ void main() {
     // the UI remains responsive (can navigate back)
 
     await tester.pumpWidget(
-      ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
+      const ProviderScope(child: MaterialApp(home: UniversalCameraScreenPure())),
     );
 
     await tester.pump();

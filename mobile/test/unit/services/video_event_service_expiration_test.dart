@@ -60,7 +60,7 @@ void main() {
 
     test('allows non-expired events into discovery feed', () {
       // Create a future-expiring event (1 hour from now)
-      final oneHourFromNow = DateTime.now().add(Duration(hours: 1));
+      final oneHourFromNow = DateTime.now().add(const Duration(hours: 1));
       final expirationTimestamp = oneHourFromNow.millisecondsSinceEpoch ~/ 1000;
 
       final futureEvent = Event.fromJson({

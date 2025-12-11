@@ -1043,12 +1043,12 @@ class VideoOverlayActions extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      hashtagStyle: TextStyle(
+                      hashtagStyle: const TextStyle(
                         color: VineTheme.vineGreen,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         height: 1.3,
-                        shadows: const [
+                        shadows: [
                           Shadow(
                             offset: Offset(0, 0),
                             blurRadius: 8,

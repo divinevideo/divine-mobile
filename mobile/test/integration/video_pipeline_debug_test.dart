@@ -130,7 +130,7 @@ void main() {
         );
 
         // Step 3: Wait a moment for subscription to be created
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         // Step 4: Send test event through the stream
         Log.info(
@@ -160,7 +160,7 @@ void main() {
         );
         try {
           final events = await eventsCompleter.future.timeout(
-            Duration(seconds: 5),
+            const Duration(seconds: 5),
           );
           Log.info(
             '✅ Pipeline complete! Received ${events.length} events',
@@ -284,7 +284,7 @@ void main() {
 
       // Wait for event
       try {
-        await completer.future.timeout(Duration(seconds: 3));
+        await completer.future.timeout(const Duration(seconds: 3));
         Log.info(
           '✅ Direct test complete! Received ${receivedEvents.length} events',
           name: 'VideoPipelineTest',
