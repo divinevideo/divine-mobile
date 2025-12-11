@@ -34,3 +34,4 @@ linter:
     - unnecessary_nullable_for_final_variable_declarations
     - unnecessary_overrides
     - unnecessary_parenthesis
+    - unnecessary_raw_strings

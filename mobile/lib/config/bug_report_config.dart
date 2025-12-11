@@ -28,7 +28,7 @@ class BugReportConfig {
   /// Sensitive data patterns to sanitize
   static final List<RegExp> sensitivePatterns = [
     RegExp(
-      r'nsec1[a-z0-9]{58}',
+      'nsec1[a-z0-9]{58}',
       caseSensitive: false,
     ), // nsec private keys (bech32)
     // Note: We do NOT redact 64-char hex strings because that would redact public event IDs and pubkeys
