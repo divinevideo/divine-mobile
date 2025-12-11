@@ -196,7 +196,7 @@ class BlurhashService {
     if (pixels.isEmpty) return colors;
 
     // Sample a few pixels to get representative colors
-    final sampleCount = 4; // Sample 4 colors
+    const sampleCount = 4; // Sample 4 colors
     final totalPixels = width * height;
     final step = totalPixels ~/ sampleCount;
 

@@ -114,7 +114,7 @@ void main() {
     });
 
     test('extracts proof manifest correctly', () {
-      final manifestJson = '{"sessionId": "test", "frameHashes": []}';
+      const manifestJson = '{"sessionId": "test", "frameHashes": []}';
       final video = VideoEvent(
         id: 'test7',
         pubkey: 'pubkey7',
@@ -128,7 +128,7 @@ void main() {
     });
 
     test('extracts device attestation correctly', () {
-      final attestation = 'ATTESTATION_TOKEN_123';
+      const attestation = 'ATTESTATION_TOKEN_123';
       final video = VideoEvent(
         id: 'test8',
         pubkey: 'pubkey8',
@@ -142,7 +142,7 @@ void main() {
     });
 
     test('extracts PGP fingerprint correctly', () {
-      final fingerprint = 'ABCD1234EFGH5678';
+      const fingerprint = 'ABCD1234EFGH5678';
       final video = VideoEvent(
         id: 'test9',
         pubkey: 'pubkey9',

@@ -7,16 +7,16 @@ void main() {
   group('Hashtag Display Tests', () {
     test('should display hashtags with counts in proper format', () {
       // Test hashtag display format
-      final hashtag = 'comedy';
-      final count = 42;
+      const hashtag = 'comedy';
+      const count = 42;
 
       // Expected format for chip with count
-      final expectedText = '#$hashtag ($count)';
+      const expectedText = '#$hashtag ($count)';
       expect(expectedText, equals('#comedy (42)'));
 
       // Expected format for chip without count
-      final hashtagNoCount = 'new';
-      final expectedNoCount = '#$hashtagNoCount';
+      const hashtagNoCount = 'new';
+      const expectedNoCount = '#$hashtagNoCount';
       expect(expectedNoCount, equals('#new'));
     });
 

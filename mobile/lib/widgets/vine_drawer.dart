@@ -601,7 +601,7 @@ Platform: ${Theme.of(context).platform.name}
     bool isZendeskAvailable,
   ) async {
     if (isZendeskAvailable) {
-      final description = '''
+      const description = '''
 Please describe the inappropriate content:
 
 Content Type (video/user/comment):

@@ -116,7 +116,7 @@ void main() {
       });
 
       test('should handle subscription to home feed (following)', () async {
-        final followedPubkey = 'followed_user_pubkey';
+        const followedPubkey = 'followed_user_pubkey';
 
         // Subscribe to events from followed users
         final stream = service.subscribeToEvents(
@@ -192,7 +192,7 @@ void main() {
       test(
         'should handle external relay addition for discoverability',
         () async {
-          final externalRelay = 'wss://example-relay.com';
+          const externalRelay = 'wss://example-relay.com';
 
           final added = await service.addRelay(externalRelay);
 

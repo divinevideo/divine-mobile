@@ -32,7 +32,7 @@ Future<void> waitForPageContext(ProviderContainer container) async {
 void main() {
   test('selects author videos when profile route active', () async {
     // Test fixture
-    final testNpub =
+    const testNpub =
         'npub1l5sga6xg72phsz5422ykujprejwud075ggrr3z2hwyrfgr7eylqstegx9z';
     final testHex = npubToHexOrNull(testNpub)!;
 

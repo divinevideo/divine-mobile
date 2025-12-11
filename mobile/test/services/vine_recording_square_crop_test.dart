@@ -49,9 +49,9 @@ void main() {
       const expectedXOffset = 420; // (1920-1080)/2
       const expectedYOffset = 0; // (1080-1080)/2
 
-      final minDimension = inputWidth < inputHeight ? inputWidth : inputHeight;
-      final xOffset = (inputWidth - minDimension) ~/ 2;
-      final yOffset = (inputHeight - minDimension) ~/ 2;
+      const minDimension = inputWidth < inputHeight ? inputWidth : inputHeight;
+      const xOffset = (inputWidth - minDimension) ~/ 2;
+      const yOffset = (inputHeight - minDimension) ~/ 2;
 
       expect(minDimension, equals(expectedOutputSize));
       expect(xOffset, equals(expectedXOffset));
@@ -66,9 +66,9 @@ void main() {
       const expectedXOffset = 0; // (1080-1080)/2
       const expectedYOffset = 420; // (1920-1080)/2
 
-      final minDimension = inputWidth < inputHeight ? inputWidth : inputHeight;
-      final xOffset = (inputWidth - minDimension) ~/ 2;
-      final yOffset = (inputHeight - minDimension) ~/ 2;
+      const minDimension = inputWidth < inputHeight ? inputWidth : inputHeight;
+      const xOffset = (inputWidth - minDimension) ~/ 2;
+      const yOffset = (inputHeight - minDimension) ~/ 2;
 
       expect(minDimension, equals(expectedOutputSize));
       expect(xOffset, equals(expectedXOffset));
@@ -83,9 +83,9 @@ void main() {
       const expectedXOffset = 0; // (1080-1080)/2
       const expectedYOffset = 0; // (1080-1080)/2
 
-      final minDimension = inputWidth < inputHeight ? inputWidth : inputHeight;
-      final xOffset = (inputWidth - minDimension) ~/ 2;
-      final yOffset = (inputHeight - minDimension) ~/ 2;
+      const minDimension = inputWidth < inputHeight ? inputWidth : inputHeight;
+      const xOffset = (inputWidth - minDimension) ~/ 2;
+      const yOffset = (inputHeight - minDimension) ~/ 2;
 
       expect(minDimension, equals(expectedOutputSize));
       expect(xOffset, equals(expectedXOffset));

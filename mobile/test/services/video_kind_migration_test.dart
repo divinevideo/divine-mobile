@@ -63,7 +63,7 @@ void main() {
       const dTag = 'my-video-id';
 
       // Addressable ID format per NIP-01: <kind>:<pubkey>:<d-tag>
-      final addressableId = '34236:$pubkey:$dTag';
+      const addressableId = '34236:$pubkey:$dTag';
 
       expect(
         addressableId,

@@ -49,7 +49,7 @@ void main() async {
   print('   Auth header length: ${authHeader.length} chars');
 
   // Test upload
-  final uploadUrl =
+  const uploadUrl =
       'https://cf-stream-service-prod.protestnet.workers.dev/upload';
   print('\n📤 Uploading to: $uploadUrl');
   print('   Method: PUT');

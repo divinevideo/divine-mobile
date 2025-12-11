@@ -62,7 +62,7 @@ void main() {
           // Mock the internal bunker service behavior
           authService.setBunkerClient(mockBunkerClient);
 
-          final mockAuthResult = const BunkerAuthResult(
+          const mockAuthResult = BunkerAuthResult(
             success: true,
             config: BunkerConfig(
               relayUrl: 'wss://relay.test.com',
@@ -101,7 +101,7 @@ void main() {
 
         authService.setBunkerClient(mockBunkerClient);
 
-        final mockAuthResult = const BunkerAuthResult(
+        const mockAuthResult = BunkerAuthResult(
           success: false,
           error: 'Invalid bunker URI format',
         );
@@ -127,7 +127,7 @@ void main() {
 
         authService.setBunkerClient(mockBunkerClient);
 
-        final mockAuthResult = const BunkerAuthResult(
+        const mockAuthResult = BunkerAuthResult(
           success: true,
           config: BunkerConfig(
             relayUrl: 'wss://relay.test.com',
@@ -307,7 +307,7 @@ void main() {
         authService.setBunkerClient(mockBunkerClient);
 
         const bunkerUri = 'bunker://npub1234@relay.test.com?secret=test123';
-        final mockAuthResult = const BunkerAuthResult(
+        const mockAuthResult = BunkerAuthResult(
           success: true,
           config: BunkerConfig(
             relayUrl: 'wss://relay.test.com',

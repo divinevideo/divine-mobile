@@ -38,7 +38,7 @@ void main() {
 
       test('ExploreScreen should have constructor', () {
         // GREEN: Constructor works
-        final screen = const ExploreScreen();
+        const screen = ExploreScreen();
         expect(screen, isA<ConsumerStatefulWidget>());
       });
     });

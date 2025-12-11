@@ -226,7 +226,7 @@ Future<void> main() async {
       '[SEED GEN] Querying for author profiles (${authorPubkeys.length} authors)...',
     );
     final profileEvents = <Map<String, dynamic>>[];
-    final batchSize = 50;
+    const batchSize = 50;
 
     for (var i = 0; i < authorPubkeys.length; i += batchSize) {
       final batch = authorPubkeys.skip(i).take(batchSize).toList();

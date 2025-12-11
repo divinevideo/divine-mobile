@@ -19,7 +19,7 @@ void main() {
     group('Video URL Parsing', () {
       test('parses valid video URL correctly', () {
         const videoId = 'abc123def456';
-        final url = 'https://divine.video/video/$videoId';
+        const url = 'https://divine.video/video/$videoId';
 
         final result = service.parseDeepLink(url);
 
@@ -31,7 +31,7 @@ void main() {
       test('parses video URL with 64-char hex ID', () {
         const videoId =
             'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
-        final url = 'https://divine.video/video/$videoId';
+        const url = 'https://divine.video/video/$videoId';
 
         final result = service.parseDeepLink(url);
 
@@ -41,7 +41,7 @@ void main() {
 
       test('handles video URL with trailing slash', () {
         const videoId = 'abc123';
-        final url = 'https://divine.video/video/$videoId/';
+        const url = 'https://divine.video/video/$videoId/';
 
         final result = service.parseDeepLink(url);
 
@@ -70,7 +70,7 @@ void main() {
     group('Profile URL Parsing', () {
       test('parses valid profile URL correctly', () {
         const npub = 'npub1abc123def456';
-        final url = 'https://divine.video/profile/$npub';
+        const url = 'https://divine.video/profile/$npub';
 
         final result = service.parseDeepLink(url);
 
@@ -82,7 +82,7 @@ void main() {
       test('parses profile URL with real npub format', () {
         const npub =
             'npub1sn0wdenkukak0d9dfczzeacvhkrgz92ak56egt7vdgzn8pv2wfqqhrjdv9';
-        final url = 'https://divine.video/profile/$npub';
+        const url = 'https://divine.video/profile/$npub';
 
         final result = service.parseDeepLink(url);
 
@@ -153,7 +153,7 @@ void main() {
     group('URL Scheme Handling', () {
       test('accepts http scheme', () {
         const videoId = 'abc123';
-        final url = 'http://divine.video/video/$videoId';
+        const url = 'http://divine.video/video/$videoId';
 
         final result = service.parseDeepLink(url);
 
@@ -163,7 +163,7 @@ void main() {
 
       test('accepts https scheme', () {
         const videoId = 'abc123';
-        final url = 'https://divine.video/video/$videoId';
+        const url = 'https://divine.video/video/$videoId';
 
         final result = service.parseDeepLink(url);
 

@@ -337,7 +337,7 @@ void main() {
           )
         ''');
 
-        final testPubkey =
+        const testPubkey =
             'test_pubkey_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab';
         final now = DateTime.now().millisecondsSinceEpoch;
 
@@ -385,7 +385,7 @@ void main() {
         final result = await db
             .customSelect(
               'SELECT * FROM user_profiles WHERE pubkey = ?',
-              variables: [Variable(testPubkey)],
+              variables: [const Variable(testPubkey)],
             )
             .get();
 
@@ -433,7 +433,7 @@ void main() {
         ''');
 
         // Insert test data
-        final testPubkey =
+        const testPubkey =
             'test_pubkey_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab';
         final now = DateTime.now().millisecondsSinceEpoch;
 

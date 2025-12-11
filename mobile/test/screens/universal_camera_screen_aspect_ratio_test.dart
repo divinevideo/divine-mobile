@@ -8,7 +8,7 @@ import 'package:models/models.dart' as vine show AspectRatio;
 void main() {
   group('AspectRatio Toggle Logic', () {
     test('icon selection returns crop_square for square aspect ratio', () {
-      final icon = vine.AspectRatio.square == vine.AspectRatio.square
+      const icon = vine.AspectRatio.square == vine.AspectRatio.square
           ? Icons.crop_square
           : Icons.crop_portrait;
 
@@ -16,7 +16,7 @@ void main() {
     });
 
     test('icon selection returns crop_portrait for vertical aspect ratio', () {
-      final icon = vine.AspectRatio.vertical == vine.AspectRatio.square
+      const icon = vine.AspectRatio.vertical == vine.AspectRatio.square
           ? Icons.crop_square
           : Icons.crop_portrait;
 
@@ -24,8 +24,8 @@ void main() {
     });
 
     test('toggle logic switches from square to vertical', () {
-      final currentRatio = vine.AspectRatio.square;
-      final newRatio = currentRatio == vine.AspectRatio.square
+      const currentRatio = vine.AspectRatio.square;
+      const newRatio = currentRatio == vine.AspectRatio.square
           ? vine.AspectRatio.vertical
           : vine.AspectRatio.square;
 
@@ -33,8 +33,8 @@ void main() {
     });
 
     test('toggle logic switches from vertical to square', () {
-      final currentRatio = vine.AspectRatio.vertical;
-      final newRatio = currentRatio == vine.AspectRatio.square
+      const currentRatio = vine.AspectRatio.vertical;
+      const newRatio = currentRatio == vine.AspectRatio.square
           ? vine.AspectRatio.vertical
           : vine.AspectRatio.square;
 
@@ -42,7 +42,7 @@ void main() {
     });
 
     test('aspect ratio for square is 1.0', () {
-      final ratio = vine.AspectRatio.square == vine.AspectRatio.square
+      const ratio = vine.AspectRatio.square == vine.AspectRatio.square
           ? 1.0
           : 9.0 / 16.0;
 
@@ -50,7 +50,7 @@ void main() {
     });
 
     test('aspect ratio for vertical is 9/16', () {
-      final ratio = vine.AspectRatio.vertical == vine.AspectRatio.square
+      const ratio = vine.AspectRatio.vertical == vine.AspectRatio.square
           ? 1.0
           : 9.0 / 16.0;
 

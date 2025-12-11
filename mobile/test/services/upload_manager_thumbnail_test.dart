@@ -104,7 +104,7 @@ void main() {
     });
 
     test('BlossomUploadResult includes thumbnailUrl field', () {
-      final result = const BlossomUploadResult(
+      const result = BlossomUploadResult(
         success: true,
         videoId: 'video-123',
         thumbnailUrl: 'https://cdn.example.com/thumbnail.jpg',
@@ -116,7 +116,7 @@ void main() {
     });
 
     test('BlossomUploadResult thumbnailUrl is optional', () {
-      final result = const BlossomUploadResult(
+      const result = BlossomUploadResult(
         success: true,
         videoId: 'video-123',
         thumbnailUrl: 'https://cdn.example.com/video.mp4',

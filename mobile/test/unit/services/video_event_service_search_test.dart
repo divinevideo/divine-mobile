@@ -42,7 +42,7 @@ void main() {
 
     group('Search Method Tests', () {
       test('should call searchVideos and handle empty query', () {
-        final searchQuery = '';
+        const searchQuery = '';
 
         expect(
           () => videoEventService.searchVideos(searchQuery),
@@ -62,7 +62,7 @@ void main() {
           ),
         ).thenAnswer((_) => const Stream<Event>.empty());
 
-        final hashtag = '#bitcoin';
+        const hashtag = '#bitcoin';
 
         // Should not throw and should complete successfully
         await videoEventService.searchVideosByHashtag(hashtag);
@@ -93,7 +93,7 @@ void main() {
             ),
           ).thenAnswer((_) => const Stream<Event>.empty());
 
-          final searchQuery = 'nostr';
+          const searchQuery = 'nostr';
           final authors = ['author1', 'author2'];
 
           await videoEventService.searchVideosWithFilters(
@@ -165,7 +165,7 @@ void main() {
             ),
           ).thenAnswer((_) => const Stream<Event>.empty());
 
-          final searchQuery = 'bitcoin';
+          const searchQuery = 'bitcoin';
           final since = DateTime.now().subtract(const Duration(days: 7));
           final until = DateTime.now();
 
@@ -202,7 +202,7 @@ void main() {
             ),
           ).thenAnswer((_) => const Stream<Event>.empty());
 
-          final searchQuery = 'music language:en nsfw:false';
+          const searchQuery = 'music language:en nsfw:false';
 
           await videoEventService.searchVideosWithExtensions(searchQuery);
 

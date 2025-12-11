@@ -48,10 +48,10 @@ void main() {
 
     test('server URL should be blossom.divine.video for upload', () async {
       // ARRANGE: Upload goes to Blossom server endpoint
-      final expectedBaseUrl = 'https://blossom.divine.video';
+      const expectedBaseUrl = 'https://blossom.divine.video';
 
       // ACT: Check default server URL
-      final serverUrl = BlossomUploadService.defaultBlossomServer;
+      const serverUrl = BlossomUploadService.defaultBlossomServer;
 
       // ASSERT: Should match current configuration
       expect(

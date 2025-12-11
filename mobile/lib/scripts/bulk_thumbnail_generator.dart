@@ -19,7 +19,7 @@ import 'package:openvine/utils/unified_logger.dart';
 /// 3. Makes API requests to generate thumbnails via api.openvine.co thumbnail service
 /// 4. Reports progress and statistics
 class BulkThumbnailGenerator {
-  static final String relayUrl = AppConstants.defaultRelayUrl;
+  static const String relayUrl = AppConstants.defaultRelayUrl;
   static const String apiBaseUrl = 'https://api.openvine.co';
   static const int batchSize =
       10; // Process videos in batches to avoid overwhelming the server

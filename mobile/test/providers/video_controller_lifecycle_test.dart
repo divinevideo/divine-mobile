@@ -19,7 +19,7 @@ void main() {
 
     test('controller should stay alive with active listener', () async {
       // Arrange
-      final params = const VideoControllerParams(
+      const params = VideoControllerParams(
         videoId: 'test1',
         videoUrl: 'https://example.com/test1.mp4',
       );
@@ -45,7 +45,7 @@ void main() {
 
     test('onCancel should fire when last listener is removed', () async {
       // Arrange
-      final params = const VideoControllerParams(
+      const params = VideoControllerParams(
         videoId: 'test2',
         videoUrl: 'https://example.com/test2.mp4',
       );
@@ -71,7 +71,7 @@ void main() {
 
     test('onResume should cancel disposal timer', () async {
       // Arrange
-      final params = const VideoControllerParams(
+      const params = VideoControllerParams(
         videoId: 'test3',
         videoUrl: 'https://example.com/test3.mp4',
       );
@@ -103,7 +103,7 @@ void main() {
 
     test('multiple simultaneous listeners should not trigger onCancel', () async {
       // Arrange
-      final params = const VideoControllerParams(
+      const params = VideoControllerParams(
         videoId: 'test4',
         videoUrl: 'https://example.com/test4.mp4',
       );
@@ -139,7 +139,7 @@ void main() {
       'controller should dispose after cache timeout',
       () async {
         // Arrange
-        final params = const VideoControllerParams(
+        const params = VideoControllerParams(
           videoId: 'test5',
           videoUrl: 'https://example.com/test5.mp4',
         );
@@ -175,7 +175,7 @@ void main() {
       'reading provider without listener should not prevent disposal',
       () async {
         // Arrange
-        final params = const VideoControllerParams(
+        const params = VideoControllerParams(
           videoId: 'test6',
           videoUrl: 'https://example.com/test6.mp4',
         );

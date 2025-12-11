@@ -64,7 +64,7 @@ Future<void> main() async {
   print('🔐 Created and signed auth event: ${event.id}\n');
 
   // Prepare upload
-  final serverUrl = 'https://cf-stream-service-prod.protestnet.workers.dev';
+  const serverUrl = 'https://cf-stream-service-prod.protestnet.workers.dev';
   final authHeader =
       'Nostr ${base64.encode(utf8.encode(jsonEncode(event.toJson())))}';
 

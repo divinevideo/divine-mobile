@@ -88,7 +88,7 @@ void main() {
       testVideoFile = File('${tempDir.path}/test_video.mp4');
 
       // Create a test video file with known content
-      final testContent = 'This is test video content for hash calculation';
+      const testContent = 'This is test video content for hash calculation';
       await testVideoFile.writeAsString(testContent);
     });
 
@@ -373,7 +373,7 @@ void main() {
       'should add BOTH MP4 and HLS URLs when Blossom returns Bunny Stream HLS URL',
       () async {
         // Arrange - Blossom server returns HLS playlist URL
-        final hlsUrl =
+        const hlsUrl =
             'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/playlist.m3u8';
         final upload = PendingUpload.create(
           localVideoPath: testVideoFile.path,
@@ -387,7 +387,7 @@ void main() {
         );
 
         // Assert - Should contain BOTH URLs
-        final mp4Url =
+        const mp4Url =
             'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/play_360p.mp4';
 
         // Should have MP4 URL FIRST (preferred for short videos)
@@ -418,7 +418,7 @@ void main() {
 
     test('should only add single URL for non-Bunny Stream CDN URLs', () async {
       // Arrange - Regular CDN URL (not Bunny Stream)
-      final regularUrl = 'https://cdn.divine.video/abc123.mp4';
+      const regularUrl = 'https://cdn.divine.video/abc123.mp4';
       final upload = PendingUpload.create(
         localVideoPath: testVideoFile.path,
         nostrPubkey: 'test_pubkey',

@@ -175,9 +175,9 @@ void main() {
       'loadSeedMediaIfNeeded uses eventId as filename in cache directory',
       () async {
         // Setup: Mock manifest with specific eventId
-        final testEventId =
+        const testEventId =
             'unique0000test1111cafe2222beef3333dead4444face5555abcd6666ef0012345678';
-        final testFilename = '$testEventId.mp4'; // Filename matches eventId
+        const testFilename = '$testEventId.mp4'; // Filename matches eventId
         final manifestJson = jsonEncode({
           'videos': [
             {

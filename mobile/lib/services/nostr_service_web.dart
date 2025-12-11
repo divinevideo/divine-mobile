@@ -93,7 +93,7 @@ abstract class NostrServiceWeb implements INostrService {
     }
 
     // Default relay
-    final defaultRelay = AppConstants.defaultRelayUrl;
+    const defaultRelay = AppConstants.defaultRelayUrl;
     final relaysToAdd = customRelays ?? [defaultRelay];
     if (!relaysToAdd.contains(defaultRelay)) {
       relaysToAdd.add(defaultRelay);

@@ -142,7 +142,7 @@ class NostrService implements INostrService {
           relaysToAdd = relaysToAdd.where((r) => r != oldRelay).toList();
 
           // Ensure we have at least the default relay
-          final defaultRelay = AppConstants.defaultRelayUrl;
+          const defaultRelay = AppConstants.defaultRelayUrl;
           if (!relaysToAdd.contains(defaultRelay)) {
             relaysToAdd.add(defaultRelay);
           }
@@ -157,7 +157,7 @@ class NostrService implements INostrService {
         }
       } else {
         // No saved config, use default
-        final defaultRelay = AppConstants.defaultRelayUrl;
+        const defaultRelay = AppConstants.defaultRelayUrl;
         relaysToAdd = [defaultRelay];
         Log.info(
           '📋 No saved relay config found, using default: $defaultRelay',
@@ -171,7 +171,7 @@ class NostrService implements INostrService {
     }
 
     // Ensure default relay is always included
-    final defaultRelay = AppConstants.defaultRelayUrl;
+    const defaultRelay = AppConstants.defaultRelayUrl;
     if (!relaysToAdd.contains(defaultRelay)) {
       relaysToAdd.add(defaultRelay);
     }

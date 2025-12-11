@@ -130,7 +130,7 @@ void main() {
 
     test('should fetch videos from relay when hashtag is clicked', () async {
       // Arrange
-      final hashtag = 'viral';
+      const hashtag = 'viral';
       final expectedVideos = [
         _createVideoWithHashtags(['viral', 'trending']),
         _createVideoWithHashtags(['viral']),

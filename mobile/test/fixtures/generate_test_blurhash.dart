@@ -7,7 +7,7 @@ import 'package:openvine/services/blurhash_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 
 Future<void> main() async {
-  final testVideoPath = 'test/fixtures/test_video.mp4';
+  const testVideoPath = 'test/fixtures/test_video.mp4';
 
   print('Extracting thumbnail from test video...');
   final thumbnailBytes = await VideoThumbnailService.extractThumbnailBytes(

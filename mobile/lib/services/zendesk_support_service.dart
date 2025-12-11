@@ -301,10 +301,10 @@ class ZendeskSupportService {
       };
 
       // Zendesk API URL for creating requests (end-user ticket creation)
-      final apiUrl = '${ZendeskConfig.zendeskUrl}/api/v2/requests.json';
+      const apiUrl = '${ZendeskConfig.zendeskUrl}/api/v2/requests.json';
 
       // Create Basic Auth header: email/token:api_token
-      final credentials =
+      const credentials =
           '${ZendeskConfig.apiEmail}/token:${ZendeskConfig.apiToken}';
       final encodedCredentials = base64Encode(utf8.encode(credentials));
 

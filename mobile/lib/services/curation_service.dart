@@ -1014,7 +1014,7 @@ class CurationService {
 
       // Publish with timeout
       final broadcastFuture = _nostrService.broadcastEvent(event);
-      final timeoutDuration = const Duration(seconds: 5);
+      const timeoutDuration = Duration(seconds: 5);
 
       NostrBroadcastResult? broadcastResult;
 

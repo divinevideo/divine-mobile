@@ -56,7 +56,7 @@ void main() {
       const maxScrollExtent = 1000.0;
       const scrollThreshold = 0.8;
 
-      final paginationTriggerPoint = maxScrollExtent * scrollThreshold;
+      const paginationTriggerPoint = maxScrollExtent * scrollThreshold;
 
       expect(paginationTriggerPoint, equals(800.0));
 
@@ -74,7 +74,7 @@ void main() {
       const totalVideos = 25;
       const paginationThreshold = 3;
 
-      final triggerIndex = totalVideos - paginationThreshold;
+      const triggerIndex = totalVideos - paginationThreshold;
 
       expect(triggerIndex, equals(22));
 

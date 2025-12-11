@@ -11,7 +11,7 @@ void main() {
   group('VineRecordingUIState', () {
     test('includes canSwitchCamera field', () {
       // Test that VineRecordingUIState has canSwitchCamera property
-      final state = const VineRecordingUIState(
+      const state = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
         progress: 0.0,
         totalRecordedDuration: Duration.zero,
@@ -28,7 +28,7 @@ void main() {
     });
 
     test('canSwitchCamera can be false', () {
-      final state = const VineRecordingUIState(
+      const state = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
         progress: 0.0,
         totalRecordedDuration: Duration.zero,
@@ -45,7 +45,7 @@ void main() {
     });
 
     test('copyWith preserves canSwitchCamera', () {
-      final state = const VineRecordingUIState(
+      const state = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
         progress: 0.0,
         totalRecordedDuration: Duration.zero,
@@ -65,7 +65,7 @@ void main() {
     });
 
     test('copyWith can update canSwitchCamera', () {
-      final state = const VineRecordingUIState(
+      const state = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
         progress: 0.0,
         totalRecordedDuration: Duration.zero,

@@ -33,7 +33,7 @@ void main() {
       videoUrl: 'https://example.com/video.mp4',
     );
 
-    final testPubkey =
+    const testPubkey =
         '2646f4c01362b3b48d4b4e31d9c96a4eabe06c4eb971e1a482ef651f1bf023b7';
 
     setUp(() {

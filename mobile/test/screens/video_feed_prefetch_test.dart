@@ -205,7 +205,7 @@ void main() {
       final actualVideoIds = captured[1] as List<String>;
 
       // Total videos to prefetch should be preloadBefore + preloadAfter
-      final expectedCount =
+      const expectedCount =
           AppConstants.preloadBefore + AppConstants.preloadAfter;
       expect(actualVideoIds.length, lessThanOrEqualTo(expectedCount));
     });

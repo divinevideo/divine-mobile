@@ -43,7 +43,7 @@ sealed class SocialState with _$SocialState {
   const SocialState._();
 
   /// Create initial state
-  static final SocialState initial = const SocialState();
+  static const SocialState initial = SocialState();
 
   /// Check if user has liked an event
   bool isLiked(String eventId) => likedEventIds.contains(eventId);

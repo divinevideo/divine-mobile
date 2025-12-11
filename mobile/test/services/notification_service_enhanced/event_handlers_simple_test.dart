@@ -133,9 +133,9 @@ void main() {
 
     test('reaction event with "+" creates like notification', () async {
       // Arrange
-      final actorPubkey =
+      const actorPubkey =
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-      final videoEventId = 'video123';
+      const videoEventId = 'video123';
 
       // Add profile (use factory method)
       final profileEvent = Event(
@@ -228,9 +228,9 @@ void main() {
 
     test('comment event creates comment notification', () async {
       // Arrange
-      final actorPubkey =
+      const actorPubkey =
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-      final videoEventId = 'video_comment';
+      const videoEventId = 'video_comment';
 
       // Add profile
       final profileEvent = Event(
@@ -285,7 +285,7 @@ void main() {
 
     test('follow event creates follow notification', () async {
       // Arrange
-      final actorPubkey =
+      const actorPubkey =
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
       // Add profile
@@ -317,7 +317,7 @@ void main() {
 
     test('duplicate notifications are not added', () async {
       // Arrange
-      final actorPubkey =
+      const actorPubkey =
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
       // Add profile
@@ -348,7 +348,7 @@ void main() {
 
     test('markAsRead marks notification as read', () async {
       // Arrange
-      final actorPubkey =
+      const actorPubkey =
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
       final profileEvent = Event(
@@ -390,7 +390,7 @@ void main() {
 
     test('markAllAsRead marks all notifications as read', () async {
       // Arrange - create multiple notifications
-      final actorPubkey =
+      const actorPubkey =
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
       final profileEvent = Event(
@@ -434,7 +434,7 @@ void main() {
 
     test('clearAll removes all notifications', () async {
       // Arrange
-      final actorPubkey =
+      const actorPubkey =
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
       final profileEvent = Event(
@@ -468,7 +468,7 @@ void main() {
       'actor name resolution priority: name > displayName > nip05 > Unknown user',
       () async {
         // Test 1: name is used
-        final pubkey1 =
+        const pubkey1 =
             '1111111111111111111111111111111111111111111111111111111111111111';
         final profileEvent1 = Event(
           pubkey1,
@@ -494,7 +494,7 @@ void main() {
         expect(service.notifications.last.actorName, 'NameValue');
 
         // Test 2: displayName is used when name is missing
-        final pubkey2 =
+        const pubkey2 =
             '2222222222222222222222222222222222222222222222222222222222222222';
         final profileEvent2 = Event(
           pubkey2,
@@ -515,7 +515,7 @@ void main() {
         expect(service.notifications.last.actorName, 'DisplayValue');
 
         // Test 3: nip05 username is used when name and displayName are missing
-        final pubkey3 =
+        const pubkey3 =
             '3333333333333333333333333333333333333333333333333333333333333333';
         final profileEvent3 = Event(
           pubkey3,
@@ -536,7 +536,7 @@ void main() {
         expect(service.notifications.last.actorName, 'username');
 
         // Test 4: "Unknown user" is used when no profile data exists
-        final pubkey4 =
+        const pubkey4 =
             '4444444444444444444444444444444444444444444444444444444444444444';
         // No profile added for pubkey4
 

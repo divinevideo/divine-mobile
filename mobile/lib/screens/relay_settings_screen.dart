@@ -893,7 +893,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
   Future<void> _restoreDefaultRelay() async {
     try {
       final nostrService = ref.read(nostrServiceProvider);
-      final defaultRelay = AppConstants.defaultRelayUrl;
+      const defaultRelay = AppConstants.defaultRelayUrl;
 
       final success = await nostrService.addRelay(defaultRelay);
 
@@ -903,7 +903,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Restored default relay: $defaultRelay'),
+              content: const Text('Restored default relay: $defaultRelay'),
               backgroundColor: Colors.green[700],
             ),
           );

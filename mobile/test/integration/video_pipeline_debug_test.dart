@@ -79,7 +79,7 @@ void main() {
           name: 'VideoPipelineTest',
           category: LogCategory.system,
         );
-        final eventsProvider = videoEventsProvider;
+        const eventsProvider = videoEventsProvider;
 
         // Create a manual stream to control the flow
         final videoEvents = <VideoEvent>[];

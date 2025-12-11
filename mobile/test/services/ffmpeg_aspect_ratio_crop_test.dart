@@ -176,7 +176,7 @@ void main() {
 
       // 9:16 aspect ratio check (width/height ≈ 0.5625)
       final aspectRatio = width / height;
-      final expected916 = 9.0 / 16.0;
+      const expected916 = 9.0 / 16.0;
 
       expect(
         aspectRatio,
@@ -252,7 +252,7 @@ void main() {
       expect(height, equals(1920), reason: 'Height should be preserved (1920)');
 
       final aspectRatio = width / height;
-      final expected916 = 9.0 / 16.0;
+      const expected916 = 9.0 / 16.0;
       expect(
         aspectRatio,
         closeTo(expected916, 0.01),

@@ -105,7 +105,7 @@ void main() {
     );
 
     test('watchProfile emits profile after insert', () async {
-      final pubkey = 'test_pubkey_789';
+      const pubkey = 'test_pubkey_789';
       final stream = db.userProfilesDao.watchProfile(pubkey);
 
       // Skip the initial null emission
@@ -130,7 +130,7 @@ void main() {
     });
 
     test('watchProfile emits updated profile after update', () async {
-      final pubkey = 'test_pubkey_update';
+      const pubkey = 'test_pubkey_update';
       final now = DateTime.now();
 
       // Insert initial profile

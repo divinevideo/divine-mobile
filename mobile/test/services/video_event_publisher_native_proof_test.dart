@@ -69,7 +69,7 @@ void main() {
 
     test('MUST publish native ProofMode data to Nostr tags', () async {
       // Create native proof data (from Guardian Project library)
-      final nativeProof = const NativeProofData(
+      const nativeProof = NativeProofData(
         videoHash: 'abc123def456',
         sensorDataCsv: 'timestamp,lat,lon\n2025-01-01,40.7,-74.0',
         pgpSignature:
@@ -216,7 +216,7 @@ void main() {
       // This tests the bug: ProofManifest used 'finalVideoHash', NativeProofData uses 'videoHash'
       // Both should work - we must never silently drop proof data!
 
-      final nativeProof = const NativeProofData(
+      const nativeProof = NativeProofData(
         videoHash: 'test_hash_123',
         pgpSignature: 'signature',
         publicKey: 'public_key',

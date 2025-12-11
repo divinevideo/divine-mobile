@@ -31,7 +31,7 @@ void main() {
     test('should create upload from draft with ProofMode data', () async {
       // Create draft with ProofMode JSON
       final testFile = File('test_video.mp4');
-      final proofJson = '{"segments":[],"deviceAttestation":null}';
+      const proofJson = '{"segments":[],"deviceAttestation":null}';
 
       final draft = VineDraft.create(
         videoFile: testFile,
@@ -61,7 +61,7 @@ void main() {
 
     test('should preserve ProofMode data through draft copyWith', () async {
       final testFile = File('test_video.mp4');
-      final proofJson = '{"segments":[],"deviceAttestation":null}';
+      const proofJson = '{"segments":[],"deviceAttestation":null}';
 
       final originalDraft = VineDraft.create(
         videoFile: testFile,

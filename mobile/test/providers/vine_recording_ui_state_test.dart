@@ -9,7 +9,7 @@ import 'package:openvine/services/vine_recording_controller.dart';
 void main() {
   group('VineRecordingUIState Tests', () {
     test('hasSegments should be false when no segments', () {
-      final state = const VineRecordingUIState(
+      const state = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
         progress: 0.0,
         totalRecordedDuration: Duration.zero,
@@ -51,7 +51,7 @@ void main() {
     });
 
     test('isRecording getter should match recording state', () {
-      final recordingState = const VineRecordingUIState(
+      const recordingState = VineRecordingUIState(
         recordingState: VineRecordingState.recording,
         progress: 0.3,
         totalRecordedDuration: Duration(seconds: 1),
@@ -64,7 +64,7 @@ void main() {
         aspectRatio: AspectRatio.square,
       );
 
-      final idleState = const VineRecordingUIState(
+      const idleState = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
         progress: 0.0,
         totalRecordedDuration: Duration.zero,
@@ -82,7 +82,7 @@ void main() {
     });
 
     test('recordingDuration should match totalRecordedDuration', () {
-      final state = const VineRecordingUIState(
+      const state = VineRecordingUIState(
         recordingState: VineRecordingState.paused,
         progress: 0.5,
         totalRecordedDuration: Duration(seconds: 3),
@@ -139,7 +139,7 @@ void main() {
     });
 
     test('canRecord should reflect ability to start recording', () {
-      final canRecordState = const VineRecordingUIState(
+      const canRecordState = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
         progress: 0.0,
         totalRecordedDuration: Duration.zero,
@@ -152,7 +152,7 @@ void main() {
         aspectRatio: AspectRatio.square,
       );
 
-      final cannotRecordState = const VineRecordingUIState(
+      const cannotRecordState = VineRecordingUIState(
         recordingState: VineRecordingState.recording,
         progress: 1.0,
         totalRecordedDuration: Duration(seconds: 6),

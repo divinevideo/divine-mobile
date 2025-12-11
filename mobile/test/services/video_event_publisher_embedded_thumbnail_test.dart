@@ -306,7 +306,7 @@ void main() {
 
     test('should handle thumbnail extraction failure gracefully', () async {
       // Arrange: Non-existent video file
-      final nonExistentPath = '/nonexistent/path/to/video.mp4';
+      const nonExistentPath = '/nonexistent/path/to/video.mp4';
 
       // Act: Attempt to extract thumbnail
       final result = await EmbeddedThumbnailGenerator.generateEmbeddedThumbnail(

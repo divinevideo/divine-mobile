@@ -43,7 +43,7 @@ void main() {
         'should fetch profile from specified relays after successful nsec import',
         () async {
           // Arrange: Create a valid test nsec key
-          final testPrivateKeyHex =
+          const testPrivateKeyHex =
               'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
           final testNsec = Nip19.encodePrivateKey(testPrivateKeyHex);
 
@@ -88,7 +88,7 @@ void main() {
 
       test('should handle missing UserProfileService gracefully', () async {
         // Arrange: Create a valid test nsec key
-        final testPrivateKeyHex =
+        const testPrivateKeyHex =
             'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3';
         final testNsec = Nip19.encodePrivateKey(testPrivateKeyHex);
 
@@ -103,7 +103,7 @@ void main() {
 
       test('should continue import even if profile fetch fails', () async {
         // Arrange: Create a valid test nsec key
-        final testPrivateKeyHex =
+        const testPrivateKeyHex =
             'c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4';
         final testNsec = Nip19.encodePrivateKey(testPrivateKeyHex);
 
@@ -143,7 +143,7 @@ void main() {
         'should NOT fetch profile if NostrService is not initialized',
         () async {
           // Arrange: Create a valid test nsec key
-          final testPrivateKeyHex =
+          const testPrivateKeyHex =
               'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5';
           final testNsec = Nip19.encodePrivateKey(testPrivateKeyHex);
 
@@ -171,7 +171,7 @@ void main() {
         'should fetch profile using forceRefresh=false for initial import',
         () async {
           // Arrange: Create a valid test nsec key
-          final testPrivateKeyHex =
+          const testPrivateKeyHex =
               'e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6';
           final testNsec = Nip19.encodePrivateKey(testPrivateKeyHex);
 
@@ -202,7 +202,7 @@ void main() {
         'should fetch profile from specified relays after successful hex key import',
         () async {
           // Arrange: Create a valid test private key in hex format
-          final testPrivateKeyHex =
+          const testPrivateKeyHex =
               'f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7';
 
           // Act: Import the hex private key
@@ -227,7 +227,7 @@ void main() {
 
       test('should handle profile fetch gracefully for hex import', () async {
         // Arrange: Create a valid test private key
-        final testPrivateKeyHex =
+        const testPrivateKeyHex =
             'a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8';
 
         // Mock profile service to return null (profile not found)

@@ -40,7 +40,7 @@ Future<void> waitFor<T>(
 void main() {
   testWidgets('profile route renders videos & overlays', (tester) async {
     // Test fixture
-    final testNpub =
+    const testNpub =
         'npub1l5sga6xg72phsz5422ykujprejwud075ggrr3z2hwyrfgr7eylqstegx9z';
     final testHex = npubToHexOrNull(testNpub)!;
 

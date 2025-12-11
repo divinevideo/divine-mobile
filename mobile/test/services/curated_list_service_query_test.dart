@@ -383,7 +383,7 @@ void main() {
     group('fetchPublicListsContainingVideo()', () {
       test('queries Nostr for lists containing specific video', () async {
         // Setup: Create mock kind 30005 events containing the target video
-        final targetVideoId = 'target_video_event_id_123456789abcdef';
+        const targetVideoId = 'target_video_event_id_123456789abcdef';
         final mockListEvent = Event.fromJson({
           'id': 'list_event_id_1',
           'pubkey': 'other_user_pubkey_123456789abcdef',
@@ -433,7 +433,7 @@ void main() {
       });
 
       test('returns empty list when no public lists contain video', () async {
-        final targetVideoId = 'orphan_video_id_123456789abcdef';
+        const targetVideoId = 'orphan_video_id_123456789abcdef';
 
         // Setup mock to return empty stream
         when(
@@ -454,7 +454,7 @@ void main() {
       });
 
       test('returns stream for progressive loading', () async {
-        final targetVideoId = 'target_video_123456789abcdef';
+        const targetVideoId = 'target_video_123456789abcdef';
         final mockListEvent1 = Event.fromJson({
           'id': 'list_1',
           'pubkey': 'user1_pubkey_123456789abcdef',

@@ -189,7 +189,7 @@ void main() {
       'FileSystemException with errno 1 (EPERM) fails without retry',
       () async {
         // Simulate EPERM error
-        final error = const FileSystemException(
+        const error = FileSystemException(
           'Operation not permitted',
           '/test/path',
           OSError('Operation not permitted', 1), // errno 1 = EPERM
@@ -207,7 +207,7 @@ void main() {
       'FileSystemException with errno 13 (EACCES) fails without retry',
       () async {
         // Simulate EACCES error
-        final error = const FileSystemException(
+        const error = FileSystemException(
           'Permission denied',
           '/test/path',
           OSError('Permission denied', 13), // errno 13 = EACCES

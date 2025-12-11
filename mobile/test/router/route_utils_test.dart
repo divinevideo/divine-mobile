@@ -69,19 +69,19 @@ void main() {
 
   group('buildRoute', () {
     test('builds home route with index', () {
-      final context = const RouteContext(type: RouteType.home, videoIndex: 5);
+      const context = RouteContext(type: RouteType.home, videoIndex: 5);
 
       expect(buildRoute(context), '/home/5');
     });
 
     test('builds explore route with index', () {
-      final context = const RouteContext(type: RouteType.explore, videoIndex: 3);
+      const context = RouteContext(type: RouteType.explore, videoIndex: 3);
 
       expect(buildRoute(context), '/explore/3');
     });
 
     test('builds profile route with npub and index', () {
-      final context = const RouteContext(
+      const context = RouteContext(
         type: RouteType.profile,
         npub: 'npub1abc123',
         videoIndex: 2,
@@ -91,7 +91,7 @@ void main() {
     });
 
     test('builds hashtag route with tag and index', () {
-      final context = const RouteContext(
+      const context = RouteContext(
         type: RouteType.hashtag,
         hashtag: 'nostr',
         videoIndex: 1,
@@ -101,19 +101,19 @@ void main() {
     });
 
     test('builds camera route', () {
-      final context = const RouteContext(type: RouteType.camera);
+      const context = RouteContext(type: RouteType.camera);
 
       expect(buildRoute(context), '/camera');
     });
 
     test('builds settings route', () {
-      final context = const RouteContext(type: RouteType.settings);
+      const context = RouteContext(type: RouteType.settings);
 
       expect(buildRoute(context), '/settings');
     });
 
     test('defaults missing index to 0 for video routes', () {
-      final context = const RouteContext(type: RouteType.home);
+      const context = RouteContext(type: RouteType.home);
 
       expect(buildRoute(context), '/home/0');
     });

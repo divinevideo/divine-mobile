@@ -28,7 +28,7 @@ void main() {
       tester,
     ) async {
       // Create a mock recording state
-      final mockState = const VineRecordingUIState(
+      const mockState = VineRecordingUIState(
         recordingState: VineRecordingState.idle,
         progress: 0.0,
         totalRecordedDuration: Duration.zero,
@@ -212,7 +212,7 @@ void main() {
     });
 
     testWidgets('should hide hint when recording is active', (tester) async {
-      final mockState = const VineRecordingUIState(
+      const mockState = VineRecordingUIState(
         recordingState: VineRecordingState.recording,
         progress: 0.2,
         totalRecordedDuration: Duration(milliseconds: 500),

@@ -48,7 +48,7 @@ void main() {
         Log.info('📹 Subscribing to kind 34236 events...', name: 'Test');
 
         // First batch - get most recent videos
-        final filter1 = const embedded.Filter(kinds: [34236], limit: 10);
+        const filter1 = embedded.Filter(kinds: [34236], limit: 10);
 
         final events1 = <embedded.NostrEvent>[];
         final completer1 = Completer<void>();

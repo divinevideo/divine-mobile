@@ -3,4 +3,5 @@ linter:
     - annotate_overrides
     - directives_ordering
     - prefer_const_constructors
+    - prefer_const_declarations
     - unnecessary_breaks

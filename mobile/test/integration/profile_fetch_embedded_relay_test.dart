@@ -49,7 +49,7 @@ void main() {
         // First, get some video events
         Log.info('📹 Getting video events...', name: 'Test');
 
-        final videoFilter = const embedded.Filter(
+        const videoFilter = embedded.Filter(
           kinds: [34236], // NIP-71 kind 34236 addressable video events
           limit: 5,
         );
@@ -190,7 +190,7 @@ void main() {
 
         Log.info('👤 Fetching Jack Dorsey profile...', name: 'Test');
 
-        final filter = const embedded.Filter(
+        const filter = embedded.Filter(
           kinds: [0],
           authors: [jackPubkey],
           limit: 1,

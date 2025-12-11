@@ -667,7 +667,7 @@ class AnalyticsApiService {
         category: LogCategory.video,
       );
 
-      final defaultRelay = AppConstants.defaultRelayUrl;
+      const defaultRelay = AppConstants.defaultRelayUrl;
       if (!connectedRelays.contains(defaultRelay)) {
         Log.warning(
           '⚠️ Not connected to $defaultRelay - attempting to add',

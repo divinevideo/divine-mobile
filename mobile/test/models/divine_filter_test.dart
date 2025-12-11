@@ -83,7 +83,7 @@ void main() {
 
     group('IntRangeFilter', () {
       test('supports all range operators', () {
-        final filter = const IntRangeFilter(gte: 10, lte: 100, gt: 5, lt: 105);
+        const filter = IntRangeFilter(gte: 10, lte: 100, gt: 5, lt: 105);
 
         final json = filter.toJson();
 
@@ -94,7 +94,7 @@ void main() {
       });
 
       test('omits null operators', () {
-        final filter = const IntRangeFilter(gte: 100);
+        const filter = IntRangeFilter(gte: 100);
 
         final json = filter.toJson();
 
@@ -107,7 +107,7 @@ void main() {
 
     group('SortConfig', () {
       test('defaults to descending direction', () {
-        final sort = const SortConfig(field: 'loop_count');
+        const sort = SortConfig(field: 'loop_count');
 
         final json = sort.toJson();
 
@@ -116,7 +116,7 @@ void main() {
       });
 
       test('supports ascending direction', () {
-        final sort = const SortConfig(
+        const sort = SortConfig(
           field: 'created_at',
           direction: SortDirection.asc,
         );

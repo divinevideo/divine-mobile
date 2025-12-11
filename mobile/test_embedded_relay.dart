@@ -84,7 +84,7 @@ void main() async {
     name: 'EmbeddedRelayTest',
     category: LogCategory.relay,
   );
-  final openFilter = const embedded.Filter(
+  const openFilter = embedded.Filter(
     kinds: [32222], // Video events
     limit: 5,
   );

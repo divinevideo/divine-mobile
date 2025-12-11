@@ -101,7 +101,7 @@ class ProofModeConfig {
   static Future<int> get gcpProjectId async {
     try {
       // Try to load from environment variable
-      final envValue = const String.fromEnvironment(
+      const envValue = String.fromEnvironment(
         'GCP_PROJECT_ID',
         defaultValue: '0',
       );

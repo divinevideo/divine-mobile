@@ -9,7 +9,7 @@ void main() {
     test('should sort videos in reverse chronological order (newest first)', () {
       // ARRANGE: Create test videos with different timestamps
       final now = DateTime.now();
-      final testUserHex = 'testuser123456789abcdef';
+      const testUserHex = 'testuser123456789abcdef';
 
       // Create videos with increasing timestamps (oldest to newest)
       final video1 = VideoEvent(
@@ -73,7 +73,7 @@ void main() {
 
     test('should handle videos with same timestamp', () {
       final now = DateTime.now();
-      final testUserHex = 'testuser123456789abcdef';
+      const testUserHex = 'testuser123456789abcdef';
 
       // Create videos with same timestamp but different IDs
       final video1 = VideoEvent(

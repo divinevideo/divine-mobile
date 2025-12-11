@@ -45,7 +45,7 @@ mixin NostrListServiceMixin {
       }
 
       final now = DateTime.now();
-      final cacheExpiry = const Duration(minutes: 5);
+      const cacheExpiry = Duration(minutes: 5);
 
       // Check if we have valid cached data
       if (_cachedMyEvents != null &&

@@ -76,7 +76,7 @@ class NostrServiceFunction implements INostrService {
     );
 
     // Ensure default relay is always included (for external relay connections)
-    final defaultRelay = AppConstants.defaultRelayUrl;
+    const defaultRelay = AppConstants.defaultRelayUrl;
     final relaysToAdd = customRelays ?? [defaultRelay];
     if (!relaysToAdd.contains(defaultRelay)) {
       relaysToAdd.add(defaultRelay);

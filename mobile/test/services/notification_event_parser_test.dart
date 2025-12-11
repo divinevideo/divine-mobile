@@ -61,7 +61,7 @@ void main() {
 
       test('creates like notification with all fields', () {
         // Arrange
-        final actorPubkey =
+        const actorPubkey =
             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
         final event = Event(
           actorPubkey,
@@ -165,7 +165,7 @@ void main() {
 
       test('creates comment notification with metadata', () {
         // Arrange
-        final actorPubkey =
+        const actorPubkey =
             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
         final event = Event(
           actorPubkey,
@@ -205,7 +205,7 @@ void main() {
     group('parseFollowEvent', () {
       test('creates follow notification without video info', () {
         // Arrange
-        final actorPubkey =
+        const actorPubkey =
             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
         final event = Event(actorPubkey, 3, [], '', createdAt: 1700000000);
 
@@ -232,7 +232,7 @@ void main() {
     group('parseMentionEvent', () {
       test('creates mention notification with text metadata', () {
         // Arrange
-        final actorPubkey =
+        const actorPubkey =
             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
         final event = Event(
           actorPubkey,
@@ -285,7 +285,7 @@ void main() {
 
       test('creates repost notification', () {
         // Arrange
-        final actorPubkey =
+        const actorPubkey =
             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
         final event = Event(
           actorPubkey,

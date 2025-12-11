@@ -114,7 +114,7 @@ void main() {
 
         // Verify the follow list is immediately cached in SharedPreferences
         final prefs = await SharedPreferences.getInstance();
-        final cachedFollowingKey = 'following_list_$testUserPubkey';
+        const cachedFollowingKey = 'following_list_$testUserPubkey';
         final cachedFollowing = prefs.getString(cachedFollowingKey);
 
         // THIS TEST SHOULD PASS BUT CURRENTLY FAILS
@@ -207,7 +207,7 @@ void main() {
 
         // Verify the follow list is immediately cached in SharedPreferences
         final prefs = await SharedPreferences.getInstance();
-        final cachedFollowingKey = 'following_list_$testUserPubkey';
+        const cachedFollowingKey = 'following_list_$testUserPubkey';
         final cachedFollowing = prefs.getString(cachedFollowingKey);
 
         // THIS TEST SHOULD PASS BUT CURRENTLY FAILS
@@ -270,7 +270,7 @@ void main() {
 
         // Verify SharedPreferences cache was updated during initialization
         final prefs = await SharedPreferences.getInstance();
-        final cachedFollowingKey = 'following_list_$testUserPubkey';
+        const cachedFollowingKey = 'following_list_$testUserPubkey';
         final cachedFollowing = prefs.getString(cachedFollowingKey);
 
         // THIS TEST SHOULD PASS BUT CURRENTLY FAILS

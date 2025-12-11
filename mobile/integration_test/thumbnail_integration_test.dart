@@ -118,7 +118,7 @@ void main() {
             // Test upload structure (without actually uploading)
             Log.debug('\n📤 Testing upload structure...');
 
-            final uploadResult = const BlossomUploadResult(
+            const uploadResult = BlossomUploadResult(
               success: true,
               videoId: 'real_test_video',
               fallbackUrl: 'https://cdn.example.com/real_test_video.mp4',
@@ -222,7 +222,7 @@ void main() {
       );
 
       // Test the upload result processing
-      final mockUploadResult = const BlossomUploadResult(
+      const mockUploadResult = BlossomUploadResult(
         success: true,
         videoId: 'integration_test_video',
         fallbackUrl: 'https://cdn.example.com/integration_test.mp4',

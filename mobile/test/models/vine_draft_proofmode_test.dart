@@ -12,7 +12,7 @@ void main() {
   group('VineDraft NativeProof serialization', () {
     test('should serialize and deserialize proofManifestJson correctly', () {
       // Create a sample NativeProofData
-      final proofData = const NativeProofData(
+      const proofData = NativeProofData(
         videoHash: 'abc123def456',
         sensorDataCsv: 'timestamp,lat,lng\n2025-01-01,0.0,0.0',
         pgpSignature: 'pgp_signature_data',
@@ -97,7 +97,7 @@ void main() {
     });
 
     test('should preserve proofManifestJson through copyWith', () {
-      final proofData = const NativeProofData(
+      const proofData = NativeProofData(
         videoHash: 'hash_123',
         pgpSignature: 'sig_123',
         publicKey: 'key_123',
@@ -129,7 +129,7 @@ void main() {
 
     test('NativeProofData verification level should work correctly', () {
       // Full verification with mobile attestation
-      final fullProof = const NativeProofData(
+      const fullProof = NativeProofData(
         videoHash: 'hash',
         pgpSignature: 'sig',
         publicKey: 'key',
@@ -141,7 +141,7 @@ void main() {
       expect(fullProof.hasMobileAttestation, true);
 
       // Web verification (no attestation)
-      final webProof = const NativeProofData(
+      const webProof = NativeProofData(
         videoHash: 'hash',
         pgpSignature: 'sig',
         publicKey: 'key',
@@ -152,7 +152,7 @@ void main() {
       expect(webProof.hasMobileAttestation, false);
 
       // Basic proof (sensor data only)
-      final basicProof = const NativeProofData(
+      const basicProof = NativeProofData(
         videoHash: 'hash',
         sensorDataCsv: 'csv',
       );

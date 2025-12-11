@@ -12,7 +12,7 @@ void main() {
       tester,
     ) async {
       final mixin = TestAsyncValueUIHelpersMixin();
-      final asyncValue = const AsyncValue.data('test data');
+      const asyncValue = AsyncValue.data('test data');
 
       await tester.pumpWidget(
         MaterialApp(
@@ -33,7 +33,7 @@ void main() {
       'SPEC: should render default loading widget when AsyncValue is loading',
       (tester) async {
         final mixin = TestAsyncValueUIHelpersMixin();
-        final asyncValue = const AsyncValue<String>.loading();
+        const asyncValue = AsyncValue<String>.loading();
 
         await tester.pumpWidget(
           MaterialApp(
@@ -55,7 +55,7 @@ void main() {
       tester,
     ) async {
       final mixin = TestAsyncValueUIHelpersMixin();
-      final asyncValue = const AsyncValue<String>.loading();
+      const asyncValue = AsyncValue<String>.loading();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -77,7 +77,7 @@ void main() {
       'SPEC: should render default error widget when AsyncValue has error',
       (tester) async {
         final mixin = TestAsyncValueUIHelpersMixin();
-        final asyncValue = const AsyncValue<String>.error(
+        const asyncValue = AsyncValue<String>.error(
           'Test error',
           StackTrace.empty,
         );
@@ -102,7 +102,7 @@ void main() {
       tester,
     ) async {
       final mixin = TestAsyncValueUIHelpersMixin();
-      final asyncValue = const AsyncValue<String>.error(
+      const asyncValue = AsyncValue<String>.error(
         'Test error',
         StackTrace.empty,
       );
@@ -127,7 +127,7 @@ void main() {
       tester,
     ) async {
       final mixin = TestAsyncValueUIHelpersMixin();
-      final asyncValue = const AsyncValue<String>.loading();
+      const asyncValue = AsyncValue<String>.loading();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -154,7 +154,7 @@ void main() {
       'SPEC: default error widget should show error icon and message',
       (tester) async {
         final mixin = TestAsyncValueUIHelpersMixin();
-        final asyncValue = const AsyncValue<String>.error(
+        const asyncValue = AsyncValue<String>.error(
           'Network timeout',
           StackTrace.empty,
         );
@@ -186,7 +186,7 @@ void main() {
 
     testWidgets('SPEC: should handle null data correctly', (tester) async {
       final mixin = TestAsyncValueUIHelpersMixin();
-      final asyncValue = const AsyncValue<String?>.data(null);
+      const asyncValue = AsyncValue<String?>.data(null);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -204,7 +204,7 @@ void main() {
 
     testWidgets('SPEC: should work with complex data types', (tester) async {
       final mixin = TestAsyncValueUIHelpersMixin();
-      final asyncValue = const AsyncValue.data({'key': 'value', 'count': 42});
+      const asyncValue = AsyncValue.data({'key': 'value', 'count': 42});
 
       await tester.pumpWidget(
         MaterialApp(

@@ -51,15 +51,15 @@ void main() {
       tester,
     ) async {
       // Simulate the conditional rendering logic
-      final showSegmentCount = !kIsWeb;
+      const showSegmentCount = !kIsWeb;
 
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: Column(
               children: [
-                if (showSegmentCount) const Text('2 segments'),
-                if (!showSegmentCount) const Text('Recording...'),
+                if (showSegmentCount) Text('2 segments'),
+                if (!showSegmentCount) Text('Recording...'),
               ],
             ),
           ),

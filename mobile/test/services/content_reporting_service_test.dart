@@ -150,7 +150,7 @@ void main() {
           () => mockNostrService.broadcastEvent(any()),
         ).thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
 
-        final reasons = ContentFilterReason.values;
+        const reasons = ContentFilterReason.values;
 
         for (final reason in reasons) {
           final result = await service.reportContent(
