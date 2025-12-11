@@ -1,46 +1,46 @@
-// ABOUTME: Factory for creating platform-appropriate NostrService implementations
-// ABOUTME: Handles conditional service creation for web vs mobile platforms
+// ABOUTME: Factory for creating NostrClient instances
+// ABOUTME: Handles platform-appropriate client creation with proper configuration
 
-import 'package:flutter/foundation.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/services/nostr_key_manager_signer.dart';
 import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
-// Conditional imports for platform-specific implementations
-import 'nostr_service_factory_mobile.dart'
-    if (dart.library.html) 'nostr_service_factory_web.dart';
-
-/// Factory class for creating platform-appropriate NostrService implementations
+/// Factory class for creating NostrClient instances
 class NostrServiceFactory {
-  /// Create the appropriate NostrService for the current platform
-  static INostrService create(
+  /// Create a NostrClient for the current platform
+  static NostrClient create(
     NostrKeyManager keyManager, {
-    void Function()? onInitialized,
     RelayStatisticsService? statisticsService,
   }) {
-    // Use platform-specific factory function
     UnifiedLogger.info(
-      'Creating platform-appropriate NostrService',
+      'Creating NostrClient via factory',
       name: 'NostrServiceFactory',
     );
-    return createEmbeddedRelayService(
-      keyManager,
-      onInitialized: onInitialized,
-      statisticsService: statisticsService,
+
+    // Create signer from key manager
+    final signer = NostrKeyManagerSigner(keyManager);
+
+    // Create NostrClient config
+    final config = NostrClientConfig(
+      signer: signer,
+      publicKey: keyManager.publicKey ?? '',
     );
+
+    // Create relay manager config
+    final relayManagerConfig = RelayManagerConfig(
+      defaultRelayUrl: AppConstants.defaultRelayUrl,
+      storage: InMemoryRelayStorage(),
+    );
+
+    // Create the NostrClient
+    return NostrClient(config: config, relayManagerConfig: relayManagerConfig);
   }
 
-  /// Initialize the created service with appropriate parameters
-  static Future<void> initialize(INostrService service) async {
-    // P2P disabled for release - not ready for production
-    // Initialize with P2P disabled on all platforms
-    await (service as dynamic).initialize(enableP2P: false);
-  }
-
-  /// Check if P2P features are available on current platform and service
-  static bool isP2PAvailable(INostrService service) {
-    // P2P is available on mobile platforms with NostrService
-    return !kIsWeb;
+  /// Initialize the created client
+  static Future<void> initialize(NostrClient client) async {
+    await client.initialize();
   }
 }

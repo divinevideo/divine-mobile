@@ -7,23 +7,23 @@ import 'package:mockito/mockito.dart';
 import 'package:openvine/models/user_profile.dart' as profile_model;
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 
 import 'video_sharing_service_test.mocks.dart';
 
-@GenerateMocks([INostrService, AuthService, UserProfileService, SocialService])
+@GenerateMocks([NostrClient, AuthService, UserProfileService, SocialService])
 void main() {
   late VideoSharingService service;
-  late MockINostrService mockNostrService;
+  late MockNostrClient mockNostrService;
   late MockAuthService mockAuthService;
   late MockUserProfileService mockUserProfileService;
   late MockSocialService mockSocialService;
 
   setUp(() {
-    mockNostrService = MockINostrService();
+    mockNostrService = MockNostrClient();
     mockAuthService = MockAuthService();
     mockUserProfileService = MockUserProfileService();
     mockSocialService = MockSocialService();

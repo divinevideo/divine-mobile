@@ -3,22 +3,22 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
-@GenerateMocks([INostrService, AuthService, SubscriptionManager])
+@GenerateMocks([NostrClient, AuthService, SubscriptionManager])
 import 'reaction_posting_test.mocks.dart';
 
 void main() {
   group('Reaction Posting - Relay Closed Issue', () {
     late SocialService socialService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockSubscriptionManager mockSubscriptionManager;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockSubscriptionManager = MockSubscriptionManager();
 

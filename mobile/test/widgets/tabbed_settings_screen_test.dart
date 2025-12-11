@@ -11,28 +11,28 @@ import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/bug_report_service.dart';
-import 'package:openvine/services/nostr_service.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
 
 import 'tabbed_settings_screen_test.mocks.dart';
 
 @GenerateMocks([
   AuthService,
-  NostrService,
+  NostrClient,
   BlossomUploadService,
   NotificationServiceEnhanced,
   BugReportService,
 ])
 void main() {
   late MockAuthService mockAuthService;
-  late MockNostrService mockNostrService;
+  late MockNostrClient mockNostrService;
   late MockBlossomUploadService mockBlossomService;
   late MockNotificationServiceEnhanced mockNotificationService;
   late MockBugReportService mockBugReportService;
 
   setUp(() {
     mockAuthService = MockAuthService();
-    mockNostrService = MockNostrService();
+    mockNostrService = MockNostrClient();
     mockBlossomService = MockBlossomUploadService();
     mockNotificationService = MockNotificationServiceEnhanced();
     mockBugReportService = MockBugReportService();

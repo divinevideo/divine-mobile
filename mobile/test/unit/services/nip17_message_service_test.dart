@@ -7,16 +7,16 @@ import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/nip17_message_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 
 import 'nip17_message_service_test.mocks.dart';
 
-@GenerateMocks([NostrKeyManager, INostrService])
+@GenerateMocks([NostrKeyManager, NostrClient])
 void main() {
   group('NIP17MessageService', () {
     late NIP17MessageService service;
     late MockNostrKeyManager mockKeyManager;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
 
     const testPrivateKey =
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
@@ -27,7 +27,7 @@ void main() {
 
     setUp(() {
       mockKeyManager = MockNostrKeyManager();
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
 
       // Setup mock key manager
       when(mockKeyManager.hasKeys).thenReturn(true);

@@ -6,12 +6,12 @@
 import 'dart:async' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
+import 'package:nostr_client/nostr_client.dart' as _i7;
 import 'package:nostr_sdk/event.dart' as _i9;
 import 'package:openvine/services/auth_service.dart' as _i3;
 import 'package:openvine/services/content_blocklist_service.dart' as _i6;
 import 'package:openvine/services/content_moderation_service.dart' as _i5;
 import 'package:openvine/services/content_reporting_service.dart' as _i2;
-import 'package:openvine/services/nostr_service_interface.dart' as _i7;
 import 'package:openvine/services/user_profile_service.dart' as _i8;
 
 // ignore_for_file: type=lint
@@ -297,7 +297,7 @@ class MockContentBlocklistService extends _i1.Mock
 
   @override
   _i4.Future<void> syncMuteListsInBackground(
-    _i7.INostrService? nostrService,
+    _i7.NostrClient? nostrService,
     String? ourPubkey,
   ) =>
       (super.noSuchMethod(

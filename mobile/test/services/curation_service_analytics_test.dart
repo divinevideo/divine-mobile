@@ -9,21 +9,21 @@ import 'package:openvine/models/curation_set.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curation_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 
-@GenerateMocks([INostrService, VideoEventService, SocialService, AuthService])
+@GenerateMocks([NostrClient, VideoEventService, SocialService, AuthService])
 import 'curation_service_analytics_test.mocks.dart';
 
 void main() {
   late CurationService curationService;
-  late MockINostrService mockNostrService;
+  late MockNostrClient mockNostrService;
   late MockVideoEventService mockVideoEventService;
   late MockSocialService mockSocialService;
   late MockAuthService mockAuthService;
   setUp(() {
-    mockNostrService = MockINostrService();
+    mockNostrService = MockNostrClient();
     mockVideoEventService = MockVideoEventService();
     mockSocialService = MockSocialService();
     mockAuthService = MockAuthService();

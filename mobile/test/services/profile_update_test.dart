@@ -5,21 +5,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
 
-@GenerateMocks([INostrService, SubscriptionManager])
+@GenerateMocks([NostrClient, SubscriptionManager])
 import 'profile_update_test.mocks.dart';
 
 void main() {
   group('UserProfileService - Profile Update Tests', () {
     late UserProfileService service;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockSubscriptionManager mockSubscriptionManager;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockSubscriptionManager = MockSubscriptionManager();
 
       when(mockNostrService.isInitialized).thenReturn(true);

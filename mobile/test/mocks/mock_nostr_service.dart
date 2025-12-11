@@ -1,9 +1,9 @@
 // ABOUTME: Mock implementation of Nostr service for testing camera screen functionality
 // ABOUTME: Provides controllable mock behavior for testing various service states
 
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 
-class MockNostrService implements INostrService {
+class MockNostrService implements NostrClient {
   bool _isInitialized = false;
   String? _lastError;
 

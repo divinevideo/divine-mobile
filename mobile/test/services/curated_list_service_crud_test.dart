@@ -11,23 +11,23 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/utils/curated_list_ext.dart';
 import 'package:openvine/utils/nostr_event_ext.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'curated_list_service_crud_test.mocks.dart';
 
-@GenerateNiceMocks([MockSpec<INostrService>(), MockSpec<AuthService>()])
+@GenerateNiceMocks([MockSpec<NostrClient>(), MockSpec<AuthService>()])
 void main() {
   group('CuratedListService - CRUD Operations', () {
     late CuratedListService service;
-    late MockINostrService mockNostr;
+    late MockNostrClient mockNostr;
     late MockAuthService mockAuth;
     late SharedPreferences prefs;
 
     setUp(() async {
-      mockNostr = MockINostrService();
+      mockNostr = MockNostrClient();
       mockAuth = MockAuthService();
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();

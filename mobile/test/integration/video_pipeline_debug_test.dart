@@ -19,14 +19,14 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Video Pipeline Debug - Complete Flow', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late SubscriptionManager subscriptionManager;
     late VideoEventService videoEventService;
     late StreamController<Event> testEventController;
     late ProviderContainer container;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       testEventController = StreamController<Event>.broadcast();
 
       // Mock NostrService

@@ -5,23 +5,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'dart:async';
 
-@GenerateMocks([INostrService, SubscriptionManager])
+@GenerateMocks([NostrClient, SubscriptionManager])
 import 'video_event_service_pagination_test.mocks.dart';
 
 void main() {
   group('VideoEventService Pagination', () {
     late VideoEventService videoEventService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockSubscriptionManager mockSubscriptionManager;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockSubscriptionManager = MockSubscriptionManager();
 
       // Setup basic mock responses

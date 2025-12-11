@@ -7,12 +7,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 class MockSubscriptionManager extends Mock implements SubscriptionManager {}
 

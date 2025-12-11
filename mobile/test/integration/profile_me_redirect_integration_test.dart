@@ -11,7 +11,7 @@ import 'package:openvine/ui/overlay_policy.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_prewarmer.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -263,7 +263,7 @@ class _FakeVideoEventService extends VideoEventService {
   }
 }
 
-class _FakeNostrService implements INostrService {
+class _FakeNostrService implements NostrClient {
   @override
   bool get isInitialized => true;
 

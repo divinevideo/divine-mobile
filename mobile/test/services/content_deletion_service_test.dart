@@ -9,15 +9,15 @@ import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/content_deletion_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'content_deletion_service_test.mocks.dart';
 
-@GenerateMocks([INostrService, NostrKeyManager])
+@GenerateMocks([NostrClient, NostrKeyManager])
 void main() {
   group('ContentDeletionService', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockNostrKeyManager mockKeyManager;
     late ContentDeletionService service;
     late SharedPreferences prefs;
@@ -35,11 +35,10 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
 
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockKeyManager = MockNostrKeyManager();
 
       // Setup common mocks with valid keys
-      when(mockNostrService.keyManager).thenReturn(mockKeyManager);
       when(mockKeyManager.keyPair).thenReturn(testKeychain);
       when(mockNostrService.isInitialized).thenReturn(true);
       when(mockNostrService.hasKeys).thenReturn(true);
@@ -47,6 +46,7 @@ void main() {
 
       service = ContentDeletionService(
         nostrService: mockNostrService,
+        keyManager: mockKeyManager,
         prefs: prefs,
       );
 
@@ -299,6 +299,7 @@ void main() {
       // Arrange - create new service without initializing
       final uninitializedService = ContentDeletionService(
         nostrService: mockNostrService,
+        keyManager: mockKeyManager,
         prefs: prefs,
       );
 

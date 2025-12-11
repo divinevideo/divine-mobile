@@ -12,18 +12,18 @@ import 'package:openvine/providers/comments_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/social_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
 // Generate mocks
-@GenerateMocks([SocialService, AuthService, INostrService, SubscriptionManager])
+@GenerateMocks([SocialService, AuthService, NostrClient, SubscriptionManager])
 import 'comments_provider_test.mocks.dart';
 
 void main() {
   group('CommentsNotifier Unit Tests', () {
     late MockSocialService mockSocialService;
     late MockAuthService mockAuthService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockSubscriptionManager mockSubscriptionManager;
     late ProviderContainer container;
     late CommentsNotifier commentsNotifier;
@@ -40,7 +40,7 @@ void main() {
     setUp(() {
       mockSocialService = MockSocialService();
       mockAuthService = MockAuthService();
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockSubscriptionManager = MockSubscriptionManager();
 
       // Default setup for auth service

@@ -6,8 +6,8 @@
 import 'dart:async' as _i3;
 
 import 'package:mockito/mockito.dart' as _i1;
+import 'package:nostr_client/nostr_client.dart' as _i4;
 import 'package:openvine/services/content_blocklist_service.dart' as _i2;
-import 'package:openvine/services/nostr_service_interface.dart' as _i4;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -114,7 +114,7 @@ class MockContentBlocklistService extends _i1.Mock
 
   @override
   _i3.Future<void> syncMuteListsInBackground(
-    _i4.INostrService? nostrService,
+    _i4.NostrClient? nostrService,
     String? ourPubkey,
   ) =>
       (super.noSuchMethod(

@@ -10,7 +10,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/services/event_router.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/relay_capability_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
@@ -18,7 +18,7 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 
 @GenerateMocks([
-  INostrService,
+  NostrClient,
   SubscriptionManager,
   UserProfileService,
   EventRouter,
@@ -29,7 +29,7 @@ import 'video_event_service_sorted_queries_integration_test.mocks.dart';
 void main() {
   group('VideoEventService Sorted Queries Integration', () {
     late VideoEventService service;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockSubscriptionManager mockSubscriptionManager;
     late MockUserProfileService mockUserProfileService;
     late MockEventRouter mockEventRouter;
@@ -38,7 +38,7 @@ void main() {
     late StreamController<Event> eventStreamController;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockSubscriptionManager = MockSubscriptionManager();
       mockUserProfileService = MockUserProfileService();
       mockEventRouter = MockEventRouter();

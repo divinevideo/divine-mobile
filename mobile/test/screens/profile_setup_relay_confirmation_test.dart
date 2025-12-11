@@ -7,15 +7,15 @@ import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/user_profile_service.dart';
 
-@GenerateMocks([INostrService, AuthService, UserProfileService])
+@GenerateMocks([NostrClient, AuthService, UserProfileService])
 import 'profile_setup_relay_confirmation_test.mocks.dart';
 
 void main() {
   group('Profile Setup Relay Confirmation', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockUserProfileService mockUserProfileService;
     late String testPubkey;
@@ -23,7 +23,7 @@ void main() {
     late int testTimestamp;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockUserProfileService = MockUserProfileService();
 

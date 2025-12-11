@@ -18,13 +18,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'video_event_service_gateway_test.mocks.dart';
 
-// Generate mocks for INostrService
-@GenerateMocks([INostrService])
-import 'package:openvine/services/nostr_service_interface.dart';
+// Generate mocks for NostrClient
+@GenerateMocks([NostrClient])
+import 'package:nostr_client/nostr_client.dart';
 
 void main() {
   group('VideoEventService Gateway Integration', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late SubscriptionManager subscriptionManager;
     late RelayGatewaySettings gatewaySettings;
     late RelayGatewayService gatewayService;
@@ -34,7 +34,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       gatewaySettings = RelayGatewaySettings(prefs);
 
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       subscriptionManager = SubscriptionManager(mockNostrService);
 
       // Setup common mock behaviors

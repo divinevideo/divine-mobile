@@ -15,13 +15,13 @@ import '../helpers/test_provider_overrides.mocks.dart';
 
 void main() {
   group('VideoEventsProvider - List Stability', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockSubscriptionManager mockSubscriptionManager;
     late VideoEventService videoEventService;
     late ProviderContainer container;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockSubscriptionManager = MockSubscriptionManager();
 
       // Stub necessary methods

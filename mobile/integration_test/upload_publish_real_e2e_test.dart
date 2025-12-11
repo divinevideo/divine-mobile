@@ -87,10 +87,8 @@ void main() {
       print('🔌 Initializing NostrService with relay connections...');
       final nostrService = container.read(nostrServiceProvider);
 
-      // Initialize with OpenVine relays
-      await nostrService.initialize(
-        customRelays: ['wss://relay3.openvine.co', 'wss://relay.damus.io'],
-      );
+      // Initialize
+      await nostrService.initialize();
 
       print('✅ NostrService initialized');
       print('   Configured relays: ${nostrService.relays}');

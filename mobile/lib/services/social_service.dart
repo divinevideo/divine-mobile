@@ -9,7 +9,7 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/immediate_completion_helper.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -93,7 +93,7 @@ class SocialService {
        _personalEventCache = personalEventCache {
     _initialize();
   }
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final AuthService _authService;
   final SubscriptionManager _subscriptionManager;
   final PersonalEventCacheService? _personalEventCache;

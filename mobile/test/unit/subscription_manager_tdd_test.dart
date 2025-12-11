@@ -7,21 +7,21 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
-@GenerateNiceMocks([MockSpec<INostrService>()])
+@GenerateNiceMocks([MockSpec<NostrClient>()])
 import 'subscription_manager_tdd_test.mocks.dart';
 
 void main() {
   group('SubscriptionManager TDD - Event Forwarding Bug', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late SubscriptionManager subscriptionManager;
     late StreamController<Event> testEventController;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       testEventController = StreamController<Event>.broadcast();
 
       // Mock the NostrService to return our test stream

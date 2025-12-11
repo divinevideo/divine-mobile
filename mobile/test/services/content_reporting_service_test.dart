@@ -4,14 +4,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/content_reporting_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/content_moderation_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nostr_sdk/event.dart';
 
 // Mock classes
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 class MockNostrKeyManager extends Mock implements NostrKeyManager {}
 
@@ -65,13 +65,13 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.publicKey).thenReturn(realKeyPair.public);
       when(() => mockNostrService.hasKeys).thenReturn(true);
-      when(() => mockNostrService.keyManager).thenReturn(mockKeyManager);
 
       // Mock KeyManager with real keypair
       when(() => mockKeyManager.keyPair).thenReturn(realKeyPair);
 
       service = ContentReportingService(
         nostrService: mockNostrService,
+        keyManager: mockKeyManager,
         prefs: prefs,
       );
     });
@@ -93,6 +93,7 @@ void main() {
 
         final uninitializedService = ContentReportingService(
           nostrService: mockNostrService,
+          keyManager: mockKeyManager,
           prefs: prefs,
         );
 
@@ -253,12 +254,12 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.publicKey).thenReturn(realKeyPair.public);
       when(() => mockNostrService.hasKeys).thenReturn(true);
-      when(() => mockNostrService.keyManager).thenReturn(mockKeyManager);
       when(() => mockKeyManager.keyPair).thenReturn(realKeyPair);
 
       // Simulate what the provider does
       final service = ContentReportingService(
         nostrService: mockNostrService,
+        keyManager: mockKeyManager,
         prefs: prefs,
       );
       await service.initialize(); // This is what the provider now does

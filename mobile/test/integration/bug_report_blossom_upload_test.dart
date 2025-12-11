@@ -12,7 +12,7 @@ import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/config/bug_report_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,7 +45,7 @@ class MockAuthService implements AuthService {
   dynamic noSuchMethod(Invocation invocation) => null;
 }
 
-class MockNostrService implements INostrService {
+class MockNostrService implements NostrClient {
   @override
   Future<bool> addRelay(String relayUrl) async {
     print('📡 Mock: Would add relay $relayUrl');

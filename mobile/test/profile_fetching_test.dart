@@ -7,23 +7,23 @@ import 'package:mockito/annotations.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/models/user_profile.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/profile_cache_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
 import 'dart:convert';
 
-@GenerateMocks([INostrService, SubscriptionManager, ProfileCacheService])
+@GenerateMocks([NostrClient, SubscriptionManager, ProfileCacheService])
 import 'profile_fetching_test.mocks.dart';
 
 void main() {
   late UserProfileService profileService;
-  late MockINostrService mockNostrService;
+  late MockNostrClient mockNostrService;
   late MockSubscriptionManager mockSubscriptionManager;
   late MockProfileCacheService mockCacheService;
 
   setUp(() {
-    mockNostrService = MockINostrService();
+    mockNostrService = MockNostrClient();
     mockSubscriptionManager = MockSubscriptionManager();
     mockCacheService = MockProfileCacheService();
 

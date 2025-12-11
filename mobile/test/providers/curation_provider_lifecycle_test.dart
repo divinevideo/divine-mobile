@@ -11,7 +11,7 @@ import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/services/analytics_api_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curation_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:riverpod/riverpod.dart';
@@ -19,7 +19,7 @@ import 'package:riverpod/riverpod.dart';
 import 'curation_provider_lifecycle_test.mocks.dart';
 
 @GenerateMocks([
-  INostrService,
+  NostrClient,
   VideoEventService,
   SocialService,
   AuthService,
@@ -27,7 +27,7 @@ import 'curation_provider_lifecycle_test.mocks.dart';
 ])
 void main() {
   group('CurationProvider Lifecycle', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockVideoEventService mockVideoEventService;
     late MockSocialService mockSocialService;
     late MockAuthService mockAuthService;
@@ -35,7 +35,7 @@ void main() {
     late List<VideoEvent> sampleVideos;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockVideoEventService = MockVideoEventService();
       mockSocialService = MockSocialService();
       mockAuthService = MockAuthService();

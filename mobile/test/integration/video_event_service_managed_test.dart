@@ -16,13 +16,13 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('VideoEventService SubscriptionManager Integration', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late SubscriptionManager subscriptionManager;
     late VideoEventService videoEventService;
     late StreamController<Event> testEventController;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       testEventController = StreamController<Event>.broadcast();
 
       // Mock NostrService

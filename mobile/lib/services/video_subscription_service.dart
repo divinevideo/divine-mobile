@@ -7,18 +7,18 @@ import 'package:flutter/foundation.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Service responsible for managing video feed subscriptions
 class VideoSubscriptionService {
   VideoSubscriptionService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required SubscriptionManager subscriptionManager,
   }) : _nostrService = nostrService,
        _subscriptionManager = subscriptionManager;
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final SubscriptionManager _subscriptionManager;
 
   String? _activeSubscriptionId;

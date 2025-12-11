@@ -7,22 +7,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 import './video_event_service_repost_test.mocks.dart';
 
-@GenerateMocks([INostrService, SubscriptionManager])
+@GenerateMocks([NostrClient, SubscriptionManager])
 void main() {
   group('VideoEventService Kind 16 Generic Repost Processing', () {
     late VideoEventService videoEventService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockSubscriptionManager mockSubscriptionManager;
     late StreamController<Event> eventStreamController;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockSubscriptionManager = MockSubscriptionManager();
       eventStreamController = StreamController<Event>.broadcast();
 

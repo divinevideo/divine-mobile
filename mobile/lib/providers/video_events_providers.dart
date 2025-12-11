@@ -9,7 +9,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/state/seen_videos_state.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
@@ -19,9 +19,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'video_events_providers.g.dart';
 
-/// Provider for NostrService instance (Video Events specific)
+/// Provider for NostrClient instance (Video Events specific)
 @riverpod
-INostrService videoEventsNostrService(Ref ref) {
+NostrClient videoEventsNostrService(Ref ref) {
   throw UnimplementedError(
     'VideoEventsNostrService must be overridden in ProviderScope',
   );

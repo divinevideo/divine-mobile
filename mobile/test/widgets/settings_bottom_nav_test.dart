@@ -8,7 +8,6 @@ import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/screens/relay_settings_screen.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
-import 'package:openvine/screens/p2p_sync_screen.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
 void main() {
@@ -65,18 +64,6 @@ void main() {
           child: MaterialApp(home: NotificationSettingsScreen()),
         ),
       );
-
-      expect(find.byType(BottomNavigationBar), findsOneWidget);
-      expect(find.byType(FloatingActionButton), findsOneWidget);
-    });
-
-    testWidgets('P2PSyncScreen has bottom nav and camera FAB', (tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(child: MaterialApp(home: P2PSyncScreen())),
-      );
-
-      // Pump frames to allow async providers to complete
-      await tester.pumpAndSettle();
 
       expect(find.byType(BottomNavigationBar), findsOneWidget);
       expect(find.byType(FloatingActionButton), findsOneWidget);

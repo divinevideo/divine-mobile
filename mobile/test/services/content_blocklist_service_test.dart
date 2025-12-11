@@ -5,11 +5,11 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/content_blocklist_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 
 import 'content_blocklist_service_test.mocks.dart';
 
-@GenerateMocks([INostrService])
+@GenerateMocks([NostrClient])
 void main() {
   group('ContentBlocklistService', () {
     late ContentBlocklistService service;
@@ -98,11 +98,11 @@ void main() {
 
   group('ContentBlocklistService - Mutual Mute Sync', () {
     late ContentBlocklistService service;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
 
     setUp(() {
       service = ContentBlocklistService();
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
     });
 
     test(

@@ -7,12 +7,12 @@ import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
 
 @GenerateMocks([
-  INostrService,
+  NostrClient,
   AuthService,
   UserProfileService,
   SubscriptionManager,
@@ -21,12 +21,12 @@ import 'profile_editing_test.mocks.dart';
 
 void main() {
   group('Profile Editing Tests', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockUserProfileService mockUserProfileService;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockUserProfileService = MockUserProfileService();
 

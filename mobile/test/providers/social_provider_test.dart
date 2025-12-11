@@ -8,12 +8,12 @@ import 'package:nostr_sdk/event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/state/social_state.dart';
 
 // Mock classes
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 class MockAuthService extends Mock implements AuthService {}
 
