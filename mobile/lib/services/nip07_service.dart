@@ -109,7 +109,7 @@ class Nip07Service {
 
       // Request public key from extension
       final pubkey = await nip07.safeNip07Call(() async {
-        return await nip07.nostr!.getPublicKey();
+        return nip07.nostr!.getPublicKey();
       }, 'get public key');
 
       // Validate the public key format

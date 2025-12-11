@@ -54,7 +54,7 @@ abstract class SocialEventServiceBase {
       throw Exception('Failed to create and sign event');
     }
 
-    return await broadcastAndCacheEvent(event);
+    return broadcastAndCacheEvent(event);
   }
 
   /// Publishes a deletion event (Kind 5) for the target event

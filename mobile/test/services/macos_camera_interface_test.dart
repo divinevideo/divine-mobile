@@ -278,7 +278,7 @@ void main() {
 
       try {
         // Initialization should fail gracefully
-        expect(() async => await controller.initialize(), throwsException);
+        expect(() async => controller.initialize(), throwsException);
       } finally {
         controller.dispose();
       }

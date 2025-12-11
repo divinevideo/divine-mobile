@@ -301,7 +301,7 @@ class TrendingHashtags extends _$TrendingHashtags {
   Future<List<TrendingHashtag>> build() async {
     // Get initial trending hashtags
     final service = ref.watch(analyticsApiServiceProvider);
-    return await service.getTrendingHashtags();
+    return service.getTrendingHashtags();
   }
 
   /// Refresh trending hashtags
@@ -319,7 +319,7 @@ class TopCreators extends _$TopCreators {
   Future<List<TopCreator>> build() async {
     // Get initial top creators
     final service = ref.watch(analyticsApiServiceProvider);
-    return await service.getTopCreators();
+    return service.getTopCreators();
   }
 
   /// Refresh top creators

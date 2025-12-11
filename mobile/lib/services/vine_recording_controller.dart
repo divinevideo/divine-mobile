@@ -882,7 +882,7 @@ class MacOSCameraInterface extends CameraPlatformInterface
       return null;
     }
 
-    return await completeRecording();
+    return completeRecording();
   }
 
   /// Wait for recording completion using proper async pattern

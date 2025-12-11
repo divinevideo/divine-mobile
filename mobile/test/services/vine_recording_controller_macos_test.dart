@@ -187,7 +187,7 @@ void main() {
 
           // Try to finish recording without any segments
           expect(
-            () async => await controller.finishRecording(),
+            () async => controller.finishRecording(),
             throwsA(
               predicate(
                 (e) => e.toString().contains(

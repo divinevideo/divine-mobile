@@ -183,7 +183,7 @@ void main() {
       // Act & Assert - should not throw
       expect(
         () async =>
-            await _triggerPrefetch(mockCacheManager, videos, currentIndex),
+            _triggerPrefetch(mockCacheManager, videos, currentIndex),
         returnsNormally,
       );
     });
