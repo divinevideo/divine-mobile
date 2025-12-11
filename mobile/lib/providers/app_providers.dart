@@ -58,9 +58,10 @@ import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:openvine/providers/database_provider.dart';
-import 'package:openvine/providers/relay_gateway_providers.dart'
-    as relay_gateway;
 import 'package:openvine/services/event_router.dart';
+
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart'
+    as ff;
 
 part 'app_providers.g.dart';
 
@@ -296,7 +297,7 @@ Stream<AuthState> authStateStream(Ref ref) async* {
 /// Prevents data leakage between different Nostr accounts
 @riverpod
 UserDataCleanupService userDataCleanupService(Ref ref) {
-  final prefs = ref.watch(relay_gateway.sharedPreferencesProvider);
+  final prefs = ref.watch(ff.sharedPreferencesProvider);
   return UserDataCleanupService(prefs);
 }
 
