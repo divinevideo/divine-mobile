@@ -36,7 +36,7 @@ void main() async {
       name: 'CameraTestRunner',
       category: LogCategory.system,
     );
-    for (var camera in cameras) {
+    for (final camera in cameras) {
       Log.info(
         '  - ${camera.name} (${camera.lensDirection})',
         name: 'CameraTestRunner',

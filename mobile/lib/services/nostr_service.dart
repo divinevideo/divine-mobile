@@ -180,7 +180,7 @@ class NostrService implements INostrService {
       '📋 Relays to be loaded at startup:',
       name: 'NostrService',
     );
-    for (var relay in relaysToAdd) {
+    for (final relay in relaysToAdd) {
       UnifiedLogger.info('   - $relay', name: 'NostrService');
     }
     UnifiedLogger.warning(

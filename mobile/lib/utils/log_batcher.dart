@@ -37,7 +37,7 @@ class LogBatcher {
   static void flush() {
     if (_batches.isEmpty) return;
 
-    for (var batch in _batches.values) {
+    for (final batch in _batches.values) {
       batch.flush();
     }
 
