@@ -2,6 +2,7 @@ linter:
   rules:
     - annotate_overrides
     - directives_ordering
+    - prefer_collection_literals
     - prefer_const_constructors
     - prefer_const_declarations
     - unnecessary_breaks
