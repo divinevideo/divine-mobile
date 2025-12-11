@@ -51,6 +51,7 @@ linter:
     - unrelated_type_equality_checks
     - use_function_type_syntax_for_parameters
     - use_key_in_widget_constructors
+    - use_rethrow_when_possible
     - use_super_parameters
     - use_string_buffers
     - use_string_in_part_of_directives
