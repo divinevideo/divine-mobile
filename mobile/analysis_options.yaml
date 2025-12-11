@@ -40,3 +40,4 @@ linter:
     - unnecessary_string_interpolations
     - unnecessary_to_list_in_spreads
     - unnecessary_underscores
+    - unrelated_type_equality_checks
