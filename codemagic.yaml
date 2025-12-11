@@ -58,30 +58,23 @@ definitions:
     - &build_ios_simulator
       name: Build iOS Simulator app
       script: |
-        # Generate Flutter build files first
-        flutter build ios --simulator --no-codesign \
-          --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
-          --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
-          --dart-define=ZENDESK_URL=$ZENDESK_URL || true
-
-        # Build with xcodebuild forcing x86_64 architecture
-        # ffmpeg_kit_flutter_new doesn't ship arm64-simulator binaries
+        # Build with xcodebuild using Codemagic's recommended approach
+        # Using -destination with x86_64 simulator to work around ffmpeg_kit arm64-simulator issue
         # See: https://github.com/sk3llo/ffmpeg_kit_flutter/issues/106
         xcodebuild build \
           -workspace ios/Runner.xcworkspace \
           -scheme Runner \
           -sdk iphonesimulator \
-          -arch x86_64 \
+          -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=18.0,arch=x86_64' \
           -configuration Debug \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO \
-          ONLY_ACTIVE_ARCH=NO \
-          -derivedDataPath "$CM_BUILD_DIR/build/ios/DerivedData"
-
-        # Copy built app to expected artifact location
+          CODE_SIGNING_ALLOWED=NO
+    - &copy_simulator_app
+      name: Copy simulator app to artifacts
+      script: |
         mkdir -p build/ios/iphonesimulator
-        cp -R "$CM_BUILD_DIR/build/ios/DerivedData/Build/Products/Debug-iphonesimulator/Runner.app" build/ios/iphonesimulator/
+        cp -R "$HOME/Library/Developer/Xcode/DerivedData/"*"/Build/Products/Debug-iphonesimulator/Runner.app" build/ios/iphonesimulator/
 
 workflows:
   ios-build:
@@ -146,8 +139,10 @@ workflows:
       - *install_flutterfire
       - *pod_install
       - *build_ios_simulator
+      - *copy_simulator_app
     artifacts:
       - build/ios/iphonesimulator/Runner.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - /tmp/xcodebuild_logs/*.log
 
   android-build:
