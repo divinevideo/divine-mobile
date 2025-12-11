@@ -1,5 +1,6 @@
 linter:
   rules:
+    - library_prefixes
     - prefer_adjacent_string_concatenation
     - prefer_asserts_in_initializer_lists
     - prefer_conditional_assignment
