@@ -135,6 +135,41 @@ class NostrClient {
     );
   }
 
+  /// Broadcasts an event and returns detailed result
+  ///
+  /// Alias for [broadcast] for API compatibility with INostrService.
+  Future<NostrBroadcastResult> broadcastEvent(Event event) => broadcast(event);
+
+  /// Gets events matching filters
+  ///
+  /// Alias for [queryEvents] for API compatibility with INostrService.
+  Future<List<Event>> getEvents({
+    required List<Filter> filters,
+    int? limit,
+  }) async {
+    // Apply limit to filters if specified
+    final adjustedFilters = limit != null
+        ? filters
+            .map(
+              (f) => Filter(
+                ids: f.ids,
+                authors: f.authors,
+                kinds: f.kinds,
+                since: f.since,
+                until: f.until,
+                limit: limit,
+                search: f.search,
+                e: f.e,
+                p: f.p,
+                t: f.t,
+                d: f.d,
+              ),
+            )
+            .toList()
+        : filters;
+    return queryEvents(adjustedFilters);
+  }
+
   /// Queries events with given filters
   ///
   /// Uses gateway first if enabled, falls back to WebSocket on failure.
@@ -237,6 +272,17 @@ class NostrClient {
     ];
     final events = await queryEvents(filters, useGateway: false);
     return events.isEmpty ? null : events.first;
+  }
+
+  /// Subscribes to events matching the given filters
+  ///
+  /// Alias for [subscribe] for API compatibility with INostrService.
+  Stream<Event> subscribeToEvents({
+    required List<Filter> filters,
+    bool bypassLimits = false,
+    void Function()? onEose,
+  }) {
+    return subscribe(filters, onEose: onEose);
   }
 
   /// Subscribes to events matching the given filters
@@ -344,9 +390,57 @@ class NostrClient {
   Stream<Map<String, RelayConnectionStatus>> get relayStatusStream =>
       _relayManager.statusStream;
 
+  /// Primary relay for client operations
+  ///
+  /// Returns the first connected relay, or first configured relay,
+  /// or the default relay URL if none are configured.
+  String get primaryRelay {
+    if (connectedRelays.isNotEmpty) {
+      return connectedRelays.first;
+    }
+    if (configuredRelays.isNotEmpty) {
+      return configuredRelays.first;
+    }
+    return 'wss://relay.divine.video';
+  }
+
+  /// Gets relay statistics for diagnostics
+  ///
+  /// Returns a map containing relay connection stats.
+  Future<Map<String, dynamic>?> getRelayStats() async {
+    return {
+      'connectedRelays': connectedRelayCount,
+      'configuredRelays': configuredRelayCount,
+      'relays': configuredRelays,
+    };
+  }
+
   /// Retry connecting to all disconnected relays
   Future<void> retryDisconnectedRelays() async {
     await _relayManager.retryDisconnectedRelays();
+  }
+
+  /// Reconnects to all relays
+  ///
+  /// Alias for [retryDisconnectedRelays] for API compatibility.
+  Future<void> reconnectAll() => retryDisconnectedRelays();
+
+  /// Retries initialization
+  ///
+  /// Alias for [retryDisconnectedRelays] for API compatibility.
+  Future<void> retryInitialization() => retryDisconnectedRelays();
+
+  /// Gets relay connection status as a simple map
+  ///
+  /// Returns Map<String, bool> where the value indicates if the relay is connected.
+  Map<String, bool> getRelayStatus() {
+    final statuses = relayStatuses;
+    final result = <String, bool>{};
+    for (final entry in statuses.entries) {
+      result[entry.key] = entry.value.state == RelayState.connected ||
+          entry.value.state == RelayState.authenticated;
+    }
+    return result;
   }
 
   /// Sends a like reaction to an event

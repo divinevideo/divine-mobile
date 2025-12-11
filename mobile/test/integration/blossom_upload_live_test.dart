@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_factory.dart';
 import '../helpers/service_init_helper.dart';
@@ -17,7 +17,7 @@ void main() {
   group('Blossom Upload Live Integration', () {
     late BlossomUploadService blossomService;
     late AuthService authService;
-    late INostrService nostrService;
+    late NostrClient nostrService;
     late File testVideoFile;
 
     const stagingServer =

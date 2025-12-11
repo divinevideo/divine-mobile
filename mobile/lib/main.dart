@@ -7,6 +7,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/deep_link_provider.dart';
 import 'package:openvine/providers/social_providers.dart' as social_providers;
 import 'package:openvine/services/back_button_handler.dart';
@@ -541,6 +542,8 @@ class _DivineAppState extends ConsumerState<DivineApp> {
 
       // Initialize Nostr service - THIS IS THE CRITICAL MISSING PIECE
       await ref.read(nostrServiceProvider).initialize();
+      // Mark Nostr as initialized so gates can open
+      ref.read(nostrInitializationProvider.notifier).markInitialized();
       Log.info(
         '[INIT] ✅ NostrService initialized',
         name: 'Main',

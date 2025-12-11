@@ -6,7 +6,7 @@ import 'dart:async';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
 /// Creates a mock SubscriptionManager for unit tests
@@ -46,7 +46,7 @@ class MockSubscriptionManager extends Mock implements SubscriptionManager {
 }
 
 /// Creates a real SubscriptionManager for integration tests
-SubscriptionManager createRealSubscriptionManager(INostrService nostrService) =>
+SubscriptionManager createRealSubscriptionManager(NostrClient nostrService) =>
     SubscriptionManager(nostrService);
 
 /// Helper to set up common mock behaviors for SubscriptionManager

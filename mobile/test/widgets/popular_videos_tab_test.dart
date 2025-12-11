@@ -10,7 +10,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/widgets/popular_videos_tab.dart';
 
 import '../test_data/video_test_data.dart';
@@ -45,16 +45,16 @@ class _MockVideoEventsError extends VideoEvents {
   }
 }
 
-@GenerateMocks([VideoEventService, INostrService])
+@GenerateMocks([VideoEventService, NostrClient])
 void main() {
   group('PopularVideosTab', () {
     late MockVideoEventService mockVideoEventService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late List<VideoEvent> testVideos;
 
     setUp(() {
       mockVideoEventService = MockVideoEventService();
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
 
       // Create test videos with different loop counts
       testVideos = [

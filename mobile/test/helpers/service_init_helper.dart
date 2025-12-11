@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_factory.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -159,7 +159,7 @@ class ServiceBundle {
   });
 
   final NostrKeyManager? keyManager;
-  final INostrService nostrService;
+  final NostrClient nostrService;
   final SubscriptionManager subscriptionManager;
   final VideoEventService videoEventService;
 }

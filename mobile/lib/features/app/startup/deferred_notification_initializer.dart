@@ -4,7 +4,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
 import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -19,7 +19,7 @@ class DeferredNotificationInitializer {
   /// Initialize notification service with appropriate deferral strategy
   static Future<void> initialize({
     required NotificationServiceEnhanced service,
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required UserProfileService profileService,
     required VideoEventService videoService,
     required bool isWeb,
@@ -46,7 +46,7 @@ class DeferredNotificationInitializer {
   /// Initialize the notification service
   static Future<void> _initializeService({
     required NotificationServiceEnhanced service,
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required UserProfileService profileService,
     required VideoEventService videoService,
   }) async {
@@ -68,7 +68,7 @@ class DeferredNotificationInitializer {
   /// Schedule web initialization using proper async patterns
   static void _scheduleWebInitialization({
     required NotificationServiceEnhanced service,
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required UserProfileService profileService,
     required VideoEventService videoService,
   }) {
@@ -109,7 +109,7 @@ class DeferredNotificationInitializer {
 
   /// Check if required services are ready
   static bool _areServicesReady(
-    INostrService nostrService,
+    NostrClient nostrService,
     UserProfileService profileService,
     VideoEventService videoService,
   ) =>

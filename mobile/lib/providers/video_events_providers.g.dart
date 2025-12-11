@@ -8,17 +8,17 @@ part of 'video_events_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Provider for NostrService instance (Video Events specific)
+/// Provider for NostrClient instance (Video Events specific)
 
 @ProviderFor(videoEventsNostrService)
 const videoEventsNostrServiceProvider = VideoEventsNostrServiceProvider._();
 
-/// Provider for NostrService instance (Video Events specific)
+/// Provider for NostrClient instance (Video Events specific)
 
 final class VideoEventsNostrServiceProvider
-    extends $FunctionalProvider<INostrService, INostrService, INostrService>
-    with $Provider<INostrService> {
-  /// Provider for NostrService instance (Video Events specific)
+    extends $FunctionalProvider<NostrClient, NostrClient, NostrClient>
+    with $Provider<NostrClient> {
+  /// Provider for NostrClient instance (Video Events specific)
   const VideoEventsNostrServiceProvider._()
     : super(
         from: null,
@@ -35,25 +35,25 @@ final class VideoEventsNostrServiceProvider
 
   @$internal
   @override
-  $ProviderElement<INostrService> $createElement($ProviderPointer pointer) =>
+  $ProviderElement<NostrClient> $createElement($ProviderPointer pointer) =>
       $ProviderElement(pointer);
 
   @override
-  INostrService create(Ref ref) {
+  NostrClient create(Ref ref) {
     return videoEventsNostrService(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(INostrService value) {
+  Override overrideWithValue(NostrClient value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<INostrService>(value),
+      providerOverride: $SyncValueProvider<NostrClient>(value),
     );
   }
 }
 
 String _$videoEventsNostrServiceHash() =>
-    r'04277d1a60fe84fec2e2c0e25e06300b39d64f24';
+    r'32b1a6239692ba30de39f752aa66dc385ff69f0e';
 
 /// Provider for SubscriptionManager instance (Video Events specific)
 

@@ -30,7 +30,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/content_blocklist_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
@@ -137,7 +137,7 @@ class VideoEventService extends ChangeNotifier {
        _gatewaySettings = gatewaySettings {
     _initializePaginationStates();
   }
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final UserProfileService? _userProfileService;
   final EventRouter? _eventRouter;
   final VideoFilterBuilder? _videoFilterBuilder;

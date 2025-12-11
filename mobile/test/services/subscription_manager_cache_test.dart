@@ -7,19 +7,19 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
-@GenerateNiceMocks([MockSpec<INostrService>()])
+@GenerateNiceMocks([MockSpec<NostrClient>()])
 import 'subscription_manager_cache_test.mocks.dart';
 
 void main() {
   group('SubscriptionManager Event Cache Pruning', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late StreamController<Event> eventController;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       eventController = StreamController<Event>.broadcast();
 
       when(

@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:nostr_sdk/filter.dart';
 import 'package:models/models.dart' show FeedType;
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
@@ -16,14 +16,14 @@ import 'package:openvine/utils/unified_logger.dart';
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class InfiniteFeedService {
   InfiniteFeedService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required VideoEventService videoEventService,
     http.Client? httpClient,
   }) : _nostrService = nostrService,
        _videoEventService = videoEventService,
        _httpClient = httpClient ?? http.Client();
 
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final VideoEventService _videoEventService;
   final http.Client _httpClient;
 

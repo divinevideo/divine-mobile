@@ -7,18 +7,18 @@ import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
 // Generate mocks
-@GenerateMocks([INostrService, AuthService, SubscriptionManager])
+@GenerateMocks([NostrClient, AuthService, SubscriptionManager])
 import 'social_service_toggle_repost_test.mocks.dart';
 
 void main() {
   group('SocialService - toggleRepost()', () {
     late SocialService socialService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockSubscriptionManager mockSubscriptionManager;
 
@@ -30,7 +30,7 @@ void main() {
     late VideoEvent testVideo;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockSubscriptionManager = MockSubscriptionManager();
 

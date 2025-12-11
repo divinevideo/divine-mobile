@@ -3,20 +3,20 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
 // Generate mocks
-@GenerateMocks([INostrService])
+@GenerateMocks([NostrClient])
 import 'subscription_manager_filter_test.mocks.dart';
 
 void main() {
   group('SubscriptionManager Filter Preservation', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late SubscriptionManager subscriptionManager;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       subscriptionManager = SubscriptionManager(mockNostrService);
 
       // Setup default mock behavior

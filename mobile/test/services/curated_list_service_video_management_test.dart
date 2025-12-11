@@ -7,21 +7,21 @@ import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'curated_list_service_video_management_test.mocks.dart';
 
-@GenerateMocks([INostrService, AuthService])
+@GenerateMocks([NostrClient, AuthService])
 void main() {
   group('CuratedListService - Video Management', () {
     late CuratedListService service;
-    late MockINostrService mockNostr;
+    late MockNostrClient mockNostr;
     late MockAuthService mockAuth;
     late SharedPreferences prefs;
 
     setUp(() async {
-      mockNostr = MockINostrService();
+      mockNostr = MockNostrClient();
       mockAuth = MockAuthService();
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();

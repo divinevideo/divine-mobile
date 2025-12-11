@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/utils/hash_util.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -51,7 +51,7 @@ class BlossomUploadService {
   static const String defaultBlossomServer = 'https://media.divine.video';
 
   final AuthService authService;
-  final INostrService nostrService;
+  final NostrClient nostrService;
   final Dio dio;
 
   BlossomUploadService({

@@ -8,14 +8,14 @@ import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curation_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 import 'curation_service_create_test.mocks.dart';
 
 @GenerateMocks([
-  INostrService,
+  NostrClient,
   VideoEventService,
   SocialService,
   NostrKeyManager,
@@ -23,7 +23,7 @@ import 'curation_service_create_test.mocks.dart';
 ])
 void main() {
   group('CurationService.createCurationSet()', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockVideoEventService mockVideoEventService;
     late MockSocialService mockSocialService;
     late MockNostrKeyManager mockKeyManager;
@@ -32,7 +32,7 @@ void main() {
     late Keychain testKeychain;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockVideoEventService = MockVideoEventService();
       mockSocialService = MockSocialService();
       mockKeyManager = MockNostrKeyManager();
@@ -42,7 +42,6 @@ void main() {
       when(mockVideoEventService.videoEvents).thenReturn([]);
       when(mockVideoEventService.discoveryVideos).thenReturn([]);
       when(mockSocialService.getCachedLikeCount(any)).thenReturn(0);
-      when(mockNostrService.keyManager).thenReturn(mockKeyManager);
 
       // Create test keypair
       testKeychain = Keychain.generate();

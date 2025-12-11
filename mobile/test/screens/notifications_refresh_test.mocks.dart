@@ -6,8 +6,8 @@
 import 'dart:async' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
+import 'package:nostr_client/nostr_client.dart' as _i5;
 import 'package:openvine/models/notification_model.dart' as _i3;
-import 'package:openvine/services/nostr_service_interface.dart' as _i5;
 import 'package:openvine/services/notification_service_enhanced.dart' as _i2;
 import 'package:openvine/services/user_profile_service.dart' as _i6;
 import 'package:openvine/services/video_event_service.dart' as _i7;
@@ -64,7 +64,7 @@ class MockNotificationServiceEnhanced extends _i1.Mock
 
   @override
   _i4.Future<void> initialize({
-    required _i5.INostrService? nostrService,
+    required _i5.NostrClient? nostrService,
     required _i6.UserProfileService? profileService,
     required _i7.VideoEventService? videoService,
   }) =>

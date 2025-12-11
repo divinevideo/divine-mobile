@@ -157,8 +157,8 @@ Examples:
       final keyManager = NostrKeyManager();
       final nostrService = NostrServiceFactory.create(keyManager);
 
-      // Initialize with only the relay we want to query
-      await nostrService.initialize(customRelays: [relayUrl]);
+      // Initialize
+      await nostrService.initialize();
 
       // Create filter for video events
       final filter = Filter(
@@ -199,8 +199,8 @@ Examples:
       }
 
       // Clean up
-      await nostrService.closeAllSubscriptions();
-      nostrService.dispose();
+      nostrService.closeAllSubscriptions();
+      await nostrService.dispose();
     } catch (e) {
       Log.error(
         'Failed to fetch events from relay: $e',

@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/utils/curated_list_ext.dart';
 import 'package:openvine/utils/nostr_event_ext.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -161,7 +161,7 @@ class CuratedList {
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class CuratedListService extends ChangeNotifier {
   CuratedListService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
   }) : _nostrService = nostrService,
@@ -170,7 +170,7 @@ class CuratedListService extends ChangeNotifier {
     _loadLists();
     _loadSubscribedListIds();
   }
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final AuthService _authService;
   final SharedPreferences _prefs;
 

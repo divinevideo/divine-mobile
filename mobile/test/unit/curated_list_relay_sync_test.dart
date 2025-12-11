@@ -9,22 +9,22 @@ import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 
 import 'curated_list_relay_sync_test.mocks.dart';
 
-@GenerateNiceMocks([MockSpec<INostrService>(), MockSpec<AuthService>()])
+@GenerateNiceMocks([MockSpec<NostrClient>(), MockSpec<AuthService>()])
 void main() {
   group('CuratedListService Relay Sync Tests', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late SharedPreferences prefs;
     late CuratedListService curatedListService;
 
     setUp(() async {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
 
       // Set up SharedPreferences with empty state for each test
@@ -264,7 +264,7 @@ void main() {
       'should update existing local list if relay version is newer',
       () async {
         // Create fresh service instance to avoid sync state conflicts
-        final freshMockNostrService = MockINostrService();
+        final freshMockNostrService = MockNostrClient();
         final freshMockAuthService = MockAuthService();
         // Use completely clean prefs to ensure no shared state
         SharedPreferences.setMockInitialValues({

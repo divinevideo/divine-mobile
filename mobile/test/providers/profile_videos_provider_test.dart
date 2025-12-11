@@ -11,16 +11,16 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/profile_videos_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/video_event_service.dart';
 
-@GenerateMocks([INostrService, VideoEventService])
+@GenerateMocks([NostrClient, VideoEventService])
 import 'profile_videos_provider_test.mocks.dart';
 
 void main() {
   group('ProfileVideosProvider', () {
     late ProviderContainer container;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockVideoEventService mockVideoEventService;
 
     /// Helper to setup mock subscription with onEose callback support
@@ -52,7 +52,7 @@ void main() {
     }
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockVideoEventService = MockVideoEventService();
 
       container = ProviderContainer(

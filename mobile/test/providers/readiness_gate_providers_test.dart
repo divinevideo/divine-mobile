@@ -11,18 +11,18 @@ import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/router/page_context_provider.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/router/route_utils.dart';
 
 import 'readiness_gate_providers_test.mocks.dart';
 
-@GenerateMocks([INostrService])
+@GenerateMocks([NostrClient])
 void main() {
   group('Readiness Gate Providers', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
     });
 
     group('nostrReadyProvider', () {
@@ -345,7 +345,7 @@ class _FakeAppForeground extends AppForeground {
 }
 
 // Fake NostrService with mutable state for testing reactive updates
-class _FakeNostrService implements INostrService {
+class _FakeNostrService implements NostrClient {
   bool isInitialized = false;
 
   @override

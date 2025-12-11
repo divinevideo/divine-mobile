@@ -21,12 +21,12 @@ import 'package:nostr_sdk/event.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 
 // Mock classes
 class MockAuthService extends Mock implements AuthService {}
 
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 class MockDio extends Mock implements Dio {}
 

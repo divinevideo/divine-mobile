@@ -3,7 +3,7 @@
 
 import 'package:mockito/mockito.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
@@ -11,7 +11,7 @@ import 'package:openvine/services/video_event_service.dart';
 
 /// Creates a VideoEventService with mocked dependencies for testing
 VideoEventService createTestVideoEventService({
-  required INostrService mockNostrService,
+  required NostrClient mockNostrService,
   required SubscriptionManager mockSubscriptionManager,
 }) {
   // Set up default mock behaviors
@@ -27,7 +27,7 @@ VideoEventService createTestVideoEventService({
 
 /// Creates a SocialService with mocked dependencies for testing
 SocialService createTestSocialService({
-  required INostrService mockNostrService,
+  required NostrClient mockNostrService,
   required AuthService mockAuthService,
   required SubscriptionManager mockSubscriptionManager,
 }) {
@@ -44,7 +44,7 @@ SocialService createTestSocialService({
 
 /// Creates a UserProfileService with mocked dependencies for testing
 UserProfileService createTestUserProfileService({
-  required INostrService mockNostrService,
+  required NostrClient mockNostrService,
   required SubscriptionManager mockSubscriptionManager,
 }) {
   // Set up default mock behaviors

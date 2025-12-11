@@ -37,6 +37,16 @@ class NostrBroadcastResult {
   /// Whether the broadcast was successful (at least one relay accepted)
   bool get success => successCount > 0;
 
+  /// Alias for [success] for API compatibility
+  bool get isSuccessful => successCount > 0;
+
+  /// Whether all relays successfully received the event
+  bool get isCompleteSuccess => successCount == totalRelays;
+
+  /// Success rate as a fraction (0.0 to 1.0)
+  double get successRate =>
+      totalRelays > 0 ? successCount / totalRelays : 0.0;
+
   /// List of relay URLs that failed to receive the event
   List<String> get failedRelays =>
       results.entries.where((e) => !e.value).map((e) => e.key).toList();

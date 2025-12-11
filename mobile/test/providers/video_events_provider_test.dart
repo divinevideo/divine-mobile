@@ -14,11 +14,11 @@ import 'package:openvine/models/video_event.dart';
 // Feed mode providers removed during embedded relay refactor
 import 'package:openvine/providers/social_providers.dart' as social;
 import 'package:openvine/providers/video_events_providers.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
 // Mock classes
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 class MockSubscriptionManager extends Mock implements SubscriptionManager {}
 

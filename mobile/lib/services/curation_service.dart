@@ -13,7 +13,7 @@ import 'package:models/models.dart'
 import 'package:openvine/models/curation_set.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -21,7 +21,7 @@ import 'package:openvine/utils/unified_logger.dart';
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class CurationService {
   CurationService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required VideoEventService videoEventService,
     required SocialService socialService,
     required AuthService authService,
@@ -34,7 +34,7 @@ class CurationService {
     // Listen for video updates and refresh curation data
     // REFACTORED: Service no longer extends ChangeNotifier - use Riverpod ref.watch instead
   }
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final VideoEventService _videoEventService;
   final SocialService _socialService;
   final AuthService _authService;
@@ -1055,7 +1055,7 @@ class CurationService {
           isPublishing: false,
           isPublished: true,
           lastPublishedAt: DateTime.now(),
-          publishedEventId: broadcastResult.event.id,
+          publishedEventId: broadcastResult.event?.id,
           successfulRelays: broadcastResult.results.entries
               .where((e) => e.value == true)
               .map((e) => e.key)
@@ -1096,7 +1096,7 @@ class CurationService {
         success: isSuccess,
         successCount: successCount,
         totalRelays: totalRelays,
-        eventId: isSuccess ? broadcastResult.event.id : null,
+        eventId: isSuccess ? broadcastResult.event?.id : null,
         errors: broadcastResult.errors,
         failedRelays: failedRelays,
       );

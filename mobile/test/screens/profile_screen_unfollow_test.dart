@@ -12,12 +12,12 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 
 import 'profile_screen_unfollow_test.mocks.dart';
 import '../helpers/test_provider_overrides.dart';
 
-@GenerateMocks([INostrService, AuthService, SubscriptionManager, SocialService])
+@GenerateMocks([NostrClient, AuthService, SubscriptionManager, SocialService])
 void main() {
   Widget shell(ProviderContainer c) => UncontrolledProviderScope(
     container: c,
@@ -25,12 +25,12 @@ void main() {
   );
 
   group('Profile Screen Unfollow Tests (TDD)', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockSocialService mockSocialService;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockSocialService = MockSocialService();
 

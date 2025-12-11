@@ -11,18 +11,18 @@ import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as nostr_sdk;
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/followers_screen.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 
-@GenerateMocks([INostrService])
+@GenerateMocks([NostrClient])
 import 'followers_screen_test.mocks.dart';
 
 void main() {
   group('FollowersScreen', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late StreamController<nostr_sdk.Event> eventStreamController;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       eventStreamController = StreamController<nostr_sdk.Event>();
 
       // Setup mock to return stream

@@ -5,7 +5,7 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
@@ -13,7 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // Generate mocks
 @GenerateMocks([
-  INostrService,
+  NostrClient,
   AuthService,
   SubscriptionManager,
   PersonalEventCacheService,
@@ -25,7 +25,7 @@ void main() {
 
   group('SocialService Cache Behavior', () {
     late SocialService socialService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockSubscriptionManager mockSubscriptionManager;
     late MockPersonalEventCacheService mockPersonalEventCache;
@@ -36,7 +36,7 @@ void main() {
       // Clear SharedPreferences before each test
       SharedPreferences.setMockInitialValues({});
 
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockSubscriptionManager = MockSubscriptionManager();
       mockPersonalEventCache = MockPersonalEventCacheService();

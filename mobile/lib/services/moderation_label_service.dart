@@ -8,7 +8,7 @@ import 'package:nostr_sdk/event.dart' as nostr_sdk;
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_list_service_mixin.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -70,7 +70,7 @@ class ModerationLabel {
 /// Service for managing NIP-32 label subscriptions (kind 1985)
 class ModerationLabelService with NostrListServiceMixin {
   ModerationLabelService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
   }) : _nostrService = nostrService,
@@ -80,13 +80,13 @@ class ModerationLabelService with NostrListServiceMixin {
     _loadLabelCache();
   }
 
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final AuthService _authService;
   final SharedPreferences _prefs;
 
   // Mixin interface implementations
   @override
-  INostrService get nostrService => _nostrService;
+  NostrClient get nostrService => _nostrService;
   @override
   AuthService get authService => _authService;
 

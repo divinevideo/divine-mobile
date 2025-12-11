@@ -135,4 +135,4 @@ final class NostrClientProvider
   }
 }
 
-String _$nostrClientHash() => r'7e56965ccc4a374ad4669071dc55b9894f9f37be';
+String _$nostrClientHash() => r'c714f6a99df9a94c6e214d9157cabda2241ff146';

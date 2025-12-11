@@ -9,7 +9,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/models/notification_model.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -36,7 +36,7 @@ class NotificationServiceEnhanced {
   final Map<String, StreamSubscription> _subscriptions = {};
   final Lock _notificationLock = Lock(); // Mutex for atomic deduplication
 
-  INostrService? _nostrService;
+  NostrClient? _nostrService;
   UserProfileService? _profileService;
   VideoEventService? _videoService;
   Box<Map<String, dynamic>>? _notificationBox;
@@ -57,7 +57,7 @@ class NotificationServiceEnhanced {
 
   /// Initialize notification service
   Future<void> initialize({
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required UserProfileService profileService,
     required VideoEventService videoService,
   }) async {
