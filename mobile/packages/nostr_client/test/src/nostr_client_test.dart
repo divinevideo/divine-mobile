@@ -1667,6 +1667,317 @@ void main() {
           await subscription.cancel();
         });
       });
+
+      group('queryEvents with cache-first', () {
+        test('returns cached events when available', () async {
+          final filters = [
+            Filter(kinds: [EventKind.textNote], limit: 10),
+          ];
+          final cachedEvents = [
+            _createTestEvent(content: 'cached 1'),
+            _createTestEvent(content: 'cached 2'),
+          ];
+
+          when(
+            () => mockEventCache.getCachedEvents(any()),
+          ).thenAnswer((_) async => cachedEvents);
+
+          final result = await clientWithCache.queryEvents(filters);
+
+          expect(result, equals(cachedEvents));
+          verify(() => mockEventCache.getCachedEvents(filters.first)).called(1);
+          // Should not call gateway or websocket when cache has results
+          verifyNever(() => mockGatewayClient.query(any()));
+          verifyNever(
+            () => mockNostr.queryEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+            ),
+          );
+        });
+
+        test('falls back to gateway when cache is empty', () async {
+          final filters = [
+            Filter(kinds: [EventKind.textNote], limit: 10),
+          ];
+          final gatewayEvents = [_createTestEvent(content: 'from gateway')];
+
+          when(
+            () => mockEventCache.getCachedEvents(any()),
+          ).thenAnswer((_) async => []);
+          when(
+            () => mockGatewayClient.query(any()),
+          ).thenAnswer(
+            (_) async => GatewayResponse(
+              events: gatewayEvents,
+              eose: true,
+              complete: true,
+              cached: false,
+            ),
+          );
+          when(
+            () => mockEventCache.cacheEvents(any()),
+          ).thenAnswer((_) async {});
+
+          final result = await clientWithCache.queryEvents(filters);
+
+          expect(result, equals(gatewayEvents));
+          verify(() => mockEventCache.cacheEvents(gatewayEvents)).called(1);
+        });
+
+        test('falls back to websocket when cache and gateway are empty',
+            () async {
+          final filters = [
+            Filter(kinds: [EventKind.textNote], limit: 10),
+          ];
+          final wsEvents = [_createTestEvent(content: 'from websocket')];
+
+          when(
+            () => mockEventCache.getCachedEvents(any()),
+          ).thenAnswer((_) async => []);
+          when(
+            () => mockGatewayClient.query(any()),
+          ).thenAnswer(
+            (_) async => const GatewayResponse(
+              events: [],
+              eose: true,
+              complete: true,
+              cached: false,
+            ),
+          );
+          when(
+            () => mockNostr.queryEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+            ),
+          ).thenAnswer((_) async => wsEvents);
+          when(
+            () => mockEventCache.cacheEvents(any()),
+          ).thenAnswer((_) async {});
+
+          final result = await clientWithCache.queryEvents(filters);
+
+          expect(result, equals(wsEvents));
+          verify(() => mockEventCache.cacheEvents(wsEvents)).called(1);
+        });
+
+        test('works without eventCache (backward compat)', () async {
+          final filters = [
+            Filter(kinds: [EventKind.textNote], limit: 10),
+          ];
+          final gatewayEvents = [_createTestEvent(content: 'from gateway')];
+
+          when(
+            () => mockGatewayClient.query(any()),
+          ).thenAnswer(
+            (_) async => GatewayResponse(
+              events: gatewayEvents,
+              eose: true,
+              complete: true,
+              cached: false,
+            ),
+          );
+
+          // Using client without cache
+          final result = await client.queryEvents(filters);
+
+          expect(result, equals(gatewayEvents));
+          verifyNever(() => mockEventCache.getCachedEvents(any()));
+          verifyNever(() => mockEventCache.cacheEvents(any()));
+        });
+
+        test('skips cache when multiple filters provided', () async {
+          final filters = [
+            Filter(kinds: [EventKind.textNote], limit: 10),
+            Filter(kinds: [EventKind.metadata], limit: 5),
+          ];
+          final wsEvents = [_createTestEvent(content: 'from websocket')];
+
+          // Cache should not be checked for multiple filters
+          when(
+            () => mockNostr.queryEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+            ),
+          ).thenAnswer((_) async => wsEvents);
+          when(
+            () => mockEventCache.cacheEvents(any()),
+          ).thenAnswer((_) async {});
+
+          final result = await clientWithCache.queryEvents(filters);
+
+          expect(result, equals(wsEvents));
+          // Cache should not be checked for multiple filters
+          verifyNever(() => mockEventCache.getCachedEvents(any()));
+        });
+      });
+
+      group('fetchEventById with cache-first', () {
+        test('returns cached event when available', () async {
+          const eventId = 'test-event-id-12345';
+          final cachedEvent = _createTestEvent(id: eventId);
+
+          when(
+            () => mockEventCache.getCachedEvent(eventId),
+          ).thenAnswer((_) async => cachedEvent);
+
+          final result = await clientWithCache.fetchEventById(eventId);
+
+          expect(result, equals(cachedEvent));
+          verify(() => mockEventCache.getCachedEvent(eventId)).called(1);
+          verifyNever(() => mockGatewayClient.getEvent(any()));
+        });
+
+        test('falls back to gateway when cache misses', () async {
+          const eventId = 'test-event-id-12345';
+          final gatewayEvent = _createTestEvent(id: eventId);
+
+          when(
+            () => mockEventCache.getCachedEvent(eventId),
+          ).thenAnswer((_) async => null);
+          when(
+            () => mockGatewayClient.getEvent(eventId),
+          ).thenAnswer((_) async => gatewayEvent);
+          when(
+            () => mockEventCache.cacheEvent(any()),
+          ).thenAnswer((_) async {});
+
+          final result = await clientWithCache.fetchEventById(eventId);
+
+          expect(result, equals(gatewayEvent));
+          verify(() => mockEventCache.cacheEvent(gatewayEvent)).called(1);
+        });
+
+        test(
+          'falls back to websocket and caches when cache and gateway miss',
+          () async {
+            const eventId = 'test-event-id-12345';
+            final wsEvent = _createTestEvent(id: eventId);
+
+            when(
+              () => mockEventCache.getCachedEvent(eventId),
+            ).thenAnswer((_) async => null);
+            when(
+              () => mockGatewayClient.getEvent(eventId),
+            ).thenAnswer((_) async => null);
+            when(
+              () => mockNostr.queryEvents(
+                any(),
+                id: any(named: 'id'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                sendAfterAuth: any(named: 'sendAfterAuth'),
+              ),
+            ).thenAnswer((_) async => [wsEvent]);
+            when(
+              () => mockEventCache.cacheEvent(any()),
+            ).thenAnswer((_) async {});
+            when(
+              () => mockEventCache.cacheEvents(any()),
+            ).thenAnswer((_) async {});
+
+            final result = await clientWithCache.fetchEventById(eventId);
+
+            expect(result, equals(wsEvent));
+            // Should cache the websocket result
+            verify(() => mockEventCache.cacheEvent(wsEvent)).called(1);
+          },
+        );
+      });
+
+      group('fetchProfile with cache-first', () {
+        test('returns cached profile when available', () async {
+          const pubkey = testPublicKey;
+          final cachedProfile = _createTestEvent(
+            pubkey: pubkey,
+            kind: EventKind.metadata,
+            content: '{"name":"Cached User"}',
+          );
+
+          when(
+            () => mockEventCache.getCachedProfile(pubkey),
+          ).thenAnswer((_) async => cachedProfile);
+
+          final result = await clientWithCache.fetchProfile(pubkey);
+
+          expect(result, equals(cachedProfile));
+          verify(() => mockEventCache.getCachedProfile(pubkey)).called(1);
+          verifyNever(() => mockGatewayClient.getProfile(any()));
+        });
+
+        test('falls back to gateway when cache misses', () async {
+          const pubkey = testPublicKey;
+          final gatewayProfile = _createTestEvent(
+            pubkey: pubkey,
+            kind: EventKind.metadata,
+            content: '{"name":"Gateway User"}',
+          );
+
+          when(
+            () => mockEventCache.getCachedProfile(pubkey),
+          ).thenAnswer((_) async => null);
+          when(
+            () => mockGatewayClient.getProfile(pubkey),
+          ).thenAnswer((_) async => gatewayProfile);
+          when(
+            () => mockEventCache.cacheEvent(any()),
+          ).thenAnswer((_) async {});
+
+          final result = await clientWithCache.fetchProfile(pubkey);
+
+          expect(result, equals(gatewayProfile));
+          verify(() => mockEventCache.cacheEvent(gatewayProfile)).called(1);
+        });
+
+        test(
+          'falls back to websocket and caches when cache and gateway miss',
+          () async {
+            const pubkey = testPublicKey;
+            final wsProfile = _createTestEvent(
+              pubkey: pubkey,
+              kind: EventKind.metadata,
+              content: '{"name":"WebSocket User"}',
+            );
+
+            when(
+              () => mockEventCache.getCachedProfile(pubkey),
+            ).thenAnswer((_) async => null);
+            when(
+              () => mockGatewayClient.getProfile(pubkey),
+            ).thenAnswer((_) async => null);
+            when(
+              () => mockNostr.queryEvents(
+                any(),
+                id: any(named: 'id'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                sendAfterAuth: any(named: 'sendAfterAuth'),
+              ),
+            ).thenAnswer((_) async => [wsProfile]);
+            when(
+              () => mockEventCache.cacheEvent(any()),
+            ).thenAnswer((_) async {});
+            when(
+              () => mockEventCache.cacheEvents(any()),
+            ).thenAnswer((_) async {});
+
+            final result = await clientWithCache.fetchProfile(pubkey);
+
+            expect(result, equals(wsProfile));
+            // Should cache the websocket result
+            verify(() => mockEventCache.cacheEvent(wsProfile)).called(1);
+          },
+        );
+      });
     });
   });
 }

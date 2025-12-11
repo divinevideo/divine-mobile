@@ -96,11 +96,14 @@ class NostrClient {
 
   /// Queries events with given filters
   ///
-  /// Uses gateway first if enabled, falls back to WebSocket on failure.
-  /// Returns a list of events matching the filters.
+  /// Query flow: **Cache → Gateway → WebSocket**
   ///
+  /// If [useCache] is `true` and cache is available, checks local cache first.
   /// If [useGateway] is `true` and gateway is enabled, attempts to use
-  /// the REST gateway first for faster cached responses.
+  /// the REST gateway for cached responses.
+  /// Falls back to WebSocket query if both are unavailable or empty.
+  ///
+  /// Results from gateway/websocket are cached for future queries.
   Future<List<Event>> queryEvents(
     List<Filter> filters, {
     String? subscriptionId,
@@ -108,7 +111,18 @@ class NostrClient {
     List<int> relayTypes = RelayType.all,
     bool sendAfterAuth = false,
     bool useGateway = true,
+    bool useCache = true,
   }) async {
+    // 1. Check cache first (instant)
+    final eventCache = _eventCache;
+    if (useCache && eventCache != null && filters.length == 1) {
+      final cached = await eventCache.getCachedEvents(filters.first);
+      if (cached.isNotEmpty) {
+        return cached;
+      }
+    }
+
+    // 2. Try gateway (fast REST)
     if (useGateway && filters.length == 1) {
       final gatewayClient = _gatewayClient;
       if (gatewayClient != null) {
@@ -116,33 +130,57 @@ class NostrClient {
           () => gatewayClient.query(filters.first),
         );
         if (response != null && response.hasEvents) {
+          // Cache gateway results
+          await _eventCache?.cacheEvents(response.events);
           return response.events;
         }
       }
     }
 
-    // Fall back to WebSocket query
+    // 3. Fall back to WebSocket query
     final filtersJson = filters.map((f) => f.toJson()).toList();
-    return _nostr.queryEvents(
+    final events = await _nostr.queryEvents(
       filtersJson,
       id: subscriptionId,
       tempRelays: tempRelays,
       relayTypes: relayTypes,
       sendAfterAuth: sendAfterAuth,
     );
+
+    // Cache websocket results
+    if (events.isNotEmpty) {
+      await _eventCache?.cacheEvents(events);
+    }
+
+    return events;
   }
 
   /// Fetches a single event by ID
   ///
-  /// Uses gateway first if enabled, falls back to WebSocket on failure.
+  /// Query flow: **Cache → Gateway → WebSocket**
   ///
+  /// If [useCache] is `true` and cache is available, checks local cache first.
   /// If [useGateway] is `true` and gateway is enabled, attempts to use
-  /// the REST gateway first for faster cached responses.
+  /// the REST gateway for faster cached responses.
+  /// Falls back to WebSocket query if both are unavailable.
+  ///
+  /// Results from gateway/websocket are cached for future queries.
   Future<Event?> fetchEventById(
     String eventId, {
     String? relayUrl,
     bool useGateway = true,
+    bool useCache = true,
   }) async {
+    // 1. Check cache first
+    final eventCache = _eventCache;
+    if (useCache && eventCache != null) {
+      final cached = await eventCache.getCachedEvent(eventId);
+      if (cached != null) {
+        return cached;
+      }
+    }
+
+    // 2. Try gateway
     final targetRelays = relayUrl != null ? [relayUrl] : null;
     if (useGateway) {
       final gatewayClient = _gatewayClient;
@@ -151,33 +189,56 @@ class NostrClient {
           () => gatewayClient.getEvent(eventId),
         );
         if (event != null) {
+          // Cache gateway result
+          await _eventCache?.cacheEvent(event);
           return event;
         }
       }
     }
 
-    // Fall back to WebSocket query
+    // 3. Fall back to WebSocket query
     final filters = [
       Filter(ids: [eventId], limit: 1),
     ];
     final events = await queryEvents(
       filters,
       useGateway: false,
+      useCache: false, // Already checked cache above
       tempRelays: targetRelays,
     );
-    return events.isEmpty ? null : events.first;
+    if (events.isNotEmpty) {
+      // Cache websocket result
+      await _eventCache?.cacheEvent(events.first);
+      return events.first;
+    }
+    return null;
   }
 
   /// Fetches a profile (kind 0) by pubkey
   ///
-  /// Uses gateway first if enabled, falls back to WebSocket on failure.
+  /// Query flow: **Cache → Gateway → WebSocket**
   ///
+  /// If [useCache] is `true` and cache is available, checks local cache first.
   /// If [useGateway] is `true` and gateway is enabled, attempts to use
-  /// the REST gateway first for faster cached responses.
+  /// the REST gateway for faster cached responses.
+  /// Falls back to WebSocket query if both are unavailable.
+  ///
+  /// Results from gateway/websocket are cached for future queries.
   Future<Event?> fetchProfile(
     String pubkey, {
     bool useGateway = true,
+    bool useCache = true,
   }) async {
+    // 1. Check cache first
+    final cache = _eventCache;
+    if (useCache && cache != null) {
+      final cached = await cache.getCachedProfile(pubkey);
+      if (cached != null) {
+        return cached;
+      }
+    }
+
+    // 2. Try gateway
     if (useGateway) {
       final gatewayClient = _gatewayClient;
       if (gatewayClient != null) {
@@ -185,17 +246,28 @@ class NostrClient {
           () => gatewayClient.getProfile(pubkey),
         );
         if (profile != null) {
+          // Cache gateway result
+          await _eventCache?.cacheEvent(profile);
           return profile;
         }
       }
     }
 
-    // Fall back to WebSocket query
+    // 3. Fall back to WebSocket query
     final filters = [
       Filter(authors: [pubkey], kinds: [EventKind.metadata], limit: 1),
     ];
-    final events = await queryEvents(filters, useGateway: false);
-    return events.isEmpty ? null : events.first;
+    final events = await queryEvents(
+      filters,
+      useGateway: false,
+      useCache: false, // Already checked cache above
+    );
+    if (events.isNotEmpty) {
+      // Cache websocket result
+      await _eventCache?.cacheEvent(events.first);
+      return events.first;
+    }
+    return null;
   }
 
   /// Subscribes to events matching the given filters
