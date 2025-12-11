@@ -2131,7 +2131,7 @@ class NostrService implements INostrService {
     try {
       // Query for kind 10002 (relay list metadata) - NIP-65
       final relayListFilter = embedded.Filter(
-        kinds: [10002], // Relay list metadata
+        kinds: const [10002], // Relay list metadata
         authors: [pubkey],
         limit: 1,
       );
@@ -2163,7 +2163,7 @@ class NostrService implements INostrService {
 
       // Also check for kind 3 (contact list) which sometimes includes relay hints
       final contactListFilter = embedded.Filter(
-        kinds: [3], // Contact list
+        kinds: const [3], // Contact list
         authors: [pubkey],
         limit: 1,
       );

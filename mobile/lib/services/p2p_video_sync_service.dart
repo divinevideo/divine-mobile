@@ -70,7 +70,7 @@ class P2PVideoSyncService extends ChangeNotifier {
       final since =
           lastSync ?? DateTime.now().subtract(const Duration(days: 7));
       final videoFilter = embedded.Filter(
-        kinds: [34236], // Kind 34236 addressable short video events
+        kinds: const [34236], // Kind 34236 addressable short video events
         since: since.millisecondsSinceEpoch ~/ 1000,
         limit: 100,
       );

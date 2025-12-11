@@ -129,7 +129,7 @@ void main() async {
   ];
 
   final authorFilter = embedded.Filter(
-    kinds: [32222],
+    kinds: const [32222],
     authors: knownAuthors,
     limit: 10,
   );
@@ -253,7 +253,7 @@ void main() async {
   ];
 
   final followedFilter = embedded.Filter(
-    kinds: [32222],
+    kinds: const [32222],
     authors: followedUsers,
     limit: 50,
   );
