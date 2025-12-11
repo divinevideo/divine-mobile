@@ -2,6 +2,7 @@ linter:
   rules:
     - always_put_required_named_parameters_first
     - avoid_final_parameters
+    - avoid_js_rounded_ints
     - annotate_overrides
     - directives_ordering
     - prefer_collection_literals
