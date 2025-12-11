@@ -18,6 +18,7 @@ linter:
     - directives_ordering
     - eol_at_end_of_file
     - library_prefixes
+    - library_private_types_in_public_api
     - noop_primitive_operations
     - prefer_adjacent_string_concatenation
     - prefer_asserts_in_initializer_lists
