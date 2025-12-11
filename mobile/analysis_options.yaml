@@ -36,3 +36,4 @@ linter:
     - unnecessary_parenthesis
     - unnecessary_raw_strings
     - unnecessary_statements
+    - unnecessary_string_escapes
