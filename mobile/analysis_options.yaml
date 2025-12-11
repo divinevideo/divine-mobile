@@ -10,6 +10,7 @@ linter:
     - unnecessary_null_in_if_null_operators
     - unnecessary_nullable_for_final_variable_declarations
     - unnecessary_overrides
+    - use_full_hex_values_for_flutter_colors
     - use_key_in_widget_constructors
     - use_rethrow_when_possible
     - use_string_buffers
