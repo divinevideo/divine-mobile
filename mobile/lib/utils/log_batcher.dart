@@ -137,7 +137,7 @@ class _BatchedMessage {
     // Add any remaining fields not in priority list
     data.forEach((key, value) {
       if (!priorityFields.contains(key) && parts.length < 4) {
-        parts.add('$key:${value.toString()}');
+        parts.add('$key:$value');
       }
     });
 

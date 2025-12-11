@@ -1937,7 +1937,7 @@ class VineRecordingController {
       await concatFile.writeAsString(buffer.toString());
 
       Log.info(
-        '📹 FFmpeg concat list:\n${buffer.toString()}',
+        '📹 FFmpeg concat list:\n$buffer',
         name: 'VineRecordingController',
         category: LogCategory.system,
       );

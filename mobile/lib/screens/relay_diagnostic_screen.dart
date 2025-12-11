@@ -121,7 +121,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
         );
       } catch (e) {
         setState(() {
-          _networkTests[relayUrl] = 'FAILED: ${e.toString()}';
+          _networkTests[relayUrl] = 'FAILED: $e';
         });
 
         Log.error('❌ Relay $relayUrl unreachable: $e', name: 'RelayDiagnostic');
@@ -188,7 +188,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Query failed: ${e.toString()}'),
+            content: Text('Query failed: $e'),
             backgroundColor: Colors.red[700],
           ),
         );
@@ -245,7 +245,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Connection retry failed: ${e.toString()}'),
+            content: Text('Connection retry failed: $e'),
             backgroundColor: Colors.red[700],
           ),
         );

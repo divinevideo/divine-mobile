@@ -4505,7 +4505,7 @@ class VideoEventService extends ChangeNotifier {
 
       // Log locally
       Log.error(
-        '🚨 EMPTY FEED - Reporting to Crashlytics:\n${context.toString()}',
+        '🚨 EMPTY FEED - Reporting to Crashlytics:\n$context',
         name: 'VideoEventService',
         category: LogCategory.video,
       );
@@ -4604,7 +4604,7 @@ class VideoEventService extends ChangeNotifier {
 
       // Log locally
       Log.error(
-        '⏰ FEED TIMEOUT - Reporting to Crashlytics:\n${context.toString()}',
+        '⏰ FEED TIMEOUT - Reporting to Crashlytics:\n$context',
         name: 'VideoEventService',
         category: LogCategory.video,
       );
@@ -5219,7 +5219,7 @@ class VideoEventService extends ChangeNotifier {
           category: LogCategory.video,
         );
         Log.warning(
-          '   ${relayStats.toString()}',
+          '   $relayStats',
           name: 'VideoEventService',
           category: LogCategory.video,
         );

@@ -67,8 +67,8 @@ class FollowActionsHelper {
           SnackBar(
             content: Text(
               isCurrentlyFollowing
-                  ? 'Failed to unfollow user: ${e.toString()}'
-                  : 'Failed to follow user: ${e.toString()}',
+                  ? 'Failed to unfollow user: $e'
+                  : 'Failed to follow user: $e',
             ),
             backgroundColor: Colors.red,
           ),
@@ -116,7 +116,7 @@ class FollowActionsHelper {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to follow user: ${e.toString()}'),
+            content: Text('Failed to follow user: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -163,7 +163,7 @@ class FollowActionsHelper {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to unfollow user: ${e.toString()}'),
+            content: Text('Failed to unfollow user: $e'),
             backgroundColor: Colors.red,
           ),
         );

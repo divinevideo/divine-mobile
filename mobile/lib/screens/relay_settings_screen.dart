@@ -726,7 +726,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
       );
     } catch (e) {
       Log.error('Failed to remove relay: $e', name: 'RelaySettingsScreen');
-      _showError('Failed to remove relay: ${e.toString()}');
+      _showError('Failed to remove relay: $e');
     }
   }
 
@@ -776,7 +776,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
       }
     } catch (e) {
       Log.error('Failed to retry connection: $e', name: 'RelaySettingsScreen');
-      _showError('Connection retry failed: ${e.toString()}');
+      _showError('Connection retry failed: $e');
     }
   }
 
@@ -886,7 +886,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
       }
     } catch (e) {
       Log.error('Failed to add relay: $e', name: 'RelaySettingsScreen');
-      _showError('Failed to add relay: ${e.toString()}');
+      _showError('Failed to add relay: $e');
     }
   }
 
@@ -920,7 +920,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         'Failed to restore default relay: $e',
         name: 'RelaySettingsScreen',
       );
-      _showError('Failed to restore default relay: ${e.toString()}');
+      _showError('Failed to restore default relay: $e');
     }
   }
 

@@ -1296,10 +1296,10 @@ class _VideoMetadataScreenPureState
                 // Show technical details in a dialog
                 final errorDetails =
                     '''
-Error: ${e.toString()}
+Error: $e
 
 Stack Trace:
-${stackTrace.toString()}
+$stackTrace
 
 Operation: Video Upload
 Time: ${DateTime.now().toIso8601String()}
