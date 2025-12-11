@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:db_client/db_client.dart' hide Filter;
 import 'package:meta/meta.dart';
-import 'package:nostr_client/src/event_cache.dart';
 import 'package:nostr_client/src/models/models.dart';
 import 'package:nostr_client/src/relay_manager.dart';
 import 'package:nostr_gateway/nostr_gateway.dart';
@@ -26,17 +26,17 @@ class NostrClient {
   /// Requires a [RelayManager] for relay management, persistence, and
   /// status tracking.
   ///
-  /// Optional [eventCache] enables local caching of events for faster
+  /// Optional [dbClient] enables local caching of events for faster
   /// queries and auto-caching of subscription events.
   NostrClient({
     required NostrClientConfig config,
     required RelayManager relayManager,
     GatewayClient? gatewayClient,
-    EventCache? eventCache,
+    AppDbClient? dbClient,
   }) : _nostr = _createNostr(config),
        _relayManager = relayManager,
        _gatewayClient = gatewayClient,
-       _eventCache = eventCache;
+       _dbClient = dbClient;
 
   /// Creates a NostrClient with injected dependencies for testing
   @visibleForTesting
@@ -44,11 +44,11 @@ class NostrClient {
     required Nostr nostr,
     required RelayManager relayManager,
     GatewayClient? gatewayClient,
-    EventCache? eventCache,
+    AppDbClient? dbClient,
   }) : _nostr = nostr,
        _relayManager = relayManager,
        _gatewayClient = gatewayClient,
-       _eventCache = eventCache;
+       _dbClient = dbClient;
 
   static Nostr _createNostr(NostrClientConfig config) {
     RelayBase tempRelayGenerator(String url) => RelayBase(
@@ -69,7 +69,10 @@ class NostrClient {
   final Nostr _nostr;
   final GatewayClient? _gatewayClient;
   final RelayManager _relayManager;
-  final EventCache? _eventCache;
+  final AppDbClient? _dbClient;
+
+  /// Convenience getter for the NostrEventsDao
+  NostrEventsDao? get _nostrEventsDao => _dbClient?.database.nostrEventsDao;
 
   /// Public key of the client
   String get publicKey => _nostr.publicKey;
@@ -114,9 +117,9 @@ class NostrClient {
     bool useCache = true,
   }) async {
     // 1. Check cache first (instant)
-    final eventCache = _eventCache;
-    if (useCache && eventCache != null && filters.length == 1) {
-      final cached = await eventCache.getCachedEvents(filters.first);
+    final dao = _nostrEventsDao;
+    if (useCache && dao != null && filters.length == 1) {
+      final cached = await dao.getEventsByFilter(filters.first);
       if (cached.isNotEmpty) {
         return cached;
       }
@@ -131,7 +134,7 @@ class NostrClient {
         );
         if (response != null && response.hasEvents) {
           // Cache gateway results
-          await _eventCache?.cacheEvents(response.events);
+          await _nostrEventsDao?.upsertEventsBatch(response.events);
           return response.events;
         }
       }
@@ -149,7 +152,7 @@ class NostrClient {
 
     // Cache websocket results
     if (events.isNotEmpty) {
-      await _eventCache?.cacheEvents(events);
+      await _nostrEventsDao?.upsertEventsBatch(events);
     }
 
     return events;
@@ -172,9 +175,9 @@ class NostrClient {
     bool useCache = true,
   }) async {
     // 1. Check cache first
-    final eventCache = _eventCache;
-    if (useCache && eventCache != null) {
-      final cached = await eventCache.getCachedEvent(eventId);
+    final dao = _nostrEventsDao;
+    if (useCache && dao != null) {
+      final cached = await dao.getEventById(eventId);
       if (cached != null) {
         return cached;
       }
@@ -190,7 +193,7 @@ class NostrClient {
         );
         if (event != null) {
           // Cache gateway result
-          await _eventCache?.cacheEvent(event);
+          await _nostrEventsDao?.upsertEvent(event);
           return event;
         }
       }
@@ -208,7 +211,7 @@ class NostrClient {
     );
     if (events.isNotEmpty) {
       // Cache websocket result
-      await _eventCache?.cacheEvent(events.first);
+      await _nostrEventsDao?.upsertEvent(events.first);
       return events.first;
     }
     return null;
@@ -230,9 +233,9 @@ class NostrClient {
     bool useCache = true,
   }) async {
     // 1. Check cache first
-    final cache = _eventCache;
-    if (useCache && cache != null) {
-      final cached = await cache.getCachedProfile(pubkey);
+    final dao = _nostrEventsDao;
+    if (useCache && dao != null) {
+      final cached = await dao.getProfileByPubkey(pubkey);
       if (cached != null) {
         return cached;
       }
@@ -247,7 +250,7 @@ class NostrClient {
         );
         if (profile != null) {
           // Cache gateway result
-          await _eventCache?.cacheEvent(profile);
+          await _nostrEventsDao?.upsertEvent(profile);
           return profile;
         }
       }
@@ -264,7 +267,7 @@ class NostrClient {
     );
     if (events.isNotEmpty) {
       // Cache websocket result
-      await _eventCache?.cacheEvent(events.first);
+      await _nostrEventsDao?.upsertEvent(events.first);
       return events.first;
     }
     return null;
@@ -307,13 +310,14 @@ class NostrClient {
       (event) {
         // Auto-cache incoming events if cache is enabled
         // Fire-and-forget to not block event emission
-        final cache = _eventCache;
-        if (cache != null) {
+        final dao = _nostrEventsDao;
+        if (dao != null) {
           try {
-            // ignore: discarded_futures, intentional fire-and-forget caching
-            cache.cacheEvent(event).catchError((_) {
-              // Ignore async cache errors - don't disrupt the event stream
-            });
+            unawaited(
+              dao.upsertEvent(event).catchError((_) {
+                // Ignore async cache errors - don't disrupt the event stream
+              }),
+            );
           } on Exception {
             // Ignore sync cache errors - don't disrupt the event stream
           }

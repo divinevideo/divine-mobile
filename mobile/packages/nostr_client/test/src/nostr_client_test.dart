@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:db_client/db_client.dart' hide Filter;
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_gateway/nostr_gateway.dart';
@@ -12,7 +13,11 @@ class _MockGatewayClient extends Mock implements GatewayClient {}
 
 class _MockRelayManager extends Mock implements RelayManager {}
 
-class _MockEventCache extends Mock implements EventCache {}
+class _MockAppDbClient extends Mock implements AppDbClient {}
+
+class _MockAppDatabase extends Mock implements AppDatabase {}
+
+class _MockNostrEventsDao extends Mock implements NostrEventsDao {}
 
 class _FakeEvent extends Fake implements Event {}
 
@@ -1512,30 +1517,40 @@ void main() {
       });
     });
 
-    group('EventCache integration', () {
-      late _MockEventCache mockEventCache;
+    group('Database caching integration', () {
+      late _MockAppDbClient mockDbClient;
+      late _MockAppDatabase mockDatabase;
+      late _MockNostrEventsDao mockNostrEventsDao;
       late NostrClient clientWithCache;
 
       setUp(() {
-        mockEventCache = _MockEventCache();
+        mockDbClient = _MockAppDbClient();
+        mockDatabase = _MockAppDatabase();
+        mockNostrEventsDao = _MockNostrEventsDao();
+
+        when(() => mockDbClient.database).thenReturn(mockDatabase);
+        when(() => mockDatabase.nostrEventsDao).thenReturn(mockNostrEventsDao);
+
         clientWithCache = NostrClient.forTesting(
           nostr: mockNostr,
           relayManager: mockRelayManager,
           gatewayClient: mockGatewayClient,
-          eventCache: mockEventCache,
+          dbClient: mockDbClient,
         );
       });
 
       tearDown(() {
-        reset(mockEventCache);
+        reset(mockDbClient);
+        reset(mockDatabase);
+        reset(mockNostrEventsDao);
       });
 
-      group('constructor with eventCache', () {
-        test('creates client with eventCache', () {
+      group('constructor with dbClient', () {
+        test('creates client with dbClient', () {
           expect(clientWithCache.publicKey, equals(testPublicKey));
         });
 
-        test('creates client without eventCache (backward compat)', () {
+        test('creates client without dbClient (backward compat)', () {
           final clientWithoutCache = NostrClient.forTesting(
             nostr: mockNostr,
             relayManager: mockRelayManager,
@@ -1569,7 +1584,9 @@ void main() {
             return 'test-sub-id';
           });
 
-          when(() => mockEventCache.cacheEvent(any())).thenAnswer((_) async {});
+          when(
+            () => mockNostrEventsDao.upsertEvent(any()),
+          ).thenAnswer((_) async {});
 
           // Subscribe to get the stream
           final stream = clientWithCache.subscribe(filters);
@@ -1583,12 +1600,12 @@ void main() {
           await Future<void>.delayed(Duration.zero);
 
           expect(receivedEvents, contains(event));
-          verify(() => mockEventCache.cacheEvent(event)).called(1);
+          verify(() => mockNostrEventsDao.upsertEvent(event)).called(1);
 
           await subscription.cancel();
         });
 
-        test('does not cache when eventCache is null', () async {
+        test('does not cache when dbClient is null', () async {
           final filters = [
             Filter(kinds: [EventKind.textNote], limit: 10),
           ];
@@ -1620,8 +1637,8 @@ void main() {
           await Future<void>.delayed(Duration.zero);
 
           expect(receivedEvents, contains(event));
-          // Should not interact with cache since client has no eventCache
-          verifyNever(() => mockEventCache.cacheEvent(any()));
+          // Should not interact with DAO since client has no dbClient
+          verifyNever(() => mockNostrEventsDao.upsertEvent(any()));
 
           await subscription.cancel();
         });
@@ -1651,7 +1668,7 @@ void main() {
 
           // Make caching fail
           when(
-            () => mockEventCache.cacheEvent(any()),
+            () => mockNostrEventsDao.upsertEvent(any()),
           ).thenThrow(Exception('Cache error'));
 
           final stream = clientWithCache.subscribe(filters);
@@ -1679,13 +1696,15 @@ void main() {
           ];
 
           when(
-            () => mockEventCache.getCachedEvents(any()),
+            () => mockNostrEventsDao.getEventsByFilter(any()),
           ).thenAnswer((_) async => cachedEvents);
 
           final result = await clientWithCache.queryEvents(filters);
 
           expect(result, equals(cachedEvents));
-          verify(() => mockEventCache.getCachedEvents(filters.first)).called(1);
+          verify(
+            () => mockNostrEventsDao.getEventsByFilter(filters.first),
+          ).called(1);
           // Should not call gateway or websocket when cache has results
           verifyNever(() => mockGatewayClient.query(any()));
           verifyNever(
@@ -1706,7 +1725,7 @@ void main() {
           final gatewayEvents = [_createTestEvent(content: 'from gateway')];
 
           when(
-            () => mockEventCache.getCachedEvents(any()),
+            () => mockNostrEventsDao.getEventsByFilter(any()),
           ).thenAnswer((_) async => []);
           when(
             () => mockGatewayClient.query(any()),
@@ -1719,13 +1738,15 @@ void main() {
             ),
           );
           when(
-            () => mockEventCache.cacheEvents(any()),
+            () => mockNostrEventsDao.upsertEventsBatch(any()),
           ).thenAnswer((_) async {});
 
           final result = await clientWithCache.queryEvents(filters);
 
           expect(result, equals(gatewayEvents));
-          verify(() => mockEventCache.cacheEvents(gatewayEvents)).called(1);
+          verify(
+            () => mockNostrEventsDao.upsertEventsBatch(gatewayEvents),
+          ).called(1);
         });
 
         test(
@@ -1737,7 +1758,7 @@ void main() {
             final wsEvents = [_createTestEvent(content: 'from websocket')];
 
             when(
-              () => mockEventCache.getCachedEvents(any()),
+              () => mockNostrEventsDao.getEventsByFilter(any()),
             ).thenAnswer((_) async => []);
             when(
               () => mockGatewayClient.query(any()),
@@ -1759,17 +1780,19 @@ void main() {
               ),
             ).thenAnswer((_) async => wsEvents);
             when(
-              () => mockEventCache.cacheEvents(any()),
+              () => mockNostrEventsDao.upsertEventsBatch(any()),
             ).thenAnswer((_) async {});
 
             final result = await clientWithCache.queryEvents(filters);
 
             expect(result, equals(wsEvents));
-            verify(() => mockEventCache.cacheEvents(wsEvents)).called(1);
+            verify(
+              () => mockNostrEventsDao.upsertEventsBatch(wsEvents),
+            ).called(1);
           },
         );
 
-        test('works without eventCache (backward compat)', () async {
+        test('works without dbClient (backward compat)', () async {
           final filters = [
             Filter(kinds: [EventKind.textNote], limit: 10),
           ];
@@ -1790,8 +1813,8 @@ void main() {
           final result = await client.queryEvents(filters);
 
           expect(result, equals(gatewayEvents));
-          verifyNever(() => mockEventCache.getCachedEvents(any()));
-          verifyNever(() => mockEventCache.cacheEvents(any()));
+          verifyNever(() => mockNostrEventsDao.getEventsByFilter(any()));
+          verifyNever(() => mockNostrEventsDao.upsertEventsBatch(any()));
         });
 
         test('skips cache when multiple filters provided', () async {
@@ -1812,14 +1835,14 @@ void main() {
             ),
           ).thenAnswer((_) async => wsEvents);
           when(
-            () => mockEventCache.cacheEvents(any()),
+            () => mockNostrEventsDao.upsertEventsBatch(any()),
           ).thenAnswer((_) async {});
 
           final result = await clientWithCache.queryEvents(filters);
 
           expect(result, equals(wsEvents));
           // Cache should not be checked for multiple filters
-          verifyNever(() => mockEventCache.getCachedEvents(any()));
+          verifyNever(() => mockNostrEventsDao.getEventsByFilter(any()));
         });
       });
 
@@ -1829,13 +1852,13 @@ void main() {
           final cachedEvent = _createTestEvent(id: eventId);
 
           when(
-            () => mockEventCache.getCachedEvent(eventId),
+            () => mockNostrEventsDao.getEventById(eventId),
           ).thenAnswer((_) async => cachedEvent);
 
           final result = await clientWithCache.fetchEventById(eventId);
 
           expect(result, equals(cachedEvent));
-          verify(() => mockEventCache.getCachedEvent(eventId)).called(1);
+          verify(() => mockNostrEventsDao.getEventById(eventId)).called(1);
           verifyNever(() => mockGatewayClient.getEvent(any()));
         });
 
@@ -1844,19 +1867,19 @@ void main() {
           final gatewayEvent = _createTestEvent(id: eventId);
 
           when(
-            () => mockEventCache.getCachedEvent(eventId),
+            () => mockNostrEventsDao.getEventById(eventId),
           ).thenAnswer((_) async => null);
           when(
             () => mockGatewayClient.getEvent(eventId),
           ).thenAnswer((_) async => gatewayEvent);
           when(
-            () => mockEventCache.cacheEvent(any()),
+            () => mockNostrEventsDao.upsertEvent(any()),
           ).thenAnswer((_) async {});
 
           final result = await clientWithCache.fetchEventById(eventId);
 
           expect(result, equals(gatewayEvent));
-          verify(() => mockEventCache.cacheEvent(gatewayEvent)).called(1);
+          verify(() => mockNostrEventsDao.upsertEvent(gatewayEvent)).called(1);
         });
 
         test(
@@ -1866,7 +1889,7 @@ void main() {
             final wsEvent = _createTestEvent(id: eventId);
 
             when(
-              () => mockEventCache.getCachedEvent(eventId),
+              () => mockNostrEventsDao.getEventById(eventId),
             ).thenAnswer((_) async => null);
             when(
               () => mockGatewayClient.getEvent(eventId),
@@ -1881,17 +1904,17 @@ void main() {
               ),
             ).thenAnswer((_) async => [wsEvent]);
             when(
-              () => mockEventCache.cacheEvent(any()),
+              () => mockNostrEventsDao.upsertEvent(any()),
             ).thenAnswer((_) async {});
             when(
-              () => mockEventCache.cacheEvents(any()),
+              () => mockNostrEventsDao.upsertEventsBatch(any()),
             ).thenAnswer((_) async {});
 
             final result = await clientWithCache.fetchEventById(eventId);
 
             expect(result, equals(wsEvent));
             // Should cache the websocket result
-            verify(() => mockEventCache.cacheEvent(wsEvent)).called(1);
+            verify(() => mockNostrEventsDao.upsertEvent(wsEvent)).called(1);
           },
         );
       });
@@ -1906,13 +1929,13 @@ void main() {
           );
 
           when(
-            () => mockEventCache.getCachedProfile(pubkey),
+            () => mockNostrEventsDao.getProfileByPubkey(pubkey),
           ).thenAnswer((_) async => cachedProfile);
 
           final result = await clientWithCache.fetchProfile(pubkey);
 
           expect(result, equals(cachedProfile));
-          verify(() => mockEventCache.getCachedProfile(pubkey)).called(1);
+          verify(() => mockNostrEventsDao.getProfileByPubkey(pubkey)).called(1);
           verifyNever(() => mockGatewayClient.getProfile(any()));
         });
 
@@ -1925,19 +1948,21 @@ void main() {
           );
 
           when(
-            () => mockEventCache.getCachedProfile(pubkey),
+            () => mockNostrEventsDao.getProfileByPubkey(pubkey),
           ).thenAnswer((_) async => null);
           when(
             () => mockGatewayClient.getProfile(pubkey),
           ).thenAnswer((_) async => gatewayProfile);
           when(
-            () => mockEventCache.cacheEvent(any()),
+            () => mockNostrEventsDao.upsertEvent(any()),
           ).thenAnswer((_) async {});
 
           final result = await clientWithCache.fetchProfile(pubkey);
 
           expect(result, equals(gatewayProfile));
-          verify(() => mockEventCache.cacheEvent(gatewayProfile)).called(1);
+          verify(
+            () => mockNostrEventsDao.upsertEvent(gatewayProfile),
+          ).called(1);
         });
 
         test(
@@ -1951,7 +1976,7 @@ void main() {
             );
 
             when(
-              () => mockEventCache.getCachedProfile(pubkey),
+              () => mockNostrEventsDao.getProfileByPubkey(pubkey),
             ).thenAnswer((_) async => null);
             when(
               () => mockGatewayClient.getProfile(pubkey),
@@ -1966,17 +1991,17 @@ void main() {
               ),
             ).thenAnswer((_) async => [wsProfile]);
             when(
-              () => mockEventCache.cacheEvent(any()),
+              () => mockNostrEventsDao.upsertEvent(any()),
             ).thenAnswer((_) async {});
             when(
-              () => mockEventCache.cacheEvents(any()),
+              () => mockNostrEventsDao.upsertEventsBatch(any()),
             ).thenAnswer((_) async {});
 
             final result = await clientWithCache.fetchProfile(pubkey);
 
             expect(result, equals(wsProfile));
             // Should cache the websocket result
-            verify(() => mockEventCache.cacheEvent(wsProfile)).called(1);
+            verify(() => mockNostrEventsDao.upsertEvent(wsProfile)).called(1);
           },
         );
       });

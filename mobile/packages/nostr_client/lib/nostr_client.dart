@@ -5,7 +5,6 @@
 /// and connection handling. Integrates SDK, gateway, and caching.
 library;
 
-export 'src/event_cache.dart';
 export 'src/models/models.dart';
 export 'src/nostr_client.dart';
 export 'src/relay_manager.dart';

@@ -23,6 +23,10 @@ class NostrEvents extends Table {
   TextColumn get sig => text()();
   TextColumn get sources => text().nullable()(); // JSON-encoded array
 
+  /// Unix timestamp when this cached event should be considered expired.
+  /// Null means the event never expires. Used for cache eviction.
+  IntColumn get expireAt => integer().nullable().named('expire_at')();
+
   @override
   Set<Column> get primaryKey => {id};
 
@@ -68,6 +72,13 @@ class NostrEvents extends Table {
       'idx_event_pubkey_created_at',
       'CREATE INDEX IF NOT EXISTS idx_event_pubkey_created_at '
           'ON event (pubkey, created_at)',
+    ),
+
+    // Index on expire_at for cache eviction queries
+    // (WHERE expire_at IS NOT NULL AND expire_at < ?)
+    Index(
+      'idx_event_expire_at',
+      'CREATE INDEX IF NOT EXISTS idx_event_expire_at ON event (expire_at)',
     ),
   ];
 }
