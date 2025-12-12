@@ -287,11 +287,7 @@ class NostrClient {
     );
     if (events.isNotEmpty) {
       // Cache websocket result (fire-and-forget)
-      unawaited(
-        _nostrEventsDao?.upsertEvent(events.first).catchError((_) {
-          // Ignore cache errors
-        }),
-      );
+      unawaited(_nostrEventsDao?.upsertEvent(events.first));
       return events.first;
     }
     return null;
@@ -333,11 +329,11 @@ class NostrClient {
       filtersJson,
       (event) {
         // Auto-cache incoming events (fire-and-forget)
-        unawaited(
-          _nostrEventsDao?.upsertEvent(event).catchError((_) {
-            // Ignore cache errors
-          }),
-        );
+        try {
+          unawaited(_nostrEventsDao?.upsertEvent(event));
+        } on Object {
+          // Ignore sync cache errors
+        }
 
         if (!controller.isClosed) {
           controller.add(event);
