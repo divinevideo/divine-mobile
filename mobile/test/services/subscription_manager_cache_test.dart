@@ -23,7 +23,7 @@ void main() {
       eventController = StreamController<Event>.broadcast();
 
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => eventController.stream);
     });
 
@@ -90,9 +90,7 @@ void main() {
         // Assert: Relay subscription should only request uncached event
         final capturedFilter =
             verify(
-                  mockNostrService.subscribeToEvents(
-                    filters: captureAnyNamed('filters'),
-                  ),
+                  mockNostrService.subscribe(captureAny()),
                 ).captured.single
                 as List<Filter>;
 
@@ -141,7 +139,7 @@ void main() {
 
         // Assert: No relay subscription created
         verifyNever(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         );
 
         // Assert: onComplete was called immediately
@@ -170,9 +168,7 @@ void main() {
         // Assert: Filter passed through unchanged
         final capturedFilter =
             verify(
-                  mockNostrService.subscribeToEvents(
-                    filters: captureAnyNamed('filters'),
-                  ),
+                  mockNostrService.subscribe(captureAny()),
                 ).captured.single
                 as List<Filter>;
 
@@ -201,9 +197,7 @@ void main() {
         // Assert: All event IDs passed to relay (no caching)
         final capturedFilter =
             verify(
-                  mockNostrService.subscribeToEvents(
-                    filters: captureAnyNamed('filters'),
-                  ),
+                  mockNostrService.subscribe(captureAny()),
                 ).captured.single
                 as List<Filter>;
 
@@ -247,9 +241,7 @@ void main() {
       // Assert: Both filters sent to relay (filter1 pruned, filter2 unchanged)
       final capturedFilters =
           verify(
-                mockNostrService.subscribeToEvents(
-                  filters: captureAnyNamed('filters'),
-                ),
+                mockNostrService.subscribe(captureAny()),
               ).captured.single
               as List<Filter>;
 

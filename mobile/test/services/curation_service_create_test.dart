@@ -57,7 +57,7 @@ void main() {
     test('successfully creates and publishes curation set', () async {
       // Setup: Mock successful broadcast
       when(mockKeyManager.keyPair).thenReturn(testKeychain);
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         final event = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: event,
@@ -85,7 +85,7 @@ void main() {
       expect(result, isTrue);
 
       // Verify: Broadcast was called
-      verify(mockNostrService.broadcastEvent(any)).called(1);
+      verify(mockNostrService.broadcast(any)).called(1);
 
       // Verify: Local state was updated
       final storedSet = curationService.getCurationSet('test_list');
@@ -99,7 +99,7 @@ void main() {
 
     test('creates event with correct kind 30005', () async {
       when(mockKeyManager.keyPair).thenReturn(testKeychain);
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         final event = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: event,
@@ -118,14 +118,14 @@ void main() {
 
       // Verify: Event has correct kind
       final capturedEvent =
-          verify(mockNostrService.broadcastEvent(captureAny)).captured.single
+          verify(mockNostrService.broadcast(captureAny)).captured.single
               as Event;
       expect(capturedEvent.kind, 30005);
     });
 
     test('creates event with correct tags', () async {
       when(mockKeyManager.keyPair).thenReturn(testKeychain);
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         final event = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: event,
@@ -146,7 +146,7 @@ void main() {
 
       // Verify: Event has correct tags
       final capturedEvent =
-          verify(mockNostrService.broadcastEvent(captureAny)).captured.single
+          verify(mockNostrService.broadcast(captureAny)).captured.single
               as Event;
 
       // Find specific tags
@@ -173,7 +173,7 @@ void main() {
 
     test('returns false when broadcast fails', () async {
       when(mockKeyManager.keyPair).thenReturn(testKeychain);
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         final event = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: event,
@@ -218,12 +218,12 @@ void main() {
       expect(result, isFalse);
 
       // Verify: Does not attempt to broadcast
-      verifyNever(mockNostrService.broadcastEvent(any));
+      verifyNever(mockNostrService.broadcast(any));
     });
 
     test('does not update local state when broadcast fails', () async {
       when(mockKeyManager.keyPair).thenReturn(testKeychain);
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         final event = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: event,
@@ -247,7 +247,7 @@ void main() {
 
     test('uses curator pubkey from keyManager', () async {
       when(mockKeyManager.keyPair).thenReturn(testKeychain);
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         final event = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: event,
@@ -266,7 +266,7 @@ void main() {
 
       // Verify: Event pubkey matches keypair
       final capturedEvent =
-          verify(mockNostrService.broadcastEvent(captureAny)).captured.single
+          verify(mockNostrService.broadcast(captureAny)).captured.single
               as Event;
       expect(capturedEvent.pubkey, testKeychain.public);
 
@@ -277,7 +277,7 @@ void main() {
 
     test('handles partial broadcast success', () async {
       when(mockKeyManager.keyPair).thenReturn(testKeychain);
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         final event = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: event,
@@ -313,7 +313,7 @@ void main() {
     test('handles broadcast exception', () async {
       when(mockKeyManager.keyPair).thenReturn(testKeychain);
       when(
-        mockNostrService.broadcastEvent(any),
+        mockNostrService.broadcast(any),
       ).thenThrow(Exception('Network error'));
 
       // Execute - should not throw
@@ -333,7 +333,7 @@ void main() {
 
     test('creates curation set with empty video list', () async {
       when(mockKeyManager.keyPair).thenReturn(testKeychain);
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         final event = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: event,
@@ -361,7 +361,7 @@ void main() {
 
     test('creates curation set with minimal parameters', () async {
       when(mockKeyManager.keyPair).thenReturn(testKeychain);
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         final event = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: event,

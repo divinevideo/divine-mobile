@@ -137,7 +137,7 @@ class NotificationServiceEnhanced {
     );
 
     final subscription = _nostrService!
-        .subscribeToEvents(filters: [filter])
+        .subscribe([filter])
         .listen((event) async {
           await _handleReactionEvent(event);
         });
@@ -153,7 +153,7 @@ class NotificationServiceEnhanced {
     );
 
     final subscription = _nostrService!
-        .subscribeToEvents(filters: [filter])
+        .subscribe([filter])
         .listen((event) async {
           await _handleCommentEvent(event);
         });
@@ -169,7 +169,7 @@ class NotificationServiceEnhanced {
     );
 
     final subscription = _nostrService!
-        .subscribeToEvents(filters: [filter])
+        .subscribe([filter])
         .listen((event) async {
           await _handleFollowEvent(event);
         });
@@ -185,7 +185,7 @@ class NotificationServiceEnhanced {
     );
 
     final subscription = _nostrService!
-        .subscribeToEvents(filters: [filter])
+        .subscribe([filter])
         .listen((event) async {
           await _handleMentionEvent(event);
         });
@@ -201,7 +201,7 @@ class NotificationServiceEnhanced {
     );
 
     final subscription = _nostrService!
-        .subscribeToEvents(filters: [filter])
+        .subscribe([filter])
         .listen((event) async {
           await _handleRepostEvent(event);
         });

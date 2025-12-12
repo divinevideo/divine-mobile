@@ -605,7 +605,7 @@ class BookmarkService with NostrListServiceMixin {
       );
 
       if (event != null) {
-        final result = await _nostrService.broadcastEvent(event);
+        final result = await _nostrService.broadcast(event);
         if (result.successCount > 0) {
           Log.debug(
             'Published global bookmarks to Nostr: ${event.id}',
@@ -666,7 +666,7 @@ class BookmarkService with NostrListServiceMixin {
       );
 
       if (event != null) {
-        final result = await _nostrService.broadcastEvent(event);
+        final result = await _nostrService.broadcast(event);
         if (result.successCount > 0) {
           // Update local set with Nostr event ID
           final setIndex = _bookmarkSets.indexWhere((s) => s.id == set.id);

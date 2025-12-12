@@ -334,7 +334,7 @@ class ReportAggregationService with NostrListServiceMixin {
         kinds: [1984], // NIP-56 report events
       );
 
-      final events = await _nostrService.getEvents(filters: [filter]);
+      final events = await _nostrService.queryEvents([filter]);
 
       if (events.isEmpty) {
         Log.debug(

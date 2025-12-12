@@ -102,7 +102,7 @@ class VideoSharingService {
       }
 
       // Broadcast the DM
-      final result = await _nostrService.broadcastEvent(event);
+      final result = await _nostrService.broadcast(event);
 
       if (result.successCount > 0) {
         // Update sharing history

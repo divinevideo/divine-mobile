@@ -101,7 +101,7 @@ void main() {
       when(mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
       when(mockNostrService.hasKeys).thenReturn(true);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: Event(
             testPublicKey,
@@ -123,7 +123,7 @@ void main() {
       await expectLater(service.deleteAccount(), completes);
 
       // Assert
-      verify(mockNostrService.broadcastEvent(any)).called(1);
+      verify(mockNostrService.broadcast(any)).called(1);
     });
 
     test(
@@ -133,7 +133,7 @@ void main() {
         when(mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
         when(mockNostrService.hasKeys).thenReturn(true);
 
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event(
               testPublicKey,
@@ -165,7 +165,7 @@ void main() {
       when(mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
       when(mockNostrService.hasKeys).thenReturn(true);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: Event(
             testPublicKey,

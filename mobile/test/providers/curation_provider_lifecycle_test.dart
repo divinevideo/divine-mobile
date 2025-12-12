@@ -4,6 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/models/curation_set.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -26,6 +27,10 @@ import 'curation_provider_lifecycle_test.mocks.dart';
   AnalyticsApiService,
 ])
 void main() {
+  setUpAll(() {
+    provideDummy<List<Filter>>([]);
+  });
+
   group('CurationProvider Lifecycle', () {
     late MockNostrClient mockNostrService;
     late MockVideoEventService mockVideoEventService;
@@ -59,9 +64,8 @@ void main() {
 
       // Stub nostr service methods
       when(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
+        mockNostrService.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).thenAnswer((_) => const Stream.empty());

@@ -56,6 +56,7 @@ class FakeFilter extends Fake implements Filter {}
 void main() {
   setUpAll(() {
     registerFallbackValue(FakeFilter());
+    registerFallbackValue(<Filter>[]);
   });
 
   group('VideoEventService Subscription Duplicate Checking', () {
@@ -71,10 +72,9 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       when(
-        () => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'),
+        () => mockNostrService.subscribe(
+          any(),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'),
         ),
       ).thenAnswer((_) => eventStreamController.stream);
 
@@ -97,14 +97,13 @@ void main() {
         // Track NostrService.subscribeToEvents calls since VideoEventService bypasses SubscriptionManager
         final subscriptionCalls = <List<Filter>>[];
         when(
-          () => mockNostrService.subscribeToEvents(
-            filters: any(named: 'filters'),
+          () => mockNostrService.subscribe(
+          any(),
             onEose: any(named: 'onEose'),
-            bypassLimits: any(named: 'bypassLimits'),
           ),
         ).thenAnswer((invocation) {
           final filters =
-              invocation.namedArguments[const Symbol('filters')]
+              invocation.positionalArguments[0]
                   as List<Filter>;
           subscriptionCalls.add(filters);
           return eventStreamController.stream;
@@ -152,14 +151,13 @@ void main() {
     test('should reject truly duplicate subscriptions', () async {
       final subscriptionCalls = <List<Filter>>[];
       when(
-        () => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'),
+        () => mockNostrService.subscribe(
+          any(),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'),
         ),
       ).thenAnswer((invocation) {
         final filters =
-            invocation.namedArguments[const Symbol('filters')] as List<Filter>;
+            invocation.positionalArguments[0] as List<Filter>;
         subscriptionCalls.add(filters);
         return eventStreamController.stream;
       });
@@ -191,14 +189,13 @@ void main() {
     test('should allow multiple author-specific subscriptions', () async {
       final subscriptionCalls = <List<Filter>>[];
       when(
-        () => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'),
+        () => mockNostrService.subscribe(
+          any(),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'),
         ),
       ).thenAnswer((invocation) {
         final filters =
-            invocation.namedArguments[const Symbol('filters')] as List<Filter>;
+            invocation.positionalArguments[0] as List<Filter>;
         subscriptionCalls.add(filters);
         return eventStreamController.stream;
       });
@@ -236,14 +233,13 @@ void main() {
     test('should correctly handle replace parameter', () async {
       final subscriptionCalls = <List<Filter>>[];
       when(
-        () => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'),
+        () => mockNostrService.subscribe(
+          any(),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'),
         ),
       ).thenAnswer((invocation) {
         final filters =
-            invocation.namedArguments[const Symbol('filters')] as List<Filter>;
+            invocation.positionalArguments[0] as List<Filter>;
         subscriptionCalls.add(filters);
         return eventStreamController.stream;
       });
@@ -296,14 +292,13 @@ void main() {
       // This test exposes the current bug where subscription parameters aren't tracked
       final subscriptionCalls = <List<Filter>>[];
       when(
-        () => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'),
+        () => mockNostrService.subscribe(
+          any(),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'),
         ),
       ).thenAnswer((invocation) {
         final filters =
-            invocation.namedArguments[const Symbol('filters')] as List<Filter>;
+            invocation.positionalArguments[0] as List<Filter>;
         subscriptionCalls.add(filters);
         return eventStreamController.stream;
       });
@@ -338,14 +333,13 @@ void main() {
       // This is the exact sequence that's failing in production
       final subscriptionCalls = <List<Filter>>[];
       when(
-        () => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'),
+        () => mockNostrService.subscribe(
+          any(),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'),
         ),
       ).thenAnswer((invocation) {
         final filters =
-            invocation.namedArguments[const Symbol('filters')] as List<Filter>;
+            invocation.positionalArguments[0] as List<Filter>;
         subscriptionCalls.add(filters);
         return eventStreamController.stream;
       });

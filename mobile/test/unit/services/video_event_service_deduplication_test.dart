@@ -48,6 +48,7 @@ class FakeFilter extends Fake implements Filter {}
 void main() {
   setUpAll(() {
     registerFallbackValue(FakeFilter());
+    registerFallbackValue(<Filter>[]);
   });
 
   group('VideoEventService Deduplication Tests', () {
@@ -63,8 +64,7 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       when(
-        () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+        () => mockNostrService.subscribe(any()),
       ).thenAnswer((_) => eventStreamController.stream);
 
       final testSubscriptionManager = TestSubscriptionManager(
@@ -284,9 +284,7 @@ void main() {
         // Create new stream controller for new subscription
         final newEventStreamController = StreamController<Event>.broadcast();
         when(
-          () => mockNostrService.subscribeToEvents(
-            filters: any(named: 'filters'),
-          ),
+          () => mockNostrService.subscribe(any()),
         ).thenAnswer((_) => newEventStreamController.stream);
 
         await videoEventService.subscribeToVideoFeed(
@@ -407,8 +405,7 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       when(
-        () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+        () => mockNostrService.subscribe(any()),
       ).thenAnswer((_) => eventStreamController.stream);
 
       final testSubscriptionManager = TestSubscriptionManager(

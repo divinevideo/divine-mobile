@@ -167,7 +167,7 @@ void main() {
 
         // Subscribe to events and wait for response
         final events = <Event>[];
-        final eventStream = nostrService.subscribeToEvents(filters: [filter]);
+        final eventStream = nostrService.subscribe([filter]);
 
         final subscription = eventStream.listen((event) {
           print('📥 Received event from relay: ${event.id}...');

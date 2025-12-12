@@ -26,7 +26,7 @@ abstract class SocialEventServiceBase {
     personalEventCache?.cacheUserEvent(event);
 
     // Broadcast to relays
-    final result = await nostrService.broadcastEvent(event);
+    final result = await nostrService.broadcast(event);
 
     if (!result.isSuccessful) {
       final errors = result.errors.values.join(', ');

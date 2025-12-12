@@ -79,8 +79,7 @@ class _FollowingScreenState extends ConsumerState<FollowingScreen>
     final nostrService = ref.read(nostrServiceProvider);
 
     // Subscribe to the user's kind 3 contact list events
-    final subscription = nostrService.subscribeToEvents(
-      filters: [
+    final subscription = nostrService.subscribe([
         nostr_sdk.Filter(
           authors: [pubkey],
           kinds: [3], // Contact lists

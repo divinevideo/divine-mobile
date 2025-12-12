@@ -47,6 +47,7 @@ class FakeFilter extends Fake implements Filter {}
 void main() {
   setUpAll(() {
     registerFallbackValue(FakeFilter());
+    registerFallbackValue(<Filter>[]);
   });
 
   group('VideoEventService Force Refresh', () {
@@ -62,10 +63,9 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       when(
-        () => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'),
+        () => mockNostrService.subscribe(
+          any(),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'),
         ),
       ).thenAnswer((invocation) {
         // Simulate EOSE immediately

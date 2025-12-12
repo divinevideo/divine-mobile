@@ -42,7 +42,7 @@ void main() {
 
     test('should create encrypted gift wrap event', () async {
       // Setup: Mock successful broadcast
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((_) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((_) async {
         return NostrBroadcastResult(
           event: Event.fromJson({
             'id': 'test-gift-wrap-id',
@@ -79,13 +79,13 @@ void main() {
       expect(result.error, isNull);
 
       // Verify: Event was broadcast
-      verify(mockNostrService.broadcastEvent(any)).called(1);
+      verify(mockNostrService.broadcast(any)).called(1);
     });
 
     test('should create gift wrap with kind 1059', () async {
       Event? capturedEvent;
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         capturedEvent = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: capturedEvent!,
@@ -109,7 +109,7 @@ void main() {
     test('should include p tag with recipient pubkey', () async {
       Event? capturedEvent;
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         capturedEvent = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: capturedEvent!,
@@ -137,7 +137,7 @@ void main() {
     test('should use random ephemeral key for gift wrap', () async {
       final capturedEvents = <Event>[];
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         final event = invocation.positionalArguments[0] as Event;
         capturedEvents.add(event);
         return NostrBroadcastResult(
@@ -170,7 +170,7 @@ void main() {
     test('should obfuscate timestamp with random offset', () async {
       Event? capturedEvent;
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         capturedEvent = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: capturedEvent!,
@@ -199,7 +199,7 @@ void main() {
 
     test('should handle broadcast failure gracefully', () async {
       // Setup: Mock broadcast failure
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((_) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((_) async {
         return NostrBroadcastResult(
           event: Event.fromJson({
             'id': 'test-id',
@@ -252,7 +252,7 @@ void main() {
     test('should include additional tags if provided', () async {
       Event? capturedEvent;
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer((invocation) async {
+      when(mockNostrService.broadcast(any)).thenAnswer((invocation) async {
         capturedEvent = invocation.positionalArguments[0] as Event;
         return NostrBroadcastResult(
           event: capturedEvent!,

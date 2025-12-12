@@ -172,7 +172,7 @@ Examples:
       );
 
       // Subscribe to events and collect them
-      final subscription = nostrService.subscribeToEvents(filters: [filter]);
+      final subscription = nostrService.subscribe([filter]);
       final eventCount = <int>[0]; // Use list to allow modification in callback
 
       await for (final event in subscription) {

@@ -31,7 +31,7 @@ void main() {
         mockAuth.currentPublicKeyHex,
       ).thenReturn('test_pubkey_123456789abcdef');
 
-      when(mockNostr.broadcastEvent(any)).thenAnswer((_) async {
+      when(mockNostr.broadcast(any)).thenAnswer((_) async {
         final event = Event.fromJson({
           'id': 'test_event_id',
           'pubkey': 'test_pubkey_123456789abcdef',
@@ -51,9 +51,8 @@ void main() {
       });
 
       when(
-        mockNostr.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
+        mockNostr.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).thenAnswer((_) => Stream.empty());
@@ -168,7 +167,7 @@ void main() {
 
         await service.reorderVideos(list.id, ['video_2', 'video_1']);
 
-        verify(mockNostr.broadcastEvent(any)).called(1);
+        verify(mockNostr.broadcast(any)).called(1);
       });
 
       test('updates updatedAt timestamp', () async {

@@ -35,7 +35,7 @@ void main() {
         'wss://relay3.example.com',
       ]);
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => eventStreamController.stream);
 
       videoEventService = VideoEventService(
@@ -57,8 +57,8 @@ void main() {
 
       // Verify that the filter includes both Kind 22 and Kind 16
       verify(
-        mockNostrService.subscribeToEvents(
-          filters: argThat(
+        mockNostrService.subscribe(
+          argThat(
             predicate<List<Filter>>((filters) {
               if (filters.isEmpty) return false;
               final filter = filters.first;
@@ -66,7 +66,6 @@ void main() {
                   filter.kinds!.contains(22) &&
                   filter.kinds!.contains(16);
             }),
-            named: 'filters',
           ),
         ),
       ).called(1);
@@ -167,8 +166,8 @@ void main() {
 
         // Verify that a new subscription was created to fetch the original event
         verify(
-          mockNostrService.subscribeToEvents(
-            filters: argThat(
+          mockNostrService.subscribe(
+            argThat(
               predicate<List<Filter>>((filters) {
                 if (filters.isEmpty) return false;
                 final filter = filters.first;
@@ -177,7 +176,6 @@ void main() {
                     filter.kinds != null &&
                     filter.kinds!.contains(22);
               }),
-              named: 'filters',
             ),
           ),
         ).called(greaterThan(0));
@@ -240,13 +238,12 @@ void main() {
       // Setup a separate stream for fetching original
       final fetchStreamController = StreamController<Event>.broadcast();
       when(
-        mockNostrService.subscribeToEvents(
-          filters: argThat(
+        mockNostrService.subscribe(
+          argThat(
             predicate<List<Filter>>(
               (filters) =>
                   filters.any((f) => f.ids?.contains('text123') ?? false),
             ),
-            named: 'filters',
           ),
         ),
       ).thenAnswer((_) => fetchStreamController.stream);

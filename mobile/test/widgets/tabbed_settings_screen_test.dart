@@ -40,7 +40,7 @@ void main() {
     // Default mock behaviors
     when(mockAuthService.isAuthenticated).thenReturn(true);
     when(mockAuthService.currentPublicKeyHex).thenReturn('test_pubkey');
-    when(mockNostrService.relays).thenReturn([]);
+    when(mockNostrService.configuredRelays).thenReturn([]);
     when(mockBlossomService.isBlossomEnabled()).thenAnswer((_) async => false);
     when(mockBlossomService.getBlossomServer()).thenAnswer((_) async => null);
   });
@@ -182,7 +182,7 @@ void main() {
   group('Network Tab -', () {
     testWidgets('should display relay list inline', (tester) async {
       when(
-        mockNostrService.relays,
+        mockNostrService.configuredRelays,
       ).thenReturn(['wss://relay1.example.com', 'wss://relay2.example.com']);
 
       await tester.pumpWidget(createTestWidget());

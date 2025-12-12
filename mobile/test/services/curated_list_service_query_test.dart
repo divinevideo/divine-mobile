@@ -36,7 +36,7 @@ void main() {
       ).thenReturn('test_pubkey_123456789abcdef');
 
       // Mock successful event broadcasting
-      when(mockNostr.broadcastEvent(any)).thenAnswer((_) async {
+      when(mockNostr.broadcast(any)).thenAnswer((_) async {
         final event = Event.fromJson({
           'id': 'broadcast_event_id',
           'pubkey': 'test_pubkey_123456789abcdef',
@@ -57,9 +57,8 @@ void main() {
 
       // Mock subscribeToEvents for relay sync
       when(
-        mockNostr.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
+        mockNostr.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).thenAnswer((_) => Stream.empty());
@@ -402,11 +401,10 @@ void main() {
 
         // Setup mock to return list events when queried with #e filter
         when(
-          mockNostr.subscribeToEvents(
-            filters: anyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
-            onEose: anyNamed('onEose'),
-          ),
+          mockNostr.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
         ).thenAnswer((_) => Stream.fromIterable([mockListEvent]));
 
         // Act
@@ -416,9 +414,9 @@ void main() {
 
         // Assert: Verify filter includes the video ID
         final captured = verify(
-          mockNostr.subscribeToEvents(
-            filters: captureAnyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
+          mockNostr.subscribe(
+            captureAny(),
+            
             onEose: anyNamed('onEose'),
           ),
         ).captured;
@@ -437,11 +435,10 @@ void main() {
 
         // Setup mock to return empty stream
         when(
-          mockNostr.subscribeToEvents(
-            filters: anyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
-            onEose: anyNamed('onEose'),
-          ),
+          mockNostr.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
         ).thenAnswer((_) => Stream.empty());
 
         // Act
@@ -484,11 +481,10 @@ void main() {
 
         // Setup mock to return events progressively
         when(
-          mockNostr.subscribeToEvents(
-            filters: anyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
-            onEose: anyNamed('onEose'),
-          ),
+          mockNostr.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
         ).thenAnswer(
           (_) => Stream.fromIterable([mockListEvent1, mockListEvent2]),
         );

@@ -56,12 +56,9 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
 
         // Query for video events specifically to see if any exist
         try {
-          final videoEvents = await nostrService.getEvents(
-            filters: [
-              nostr.Filter(kinds: [34236]),
-            ],
-            limit: 10,
-          );
+          final videoEvents = await nostrService.queryEvents([
+            nostr.Filter(kinds: [34236], limit: 10),
+          ]);
           Log.info(
             'Found ${videoEvents.length} video events in embedded relay database',
             name: 'RelayDiagnostic',
@@ -85,7 +82,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
     });
 
     final nostrService = ref.read(nostrServiceProvider);
-    final relays = nostrService.relays;
+    final relays = nostrService.configuredRelays;
 
     for (final relayUrl in relays) {
       try {
@@ -142,12 +139,9 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
 
     try {
       // Query for video events directly from embedded relay database
-      final videoEvents = await nostrService.getEvents(
-        filters: [
-          nostr.Filter(kinds: [34236], limit: 100),
-        ],
-        limit: 100,
-      );
+      final videoEvents = await nostrService.queryEvents([
+        nostr.Filter(kinds: [34236], limit: 100),
+      ]);
 
       Log.info(
         '✅ Direct query returned ${videoEvents.length} video events',
@@ -205,7 +199,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
 
       Log.info('Retrying relay connections...', name: 'RelayDiagnostic');
 
-      await nostrService.retryInitialization();
+      await nostrService.retryDisconnectedRelays();
 
       // Wait a bit for connections to establish
       await Future.delayed(const Duration(seconds: 2));
@@ -263,7 +257,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
     final nostrService = ref.watch(nostrServiceProvider);
     final videoService = ref.watch(videoEventServiceProvider);
 
-    final configuredRelays = nostrService.relays;
+    final configuredRelays = nostrService.configuredRelays;
     final connectedRelays = nostrService.connectedRelays;
     final relayStatuses = nostrService.relayStatuses;
 

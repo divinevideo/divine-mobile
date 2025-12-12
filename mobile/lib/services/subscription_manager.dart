@@ -87,9 +87,7 @@ class SubscriptionManager {
     }
 
     // Create event stream from NostrService with filtered filters
-    final eventStream = _nostrService.subscribeToEvents(
-      filters: filteredFilters,
-    );
+    final eventStream = _nostrService.subscribe(filteredFilters);
 
     // Set up subscription
     final subscription = eventStream.listen(

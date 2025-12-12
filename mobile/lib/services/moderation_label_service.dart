@@ -272,7 +272,7 @@ class ModerationLabelService with NostrListServiceMixin {
         kinds: [1985], // NIP-32 label events
       );
 
-      final events = await _nostrService.getEvents(filters: [filter]);
+      final events = await _nostrService.queryEvents([filter]);
 
       if (events.isEmpty) {
         Log.debug(

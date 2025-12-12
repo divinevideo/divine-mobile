@@ -84,7 +84,7 @@ void main() {
         final streamController = StreamController<Event>.broadcast();
 
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((invocation) {
           final filters = invocation.namedArguments[#filters] as List<Filter>;
           capturedFilter = filters.first;
@@ -99,7 +99,7 @@ void main() {
 
         // Assert - Verify that 'until' filter was applied with oldest timestamp
         verify(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).called(1);
 
         expect(capturedFilter, isNotNull);
@@ -128,7 +128,7 @@ void main() {
       final streamController = StreamController<Event>.broadcast();
 
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((invocation) {
         final filters = invocation.namedArguments[#filters] as List<Filter>;
         capturedFilter = filters.first;
@@ -143,7 +143,7 @@ void main() {
 
       // Assert - Verify that no 'until' filter was applied
       verify(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).called(1);
 
       expect(capturedFilter, isNotNull);
@@ -178,7 +178,7 @@ void main() {
         // Setup stream for loadMoreEvents
         final streamController = StreamController<Event>.broadcast();
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => streamController.stream);
 
         // Act - Load more and simulate receiving older events
@@ -228,7 +228,7 @@ void main() {
         // Setup stream for loadMoreEvents
         final streamController = StreamController<Event>.broadcast();
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => streamController.stream);
 
         // Act - Request 10 events but only receive 2
@@ -276,7 +276,7 @@ void main() {
         final streamController = StreamController<Event>.broadcast();
 
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((invocation) {
           final filters = invocation.namedArguments[#filters] as List<Filter>;
           capturedFilters.add(filters.first);
@@ -348,7 +348,7 @@ void main() {
 
       final streamController = StreamController<Event>.broadcast();
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => streamController.stream);
 
       // Act - Load more but receive no events (reached end)
@@ -371,7 +371,7 @@ void main() {
 
       // Reset the stream mock to ensure we're not accidentally triggering it
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => streamController.stream);
 
       videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 50);
@@ -379,7 +379,7 @@ void main() {
 
       // Should not make another subscription since hasMore=false
       verifyNever(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       );
 
       // Cleanup

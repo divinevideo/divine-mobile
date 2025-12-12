@@ -40,7 +40,7 @@ void main() {
 
       // Mock subscribeToEvents to prevent initialization calls
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => const Stream<Event>.empty());
 
       // Mock createSubscription for fetchCommentsForEvent
@@ -146,7 +146,7 @@ void main() {
             ),
           ).thenAnswer((_) async => testEvent);
 
-          when(mockNostrService.broadcastEvent(testEvent)).thenAnswer(
+          when(mockNostrService.broadcast(testEvent)).thenAnswer(
             (_) async => NostrBroadcastResult(
               event: testEvent,
               successCount: 1,
@@ -216,7 +216,7 @@ void main() {
           ),
         ).thenAnswer((_) async => testEvent);
 
-        when(mockNostrService.broadcastEvent(testEvent)).thenAnswer(
+        when(mockNostrService.broadcast(testEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: testEvent,
             successCount: 1,
@@ -277,7 +277,7 @@ void main() {
           ),
         ).thenAnswer((_) async => testEvent);
 
-        when(mockNostrService.broadcastEvent(testEvent)).thenAnswer(
+        when(mockNostrService.broadcast(testEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: testEvent,
             successCount: 1,
@@ -295,7 +295,7 @@ void main() {
         );
 
         // Assert
-        verify(mockNostrService.broadcastEvent(testEvent)).called(1);
+        verify(mockNostrService.broadcast(testEvent)).called(1);
       });
 
       test('should throw exception when event creation fails', () async {
@@ -353,7 +353,7 @@ void main() {
           ),
         ).thenAnswer((_) async => testEvent);
 
-        when(mockNostrService.broadcastEvent(testEvent)).thenAnswer(
+        when(mockNostrService.broadcast(testEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: testEvent,
             successCount: 0,
@@ -410,7 +410,7 @@ void main() {
           ),
         ).thenAnswer((_) async => testEvent);
 
-        when(mockNostrService.broadcastEvent(testEvent)).thenAnswer(
+        when(mockNostrService.broadcast(testEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: testEvent,
             successCount: 1,

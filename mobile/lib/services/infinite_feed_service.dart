@@ -248,7 +248,7 @@ class InfiniteFeedService {
 
     try {
       final filter = Filter(ids: eventIds);
-      final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
+      final eventStream = _nostrService.subscribe([filter]);
 
       final fetchedVideos = <VideoEvent>[];
       await for (final event in eventStream.timeout(
@@ -297,7 +297,7 @@ class InfiniteFeedService {
         until: since,
       );
 
-      final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
+      final eventStream = _nostrService.subscribe([filter]);
 
       final newVideos = <VideoEvent>[];
       await for (final event in eventStream.timeout(

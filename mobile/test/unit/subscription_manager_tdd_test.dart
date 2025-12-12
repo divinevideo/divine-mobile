@@ -26,10 +26,7 @@ void main() {
 
       // Mock the NostrService to return our test stream
       when(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        ),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => testEventController.stream);
 
       subscriptionManager = SubscriptionManager(mockNostrService);
@@ -175,11 +172,9 @@ void main() {
         final completer = Completer<void>();
 
         // Listen directly to the stream (bypassing SubscriptionManager)
-        final directStream = mockNostrService.subscribeToEvents(
-          filters: [
-            Filter(kinds: [22]),
-          ],
-        );
+        final directStream = mockNostrService.subscribe([
+          Filter(kinds: [22]),
+        ]);
         final subscription = directStream.listen((event) {
           Log.info(
             '✅ TDD: Direct stream received: ${event.id}',

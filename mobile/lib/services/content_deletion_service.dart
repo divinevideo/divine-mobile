@@ -147,7 +147,7 @@ class ContentDeletionService {
       );
 
       if (deleteEvent != null) {
-        final broadcastResult = await _nostrService.broadcastEvent(deleteEvent);
+        final broadcastResult = await _nostrService.broadcast(deleteEvent);
         if (broadcastResult.successCount == 0) {
           Log.error(
             'Failed to broadcast delete request to relays',

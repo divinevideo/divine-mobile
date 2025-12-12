@@ -14,18 +14,22 @@ void main() {
   group('SubscriptionManager Filter Preservation', () {
     late MockNostrClient mockNostrService;
     late SubscriptionManager subscriptionManager;
+    late List<List<Filter>> capturedFiltersList;
 
     setUp(() {
       mockNostrService = MockNostrClient();
       subscriptionManager = SubscriptionManager(mockNostrService);
+      capturedFiltersList = [];
 
-      // Setup default mock behavior
+      // Setup default mock behavior with capture
       when(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        ),
-      ).thenAnswer((_) => const Stream<Event>.empty());
+        mockNostrService.subscribe(argThat(anything)),
+      ).thenAnswer((invocation) {
+        capturedFiltersList.add(
+          invocation.positionalArguments[0] as List<Filter>,
+        );
+        return const Stream<Event>.empty();
+      });
     });
 
     test('should preserve hashtag filters when optimizing', () async {
@@ -45,10 +49,7 @@ void main() {
 
       // Verify the filter passed to NostrService preserved hashtags
       final capturedCalls = verify(
-        mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        ),
+        mockNostrService.subscribe(captureAny()),
       ).captured;
 
       expect(capturedCalls.isNotEmpty, isTrue);
@@ -77,10 +78,7 @@ void main() {
 
       // Verify the filter passed to NostrService preserved group
       final capturedCalls = verify(
-        mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        ),
+        mockNostrService.subscribe(captureAny()),
       ).captured;
 
       expect(capturedCalls.isNotEmpty, isTrue);
@@ -114,10 +112,7 @@ void main() {
 
       // Verify all filter parameters are preserved
       final capturedCalls = verify(
-        mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        ),
+        mockNostrService.subscribe(captureAny()),
       ).captured;
 
       expect(capturedCalls.isNotEmpty, isTrue);
@@ -157,10 +152,7 @@ void main() {
 
       // Verify the filter passed to NostrService
       final capturedCalls = verify(
-        mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        ),
+        mockNostrService.subscribe(captureAny()),
       ).captured;
 
       expect(capturedCalls.isNotEmpty, isTrue);
@@ -195,10 +187,7 @@ void main() {
 
       // Verify both filters are optimized correctly
       final capturedCalls = verify(
-        mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        ),
+        mockNostrService.subscribe(captureAny()),
       ).captured;
 
       expect(capturedCalls.isNotEmpty, isTrue);
@@ -233,10 +222,7 @@ void main() {
 
       // Verify the limit is not changed
       final capturedCalls = verify(
-        mockNostrService.subscribeToEvents(
-          filters: captureAnyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        ),
+        mockNostrService.subscribe(captureAny()),
       ).captured;
 
       expect(capturedCalls.isNotEmpty, isTrue);

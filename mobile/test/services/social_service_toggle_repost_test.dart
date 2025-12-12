@@ -38,7 +38,7 @@ void main() {
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentPublicKeyHex).thenReturn(testUserPubkey);
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream.fromIterable([]));
       when(
         mockSubscriptionManager.createSubscription(
@@ -112,7 +112,7 @@ void main() {
         ).thenAnswer((_) async => mockRepostEvent);
 
         // Mock successful broadcast
-        when(mockNostrService.broadcastEvent(mockRepostEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockRepostEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockRepostEvent,
             successCount: 1,
@@ -149,7 +149,7 @@ void main() {
         ).called(1);
 
         // Verify broadcast was called
-        verify(mockNostrService.broadcastEvent(mockRepostEvent)).called(1);
+        verify(mockNostrService.broadcast(mockRepostEvent)).called(1);
 
         // Verify video is now reposted locally
         expect(
@@ -190,7 +190,7 @@ void main() {
           ),
         ).thenAnswer((_) async => mockRepostEvent);
 
-        when(mockNostrService.broadcastEvent(mockRepostEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockRepostEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockRepostEvent,
             successCount: 1,
@@ -232,7 +232,7 @@ void main() {
           ),
         ).thenAnswer((_) async => mockDeletionEvent);
 
-        when(mockNostrService.broadcastEvent(mockDeletionEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockDeletionEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockDeletionEvent,
             successCount: 1,
@@ -257,7 +257,7 @@ void main() {
         ).called(1);
 
         // Verify deletion broadcast
-        verify(mockNostrService.broadcastEvent(mockDeletionEvent)).called(1);
+        verify(mockNostrService.broadcast(mockDeletionEvent)).called(1);
 
         // Verify video is no longer reposted locally
         expect(

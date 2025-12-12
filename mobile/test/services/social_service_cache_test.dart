@@ -45,7 +45,7 @@ void main() {
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentPublicKeyHex).thenReturn(testUserPubkey);
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream.fromIterable([]));
       when(
         mockSubscriptionManager.createSubscription(
@@ -99,7 +99,7 @@ void main() {
           ),
         ).thenAnswer((_) async => mockContactListEvent);
 
-        when(mockNostrService.broadcastEvent(mockContactListEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockContactListEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockContactListEvent,
             successCount: 1,
@@ -162,7 +162,7 @@ void main() {
           ),
         ).thenAnswer((_) async => followEvent);
 
-        when(mockNostrService.broadcastEvent(followEvent)).thenAnswer(
+        when(mockNostrService.broadcast(followEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: followEvent,
             successCount: 1,
@@ -193,7 +193,7 @@ void main() {
           mockAuthService.createAndSignEvent(kind: 3, content: '', tags: []),
         ).thenAnswer((_) async => unfollowEvent);
 
-        when(mockNostrService.broadcastEvent(unfollowEvent)).thenAnswer(
+        when(mockNostrService.broadcast(unfollowEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: unfollowEvent,
             successCount: 1,

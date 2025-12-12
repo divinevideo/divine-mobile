@@ -48,7 +48,7 @@ void main() {
       final eventStreamController = StreamController<Event>.broadcast();
 
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => eventStreamController.stream);
 
       // Call the method
@@ -61,8 +61,8 @@ void main() {
 
       // Verify the filter
       verify(
-        mockNostrService.subscribeToEvents(
-          filters: argThat(
+        mockNostrService.subscribe(
+          argThat(
             predicate<List<Filter>>((filters) {
               if (filters.isEmpty) return false;
               final filter = filters.first;
@@ -71,7 +71,6 @@ void main() {
                   filter.e != null &&
                   filter.e!.contains(videoId);
             }),
-            named: 'filters',
           ),
         ),
       ).called(1);
@@ -83,7 +82,7 @@ void main() {
       final eventStreamController = StreamController<Event>.broadcast();
 
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => eventStreamController.stream);
 
       // Create repost events with valid hex pubkeys (64 chars)
@@ -161,7 +160,7 @@ void main() {
       final eventStreamController = StreamController<Event>.broadcast();
 
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => eventStreamController.stream);
 
       // Call the method
@@ -184,7 +183,7 @@ void main() {
         final eventStreamController = StreamController<Event>.broadcast();
 
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => eventStreamController.stream);
 
         final reposter1Pubkey =
@@ -254,7 +253,7 @@ void main() {
       final eventStreamController = StreamController<Event>.broadcast();
 
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => eventStreamController.stream);
 
       // Call the method
@@ -279,7 +278,7 @@ void main() {
       final eventStreamController = StreamController<Event>.broadcast();
 
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => eventStreamController.stream);
 
       final reposterPubkey =

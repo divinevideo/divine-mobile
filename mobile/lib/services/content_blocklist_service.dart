@@ -184,7 +184,7 @@ class ContentBlocklistService {
       final filter = Filter(kinds: const [10000]);
       filter.p = [ourPubkey]; // Filter by 'p' tags containing our pubkey
 
-      final subscription = nostrService.subscribeToEvents(filters: [filter]);
+      final subscription = nostrService.subscribe([filter]);
 
       _mutualMuteSubscriptionId =
           'mutual-mute-${DateTime.now().millisecondsSinceEpoch}';

@@ -34,11 +34,9 @@ void main() {
       // Track all subscription calls
       final subscriptionCalls = <Map<String, dynamic>>[];
       when(
-        () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+        () => mockNostrService.subscribe(any()),
       ).thenAnswer((invocation) {
-        final filters =
-            invocation.namedArguments[const Symbol('filters')] as List<Filter>;
+        final filters = invocation.positionalArguments[0] as List<Filter>;
         final filter = filters.first;
 
         // Extract subscription parameters

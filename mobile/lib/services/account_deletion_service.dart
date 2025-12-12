@@ -58,7 +58,7 @@ class AccountDeletionService {
       }
 
       // Broadcast to all configured relays
-      final broadcastResult = await _nostrService.broadcastEvent(event);
+      final broadcastResult = await _nostrService.broadcast(event);
 
       if (broadcastResult.successCount == 0) {
         Log.error(

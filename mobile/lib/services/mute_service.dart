@@ -527,7 +527,7 @@ class MuteService {
       );
 
       if (event != null) {
-        final result = await _nostrService.broadcastEvent(event);
+        final result = await _nostrService.broadcast(event);
         if (result.successCount > 0) {
           Log.debug(
             'Published mute list to Nostr: ${event.id}',

@@ -26,13 +26,13 @@ class MinimalMockNostrService implements NostrClient {
   bool get hasKeys => false;
 
   @override
-  int get relayCount => 1;
+  int get configuredRelayCount => 1;
 
   @override
   int get connectedRelayCount => 1;
 
   @override
-  List<String> get relays => ['wss://localhost:8080'];
+  List<String> get configuredRelays => ['wss://localhost:8080'];
 
   @override
   Map<String, RelayConnectionStatus> get relayStatuses => {};

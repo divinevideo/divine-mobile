@@ -683,7 +683,7 @@ class AnalyticsApiService {
         category: LogCategory.video,
       );
 
-      final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
+      final eventStream = _nostrService.subscribe([filter]);
 
       final fetchedVideos = <VideoEvent>[];
       final completer = Completer<void>();

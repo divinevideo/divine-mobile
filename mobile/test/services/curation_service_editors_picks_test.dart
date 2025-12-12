@@ -36,7 +36,7 @@ void main() {
       when(mockVideoEventService.discoveryVideos).thenReturn([]);
       // Mock subscribeToEvents to avoid MissingStubError when fetching Editor's Picks list
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream<Event>.empty());
     });
 

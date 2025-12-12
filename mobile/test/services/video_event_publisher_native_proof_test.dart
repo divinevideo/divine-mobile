@@ -118,7 +118,7 @@ void main() {
       });
 
       // Mock broadcast to succeed
-      when(() => mockNostrService.broadcastEvent(any())).thenAnswer((
+      when(() => mockNostrService.broadcast(any())).thenAnswer((
         invocation,
       ) async {
         final event = invocation.positionalArguments[0] as Event;
@@ -255,7 +255,7 @@ void main() {
         return Future.value(capturedEvent);
       });
 
-      when(() => mockNostrService.broadcastEvent(any())).thenAnswer((
+      when(() => mockNostrService.broadcast(any())).thenAnswer((
         invocation,
       ) async {
         final event = invocation.positionalArguments[0] as Event;
@@ -329,7 +329,7 @@ void main() {
         return Future.value(capturedEvent);
       });
 
-      when(() => mockNostrService.broadcastEvent(any())).thenAnswer((
+      when(() => mockNostrService.broadcast(any())).thenAnswer((
         invocation,
       ) async {
         final event = invocation.positionalArguments[0] as Event;

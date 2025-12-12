@@ -947,7 +947,7 @@ class CuratedListService extends ChangeNotifier {
       );
 
       if (event != null) {
-        final result = await _nostrService.broadcastEvent(event);
+        final result = await _nostrService.broadcast(event);
         if (result.successCount > 0) {
           // Update local list with Nostr event ID
           final listIndex = _lists.indexWhere((l) => l.id == list.id);
@@ -1092,8 +1092,7 @@ class CuratedListService extends ChangeNotifier {
       final receivedEvents = <Event>[];
 
       // Subscribe to user's own Kind 30005 events (NIP-51 curated lists)
-      final subscription = _nostrService.subscribeToEvents(
-        filters: [
+      final subscription = _nostrService.subscribe([
           Filter(
             authors: [userPubkey],
             kinds: [30005], // NIP-51 curated lists
@@ -1188,7 +1187,7 @@ class CuratedListService extends ChangeNotifier {
       );
 
       // Subscribe to all public Kind 30005 events (no author filter)
-      final subscription = _nostrService.subscribeToEvents(filters: [filter]);
+      final subscription = _nostrService.subscribe([filter]);
 
       // Set a timeout for the subscription
       Timer? timeoutTimer;
@@ -1319,7 +1318,7 @@ class CuratedListService extends ChangeNotifier {
       );
 
       // Subscribe to matching events
-      final subscription = _nostrService.subscribeToEvents(filters: [filter]);
+      final subscription = _nostrService.subscribe([filter]);
 
       // Set a timeout for the subscription
       Timer? timeoutTimer;
@@ -1434,7 +1433,7 @@ class CuratedListService extends ChangeNotifier {
 
     // Subscribe and transform events to CuratedList objects
     return _nostrService
-        .subscribeToEvents(filters: [filter])
+        .subscribe([filter])
         .map((event) {
           final dTag = _extractDTag(event);
           if (dTag == null) return null;

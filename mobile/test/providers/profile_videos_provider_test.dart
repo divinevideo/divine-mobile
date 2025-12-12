@@ -31,8 +31,8 @@ void main() {
       void Function()? capturedOnEose;
       final subscriptionStarted = Completer<void>();
       when(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
+        mockNostrService.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).thenAnswer((invocation) {
@@ -168,10 +168,10 @@ void main() {
           final controller = StreamController<Event>();
           void Function()? capturedOnEose;
           when(
-            mockNostrService.subscribeToEvents(
-              filters: anyNamed('filters'),
-              onEose: anyNamed('onEose'),
-            ),
+            mockNostrService.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
           ).thenAnswer((invocation) {
             capturedOnEose =
                 invocation.namedArguments[#onEose] as void Function()?;
@@ -218,10 +218,10 @@ void main() {
           mockVideoEventService.getVideosByAuthor(testPubkey),
         ).thenReturn([]);
         when(
-          mockNostrService.subscribeToEvents(
-            filters: anyNamed('filters'),
-            onEose: anyNamed('onEose'),
-          ),
+          mockNostrService.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
         ).thenAnswer((_) => Stream.error(Exception('Network error')));
 
         // Act
@@ -337,10 +337,10 @@ void main() {
             onTimeout: () {
               // Debug: check if subscribeToEvents was ever called
               final verification = verify(
-                mockNostrService.subscribeToEvents(
-                  filters: anyNamed('filters'),
-                  onEose: anyNamed('onEose'),
-                ),
+                mockNostrService.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
               );
               final callCount = verification.callCount;
               throw Exception(
@@ -378,10 +378,10 @@ void main() {
           mockVideoEventService.getVideosByAuthor(testPubkey),
         ).thenReturn([]);
         when(
-          mockNostrService.subscribeToEvents(
-            filters: anyNamed('filters'),
-            onEose: anyNamed('onEose'),
-          ),
+          mockNostrService.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
         ).thenAnswer((_) => Stream.error(Exception('Test error')));
 
         final notifier = container.read(profileVideosProvider.notifier);
@@ -589,10 +589,10 @@ void main() {
         void Function()? capturedOnEose;
 
         when(
-          mockNostrService.subscribeToEvents(
-            filters: anyNamed('filters'),
-            onEose: anyNamed('onEose'),
-          ),
+          mockNostrService.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
         ).thenAnswer((invocation) {
           // Capture the onEose callback
           capturedOnEose =

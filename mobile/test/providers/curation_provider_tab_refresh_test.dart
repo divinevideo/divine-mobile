@@ -40,9 +40,8 @@ void main() {
 
       // Stub nostr service to return empty stream (no async fetch for this test)
       when(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
+        mockNostrService.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).thenAnswer((_) => const Stream.empty());

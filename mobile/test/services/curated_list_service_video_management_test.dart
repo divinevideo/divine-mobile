@@ -33,7 +33,7 @@ void main() {
       ).thenReturn('test_pubkey_123456789abcdef');
 
       // Mock successful event broadcasting
-      when(mockNostr.broadcastEvent(any)).thenAnswer((_) async {
+      when(mockNostr.broadcast(any)).thenAnswer((_) async {
         final event = Event.fromJson({
           'id': 'broadcast_event_id',
           'pubkey': 'test_pubkey_123456789abcdef',
@@ -54,9 +54,8 @@ void main() {
 
       // Mock subscribeToEvents for relay sync
       when(
-        mockNostr.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
+        mockNostr.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).thenAnswer((_) => Stream.empty());
@@ -164,7 +163,7 @@ void main() {
 
         await service.addVideoToList(list!.id, 'video_event_123');
 
-        verify(mockNostr.broadcastEvent(any)).called(1);
+        verify(mockNostr.broadcast(any)).called(1);
       });
 
       test('does not publish update for private list', () async {
@@ -176,7 +175,7 @@ void main() {
 
         await service.addVideoToList(list!.id, 'video_event_123');
 
-        verifyNever(mockNostr.broadcastEvent(any));
+        verifyNever(mockNostr.broadcast(any));
       });
 
       test('saves to SharedPreferences after adding', () async {
@@ -270,7 +269,7 @@ void main() {
 
         await service.removeVideoFromList(list.id, 'video_event_123');
 
-        verify(mockNostr.broadcastEvent(any)).called(1);
+        verify(mockNostr.broadcast(any)).called(1);
       });
 
       test('does not publish update for private list', () async {
@@ -283,7 +282,7 @@ void main() {
 
         await service.removeVideoFromList(list.id, 'video_event_123');
 
-        verifyNever(mockNostr.broadcastEvent(any));
+        verifyNever(mockNostr.broadcast(any));
       });
 
       test('saves to SharedPreferences after removing', () async {

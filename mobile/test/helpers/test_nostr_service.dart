@@ -36,13 +36,13 @@ class TestNostrService implements NostrClient {
   bool get hasKeys => _currentUserPubkey != null;
 
   @override
-  int get relayCount => _isConnected ? 1 : 0;
+  int get configuredRelayCount => _isConnected ? 1 : 0;
 
   @override
   int get connectedRelayCount => _isConnected ? 1 : 0;
 
   @override
-  List<String> get relays => ['wss://test.relay'];
+  List<String> get configuredRelays => ['wss://test.relay'];
 
   @override
   Map<String, RelayConnectionStatus> get relayStatuses => {
@@ -72,7 +72,7 @@ class TestNostrService implements NostrClient {
   }
 
   @override
-  Future<NostrBroadcastResult> broadcastEvent(Event event) async {
+  Future<NostrBroadcastResult> broadcast(Event event, {List<String>? targetRelays}) async {
     if (!_isConnected) throw StateError('Not connected');
     _storedEvents.add(event);
 
@@ -115,7 +115,7 @@ class TestNostrService implements NostrClient {
       createdAt: NostrTimestamp.now(),
     );
 
-    return broadcastEvent(event);
+    return broadcast(event);
   }
 
   Future<NostrBroadcastResult> publishVideoEvent({
@@ -146,23 +146,27 @@ class TestNostrService implements NostrClient {
       createdAt: NostrTimestamp.now(),
     );
 
-    return broadcastEvent(event);
+    return broadcast(event);
   }
 
   @override
-  Stream<Event> subscribeToEvents({
-    required List<Filter> filters,
-    bool bypassLimits = false,
+  Stream<Event> subscribe(
+    List<Filter> filters, {
+    String? subscriptionId,
+    List<String>? tempRelays,
+    List<String>? targetRelays,
+    List<int> relayTypes = const [],
+    bool sendAfterAuth = false,
     void Function()? onEose,
   }) {
-    final subscriptionId = 'test_sub_${DateTime.now().millisecondsSinceEpoch}';
+    final subId = subscriptionId ?? 'test_sub_${DateTime.now().millisecondsSinceEpoch}';
 
-    if (_subscriptions.containsKey(subscriptionId)) {
-      throw StateError('Subscription $subscriptionId already exists');
+    if (_subscriptions.containsKey(subId)) {
+      throw StateError('Subscription $subId already exists');
     }
 
     final controller = StreamController<Event>.broadcast();
-    _subscriptions[subscriptionId] = controller;
+    _subscriptions[subId] = controller;
 
     // Send existing matching events
     for (final event in _storedEvents) {
@@ -186,9 +190,13 @@ class TestNostrService implements NostrClient {
   }
 
   @override
-  Future<List<Event>> getEvents({
-    required List<Filter> filters,
-    int? limit,
+  Future<List<Event>> queryEvents(
+    List<Filter> filters, {
+    String? subscriptionId,
+    List<String>? tempRelays,
+    List<int> relayTypes = const [],
+    bool sendAfterAuth = false,
+    bool useGateway = false,
   }) async {
     final matchingEvents = <Event>[];
 
@@ -206,9 +214,6 @@ class TestNostrService implements NostrClient {
       }
       if (matches) {
         matchingEvents.add(event);
-        if (limit != null && matchingEvents.length >= limit) {
-          break;
-        }
       }
     }
 
@@ -261,7 +266,7 @@ class TestNostrService implements NostrClient {
   }
 
   @override
-  Future<void> reconnectAll() async {
+  Future<void> retryDisconnectedRelays() async {
     _isConnected = true;
   }
 
@@ -284,11 +289,6 @@ class TestNostrService implements NostrClient {
     // Clear test auth states
     _relayAuthStates.clear();
     _authStateController.add(Map.from(_relayAuthStates));
-  }
-
-  @override
-  Future<void> retryInitialization() async {
-    _isConnected = true;
   }
 
   @override
@@ -321,7 +321,7 @@ class TestNostrService implements NostrClient {
     return {
       'database': {'total_events': _storedEvents.length},
       'subscriptions': {'active_count': _subscriptions.length},
-      'external_relays': relays.length,
+      'external_relays': configuredRelays.length,
     };
   }
 

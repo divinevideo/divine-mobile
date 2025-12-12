@@ -168,7 +168,7 @@ class ContentReportingService {
       );
 
       if (reportEvent != null) {
-        final broadcastResult = await _nostrService.broadcastEvent(reportEvent);
+        final broadcastResult = await _nostrService.broadcast(reportEvent);
         if (broadcastResult.successCount == 0) {
           Log.error(
             'Failed to broadcast report to relays',

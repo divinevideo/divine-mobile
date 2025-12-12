@@ -68,7 +68,7 @@ mixin NostrListServiceMixin {
 
       // Query embedded relay for ALL our published events
       final filter = nostr.Filter(authors: [ourPubkey]);
-      final events = await nostrService.getEvents(filters: [filter]);
+      final events = await nostrService.queryEvents([filter]);
 
       // Cache the results
       _cachedMyEvents = events;

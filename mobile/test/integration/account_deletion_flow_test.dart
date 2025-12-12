@@ -62,7 +62,7 @@ void main() {
         createdAt: 1234567890,
       );
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: mockEvent,
           successCount: 3,
@@ -109,7 +109,7 @@ void main() {
       await tester.pumpAndSettle(); // Complete deletion
 
       // Verify NIP-62 event was broadcast
-      verify(mockNostrService.broadcastEvent(any)).called(1);
+      verify(mockNostrService.broadcast(any)).called(1);
 
       // Verify user was signed out with keys deleted
       verify(mockAuthService.signOut(deleteKeys: true)).called(1);
@@ -136,7 +136,7 @@ void main() {
         createdAt: 1234567890,
       );
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: mockEvent,
           successCount: 0,

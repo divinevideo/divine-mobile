@@ -125,7 +125,7 @@ void main() {
 
         // Mock successful event broadcast
         when(
-          () => mockNostrService.broadcastEvent(any()),
+          () => mockNostrService.broadcast(any()),
         ).thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
 
         final result = await service.reportContent(
@@ -139,7 +139,7 @@ void main() {
         expect(result.error, isNull);
 
         // Verify Nostr event was broadcast
-        verify(() => mockNostrService.broadcastEvent(any())).called(1);
+        verify(() => mockNostrService.broadcast(any())).called(1);
       },
     );
 
@@ -148,7 +148,7 @@ void main() {
       () async {
         await service.initialize();
         when(
-          () => mockNostrService.broadcastEvent(any()),
+          () => mockNostrService.broadcast(any()),
         ).thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
 
         final reasons = ContentFilterReason.values;
@@ -170,7 +170,7 @@ void main() {
 
         // Should have broadcast one event per reason
         verify(
-          () => mockNostrService.broadcastEvent(any()),
+          () => mockNostrService.broadcast(any()),
         ).called(reasons.length);
       },
     );
@@ -178,7 +178,7 @@ void main() {
     test('reportContent() specifically tests aiGenerated reason', () async {
       await service.initialize();
       when(
-        () => mockNostrService.broadcastEvent(any()),
+        () => mockNostrService.broadcast(any()),
       ).thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
 
       // This should not throw an exception due to missing switch case
@@ -198,7 +198,7 @@ void main() {
 
       // Mock failed broadcast
       when(
-        () => mockNostrService.broadcastEvent(any()),
+        () => mockNostrService.broadcast(any()),
       ).thenAnswer((inv) async => _failedBroadcast(FakeEvent()));
 
       final result = await service.reportContent(
@@ -220,7 +220,7 @@ void main() {
     test('reportContent() stores report in history on success', () async {
       await service.initialize();
       when(
-        () => mockNostrService.broadcastEvent(any()),
+        () => mockNostrService.broadcast(any()),
       ).thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
 
       await service.reportContent(
@@ -266,7 +266,7 @@ void main() {
 
       // Now reportContent should work
       when(
-        () => mockNostrService.broadcastEvent(any()),
+        () => mockNostrService.broadcast(any()),
       ).thenAnswer((inv) async => _successfulBroadcast(FakeEvent()));
 
       final result = await service.reportContent(

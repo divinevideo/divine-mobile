@@ -100,7 +100,7 @@ class NIP17MessageService {
       );
 
       // Broadcast the gift wrap event
-      final broadcastResult = await _nostrService.broadcastEvent(giftWrapEvent);
+      final broadcastResult = await _nostrService.broadcast(giftWrapEvent);
 
       if (broadcastResult.successCount > 0) {
         Log.info(

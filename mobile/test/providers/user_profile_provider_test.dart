@@ -279,7 +279,7 @@ void main() {
       expect(profile, equals(testProfile));
       verifyNever(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       );
     });
 
@@ -366,7 +366,7 @@ void main() {
       // Mock empty stream (no profile found)
       when(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       ).thenAnswer((_) => const Stream.empty());
 
       // Fetch profile
@@ -497,7 +497,7 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       ).thenAnswer((_) => Stream.error(Exception('Network error')));
 
       // Fetch profile should handle error gracefully

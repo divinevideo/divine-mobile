@@ -28,7 +28,7 @@ void main() {
 
       // Set up default stubs for NostrService
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream.fromIterable([]));
 
       socialService = SocialService(
@@ -70,7 +70,7 @@ void main() {
         ).thenAnswer((_) async => mockEvent);
 
         // Mock broadcast failure with "relay closed" error
-        when(mockNostrService.broadcastEvent(mockEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockEvent,
             successCount: 0,
@@ -122,7 +122,7 @@ void main() {
       ).thenAnswer((_) async => mockEvent);
 
       // Mock successful broadcast
-      when(mockNostrService.broadcastEvent(mockEvent)).thenAnswer(
+      when(mockNostrService.broadcast(mockEvent)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: mockEvent,
           successCount: 1,
@@ -148,7 +148,7 @@ void main() {
       ).called(1);
 
       // Verify broadcast was called
-      verify(mockNostrService.broadcastEvent(mockEvent)).called(1);
+      verify(mockNostrService.broadcast(mockEvent)).called(1);
 
       // Verify event is now liked locally
       expect(socialService.isLiked(testEventId), true);

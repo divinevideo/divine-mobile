@@ -20,15 +20,22 @@ void main() {
   group('FollowersScreen', () {
     late MockNostrClient mockNostrService;
     late StreamController<nostr_sdk.Event> eventStreamController;
+    late List<List<nostr_sdk.Filter>> capturedFiltersList;
 
     setUp(() {
       mockNostrService = MockNostrClient();
       eventStreamController = StreamController<nostr_sdk.Event>();
+      capturedFiltersList = [];
 
-      // Setup mock to return stream
+      // Setup mock to return stream and capture filters
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
-      ).thenAnswer((_) => eventStreamController.stream);
+        mockNostrService.subscribe(argThat(anything)),
+      ).thenAnswer((invocation) {
+        capturedFiltersList.add(
+          invocation.positionalArguments[0] as List<nostr_sdk.Filter>,
+        );
+        return eventStreamController.stream;
+      });
     });
 
     tearDown(() {
@@ -102,7 +109,7 @@ void main() {
     testWidgets('handles subscription errors gracefully', (tester) async {
       // Setup mock to emit error
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream.error('Subscription failed'));
 
       await tester.pumpWidget(
@@ -170,12 +177,12 @@ void main() {
       await tester.pump();
 
       // Verify subscription was called with correct filter
-      final captured = verify(
-        mockNostrService.subscribeToEvents(filters: captureAnyNamed('filters')),
-      ).captured;
+      verify(
+        mockNostrService.subscribe(argThat(anything)),
+      ).called(1);
 
-      expect(captured.length, 1);
-      final filters = captured[0] as List<nostr_sdk.Filter>;
+      expect(capturedFiltersList.length, 1);
+      final filters = capturedFiltersList.last;
       expect(filters.length, 1);
       expect(filters[0].kinds, contains(3)); // Contact list kind
       expect(filters[0].p, contains('target_pubkey')); // Mentions target
@@ -198,7 +205,7 @@ void main() {
     testWidgets('retry button reloads followers', (tester) async {
       // Setup mock to emit error first
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream.error('Subscription failed'));
 
       await tester.pumpWidget(
@@ -213,7 +220,7 @@ void main() {
       // Setup mock to succeed on retry
       final retryStreamController = StreamController<nostr_sdk.Event>();
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => retryStreamController.stream);
 
       // Tap retry

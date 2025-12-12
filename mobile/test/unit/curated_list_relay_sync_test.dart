@@ -56,13 +56,14 @@ void main() {
 
         // Verify: No relay calls should be made
         verifyNever(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         );
 
         // Verify: Service should handle this gracefully
         expect(curatedListService.lists.length, 0);
       },
     );
+    
 
     test(
       'should create subscription for Kind 30005 events when authenticated',
@@ -76,7 +77,7 @@ void main() {
         // Mock subscription stream
         final streamController = StreamController<Event>();
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => streamController.stream);
 
         // Test: fetchUserListsFromRelays should create subscription
@@ -88,9 +89,7 @@ void main() {
 
         // Verify: Subscription was created with correct filter
         final captured = verify(
-          mockNostrService.subscribeToEvents(
-            filters: captureAnyNamed('filters'),
-          ),
+          mockNostrService.subscribe(captureAny()),
         ).captured;
         expect(captured.length, 1);
 
@@ -138,7 +137,7 @@ void main() {
       // Mock subscription stream that emits our test event
       final streamController = StreamController<Event>();
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => streamController.stream);
 
       // Start the sync
@@ -207,7 +206,7 @@ void main() {
       // Mock subscription stream
       final streamController = StreamController<Event>();
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => streamController.stream);
 
       // Start the sync
@@ -241,7 +240,7 @@ void main() {
       // Mock subscription stream
       final streamController = StreamController<Event>();
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => streamController.stream);
 
       // First sync
@@ -254,7 +253,7 @@ void main() {
 
       // Verify: Subscription was only created once
       verify(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).called(1);
     });
   });
@@ -322,7 +321,7 @@ void main() {
         // Mock subscription
         final streamController = StreamController<Event>();
         when(
-          freshMockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          freshMockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => streamController.stream);
 
         // Sync from relay

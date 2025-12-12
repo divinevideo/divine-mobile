@@ -23,7 +23,7 @@ void main() {
       when(mockNostrService.isInitialized).thenReturn(true);
       when(mockNostrService.connectedRelayCount).thenReturn(1);
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream<Event>.empty());
 
       videoEventService = VideoEventService(
@@ -46,7 +46,7 @@ void main() {
 
         // Verify NostrService was only called once (reused existing)
         verify(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).called(1);
       });
     });
@@ -62,7 +62,7 @@ void main() {
 
         // Both should create separate subscriptions
         verify(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).called(2);
       },
     );
@@ -82,7 +82,7 @@ void main() {
 
       // Both should create separate subscriptions
       verify(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).called(2);
     });
 
@@ -104,7 +104,7 @@ void main() {
 
       // Should reuse the subscription pattern (2 calls total, not 3)
       verify(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).called(2);
     });
 
@@ -117,7 +117,7 @@ void main() {
 
       // Both should create separate subscriptions
       verify(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).called(2);
     });
 
@@ -133,7 +133,7 @@ void main() {
 
       // Should only create one subscription despite 5 calls
       verify(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).called(1);
     });
 
@@ -163,7 +163,7 @@ void main() {
 
       // Should create two subscriptions (old one cancelled, new one created)
       verify(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).called(2);
 
       // But only one should be active

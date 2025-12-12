@@ -30,7 +30,7 @@ void main() {
       when(mockNostrService.hasKeys).thenReturn(true);
       when(mockNostrService.publicKey).thenReturn('test-pubkey-123');
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream.empty());
     });
 

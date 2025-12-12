@@ -170,7 +170,7 @@ class CurationService {
         authors: AppConstants.divineTeamPubkeys,
         limit: 500, // Get all their videos
       );
-      final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
+      final eventStream = _nostrService.subscribe([filter]);
 
       final completer = Completer<void>();
       late StreamSubscription<Event> streamSubscription;
@@ -485,8 +485,7 @@ class CurationService {
             try {
               // Subscribe to fetch specific video events by ID using proper streaming
               final filter = Filter(ids: missingEventIds);
-              final eventStream = _nostrService.subscribeToEvents(
-                filters: [filter],
+              final eventStream = _nostrService.subscribe([filter],
               );
 
               // Collect fetched videos and process them immediately
@@ -703,10 +702,7 @@ class CurationService {
       );
 
       // Use bypassLimits for one-time fetch to get all results quickly
-      final eventStream = _nostrService.subscribeToEvents(
-        filters: [filter],
-        bypassLimits: true,
-      );
+      final eventStream = _nostrService.subscribe([filter]);
 
       int fetchedCount = 0;
       final completer = Completer<void>();
@@ -825,8 +821,7 @@ class CurationService {
       }
 
       // Subscribe to receive curation set events
-      final eventStream = _nostrService.subscribeToEvents(
-        filters: [
+      final eventStream = _nostrService.subscribe([
           Filter(kinds: [30005], authors: curatorPubkeys, limit: 500),
         ],
       );
@@ -1013,7 +1008,7 @@ class CurationService {
       }
 
       // Publish with timeout
-      final broadcastFuture = _nostrService.broadcastEvent(event);
+      final broadcastFuture = _nostrService.broadcast(event);
       final timeoutDuration = const Duration(seconds: 5);
 
       NostrBroadcastResult? broadcastResult;

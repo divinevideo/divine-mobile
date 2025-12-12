@@ -151,7 +151,7 @@ class VideoEventPublisher {
       }
 
       // Use the existing Nostr service to broadcast
-      final broadcastResult = await _nostrService.broadcastEvent(event);
+      final broadcastResult = await _nostrService.broadcast(event);
 
       Log.info(
         '✅ Event broadcast completed with result: successful=${broadcastResult.successCount}, failed=${broadcastResult.failedRelays.length}',

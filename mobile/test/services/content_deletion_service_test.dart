@@ -73,7 +73,7 @@ void main() {
       // Arrange
       final video = createTestVideoEvent(testPublicKey);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: Event(
             testPublicKey,
@@ -104,7 +104,7 @@ void main() {
 
       // Verify broadcast was called with kind 5 event
       final capturedEvent =
-          verify(mockNostrService.broadcastEvent(captureAny)).captured.single
+          verify(mockNostrService.broadcast(captureAny)).captured.single
               as Event;
       expect(capturedEvent.kind, equals(5));
     });
@@ -115,7 +115,7 @@ void main() {
         // Arrange
         final video = createTestVideoEvent(testPublicKey);
 
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event(
               testPublicKey,
@@ -139,7 +139,7 @@ void main() {
 
         // Assert - verify the delete event has the 'k' tag
         final capturedEvent =
-            verify(mockNostrService.broadcastEvent(captureAny)).captured.single
+            verify(mockNostrService.broadcast(captureAny)).captured.single
                 as Event;
 
         // Find the 'k' tag
@@ -161,7 +161,7 @@ void main() {
       // Arrange
       final video = createTestVideoEvent(testPublicKey);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: Event(
             testPublicKey,
@@ -208,7 +208,7 @@ void main() {
         expect(result.error, contains('Can only delete your own content'));
 
         // Verify broadcast was NOT called
-        verifyNever(mockNostrService.broadcastEvent(any));
+        verifyNever(mockNostrService.broadcast(any));
       },
     );
 
@@ -218,7 +218,7 @@ void main() {
         // Arrange
         final video = createTestVideoEvent(testPublicKey);
 
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event(
               testPublicKey,
@@ -253,7 +253,7 @@ void main() {
       // Arrange
       final video = createTestVideoEvent(testPublicKey);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: Event(
             testPublicKey,

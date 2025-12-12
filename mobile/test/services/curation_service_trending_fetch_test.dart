@@ -40,7 +40,7 @@ void main() {
 
     // Mock subscribeToEvents to avoid MissingStubError when fetching Editor's Picks list
     when(
-      mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      mockNostrService.subscribe(argThat(anything)),
     ).thenAnswer((_) => Stream<Event>.empty());
 
     curationService = CurationService(
@@ -79,7 +79,7 @@ void main() {
 
       final streamController = StreamController<Event>();
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) {
         // Emit the video event
         Timer(const Duration(milliseconds: 100), () {
@@ -100,7 +100,7 @@ void main() {
       // it would fetch the missing videos
       final filter = Filter(kinds: [22], ids: missingEventIds, h: ['vine']);
 
-      final eventStream = mockNostrService.subscribeToEvents(filters: [filter]);
+      final eventStream = mockNostrService.subscribe([filter]);
       final fetchedEvents = <Event>[];
 
       await for (final event in eventStream) {

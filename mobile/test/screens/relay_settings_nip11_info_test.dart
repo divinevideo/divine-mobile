@@ -40,7 +40,7 @@ void main() {
       List<String> configuredRelays, {
       RelayCapabilities? capabilities,
     }) {
-      when(() => mockNostrService.relays).thenReturn(configuredRelays);
+      when(() => mockNostrService.configuredRelays).thenReturn(configuredRelays);
       when(
         () => mockNostrService.connectedRelayCount,
       ).thenReturn(configuredRelays.length);
@@ -271,7 +271,7 @@ void main() {
       ).thenAnswer((_) => completer.future);
 
       when(
-        () => mockNostrService.relays,
+        () => mockNostrService.configuredRelays,
       ).thenReturn(['wss://relay.divine.video']);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       final loadingStats = RelayStatistics(

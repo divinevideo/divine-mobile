@@ -235,16 +235,6 @@ class MockNostrClient extends _i1.Mock implements _i6.NostrClient {
           as bool);
 
   @override
-  int get relayCount =>
-      (super.noSuchMethod(Invocation.getter(#relayCount), returnValue: 0)
-          as int);
-
-  @override
-  List<String> get relays =>
-      (super.noSuchMethod(Invocation.getter(#relays), returnValue: <String>[])
-          as List<String>);
-
-  @override
   List<String> get configuredRelays =>
       (super.noSuchMethod(
             Invocation.getter(#configuredRelays),
@@ -329,33 +319,6 @@ class MockNostrClient extends _i1.Mock implements _i6.NostrClient {
           as _i4.Future<_i7.Event?>);
 
   @override
-  _i4.Future<_i3.NostrBroadcastResult> broadcastEvent(_i7.Event? event) =>
-      (super.noSuchMethod(
-            Invocation.method(#broadcastEvent, [event]),
-            returnValue: _i4.Future<_i3.NostrBroadcastResult>.value(
-              _FakeNostrBroadcastResult_1(
-                this,
-                Invocation.method(#broadcastEvent, [event]),
-              ),
-            ),
-          )
-          as _i4.Future<_i3.NostrBroadcastResult>);
-
-  @override
-  _i4.Future<List<_i7.Event>> getEvents({
-    required List<_i7.Filter>? filters,
-    int? limit,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(#getEvents, [], {
-              #filters: filters,
-              #limit: limit,
-            }),
-            returnValue: _i4.Future<List<_i7.Event>>.value(<_i7.Event>[]),
-          )
-          as _i4.Future<List<_i7.Event>>);
-
-  @override
   _i4.Future<List<_i7.Event>> queryEvents(
     List<_i7.Filter>? filters, {
     String? subscriptionId,
@@ -410,22 +373,6 @@ class MockNostrClient extends _i1.Mock implements _i6.NostrClient {
             returnValue: _i4.Future<_i7.Event?>.value(),
           )
           as _i4.Future<_i7.Event?>);
-
-  @override
-  _i4.Stream<_i7.Event> subscribeToEvents({
-    required List<_i7.Filter>? filters,
-    bool? bypassLimits = false,
-    void Function()? onEose,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(#subscribeToEvents, [], {
-              #filters: filters,
-              #bypassLimits: bypassLimits,
-              #onEose: onEose,
-            }),
-            returnValue: _i4.Stream<_i7.Event>.empty(),
-          )
-          as _i4.Stream<_i7.Event>);
 
   @override
   _i4.Stream<_i7.Event> subscribe(
@@ -497,24 +444,6 @@ class MockNostrClient extends _i1.Mock implements _i6.NostrClient {
   _i4.Future<void> retryDisconnectedRelays() =>
       (super.noSuchMethod(
             Invocation.method(#retryDisconnectedRelays, []),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
-
-  @override
-  _i4.Future<void> reconnectAll() =>
-      (super.noSuchMethod(
-            Invocation.method(#reconnectAll, []),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
-
-  @override
-  _i4.Future<void> retryInitialization() =>
-      (super.noSuchMethod(
-            Invocation.method(#retryInitialization, []),
             returnValue: _i4.Future<void>.value(),
             returnValueForMissingStub: _i4.Future<void>.value(),
           )

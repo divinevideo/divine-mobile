@@ -52,7 +52,7 @@ void main() {
 
       // Mock the critical subscribeToEvents method
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => mockEventStream.stream);
 
       // Initialize services that don't require SharedPreferences
@@ -109,7 +109,7 @@ void main() {
         // Verify that subscribeToEvents was called on the mock
         await subscriptionFuture;
         verify(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).called(1);
         Log.info('✅ Confirmed VideoEventService called subscribeToEvents');
 

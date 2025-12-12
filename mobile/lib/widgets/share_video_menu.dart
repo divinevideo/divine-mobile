@@ -2491,7 +2491,7 @@ class _EditVideoDialogState extends ConsumerState<_EditVideoDialog> {
 
       // Broadcast the updated event
       final nostrService = ref.read(nostrServiceProvider);
-      await nostrService.broadcastEvent(event);
+      await nostrService.broadcast(event);
 
       if (mounted) {
         Navigator.of(context).pop(); // Close edit dialog

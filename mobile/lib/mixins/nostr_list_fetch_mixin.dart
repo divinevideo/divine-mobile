@@ -28,7 +28,7 @@ import 'package:openvine/widgets/user_profile_tile.dart';
 ///   @override
 ///   Future<void> fetchList() async {
 ///     // Your Nostr subscription logic with proper timeout handling
-///     final subscription = nostrService.subscribeToEvents(...);
+///     final subscription = nostrService.subscribe(...);
 ///
 ///     subscription.timeout(Duration(seconds: 5), onTimeout: (sink) {
 ///       setError('Failed to connect to relay server');

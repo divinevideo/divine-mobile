@@ -64,7 +64,7 @@ void main() {
           ),
         ).thenAnswer((_) async => publishedEvent);
 
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: publishedEvent,
             successCount: 1,
@@ -120,7 +120,7 @@ void main() {
           tags: [],
         );
 
-        final broadcastResult = await mockNostrService.broadcastEvent(event!);
+        final broadcastResult = await mockNostrService.broadcast(event!);
         expect(broadcastResult.isSuccessful, isTrue);
 
         // THE CRITICAL PART: Wait for relay to return updated profile
@@ -211,7 +211,7 @@ void main() {
         ),
       ).thenAnswer((_) async => publishedEvent);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: publishedEvent,
           successCount: 1,
@@ -244,7 +244,7 @@ void main() {
         tags: [],
       );
 
-      await mockNostrService.broadcastEvent(event!);
+      await mockNostrService.broadcast(event!);
 
       // Try to get updated profile with retries
       UserProfile? confirmedProfile;
@@ -313,7 +313,7 @@ void main() {
           ),
         ).thenAnswer((_) async => publishedEvent);
 
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: publishedEvent,
             successCount: 1,
@@ -344,7 +344,7 @@ void main() {
           tags: [],
         );
 
-        await mockNostrService.broadcastEvent(event!);
+        await mockNostrService.broadcast(event!);
 
         // Try to get updated profile
         UserProfile? confirmedProfile;

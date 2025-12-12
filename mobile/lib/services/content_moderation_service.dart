@@ -471,7 +471,7 @@ class ContentModerationService with NostrListServiceMixin {
         kinds: [10000], // NIP-51 mute list
       );
 
-      final events = await _nostrService.getEvents(filters: [filter]);
+      final events = await _nostrService.queryEvents([filter]);
 
       if (events.isEmpty) {
         Log.debug(
