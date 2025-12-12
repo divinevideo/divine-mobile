@@ -656,6 +656,23 @@ class MockVideoEventService extends _i1.Mock implements _i13.VideoEventService {
           as bool);
 
   @override
+  _i12.VoidCallback addVideoUpdateListener(
+    void Function(_i14.VideoEvent)? callback,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#addVideoUpdateListener, [callback]),
+            returnValue: () {},
+          )
+          as _i12.VoidCallback);
+
+  @override
+  void removeVideoUpdateListener(void Function(_i14.VideoEvent)? callback) =>
+      super.noSuchMethod(
+        Invocation.method(#removeVideoUpdateListener, [callback]),
+        returnValueForMissingStub: null,
+      );
+
+  @override
   void setBlocklistService(_i15.ContentBlocklistService? blocklistService) =>
       super.noSuchMethod(
         Invocation.method(#setBlocklistService, [blocklistService]),
@@ -1107,6 +1124,12 @@ class MockVideoEventService extends _i1.Mock implements _i13.VideoEventService {
   @override
   void addVideoEvent(_i14.VideoEvent? videoEvent) => super.noSuchMethod(
     Invocation.method(#addVideoEvent, [videoEvent]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void updateVideoEvent(_i14.VideoEvent? updatedVideo) => super.noSuchMethod(
+    Invocation.method(#updateVideoEvent, [updatedVideo]),
     returnValueForMissingStub: null,
   );
 

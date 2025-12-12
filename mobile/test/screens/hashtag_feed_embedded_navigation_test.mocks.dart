@@ -4,17 +4,17 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
-import 'dart:ui' as _i11;
+import 'dart:ui' as _i7;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
-import 'package:nostr_sdk/event.dart' as _i9;
+import 'package:nostr_sdk/event.dart' as _i10;
 import 'package:openvine/models/video_event.dart' as _i3;
-import 'package:openvine/services/age_verification_service.dart' as _i8;
-import 'package:openvine/services/content_blocklist_service.dart' as _i7;
+import 'package:openvine/services/age_verification_service.dart' as _i9;
+import 'package:openvine/services/content_blocklist_service.dart' as _i8;
 import 'package:openvine/services/hashtag_service.dart' as _i2;
 import 'package:openvine/services/video_event_service.dart' as _i5;
-import 'package:openvine/services/video_filter_builder.dart' as _i10;
+import 'package:openvine/services/video_filter_builder.dart' as _i11;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -232,7 +232,24 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
           as bool);
 
   @override
-  void setBlocklistService(_i7.ContentBlocklistService? blocklistService) =>
+  _i7.VoidCallback addVideoUpdateListener(
+    void Function(_i3.VideoEvent)? callback,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#addVideoUpdateListener, [callback]),
+            returnValue: () {},
+          )
+          as _i7.VoidCallback);
+
+  @override
+  void removeVideoUpdateListener(void Function(_i3.VideoEvent)? callback) =>
+      super.noSuchMethod(
+        Invocation.method(#removeVideoUpdateListener, [callback]),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void setBlocklistService(_i8.ContentBlocklistService? blocklistService) =>
       super.noSuchMethod(
         Invocation.method(#setBlocklistService, [blocklistService]),
         returnValueForMissingStub: null,
@@ -240,14 +257,14 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
 
   @override
   void setAgeVerificationService(
-    _i8.AgeVerificationService? ageVerificationService,
+    _i9.AgeVerificationService? ageVerificationService,
   ) => super.noSuchMethod(
     Invocation.method(#setAgeVerificationService, [ageVerificationService]),
     returnValueForMissingStub: null,
   );
 
   @override
-  bool shouldFilterEvent(_i9.Event? event) =>
+  bool shouldFilterEvent(_i10.Event? event) =>
       (super.noSuchMethod(
             Invocation.method(#shouldFilterEvent, [event]),
             returnValue: false,
@@ -371,8 +388,8 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
     int? limit = 200,
     bool? replace = true,
     bool? includeReposts = false,
-    _i10.VideoSortField? sortBy,
-    _i10.NIP50SortMode? nip50Sort,
+    _i11.VideoSortField? sortBy,
+    _i11.NIP50SortMode? nip50Sort,
     bool? force = false,
   }) =>
       (super.noSuchMethod(
@@ -446,7 +463,7 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
   _i4.Future<void> subscribeToHomeFeed(
     List<String>? followingPubkeys, {
     int? limit = 100,
-    _i10.VideoSortField? sortBy,
+    _i11.VideoSortField? sortBy,
     bool? force = false,
   }) =>
       (super.noSuchMethod(
@@ -463,8 +480,8 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
   @override
   _i4.Future<void> subscribeToDiscovery({
     int? limit = 100,
-    _i10.VideoSortField? sortBy,
-    _i10.NIP50SortMode? nip50Sort,
+    _i11.VideoSortField? sortBy,
+    _i11.NIP50SortMode? nip50Sort,
     bool? force = false,
   }) =>
       (super.noSuchMethod(
@@ -687,6 +704,12 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
   );
 
   @override
+  void updateVideoEvent(_i3.VideoEvent? updatedVideo) => super.noSuchMethod(
+    Invocation.method(#updateVideoEvent, [updatedVideo]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
   _i4.Future<void> searchVideos(
     String? query, {
     List<String>? authors,
@@ -742,7 +765,7 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
   );
 
   @override
-  List<_i3.VideoEvent> processSearchResults(List<_i9.Event>? events) =>
+  List<_i3.VideoEvent> processSearchResults(List<_i10.Event>? events) =>
       (super.noSuchMethod(
             Invocation.method(#processSearchResults, [events]),
             returnValue: <_i3.VideoEvent>[],
@@ -821,20 +844,20 @@ class MockVideoEventService extends _i1.Mock implements _i5.VideoEventService {
   );
 
   @override
-  void handleEventForTesting(_i9.Event? event, _i5.SubscriptionType? type) =>
+  void handleEventForTesting(_i10.Event? event, _i5.SubscriptionType? type) =>
       super.noSuchMethod(
         Invocation.method(#handleEventForTesting, [event, type]),
         returnValueForMissingStub: null,
       );
 
   @override
-  void addListener(_i11.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i7.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#addListener, [listener]),
     returnValueForMissingStub: null,
   );
 
   @override
-  void removeListener(_i11.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i7.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#removeListener, [listener]),
     returnValueForMissingStub: null,
   );
