@@ -23,13 +23,19 @@ void main() {
 
       test('returns stored relays', () async {
         SharedPreferences.setMockInitialValues({
-          'configured_relays': ['wss://relay1.example.com', 'wss://relay2.example.com'],
+          'configured_relays': [
+            'wss://relay1.example.com',
+            'wss://relay2.example.com',
+          ],
         });
         final storage = SharedPreferencesRelayStorage();
 
         final relays = await storage.loadRelays();
 
-        expect(relays, equals(['wss://relay1.example.com', 'wss://relay2.example.com']));
+        expect(
+          relays,
+          equals(['wss://relay1.example.com', 'wss://relay2.example.com']),
+        );
       });
 
       test('returns copy of list (not reference)', () async {
@@ -49,7 +55,10 @@ void main() {
       test('saves relay URLs to SharedPreferences', () async {
         final storage = SharedPreferencesRelayStorage();
 
-        await storage.saveRelays(['wss://relay1.example.com', 'wss://relay2.example.com']);
+        await storage.saveRelays([
+          'wss://relay1.example.com',
+          'wss://relay2.example.com',
+        ]);
 
         final prefs = await SharedPreferences.getInstance();
         expect(
@@ -109,7 +118,10 @@ void main() {
         await storage.saveRelays(['wss://relay.example.com']);
 
         final prefs = await SharedPreferences.getInstance();
-        expect(prefs.getStringList('custom_relay_key'), equals(['wss://relay.example.com']));
+        expect(
+          prefs.getStringList('custom_relay_key'),
+          equals(['wss://relay.example.com']),
+        );
         expect(prefs.getStringList('configured_relays'), isNull);
       });
 

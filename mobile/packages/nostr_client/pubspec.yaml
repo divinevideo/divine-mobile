@@ -18,6 +18,7 @@ dependencies:
     path: ../nostr_gateway
   nostr_sdk:
     path: ../nostr_sdk
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   mocktail: ^1.0.4
