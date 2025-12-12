@@ -25,6 +25,8 @@ class VideoMetricsDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Note: views, avg_completion, and verification flags are set to NULL
   /// until we add support for extracting them from events.
+  ///
+  /// Uses customInsert with updates parameter to notify stream watchers.
   Future<void> upsertVideoMetrics(Event event) async {
     // Parse metrics from VideoEvent model
     final videoEvent = VideoEvent.fromNostrEvent(event);
@@ -55,6 +57,7 @@ class VideoMetricsDao extends DatabaseAccessor<AppDatabase>
         const Variable(null), // has_pgp_signature - not yet extracted
         Variable.withDateTime(DateTime.now()),
       ],
+      updates: {videoMetrics},
     );
   }
 

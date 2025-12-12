@@ -19,6 +19,97 @@ part 'individual_video_providers.g.dart';
 final authHeadersCacheProvider =
     StateProvider<Map<String, Map<String, String>>>((ref) => {});
 
+/// Track controllers that have been scheduled for disposal.
+/// This prevents race conditions where async callbacks try to use disposed controllers.
+/// Key: videoId, Value: true if disposal has been scheduled
+final _disposedControllersProvider = StateProvider<Set<String>>((ref) => {});
+
+/// Check if a video controller has been scheduled for disposal.
+/// Use this before any controller operation to prevent "No active player" crashes.
+/// Note: This function is available for widgets but the safe* helpers below
+/// are the preferred approach for most use cases.
+bool isControllerDisposed(Ref ref, String videoId) {
+  return ref.read(_disposedControllersProvider).contains(videoId);
+}
+
+/// Safe wrapper for async controller operations that may fail after disposal.
+/// Returns true if operation succeeded, false if controller was disposed or errored.
+Future<bool> safeControllerOperation(
+  VideoPlayerController controller,
+  String videoId,
+  Future<void> Function() operation, {
+  String? operationName,
+}) async {
+  try {
+    // Quick sanity check - if not initialized, likely disposed or errored
+    if (!controller.value.isInitialized) {
+      Log.debug(
+        '⏭️ Skipping ${operationName ?? 'operation'} for $videoId - controller not initialized',
+        name: 'SafeController',
+        category: LogCategory.video,
+      );
+      return false;
+    }
+    await operation();
+    return true;
+  } catch (e) {
+    // Catch "No active player with ID" and similar disposal-related errors
+    if (_isDisposalError(e)) {
+      Log.debug(
+        '⏭️ Controller already disposed for $videoId during ${operationName ?? 'operation'}: $e',
+        name: 'SafeController',
+        category: LogCategory.video,
+      );
+      return false;
+    }
+    // Rethrow unexpected errors
+    rethrow;
+  }
+}
+
+/// Safe wrapper for sync controller operations (play/pause/seekTo).
+/// These methods return Futures but are often called without await.
+/// This helper catches disposal errors gracefully.
+Future<bool> safePlay(VideoPlayerController controller, String videoId) {
+  return safeControllerOperation(
+    controller,
+    videoId,
+    () => controller.play(),
+    operationName: 'play',
+  );
+}
+
+Future<bool> safePause(VideoPlayerController controller, String videoId) {
+  return safeControllerOperation(
+    controller,
+    videoId,
+    () => controller.pause(),
+    operationName: 'pause',
+  );
+}
+
+Future<bool> safeSeekTo(
+  VideoPlayerController controller,
+  String videoId,
+  Duration position,
+) {
+  return safeControllerOperation(
+    controller,
+    videoId,
+    () => controller.seekTo(position),
+    operationName: 'seekTo',
+  );
+}
+
+/// Check if an error indicates the controller/player has been disposed.
+bool _isDisposalError(dynamic e) {
+  final errorStr = e.toString().toLowerCase();
+  return errorStr.contains('no active player') ||
+      errorStr.contains('bad state') ||
+      errorStr.contains('disposed') ||
+      errorStr.contains('player with id');
+}
+
 /// Parameters for video controller creation
 class VideoControllerParams {
   const VideoControllerParams({

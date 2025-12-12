@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:db_client/db_client.dart' hide Filter;
 import 'package:meta/meta.dart';
 import 'package:nostr_client/src/models/models.dart';
 import 'package:nostr_client/src/relay_manager.dart';
@@ -24,10 +25,14 @@ class NostrClient {
   /// Creates a new NostrClient instance with the given configuration.
   /// The RelayManager is created internally using the Nostr instance's
   /// RelayPool to ensure they share the same connection pool.
+  ///
+  /// Optional [dbClient] enables local caching of events for faster
+  /// queries and auto-caching of subscription events.
   factory NostrClient({
     required NostrClientConfig config,
     required RelayManagerConfig relayManagerConfig,
     GatewayClient? gatewayClient,
+    AppDbClient? dbClient,
   }) {
     final nostr = _createNostr(config);
     final relayManager = RelayManager(
@@ -38,6 +43,7 @@ class NostrClient {
       nostr: nostr,
       relayManager: relayManager,
       gatewayClient: gatewayClient,
+      dbClient: dbClient,
     );
   }
 
@@ -46,9 +52,11 @@ class NostrClient {
     required Nostr nostr,
     required RelayManager relayManager,
     GatewayClient? gatewayClient,
+    AppDbClient? dbClient,
   }) : _nostr = nostr,
        _relayManager = relayManager,
-       _gatewayClient = gatewayClient;
+       _gatewayClient = gatewayClient,
+       _dbClient = dbClient;
 
   /// Creates a NostrClient with injected dependencies for testing
   @visibleForTesting
@@ -56,9 +64,11 @@ class NostrClient {
     required Nostr nostr,
     required RelayManager relayManager,
     GatewayClient? gatewayClient,
+    AppDbClient? dbClient,
   }) : _nostr = nostr,
        _relayManager = relayManager,
-       _gatewayClient = gatewayClient;
+       _gatewayClient = gatewayClient,
+       _dbClient = dbClient;
 
   static Nostr _createNostr(NostrClientConfig config) {
     RelayBase tempRelayGenerator(String url) => RelayBase(
@@ -79,6 +89,10 @@ class NostrClient {
   final Nostr _nostr;
   final GatewayClient? _gatewayClient;
   final RelayManager _relayManager;
+  final AppDbClient? _dbClient;
+
+  /// Convenience getter for the NostrEventsDao
+  NostrEventsDao? get _nostrEventsDao => _dbClient?.database.nostrEventsDao;
 
   /// Tracks whether dispose() has been called
   bool _isDisposed = false;
@@ -131,11 +145,14 @@ class NostrClient {
 
   /// Queries events with given filters
   ///
-  /// Uses gateway first if enabled, falls back to WebSocket on failure.
-  /// Returns a list of events matching the filters.
+  /// Query flow: **Cache → Gateway → WebSocket**
   ///
+  /// If [useCache] is `true` and cache is available, checks local cache first.
   /// If [useGateway] is `true` and gateway is enabled, attempts to use
-  /// the REST gateway first for faster cached responses.
+  /// the REST gateway for cached responses.
+  /// Falls back to WebSocket query if both are unavailable or empty.
+  ///
+  /// Results from gateway/websocket are cached for future queries.
   Future<List<Event>> queryEvents(
     List<Filter> filters, {
     String? subscriptionId,
@@ -143,7 +160,18 @@ class NostrClient {
     List<int> relayTypes = RelayType.all,
     bool sendAfterAuth = false,
     bool useGateway = true,
+    bool useCache = true,
   }) async {
+    // 1. Check cache first (instant)
+    final dao = _nostrEventsDao;
+    if (useCache && dao != null && filters.length == 1) {
+      final cached = await dao.getEventsByFilter(filters.first);
+      if (cached.isNotEmpty) {
+        return cached;
+      }
+    }
+
+    // 2. Try gateway (fast REST)
     if (useGateway && filters.length == 1) {
       final gatewayClient = _gatewayClient;
       if (gatewayClient != null) {
@@ -151,33 +179,65 @@ class NostrClient {
           () => gatewayClient.query(filters.first),
         );
         if (response != null && response.hasEvents) {
+          // Cache gateway results (fire-and-forget)
+          try {
+            unawaited(_nostrEventsDao?.upsertEventsBatch(response.events));
+          } on Object {
+            // Ignore cache errors
+          }
           return response.events;
         }
       }
     }
 
-    // Fall back to WebSocket query
+    // 3. Fall back to WebSocket query
     final filtersJson = filters.map((f) => f.toJson()).toList();
-    return _nostr.queryEvents(
+    final events = await _nostr.queryEvents(
       filtersJson,
       id: subscriptionId,
       tempRelays: tempRelays,
       relayTypes: relayTypes,
       sendAfterAuth: sendAfterAuth,
     );
+
+    // Cache websocket results (fire-and-forget)
+    if (events.isNotEmpty) {
+      try {
+        unawaited(_nostrEventsDao?.upsertEventsBatch(events));
+      } on Object {
+        // Ignore cache errors
+      }
+    }
+
+    return events;
   }
 
   /// Fetches a single event by ID
   ///
-  /// Uses gateway first if enabled, falls back to WebSocket on failure.
+  /// Query flow: **Cache → Gateway → WebSocket**
   ///
+  /// If [useCache] is `true` and cache is available, checks local cache first.
   /// If [useGateway] is `true` and gateway is enabled, attempts to use
-  /// the REST gateway first for faster cached responses.
+  /// the REST gateway for faster cached responses.
+  /// Falls back to WebSocket query if both are unavailable.
+  ///
+  /// Results from gateway/websocket are cached for future queries.
   Future<Event?> fetchEventById(
     String eventId, {
     String? relayUrl,
     bool useGateway = true,
+    bool useCache = true,
   }) async {
+    // 1. Check cache first
+    final dao = _nostrEventsDao;
+    if (useCache && dao != null) {
+      final cached = await dao.getEventById(eventId);
+      if (cached != null) {
+        return cached;
+      }
+    }
+
+    // 2. Try gateway
     final targetRelays = relayUrl != null ? [relayUrl] : null;
     if (useGateway) {
       final gatewayClient = _gatewayClient;
@@ -186,33 +246,65 @@ class NostrClient {
           () => gatewayClient.getEvent(eventId),
         );
         if (event != null) {
+          // Cache gateway result (fire-and-forget)
+          try {
+            unawaited(_nostrEventsDao?.upsertEvent(event));
+          } on Object {
+            // Ignore cache errors
+          }
           return event;
         }
       }
     }
 
-    // Fall back to WebSocket query
+    // 3. Fall back to WebSocket query
     final filters = [
       Filter(ids: [eventId], limit: 1),
     ];
     final events = await queryEvents(
       filters,
       useGateway: false,
+      useCache: false, // Already checked cache above
       tempRelays: targetRelays,
     );
-    return events.isEmpty ? null : events.first;
+    if (events.isNotEmpty) {
+      // Cache websocket result (fire-and-forget)
+      try {
+        unawaited(_nostrEventsDao?.upsertEvent(events.first));
+      } on Object {
+        // Ignore cache errors
+      }
+
+      return events.first;
+    }
+    return null;
   }
 
   /// Fetches a profile (kind 0) by pubkey
   ///
-  /// Uses gateway first if enabled, falls back to WebSocket on failure.
+  /// Query flow: **Cache → Gateway → WebSocket**
   ///
+  /// If [useCache] is `true` and cache is available, checks local cache first.
   /// If [useGateway] is `true` and gateway is enabled, attempts to use
-  /// the REST gateway first for faster cached responses.
+  /// the REST gateway for faster cached responses.
+  /// Falls back to WebSocket query if both are unavailable.
+  ///
+  /// Results from gateway/websocket are cached for future queries.
   Future<Event?> fetchProfile(
     String pubkey, {
     bool useGateway = true,
+    bool useCache = true,
   }) async {
+    // 1. Check cache first
+    final dao = _nostrEventsDao;
+    if (useCache && dao != null) {
+      final cached = await dao.getProfileByPubkey(pubkey);
+      if (cached != null) {
+        return cached;
+      }
+    }
+
+    // 2. Try gateway
     if (useGateway) {
       final gatewayClient = _gatewayClient;
       if (gatewayClient != null) {
@@ -220,17 +312,36 @@ class NostrClient {
           () => gatewayClient.getProfile(pubkey),
         );
         if (profile != null) {
+          // Cache gateway result (fire-and-forget)
+          try {
+            unawaited(_nostrEventsDao?.upsertEvent(profile));
+          } on Object {
+            // Ignore cache errors
+          }
           return profile;
         }
       }
     }
 
-    // Fall back to WebSocket query
+    // 3. Fall back to WebSocket query
     final filters = [
       Filter(authors: [pubkey], kinds: [EventKind.metadata], limit: 1),
     ];
-    final events = await queryEvents(filters, useGateway: false);
-    return events.isEmpty ? null : events.first;
+    final events = await queryEvents(
+      filters,
+      useGateway: false,
+      useCache: false, // Already checked cache above
+    );
+    if (events.isNotEmpty) {
+      // Cache websocket result (fire-and-forget)
+      try {
+        unawaited(_nostrEventsDao?.upsertEvent(events.first));
+      } on Object {
+        // Ignore cache errors
+      }
+      return events.first;
+    }
+    return null;
   }
 
   /// Subscribes to events matching the given filters
@@ -268,6 +379,13 @@ class NostrClient {
     final actualId = _nostr.subscribe(
       filtersJson,
       (event) {
+        // Auto-cache incoming events (fire-and-forget)
+        try {
+          unawaited(_nostrEventsDao?.upsertEvent(event));
+        } on Object {
+          // Ignore sync cache errors
+        }
+
         if (!controller.isClosed) {
           controller.add(event);
         }
@@ -368,9 +486,10 @@ class NostrClient {
     await _relayManager.retryDisconnectedRelays();
   }
 
-  /// Gets relay connection status as a simple map
+  /// Gets relay connection status as a simple map.
   ///
-  /// Returns Map<String, bool> where the value indicates if the relay is connected.
+  /// Returns `Map<String, bool>` where the value indicates if
+  /// the relay is connected.
   Map<String, bool> getRelayStatus() {
     final statuses = relayStatuses;
     final result = <String, bool>{};
