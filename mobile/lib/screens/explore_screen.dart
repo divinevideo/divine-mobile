@@ -658,7 +658,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                           );
                           // Stop any playing videos before navigating
                           disposeAllVideoControllers(ref);
-                          context.push('/user-list/${userList.id}', extra: userList);
+                          context.push(
+                            '/user-list/${userList.id}',
+                            extra: userList,
+                          );
                         },
                       ),
                     ),
