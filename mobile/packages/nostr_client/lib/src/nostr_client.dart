@@ -486,9 +486,10 @@ class NostrClient {
     await _relayManager.retryDisconnectedRelays();
   }
 
-  /// Gets relay connection status as a simple map
+  /// Gets relay connection status as a simple map.
   ///
-  /// Returns Map<String, bool> where the value indicates if the relay is connected.
+  /// Returns `Map<String, bool>` where the value indicates if
+  /// the relay is connected.
   Map<String, bool> getRelayStatus() {
     final statuses = relayStatuses;
     final result = <String, bool>{};
