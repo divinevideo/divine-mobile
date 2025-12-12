@@ -1,11 +1,11 @@
 // ABOUTME: Unit tests for NostrEventsDao with Event model operations.
-// ABOUTME: Tests upsertEvent, upsertEventsBatch, and getVideoEventsByFilter.
+// ABOUTME: Tests all DAO methods including cache expiry and replaceable events.
 
 import 'dart:io';
 
-import 'package:db_client/db_client.dart';
+import 'package:db_client/db_client.dart' hide Filter;
 import 'package:drift/native.dart';
-import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -232,17 +232,37 @@ void main() {
       });
     });
 
-    group('getVideoEventsByFilter', () {
-      test('returns events matching default video kinds', () async {
-        final videoEvent = createVideoEvent(createdAt: 1000);
-        final textEvent = createEvent(createdAt: 2000);
+    group('getEventsByFilter', () {
+      test('returns all events when empty filter', () async {
+        final events = [
+          createEvent(createdAt: 1000),
+          createVideoEvent(createdAt: 2000),
+          createEvent(kind: 7, createdAt: 3000),
+        ];
 
-        await dao.upsertEventsBatch([videoEvent, textEvent]);
+        await dao.upsertEventsBatch(events);
 
-        final results = await dao.getVideoEventsByFilter();
+        final results = await dao.getEventsByFilter(Filter());
 
-        expect(results.length, equals(1));
-        expect(results.first.id, equals(videoEvent.id));
+        expect(results.length, equals(3));
+      });
+
+      test('filters by ids', () async {
+        final event1 = createEvent(content: 'event 1', createdAt: 1000);
+        final event2 = createEvent(content: 'event 2', createdAt: 2000);
+        final event3 = createEvent(content: 'event 3', createdAt: 3000);
+
+        await dao.upsertEventsBatch([event1, event2, event3]);
+
+        final results = await dao.getEventsByFilter(
+          Filter(ids: [event1.id, event3.id]),
+        );
+
+        expect(results.length, equals(2));
+        expect(
+          results.map((e) => e.id).toSet(),
+          equals({event1.id, event3.id}),
+        );
       });
 
       test('filters by specific kinds', () async {
@@ -254,25 +274,27 @@ void main() {
 
         await dao.upsertEventsBatch(events);
 
-        final results = await dao.getVideoEventsByFilter(kinds: [1, 7]);
+        final results = await dao.getEventsByFilter(Filter(kinds: [1, 7]));
 
         expect(results.length, equals(2));
         expect(results.map((e) => e.kind).toSet(), equals({1, 7}));
       });
 
       test('filters by authors', () async {
-        final event1 = createVideoEvent(createdAt: 1000);
-        final event2 = createVideoEvent(pubkey: testPubkey2, createdAt: 2000);
+        final event1 = createEvent(createdAt: 1000);
+        final event2 = createEvent(pubkey: testPubkey2, createdAt: 2000);
 
         await dao.upsertEventsBatch([event1, event2]);
 
-        final results = await dao.getVideoEventsByFilter(authors: [testPubkey]);
+        final results = await dao.getEventsByFilter(
+          Filter(authors: [testPubkey]),
+        );
 
         expect(results.length, equals(1));
         expect(results.first.pubkey, equals(testPubkey));
       });
 
-      test('filters by hashtags', () async {
+      test('filters by hashtags (t tags)', () async {
         final event1 = createVideoEvent(
           hashtags: ['flutter', 'dart'],
           createdAt: 1000,
@@ -284,31 +306,138 @@ void main() {
 
         await dao.upsertEventsBatch([event1, event2]);
 
-        final results = await dao.getVideoEventsByFilter(hashtags: ['flutter']);
+        final results = await dao.getEventsByFilter(Filter(t: ['flutter']));
+
+        expect(results.length, equals(1));
+        expect(results.first.id, equals(event1.id));
+      });
+
+      test('filters by e tags (referenced events)', () async {
+        const referencedEventId = 'abc123def456';
+        final event1 = createEvent(
+          tags: [
+            ['e', referencedEventId],
+          ],
+          createdAt: 1000,
+        );
+        final event2 = createEvent(
+          tags: [
+            ['e', 'other_event_id'],
+          ],
+          createdAt: 2000,
+        );
+
+        await dao.upsertEventsBatch([event1, event2]);
+
+        final results = await dao.getEventsByFilter(
+          Filter(e: [referencedEventId]),
+        );
+
+        expect(results.length, equals(1));
+        expect(results.first.id, equals(event1.id));
+      });
+
+      test('filters by p tags (mentioned pubkeys)', () async {
+        const mentionedPubkey = 'mentioned_pubkey_123';
+        final event1 = createEvent(
+          tags: [
+            ['p', mentionedPubkey],
+          ],
+          createdAt: 1000,
+        );
+        final event2 = createEvent(
+          tags: [
+            ['p', 'other_pubkey'],
+          ],
+          createdAt: 2000,
+        );
+
+        await dao.upsertEventsBatch([event1, event2]);
+
+        final results = await dao.getEventsByFilter(
+          Filter(p: [mentionedPubkey]),
+        );
+
+        expect(results.length, equals(1));
+        expect(results.first.id, equals(event1.id));
+      });
+
+      test('filters by d tags (addressable event identifiers)', () async {
+        const dTagValue = 'my-unique-identifier';
+        final event1 = createEvent(
+          kind: 30023,
+          tags: [
+            ['d', dTagValue],
+          ],
+          createdAt: 1000,
+        );
+        final event2 = createEvent(
+          kind: 30023,
+          tags: [
+            ['d', 'other-identifier'],
+          ],
+          createdAt: 2000,
+        );
+
+        await dao.upsertEventsBatch([event1, event2]);
+
+        final results = await dao.getEventsByFilter(Filter(d: [dTagValue]));
+
+        expect(results.length, equals(1));
+        expect(results.first.id, equals(event1.id));
+      });
+
+      test('filters by search (content text)', () async {
+        final event1 = createEvent(
+          content: 'Hello world, this is a test',
+          createdAt: 1000,
+        );
+        final event2 = createEvent(
+          content: 'Goodbye universe',
+          createdAt: 2000,
+        );
+
+        await dao.upsertEventsBatch([event1, event2]);
+
+        final results = await dao.getEventsByFilter(Filter(search: 'world'));
+
+        expect(results.length, equals(1));
+        expect(results.first.id, equals(event1.id));
+      });
+
+      test('search is case insensitive', () async {
+        final event1 = createEvent(
+          content: 'Hello WORLD',
+          createdAt: 1000,
+        );
+
+        await dao.upsertEvent(event1);
+
+        final results = await dao.getEventsByFilter(Filter(search: 'world'));
 
         expect(results.length, equals(1));
         expect(results.first.id, equals(event1.id));
       });
 
       test('filters by since timestamp', () async {
-        final oldEvent = createVideoEvent(createdAt: 1000);
-        final newEvent = createVideoEvent(createdAt: 3000);
+        final oldEvent = createEvent(createdAt: 1000);
+        final newEvent = createEvent(createdAt: 3000);
 
         await dao.upsertEventsBatch([oldEvent, newEvent]);
 
-        final results = await dao.getVideoEventsByFilter(since: 2000);
+        final results = await dao.getEventsByFilter(Filter(since: 2000));
 
         expect(results.length, equals(1));
         expect(results.first.id, equals(newEvent.id));
       });
 
       test('filters by until timestamp', () async {
-        final oldEvent = createVideoEvent(createdAt: 1000);
-        final newEvent = createVideoEvent(createdAt: 3000);
+        final oldEvent = createEvent(createdAt: 1000);
+        final newEvent = createEvent(createdAt: 3000);
 
         await dao.upsertEventsBatch([oldEvent, newEvent]);
 
-        final results = await dao.getVideoEventsByFilter(until: 2000);
+        final results = await dao.getEventsByFilter(Filter(until: 2000));
 
         expect(results.length, equals(1));
         expect(results.first.id, equals(oldEvent.id));
@@ -317,33 +446,33 @@ void main() {
       test('limits number of returned events', () async {
         final events = List.generate(
           10,
-          (i) => createVideoEvent(createdAt: 1000 + i),
+          (i) => createEvent(createdAt: 1000 + i),
         );
 
         await dao.upsertEventsBatch(events);
 
-        final results = await dao.getVideoEventsByFilter(limit: 5);
+        final results = await dao.getEventsByFilter(Filter(limit: 5));
 
         expect(results.length, equals(5));
       });
 
       test('sorts by created_at descending by default', () async {
         final events = [
-          createVideoEvent(createdAt: 1000),
-          createVideoEvent(createdAt: 3000),
-          createVideoEvent(createdAt: 2000),
+          createEvent(createdAt: 1000),
+          createEvent(createdAt: 3000),
+          createEvent(createdAt: 2000),
         ];
 
         await dao.upsertEventsBatch(events);
 
-        final results = await dao.getVideoEventsByFilter();
+        final results = await dao.getEventsByFilter(Filter());
 
         expect(results[0].createdAt, equals(3000));
         expect(results[1].createdAt, equals(2000));
         expect(results[2].createdAt, equals(1000));
       });
 
-      test('sorts by loop_count when specified', () async {
+      test('sorts by loop_count when specified (video events)', () async {
         final events = [
           createVideoEvent(loops: 10, createdAt: 3000),
           createVideoEvent(loops: 100, createdAt: 1000),
@@ -352,14 +481,17 @@ void main() {
 
         await dao.upsertEventsBatch(events);
 
-        final results = await dao.getVideoEventsByFilter(sortBy: 'loop_count');
+        final results = await dao.getEventsByFilter(
+          Filter(kinds: [34236]),
+          sortBy: 'loop_count',
+        );
 
         expect(results[0].id, equals(events[1].id)); // 100 loops
         expect(results[1].id, equals(events[2].id)); // 50 loops
         expect(results[2].id, equals(events[0].id)); // 10 loops
       });
 
-      test('sorts by likes when specified', () async {
+      test('sorts by likes when specified (video events)', () async {
         final events = [
           createVideoEvent(likes: 5, createdAt: 3000),
           createVideoEvent(likes: 50, createdAt: 1000),
@@ -368,7 +500,10 @@ void main() {
 
         await dao.upsertEventsBatch(events);
 
-        final results = await dao.getVideoEventsByFilter(sortBy: 'likes');
+        final results = await dao.getEventsByFilter(
+          Filter(kinds: [34236]),
+          sortBy: 'likes',
+        );
 
         expect(results[0].id, equals(events[1].id)); // 50 likes
         expect(results[1].id, equals(events[2].id)); // 25 likes
@@ -376,40 +511,238 @@ void main() {
       });
 
       test('combines multiple filters', () async {
-        final matchingEvent = createVideoEvent(
-          hashtags: ['flutter'],
+        final matchingEvent = createEvent(
+          content: 'matching content here',
           createdAt: 2500,
         );
-        final wrongAuthor = createVideoEvent(
+        final wrongAuthor = createEvent(
           pubkey: testPubkey2,
-          hashtags: ['flutter'],
+          content: 'matching content here',
           createdAt: 2500,
         );
-        final wrongHashtag = createVideoEvent(
-          hashtags: ['nostr'],
+        final wrongKind = createEvent(
+          kind: 7,
+          content: 'matching content here',
           createdAt: 2500,
         );
-        final wrongTime = createVideoEvent(
-          hashtags: ['flutter'],
+        final wrongTime = createEvent(
+          content: 'matching content here',
           createdAt: 500,
+        );
+        final wrongContent = createEvent(
+          content: 'different text',
+          createdAt: 2500,
         );
 
         await dao.upsertEventsBatch([
           matchingEvent,
           wrongAuthor,
-          wrongHashtag,
+          wrongKind,
           wrongTime,
+          wrongContent,
         ]);
 
-        final results = await dao.getVideoEventsByFilter(
-          authors: [testPubkey],
-          hashtags: ['flutter'],
-          since: 2000,
-          until: 3000,
+        final results = await dao.getEventsByFilter(
+          Filter(
+            authors: [testPubkey],
+            kinds: [1],
+            since: 2000,
+            until: 3000,
+            search: 'matching',
+          ),
         );
 
         expect(results.length, equals(1));
         expect(results.first.id, equals(matchingEvent.id));
+      });
+
+      test('returns empty list when no events match', () async {
+        final event = createEvent(createdAt: 1000);
+        await dao.upsertEvent(event);
+
+        final results = await dao.getEventsByFilter(Filter(kinds: [999]));
+
+        expect(results, isEmpty);
+      });
+
+      test('filters by multiple e tags with OR logic', () async {
+        const eventId1 = 'referenced_event_1';
+        const eventId2 = 'referenced_event_2';
+        final event1 = createEvent(
+          tags: [
+            ['e', eventId1],
+          ],
+          createdAt: 1000,
+        );
+        final event2 = createEvent(
+          tags: [
+            ['e', eventId2],
+          ],
+          createdAt: 2000,
+        );
+        final event3 = createEvent(
+          tags: [
+            ['e', 'other_event'],
+          ],
+          createdAt: 3000,
+        );
+
+        await dao.upsertEventsBatch([event1, event2, event3]);
+
+        final results = await dao.getEventsByFilter(
+          Filter(e: [eventId1, eventId2]),
+        );
+
+        expect(results.length, equals(2));
+        expect(
+          results.map((e) => e.id).toSet(),
+          equals({event1.id, event2.id}),
+        );
+      });
+    });
+
+    group('getEventById', () {
+      test('returns event when found', () async {
+        final event = createEvent(content: 'test event');
+        await dao.upsertEvent(event);
+
+        final result = await dao.getEventById(event.id);
+
+        expect(result, isNotNull);
+        expect(result!.id, equals(event.id));
+        expect(result.content, equals('test event'));
+      });
+
+      test('returns null when event not found', () async {
+        final result = await dao.getEventById('nonexistent_event_id');
+
+        expect(result, isNull);
+      });
+
+      test('returns correct event when multiple events exist', () async {
+        final event1 = createEvent(content: 'event 1', createdAt: 1000);
+        final event2 = createEvent(content: 'event 2', createdAt: 2000);
+        final event3 = createEvent(content: 'event 3', createdAt: 3000);
+
+        await dao.upsertEventsBatch([event1, event2, event3]);
+
+        final result = await dao.getEventById(event2.id);
+
+        expect(result, isNotNull);
+        expect(result!.id, equals(event2.id));
+        expect(result.content, equals('event 2'));
+      });
+    });
+
+    group('getProfileByPubkey', () {
+      test('returns profile event when found', () async {
+        final profile = createEvent(
+          kind: 0,
+          content: '{"name":"testuser","about":"Test bio"}',
+        );
+        await dao.upsertEvent(profile);
+
+        final result = await dao.getProfileByPubkey(testPubkey);
+
+        expect(result, isNotNull);
+        expect(result!.kind, equals(0));
+        expect(result.pubkey, equals(testPubkey));
+        expect(result.content, contains('testuser'));
+      });
+
+      test('returns null when profile not found', () async {
+        final result = await dao.getProfileByPubkey('nonexistent_pubkey');
+
+        expect(result, isNull);
+      });
+
+      test('returns null when pubkey has events but no profile', () async {
+        final textNote = createEvent(content: 'just a note');
+        await dao.upsertEvent(textNote);
+
+        final result = await dao.getProfileByPubkey(testPubkey);
+
+        expect(result, isNull);
+      });
+
+      test('returns most recent profile when multiple exist', () async {
+        // This shouldn't happen with replaceable event logic, but test anyway
+        final oldProfile = createEvent(
+          kind: 0,
+          content: '{"name":"old"}',
+          createdAt: 1000,
+        );
+        final newProfile = createEvent(
+          kind: 0,
+          content: '{"name":"new"}',
+          createdAt: 2000,
+        );
+
+        await dao.upsertEvent(oldProfile);
+        await dao.upsertEvent(newProfile);
+
+        final result = await dao.getProfileByPubkey(testPubkey);
+
+        expect(result, isNotNull);
+        expect(result!.content, equals('{"name":"new"}'));
+      });
+
+      test('returns correct profile for specific pubkey', () async {
+        final profile1 = createEvent(
+          kind: 0,
+          content: '{"name":"user1"}',
+        );
+        final profile2 = createEvent(
+          pubkey: testPubkey2,
+          kind: 0,
+          content: '{"name":"user2"}',
+        );
+
+        await dao.upsertEventsBatch([profile1, profile2]);
+
+        final result = await dao.getProfileByPubkey(testPubkey2);
+
+        expect(result, isNotNull);
+        expect(result!.pubkey, equals(testPubkey2));
+        expect(result.content, equals('{"name":"user2"}'));
+      });
+    });
+
+    group('deleteAllEvents', () {
+      test('deletes all events and returns count', () async {
+        final events = [
+          createEvent(content: 'event 1', createdAt: 1000),
+          createEvent(content: 'event 2', createdAt: 2000),
+          createEvent(content: 'event 3', createdAt: 3000),
+        ];
+        await dao.upsertEventsBatch(events);
+
+        final deletedCount = await dao.deleteAllEvents();
+
+        expect(deletedCount, equals(3));
+
+        final remaining = await dao.getEventsByFilter(Filter());
+        expect(remaining, isEmpty);
+      });
+
+      test('returns 0 when no events exist', () async {
+        final deletedCount = await dao.deleteAllEvents();
+
+        expect(deletedCount, equals(0));
+      });
+
+      test('deletes events of all kinds', () async {
+        final events = [
+          createEvent(kind: 0, content: 'profile', createdAt: 1000),
+          createEvent(content: 'note', createdAt: 2000),
+          createVideoEvent(createdAt: 3000),
+          createEvent(kind: 7, content: 'reaction', createdAt: 4000),
+        ];
+        await dao.upsertEventsBatch(events);
+
+        final deletedCount = await dao.deleteAllEvents();
+
+        expect(deletedCount, equals(4));
       });
     });
 
@@ -432,7 +765,7 @@ void main() {
           await dao.upsertEvent(newProfile);
 
           // Should only have one event for this pubkey+kind
-          final results = await dao.getVideoEventsByFilter(kinds: [0]);
+          final results = await dao.getEventsByFilter(Filter(kinds: [0]));
           expect(results.length, equals(1));
           expect(results.first.content, equals('{"name":"new"}'));
           expect(results.first.createdAt, equals(2000));
@@ -454,7 +787,7 @@ void main() {
         await dao.upsertEvent(newProfile);
         await dao.upsertEvent(oldProfile); // Should be ignored
 
-        final results = await dao.getVideoEventsByFilter(kinds: [0]);
+        final results = await dao.getEventsByFilter(Filter(kinds: [0]));
         expect(results.length, equals(1));
         expect(results.first.content, equals('{"name":"new"}'));
         expect(results.first.createdAt, equals(2000));
@@ -482,7 +815,7 @@ void main() {
           await dao.upsertEvent(oldContacts);
           await dao.upsertEvent(newContacts);
 
-          final results = await dao.getVideoEventsByFilter(kinds: [3]);
+          final results = await dao.getEventsByFilter(Filter(kinds: [3]));
           expect(results.length, equals(1));
           expect(results.first.tags.length, equals(2));
         },
@@ -510,7 +843,7 @@ void main() {
           await dao.upsertEvent(oldRelays);
           await dao.upsertEvent(newRelays);
 
-          final results = await dao.getVideoEventsByFilter(kinds: [10002]);
+          final results = await dao.getEventsByFilter(Filter(kinds: [10002]));
           expect(results.length, equals(1));
           expect(results.first.tags.length, equals(2));
         },
@@ -534,7 +867,7 @@ void main() {
           await dao.upsertEvent(profile1);
           await dao.upsertEvent(profile2);
 
-          final results = await dao.getVideoEventsByFilter(kinds: [0]);
+          final results = await dao.getEventsByFilter(Filter(kinds: [0]));
           expect(results.length, equals(2));
         },
       );
@@ -562,7 +895,7 @@ void main() {
           await dao.upsertEvent(oldArticle);
           await dao.upsertEvent(newArticle);
 
-          final results = await dao.getVideoEventsByFilter(kinds: [30023]);
+          final results = await dao.getEventsByFilter(Filter(kinds: [30023]));
           expect(results.length, equals(1));
           expect(results.first.content, equals('new content'));
         },
@@ -591,7 +924,7 @@ void main() {
           await dao.upsertEvent(article1);
           await dao.upsertEvent(article2);
 
-          final results = await dao.getVideoEventsByFilter(kinds: [30023]);
+          final results = await dao.getEventsByFilter(Filter(kinds: [30023]));
           expect(results.length, equals(2));
         },
       );
@@ -619,7 +952,7 @@ void main() {
           await dao.upsertEvent(newArticle);
           await dao.upsertEvent(oldArticle); // Should be ignored
 
-          final results = await dao.getVideoEventsByFilter(kinds: [30023]);
+          final results = await dao.getEventsByFilter(Filter(kinds: [30023]));
           expect(results.length, equals(1));
           expect(results.first.content, equals('new content'));
         },
@@ -640,7 +973,7 @@ void main() {
           await dao.upsertEvent(note1);
           await dao.upsertEvent(note2);
 
-          final results = await dao.getVideoEventsByFilter(kinds: [1]);
+          final results = await dao.getEventsByFilter(Filter(kinds: [1]));
           expect(results.length, equals(2));
         },
       );
@@ -663,12 +996,202 @@ void main() {
 
         await dao.upsertEventsBatch([oldProfile, newProfile, regularNote]);
 
-        final profiles = await dao.getVideoEventsByFilter(kinds: [0]);
+        final profiles = await dao.getEventsByFilter(Filter(kinds: [0]));
         expect(profiles.length, equals(1));
         expect(profiles.first.content, equals('{"name":"new"}'));
 
-        final notes = await dao.getVideoEventsByFilter(kinds: [1]);
+        final notes = await dao.getEventsByFilter(Filter(kinds: [1]));
         expect(notes.length, equals(1));
+      });
+    });
+
+    group('cache expiry', () {
+      /// Helper to get current Unix timestamp
+      int nowUnix() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+      group('upsertEventWithExpiry', () {
+        test('inserts event with expiry timestamp', () async {
+          final event = createEvent(content: 'expiring event');
+          final expireAt = nowUnix() + 3600; // 1 hour from now
+
+          await dao.upsertEventWithExpiry(event, expireAt: expireAt);
+
+          final result = await dao.getEventById(event.id);
+          expect(result, isNotNull);
+          expect(result!.content, equals('expiring event'));
+        });
+
+        test('handles replaceable events with expiry', () async {
+          final profile = createEvent(
+            kind: 0,
+            content: '{"name":"test"}',
+            createdAt: 1000,
+          );
+          final expireAt = nowUnix() + 3600;
+
+          await dao.upsertEventWithExpiry(profile, expireAt: expireAt);
+
+          final result = await dao.getProfileByPubkey(testPubkey);
+          expect(result, isNotNull);
+          expect(result!.content, equals('{"name":"test"}'));
+        });
+
+        test('handles parameterized replaceable events with expiry', () async {
+          final video = createVideoEvent(loops: 100);
+          final expireAt = nowUnix() + 3600;
+
+          await dao.upsertEventWithExpiry(video, expireAt: expireAt);
+
+          final result = await dao.getEventById(video.id);
+          expect(result, isNotNull);
+        });
+      });
+
+      group('setEventExpiry', () {
+        test('sets expiry on existing event', () async {
+          final event = createEvent();
+          await dao.upsertEvent(event);
+
+          final expireAt = nowUnix() + 3600;
+          final success = await dao.setEventExpiry(event.id, expireAt);
+
+          expect(success, isTrue);
+        });
+
+        test('returns false for non-existent event', () async {
+          final success = await dao.setEventExpiry(
+            'nonexistent_id',
+            nowUnix() + 3600,
+          );
+
+          expect(success, isFalse);
+        });
+      });
+
+      group('clearEventExpiry', () {
+        test('removes expiry from event', () async {
+          final event = createEvent();
+          final expireAt = nowUnix() + 3600;
+          await dao.upsertEventWithExpiry(event, expireAt: expireAt);
+
+          final success = await dao.clearEventExpiry(event.id);
+
+          expect(success, isTrue);
+        });
+
+        test('returns false for non-existent event', () async {
+          final success = await dao.clearEventExpiry('nonexistent_id');
+
+          expect(success, isFalse);
+        });
+      });
+
+      group('deleteExpiredEvents', () {
+        test(
+          'deletes events with expired timestamps using current time',
+          () async {
+            final pastExpiry = nowUnix() - 100; // Already expired
+            final futureExpiry = nowUnix() + 3600; // Not yet expired
+
+            final expiredEvent = createEvent(
+              content: 'expired',
+              createdAt: 1000,
+            );
+            final validEvent = createEvent(content: 'valid', createdAt: 2000);
+            final noExpiryEvent = createEvent(
+              content: 'no expiry',
+              createdAt: 3000,
+            );
+
+            await dao.upsertEventWithExpiry(expiredEvent, expireAt: pastExpiry);
+            await dao.upsertEventWithExpiry(validEvent, expireAt: futureExpiry);
+            await dao.upsertEvent(noExpiryEvent);
+
+            final deletedCount = await dao.deleteExpiredEvents(null);
+
+            expect(deletedCount, equals(1));
+
+            // Expired event should be gone
+            final expiredResult = await dao.getEventById(expiredEvent.id);
+            expect(expiredResult, isNull);
+
+            // Valid and no-expiry events should remain
+            final validResult = await dao.getEventById(validEvent.id);
+            expect(validResult, isNotNull);
+
+            final noExpiryResult = await dao.getEventById(noExpiryEvent.id);
+            expect(noExpiryResult, isNotNull);
+          },
+        );
+
+        test('deletes events expired before given timestamp', () async {
+          final event1 = createEvent(content: 'event 1', createdAt: 1000);
+          final event2 = createEvent(content: 'event 2', createdAt: 2000);
+          final event3 = createEvent(content: 'event 3', createdAt: 3000);
+
+          await dao.upsertEventWithExpiry(event1, expireAt: 100);
+          await dao.upsertEventWithExpiry(event2, expireAt: 200);
+          await dao.upsertEventWithExpiry(event3, expireAt: 300);
+
+          // Delete events expiring before 250
+          final deletedCount = await dao.deleteExpiredEvents(250);
+
+          expect(deletedCount, equals(2));
+
+          // event3 should remain
+          final remaining = await dao.getEventsByFilter(Filter());
+          expect(remaining.length, equals(1));
+          expect(remaining.first.id, equals(event3.id));
+        });
+
+        test('returns 0 when no expired events', () async {
+          final futureExpiry = nowUnix() + 3600;
+          final event = createEvent();
+          await dao.upsertEventWithExpiry(event, expireAt: futureExpiry);
+
+          final deletedCount = await dao.deleteExpiredEvents(null);
+
+          expect(deletedCount, equals(0));
+        });
+
+        test('returns 0 when no events exist', () async {
+          final deletedCount = await dao.deleteExpiredEvents(null);
+
+          expect(deletedCount, equals(0));
+        });
+      });
+
+      group('countExpiredEvents', () {
+        test('counts events that will expire before timestamp', () async {
+          final event1 = createEvent(content: 'event 1', createdAt: 1000);
+          final event2 = createEvent(content: 'event 2', createdAt: 2000);
+          final event3 = createEvent(content: 'event 3', createdAt: 3000);
+          final noExpiry = createEvent(content: 'no expiry', createdAt: 4000);
+
+          await dao.upsertEventWithExpiry(event1, expireAt: 100);
+          await dao.upsertEventWithExpiry(event2, expireAt: 200);
+          await dao.upsertEventWithExpiry(event3, expireAt: 300);
+          await dao.upsertEvent(noExpiry);
+
+          final count = await dao.countExpiredEvents(250);
+
+          expect(count, equals(2));
+        });
+
+        test('returns 0 when no events will expire', () async {
+          final event = createEvent();
+          await dao.upsertEventWithExpiry(event, expireAt: 1000);
+
+          final count = await dao.countExpiredEvents(500);
+
+          expect(count, equals(0));
+        });
+
+        test('returns 0 when no events exist', () async {
+          final count = await dao.countExpiredEvents(nowUnix());
+
+          expect(count, equals(0));
+        });
       });
     });
   });

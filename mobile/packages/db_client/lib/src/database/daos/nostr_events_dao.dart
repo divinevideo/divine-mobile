@@ -4,10 +4,9 @@
 
 import 'dart:convert';
 
-import 'package:db_client/db_client.dart';
+import 'package:db_client/db_client.dart' hide Filter;
 import 'package:drift/drift.dart';
-import 'package:nostr_sdk/event.dart';
-import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 
 part 'nostr_events_dao.g.dart';
 
@@ -52,11 +51,14 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Insert event without replaceable logic (by event ID)
-  Future<void> _insertEvent(Event event) async {
+  ///
+  /// If [expireAt] is provided, the event will be marked for cache eviction
+  /// after that Unix timestamp.
+  Future<void> _insertEvent(Event event, {int? expireAt}) async {
     await customInsert(
       'INSERT OR REPLACE INTO event '
-      '(id, pubkey, created_at, kind, tags, content, sig, sources) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      '(id, pubkey, created_at, kind, tags, content, sig, sources, expire_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       variables: [
         Variable.withString(event.id),
         Variable.withString(event.pubkey),
@@ -66,6 +68,10 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
         Variable.withString(event.content),
         Variable.withString(event.sig),
         const Variable(null), // sources - not used yet
+        if (expireAt != null)
+          Variable.withInt(expireAt)
+        else
+          const Variable(null),
       ],
     );
   }
@@ -172,88 +178,134 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     });
   }
 
-  /// Query video events with filter parameters (cache-first strategy)
+  /// Query events with a Nostr Filter (cache-first strategy)
   ///
-  /// Supports the same filter parameters as relay subscriptions:
-  /// - kinds: Event kinds to match (defaults to video kinds: 34236, 6)
+  /// Supports all standard Nostr filter parameters:
+  /// - ids: List of event IDs to match
+  /// - kinds: Event kinds to match (no default - returns all kinds if null)
   /// - authors: List of pubkeys to filter by
-  /// - hashtags: List of hashtags to filter by (searches tags JSON)
+  /// - t: List of hashtags to filter by (searches tags JSON)
+  /// - e: List of referenced event IDs (e tags)
+  /// - p: List of mentioned pubkeys (p tags)
+  /// - d: List of addressable event identifiers (d tags)
+  /// - search: Full-text search in content (NIP-50)
   /// - since: Minimum created_at timestamp (Unix seconds)
   /// - until: Maximum created_at timestamp (Unix seconds)
   /// - limit: Maximum number of events to return
+  ///
+  /// Additional parameter:
   /// - sortBy: Field to sort by (loop_count, likes, views, created_at).
   ///   Defaults to created_at DESC.
   ///
   /// Used by cache-first query strategy to return instant results before
   /// relay query.
-  Future<List<Event>> getVideoEventsByFilter({
-    List<int>? kinds,
-    List<String>? authors,
-    List<String>? hashtags,
-    int? since,
-    int? until,
-    int limit = 100,
+  Future<List<Event>> getEventsByFilter(
+    Filter filter, {
     String? sortBy,
   }) async {
     // Build dynamic SQL query based on provided filters
     final conditions = <String>[];
     final variables = <Variable>[];
 
-    // Kind filter (defaults to video kinds if not specified)
-    final effectiveKinds = kinds ?? [34236, 16];
-    if (effectiveKinds.length == 1) {
-      conditions.add('kind = ?');
-      variables.add(Variable.withInt(effectiveKinds.first));
-    } else {
-      final placeholders = List.filled(effectiveKinds.length, '?').join(', ');
-      conditions.add('kind IN ($placeholders)');
-      variables.addAll(effectiveKinds.map(Variable.withInt));
+    // IDs filter
+    final ids = filter.ids;
+    if (ids != null && ids.isNotEmpty) {
+      final placeholders = List.filled(ids.length, '?').join(', ');
+      conditions.add('id IN ($placeholders)');
+      variables.addAll(ids.map(Variable.withString));
+    }
+
+    // Kind filter (no default - returns all kinds if not specified)
+    final kinds = filter.kinds;
+    if (kinds != null && kinds.isNotEmpty) {
+      if (kinds.length == 1) {
+        conditions.add('kind = ?');
+        variables.add(Variable.withInt(kinds.first));
+      } else {
+        final placeholders = List.filled(kinds.length, '?').join(', ');
+        conditions.add('kind IN ($placeholders)');
+        variables.addAll(kinds.map(Variable.withInt));
+      }
     }
 
     // Authors filter
+    final authors = filter.authors;
     if (authors != null && authors.isNotEmpty) {
       final placeholders = List.filled(authors.length, '?').join(', ');
       conditions.add('pubkey IN ($placeholders)');
       variables.addAll(authors.map(Variable.withString));
     }
 
-    // Hashtags filter (search in tags JSON)
-    // Tags are stored as JSON array, search for hashtag entries
+    // Hashtags filter (t tags)
+    final hashtags = filter.t;
     if (hashtags != null && hashtags.isNotEmpty) {
       final hashtagConditions = hashtags.map((tag) {
-        // Convert to lowercase to match NIP-24 requirement
         final lowerTag = tag.toLowerCase();
-        // Search for ["t", "hashtag"] in tags JSON
         variables.add(Variable.withString('%"t"%"$lowerTag"%'));
         return 'tags LIKE ?';
       }).toList();
-      // OR condition: match ANY hashtag
       conditions.add('(${hashtagConditions.join(' OR ')})');
     }
 
+    // Referenced events filter (e tags)
+    final eTags = filter.e;
+    if (eTags != null && eTags.isNotEmpty) {
+      final eTagConditions = eTags.map((eventId) {
+        variables.add(Variable.withString('%"e"%"$eventId"%'));
+        return 'tags LIKE ?';
+      }).toList();
+      conditions.add('(${eTagConditions.join(' OR ')})');
+    }
+
+    // Mentioned pubkeys filter (p tags)
+    final pTags = filter.p;
+    if (pTags != null && pTags.isNotEmpty) {
+      final pTagConditions = pTags.map((pubkey) {
+        variables.add(Variable.withString('%"p"%"$pubkey"%'));
+        return 'tags LIKE ?';
+      }).toList();
+      conditions.add('(${pTagConditions.join(' OR ')})');
+    }
+
+    // Addressable event identifiers filter (d tags)
+    final dTags = filter.d;
+    if (dTags != null && dTags.isNotEmpty) {
+      final dTagConditions = dTags.map((identifier) {
+        variables.add(Variable.withString('%"d"%"$identifier"%'));
+        return 'tags LIKE ?';
+      }).toList();
+      conditions.add('(${dTagConditions.join(' OR ')})');
+    }
+
+    // Content search filter (NIP-50 style, case insensitive)
+    final search = filter.search;
+    if (search != null && search.isNotEmpty) {
+      conditions.add('content LIKE ? COLLATE NOCASE');
+      variables.add(Variable.withString('%$search%'));
+    }
+
     // Time range filters
+    final since = filter.since;
     if (since != null) {
       conditions.add('created_at >= ?');
       variables.add(Variable.withInt(since));
     }
+    final until = filter.until;
     if (until != null) {
       conditions.add('created_at <= ?');
       variables.add(Variable.withInt(until));
     }
 
-    // Build final query with optional video_metrics join for sorting
-    final whereClause = conditions.join(' AND ');
+    // Build WHERE clause (or no WHERE if no conditions)
+    final whereClause = conditions.isEmpty ? '1=1' : conditions.join(' AND ');
 
     // Determine ORDER BY clause and whether we need to join video_metrics
     String orderByClause;
     var needsMetricsJoin = false;
 
     if (sortBy != null && sortBy != 'created_at') {
-      // Server-side sorting by engagement metrics requires join with
-      // video_metrics
       needsMetricsJoin = true;
 
-      // Map sort field names to column names
       final sortColumn =
           {
             'loop_count': 'loop_count',
@@ -264,16 +316,16 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
           }[sortBy] ??
           'loop_count';
 
-      // COALESCE to handle null metrics (treat as 0) and sort DESC
       orderByClause = 'COALESCE(m.$sortColumn, 0) DESC, e.created_at DESC';
     } else {
-      // Default: sort by created_at DESC
       orderByClause = 'e.created_at DESC';
     }
 
+    // Use filter.limit or default to 100
+    final limit = filter.limit ?? 100;
+
     final String sql;
     if (needsMetricsJoin) {
-      // Join with video_metrics for sorted queries
       sql =
           '''
         SELECT e.* FROM event e
@@ -283,7 +335,6 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
         LIMIT ?
       ''';
     } else {
-      // Simple query without join
       sql =
           '''
         SELECT * FROM event e
@@ -302,6 +353,50 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     ).get();
 
     return rows.map(_rowToEvent).toList();
+  }
+
+  /// Get a single event by ID.
+  ///
+  /// Returns `null` if the event is not found.
+  Future<Event?> getEventById(String eventId) async {
+    final rows = await customSelect(
+      'SELECT * FROM event WHERE id = ? LIMIT 1',
+      variables: [Variable.withString(eventId)],
+      readsFrom: {nostrEvents},
+    ).get();
+
+    if (rows.isEmpty) return null;
+    return _rowToEvent(rows.first);
+  }
+
+  /// Get a profile (kind 0) event by pubkey.
+  ///
+  /// Returns the most recent profile event for the given pubkey,
+  /// or `null` if no profile is found.
+  Future<Event?> getProfileByPubkey(String pubkey) async {
+    final rows = await customSelect(
+      'SELECT * FROM event WHERE pubkey = ? AND kind = ? '
+      'ORDER BY created_at DESC LIMIT 1',
+      variables: [
+        Variable.withString(pubkey),
+        Variable.withInt(EventKind.metadata),
+      ],
+      readsFrom: {nostrEvents},
+    ).get();
+
+    if (rows.isEmpty) return null;
+    return _rowToEvent(rows.first);
+  }
+
+  /// Delete all events from the cache.
+  ///
+  /// Returns the number of events deleted.
+  Future<int> deleteAllEvents() async {
+    return customUpdate(
+      'DELETE FROM event',
+      updates: {nostrEvents},
+      updateKind: UpdateKind.delete,
+    );
   }
 
   /// Convert database row to Event model
@@ -333,5 +428,172 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
       }
     }
     return '';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Cache Expiry Management
+  // ---------------------------------------------------------------------------
+
+  /// Insert or replace event with an expiry timestamp.
+  ///
+  /// The event will be marked for cache eviction after [expireAt] Unix
+  /// timestamp. Use [deleteExpiredEvents] to remove expired events.
+  Future<void> upsertEventWithExpiry(
+    Event event, {
+    required int expireAt,
+  }) async {
+    // Handle replaceable events (kind 0, 3, 10000-19999)
+    if (EventKind.isReplaceable(event.kind)) {
+      await _upsertReplaceableEventWithExpiry(event, expireAt: expireAt);
+      return;
+    }
+
+    // Handle parameterized replaceable events (kind 30000-39999)
+    if (EventKind.isParameterizedReplaceable(event.kind)) {
+      await _upsertParameterizedReplaceableEventWithExpiry(
+        event,
+        expireAt: expireAt,
+      );
+      return;
+    }
+
+    // Regular event: simple insert or replace by ID
+    await _insertEvent(event, expireAt: expireAt);
+
+    // Also upsert video metrics for video events and reposts
+    if (event.kind == 34236 || event.kind == 16) {
+      await db.videoMetricsDao.upsertVideoMetrics(event);
+    }
+  }
+
+  /// Upsert replaceable event with expiry.
+  Future<void> _upsertReplaceableEventWithExpiry(
+    Event event, {
+    required int expireAt,
+  }) async {
+    final existingRows = await customSelect(
+      'SELECT id, created_at FROM event WHERE pubkey = ? AND kind = ? LIMIT 1',
+      variables: [
+        Variable.withString(event.pubkey),
+        Variable.withInt(event.kind),
+      ],
+      readsFrom: {nostrEvents},
+    ).get();
+
+    if (existingRows.isNotEmpty) {
+      final existingCreatedAt = existingRows.first.read<int>('created_at');
+      if (event.createdAt <= existingCreatedAt) {
+        return;
+      }
+      final existingId = existingRows.first.read<String>('id');
+      await customUpdate(
+        'DELETE FROM event WHERE id = ?',
+        variables: [Variable.withString(existingId)],
+        updates: {nostrEvents},
+        updateKind: UpdateKind.delete,
+      );
+    }
+
+    await _insertEvent(event, expireAt: expireAt);
+  }
+
+  /// Upsert parameterized replaceable event with expiry.
+  Future<void> _upsertParameterizedReplaceableEventWithExpiry(
+    Event event, {
+    required int expireAt,
+  }) async {
+    final dTagValue = event.dTagValue;
+
+    final existingRows = await customSelect(
+      'SELECT id, created_at, tags FROM event WHERE pubkey = ? AND kind = ?',
+      variables: [
+        Variable.withString(event.pubkey),
+        Variable.withInt(event.kind),
+      ],
+      readsFrom: {nostrEvents},
+    ).get();
+
+    for (final row in existingRows) {
+      final tagsJson = row.read<String>('tags');
+      final tags = (jsonDecode(tagsJson) as List)
+          .map((tag) => (tag as List).map((e) => e.toString()).toList())
+          .toList();
+      final existingDTag = _extractDTagFromTags(tags);
+
+      if (existingDTag == dTagValue) {
+        final existingCreatedAt = row.read<int>('created_at');
+        if (event.createdAt <= existingCreatedAt) {
+          return;
+        }
+        final existingId = row.read<String>('id');
+        await customUpdate(
+          'DELETE FROM event WHERE id = ?',
+          variables: [Variable.withString(existingId)],
+          updates: {nostrEvents},
+          updateKind: UpdateKind.delete,
+        );
+        break;
+      }
+    }
+
+    await _insertEvent(event, expireAt: expireAt);
+
+    if (event.kind == 34236) {
+      await db.videoMetricsDao.upsertVideoMetrics(event);
+    }
+  }
+
+  /// Set the expiry timestamp for an existing event.
+  ///
+  /// Returns true if the event was found and updated, false otherwise.
+  Future<bool> setEventExpiry(String eventId, int expireAt) async {
+    final rowsAffected = await customUpdate(
+      'UPDATE event SET expire_at = ? WHERE id = ?',
+      variables: [
+        Variable.withInt(expireAt),
+        Variable.withString(eventId),
+      ],
+      updates: {nostrEvents},
+      updateKind: UpdateKind.update,
+    );
+    return rowsAffected > 0;
+  }
+
+  /// Remove the expiry timestamp from an event (make it permanent).
+  ///
+  /// Returns true if the event was found and updated, false otherwise.
+  Future<bool> clearEventExpiry(String eventId) async {
+    final rowsAffected = await customUpdate(
+      'UPDATE event SET expire_at = NULL WHERE id = ?',
+      variables: [Variable.withString(eventId)],
+      updates: {nostrEvents},
+      updateKind: UpdateKind.update,
+    );
+    return rowsAffected > 0;
+  }
+
+  /// Delete events that have expired (expire_at < now).
+  ///
+  /// If [before] is provided, deletes events expired before that timestamp.
+  /// Returns the number of events deleted.
+  Future<int> deleteExpiredEvents(int? before) async {
+    final nowUnix = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    return customUpdate(
+      'DELETE FROM event WHERE expire_at IS NOT NULL AND expire_at < ?',
+      variables: [Variable.withInt(before ?? nowUnix)],
+      updates: {nostrEvents},
+      updateKind: UpdateKind.delete,
+    );
+  }
+
+  /// Get the count of events that will expire before [before] Unix timestamp.
+  Future<int> countExpiredEvents(int before) async {
+    final result = await customSelect(
+      'SELECT COUNT(*) as count FROM event '
+      'WHERE expire_at IS NOT NULL AND expire_at < ?',
+      variables: [Variable.withInt(before)],
+      readsFrom: {nostrEvents},
+    ).getSingle();
+    return result.read<int>('count');
   }
 }
