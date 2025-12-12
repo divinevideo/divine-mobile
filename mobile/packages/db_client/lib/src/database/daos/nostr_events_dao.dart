@@ -572,26 +572,15 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     return rowsAffected > 0;
   }
 
-  /// Delete all events that have expired (expire_at < now).
+  /// Delete events that have expired (expire_at < now).
   ///
+  /// If [before] is provided, deletes events expired before that timestamp.
   /// Returns the number of events deleted.
-  Future<int> deleteExpiredEvents() async {
+  Future<int> deleteExpiredEvents(int? before) async {
     final nowUnix = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     return customUpdate(
       'DELETE FROM event WHERE expire_at IS NOT NULL AND expire_at < ?',
-      variables: [Variable.withInt(nowUnix)],
-      updates: {nostrEvents},
-      updateKind: UpdateKind.delete,
-    );
-  }
-
-  /// Delete expired events older than [before] Unix timestamp.
-  ///
-  /// Returns the number of events deleted.
-  Future<int> deleteExpiredEventsBefore(int before) async {
-    return customUpdate(
-      'DELETE FROM event WHERE expire_at IS NOT NULL AND expire_at < ?',
-      variables: [Variable.withInt(before)],
+      variables: [Variable.withInt(before ?? nowUnix)],
       updates: {nostrEvents},
       updateKind: UpdateKind.delete,
     );

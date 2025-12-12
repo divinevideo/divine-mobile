@@ -1,5 +1,5 @@
 // ABOUTME: Unit tests for NostrEventsDao with Event model operations.
-// ABOUTME: Tests upsertEvent, upsertEventsBatch, and getEventsByFilter.
+// ABOUTME: Tests all DAO methods including cache expiry and replaceable events.
 
 import 'dart:io';
 
@@ -601,6 +601,151 @@ void main() {
       });
     });
 
+    group('getEventById', () {
+      test('returns event when found', () async {
+        final event = createEvent(content: 'test event');
+        await dao.upsertEvent(event);
+
+        final result = await dao.getEventById(event.id);
+
+        expect(result, isNotNull);
+        expect(result!.id, equals(event.id));
+        expect(result.content, equals('test event'));
+      });
+
+      test('returns null when event not found', () async {
+        final result = await dao.getEventById('nonexistent_event_id');
+
+        expect(result, isNull);
+      });
+
+      test('returns correct event when multiple events exist', () async {
+        final event1 = createEvent(content: 'event 1', createdAt: 1000);
+        final event2 = createEvent(content: 'event 2', createdAt: 2000);
+        final event3 = createEvent(content: 'event 3', createdAt: 3000);
+
+        await dao.upsertEventsBatch([event1, event2, event3]);
+
+        final result = await dao.getEventById(event2.id);
+
+        expect(result, isNotNull);
+        expect(result!.id, equals(event2.id));
+        expect(result.content, equals('event 2'));
+      });
+    });
+
+    group('getProfileByPubkey', () {
+      test('returns profile event when found', () async {
+        final profile = createEvent(
+          kind: 0,
+          content: '{"name":"testuser","about":"Test bio"}',
+        );
+        await dao.upsertEvent(profile);
+
+        final result = await dao.getProfileByPubkey(testPubkey);
+
+        expect(result, isNotNull);
+        expect(result!.kind, equals(0));
+        expect(result.pubkey, equals(testPubkey));
+        expect(result.content, contains('testuser'));
+      });
+
+      test('returns null when profile not found', () async {
+        final result = await dao.getProfileByPubkey('nonexistent_pubkey');
+
+        expect(result, isNull);
+      });
+
+      test('returns null when pubkey has events but no profile', () async {
+        final textNote = createEvent(kind: 1, content: 'just a note');
+        await dao.upsertEvent(textNote);
+
+        final result = await dao.getProfileByPubkey(testPubkey);
+
+        expect(result, isNull);
+      });
+
+      test('returns most recent profile when multiple exist', () async {
+        // This shouldn't happen with replaceable event logic, but test anyway
+        final oldProfile = createEvent(
+          kind: 0,
+          content: '{"name":"old"}',
+          createdAt: 1000,
+        );
+        final newProfile = createEvent(
+          kind: 0,
+          content: '{"name":"new"}',
+          createdAt: 2000,
+        );
+
+        await dao.upsertEvent(oldProfile);
+        await dao.upsertEvent(newProfile);
+
+        final result = await dao.getProfileByPubkey(testPubkey);
+
+        expect(result, isNotNull);
+        expect(result!.content, equals('{"name":"new"}'));
+      });
+
+      test('returns correct profile for specific pubkey', () async {
+        final profile1 = createEvent(
+          kind: 0,
+          content: '{"name":"user1"}',
+        );
+        final profile2 = createEvent(
+          pubkey: testPubkey2,
+          kind: 0,
+          content: '{"name":"user2"}',
+        );
+
+        await dao.upsertEventsBatch([profile1, profile2]);
+
+        final result = await dao.getProfileByPubkey(testPubkey2);
+
+        expect(result, isNotNull);
+        expect(result!.pubkey, equals(testPubkey2));
+        expect(result.content, equals('{"name":"user2"}'));
+      });
+    });
+
+    group('deleteAllEvents', () {
+      test('deletes all events and returns count', () async {
+        final events = [
+          createEvent(content: 'event 1', createdAt: 1000),
+          createEvent(content: 'event 2', createdAt: 2000),
+          createEvent(content: 'event 3', createdAt: 3000),
+        ];
+        await dao.upsertEventsBatch(events);
+
+        final deletedCount = await dao.deleteAllEvents();
+
+        expect(deletedCount, equals(3));
+
+        final remaining = await dao.getEventsByFilter(Filter());
+        expect(remaining, isEmpty);
+      });
+
+      test('returns 0 when no events exist', () async {
+        final deletedCount = await dao.deleteAllEvents();
+
+        expect(deletedCount, equals(0));
+      });
+
+      test('deletes events of all kinds', () async {
+        final events = [
+          createEvent(kind: 0, content: 'profile', createdAt: 1000),
+          createEvent(kind: 1, content: 'note', createdAt: 2000),
+          createVideoEvent(createdAt: 3000),
+          createEvent(kind: 7, content: 'reaction', createdAt: 4000),
+        ];
+        await dao.upsertEventsBatch(events);
+
+        final deletedCount = await dao.deleteAllEvents();
+
+        expect(deletedCount, equals(4));
+      });
+    });
+
     group('replaceable events', () {
       test(
         'kind 0 (profile): newer event replaces older for same pubkey',
@@ -857,6 +1002,193 @@ void main() {
 
         final notes = await dao.getEventsByFilter(Filter(kinds: [1]));
         expect(notes.length, equals(1));
+      });
+    });
+
+    group('cache expiry', () {
+      /// Helper to get current Unix timestamp
+      int nowUnix() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+      group('upsertEventWithExpiry', () {
+        test('inserts event with expiry timestamp', () async {
+          final event = createEvent(content: 'expiring event');
+          final expireAt = nowUnix() + 3600; // 1 hour from now
+
+          await dao.upsertEventWithExpiry(event, expireAt: expireAt);
+
+          final result = await dao.getEventById(event.id);
+          expect(result, isNotNull);
+          expect(result!.content, equals('expiring event'));
+        });
+
+        test('handles replaceable events with expiry', () async {
+          final profile = createEvent(
+            kind: 0,
+            content: '{"name":"test"}',
+            createdAt: 1000,
+          );
+          final expireAt = nowUnix() + 3600;
+
+          await dao.upsertEventWithExpiry(profile, expireAt: expireAt);
+
+          final result = await dao.getProfileByPubkey(testPubkey);
+          expect(result, isNotNull);
+          expect(result!.content, equals('{"name":"test"}'));
+        });
+
+        test('handles parameterized replaceable events with expiry', () async {
+          final video = createVideoEvent(loops: 100);
+          final expireAt = nowUnix() + 3600;
+
+          await dao.upsertEventWithExpiry(video, expireAt: expireAt);
+
+          final result = await dao.getEventById(video.id);
+          expect(result, isNotNull);
+        });
+      });
+
+      group('setEventExpiry', () {
+        test('sets expiry on existing event', () async {
+          final event = createEvent();
+          await dao.upsertEvent(event);
+
+          final expireAt = nowUnix() + 3600;
+          final success = await dao.setEventExpiry(event.id, expireAt);
+
+          expect(success, isTrue);
+        });
+
+        test('returns false for non-existent event', () async {
+          final success = await dao.setEventExpiry(
+            'nonexistent_id',
+            nowUnix() + 3600,
+          );
+
+          expect(success, isFalse);
+        });
+      });
+
+      group('clearEventExpiry', () {
+        test('removes expiry from event', () async {
+          final event = createEvent();
+          final expireAt = nowUnix() + 3600;
+          await dao.upsertEventWithExpiry(event, expireAt: expireAt);
+
+          final success = await dao.clearEventExpiry(event.id);
+
+          expect(success, isTrue);
+        });
+
+        test('returns false for non-existent event', () async {
+          final success = await dao.clearEventExpiry('nonexistent_id');
+
+          expect(success, isFalse);
+        });
+      });
+
+      group('deleteExpiredEvents', () {
+        test('deletes events with expired timestamps using current time', () async {
+          final pastExpiry = nowUnix() - 100; // Already expired
+          final futureExpiry = nowUnix() + 3600; // Not yet expired
+
+          final expiredEvent = createEvent(
+            content: 'expired',
+            createdAt: 1000,
+          );
+          final validEvent = createEvent(content: 'valid', createdAt: 2000);
+          final noExpiryEvent = createEvent(
+            content: 'no expiry',
+            createdAt: 3000,
+          );
+
+          await dao.upsertEventWithExpiry(expiredEvent, expireAt: pastExpiry);
+          await dao.upsertEventWithExpiry(validEvent, expireAt: futureExpiry);
+          await dao.upsertEvent(noExpiryEvent);
+
+          final deletedCount = await dao.deleteExpiredEvents(null);
+
+          expect(deletedCount, equals(1));
+
+          // Expired event should be gone
+          final expiredResult = await dao.getEventById(expiredEvent.id);
+          expect(expiredResult, isNull);
+
+          // Valid and no-expiry events should remain
+          final validResult = await dao.getEventById(validEvent.id);
+          expect(validResult, isNotNull);
+
+          final noExpiryResult = await dao.getEventById(noExpiryEvent.id);
+          expect(noExpiryResult, isNotNull);
+        });
+
+        test('deletes events expired before given timestamp', () async {
+          final event1 = createEvent(content: 'event 1', createdAt: 1000);
+          final event2 = createEvent(content: 'event 2', createdAt: 2000);
+          final event3 = createEvent(content: 'event 3', createdAt: 3000);
+
+          await dao.upsertEventWithExpiry(event1, expireAt: 100);
+          await dao.upsertEventWithExpiry(event2, expireAt: 200);
+          await dao.upsertEventWithExpiry(event3, expireAt: 300);
+
+          // Delete events expiring before 250
+          final deletedCount = await dao.deleteExpiredEvents(250);
+
+          expect(deletedCount, equals(2));
+
+          // event3 should remain
+          final remaining = await dao.getEventsByFilter(Filter());
+          expect(remaining.length, equals(1));
+          expect(remaining.first.id, equals(event3.id));
+        });
+
+        test('returns 0 when no expired events', () async {
+          final futureExpiry = nowUnix() + 3600;
+          final event = createEvent();
+          await dao.upsertEventWithExpiry(event, expireAt: futureExpiry);
+
+          final deletedCount = await dao.deleteExpiredEvents(null);
+
+          expect(deletedCount, equals(0));
+        });
+
+        test('returns 0 when no events exist', () async {
+          final deletedCount = await dao.deleteExpiredEvents(null);
+
+          expect(deletedCount, equals(0));
+        });
+      });
+
+      group('countExpiredEvents', () {
+        test('counts events that will expire before timestamp', () async {
+          final event1 = createEvent(content: 'event 1', createdAt: 1000);
+          final event2 = createEvent(content: 'event 2', createdAt: 2000);
+          final event3 = createEvent(content: 'event 3', createdAt: 3000);
+          final noExpiry = createEvent(content: 'no expiry', createdAt: 4000);
+
+          await dao.upsertEventWithExpiry(event1, expireAt: 100);
+          await dao.upsertEventWithExpiry(event2, expireAt: 200);
+          await dao.upsertEventWithExpiry(event3, expireAt: 300);
+          await dao.upsertEvent(noExpiry);
+
+          final count = await dao.countExpiredEvents(250);
+
+          expect(count, equals(2));
+        });
+
+        test('returns 0 when no events will expire', () async {
+          final event = createEvent();
+          await dao.upsertEventWithExpiry(event, expireAt: 1000);
+
+          final count = await dao.countExpiredEvents(500);
+
+          expect(count, equals(0));
+        });
+
+        test('returns 0 when no events exist', () async {
+          final count = await dao.countExpiredEvents(nowUnix());
+
+          expect(count, equals(0));
+        });
       });
     });
   });

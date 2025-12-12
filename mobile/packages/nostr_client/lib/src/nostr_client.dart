@@ -133,8 +133,12 @@ class NostrClient {
           () => gatewayClient.query(filters.first),
         );
         if (response != null && response.hasEvents) {
-          // Cache gateway results
-          await _nostrEventsDao?.upsertEventsBatch(response.events);
+          // Cache gateway results (fire-and-forget)
+          unawaited(
+            _nostrEventsDao?.upsertEventsBatch(response.events).catchError((_) {
+              // Ignore cache errors
+            }),
+          );
           return response.events;
         }
       }
@@ -150,9 +154,13 @@ class NostrClient {
       sendAfterAuth: sendAfterAuth,
     );
 
-    // Cache websocket results
+    // Cache websocket results (fire-and-forget)
     if (events.isNotEmpty) {
-      await _nostrEventsDao?.upsertEventsBatch(events);
+      unawaited(
+        _nostrEventsDao?.upsertEventsBatch(events).catchError((_) {
+          // Ignore cache errors
+        }),
+      );
     }
 
     return events;
@@ -192,8 +200,12 @@ class NostrClient {
           () => gatewayClient.getEvent(eventId),
         );
         if (event != null) {
-          // Cache gateway result
-          await _nostrEventsDao?.upsertEvent(event);
+          // Cache gateway result (fire-and-forget)
+          unawaited(
+            _nostrEventsDao?.upsertEvent(event).catchError((_) {
+              // Ignore cache errors
+            }),
+          );
           return event;
         }
       }
@@ -210,8 +222,12 @@ class NostrClient {
       tempRelays: targetRelays,
     );
     if (events.isNotEmpty) {
-      // Cache websocket result
-      await _nostrEventsDao?.upsertEvent(events.first);
+      // Cache websocket result (fire-and-forget)
+      unawaited(
+        _nostrEventsDao?.upsertEvent(events.first).catchError((_) {
+          // Ignore cache errors
+        }),
+      );
       return events.first;
     }
     return null;
@@ -249,8 +265,12 @@ class NostrClient {
           () => gatewayClient.getProfile(pubkey),
         );
         if (profile != null) {
-          // Cache gateway result
-          await _nostrEventsDao?.upsertEvent(profile);
+          // Cache gateway result (fire-and-forget)
+          unawaited(
+            _nostrEventsDao?.upsertEvent(profile).catchError((_) {
+              // Ignore cache errors
+            }),
+          );
           return profile;
         }
       }
@@ -266,8 +286,12 @@ class NostrClient {
       useCache: false, // Already checked cache above
     );
     if (events.isNotEmpty) {
-      // Cache websocket result
-      await _nostrEventsDao?.upsertEvent(events.first);
+      // Cache websocket result (fire-and-forget)
+      unawaited(
+        _nostrEventsDao?.upsertEvent(events.first).catchError((_) {
+          // Ignore cache errors
+        }),
+      );
       return events.first;
     }
     return null;
@@ -308,20 +332,12 @@ class NostrClient {
     final actualId = _nostr.subscribe(
       filtersJson,
       (event) {
-        // Auto-cache incoming events if cache is enabled
-        // Fire-and-forget to not block event emission
-        final dao = _nostrEventsDao;
-        if (dao != null) {
-          try {
-            unawaited(
-              dao.upsertEvent(event).catchError((_) {
-                // Ignore async cache errors - don't disrupt the event stream
-              }),
-            );
-          } on Exception {
-            // Ignore sync cache errors - don't disrupt the event stream
-          }
-        }
+        // Auto-cache incoming events (fire-and-forget)
+        unawaited(
+          _nostrEventsDao?.upsertEvent(event).catchError((_) {
+            // Ignore cache errors
+          }),
+        );
 
         if (!controller.isClosed) {
           controller.add(event);
