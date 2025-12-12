@@ -16,7 +16,6 @@ import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
-import 'package:openvine/screens/pure/video_metadata_screen_pure.dart';
 import 'package:openvine/services/camera/native_macos_camera.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -651,7 +650,7 @@ class _UniversalCameraScreenPureState
         backgroundColor: VineTheme.vineGreen,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         title: const Text(
           'Camera Permission',
@@ -703,7 +702,7 @@ class _UniversalCameraScreenPureState
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
                 child: const Text(
                   'Cancel',
                   style: TextStyle(color: Colors.grey),
@@ -725,7 +724,7 @@ class _UniversalCameraScreenPureState
         backgroundColor: VineTheme.vineGreen,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         title: const Text(
           'Camera Error',
@@ -1454,11 +1453,7 @@ class _UniversalCameraScreenPureState
         });
 
         // Navigate to metadata screen
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => VideoMetadataScreenPure(draftId: draft.id),
-          ),
-        );
+        await context.push('/video-metadata/${draft.id}');
 
         // After metadata screen returns, navigate to profile
         if (mounted) {

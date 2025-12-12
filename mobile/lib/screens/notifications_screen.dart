@@ -3,10 +3,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/models/notification_model.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
-import 'package:openvine/screens/pure/explore_video_screen_pure.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/notification_list_item.dart';
@@ -323,18 +323,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     }
 
     // Navigate to video player with this specific video
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ExploreVideoScreenPure(
-          startingVideo: video,
-          videoList: [video],
-          contextTitle: 'From Notification',
-          startingIndex: 0,
-          useLocalActiveState:
-              true, // Use local state since not using URL routing
-        ),
-      ),
-    );
+    context.push('/video/${video.id}');
   }
 
   void _navigateToProfile(BuildContext context, String userPubkey) {

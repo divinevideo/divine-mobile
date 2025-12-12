@@ -2,12 +2,11 @@
 // ABOUTME: Displays notifications feed similar to original Vine's activity tab
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/models/notification_model.dart';
 import 'package:openvine/models/user_profile.dart' as models;
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/router/nav_extensions.dart';
-import 'package:openvine/screens/comments_screen.dart';
-import 'package:openvine/screens/pure/explore_video_screen_pure.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
@@ -288,11 +287,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
     );
 
     // Navigate to comments screen with the video
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => CommentsScreen(videoEvent: video),
-      ),
-    );
+    context.push('/comments', extra: video);
   }
 
   void _openVideo(VideoEvent video, VideoEventService videoEventService) {
@@ -333,19 +328,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen>
       return;
     }
 
-    final allVideos = videoEventService.discoveryVideos;
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ExploreVideoScreenPure(
-          startingVideo: video,
-          videoList: allVideos,
-          contextTitle: 'Activity Video',
-          useLocalActiveState:
-              true, // Use local state since not using URL routing
-        ),
-      ),
-    );
+    context.push('/video/${video.id}');
   }
 }
 
