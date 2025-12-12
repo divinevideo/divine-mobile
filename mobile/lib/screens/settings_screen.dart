@@ -3,14 +3,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/screens/blossom_settings_screen.dart';
-import 'package:openvine/screens/key_management_screen.dart';
-import 'package:openvine/screens/notification_settings_screen.dart';
-import 'package:openvine/screens/profile_setup_screen.dart';
-import 'package:openvine/screens/relay_settings_screen.dart';
-import 'package:openvine/screens/relay_diagnostic_screen.dart';
-import 'package:openvine/screens/safety_settings_screen.dart';
 // import 'package:openvine/screens/p2p_sync_screen.dart'; // Hidden for release
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
@@ -33,7 +27,7 @@ class SettingsScreen extends ConsumerWidget {
         foregroundColor: VineTheme.whiteText,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           tooltip: 'Back',
         ),
       ),
@@ -52,25 +46,14 @@ class SettingsScreen extends ConsumerWidget {
                   icon: Icons.person,
                   title: 'Edit Profile',
                   subtitle: 'Update your display name, bio, and avatar',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          const ProfileSetupScreen(isNewUser: false),
-                    ),
-                  ),
+                  onTap: () => context.push('/edit-profile'),
                 ),
                 _buildSettingsTile(
                   context,
                   icon: Icons.key,
                   title: 'Key Management',
                   subtitle: 'Export, backup, and restore your Nostr keys',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const KeyManagementScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/key-management'),
                 ),
               ],
 
@@ -113,36 +96,21 @@ class SettingsScreen extends ConsumerWidget {
                 icon: Icons.hub,
                 title: 'Relays',
                 subtitle: 'Manage Nostr relay connections',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const RelaySettingsScreen(),
-                  ),
-                ),
+                onTap: () => context.push('/relay-settings'),
               ),
               _buildSettingsTile(
                 context,
                 icon: Icons.troubleshoot,
                 title: 'Relay Diagnostics',
                 subtitle: 'Debug relay connectivity and network issues',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const RelayDiagnosticScreen(),
-                  ),
-                ),
+                onTap: () => context.push('/relay-diagnostic'),
               ),
               _buildSettingsTile(
                 context,
                 icon: Icons.cloud_upload,
                 title: 'Media Servers',
                 subtitle: 'Configure Blossom upload servers',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const BlossomSettingsScreen(),
-                  ),
-                ),
+                onTap: () => context.push('/blossom-settings'),
               ),
               // P2P Sync hidden for release - not ready for production
               // _buildSettingsTile(
@@ -165,24 +133,14 @@ class SettingsScreen extends ConsumerWidget {
                 icon: Icons.notifications,
                 title: 'Notifications',
                 subtitle: 'Manage notification preferences',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const NotificationSettingsScreen(),
-                  ),
-                ),
+                onTap: () => context.push('/notification-settings'),
               ),
               _buildSettingsTile(
                 context,
                 icon: Icons.shield,
                 title: 'Safety & Privacy',
                 subtitle: 'Blocked users, muted content, and report history',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SafetySettingsScreen(),
-                  ),
-                ),
+                onTap: () => context.push('/safety-settings'),
               ),
 
               // Support

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
+import 'package:go_router/go_router.dart';
 
 class TestCameraScreen extends StatefulWidget {
   const TestCameraScreen({super.key});
@@ -143,7 +144,7 @@ class _TestCameraScreenState extends State<TestCameraScreen> {
             left: 16,
             child: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white, size: 32),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => context.pop(),
             ),
           ),
 

@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/models/video_event.dart';
 
 /// Video editor screen - V1 placeholder implementation
@@ -19,7 +20,7 @@ class VideoEditorScreen extends ConsumerWidget {
         title: const Text('Edit Video'),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
       ),
       body: Center(
@@ -48,7 +49,7 @@ class VideoEditorScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 32),
               OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
                 child: const Text('Go Back'),
               ),
             ],

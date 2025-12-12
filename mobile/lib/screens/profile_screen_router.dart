@@ -33,8 +33,6 @@ import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/helpers/follow_actions_helper.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:openvine/screens/followers_screen.dart';
-import 'package:openvine/screens/following_screen.dart';
 import 'package:openvine/widgets/delete_account_dialog.dart';
 
 /// Router-driven ProfileScreen - Instagram-style scrollable profile
@@ -95,13 +93,8 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
     String pubkey,
     String displayName,
   ) {
-    // Navigate using root navigator to escape shell route
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (context) =>
-            FollowersScreen(pubkey: pubkey, displayName: displayName),
-      ),
-    );
+    // Navigate using go_router
+    context.push('/followers/$pubkey', extra: displayName);
   }
 
   void _navigateToFollowing(
@@ -109,13 +102,8 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
     String pubkey,
     String displayName,
   ) {
-    // Navigate using root navigator to escape shell route
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (context) =>
-            FollowingScreen(pubkey: pubkey, displayName: displayName),
-      ),
-    );
+    // Navigate using go_router
+    context.push('/following/$pubkey', extra: displayName);
   }
 
   @override
@@ -202,7 +190,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
               elevation: 0,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
               ),
             ),
             body: const Center(

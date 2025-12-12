@@ -21,13 +21,22 @@ import 'package:openvine/screens/following_screen.dart';
 import 'package:openvine/screens/key_import_screen.dart';
 import 'package:openvine/screens/profile_setup_screen.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
+import 'package:openvine/screens/comments_screen.dart';
+import 'package:openvine/screens/key_management_screen.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
+import 'package:openvine/screens/relay_diagnostic_screen.dart';
 import 'package:openvine/screens/relay_settings_screen.dart';
+import 'package:openvine/screens/safety_settings_screen.dart';
 import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_editor_screen.dart';
 import 'package:openvine/screens/vine_drafts_screen.dart';
 import 'package:openvine/screens/welcome_screen.dart';
+import 'package:openvine/screens/discover_lists_screen.dart';
+import 'package:openvine/screens/curated_list_feed_screen.dart';
+import 'package:openvine/screens/user_list_people_screen.dart';
+import 'package:openvine/screens/pure/video_metadata_screen_pure.dart';
+import 'package:openvine/services/user_list_service.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_stop_navigator_observer.dart';
@@ -66,8 +75,12 @@ int tabIndexFromLocation(String loc) {
     case 'search':
     case 'settings':
     case 'relay-settings':
+    case 'relay-diagnostic':
     case 'blossom-settings':
     case 'notification-settings':
+    case 'key-management':
+    case 'safety-settings':
+    case 'comments':
     case 'edit-profile':
     case 'setup-profile':
     case 'import-key':
@@ -76,6 +89,11 @@ int tabIndexFromLocation(String loc) {
     case 'drafts':
     case 'followers':
     case 'following':
+    case 'video':
+    case 'discover-lists':
+    case 'curated-list':
+    case 'user-list':
+    case 'video-metadata':
       return -1; // Non-tab routes - no bottom nav
     default:
       return 0; // fallback to home
@@ -419,6 +437,35 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const NotificationSettingsScreen(),
       ),
       GoRoute(
+        path: '/key-management',
+        name: 'key-management',
+        builder: (_, __) => const KeyManagementScreen(),
+      ),
+      GoRoute(
+        path: '/relay-diagnostic',
+        name: 'relay-diagnostic',
+        builder: (_, __) => const RelayDiagnosticScreen(),
+      ),
+      GoRoute(
+        path: '/safety-settings',
+        name: 'safety-settings',
+        builder: (_, __) => const SafetySettingsScreen(),
+      ),
+      GoRoute(
+        path: '/comments',
+        name: 'comments',
+        builder: (ctx, st) {
+          final video = st.extra as VideoEvent?;
+          if (video == null) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(child: Text('No video selected for comments')),
+            );
+          }
+          return CommentsScreen(videoEvent: video);
+        },
+      ),
+      GoRoute(
         path: '/edit-profile',
         name: 'edit-profile',
         builder: (context, state) {
@@ -510,6 +557,58 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             );
           }
           return VideoEditorScreen(video: video);
+        },
+      ),
+      // Discover lists route
+      GoRoute(
+        path: '/discover-lists',
+        name: 'discover-lists',
+        builder: (_, __) => const DiscoverListsScreen(),
+      ),
+      // Curated list feed route
+      GoRoute(
+        path: '/curated-list/:id',
+        name: 'curated-list',
+        builder: (ctx, st) {
+          final listId = st.pathParameters['id'];
+          final listName = st.extra as String? ?? 'List';
+          if (listId == null || listId.isEmpty) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(child: Text('Invalid list ID')),
+            );
+          }
+          return CuratedListFeedScreen(listId: listId, listName: listName);
+        },
+      ),
+      // User list people route
+      GoRoute(
+        path: '/user-list/:id',
+        name: 'user-list',
+        builder: (ctx, st) {
+          final userList = st.extra as UserList?;
+          if (userList == null) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(child: Text('No list data provided')),
+            );
+          }
+          return UserListPeopleScreen(userList: userList);
+        },
+      ),
+      // Video metadata route (for editing drafts)
+      GoRoute(
+        path: '/video-metadata/:draftId',
+        name: 'video-metadata',
+        builder: (ctx, st) {
+          final draftId = st.pathParameters['draftId'];
+          if (draftId == null || draftId.isEmpty) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(child: Text('No draft ID provided')),
+            );
+          }
+          return VideoMetadataScreenPure(draftId: draftId);
         },
       ),
     ],

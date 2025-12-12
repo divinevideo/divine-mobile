@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
@@ -90,7 +91,7 @@ class _SafetySettingsScreenState extends ConsumerState<SafetySettingsScreen> {
         foregroundColor: VineTheme.whiteText,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           tooltip: 'Back',
         ),
       ),

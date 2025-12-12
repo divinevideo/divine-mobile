@@ -3,9 +3,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
-import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -117,7 +117,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
         backgroundColor: VineTheme.cardBackground,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: VineTheme.whiteText),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         title: const Text(
           'Discover Lists',
@@ -246,14 +246,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen> {
               );
               // Stop any playing videos before navigating
               disposeAllVideoControllers(ref);
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => CuratedListFeedScreen(
-                    listId: list.id,
-                    listName: list.name,
-                  ),
-                ),
-              );
+              context.push('/curated-list/${list.id}', extra: list.name);
             },
             borderRadius: BorderRadius.circular(8),
             child: Padding(
