@@ -69,7 +69,7 @@ void main() {
           errors: {},
         );
 
-        expect(result.success, isTrue);
+        expect(result.isSuccessful, isTrue);
       });
 
       test('returns false when successCount is 0', () {
@@ -87,7 +87,7 @@ void main() {
           },
         );
 
-        expect(result.success, isFalse);
+        expect(result.isSuccessful, isFalse);
       });
     });
 

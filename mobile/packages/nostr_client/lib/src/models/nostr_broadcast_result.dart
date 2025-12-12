@@ -35,9 +35,6 @@ class NostrBroadcastResult {
   final Map<String, String> errors;
 
   /// Whether the broadcast was successful (at least one relay accepted)
-  bool get success => successCount > 0;
-
-  /// Alias for [success] for API compatibility
   bool get isSuccessful => successCount > 0;
 
   /// Whether all relays successfully received the event

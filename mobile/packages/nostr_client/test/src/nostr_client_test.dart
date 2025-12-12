@@ -2089,7 +2089,7 @@ void main() {
 
         final result = await client.broadcast(event);
 
-        expect(result.success, isTrue);
+        expect(result.isSuccessful, isTrue);
         expect(result.event, equals(event));
         expect(result.totalRelays, equals(2));
         expect(result.successCount, greaterThan(0));
@@ -2115,7 +2115,7 @@ void main() {
 
         final result = await client.broadcast(event);
 
-        expect(result.success, isFalse);
+        expect(result.isSuccessful, isFalse);
         expect(result.event, isNull);
         expect(result.successCount, equals(0));
       });
@@ -2134,7 +2134,7 @@ void main() {
 
         final result = await client.broadcast(event);
 
-        expect(result.success, isFalse);
+        expect(result.isSuccessful, isFalse);
         expect(result.totalRelays, equals(0));
         expect(result.successCount, equals(0));
       });
@@ -2185,7 +2185,7 @@ void main() {
 
         final result = await client.broadcast(event);
 
-        expect(result.success, isFalse);
+        expect(result.isSuccessful, isFalse);
         expect(result.event, isNull);
         expect(result.errors, isNotEmpty);
       });
