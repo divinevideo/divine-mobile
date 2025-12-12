@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import 'package:video_player/video_player.dart';
+import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/models/video_event.dart';
@@ -71,6 +72,9 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
       0; // Prevents race conditions with rapid state changes
   DateTime? _lastTapTime; // Debounce rapid taps to prevent phantom pauses
 
+  /// Stable video identifier for active state tracking
+  String get _stableVideoId => widget.video.stableId;
+
   @override
   void initState() {
     super.initState();
@@ -104,9 +108,10 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
       }
 
       // Set up listener FIRST to avoid missing provider updates during setup
-      ref.listenManual(isVideoActiveProvider(widget.video.id), (prev, next) {
+      // Use _stableVideoId (vineId) for active state since event ID changes on metadata updates
+      ref.listenManual(isVideoActiveProvider(_stableVideoId), (prev, next) {
         Log.info(
-          '🔄 VideoFeedItem active state changed: videoId=${widget.video.id}, prev=$prev → next=$next',
+          '🔄 VideoFeedItem active state changed: videoId=$_stableVideoId, prev=$prev → next=$next',
           name: 'VideoFeedItem',
           category: LogCategory.video,
         );
@@ -116,7 +121,7 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
       // THEN check current state (providers may have become ready while listener was setting up)
       // This two-step approach handles the race condition where providers might not be ready initially
       // but become ready shortly after widget mounts
-      final isActive = ref.read(isVideoActiveProvider(widget.video.id));
+      final isActive = ref.read(isVideoActiveProvider(_stableVideoId));
       Log.info(
         '🎬 VideoFeedItem.initState postFrameCallback: videoId=${widget.video.id}, isActive=$isActive',
         name: 'VideoFeedItem',
@@ -282,7 +287,7 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
 
             // Check if video is still active (even if generation changed)
             final stillActive = ref.read(
-              isVideoActiveProvider(widget.video.id),
+              isVideoActiveProvider(_stableVideoId),
             );
 
             if (!stillActive) {
@@ -401,7 +406,7 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
     // Riverpod rebuilds interfering with local state management
     final bool isActive = widget.isActiveOverride != null
         ? widget.isActiveOverride!
-        : ref.watch(isVideoActiveProvider(video.id));
+        : ref.watch(isVideoActiveProvider(video.stableId));
 
     Log.debug(
       '📱 VideoFeedItem state: isActive=$isActive (override=${widget.isActiveOverride})',
@@ -1259,7 +1264,7 @@ class VideoOverlayActions extends ConsumerWidget {
                       // Construct addressable ID for repost state check
                       final dTag = video.rawTags['d'];
                       final addressableId = dTag != null
-                          ? '34236:${video.pubkey}:$dTag'
+                          ? '${NIP71VideoKinds.addressableShortVideo}:${video.pubkey}:$dTag'
                           : video.id;
                       final isReposted = socialState.hasReposted(addressableId);
 
@@ -1555,7 +1560,8 @@ class VideoOverlayActions extends ConsumerWidget {
         final controller = ref.read(
           individualVideoControllerProvider(controllerParams),
         );
-        final isActive = ref.read(isVideoActiveProvider(video.id));
+        final stableId = video.vineId ?? video.id;
+        final isActive = ref.read(isVideoActiveProvider(stableId));
 
         // Only resume if video is still active (not scrolled away)
         if (isActive &&

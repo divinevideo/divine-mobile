@@ -6,6 +6,7 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as sdk;
 import 'package:openvine/constants/nip71_migration.dart';
+import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -270,6 +271,204 @@ void main() {
         2,
         reason: 'Kind 22 events should not replace each other',
       );
+    });
+  });
+
+  group('VideoEventService - updateVideoEvent()', () {
+    late MockINostrService mockNostrService;
+    late MockSubscriptionManager mockSubscriptionManager;
+    late VideoEventService service;
+
+    setUp(() {
+      mockNostrService = MockINostrService();
+      mockSubscriptionManager = MockSubscriptionManager();
+
+      when(mockNostrService.isInitialized).thenReturn(true);
+
+      service = VideoEventService(
+        mockNostrService,
+        subscriptionManager: mockSubscriptionManager,
+      );
+    });
+
+    test('updateVideoEvent replaces video in discovery feed by vineId', () {
+      // Arrange: Add a video to discovery feed
+      const pubkey =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      const vineId = 'update-test-vine';
+      const videoUrl = 'https://example.com/video.mp4';
+
+      final originalEvent = sdk.Event(
+        pubkey,
+        NIP71VideoKinds.addressableShortVideo,
+        [
+          ['d', vineId],
+          ['url', videoUrl],
+          ['title', 'Original Title'],
+        ],
+        'Original description',
+        createdAt: 1000,
+      );
+
+      service.handleEventForTesting(originalEvent, SubscriptionType.discovery);
+      expect(service.discoveryVideos.length, 1);
+      expect(service.discoveryVideos[0].title, 'Original Title');
+
+      // Act: Create updated event with new metadata (different event.id but same vineId)
+      final updatedEvent = sdk.Event(
+        pubkey,
+        NIP71VideoKinds.addressableShortVideo,
+        [
+          ['d', vineId],
+          ['url', videoUrl],
+          ['title', 'Updated Title'],
+        ],
+        'Updated description',
+        createdAt: 2000,
+      );
+
+      final updatedVideoEvent = VideoEvent.fromNostrEvent(updatedEvent);
+      service.updateVideoEvent(updatedVideoEvent);
+
+      // Assert: Should have replaced the original video
+      final videos = service.discoveryVideos;
+      expect(videos.length, 1, reason: 'Should still have one video');
+      expect(videos[0].title, 'Updated Title', reason: 'Title should be updated');
+      expect(
+        videos[0].content,
+        'Updated description',
+        reason: 'Description should be updated',
+      );
+      expect(
+        videos[0].id,
+        updatedEvent.id,
+        reason: 'Event ID should be the updated one',
+      );
+    });
+
+    test('updateVideoEvent replaces video across multiple subscription types', () {
+      // Arrange: Add same video to both discovery and homeFeed
+      const pubkey =
+          'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
+      const vineId = 'multi-feed-vine';
+      const videoUrl = 'https://example.com/video.mp4';
+
+      final originalEvent = sdk.Event(
+        pubkey,
+        NIP71VideoKinds.addressableShortVideo,
+        [
+          ['d', vineId],
+          ['url', videoUrl],
+          ['title', 'Original'],
+        ],
+        'Original',
+        createdAt: 1000,
+      );
+
+      service.handleEventForTesting(originalEvent, SubscriptionType.discovery);
+      service.handleEventForTesting(originalEvent, SubscriptionType.homeFeed);
+
+      expect(service.discoveryVideos.length, 1);
+      expect(service.homeFeedVideos.length, 1);
+
+      // Act: Update with new metadata
+      final updatedEvent = sdk.Event(
+        pubkey,
+        NIP71VideoKinds.addressableShortVideo,
+        [
+          ['d', vineId],
+          ['url', videoUrl],
+          ['title', 'Updated'],
+        ],
+        'Updated',
+        createdAt: 2000,
+      );
+
+      final updatedVideoEvent = VideoEvent.fromNostrEvent(updatedEvent);
+      service.updateVideoEvent(updatedVideoEvent);
+
+      // Assert: Should have updated in both feeds
+      expect(service.discoveryVideos[0].title, 'Updated');
+      expect(service.homeFeedVideos[0].title, 'Updated');
+    });
+
+    test('updateVideoEvent adds to discovery if video not found in any feed', () {
+      // Arrange: Empty feeds
+      expect(service.discoveryVideos.length, 0);
+
+      // Act: Update a video that doesn't exist
+      const pubkey =
+          '1111222233334444555566667777888899990000aaaabbbbccccddddeeeeffff';
+      const vineId = 'new-vine';
+      const videoUrl = 'https://example.com/video.mp4';
+
+      final newEvent = sdk.Event(
+        pubkey,
+        NIP71VideoKinds.addressableShortVideo,
+        [
+          ['d', vineId],
+          ['url', videoUrl],
+          ['title', 'New Video'],
+        ],
+        'New video description',
+        createdAt: 3000,
+      );
+
+      final newVideoEvent = VideoEvent.fromNostrEvent(newEvent);
+      service.updateVideoEvent(newVideoEvent);
+
+      // Assert: Should be added to discovery feed
+      expect(
+        service.discoveryVideos.length,
+        1,
+        reason: 'Should add to discovery when not found',
+      );
+      expect(service.discoveryVideos[0].title, 'New Video');
+    });
+
+    test('updateVideoEvent calls notifyListeners when video is updated', () {
+      // Arrange
+      const pubkey =
+          'aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
+      const vineId = 'notify-test';
+      const videoUrl = 'https://example.com/video.mp4';
+
+      final originalEvent = sdk.Event(
+        pubkey,
+        NIP71VideoKinds.addressableShortVideo,
+        [
+          ['d', vineId],
+          ['url', videoUrl],
+          ['title', 'Original'],
+        ],
+        'Original',
+        createdAt: 1000,
+      );
+
+      service.handleEventForTesting(originalEvent, SubscriptionType.discovery);
+
+      // Track listener notifications
+      var notified = false;
+      service.addListener(() => notified = true);
+
+      // Act
+      final updatedEvent = sdk.Event(
+        pubkey,
+        NIP71VideoKinds.addressableShortVideo,
+        [
+          ['d', vineId],
+          ['url', videoUrl],
+          ['title', 'Updated'],
+        ],
+        'Updated',
+        createdAt: 2000,
+      );
+
+      final updatedVideoEvent = VideoEvent.fromNostrEvent(updatedEvent);
+      service.updateVideoEvent(updatedVideoEvent);
+
+      // Assert
+      expect(notified, true, reason: 'Should notify listeners on update');
     });
   });
 }

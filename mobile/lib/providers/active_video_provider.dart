@@ -116,15 +116,15 @@ final activeVideoIdProvider = Provider<String?>((ref) {
 
   // Get video at current index - videoIndex maps directly to list index
   final idx = ctx.videoIndex!.clamp(0, videos.length - 1);
-  final activeVideoId = videos[idx].id;
+  final video = videos[idx];
 
   Log.info(
-    '[ACTIVE] ✅ Active video at index $idx: $activeVideoId',
+    '[ACTIVE] ✅ Active video at index $idx: ${video.stableId} (vineId=${video.vineId}, id=${video.id})',
     name: 'ActiveVideoProvider',
     category: LogCategory.system,
   );
 
-  return activeVideoId;
+  return video.stableId;
 });
 
 /// Per-video active state (for efficient VideoFeedItem updates)

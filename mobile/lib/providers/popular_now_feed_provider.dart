@@ -102,10 +102,20 @@ class PopularNowFeed extends _$PopularNowFeed {
       },
     );
 
+    // Register for video update callbacks to auto-refresh when any video is updated
+    final unregisterVideoUpdate = videoEventService.addVideoUpdateListener((
+      updated,
+    ) {
+      if (ref.mounted) {
+        refreshFromService();
+      }
+    });
+
     // Clean up on dispose
     ref.onDispose(() {
       _builder?.cleanup();
       _builder = null;
+      unregisterVideoUpdate(); // Clean up video update callback
       Log.info(
         '🆕 PopularNowFeed: Disposed',
         name: 'PopularNowFeedProvider',
@@ -181,6 +191,34 @@ class PopularNowFeed extends _$PopularNowFeed {
         currentState.copyWith(isLoadingMore: false, error: e.toString()),
       );
     }
+  }
+
+  /// Refresh state from VideoEventService without re-subscribing to relay
+  /// Call this after a video is updated to sync the provider's state
+  void refreshFromService() {
+    final videoEventService = ref.read(videoEventServiceProvider);
+    var updatedVideos = videoEventService.popularNowVideos.toList();
+
+    // Apply same filtering as build()
+    updatedVideos = updatedVideos
+        .where((v) => v.isSupportedOnCurrentPlatform)
+        .toList();
+
+    // Sort by timestamp (newest first)
+    updatedVideos.sort((a, b) {
+      final timeCompare = b.timestamp.compareTo(a.timestamp);
+      if (timeCompare != 0) return timeCompare;
+      return a.id.compareTo(b.id);
+    });
+
+    state = AsyncData(
+      VideoFeedState(
+        videos: updatedVideos,
+        hasMoreContent: updatedVideos.length >= 10,
+        isLoadingMore: false,
+        lastUpdated: DateTime.now(),
+      ),
+    );
   }
 
   /// Refresh the feed

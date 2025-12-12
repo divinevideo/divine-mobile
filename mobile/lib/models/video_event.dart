@@ -544,6 +544,12 @@ class VideoEvent {
 
   // Vine-specific fields from NIP-71 spec
   final String? vineId; // 'd' tag - original vine ID for replaceable events
+
+  /// Stable identifier for addressable events (NIP-71).
+  /// Returns vineId (d-tag) if available, otherwise event ID.
+  /// For addressable events, vineId remains constant even when
+  /// metadata updates create new event IDs.
+  String get stableId => vineId ?? id;
   final String? group; // 'h' tag - group/community identification
   final String? altText; // 'alt' tag - accessibility text
   final String? blurhash; // 'blurhash' tag - for progressive image loading

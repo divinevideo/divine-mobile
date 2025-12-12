@@ -329,9 +329,10 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
 
                   // VideoFeedItem uses list index for active video detection
                   // (URL manages 1-based indexing separately)
+                  final video = videos[index];
                   return VideoFeedItem(
-                    key: ValueKey('video-${videos[index].id}'),
-                    video: videos[index],
+                    key: ValueKey('video-${video.stableId}'),
+                    video: video,
                     index: index, // Use list index for active video detection
                     hasBottomNavigation:
                         false, // Fullscreen mode, no bottom nav

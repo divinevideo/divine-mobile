@@ -238,6 +238,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(exploreTabVideoUpdateListenerProvider);
+
     // Always show Column with TabBar + content
     return Column(
       children: [

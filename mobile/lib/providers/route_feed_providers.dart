@@ -18,6 +18,27 @@ final exploreTabVideosProvider = StateProvider<List<VideoEvent>?>(
   (ref) => null,
 );
 
+/// Provider that registers a callback to auto-update exploreTabVideosProvider
+/// when a video is updated. Must be watched by a widget to activate.
+final exploreTabVideoUpdateListenerProvider = Provider<void>((ref) {
+  final videoEventService = ref.watch(videoEventServiceProvider);
+
+  final unregister = videoEventService.addVideoUpdateListener((updated) {
+    final currentVideos = ref.read(exploreTabVideosProvider);
+    if (currentVideos != null) {
+      final updatedList = currentVideos.map((v) {
+        if (v.stableId == updated.stableId && v.pubkey == updated.pubkey) {
+          return updated;
+        }
+        return v;
+      }).toList();
+      ref.read(exploreTabVideosProvider.notifier).state = updatedList;
+    }
+  });
+
+  ref.onDispose(unregister);
+});
+
 /// Provider to persist the current tab index across widget recreation
 /// Default to 1 (Popular Videos) as initial state
 final exploreTabIndexProvider = StateProvider<int>((ref) => 1);

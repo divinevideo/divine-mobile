@@ -20,6 +20,7 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:openvine/constants/nip71_migration.dart';
 
 // TODO(any): Move this to a reusable widget
 Widget get _buildLoadingIndicator => Padding(
@@ -2416,7 +2417,7 @@ class _EditVideoDialogState extends ConsumerState<_EditVideoDialog> {
       final tags = <List<String>>[];
 
       // Required 'd' tag - must use the same identifier
-      tags.add(['d', widget.video.vineId ?? widget.video.id]);
+      tags.add(['d', widget.video.stableId]);
 
       // Build imeta tag components (preserve existing media data)
       final imetaComponents = <String>[];
@@ -2480,7 +2481,7 @@ class _EditVideoDialogState extends ConsumerState<_EditVideoDialog> {
       // Create and sign the updated event
       final content = _descriptionController.text.trim();
       final event = await authService.createAndSignEvent(
-        kind: 34236, // Addressable short looping video (NIP-71)
+        kind: NIP71VideoKinds.addressableShortVideo, // Kind 34236
         content: content,
         tags: tags,
       );
@@ -2492,6 +2493,19 @@ class _EditVideoDialogState extends ConsumerState<_EditVideoDialog> {
       // Broadcast the updated event
       final nostrService = ref.read(nostrServiceProvider);
       await nostrService.broadcastEvent(event);
+
+      // Update local cache for immediate UI update
+      final personalEventCache = ref.read(personalEventCacheServiceProvider);
+      personalEventCache.cacheUserEvent(event);
+
+      // Update VideoEventService to replace old video in all feeds
+      // This triggers callbacks that automatically refresh:
+      // - profileFeedProvider (via addVideoUpdateListener)
+      // - homeFeedProvider (via addVideoUpdateListener)
+      // - exploreTabVideosProvider (via exploreTabVideoUpdateListenerProvider)
+      final videoEventService = ref.read(videoEventServiceProvider);
+      final updatedVideoEvent = VideoEvent.fromNostrEvent(event);
+      videoEventService.updateVideoEvent(updatedVideoEvent);
 
       if (mounted) {
         Navigator.of(context).pop(); // Close edit dialog

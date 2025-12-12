@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
+import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/home_feed_provider.dart';
@@ -783,7 +784,8 @@ class SocialNotifier extends _$SocialNotifier {
         }
 
         // Update state - add to reposted set
-        final addressableId = '34236:${video.pubkey}:${video.rawTags['d']}';
+        final addressableId =
+            '${NIP71VideoKinds.addressableShortVideo}:${video.pubkey}:${video.rawTags['d']}';
         state = state.copyWith(
           repostedEventIds: {...state.repostedEventIds, addressableId},
         );
@@ -809,7 +811,8 @@ class SocialNotifier extends _$SocialNotifier {
         }
 
         // Update state - remove from reposted set
-        final addressableId = '34236:${video.pubkey}:${video.rawTags['d']}';
+        final addressableId =
+            '${NIP71VideoKinds.addressableShortVideo}:${video.pubkey}:${video.rawTags['d']}';
         final newRepostedEventIds = {...state.repostedEventIds}
           ..remove(addressableId);
 

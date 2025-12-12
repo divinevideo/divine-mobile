@@ -215,6 +215,40 @@ class VideoEventService extends ChangeNotifier {
   // AUTH retry mechanism
   StreamSubscription<Map<String, bool>>? _authStateSubscription;
 
+  /// Callback type for video update notifications.
+  /// Called when a video's metadata is updated via updateVideoEvent().
+  /// [updated] is the new video with updated metadata.
+  final List<void Function(VideoEvent updated)> _onVideoUpdatedCallbacks = [];
+
+  /// Register a callback to be notified when a video is updated.
+  /// Returns a function that can be called to unregister the callback.
+  VoidCallback addVideoUpdateListener(
+    void Function(VideoEvent updated) callback,
+  ) {
+    _onVideoUpdatedCallbacks.add(callback);
+    return () => _onVideoUpdatedCallbacks.remove(callback);
+  }
+
+  /// Remove a previously registered video update callback.
+  void removeVideoUpdateListener(void Function(VideoEvent updated) callback) {
+    _onVideoUpdatedCallbacks.remove(callback);
+  }
+
+  /// Notify all registered callbacks that a video was updated.
+  void _notifyVideoUpdated(VideoEvent updated) {
+    for (final callback in _onVideoUpdatedCallbacks) {
+      try {
+        callback(updated);
+      } catch (e) {
+        Log.error(
+          'Error in video update callback: $e',
+          name: 'VideoEventService',
+          category: LogCategory.video,
+        );
+      }
+    }
+  }
+
   /// Set the blocklist service for content filtering
   void setBlocklistService(ContentBlocklistService blocklistService) {
     _blocklistService = blocklistService;
@@ -4208,7 +4242,19 @@ class VideoEventService extends ChangeNotifier {
           ? videoEvent.reposterPubkey!
           : videoEvent.pubkey;
       final bucket = _authorBuckets.putIfAbsent(authorHex, () => []);
-      if (!bucket.any((e) => e.id == videoEvent.id)) {
+
+      // For addressable events (NIP-71), deduplicate by (pubkey, vineId) pair
+      // since each update creates a new event ID but same vineId
+      final existingIndex = bucket.indexWhere(
+        (e) => e.vineId == videoEvent.vineId && e.pubkey == videoEvent.pubkey,
+      );
+
+      if (existingIndex != -1) {
+        // Replace existing video with newer version (higher createdAt wins)
+        if (videoEvent.createdAt > bucket[existingIndex].createdAt) {
+          bucket[existingIndex] = videoEvent;
+        }
+      } else {
         if (isHistorical) {
           bucket.add(videoEvent);
         } else {
@@ -4754,6 +4800,77 @@ class VideoEventService extends ChangeNotifier {
       SubscriptionType.discovery,
       isHistorical: false,
     );
+  }
+
+  /// Update a video event (for addressable events with same pubkey/d-tag).
+  ///
+  /// This method replaces an existing video across all data structures:
+  /// - `_eventLists` (all subscription types: homeFeed, discovery, etc.)
+  /// - `_authorBuckets` (used by profile feeds)
+  /// - `_replaceableVideoEvents` tracking map
+  ///
+  /// After updating, callers should refresh any StateProviders that hold
+  /// their own copies of video lists (e.g., `exploreTabVideosProvider`).
+  ///
+  /// Providers that watch VideoEventService (via `ref.watch()` or `addListener()`)
+  /// will automatically rebuild when `notifyListeners()` is called, but those
+  /// with cached state (like `profileFeedProvider`, `homeFeedProvider`) need
+  /// explicit `refreshFromService()` calls.
+  ///
+  /// See share_video_menu.dart `_updateVideo()` for the complete update pattern.
+  void updateVideoEvent(VideoEvent updatedVideo) {
+    bool foundAny = false;
+
+    // Find and replace in all subscription types
+    for (final entry in _eventLists.entries) {
+      final subscriptionType = entry.key;
+      final eventList = entry.value;
+
+      // Find by d-tag (vineId) and pubkey instead of event.id
+      // For addressable events, (pubkey, d-tag) is the stable identifier
+      final existingIndex = eventList.indexWhere(
+        (existing) =>
+            existing.vineId == updatedVideo.vineId &&
+            existing.pubkey == updatedVideo.pubkey,
+      );
+
+      if (existingIndex != -1) {
+        eventList[existingIndex] = updatedVideo;
+        foundAny = true;
+
+        // Update replaceable tracking map
+        // Use NIP71VideoKinds.addressableShortVideo since that's what diVine uses
+        final replaceKey =
+            '$subscriptionType:${NIP71VideoKinds.addressableShortVideo}:${updatedVideo.pubkey}:${updatedVideo.vineId}';
+        _replaceableVideoEvents[replaceKey] = (
+          updatedVideo,
+          updatedVideo.createdAt,
+        );
+      }
+    }
+
+    // Also update in author buckets (used by profile feeds)
+    final authorBucket = _authorBuckets[updatedVideo.pubkey];
+    if (authorBucket != null) {
+      final bucketIndex = authorBucket.indexWhere(
+        (existing) =>
+            existing.vineId == updatedVideo.vineId &&
+            existing.pubkey == updatedVideo.pubkey,
+      );
+      if (bucketIndex != -1) {
+        authorBucket[bucketIndex] = updatedVideo;
+        foundAny = true;
+      }
+    }
+
+    if (foundAny) {
+      notifyListeners();
+      // Notify registered callbacks about the update
+      _notifyVideoUpdated(updatedVideo);
+    } else {
+      // If not found anywhere, add it to discovery feed
+      addVideoEvent(updatedVideo);
+    }
   }
 
   // NIP-50 Search Methods

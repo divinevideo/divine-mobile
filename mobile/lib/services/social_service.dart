@@ -277,7 +277,8 @@ class SocialService {
   bool hasReposted(String eventId, {String? pubkey, String? dTag}) {
     // For addressable events, check using addressable ID format
     if (pubkey != null && dTag != null) {
-      final addressableId = '34236:$pubkey:$dTag';
+      final addressableId =
+          '${NIP71VideoKinds.addressableShortVideo}:$pubkey:$dTag';
       return _repostedEventIds.contains(addressableId);
     }
 
@@ -1909,7 +1910,8 @@ class SocialService {
     }
 
     // Check repost state using addressable ID format
-    final addressableId = '34236:${videoToRepost.pubkey}:$dTagValue';
+    final addressableId =
+        '${NIP71VideoKinds.addressableShortVideo}:${videoToRepost.pubkey}:$dTagValue';
     final wasReposted = _repostedEventIds.contains(addressableId);
 
     try {
@@ -2072,8 +2074,14 @@ class SocialService {
 
       // Use 'a' tag for addressable event reference
       final repostTags = <List<String>>[
-        ['k', '34236'], // Required k tag for generic repost (kind 16)
-        ['a', '34236:${eventToRepost.pubkey}:$dTagValue'],
+        [
+          'k',
+          '${NIP71VideoKinds.addressableShortVideo}',
+        ], // Required k tag for generic repost (kind 16)
+        [
+          'a',
+          '${NIP71VideoKinds.addressableShortVideo}:${eventToRepost.pubkey}:$dTagValue',
+        ],
         ['p', eventToRepost.pubkey], // Reference to original author
       ];
 
@@ -2099,7 +2107,8 @@ class SocialService {
       }
 
       // Track the repost locally using the addressable ID format
-      final addressableId = '34236:${eventToRepost.pubkey}:$dTagValue';
+      final addressableId =
+          '${NIP71VideoKinds.addressableShortVideo}:${eventToRepost.pubkey}:$dTagValue';
       _repostedEventIds.add(addressableId);
       _repostEventIdToRepostId[addressableId] = event.id;
 
@@ -2270,7 +2279,8 @@ class SocialService {
       if (tag.isNotEmpty && tag[0] == 'a' && tag.length > 1) {
         // Parse the 'a' tag format: "kind:pubkey:d-tag-value"
         final parts = tag[1].split(':');
-        if (parts.length >= 3 && parts[0] == '34236') {
+        if (parts.length >= 3 &&
+            parts[0] == '${NIP71VideoKinds.addressableShortVideo}') {
           final addressableId = tag[1];
           _repostedEventIds.add(addressableId);
           _repostEventIdToRepostId[addressableId] = repostEvent.id;

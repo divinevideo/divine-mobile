@@ -37,12 +37,10 @@ class VideoControllerParams {
       other is VideoControllerParams &&
           runtimeType == other.runtimeType &&
           videoId == other.videoId &&
-          videoUrl == other.videoUrl &&
-          videoEvent == other.videoEvent;
+          videoUrl == other.videoUrl;
 
   @override
-  int get hashCode =>
-      videoId.hashCode ^ videoUrl.hashCode ^ videoEvent.hashCode;
+  int get hashCode => videoId.hashCode ^ videoUrl.hashCode;
 
   @override
   String toString() =>

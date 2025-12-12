@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Completion mode for different types of queries
@@ -309,7 +310,7 @@ class VideoEventCompletionHelper {
       eventStream: eventStream,
       config: config,
       onEvent: (event) {
-        if (event.kind == 34236) {
+        if (event.kind == NIP71VideoKinds.addressableShortVideo) {
           onVideoEvent(event);
           receivedCount++;
 

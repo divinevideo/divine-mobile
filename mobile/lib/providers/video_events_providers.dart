@@ -141,6 +141,12 @@ class VideoEvents extends _$VideoEvents {
       category: LogCategory.video,
     );
 
+    final unregisterVideoUpdate = videoEventService.addVideoUpdateListener((
+      updated,
+    ) {
+      _onVideoEventServiceChange();
+    });
+
     // Register cleanup handler ONCE at the top
     ref.onDispose(() {
       Log.error(
@@ -155,6 +161,7 @@ class VideoEvents extends _$VideoEvents {
       );
       _debounceTimer?.cancel();
       videoEventService.removeListener(_onVideoEventServiceChange);
+      unregisterVideoUpdate(); // Clean up video update callback
       _subject?.close();
       _subject = null;
     });

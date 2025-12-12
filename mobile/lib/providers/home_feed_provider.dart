@@ -296,6 +296,18 @@ class HomeFeed extends _$HomeFeed {
       lastUpdated: DateTime.now(),
     );
 
+    // Register for video update callbacks to auto-refresh when any video is updated
+    final unregisterVideoUpdate = videoEventService.addVideoUpdateListener((
+      updated,
+    ) {
+      if (ref.mounted) {
+        refreshFromService();
+      }
+    });
+
+    // Clean up callback when provider is disposed
+    ref.onDispose(unregisterVideoUpdate);
+
     final buildDuration = DateTime.now().difference(now).inMilliseconds;
 
     Log.info(
@@ -431,6 +443,34 @@ class HomeFeed extends _$HomeFeed {
         currentState.copyWith(isLoadingMore: false, error: e.toString()),
       );
     }
+  }
+
+  /// Refresh state from VideoEventService without re-subscribing to relay
+  /// Call this after a video is updated to sync the provider's state
+  void refreshFromService() {
+    final videoEventService = ref.read(videoEventServiceProvider);
+    var updatedVideos = List<VideoEvent>.from(videoEventService.homeFeedVideos);
+
+    // Apply same filtering as build()
+    updatedVideos = updatedVideos
+        .where((v) => v.isSupportedOnCurrentPlatform)
+        .toList();
+
+    // Sort by creation time (newest first)
+    updatedVideos.sort((a, b) {
+      final timeCompare = b.createdAt.compareTo(a.createdAt);
+      if (timeCompare != 0) return timeCompare;
+      return a.id.compareTo(b.id);
+    });
+
+    state = AsyncData(
+      VideoFeedState(
+        videos: updatedVideos,
+        hasMoreContent: updatedVideos.length >= 10,
+        isLoadingMore: false,
+        lastUpdated: DateTime.now(),
+      ),
+    );
   }
 
   /// Refresh the home feed
