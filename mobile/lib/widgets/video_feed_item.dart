@@ -286,9 +286,7 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
             }
 
             // Check if video is still active (even if generation changed)
-            final stillActive = ref.read(
-              isVideoActiveProvider(_stableVideoId),
-            );
+            final stillActive = ref.read(isVideoActiveProvider(_stableVideoId));
 
             if (!stillActive) {
               // Video no longer active, don't play
