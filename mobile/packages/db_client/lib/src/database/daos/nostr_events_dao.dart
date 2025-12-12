@@ -54,6 +54,8 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   ///
   /// If [expireAt] is provided, the event will be marked for cache eviction
   /// after that Unix timestamp.
+  ///
+  /// Uses customInsert with updates parameter to notify stream watchers.
   Future<void> _insertEvent(Event event, {int? expireAt}) async {
     await customInsert(
       'INSERT OR REPLACE INTO event '
@@ -73,6 +75,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
         else
           const Variable(null),
       ],
+      updates: {nostrEvents},
     );
   }
 
@@ -178,6 +181,30 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     });
   }
 
+  /// Watch events with a Nostr Filter (reactive stream)
+  ///
+  /// Returns a Stream that emits whenever the matching events change in the
+  /// database. Uses Drift's reactive query mechanism to automatically re-emit
+  /// when inserts, updates, or deletes occur on the events table.
+  ///
+  /// Supports all the same filter parameters as [getEventsByFilter].
+  ///
+  /// Example:
+  /// ```dart
+  /// dao.watchEventsByFilter(Filter(kinds: [1])).listen((events) {
+  ///   print('Got ${events.length} events');
+  /// });
+  /// ```
+  Stream<List<Event>> watchEventsByFilter(
+    Filter filter, {
+    String? sortBy,
+  }) {
+    return _buildFilterQuery(
+      filter,
+      sortBy: sortBy,
+    ).watch().map((rows) => rows.map(_rowToEvent).toList());
+  }
+
   /// Query events with a Nostr Filter (cache-first strategy)
   ///
   /// Supports all standard Nostr filter parameters:
@@ -203,6 +230,18 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     Filter filter, {
     String? sortBy,
   }) async {
+    final rows = await _buildFilterQuery(filter, sortBy: sortBy).get();
+    return rows.map(_rowToEvent).toList();
+  }
+
+  /// Builds a Selectable query for events matching the given filter.
+  ///
+  /// This method is used internally by both [getEventsByFilter] (one-shot)
+  /// and [watchEventsByFilter] (reactive stream).
+  Selectable<QueryRow> _buildFilterQuery(
+    Filter filter, {
+    String? sortBy,
+  }) {
     // Build dynamic SQL query based on provided filters
     final conditions = <String>[];
     final variables = <Variable>[];
@@ -346,13 +385,11 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
 
     variables.add(Variable.withInt(limit));
 
-    final rows = await customSelect(
+    return customSelect(
       sql,
       variables: variables,
       readsFrom: needsMetricsJoin ? {nostrEvents, videoMetrics} : {nostrEvents},
-    ).get();
-
-    return rows.map(_rowToEvent).toList();
+    );
   }
 
   /// Get a single event by ID.

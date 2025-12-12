@@ -1005,6 +1005,114 @@ void main() {
       });
     });
 
+    group('watchEventsByFilter (reactive queries)', () {
+      test('emits initial events matching filter', () async {
+        final event1 = createEvent(content: 'event 1', createdAt: 1000);
+        final event2 = createEvent(content: 'event 2', createdAt: 2000);
+        await dao.upsertEventsBatch([event1, event2]);
+
+        final stream = dao.watchEventsByFilter(Filter(kinds: [1]));
+
+        final events = await stream.first;
+        expect(events.length, equals(2));
+        expect(events[0].createdAt, equals(2000)); // Most recent first
+        expect(events[1].createdAt, equals(1000));
+      });
+
+      test('emits new events when inserted', () async {
+        final stream = dao.watchEventsByFilter(Filter(kinds: [1]));
+
+        // Collect two emissions
+        final emissionsFuture = stream.take(2).toList();
+
+        // Insert an event after a short delay to ensure stream is listening
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        final event = createEvent(content: 'new event');
+        await dao.upsertEvent(event);
+
+        final emissions = await emissionsFuture;
+        expect(emissions.length, equals(2));
+        expect(emissions[0], isEmpty); // Initial empty state
+        expect(emissions[1].length, equals(1));
+        expect(emissions[1][0].id, equals(event.id));
+      });
+
+      test('emits updates when events are deleted', () async {
+        final event = createEvent(content: 'will be deleted');
+        await dao.upsertEvent(event);
+
+        final stream = dao.watchEventsByFilter(Filter(kinds: [1]));
+
+        // Collect two emissions
+        final emissionsFuture = stream.take(2).toList();
+
+        // Delete the event after a short delay to ensure stream is listening
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await dao.deleteAllEvents();
+
+        final emissions = await emissionsFuture;
+        expect(emissions.length, equals(2));
+        expect(emissions[0].length, equals(1)); // Initial has the event
+        expect(emissions[1], isEmpty); // After delete, empty
+      });
+
+      test('filters by kind in watch query', () async {
+        final textNote = createEvent(createdAt: 1000);
+        final reaction = createEvent(kind: 7, createdAt: 2000);
+        await dao.upsertEventsBatch([textNote, reaction]);
+
+        final stream = dao.watchEventsByFilter(Filter(kinds: [1]));
+
+        final events = await stream.first;
+        expect(events.length, equals(1));
+        expect(events[0].kind, equals(1));
+      });
+
+      test('filters by author in watch query', () async {
+        final event1 = createEvent(createdAt: 1000);
+        final event2 = createEvent(pubkey: testPubkey2, createdAt: 2000);
+        await dao.upsertEventsBatch([event1, event2]);
+
+        final stream = dao.watchEventsByFilter(Filter(authors: [testPubkey]));
+
+        final events = await stream.first;
+        expect(events.length, equals(1));
+        expect(events[0].pubkey, equals(testPubkey));
+      });
+
+      test('respects limit in watch query', () async {
+        final events = List.generate(
+          10,
+          (i) => createEvent(createdAt: 1000 + i),
+        );
+        await dao.upsertEventsBatch(events);
+
+        final stream = dao.watchEventsByFilter(Filter(limit: 5));
+
+        final result = await stream.first;
+        expect(result.length, equals(5));
+      });
+
+      test('supports sortBy parameter for video events', () async {
+        final events = [
+          createVideoEvent(loops: 10, createdAt: 3000),
+          createVideoEvent(loops: 100, createdAt: 1000),
+          createVideoEvent(loops: 50, createdAt: 2000),
+        ];
+        await dao.upsertEventsBatch(events);
+
+        final stream = dao.watchEventsByFilter(
+          Filter(kinds: [34236]),
+          sortBy: 'loop_count',
+        );
+
+        final result = await stream.first;
+        expect(result[0].id, equals(events[1].id)); // 100 loops
+        expect(result[1].id, equals(events[2].id)); // 50 loops
+        expect(result[2].id, equals(events[0].id)); // 10 loops
+      });
+    });
+
     group('cache expiry', () {
       /// Helper to get current Unix timestamp
       int nowUnix() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
