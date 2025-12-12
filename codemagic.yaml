@@ -61,7 +61,7 @@ definitions:
     - &build_ios_simulator
       name: Build iOS Simulator app
       script: |
-        flutter build ios --simulator --no-codesign \
+        flutter build ios --simulator \
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
           --dart-define=ZENDESK_URL=$ZENDESK_URL
