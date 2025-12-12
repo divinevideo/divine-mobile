@@ -22,8 +22,7 @@ final authHeadersCacheProvider =
 /// Track controllers that have been scheduled for disposal.
 /// This prevents race conditions where async callbacks try to use disposed controllers.
 /// Key: videoId, Value: true if disposal has been scheduled
-final _disposedControllersProvider =
-    StateProvider<Set<String>>((ref) => {});
+final _disposedControllersProvider = StateProvider<Set<String>>((ref) => {});
 
 /// Check if a video controller has been scheduled for disposal.
 /// Use this before any controller operation to prevent "No active player" crashes.

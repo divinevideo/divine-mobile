@@ -20,9 +20,9 @@ void main() {
 
     test('returns false when controller is not initialized', () async {
       // Arrange
-      when(mockController.value).thenReturn(
-        const VideoPlayerValue(duration: Duration.zero),
-      );
+      when(
+        mockController.value,
+      ).thenReturn(const VideoPlayerValue(duration: Duration.zero));
 
       // Act
       final result = await safeControllerOperation(
@@ -114,14 +114,10 @@ void main() {
 
       // Act & Assert
       expect(
-        () async => safeControllerOperation(
-          mockController,
-          'test-video-id',
-          () async {
-            throw Exception('Network error');
-          },
-          operationName: 'test',
-        ),
+        () async =>
+            safeControllerOperation(mockController, 'test-video-id', () async {
+              throw Exception('Network error');
+            }, operationName: 'test'),
         throwsA(isA<Exception>()),
       );
     });
@@ -154,9 +150,9 @@ void main() {
 
     test('returns false for uninitialized controller', () async {
       // Arrange
-      when(mockController.value).thenReturn(
-        const VideoPlayerValue(duration: Duration.zero),
-      );
+      when(
+        mockController.value,
+      ).thenReturn(const VideoPlayerValue(duration: Duration.zero));
 
       // Act
       final result = await safePlay(mockController, 'test-video-id');
@@ -174,9 +170,9 @@ void main() {
           isInitialized: true,
         ),
       );
-      when(mockController.play()).thenThrow(
-        Exception('Bad state: No active player with ID 5'),
-      );
+      when(
+        mockController.play(),
+      ).thenThrow(Exception('Bad state: No active player with ID 5'));
 
       // Act
       final result = await safePlay(mockController, 'test-video-id');
@@ -213,9 +209,9 @@ void main() {
 
     test('returns false for uninitialized controller', () async {
       // Arrange
-      when(mockController.value).thenReturn(
-        const VideoPlayerValue(duration: Duration.zero),
-      );
+      when(
+        mockController.value,
+      ).thenReturn(const VideoPlayerValue(duration: Duration.zero));
 
       // Act
       final result = await safePause(mockController, 'test-video-id');
@@ -233,9 +229,9 @@ void main() {
           isInitialized: true,
         ),
       );
-      when(mockController.pause()).thenThrow(
-        Exception('Bad state: No active player with ID 13'),
-      );
+      when(
+        mockController.pause(),
+      ).thenThrow(Exception('Bad state: No active player with ID 13'));
 
       // Act
       final result = await safePause(mockController, 'test-video-id');
@@ -282,9 +278,9 @@ void main() {
           isInitialized: true,
         ),
       );
-      when(mockController.seekTo(any)).thenThrow(
-        Exception('player with id 7 not found'),
-      );
+      when(
+        mockController.seekTo(any),
+      ).thenThrow(Exception('player with id 7 not found'));
 
       // Act
       final result = await safeSeekTo(
@@ -302,29 +298,31 @@ void main() {
     // Note: _isDisposalError is private, but we test it indirectly through
     // the public functions above. These tests verify the error detection logic.
 
-    test('safeControllerOperation detects "no active player" as disposal error',
-        () async {
-      final mockController = MockVideoPlayerController();
-      when(mockController.value).thenReturn(
-        VideoPlayerValue(
-          duration: const Duration(seconds: 10),
-          isInitialized: true,
-        ),
-      );
+    test(
+      'safeControllerOperation detects "no active player" as disposal error',
+      () async {
+        final mockController = MockVideoPlayerController();
+        when(mockController.value).thenReturn(
+          VideoPlayerValue(
+            duration: const Duration(seconds: 10),
+            isInitialized: true,
+          ),
+        );
 
-      // These error messages should be caught and return false
-      final disposalErrors = [
-        'No active player with ID 13',
-        'Bad state: controller disposed',
-        'The player with id 5 has been disposed',
-        'PLAYER WITH ID 99 not found', // case insensitive
-      ];
+        // These error messages should be caught and return false
+        final disposalErrors = [
+          'No active player with ID 13',
+          'Bad state: controller disposed',
+          'The player with id 5 has been disposed',
+          'PLAYER WITH ID 99 not found', // case insensitive
+        ];
 
-      for (final errorMsg in disposalErrors) {
-        when(mockController.play()).thenThrow(Exception(errorMsg));
-        final result = await safePlay(mockController, 'test-video-id');
-        expect(result, false, reason: 'Should catch: $errorMsg');
-      }
-    });
+        for (final errorMsg in disposalErrors) {
+          when(mockController.play()).thenThrow(Exception(errorMsg));
+          final result = await safePlay(mockController, 'test-video-id');
+          expect(result, false, reason: 'Should catch: $errorMsg');
+        }
+      },
+    );
   });
 }

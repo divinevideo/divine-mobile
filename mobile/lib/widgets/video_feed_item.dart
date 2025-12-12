@@ -240,33 +240,35 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
           );
 
           // Use safePlay to handle "No active player with ID" errors gracefully
-          safePlay(controller, widget.video.id).then((success) {
-            if (success) {
-              final positionAfterPlay = controller.value.position;
-              Log.info(
-                '✅ Video ${widget.video.id} play() completed\n'
-                '   • Position after play: ${positionAfterPlay.inMilliseconds}ms\n'
-                '   • Is playing: ${controller.value.isPlaying}',
-                name: 'VideoFeedItem',
-                category: LogCategory.ui,
-              );
-              if (gen != _playbackGeneration) {
-                Log.debug(
-                  '⏭️ Ignoring stale play() completion for ${widget.video.id}',
-                  name: 'VideoFeedItem',
-                  category: LogCategory.ui,
-                );
-              }
-            }
-          }).catchError((error) {
-            if (gen == _playbackGeneration) {
-              Log.error(
-                '❌ Widget failed to play video ${widget.video.id}: $error',
-                name: 'VideoFeedItem',
-                category: LogCategory.ui,
-              );
-            }
-          });
+          safePlay(controller, widget.video.id)
+              .then((success) {
+                if (success) {
+                  final positionAfterPlay = controller.value.position;
+                  Log.info(
+                    '✅ Video ${widget.video.id} play() completed\n'
+                    '   • Position after play: ${positionAfterPlay.inMilliseconds}ms\n'
+                    '   • Is playing: ${controller.value.isPlaying}',
+                    name: 'VideoFeedItem',
+                    category: LogCategory.ui,
+                  );
+                  if (gen != _playbackGeneration) {
+                    Log.debug(
+                      '⏭️ Ignoring stale play() completion for ${widget.video.id}',
+                      name: 'VideoFeedItem',
+                      category: LogCategory.ui,
+                    );
+                  }
+                }
+              })
+              .catchError((error) {
+                if (gen == _playbackGeneration) {
+                  Log.error(
+                    '❌ Widget failed to play video ${widget.video.id}: $error',
+                    name: 'VideoFeedItem',
+                    category: LogCategory.ui,
+                  );
+                }
+              });
         } else if (!controller.value.isInitialized &&
             !controller.value.hasError) {
           // Controller not ready yet - wait for initialization then play
