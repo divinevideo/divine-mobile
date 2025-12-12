@@ -4,6 +4,7 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i7;
+import 'dart:ui' as _i12;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i11;
@@ -14,7 +15,7 @@ import 'package:openvine/services/content_deletion_service.dart' as _i2;
 import 'package:openvine/services/content_moderation_service.dart' as _i5;
 import 'package:openvine/services/curated_list_service.dart' as _i10;
 import 'package:openvine/services/nostr_service_interface.dart' as _i3;
-import 'package:openvine/services/social_service.dart' as _i12;
+import 'package:openvine/services/social_service.dart' as _i13;
 import 'package:openvine/services/video_sharing_service.dart' as _i6;
 
 // ignore_for_file: type=lint
@@ -476,6 +477,15 @@ class MockCuratedListService extends _i1.Mock
           as List<_i10.CuratedList>);
 
   @override
+  bool get hasListeners =>
+      (super.noSuchMethod(
+            Invocation.getter(#hasListeners),
+            returnValue: false,
+            returnValueForMissingStub: false,
+          )
+          as bool);
+
+  @override
   _i7.Future<void> initialize() =>
       (super.noSuchMethod(
             Invocation.method(#initialize, []),
@@ -787,12 +797,36 @@ class MockCuratedListService extends _i1.Mock
             returnValueForMissingStub: _i7.Stream<_i10.CuratedList>.empty(),
           )
           as _i7.Stream<_i10.CuratedList>);
+
+  @override
+  void addListener(_i12.VoidCallback? listener) => super.noSuchMethod(
+    Invocation.method(#addListener, [listener]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void removeListener(_i12.VoidCallback? listener) => super.noSuchMethod(
+    Invocation.method(#removeListener, [listener]),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void dispose() => super.noSuchMethod(
+    Invocation.method(#dispose, []),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  void notifyListeners() => super.noSuchMethod(
+    Invocation.method(#notifyListeners, []),
+    returnValueForMissingStub: null,
+  );
 }
 
 /// A class which mocks [SocialService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSocialService extends _i1.Mock implements _i12.SocialService {
+class MockSocialService extends _i1.Mock implements _i13.SocialService {
   @override
   Set<String> get likedEventIds =>
       (super.noSuchMethod(
@@ -812,13 +846,13 @@ class MockSocialService extends _i1.Mock implements _i12.SocialService {
           as List<String>);
 
   @override
-  List<_i12.FollowSet> get followSets =>
+  List<_i13.FollowSet> get followSets =>
       (super.noSuchMethod(
             Invocation.getter(#followSets),
-            returnValue: <_i12.FollowSet>[],
-            returnValueForMissingStub: <_i12.FollowSet>[],
+            returnValue: <_i13.FollowSet>[],
+            returnValueForMissingStub: <_i13.FollowSet>[],
           )
-          as List<_i12.FollowSet>);
+          as List<_i13.FollowSet>);
 
   @override
   bool isLiked(String? eventId) =>
@@ -868,12 +902,12 @@ class MockSocialService extends _i1.Mock implements _i12.SocialService {
           as Map<String, int>?);
 
   @override
-  _i12.FollowSet? getFollowSetById(String? setId) =>
+  _i13.FollowSet? getFollowSetById(String? setId) =>
       (super.noSuchMethod(
             Invocation.method(#getFollowSetById, [setId]),
             returnValueForMissingStub: null,
           )
-          as _i12.FollowSet?);
+          as _i13.FollowSet?);
 
   @override
   bool isInFollowSet(String? setId, String? pubkey) =>
@@ -956,7 +990,7 @@ class MockSocialService extends _i1.Mock implements _i12.SocialService {
           as _i7.Future<Map<String, int>>);
 
   @override
-  _i7.Future<_i12.FollowSet?> createFollowSet({
+  _i7.Future<_i13.FollowSet?> createFollowSet({
     required String? name,
     String? description,
     String? imageUrl,
@@ -969,10 +1003,10 @@ class MockSocialService extends _i1.Mock implements _i12.SocialService {
               #imageUrl: imageUrl,
               #initialPubkeys: initialPubkeys,
             }),
-            returnValue: _i7.Future<_i12.FollowSet?>.value(),
-            returnValueForMissingStub: _i7.Future<_i12.FollowSet?>.value(),
+            returnValue: _i7.Future<_i13.FollowSet?>.value(),
+            returnValueForMissingStub: _i7.Future<_i13.FollowSet?>.value(),
           )
-          as _i7.Future<_i12.FollowSet?>);
+          as _i7.Future<_i13.FollowSet?>);
 
   @override
   _i7.Future<bool> addToFollowSet(String? setId, String? pubkey) =>

@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
@@ -66,7 +67,7 @@ class _UploadProgressDialogState extends State<UploadProgressDialog> {
     if (_status == UploadStatus.readyToPublish) {
       _pollTimer?.cancel();
       if (mounted) {
-        Navigator.of(context).pop();
+        context.pop();
       }
     }
   }

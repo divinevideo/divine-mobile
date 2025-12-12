@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:video_player/video_player.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -1198,8 +1199,8 @@ class _VideoMetadataScreenPureState
             _currentUploadId = null;
           });
 
-          // Pop back to the root (main navigation screen)
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          // Go to the profile screen to see the new video
+          context.goMyProfile();
 
           Log.info(
             '📝 Published successfully, returned to main screen',
