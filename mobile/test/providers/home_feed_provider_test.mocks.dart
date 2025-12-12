@@ -890,6 +890,7 @@ class MockNostrClient extends _i1.Mock implements _i2.NostrClient {
     List<int>? relayTypes = const [1, 2, 3, 4],
     bool? sendAfterAuth = false,
     bool? useGateway = true,
+    bool? useCache = true,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
@@ -901,6 +902,7 @@ class MockNostrClient extends _i1.Mock implements _i2.NostrClient {
                 #relayTypes: relayTypes,
                 #sendAfterAuth: sendAfterAuth,
                 #useGateway: useGateway,
+                #useCache: useCache,
               },
             ),
             returnValue: _i9.Future<List<_i8.Event>>.value(<_i8.Event>[]),
@@ -912,12 +914,17 @@ class MockNostrClient extends _i1.Mock implements _i2.NostrClient {
     String? eventId, {
     String? relayUrl,
     bool? useGateway = true,
+    bool? useCache = true,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
               #fetchEventById,
               [eventId],
-              {#relayUrl: relayUrl, #useGateway: useGateway},
+              {
+                #relayUrl: relayUrl,
+                #useGateway: useGateway,
+                #useCache: useCache,
+              },
             ),
             returnValue: _i9.Future<_i8.Event?>.value(),
           )
@@ -927,12 +934,13 @@ class MockNostrClient extends _i1.Mock implements _i2.NostrClient {
   _i9.Future<_i8.Event?> fetchProfile(
     String? pubkey, {
     bool? useGateway = true,
+    bool? useCache = true,
   }) =>
       (super.noSuchMethod(
             Invocation.method(
               #fetchProfile,
               [pubkey],
-              {#useGateway: useGateway},
+              {#useGateway: useGateway, #useCache: useCache},
             ),
             returnValue: _i9.Future<_i8.Event?>.value(),
           )
