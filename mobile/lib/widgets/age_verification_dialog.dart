@@ -2,6 +2,7 @@
 // ABOUTME: Supports both 16+ creation and 18+ content viewing verification
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
 enum AgeVerificationType {
@@ -71,7 +72,7 @@ class AgeVerificationDialog extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(false),
+                  onPressed: () => context.pop(false),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
                     side: const BorderSide(color: Colors.white54),
@@ -86,7 +87,7 @@ class AgeVerificationDialog extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => context.pop(true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: VineTheme.vineGreen,
                     foregroundColor: Colors.white,

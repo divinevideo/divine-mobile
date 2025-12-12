@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -83,7 +84,7 @@ class _BugReportDialogState extends State<BugReportDialog> {
         if (result.success) {
           _closeTimer = Timer(const Duration(milliseconds: 1500), () {
             if (!_isDisposed && mounted) {
-              Navigator.of(context).pop();
+              context.pop();
             }
           });
         }
@@ -192,14 +193,14 @@ class _BugReportDialogState extends State<BugReportDialog> {
         // Cancel button (hide after success)
         if (_isSuccess != true)
           TextButton(
-            onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+            onPressed: _isSubmitting ? null : () => context.pop(),
             child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
 
         // Send/Close button
         ElevatedButton(
           onPressed: _isSuccess == true
-              ? () => Navigator.of(context).pop()
+              ? () => context.pop()
               : (_canSubmit ? _submitReport : null),
           style: ElevatedButton.styleFrom(
             backgroundColor: VineTheme.vineGreen,

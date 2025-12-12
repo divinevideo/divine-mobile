@@ -239,9 +239,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                       // Wait for drawer close animation
                       await Future.delayed(const Duration(milliseconds: 300));
                       if (!rootContext.mounted) {
-                        print(
-                          '⚠️ Context not mounted after drawer close',
-                        );
+                        print('⚠️ Context not mounted after drawer close');
                         return;
                       }
 

@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
@@ -326,7 +327,7 @@ class ComposableVideoGrid extends ConsumerWidget {
                     ),
                   ),
                   IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                     icon: Icon(Icons.close, color: VineTheme.secondaryText),
                   ),
                 ],
@@ -356,7 +357,7 @@ class ComposableVideoGrid extends ConsumerWidget {
                 style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
               ),
               onTap: () {
-                Navigator.of(context).pop();
+                context.pop();
                 showEditDialogForVideo(context, video);
               },
             ),
@@ -384,7 +385,7 @@ class ComposableVideoGrid extends ConsumerWidget {
                 style: TextStyle(color: VineTheme.secondaryText, fontSize: 12),
               ),
               onTap: () {
-                Navigator.of(context).pop();
+                context.pop();
                 _showDeleteConfirmation(context, ref, video);
               },
             ),
@@ -427,11 +428,11 @@ class ComposableVideoGrid extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => context.pop(false),
             child: Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => context.pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: Text('Delete'),
           ),
