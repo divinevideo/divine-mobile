@@ -2047,14 +2047,14 @@ void main() {
     });
 
     group('relay convenience properties', () {
-      test('relayCount returns configuredRelayCount from manager', () {
+      test('configuredRelayCount returns count from manager', () {
         when(() => mockRelayManager.configuredRelayCount).thenReturn(3);
 
-        expect(client.relayCount, equals(3));
+        expect(client.configuredRelayCount, equals(3));
         verify(() => mockRelayManager.configuredRelayCount).called(1);
       });
 
-      test('relays returns configuredRelays from manager', () {
+      test('configuredRelays returns list from manager', () {
         final expectedRelays = [
           'wss://relay1.example.com',
           'wss://relay2.example.com',
@@ -2063,7 +2063,7 @@ void main() {
           () => mockRelayManager.configuredRelays,
         ).thenReturn(expectedRelays);
 
-        expect(client.relays, equals(expectedRelays));
+        expect(client.configuredRelays, equals(expectedRelays));
         verify(() => mockRelayManager.configuredRelays).called(1);
       });
     });
