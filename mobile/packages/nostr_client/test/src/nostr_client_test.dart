@@ -2006,5 +2006,334 @@ void main() {
         );
       });
     });
+
+    group('state properties', () {
+      test(
+        'isInitialized returns false when relay manager not initialized',
+        () {
+          when(() => mockRelayManager.isInitialized).thenReturn(false);
+          expect(client.isInitialized, isFalse);
+        },
+      );
+
+      test('isInitialized returns true when relay manager is initialized', () {
+        when(() => mockRelayManager.isInitialized).thenReturn(true);
+        expect(client.isInitialized, isTrue);
+      });
+
+      test('isDisposed returns false before dispose', () {
+        expect(client.isDisposed, isFalse);
+      });
+
+      test('isDisposed returns true after dispose', () async {
+        when(() => mockNostr.unsubscribe(any())).thenReturn(null);
+
+        await client.dispose();
+
+        expect(client.isDisposed, isTrue);
+      });
+
+      test('hasKeys returns true when public key is not empty', () {
+        when(() => mockNostr.publicKey).thenReturn(testPublicKey);
+
+        expect(client.hasKeys, isTrue);
+      });
+
+      test('hasKeys returns false when public key is empty', () {
+        when(() => mockNostr.publicKey).thenReturn('');
+
+        expect(client.hasKeys, isFalse);
+      });
+    });
+
+    group('relay convenience properties', () {
+      test('configuredRelayCount returns count from manager', () {
+        when(() => mockRelayManager.configuredRelayCount).thenReturn(3);
+
+        expect(client.configuredRelayCount, equals(3));
+        verify(() => mockRelayManager.configuredRelayCount).called(1);
+      });
+
+      test('configuredRelays returns list from manager', () {
+        final expectedRelays = [
+          'wss://relay1.example.com',
+          'wss://relay2.example.com',
+        ];
+        when(
+          () => mockRelayManager.configuredRelays,
+        ).thenReturn(expectedRelays);
+
+        expect(client.configuredRelays, equals(expectedRelays));
+        verify(() => mockRelayManager.configuredRelays).called(1);
+      });
+    });
+
+    group('broadcast', () {
+      test('returns successful result when event is sent', () async {
+        final event = _createTestEvent();
+        final connectedRelays = [
+          'wss://relay1.example.com',
+          'wss://relay2.example.com',
+        ];
+
+        when(
+          () => mockRelayManager.connectedRelays,
+        ).thenReturn(connectedRelays);
+        when(
+          () => mockNostr.sendEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => event);
+
+        final result = await client.broadcast(event);
+
+        expect(result.isSuccessful, isTrue);
+        expect(result.event, equals(event));
+        expect(result.totalRelays, equals(2));
+        expect(result.successCount, greaterThan(0));
+      });
+
+      test('returns failed result when sendEvent returns null', () async {
+        final event = _createTestEvent();
+        final connectedRelays = [
+          'wss://relay1.example.com',
+          'wss://relay2.example.com',
+        ];
+
+        when(
+          () => mockRelayManager.connectedRelays,
+        ).thenReturn(connectedRelays);
+        when(
+          () => mockNostr.sendEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => null);
+
+        final result = await client.broadcast(event);
+
+        expect(result.isSuccessful, isFalse);
+        expect(result.event, isNull);
+        expect(result.successCount, equals(0));
+      });
+
+      test('returns failed result when no relays connected', () async {
+        final event = _createTestEvent();
+
+        when(() => mockRelayManager.connectedRelays).thenReturn([]);
+        when(
+          () => mockNostr.sendEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => null);
+
+        final result = await client.broadcast(event);
+
+        expect(result.isSuccessful, isFalse);
+        expect(result.totalRelays, equals(0));
+        expect(result.successCount, equals(0));
+      });
+
+      test('passes target relays to sendEvent', () async {
+        final event = _createTestEvent();
+        final targetRelays = ['wss://specific.example.com'];
+        final connectedRelays = [
+          'wss://relay1.example.com',
+          'wss://relay2.example.com',
+        ];
+
+        when(
+          () => mockRelayManager.connectedRelays,
+        ).thenReturn(connectedRelays);
+        when(
+          () => mockNostr.sendEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => event);
+
+        await client.broadcast(event, targetRelays: targetRelays);
+
+        verify(
+          () => mockNostr.sendEvent(
+            event,
+            targetRelays: targetRelays,
+          ),
+        ).called(1);
+      });
+
+      test('handles exception during broadcast', () async {
+        final event = _createTestEvent();
+        final connectedRelays = ['wss://relay1.example.com'];
+
+        when(
+          () => mockRelayManager.connectedRelays,
+        ).thenReturn(connectedRelays);
+        when(
+          () => mockNostr.sendEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenThrow(Exception('Network error'));
+
+        final result = await client.broadcast(event);
+
+        expect(result.isSuccessful, isFalse);
+        expect(result.event, isNull);
+        expect(result.errors, isNotEmpty);
+      });
+    });
+
+    group('searchVideos', () {
+      test('returns stream of video events matching query', () async {
+        const query = 'test video';
+        final videoEvent = _createTestEvent(
+          kind: 34236,
+          content: 'Test video content',
+        );
+
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((invocation) {
+          // Get the callback and call it with test event
+          final callback =
+              invocation.positionalArguments[1] as void Function(Event);
+          unawaited(Future.microtask(() => callback(videoEvent)));
+          return 'search-sub-id';
+        });
+
+        final stream = client.searchVideos(query);
+        final events = await stream.take(1).toList();
+
+        expect(events, hasLength(1));
+        expect(events.first.kind, equals(34236));
+      });
+
+      test('passes correct filter parameters', () async {
+        const query = 'test';
+        final since = DateTime(2024);
+        final until = DateTime(2024, 12, 31);
+        const limit = 50;
+
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenReturn('search-sub-id');
+
+        client.searchVideos(
+          query,
+          since: since,
+          until: until,
+          limit: limit,
+        );
+
+        // Verify subscribe was called with filter containing search
+        final captured = verify(
+          () => mockNostr.subscribe(
+            captureAny(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).captured;
+
+        final filters = captured.first as List<Map<String, dynamic>>;
+        expect(filters.first['search'], equals(query));
+        expect(filters.first['kinds'], contains(34236));
+        expect(filters.first['limit'], equals(limit));
+      });
+    });
+
+    group('searchUsers', () {
+      test('returns stream of profile events matching query', () async {
+        const query = 'test user';
+        final profileEvent = _createTestEvent(
+          kind: EventKind.metadata,
+          content: '{"name": "Test User"}',
+        );
+
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenAnswer((invocation) {
+          final callback =
+              invocation.positionalArguments[1] as void Function(Event);
+          unawaited(Future.microtask(() => callback(profileEvent)));
+          return 'search-sub-id';
+        });
+
+        final stream = client.searchUsers(query);
+        final events = await stream.take(1).toList();
+
+        expect(events, hasLength(1));
+        expect(events.first.kind, equals(EventKind.metadata));
+      });
+
+      test('uses metadata kind filter', () async {
+        const query = 'user';
+
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).thenReturn('search-sub-id');
+
+        client.searchUsers(query);
+
+        final captured = verify(
+          () => mockNostr.subscribe(
+            captureAny(),
+            any(),
+            id: any(named: 'id'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+          ),
+        ).captured;
+
+        final filters = captured.first as List<Map<String, dynamic>>;
+        expect(filters.first['search'], equals(query));
+        expect(filters.first['kinds'], contains(EventKind.metadata));
+      });
+    });
   });
 }
