@@ -159,6 +159,7 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
 
       // Directly pause the controller - don't rely on _handlePlaybackChange
       // which might fail if ref is in an inconsistent state during dispose
+      // Use safePause to handle "No active player with ID" errors gracefully
       try {
         final controllerParams = VideoControllerParams(
           videoId: widget.video.id,
@@ -168,20 +169,27 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
         final controller = ref.read(
           individualVideoControllerProvider(controllerParams),
         );
-        if (controller.value.isPlaying) {
+        if (controller.value.isInitialized && controller.value.isPlaying) {
           Log.info(
             '⏸️ VideoFeedItem.dispose: pausing video ${widget.video.id}',
             name: 'VideoFeedItem',
             category: LogCategory.video,
           );
-          controller.pause();
+          // Use safePause to handle disposed controller gracefully
+          safePause(controller, widget.video.id);
         }
       } catch (e) {
-        Log.error(
-          '❌ VideoFeedItem.dispose: failed to pause ${widget.video.id}: $e',
-          name: 'VideoFeedItem',
-          category: LogCategory.video,
-        );
+        // Log only if not a disposal-related error (those are expected during cleanup)
+        final errorStr = e.toString().toLowerCase();
+        if (!errorStr.contains('no active player') &&
+            !errorStr.contains('bad state') &&
+            !errorStr.contains('disposed')) {
+          Log.error(
+            '❌ VideoFeedItem.dispose: failed to pause ${widget.video.id}: $e',
+            name: 'VideoFeedItem',
+            category: LogCategory.video,
+          );
+        }
       }
     }
     super.dispose();
@@ -231,23 +239,25 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
             category: LogCategory.ui,
           );
 
-          controller
-              .play()
-              .then((_) {
-                final positionAfterPlay = controller.value.position;
-                Log.info(
-                  '✅ Video ${widget.video.id} play() completed\n'
-                  '   • Position after play: ${positionAfterPlay.inMilliseconds}ms\n'
-                  '   • Is playing: ${controller.value.isPlaying}',
-                  name: 'VideoFeedItem',
-                  category: LogCategory.ui,
-                );
-                if (gen != _playbackGeneration) {
-                  Log.debug(
-                    '⏭️ Ignoring stale play() completion for ${widget.video.id}',
+          // Use safePlay to handle "No active player with ID" errors gracefully
+          safePlay(controller, widget.video.id)
+              .then((success) {
+                if (success) {
+                  final positionAfterPlay = controller.value.position;
+                  Log.info(
+                    '✅ Video ${widget.video.id} play() completed\n'
+                    '   • Position after play: ${positionAfterPlay.inMilliseconds}ms\n'
+                    '   • Is playing: ${controller.value.isPlaying}',
                     name: 'VideoFeedItem',
                     category: LogCategory.ui,
                   );
+                  if (gen != _playbackGeneration) {
+                    Log.debug(
+                      '⏭️ Ignoring stale play() completion for ${widget.video.id}',
+                      name: 'VideoFeedItem',
+                      category: LogCategory.ui,
+                    );
+                  }
                 }
               })
               .catchError((error) {
@@ -312,7 +322,8 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                 name: 'VideoFeedItem',
                 category: LogCategory.ui,
               );
-              controller.play().catchError((error) {
+              // Use safePlay to handle disposed controller gracefully
+              safePlay(controller, widget.video.id).catchError((error) {
                 if (gen == _playbackGeneration) {
                   Log.error(
                     '❌ Widget failed to play video ${widget.video.id} after init: $error',
@@ -320,6 +331,7 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                     category: LogCategory.ui,
                   );
                 }
+                return false; // Return bool to match Future<bool> type
               });
               controller.removeListener(checkAndPlay);
             }
@@ -344,9 +356,9 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
           name: 'VideoFeedItem',
           category: LogCategory.video,
         );
-        controller
-            .pause()
-            .then((_) {
+        // Use safePause to handle disposed controller gracefully
+        safePause(controller, widget.video.id)
+            .then((success) {
               if (gen != _playbackGeneration) {
                 Log.debug(
                   '⏭️ Ignoring stale pause() completion for ${widget.video.id}',
@@ -483,14 +495,16 @@ class _VideoFeedItemState extends ConsumerState<VideoFeedItem> {
                   name: 'VideoFeedItem',
                   category: LogCategory.ui,
                 );
-                controller.pause();
+                // Use safePause to handle disposed controller gracefully
+                safePause(controller, video.id);
               } else {
                 Log.info(
                   '▶️ Tap playing video ${video.id}...',
                   name: 'VideoFeedItem',
                   category: LogCategory.ui,
                 );
-                controller.play();
+                // Use safePlay to handle disposed controller gracefully
+                safePlay(controller, video.id);
               }
             } else {
               Log.debug(
@@ -1197,15 +1211,22 @@ class VideoOverlayActions extends ConsumerWidget {
                                   controllerParams,
                                 ),
                               );
-                              if (controller.value.isPlaying) {
-                                controller.pause();
+                              if (controller.value.isInitialized &&
+                                  controller.value.isPlaying) {
+                                // Use safePause to handle disposed controller
+                                safePause(controller, video.id);
                               }
                             } catch (e) {
-                              Log.error(
-                                'Failed to pause video before comments: $e',
-                                name: 'VideoFeedItem',
-                                category: LogCategory.video,
-                              );
+                              // Ignore disposal errors, log others
+                              final errorStr = e.toString().toLowerCase();
+                              if (!errorStr.contains('no active player') &&
+                                  !errorStr.contains('disposed')) {
+                                Log.error(
+                                  'Failed to pause video before comments: $e',
+                                  name: 'VideoFeedItem',
+                                  category: LogCategory.video,
+                                );
+                              }
                             }
                           }
                           Navigator.of(context).push(
@@ -1521,21 +1542,28 @@ class VideoOverlayActions extends ConsumerWidget {
       final controller = ref.read(
         individualVideoControllerProvider(controllerParams),
       );
-      if (controller.value.isPlaying) {
-        await controller.pause();
-        wasPaused = true;
-        Log.info(
-          '🎬 Paused video for badge modal',
+      if (controller.value.isInitialized && controller.value.isPlaying) {
+        // Use safePause to handle disposed controller gracefully
+        wasPaused = await safePause(controller, video.id);
+        if (wasPaused) {
+          Log.info(
+            '🎬 Paused video for badge modal',
+            name: 'VideoFeedItem',
+            category: LogCategory.ui,
+          );
+        }
+      }
+    } catch (e) {
+      // Ignore disposal errors
+      final errorStr = e.toString().toLowerCase();
+      if (!errorStr.contains('no active player') &&
+          !errorStr.contains('disposed')) {
+        Log.error(
+          'Failed to pause video for modal: $e',
           name: 'VideoFeedItem',
           category: LogCategory.ui,
         );
       }
-    } catch (e) {
-      Log.error(
-        'Failed to pause video for modal: $e',
-        name: 'VideoFeedItem',
-        category: LogCategory.ui,
-      );
     }
 
     await showDialog<void>(
@@ -1561,19 +1589,27 @@ class VideoOverlayActions extends ConsumerWidget {
         if (isActive &&
             controller.value.isInitialized &&
             !controller.value.isPlaying) {
-          await controller.play();
-          Log.info(
-            '🎬 Resumed video after badge modal closed',
+          // Use safePlay to handle disposed controller gracefully
+          final resumed = await safePlay(controller, video.id);
+          if (resumed) {
+            Log.info(
+              '🎬 Resumed video after badge modal closed',
+              name: 'VideoFeedItem',
+              category: LogCategory.ui,
+            );
+          }
+        }
+      } catch (e) {
+        // Ignore disposal errors
+        final errorStr = e.toString().toLowerCase();
+        if (!errorStr.contains('no active player') &&
+            !errorStr.contains('disposed')) {
+          Log.error(
+            'Failed to resume video after modal: $e',
             name: 'VideoFeedItem',
             category: LogCategory.ui,
           );
         }
-      } catch (e) {
-        Log.error(
-          'Failed to resume video after modal: $e',
-          name: 'VideoFeedItem',
-          category: LogCategory.ui,
-        );
       }
     }
   }

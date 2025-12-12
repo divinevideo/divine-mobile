@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/pure/video_metadata_screen_pure.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
@@ -141,13 +142,7 @@ class _VineDraftsScreenState extends ConsumerState<VineDraftsScreen> {
         const SizedBox(height: 32),
         ElevatedButton.icon(
           onPressed: () {
-            // Wait for navigation animation to complete before allowing camera FAB to push
-            // This prevents navigation timing race condition that causes black screens
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                Navigator.of(context).pop();
-              }
-            });
+            context.pushCamera();
           },
           icon: const Icon(Icons.videocam),
           label: const Text('Record a Video'),
