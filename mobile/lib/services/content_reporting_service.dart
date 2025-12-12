@@ -3,9 +3,10 @@
 
 import 'dart:convert';
 
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/content_moderation_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -86,13 +87,16 @@ class ContentReport {
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class ContentReportingService {
   ContentReportingService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
+    required NostrKeyManager keyManager,
     required SharedPreferences prefs,
   }) : _nostrService = nostrService,
+       _keyManager = keyManager,
        _prefs = prefs {
     _loadReportHistory();
   }
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
+  final NostrKeyManager _keyManager;
   final SharedPreferences _prefs;
 
   // divine moderation relay for reports
@@ -164,7 +168,7 @@ class ContentReportingService {
       );
 
       if (reportEvent != null) {
-        final broadcastResult = await _nostrService.broadcastEvent(reportEvent);
+        final broadcastResult = await _nostrService.broadcast(reportEvent);
         if (broadcastResult.successCount == 0) {
           Log.error(
             'Failed to broadcast report to relays',
@@ -367,7 +371,7 @@ class ContentReportingService {
       // Create kind 1984 event using nostr_sdk (same pattern as video events)
       final createdAt = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       final event = Event(
-        _nostrService.keyManager.keyPair!.public,
+        _keyManager.keyPair!.public,
         1984, // NIP-56 reporting event kind
         tags,
         reportContent,
@@ -375,7 +379,7 @@ class ContentReportingService {
       );
 
       // Sign the event
-      event.sign(_nostrService.keyManager.keyPair!.private);
+      event.sign(_keyManager.keyPair!.private);
 
       Log.info(
         'Created NIP-56 report event (kind 1984): ${event.id}',

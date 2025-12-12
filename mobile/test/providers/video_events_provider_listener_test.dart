@@ -12,7 +12,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/providers/video_events_providers.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
@@ -38,16 +38,16 @@ class _FakeSeenVideosNotifier extends SeenVideosNotifier {
   SeenVideosState build() => _state;
 }
 
-@GenerateMocks([VideoEventService, INostrService])
+@GenerateMocks([VideoEventService, NostrClient])
 void main() {
   group('VideoEvents Provider - Listener Attachment', () {
     late MockVideoEventService mockVideoEventService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late ProviderContainer container;
 
     setUp(() {
       mockVideoEventService = MockVideoEventService();
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
 
       // Setup default mocks
       when(mockNostrService.isInitialized).thenReturn(true);
@@ -405,13 +405,13 @@ void main() {
 
   group('VideoEvents Provider - Reactive Updates', () {
     late MockVideoEventService mockVideoEventService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late ProviderContainer container;
     late StreamController<void> serviceNotifier;
 
     setUp(() {
       mockVideoEventService = MockVideoEventService();
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       serviceNotifier = StreamController<void>.broadcast();
 
       when(mockNostrService.isInitialized).thenReturn(true);

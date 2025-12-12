@@ -3,7 +3,7 @@
 
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
@@ -158,7 +158,7 @@ class ContentBlocklistService {
   /// Start background sync of mutual mute lists (NIP-51 kind 10000)
   /// Subscribes to kind 10000 events WHERE our pubkey appears in 'p' tags
   Future<void> syncMuteListsInBackground(
-    INostrService nostrService,
+    NostrClient nostrService,
     String ourPubkey,
   ) async {
     if (_mutualMuteSyncStarted) {
@@ -184,7 +184,7 @@ class ContentBlocklistService {
       final filter = Filter(kinds: const [10000]);
       filter.p = [ourPubkey]; // Filter by 'p' tags containing our pubkey
 
-      final subscription = nostrService.subscribeToEvents(filters: [filter]);
+      final subscription = nostrService.subscribe([filter]);
 
       _mutualMuteSubscriptionId =
           'mutual-mute-${DateTime.now().millisecondsSinceEpoch}';

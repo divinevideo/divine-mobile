@@ -9,21 +9,21 @@ import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'curated_list_service_persistence_test.mocks.dart';
 
-@GenerateMocks([INostrService, AuthService])
+@GenerateMocks([NostrClient, AuthService])
 void main() {
   group('CuratedListService - Persistence', () {
-    late MockINostrService mockNostr;
+    late MockNostrClient mockNostr;
     late MockAuthService mockAuth;
     late SharedPreferences prefs;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
-      mockNostr = MockINostrService();
+      mockNostr = MockNostrClient();
       mockAuth = MockAuthService();
       prefs = await SharedPreferences.getInstance();
 
@@ -32,7 +32,7 @@ void main() {
         mockAuth.currentPublicKeyHex,
       ).thenReturn('test_pubkey_123456789abcdef');
 
-      when(mockNostr.broadcastEvent(any)).thenAnswer((_) async {
+      when(mockNostr.broadcast(any)).thenAnswer((_) async {
         final event = Event.fromJson({
           'id': 'test_event_id',
           'pubkey': 'test_pubkey_123456789abcdef',
@@ -52,9 +52,8 @@ void main() {
       });
 
       when(
-        mockNostr.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
+        mockNostr.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).thenAnswer((_) => Stream.empty());

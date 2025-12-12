@@ -11,28 +11,28 @@ import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/bug_report_service.dart';
-import 'package:openvine/services/nostr_service.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
 
 import 'tabbed_settings_screen_test.mocks.dart';
 
 @GenerateMocks([
   AuthService,
-  NostrService,
+  NostrClient,
   BlossomUploadService,
   NotificationServiceEnhanced,
   BugReportService,
 ])
 void main() {
   late MockAuthService mockAuthService;
-  late MockNostrService mockNostrService;
+  late MockNostrClient mockNostrService;
   late MockBlossomUploadService mockBlossomService;
   late MockNotificationServiceEnhanced mockNotificationService;
   late MockBugReportService mockBugReportService;
 
   setUp(() {
     mockAuthService = MockAuthService();
-    mockNostrService = MockNostrService();
+    mockNostrService = MockNostrClient();
     mockBlossomService = MockBlossomUploadService();
     mockNotificationService = MockNotificationServiceEnhanced();
     mockBugReportService = MockBugReportService();
@@ -40,7 +40,7 @@ void main() {
     // Default mock behaviors
     when(mockAuthService.isAuthenticated).thenReturn(true);
     when(mockAuthService.currentPublicKeyHex).thenReturn('test_pubkey');
-    when(mockNostrService.relays).thenReturn([]);
+    when(mockNostrService.configuredRelays).thenReturn([]);
     when(mockBlossomService.isBlossomEnabled()).thenAnswer((_) async => false);
     when(mockBlossomService.getBlossomServer()).thenAnswer((_) async => null);
   });
@@ -182,7 +182,7 @@ void main() {
   group('Network Tab -', () {
     testWidgets('should display relay list inline', (tester) async {
       when(
-        mockNostrService.relays,
+        mockNostrService.configuredRelays,
       ).thenReturn(['wss://relay1.example.com', 'wss://relay2.example.com']);
 
       await tester.pumpWidget(createTestWidget());

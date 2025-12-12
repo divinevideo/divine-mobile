@@ -6,24 +6,24 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/user_profile_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../test_setup.dart';
 import 'nostr_key_manager_profile_fetch_test.mocks.dart';
 
-@GenerateMocks([INostrService, UserProfileService])
+@GenerateMocks([NostrClient, UserProfileService])
 void main() {
   setupTestEnvironment();
 
   group('NostrKeyManager Profile Fetching After Import', () {
     late NostrKeyManager keyManager;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockUserProfileService mockProfileService;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockProfileService = MockUserProfileService();
 
       // Setup basic mocks

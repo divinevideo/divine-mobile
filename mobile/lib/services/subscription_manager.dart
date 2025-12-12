@@ -5,7 +5,7 @@ import 'dart:async';
 
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Manages Nostr subscriptions for video events and other content
@@ -19,7 +19,7 @@ class SubscriptionManager {
   }) : _getCachedEvent = getCachedEvent,
        _hasProfileCached = hasProfileCached;
 
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   Event? Function(String)? _getCachedEvent; // Returns cached Event for event ID
   bool Function(String)?
   _hasProfileCached; // Checks if profile cached for pubkey
@@ -87,9 +87,7 @@ class SubscriptionManager {
     }
 
     // Create event stream from NostrService with filtered filters
-    final eventStream = _nostrService.subscribeToEvents(
-      filters: filteredFilters,
-    );
+    final eventStream = _nostrService.subscribe(filteredFilters);
 
     // Set up subscription
     final subscription = eventStream.listen(

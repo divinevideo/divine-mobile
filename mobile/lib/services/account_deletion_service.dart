@@ -1,9 +1,10 @@
 // ABOUTME: Account deletion service implementing NIP-62 Request to Vanish
 // ABOUTME: Handles network-wide account deletion by publishing kind 62 events to all relays
 
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Result of account deletion operation
@@ -28,12 +29,15 @@ class DeleteAccountResult {
 /// Service for deleting user's entire Nostr account via NIP-62
 class AccountDeletionService {
   AccountDeletionService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
+    required NostrKeyManager keyManager,
     required AuthService authService,
   }) : _nostrService = nostrService,
+       _keyManager = keyManager,
        _authService = authService;
 
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
+  final NostrKeyManager _keyManager;
   final AuthService _authService;
 
   /// Delete user's account using NIP-62 Request to Vanish
@@ -54,7 +58,7 @@ class AccountDeletionService {
       }
 
       // Broadcast to all configured relays
-      final broadcastResult = await _nostrService.broadcastEvent(event);
+      final broadcastResult = await _nostrService.broadcast(event);
 
       if (broadcastResult.successCount == 0) {
         Log.error(
@@ -97,7 +101,7 @@ class AccountDeletionService {
       }
 
       // Get keyManager
-      final keyManager = _nostrService.keyManager;
+      final keyManager = _keyManager;
 
       // Check keyPair exists
       final keyPair = keyManager.keyPair;

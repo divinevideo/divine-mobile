@@ -6,20 +6,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 import 'reactive_pagination_test.mocks.dart';
 
-@GenerateMocks([INostrService, SubscriptionManager])
+@GenerateMocks([NostrClient, SubscriptionManager])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Reactive Pagination Tests', () {
     late VideoEventService videoEventService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockSubscriptionManager mockSubscriptionManager;
     bool listenerCalled = false;
 
@@ -28,7 +28,7 @@ void main() {
       Log.setLogLevel(LogLevel.debug);
 
       // Create mock services
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockSubscriptionManager = MockSubscriptionManager();
 
       // Set up basic mock behavior

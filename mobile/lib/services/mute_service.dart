@@ -5,7 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -113,7 +113,7 @@ class MuteItem {
 /// Service for managing NIP-51 mute lists
 class MuteService {
   MuteService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
   }) : _nostrService = nostrService,
@@ -122,7 +122,7 @@ class MuteService {
     _loadMutedItems();
   }
 
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final AuthService _authService;
   final SharedPreferences _prefs;
 
@@ -527,7 +527,7 @@ class MuteService {
       );
 
       if (event != null) {
-        final result = await _nostrService.broadcastEvent(event);
+        final result = await _nostrService.broadcast(event);
         if (result.successCount > 0) {
           Log.debug(
             'Published mute list to Nostr: ${event.id}',

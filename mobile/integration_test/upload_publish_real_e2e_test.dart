@@ -87,14 +87,12 @@ void main() {
       print('🔌 Initializing NostrService with relay connections...');
       final nostrService = container.read(nostrServiceProvider);
 
-      // Initialize with OpenVine relays
-      await nostrService.initialize(
-        customRelays: ['wss://relay3.openvine.co', 'wss://relay.damus.io'],
-      );
+      // Initialize
+      await nostrService.initialize();
 
       print('✅ NostrService initialized');
-      print('   Configured relays: ${nostrService.relays}');
-      print('   Relay count: ${nostrService.relayCount}');
+      print('   Configured relays: ${nostrService.configuredRelays}');
+      print('   Relay count: ${nostrService.configuredRelayCount}');
       print(
         '   Note: Relay connections are asynchronous - publishing will connect as needed',
       );
@@ -233,8 +231,8 @@ void main() {
         // Check NostrService relay connections before publishing
         final nostrService = container.read(nostrServiceProvider);
         print('📡 Nostr relay status:');
-        print('   Configured relays: ${nostrService.relays}');
-        print('   Relay count: ${nostrService.relayCount}');
+        print('   Configured relays: ${nostrService.configuredRelays}');
+        print('   Relay count: ${nostrService.configuredRelayCount}');
 
         final videoEventPublisher = container.read(videoEventPublisherProvider);
 

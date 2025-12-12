@@ -8,10 +8,10 @@ import 'dart:io' as _i7;
 
 import 'package:dio/dio.dart' as _i4;
 import 'package:mockito/mockito.dart' as _i1;
+import 'package:nostr_client/nostr_client.dart' as _i3;
 import 'package:openvine/services/auth_service.dart' as _i2;
 import 'package:openvine/services/blossom_upload_service.dart' as _i5;
 import 'package:openvine/services/circuit_breaker_service.dart' as _i8;
-import 'package:openvine/services/nostr_service_interface.dart' as _i3;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -33,8 +33,8 @@ class _FakeAuthService_0 extends _i1.SmartFake implements _i2.AuthService {
     : super(parent, parentInvocation);
 }
 
-class _FakeINostrService_1 extends _i1.SmartFake implements _i3.INostrService {
-  _FakeINostrService_1(Object parent, Invocation parentInvocation)
+class _FakeNostrClient_1 extends _i1.SmartFake implements _i3.NostrClient {
+  _FakeNostrClient_1(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
@@ -70,15 +70,15 @@ class MockBlossomUploadService extends _i1.Mock
           as _i2.AuthService);
 
   @override
-  _i3.INostrService get nostrService =>
+  _i3.NostrClient get nostrService =>
       (super.noSuchMethod(
             Invocation.getter(#nostrService),
-            returnValue: _FakeINostrService_1(
+            returnValue: _FakeNostrClient_1(
               this,
               Invocation.getter(#nostrService),
             ),
           )
-          as _i3.INostrService);
+          as _i3.NostrClient);
 
   @override
   _i4.Dio get dio =>

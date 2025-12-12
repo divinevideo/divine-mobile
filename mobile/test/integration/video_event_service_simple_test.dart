@@ -8,19 +8,19 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/content_blocklist_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 import 'video_event_service_simple_test.mocks.dart';
 
-@GenerateMocks([INostrService, SubscriptionManager])
+@GenerateMocks([NostrClient, SubscriptionManager])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('VideoEventService Event Reception Bug Investigation', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockSubscriptionManager mockSubscriptionManager;
     late VideoEventService videoEventService;
     late ContentBlocklistService blocklistService;
@@ -37,7 +37,7 @@ void main() {
       });
 
       // Set up mocks
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockSubscriptionManager = MockSubscriptionManager();
       mockEventStream = StreamController<Event>.broadcast();
 
@@ -52,7 +52,7 @@ void main() {
 
       // Mock the critical subscribeToEvents method
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => mockEventStream.stream);
 
       // Initialize services that don't require SharedPreferences
@@ -109,7 +109,7 @@ void main() {
         // Verify that subscribeToEvents was called on the mock
         await subscriptionFuture;
         verify(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).called(1);
         Log.info('✅ Confirmed VideoEventService called subscribeToEvents');
 

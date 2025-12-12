@@ -18,13 +18,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'video_event_service_gateway_test.mocks.dart';
 
-// Generate mocks for INostrService
-@GenerateMocks([INostrService])
-import 'package:openvine/services/nostr_service_interface.dart';
+// Generate mocks for NostrClient
+@GenerateMocks([NostrClient])
+import 'package:nostr_client/nostr_client.dart';
 
 void main() {
   group('VideoEventService Gateway Integration', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late SubscriptionManager subscriptionManager;
     late RelayGatewaySettings gatewaySettings;
     late RelayGatewayService gatewayService;
@@ -34,17 +34,16 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       gatewaySettings = RelayGatewaySettings(prefs);
 
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       subscriptionManager = SubscriptionManager(mockNostrService);
 
       // Setup common mock behaviors
       when(mockNostrService.isInitialized).thenReturn(true);
-      when(mockNostrService.relays).thenReturn(['wss://relay.divine.video']);
+      when(mockNostrService.configuredRelays).thenReturn(['wss://relay.divine.video']);
       when(mockNostrService.connectedRelayCount).thenReturn(1);
       when(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
+        mockNostrService.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).thenAnswer((_) => Stream<Event>.empty());
@@ -160,9 +159,8 @@ void main() {
 
       // Verify WebSocket subscription was still created
       verify(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
+        mockNostrService.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).called(1);
@@ -181,7 +179,7 @@ void main() {
       );
 
       // Mock with non-divine relay
-      when(mockNostrService.relays).thenReturn(['wss://other.relay']);
+      when(mockNostrService.configuredRelays).thenReturn(['wss://other.relay']);
 
       final videoEventService = VideoEventService(
         mockNostrService,
@@ -293,9 +291,8 @@ void main() {
 
       // Verify WebSocket subscription was created
       verify(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
+        mockNostrService.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).called(1);

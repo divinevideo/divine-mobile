@@ -19,25 +19,21 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Video Pipeline Debug - Complete Flow', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late SubscriptionManager subscriptionManager;
     late VideoEventService videoEventService;
     late StreamController<Event> testEventController;
     late ProviderContainer container;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       testEventController = StreamController<Event>.broadcast();
 
       // Mock NostrService
       when(mockNostrService.isInitialized).thenReturn(true);
       when(mockNostrService.connectedRelayCount).thenReturn(1);
-      when(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        ),
-      ).thenAnswer((_) => testEventController.stream);
+      when(mockNostrService.subscribe(argThat(anything)))
+          .thenAnswer((_) => testEventController.stream);
 
       subscriptionManager = SubscriptionManager(mockNostrService);
       videoEventService = VideoEventService(

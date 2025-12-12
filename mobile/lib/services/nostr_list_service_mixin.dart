@@ -2,7 +2,7 @@
 // ABOUTME: Provides cached access to user's own published events for all list services
 
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as nostr;
 
@@ -22,7 +22,7 @@ mixin NostrListServiceMixin {
   static DateTime? _lastCacheTime;
 
   // Services must provide these dependencies
-  INostrService get nostrService;
+  NostrClient get nostrService;
   AuthService get authService;
 
   /// Get all events published by the current user from embedded relay
@@ -68,7 +68,7 @@ mixin NostrListServiceMixin {
 
       // Query embedded relay for ALL our published events
       final filter = nostr.Filter(authors: [ourPubkey]);
-      final events = await nostrService.getEvents(filters: [filter]);
+      final events = await nostrService.queryEvents([filter]);
 
       // Cache the results
       _cachedMyEvents = events;

@@ -10,12 +10,12 @@ import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/user_profile.dart' as models;
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/state/user_profile_state.dart';
 
 // Mock classes
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 class MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
@@ -279,7 +279,7 @@ void main() {
       expect(profile, equals(testProfile));
       verifyNever(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       );
     });
 
@@ -366,7 +366,7 @@ void main() {
       // Mock empty stream (no profile found)
       when(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       ).thenAnswer((_) => const Stream.empty());
 
       // Fetch profile
@@ -497,7 +497,7 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       ).thenAnswer((_) => Stream.error(Exception('Network error')));
 
       // Fetch profile should handle error gracefully

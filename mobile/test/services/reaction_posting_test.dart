@@ -3,22 +3,22 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
-@GenerateMocks([INostrService, AuthService, SubscriptionManager])
+@GenerateMocks([NostrClient, AuthService, SubscriptionManager])
 import 'reaction_posting_test.mocks.dart';
 
 void main() {
   group('Reaction Posting - Relay Closed Issue', () {
     late SocialService socialService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockSubscriptionManager mockSubscriptionManager;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockSubscriptionManager = MockSubscriptionManager();
 
@@ -28,7 +28,7 @@ void main() {
 
       // Set up default stubs for NostrService
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream.fromIterable([]));
 
       socialService = SocialService(
@@ -70,7 +70,7 @@ void main() {
         ).thenAnswer((_) async => mockEvent);
 
         // Mock broadcast failure with "relay closed" error
-        when(mockNostrService.broadcastEvent(mockEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockEvent,
             successCount: 0,
@@ -122,7 +122,7 @@ void main() {
       ).thenAnswer((_) async => mockEvent);
 
       // Mock successful broadcast
-      when(mockNostrService.broadcastEvent(mockEvent)).thenAnswer(
+      when(mockNostrService.broadcast(mockEvent)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: mockEvent,
           successCount: 1,
@@ -148,7 +148,7 @@ void main() {
       ).called(1);
 
       // Verify broadcast was called
-      verify(mockNostrService.broadcastEvent(mockEvent)).called(1);
+      verify(mockNostrService.broadcast(mockEvent)).called(1);
 
       // Verify event is now liked locally
       expect(socialService.isLiked(testEventId), true);

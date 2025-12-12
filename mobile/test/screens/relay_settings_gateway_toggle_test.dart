@@ -6,12 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/screens/relay_settings_screen.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 void main() {
   group('RelaySettingsScreen Gateway Toggle', () {
@@ -23,7 +23,7 @@ void main() {
     });
 
     Widget createTestWidget(List<String> configuredRelays) {
-      when(() => mockNostrService.relays).thenReturn(configuredRelays);
+      when(() => mockNostrService.configuredRelays).thenReturn(configuredRelays);
       when(
         () => mockNostrService.connectedRelayCount,
       ).thenReturn(configuredRelays.length);

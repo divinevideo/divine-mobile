@@ -2,7 +2,7 @@
 // ABOUTME: Handles event creation, signing, broadcasting, and caching with consistent error handling
 
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 
@@ -10,7 +10,7 @@ import 'package:openvine/services/personal_event_cache_service.dart';
 /// Provides shared patterns for event lifecycle: create → sign → broadcast → cache
 abstract class SocialEventServiceBase {
   /// Nostr service for broadcasting events to relays
-  INostrService get nostrService;
+  NostrClient get nostrService;
 
   /// Auth service for creating and signing events
   AuthService get authService;
@@ -26,7 +26,7 @@ abstract class SocialEventServiceBase {
     personalEventCache?.cacheUserEvent(event);
 
     // Broadcast to relays
-    final result = await nostrService.broadcastEvent(event);
+    final result = await nostrService.broadcast(event);
 
     if (!result.isSuccessful) {
       final errors = result.errors.values.join(', ');

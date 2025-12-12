@@ -7,29 +7,26 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
-@GenerateNiceMocks([MockSpec<INostrService>()])
+@GenerateNiceMocks([MockSpec<NostrClient>()])
 import 'subscription_manager_tdd_test.mocks.dart';
 
 void main() {
   group('SubscriptionManager TDD - Event Forwarding Bug', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late SubscriptionManager subscriptionManager;
     late StreamController<Event> testEventController;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       testEventController = StreamController<Event>.broadcast();
 
       // Mock the NostrService to return our test stream
       when(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
-        ),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => testEventController.stream);
 
       subscriptionManager = SubscriptionManager(mockNostrService);
@@ -175,11 +172,9 @@ void main() {
         final completer = Completer<void>();
 
         // Listen directly to the stream (bypassing SubscriptionManager)
-        final directStream = mockNostrService.subscribeToEvents(
-          filters: [
-            Filter(kinds: [22]),
-          ],
-        );
+        final directStream = mockNostrService.subscribe([
+          Filter(kinds: [22]),
+        ]);
         final subscription = directStream.listen((event) {
           Log.info(
             '✅ TDD: Direct stream received: ${event.id}',

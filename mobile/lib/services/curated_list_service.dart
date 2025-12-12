@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/utils/curated_list_ext.dart';
 import 'package:openvine/utils/nostr_event_ext.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -161,7 +161,7 @@ class CuratedList {
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class CuratedListService extends ChangeNotifier {
   CuratedListService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
   }) : _nostrService = nostrService,
@@ -170,7 +170,7 @@ class CuratedListService extends ChangeNotifier {
     _loadLists();
     _loadSubscribedListIds();
   }
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final AuthService _authService;
   final SharedPreferences _prefs;
 
@@ -947,7 +947,7 @@ class CuratedListService extends ChangeNotifier {
       );
 
       if (event != null) {
-        final result = await _nostrService.broadcastEvent(event);
+        final result = await _nostrService.broadcast(event);
         if (result.successCount > 0) {
           // Update local list with Nostr event ID
           final listIndex = _lists.indexWhere((l) => l.id == list.id);
@@ -1092,8 +1092,7 @@ class CuratedListService extends ChangeNotifier {
       final receivedEvents = <Event>[];
 
       // Subscribe to user's own Kind 30005 events (NIP-51 curated lists)
-      final subscription = _nostrService.subscribeToEvents(
-        filters: [
+      final subscription = _nostrService.subscribe([
           Filter(
             authors: [userPubkey],
             kinds: [30005], // NIP-51 curated lists
@@ -1188,7 +1187,7 @@ class CuratedListService extends ChangeNotifier {
       );
 
       // Subscribe to all public Kind 30005 events (no author filter)
-      final subscription = _nostrService.subscribeToEvents(filters: [filter]);
+      final subscription = _nostrService.subscribe([filter]);
 
       // Set a timeout for the subscription
       Timer? timeoutTimer;
@@ -1319,7 +1318,7 @@ class CuratedListService extends ChangeNotifier {
       );
 
       // Subscribe to matching events
-      final subscription = _nostrService.subscribeToEvents(filters: [filter]);
+      final subscription = _nostrService.subscribe([filter]);
 
       // Set a timeout for the subscription
       Timer? timeoutTimer;
@@ -1434,7 +1433,7 @@ class CuratedListService extends ChangeNotifier {
 
     // Subscribe and transform events to CuratedList objects
     return _nostrService
-        .subscribeToEvents(filters: [filter])
+        .subscribe([filter])
         .map((event) {
           final dTag = _extractDTag(event);
           if (dTag == null) return null;

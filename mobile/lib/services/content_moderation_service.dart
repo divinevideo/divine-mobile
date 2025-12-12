@@ -7,7 +7,7 @@ import 'dart:convert';
 import 'package:nostr_sdk/event.dart' as nostr_sdk;
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/nostr_list_service_mixin.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -114,7 +114,7 @@ class ModerationResult {
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class ContentModerationService with NostrListServiceMixin {
   ContentModerationService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
   }) : _nostrService = nostrService,
@@ -125,13 +125,13 @@ class ContentModerationService with NostrListServiceMixin {
     _loadSubscribedLists();
   }
 
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final AuthService _authService;
   final SharedPreferences _prefs;
 
   // Mixin interface implementations
   @override
-  INostrService get nostrService => _nostrService;
+  NostrClient get nostrService => _nostrService;
   @override
   AuthService get authService => _authService;
 
@@ -471,7 +471,7 @@ class ContentModerationService with NostrListServiceMixin {
         kinds: [10000], // NIP-51 mute list
       );
 
-      final events = await _nostrService.getEvents(filters: [filter]);
+      final events = await _nostrService.queryEvents([filter]);
 
       if (events.isEmpty) {
         Log.debug(

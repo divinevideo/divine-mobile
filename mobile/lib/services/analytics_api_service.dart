@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/hashtag_extractor.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -99,7 +99,7 @@ class AnalyticsApiService {
   static const String baseUrl = 'https://api.openvine.co';
   static const Duration cacheTimeout = Duration(minutes: 5);
 
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final VideoEventService _videoEventService;
 
   // Cache for trending data
@@ -114,7 +114,7 @@ class AnalyticsApiService {
   final Set<String> _missingVideoIds = {};
 
   AnalyticsApiService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required VideoEventService videoEventService,
   }) : _nostrService = nostrService,
        _videoEventService = videoEventService;
@@ -683,7 +683,7 @@ class AnalyticsApiService {
         category: LogCategory.video,
       );
 
-      final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
+      final eventStream = _nostrService.subscribe([filter]);
 
       final fetchedVideos = <VideoEvent>[];
       final completer = Completer<void>();

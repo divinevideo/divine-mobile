@@ -7,21 +7,21 @@ import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'curated_list_service_video_management_test.mocks.dart';
 
-@GenerateMocks([INostrService, AuthService])
+@GenerateMocks([NostrClient, AuthService])
 void main() {
   group('CuratedListService - Video Management', () {
     late CuratedListService service;
-    late MockINostrService mockNostr;
+    late MockNostrClient mockNostr;
     late MockAuthService mockAuth;
     late SharedPreferences prefs;
 
     setUp(() async {
-      mockNostr = MockINostrService();
+      mockNostr = MockNostrClient();
       mockAuth = MockAuthService();
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
@@ -33,7 +33,7 @@ void main() {
       ).thenReturn('test_pubkey_123456789abcdef');
 
       // Mock successful event broadcasting
-      when(mockNostr.broadcastEvent(any)).thenAnswer((_) async {
+      when(mockNostr.broadcast(any)).thenAnswer((_) async {
         final event = Event.fromJson({
           'id': 'broadcast_event_id',
           'pubkey': 'test_pubkey_123456789abcdef',
@@ -54,9 +54,8 @@ void main() {
 
       // Mock subscribeToEvents for relay sync
       when(
-        mockNostr.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
+        mockNostr.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).thenAnswer((_) => Stream.empty());
@@ -164,7 +163,7 @@ void main() {
 
         await service.addVideoToList(list!.id, 'video_event_123');
 
-        verify(mockNostr.broadcastEvent(any)).called(1);
+        verify(mockNostr.broadcast(any)).called(1);
       });
 
       test('does not publish update for private list', () async {
@@ -176,7 +175,7 @@ void main() {
 
         await service.addVideoToList(list!.id, 'video_event_123');
 
-        verifyNever(mockNostr.broadcastEvent(any));
+        verifyNever(mockNostr.broadcast(any));
       });
 
       test('saves to SharedPreferences after adding', () async {
@@ -270,7 +269,7 @@ void main() {
 
         await service.removeVideoFromList(list.id, 'video_event_123');
 
-        verify(mockNostr.broadcastEvent(any)).called(1);
+        verify(mockNostr.broadcast(any)).called(1);
       });
 
       test('does not publish update for private list', () async {
@@ -283,7 +282,7 @@ void main() {
 
         await service.removeVideoFromList(list.id, 'video_event_123');
 
-        verifyNever(mockNostr.broadcastEvent(any));
+        verifyNever(mockNostr.broadcast(any));
       });
 
       test('saves to SharedPreferences after removing', () async {

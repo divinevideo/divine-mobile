@@ -7,18 +7,18 @@ import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
 // Generate mocks
-@GenerateMocks([INostrService, AuthService, SubscriptionManager])
+@GenerateMocks([NostrClient, AuthService, SubscriptionManager])
 import 'social_service_toggle_repost_test.mocks.dart';
 
 void main() {
   group('SocialService - toggleRepost()', () {
     late SocialService socialService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockSubscriptionManager mockSubscriptionManager;
 
@@ -30,7 +30,7 @@ void main() {
     late VideoEvent testVideo;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockSubscriptionManager = MockSubscriptionManager();
 
@@ -38,7 +38,7 @@ void main() {
       when(mockAuthService.isAuthenticated).thenReturn(true);
       when(mockAuthService.currentPublicKeyHex).thenReturn(testUserPubkey);
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream.fromIterable([]));
       when(
         mockSubscriptionManager.createSubscription(
@@ -112,7 +112,7 @@ void main() {
         ).thenAnswer((_) async => mockRepostEvent);
 
         // Mock successful broadcast
-        when(mockNostrService.broadcastEvent(mockRepostEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockRepostEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockRepostEvent,
             successCount: 1,
@@ -149,7 +149,7 @@ void main() {
         ).called(1);
 
         // Verify broadcast was called
-        verify(mockNostrService.broadcastEvent(mockRepostEvent)).called(1);
+        verify(mockNostrService.broadcast(mockRepostEvent)).called(1);
 
         // Verify video is now reposted locally
         expect(
@@ -190,7 +190,7 @@ void main() {
           ),
         ).thenAnswer((_) async => mockRepostEvent);
 
-        when(mockNostrService.broadcastEvent(mockRepostEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockRepostEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockRepostEvent,
             successCount: 1,
@@ -232,7 +232,7 @@ void main() {
           ),
         ).thenAnswer((_) async => mockDeletionEvent);
 
-        when(mockNostrService.broadcastEvent(mockDeletionEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockDeletionEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockDeletionEvent,
             successCount: 1,
@@ -257,7 +257,7 @@ void main() {
         ).called(1);
 
         // Verify deletion broadcast
-        verify(mockNostrService.broadcastEvent(mockDeletionEvent)).called(1);
+        verify(mockNostrService.broadcast(mockDeletionEvent)).called(1);
 
         // Verify video is no longer reposted locally
         expect(

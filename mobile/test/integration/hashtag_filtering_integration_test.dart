@@ -4,13 +4,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 // Simple mock for testing basic functionality
-class MinimalMockNostrService implements INostrService {
+class MinimalMockNostrService implements NostrClient {
   @override
   bool get isInitialized => true;
 
@@ -21,24 +20,22 @@ class MinimalMockNostrService implements INostrService {
   List<String> get connectedRelays => ['wss://localhost:8080'];
 
   @override
-  String? get publicKey => null;
+  String get publicKey => '';
 
   @override
   bool get hasKeys => false;
 
   @override
-  NostrKeyManager get keyManager => throw UnimplementedError();
-
-  @override
-  int get relayCount => 1;
+  int get configuredRelayCount => 1;
 
   @override
   int get connectedRelayCount => 1;
 
   @override
-  List<String> get relays => ['wss://localhost:8080'];
+  List<String> get configuredRelays => ['wss://localhost:8080'];
 
-  Map<String, dynamic> get relayStatuses => {};
+  @override
+  Map<String, RelayConnectionStatus> get relayStatuses => {};
 
   void addListener(listener) {}
 

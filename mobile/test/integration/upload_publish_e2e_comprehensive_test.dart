@@ -13,13 +13,13 @@ import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 import '../helpers/real_integration_test_helper.dart';
 
 import 'upload_publish_e2e_comprehensive_test.mocks.dart';
 
-@GenerateMocks([BlossomUploadService, AuthService, INostrService])
+@GenerateMocks([BlossomUploadService, AuthService, NostrClient])
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -30,7 +30,7 @@ void main() {
     late String testPublicKey;
     late MockBlossomUploadService mockBlossomService;
     late MockAuthService mockAuthService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
 
     setUpAll(() async {
       await RealIntegrationTestHelper.setupTestEnvironment();
@@ -55,7 +55,7 @@ void main() {
       // Setup mocks
       mockBlossomService = MockBlossomUploadService();
       mockAuthService = MockAuthService();
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
 
       // Configure mock behaviors
       _configureMockBlossomService(mockBlossomService);
@@ -314,7 +314,7 @@ void main() {
         // PHASE 4: Verify event was broadcast to relays
         print('📤 PHASE 4: Verifying relay broadcast...');
 
-        verify(mockNostrService.broadcastEvent(any)).called(1);
+        verify(mockNostrService.broadcast(any)).called(1);
 
         print('✅ Event was broadcast to relays');
 
@@ -562,8 +562,8 @@ void _configureMockAuthService(MockAuthService mock, String testPublicKey) {
 }
 
 /// Configure mock Nostr service to simulate relay broadcasting
-void _configureMockNostrService(MockINostrService mock) {
-  when(mock.broadcastEvent(any)).thenAnswer((invocation) async {
+void _configureMockNostrService(MockNostrClient mock) {
+  when(mock.broadcast(any)).thenAnswer((invocation) async {
     return NostrBroadcastResult(
       event: invocation.positionalArguments[0] as Event,
       successCount: 3,

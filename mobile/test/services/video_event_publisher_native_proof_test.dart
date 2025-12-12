@@ -8,14 +8,14 @@ import 'package:openvine/models/pending_upload.dart';
 import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/upload_manager.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:nostr_sdk/event.dart';
 
 // Mock classes
 class MockAuthService extends Mock implements AuthService {}
 
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 class MockUploadManager extends Mock implements UploadManager {}
 
@@ -118,7 +118,7 @@ void main() {
       });
 
       // Mock broadcast to succeed
-      when(() => mockNostrService.broadcastEvent(any())).thenAnswer((
+      when(() => mockNostrService.broadcast(any())).thenAnswer((
         invocation,
       ) async {
         final event = invocation.positionalArguments[0] as Event;
@@ -255,7 +255,7 @@ void main() {
         return Future.value(capturedEvent);
       });
 
-      when(() => mockNostrService.broadcastEvent(any())).thenAnswer((
+      when(() => mockNostrService.broadcast(any())).thenAnswer((
         invocation,
       ) async {
         final event = invocation.positionalArguments[0] as Event;
@@ -329,7 +329,7 @@ void main() {
         return Future.value(capturedEvent);
       });
 
-      when(() => mockNostrService.broadcastEvent(any())).thenAnswer((
+      when(() => mockNostrService.broadcast(any())).thenAnswer((
         invocation,
       ) async {
         final event = invocation.positionalArguments[0] as Event;

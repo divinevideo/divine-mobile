@@ -9,23 +9,23 @@ import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curation_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 import 'curation_publish_test.mocks.dart';
 
-@GenerateMocks([INostrService, VideoEventService, SocialService, AuthService])
+@GenerateMocks([NostrClient, VideoEventService, SocialService, AuthService])
 void main() {
   group('CurationService Publishing', () {
     late CurationService curationService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockVideoEventService mockVideoEventService;
     late MockSocialService mockSocialService;
     late MockAuthService mockAuthService;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockVideoEventService = MockVideoEventService();
       mockSocialService = MockSocialService();
       mockAuthService = MockAuthService();
@@ -160,7 +160,7 @@ void main() {
         final mockEvent = Event('test_pubkey', 30005, [
           ['d', 'test_id'],
         ], 'Test content');
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockEvent,
             successCount: 2,
@@ -185,12 +185,12 @@ void main() {
         expect(result.eventId, isNotNull);
 
         // Verify broadcastEvent was called
-        verify(mockNostrService.broadcastEvent(any)).called(1);
+        verify(mockNostrService.broadcast(any)).called(1);
       });
 
       test('should handle complete failure gracefully', () async {
         // Given: Mock failed broadcast
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event('test', 30005, [], ''),
             successCount: 0,
@@ -219,7 +219,7 @@ void main() {
 
       test('should timeout after 5 seconds', () async {
         // Given: Mock slow broadcast
-        when(mockNostrService.broadcastEvent(any)).thenAnswer((_) async {
+        when(mockNostrService.broadcast(any)).thenAnswer((_) async {
           await Future.delayed(const Duration(seconds: 10));
           return NostrBroadcastResult(
             event: Event('test', 30005, [], ''),
@@ -247,7 +247,7 @@ void main() {
 
       test('should handle partial relay success', () async {
         // Given: Mock partial success
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event('test', 30005, [], ''),
             successCount: 1,
@@ -275,7 +275,7 @@ void main() {
     group('Local Persistence', () {
       test('should mark curation as published locally after success', () async {
         // Given: Mock successful publish
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event('test', 30005, [], ''),
             successCount: 2,
@@ -303,7 +303,7 @@ void main() {
 
       test('should track failed publish attempts', () async {
         // Given: Mock failed publish
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event('test', 30005, [], ''),
             successCount: 0,
@@ -331,7 +331,7 @@ void main() {
 
       test('should persist publish status across service restarts', () async {
         // Given: Published curation
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event('test', 30005, [], ''),
             successCount: 1,
@@ -368,7 +368,7 @@ void main() {
         'should retry unpublished curations with exponential backoff',
         () async {
           // Given: Failed initial publish
-          when(mockNostrService.broadcastEvent(any)).thenAnswer(
+          when(mockNostrService.broadcast(any)).thenAnswer(
             (_) async => NostrBroadcastResult(
               event: Event('test', 30005, [], ''),
               successCount: 0,
@@ -385,7 +385,7 @@ void main() {
           );
 
           // Mock successful retry
-          when(mockNostrService.broadcastEvent(any)).thenAnswer(
+          when(mockNostrService.broadcast(any)).thenAnswer(
             (_) async => NostrBroadcastResult(
               event: Event('test', 30005, [], ''),
               successCount: 1,
@@ -408,7 +408,7 @@ void main() {
 
       test('should stop retrying after max attempts', () async {
         // Given: Persistent failures
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event('test', 30005, [], ''),
             successCount: 0,
@@ -449,7 +449,7 @@ void main() {
 
       test('should coalesce rapid updates to same curation', () async {
         // Given: Mock successful broadcast
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event('test', 30005, [], ''),
             successCount: 1,
@@ -474,7 +474,7 @@ void main() {
 
         // Then: Should coalesce into single publish (or very few)
         verify(
-          mockNostrService.broadcastEvent(any),
+          mockNostrService.broadcast(any),
         ).called(lessThanOrEqualTo(2));
       });
     });
@@ -484,7 +484,7 @@ void main() {
         // Given: Slow broadcast simulation
         final completer = Completer<NostrBroadcastResult>();
         when(
-          mockNostrService.broadcastEvent(any),
+          mockNostrService.broadcast(any),
         ).thenAnswer((_) => completer.future);
 
         // When: Starting publish
@@ -526,7 +526,7 @@ void main() {
 
       test('should show relay success count in status', () async {
         // Given: Partial success
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event('test', 30005, [], ''),
             successCount: 2,
@@ -558,7 +558,7 @@ void main() {
 
       test('should show error status for failed publishes', () async {
         // Given: Failed publish
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event('test', 30005, [], ''),
             successCount: 0,

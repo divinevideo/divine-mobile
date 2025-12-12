@@ -8,14 +8,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/screens/relay_settings_screen.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/relay_capability_service.dart';
 import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 class MockRelayCapabilityService extends Mock
     implements RelayCapabilityService {}
@@ -40,7 +40,7 @@ void main() {
       List<String> configuredRelays, {
       RelayCapabilities? capabilities,
     }) {
-      when(() => mockNostrService.relays).thenReturn(configuredRelays);
+      when(() => mockNostrService.configuredRelays).thenReturn(configuredRelays);
       when(
         () => mockNostrService.connectedRelayCount,
       ).thenReturn(configuredRelays.length);
@@ -271,7 +271,7 @@ void main() {
       ).thenAnswer((_) => completer.future);
 
       when(
-        () => mockNostrService.relays,
+        () => mockNostrService.configuredRelays,
       ).thenReturn(['wss://relay.divine.video']);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       final loadingStats = RelayStatistics(

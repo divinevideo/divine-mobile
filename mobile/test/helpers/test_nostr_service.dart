@@ -4,13 +4,12 @@
 import 'dart:async';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/utils/nostr_timestamp.dart';
 import 'package:models/models.dart';
 
 /// Test implementation of NostrService that doesn't connect to real relays
-class TestNostrService implements INostrService {
+class TestNostrService implements NostrClient {
   final List<Event> _storedEvents = [];
   final Map<String, StreamController<Event>> _subscriptions = {};
   final Map<String, bool> _relayAuthStates = {};
@@ -31,26 +30,27 @@ class TestNostrService implements INostrService {
   bool get isDisposed => !_isConnected;
 
   @override
-  String? get publicKey => _currentUserPubkey;
+  String get publicKey => _currentUserPubkey ?? '';
 
   @override
   bool get hasKeys => _currentUserPubkey != null;
 
   @override
-  NostrKeyManager get keyManager =>
-      throw UnimplementedError('Test service does not implement key manager');
-
-  @override
-  int get relayCount => _isConnected ? 1 : 0;
+  int get configuredRelayCount => _isConnected ? 1 : 0;
 
   @override
   int get connectedRelayCount => _isConnected ? 1 : 0;
 
   @override
-  List<String> get relays => ['wss://test.relay'];
+  List<String> get configuredRelays => ['wss://test.relay'];
 
   @override
-  Map<String, dynamic> get relayStatuses => {'wss://test.relay': _isConnected};
+  Map<String, RelayConnectionStatus> get relayStatuses => {
+    'wss://test.relay': RelayConnectionStatus(
+      url: 'wss://test.relay',
+      state: _isConnected ? RelayState.connected : RelayState.disconnected,
+    ),
+  };
 
   @override
   String get primaryRelay => 'wss://test.relay';
@@ -72,7 +72,7 @@ class TestNostrService implements INostrService {
   }
 
   @override
-  Future<NostrBroadcastResult> broadcastEvent(Event event) async {
+  Future<NostrBroadcastResult> broadcast(Event event, {List<String>? targetRelays}) async {
     if (!_isConnected) throw StateError('Not connected');
     _storedEvents.add(event);
 
@@ -93,7 +93,6 @@ class TestNostrService implements INostrService {
     );
   }
 
-  @override
   Future<NostrBroadcastResult> publishFileMetadata({
     required NIP94Metadata metadata,
     required String content,
@@ -116,7 +115,7 @@ class TestNostrService implements INostrService {
       createdAt: NostrTimestamp.now(),
     );
 
-    return broadcastEvent(event);
+    return broadcast(event);
   }
 
   Future<NostrBroadcastResult> publishVideoEvent({
@@ -147,23 +146,27 @@ class TestNostrService implements INostrService {
       createdAt: NostrTimestamp.now(),
     );
 
-    return broadcastEvent(event);
+    return broadcast(event);
   }
 
   @override
-  Stream<Event> subscribeToEvents({
-    required List<Filter> filters,
-    bool bypassLimits = false,
+  Stream<Event> subscribe(
+    List<Filter> filters, {
+    String? subscriptionId,
+    List<String>? tempRelays,
+    List<String>? targetRelays,
+    List<int> relayTypes = const [],
+    bool sendAfterAuth = false,
     void Function()? onEose,
   }) {
-    final subscriptionId = 'test_sub_${DateTime.now().millisecondsSinceEpoch}';
+    final subId = subscriptionId ?? 'test_sub_${DateTime.now().millisecondsSinceEpoch}';
 
-    if (_subscriptions.containsKey(subscriptionId)) {
-      throw StateError('Subscription $subscriptionId already exists');
+    if (_subscriptions.containsKey(subId)) {
+      throw StateError('Subscription $subId already exists');
     }
 
     final controller = StreamController<Event>.broadcast();
-    _subscriptions[subscriptionId] = controller;
+    _subscriptions[subId] = controller;
 
     // Send existing matching events
     for (final event in _storedEvents) {
@@ -187,9 +190,13 @@ class TestNostrService implements INostrService {
   }
 
   @override
-  Future<List<Event>> getEvents({
-    required List<Filter> filters,
-    int? limit,
+  Future<List<Event>> queryEvents(
+    List<Filter> filters, {
+    String? subscriptionId,
+    List<String>? tempRelays,
+    List<int> relayTypes = const [],
+    bool sendAfterAuth = false,
+    bool useGateway = false,
   }) async {
     final matchingEvents = <Event>[];
 
@@ -207,9 +214,6 @@ class TestNostrService implements INostrService {
       }
       if (matches) {
         matchingEvents.add(event);
-        if (limit != null && matchingEvents.length >= limit) {
-          break;
-        }
       }
     }
 
@@ -217,7 +221,11 @@ class TestNostrService implements INostrService {
   }
 
   @override
-  Future<Event?> fetchEventById(String eventId, {String? relayUrl}) async {
+  Future<Event?> fetchEventById(
+    String eventId, {
+    String? relayUrl,
+    bool useGateway = false,
+  }) async {
     // Search through stored events for matching ID
     for (final event in _storedEvents) {
       if (event.id == eventId) {
@@ -247,8 +255,9 @@ class TestNostrService implements INostrService {
   }
 
   @override
-  Future<void> removeRelay(String relayUrl) async {
+  Future<bool> removeRelay(String relayUrl) async {
     // No-op for tests
+    return true;
   }
 
   @override
@@ -257,26 +266,21 @@ class TestNostrService implements INostrService {
   }
 
   @override
-  Future<void> reconnectAll() async {
+  Future<void> retryDisconnectedRelays() async {
     _isConnected = true;
   }
 
-  @override
   Map<String, bool> get relayAuthStates => Map.from(_relayAuthStates);
 
-  @override
   Stream<Map<String, bool>> get authStateStream => _authStateController.stream;
 
-  @override
   bool isRelayAuthenticated(String relayUrl) {
     return _relayAuthStates[relayUrl] ?? false;
   }
 
-  @override
   bool get isVineRelayAuthenticated =>
       isRelayAuthenticated('wss://staging-relay.divine.video');
 
-  @override
   void setAuthTimeout(Duration timeout) {
     // No-op for tests
   }
@@ -285,11 +289,6 @@ class TestNostrService implements INostrService {
     // Clear test auth states
     _relayAuthStates.clear();
     _authStateController.add(Map.from(_relayAuthStates));
-  }
-
-  @override
-  Future<void> retryInitialization() async {
-    _isConnected = true;
   }
 
   @override
@@ -322,13 +321,26 @@ class TestNostrService implements INostrService {
     return {
       'database': {'total_events': _storedEvents.length},
       'subscriptions': {'active_count': _subscriptions.length},
-      'external_relays': relays.length,
+      'external_relays': configuredRelays.length,
     };
   }
 
   @override
   Stream<Event> searchUsers(String query, {int? limit}) {
-    // TODO: implement searchUsers
-    throw UnimplementedError();
+    return const Stream.empty();
+  }
+
+  // Handle any unimplemented methods from NostrClient
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    // Return sensible defaults for common return types
+    final memberName = invocation.memberName.toString();
+    if (memberName.contains('Future')) {
+      return Future.value(null);
+    }
+    if (memberName.contains('Stream')) {
+      return const Stream.empty();
+    }
+    return super.noSuchMethod(invocation);
   }
 }

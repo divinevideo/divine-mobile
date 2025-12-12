@@ -3,17 +3,16 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i5;
+import 'dart:async' as _i7;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i6;
-import 'package:models/models.dart' as _i9;
-import 'package:nostr_key_manager/nostr_key_manager.dart' as _i2;
-import 'package:nostr_sdk/event.dart' as _i7;
-import 'package:nostr_sdk/filter.dart' as _i8;
-import 'package:openvine/services/auth_service.dart' as _i4;
-import 'package:openvine/services/nostr_service_interface.dart' as _i3;
-import 'package:openvine/services/user_profile_service.dart' as _i10;
+import 'package:nostr_client/src/models/models.dart' as _i2;
+import 'package:nostr_client/src/nostr_client.dart' as _i5;
+import 'package:nostr_key_manager/nostr_key_manager.dart' as _i4;
+import 'package:nostr_sdk/nostr_sdk.dart' as _i8;
+import 'package:openvine/services/auth_service.dart' as _i3;
+import 'package:openvine/services/user_profile_service.dart' as _i9;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -30,35 +29,40 @@ import 'package:openvine/services/user_profile_service.dart' as _i10;
 // ignore_for_file: subtype_of_sealed_class
 // ignore_for_file: invalid_use_of_internal_member
 
-class _FakeNostrKeyManager_0 extends _i1.SmartFake
-    implements _i2.NostrKeyManager {
-  _FakeNostrKeyManager_0(Object parent, Invocation parentInvocation)
+class _FakeNostrBroadcastResult_0 extends _i1.SmartFake
+    implements _i2.NostrBroadcastResult {
+  _FakeNostrBroadcastResult_0(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
-class _FakeNostrBroadcastResult_1 extends _i1.SmartFake
-    implements _i3.NostrBroadcastResult {
-  _FakeNostrBroadcastResult_1(Object parent, Invocation parentInvocation)
+class _FakeAuthResult_1 extends _i1.SmartFake implements _i3.AuthResult {
+  _FakeAuthResult_1(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
-class _FakeAuthResult_2 extends _i1.SmartFake implements _i4.AuthResult {
-  _FakeAuthResult_2(Object parent, Invocation parentInvocation)
+class _FakeKeychain_2 extends _i1.SmartFake implements _i4.Keychain {
+  _FakeKeychain_2(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
-class _FakeKeychain_3 extends _i1.SmartFake implements _i2.Keychain {
-  _FakeKeychain_3(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
-/// A class which mocks [INostrService].
+/// A class which mocks [NostrClient].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockINostrService extends _i1.Mock implements _i3.INostrService {
-  MockINostrService() {
+class MockNostrClient extends _i1.Mock implements _i5.NostrClient {
+  MockNostrClient() {
     _i1.throwOnMissingStub(this);
   }
+
+  @override
+  String get publicKey =>
+      (super.noSuchMethod(
+            Invocation.getter(#publicKey),
+            returnValue: _i6.dummyValue<String>(
+              this,
+              Invocation.getter(#publicKey),
+            ),
+          )
+          as String);
 
   @override
   bool get isInitialized =>
@@ -71,33 +75,25 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
           as bool);
 
   @override
+  bool get hasKeys =>
+      (super.noSuchMethod(Invocation.getter(#hasKeys), returnValue: false)
+          as bool);
+
+  @override
+  List<String> get configuredRelays =>
+      (super.noSuchMethod(
+            Invocation.getter(#configuredRelays),
+            returnValue: <String>[],
+          )
+          as List<String>);
+
+  @override
   List<String> get connectedRelays =>
       (super.noSuchMethod(
             Invocation.getter(#connectedRelays),
             returnValue: <String>[],
           )
           as List<String>);
-
-  @override
-  bool get hasKeys =>
-      (super.noSuchMethod(Invocation.getter(#hasKeys), returnValue: false)
-          as bool);
-
-  @override
-  _i2.NostrKeyManager get keyManager =>
-      (super.noSuchMethod(
-            Invocation.getter(#keyManager),
-            returnValue: _FakeNostrKeyManager_0(
-              this,
-              Invocation.getter(#keyManager),
-            ),
-          )
-          as _i2.NostrKeyManager);
-
-  @override
-  int get relayCount =>
-      (super.noSuchMethod(Invocation.getter(#relayCount), returnValue: 0)
-          as int);
 
   @override
   int get connectedRelayCount =>
@@ -108,41 +104,29 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
           as int);
 
   @override
-  List<String> get relays =>
-      (super.noSuchMethod(Invocation.getter(#relays), returnValue: <String>[])
-          as List<String>);
+  int get configuredRelayCount =>
+      (super.noSuchMethod(
+            Invocation.getter(#configuredRelayCount),
+            returnValue: 0,
+          )
+          as int);
 
   @override
-  Map<String, dynamic> get relayStatuses =>
+  Map<String, _i2.RelayConnectionStatus> get relayStatuses =>
       (super.noSuchMethod(
             Invocation.getter(#relayStatuses),
-            returnValue: <String, dynamic>{},
+            returnValue: <String, _i2.RelayConnectionStatus>{},
           )
-          as Map<String, dynamic>);
+          as Map<String, _i2.RelayConnectionStatus>);
 
   @override
-  Map<String, bool> get relayAuthStates =>
+  _i7.Stream<Map<String, _i2.RelayConnectionStatus>> get relayStatusStream =>
       (super.noSuchMethod(
-            Invocation.getter(#relayAuthStates),
-            returnValue: <String, bool>{},
+            Invocation.getter(#relayStatusStream),
+            returnValue:
+                _i7.Stream<Map<String, _i2.RelayConnectionStatus>>.empty(),
           )
-          as Map<String, bool>);
-
-  @override
-  _i5.Stream<Map<String, bool>> get authStateStream =>
-      (super.noSuchMethod(
-            Invocation.getter(#authStateStream),
-            returnValue: _i5.Stream<Map<String, bool>>.empty(),
-          )
-          as _i5.Stream<Map<String, bool>>);
-
-  @override
-  bool get isVineRelayAuthenticated =>
-      (super.noSuchMethod(
-            Invocation.getter(#isVineRelayAuthenticated),
-            returnValue: false,
-          )
-          as bool);
+          as _i7.Stream<Map<String, _i2.RelayConnectionStatus>>);
 
   @override
   String get primaryRelay =>
@@ -156,98 +140,167 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
           as String);
 
   @override
-  bool isRelayAuthenticated(String? relayUrl) =>
+  _i7.Future<void> initialize() =>
       (super.noSuchMethod(
-            Invocation.method(#isRelayAuthenticated, [relayUrl]),
-            returnValue: false,
+            Invocation.method(#initialize, []),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
           )
-          as bool);
+          as _i7.Future<void>);
 
   @override
-  void setAuthTimeout(Duration? timeout) => super.noSuchMethod(
-    Invocation.method(#setAuthTimeout, [timeout]),
+  _i7.Future<_i8.Event?> publishEvent(
+    _i8.Event? event, {
+    List<String>? targetRelays,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #publishEvent,
+              [event],
+              {#targetRelays: targetRelays},
+            ),
+            returnValue: _i7.Future<_i8.Event?>.value(),
+          )
+          as _i7.Future<_i8.Event?>);
+
+  @override
+  _i7.Future<List<_i8.Event>> queryEvents(
+    List<_i8.Filter>? filters, {
+    String? subscriptionId,
+    List<String>? tempRelays,
+    List<int>? relayTypes = const [1, 2, 3, 4],
+    bool? sendAfterAuth = false,
+    bool? useGateway = true,
+    bool? useCache = true,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #queryEvents,
+              [filters],
+              {
+                #subscriptionId: subscriptionId,
+                #tempRelays: tempRelays,
+                #relayTypes: relayTypes,
+                #sendAfterAuth: sendAfterAuth,
+                #useGateway: useGateway,
+                #useCache: useCache,
+              },
+            ),
+            returnValue: _i7.Future<List<_i8.Event>>.value(<_i8.Event>[]),
+          )
+          as _i7.Future<List<_i8.Event>>);
+
+  @override
+  _i7.Future<_i8.Event?> fetchEventById(
+    String? eventId, {
+    String? relayUrl,
+    bool? useGateway = true,
+    bool? useCache = true,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #fetchEventById,
+              [eventId],
+              {
+                #relayUrl: relayUrl,
+                #useGateway: useGateway,
+                #useCache: useCache,
+              },
+            ),
+            returnValue: _i7.Future<_i8.Event?>.value(),
+          )
+          as _i7.Future<_i8.Event?>);
+
+  @override
+  _i7.Future<_i8.Event?> fetchProfile(
+    String? pubkey, {
+    bool? useGateway = true,
+    bool? useCache = true,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #fetchProfile,
+              [pubkey],
+              {#useGateway: useGateway, #useCache: useCache},
+            ),
+            returnValue: _i7.Future<_i8.Event?>.value(),
+          )
+          as _i7.Future<_i8.Event?>);
+
+  @override
+  _i7.Stream<_i8.Event> subscribe(
+    List<_i8.Filter>? filters, {
+    String? subscriptionId,
+    List<String>? tempRelays,
+    List<String>? targetRelays,
+    List<int>? relayTypes = const [1, 2, 3, 4],
+    bool? sendAfterAuth = false,
+    void Function()? onEose,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #subscribe,
+              [filters],
+              {
+                #subscriptionId: subscriptionId,
+                #tempRelays: tempRelays,
+                #targetRelays: targetRelays,
+                #relayTypes: relayTypes,
+                #sendAfterAuth: sendAfterAuth,
+                #onEose: onEose,
+              },
+            ),
+            returnValue: _i7.Stream<_i8.Event>.empty(),
+          )
+          as _i7.Stream<_i8.Event>);
+
+  @override
+  _i7.Future<void> unsubscribe(String? subscriptionId) =>
+      (super.noSuchMethod(
+            Invocation.method(#unsubscribe, [subscriptionId]),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
+          )
+          as _i7.Future<void>);
+
+  @override
+  void closeAllSubscriptions() => super.noSuchMethod(
+    Invocation.method(#closeAllSubscriptions, []),
     returnValueForMissingStub: null,
   );
 
   @override
-  _i5.Future<void> initialize({List<String>? customRelays}) =>
-      (super.noSuchMethod(
-            Invocation.method(#initialize, [], {#customRelays: customRelays}),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Stream<_i7.Event> subscribeToEvents({
-    required List<_i8.Filter>? filters,
-    bool? bypassLimits = false,
-    void Function()? onEose,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(#subscribeToEvents, [], {
-              #filters: filters,
-              #bypassLimits: bypassLimits,
-              #onEose: onEose,
-            }),
-            returnValue: _i5.Stream<_i7.Event>.empty(),
-          )
-          as _i5.Stream<_i7.Event>);
-
-  @override
-  _i5.Future<_i3.NostrBroadcastResult> broadcastEvent(_i7.Event? event) =>
-      (super.noSuchMethod(
-            Invocation.method(#broadcastEvent, [event]),
-            returnValue: _i5.Future<_i3.NostrBroadcastResult>.value(
-              _FakeNostrBroadcastResult_1(
-                this,
-                Invocation.method(#broadcastEvent, [event]),
-              ),
-            ),
-          )
-          as _i5.Future<_i3.NostrBroadcastResult>);
-
-  @override
-  _i5.Future<_i3.NostrBroadcastResult> publishFileMetadata({
-    required _i9.NIP94Metadata? metadata,
-    required String? content,
-    List<String>? hashtags = const [],
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(#publishFileMetadata, [], {
-              #metadata: metadata,
-              #content: content,
-              #hashtags: hashtags,
-            }),
-            returnValue: _i5.Future<_i3.NostrBroadcastResult>.value(
-              _FakeNostrBroadcastResult_1(
-                this,
-                Invocation.method(#publishFileMetadata, [], {
-                  #metadata: metadata,
-                  #content: content,
-                  #hashtags: hashtags,
-                }),
-              ),
-            ),
-          )
-          as _i5.Future<_i3.NostrBroadcastResult>);
-
-  @override
-  _i5.Future<bool> addRelay(String? relayUrl) =>
+  _i7.Future<bool> addRelay(String? relayUrl) =>
       (super.noSuchMethod(
             Invocation.method(#addRelay, [relayUrl]),
-            returnValue: _i5.Future<bool>.value(false),
+            returnValue: _i7.Future<bool>.value(false),
           )
-          as _i5.Future<bool>);
+          as _i7.Future<bool>);
 
   @override
-  _i5.Future<void> removeRelay(String? relayUrl) =>
+  _i7.Future<bool> removeRelay(String? relayUrl) =>
       (super.noSuchMethod(
             Invocation.method(#removeRelay, [relayUrl]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i7.Future<bool>.value(false),
           )
-          as _i5.Future<void>);
+          as _i7.Future<bool>);
+
+  @override
+  _i7.Future<Map<String, dynamic>?> getRelayStats() =>
+      (super.noSuchMethod(
+            Invocation.method(#getRelayStats, []),
+            returnValue: _i7.Future<Map<String, dynamic>?>.value(),
+          )
+          as _i7.Future<Map<String, dynamic>?>);
+
+  @override
+  _i7.Future<void> retryDisconnectedRelays() =>
+      (super.noSuchMethod(
+            Invocation.method(#retryDisconnectedRelays, []),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
+          )
+          as _i7.Future<void>);
 
   @override
   Map<String, bool> getRelayStatus() =>
@@ -258,60 +311,100 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
           as Map<String, bool>);
 
   @override
-  _i5.Future<void> reconnectAll() =>
-      (super.noSuchMethod(
-            Invocation.method(#reconnectAll, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> retryInitialization() =>
-      (super.noSuchMethod(
-            Invocation.method(#retryInitialization, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> closeAllSubscriptions() =>
-      (super.noSuchMethod(
-            Invocation.method(#closeAllSubscriptions, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<List<_i7.Event>> getEvents({
-    required List<_i8.Filter>? filters,
-    int? limit,
+  _i7.Future<_i8.Event?> sendLike(
+    String? eventId, {
+    String? content,
+    List<String>? tempRelays,
+    List<String>? targetRelays,
   }) =>
       (super.noSuchMethod(
-            Invocation.method(#getEvents, [], {
-              #filters: filters,
-              #limit: limit,
-            }),
-            returnValue: _i5.Future<List<_i7.Event>>.value(<_i7.Event>[]),
+            Invocation.method(
+              #sendLike,
+              [eventId],
+              {
+                #content: content,
+                #tempRelays: tempRelays,
+                #targetRelays: targetRelays,
+              },
+            ),
+            returnValue: _i7.Future<_i8.Event?>.value(),
           )
-          as _i5.Future<List<_i7.Event>>);
+          as _i7.Future<_i8.Event?>);
 
   @override
-  _i5.Future<_i7.Event?> fetchEventById(String? eventId, {String? relayUrl}) =>
+  _i7.Future<_i8.Event?> sendRepost(
+    String? eventId, {
+    String? relayAddr,
+    String? content = '',
+    List<String>? tempRelays,
+    List<String>? targetRelays,
+  }) =>
       (super.noSuchMethod(
             Invocation.method(
-              #fetchEventById,
+              #sendRepost,
               [eventId],
-              {#relayUrl: relayUrl},
+              {
+                #relayAddr: relayAddr,
+                #content: content,
+                #tempRelays: tempRelays,
+                #targetRelays: targetRelays,
+              },
             ),
-            returnValue: _i5.Future<_i7.Event?>.value(),
+            returnValue: _i7.Future<_i8.Event?>.value(),
           )
-          as _i5.Future<_i7.Event?>);
+          as _i7.Future<_i8.Event?>);
 
   @override
-  _i5.Stream<_i7.Event> searchVideos(
+  _i7.Future<_i8.Event?> deleteEvent(
+    String? eventId, {
+    List<String>? tempRelays,
+    List<String>? targetRelays,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #deleteEvent,
+              [eventId],
+              {#tempRelays: tempRelays, #targetRelays: targetRelays},
+            ),
+            returnValue: _i7.Future<_i8.Event?>.value(),
+          )
+          as _i7.Future<_i8.Event?>);
+
+  @override
+  _i7.Future<_i8.Event?> deleteEvents(
+    List<String>? eventIds, {
+    List<String>? tempRelays,
+    List<String>? targetRelays,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #deleteEvents,
+              [eventIds],
+              {#tempRelays: tempRelays, #targetRelays: targetRelays},
+            ),
+            returnValue: _i7.Future<_i8.Event?>.value(),
+          )
+          as _i7.Future<_i8.Event?>);
+
+  @override
+  _i7.Future<_i8.Event?> sendContactList(
+    _i8.ContactList? contacts,
+    String? content, {
+    List<String>? tempRelays,
+    List<String>? targetRelays,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #sendContactList,
+              [contacts, content],
+              {#tempRelays: tempRelays, #targetRelays: targetRelays},
+            ),
+            returnValue: _i7.Future<_i8.Event?>.value(),
+          )
+          as _i7.Future<_i8.Event?>);
+
+  @override
+  _i7.Stream<_i8.Event> searchVideos(
     String? query, {
     List<String>? authors,
     DateTime? since,
@@ -324,67 +417,83 @@ class MockINostrService extends _i1.Mock implements _i3.INostrService {
               [query],
               {#authors: authors, #since: since, #until: until, #limit: limit},
             ),
-            returnValue: _i5.Stream<_i7.Event>.empty(),
+            returnValue: _i7.Stream<_i8.Event>.empty(),
           )
-          as _i5.Stream<_i7.Event>);
+          as _i7.Stream<_i8.Event>);
 
   @override
-  _i5.Stream<_i7.Event> searchUsers(String? query, {int? limit}) =>
+  _i7.Stream<_i8.Event> searchUsers(String? query, {int? limit}) =>
       (super.noSuchMethod(
             Invocation.method(#searchUsers, [query], {#limit: limit}),
-            returnValue: _i5.Stream<_i7.Event>.empty(),
+            returnValue: _i7.Stream<_i8.Event>.empty(),
           )
-          as _i5.Stream<_i7.Event>);
+          as _i7.Stream<_i8.Event>);
 
   @override
-  _i5.Future<Map<String, dynamic>?> getRelayStats() =>
+  _i7.Future<_i2.NostrBroadcastResult> broadcast(
+    _i8.Event? event, {
+    List<String>? targetRelays,
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#getRelayStats, []),
-            returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+            Invocation.method(
+              #broadcast,
+              [event],
+              {#targetRelays: targetRelays},
+            ),
+            returnValue: _i7.Future<_i2.NostrBroadcastResult>.value(
+              _FakeNostrBroadcastResult_0(
+                this,
+                Invocation.method(
+                  #broadcast,
+                  [event],
+                  {#targetRelays: targetRelays},
+                ),
+              ),
+            ),
           )
-          as _i5.Future<Map<String, dynamic>?>);
+          as _i7.Future<_i2.NostrBroadcastResult>);
 
   @override
-  _i5.Future<void> dispose() =>
+  _i7.Future<void> dispose() =>
       (super.noSuchMethod(
             Invocation.method(#dispose, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i7.Future<void>);
 }
 
 /// A class which mocks [AuthService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockAuthService extends _i1.Mock implements _i4.AuthService {
+class MockAuthService extends _i1.Mock implements _i3.AuthService {
   MockAuthService() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i4.AuthState get authState =>
+  _i3.AuthState get authState =>
       (super.noSuchMethod(
             Invocation.getter(#authState),
-            returnValue: _i4.AuthState.unauthenticated,
+            returnValue: _i3.AuthState.unauthenticated,
           )
-          as _i4.AuthState);
+          as _i3.AuthState);
 
   @override
-  _i5.Stream<_i4.AuthState> get authStateStream =>
+  _i7.Stream<_i3.AuthState> get authStateStream =>
       (super.noSuchMethod(
             Invocation.getter(#authStateStream),
-            returnValue: _i5.Stream<_i4.AuthState>.empty(),
+            returnValue: _i7.Stream<_i3.AuthState>.empty(),
           )
-          as _i5.Stream<_i4.AuthState>);
+          as _i7.Stream<_i3.AuthState>);
 
   @override
-  _i5.Stream<_i4.UserProfile?> get profileStream =>
+  _i7.Stream<_i3.UserProfile?> get profileStream =>
       (super.noSuchMethod(
             Invocation.getter(#profileStream),
-            returnValue: _i5.Stream<_i4.UserProfile?>.empty(),
+            returnValue: _i7.Stream<_i3.UserProfile?>.empty(),
           )
-          as _i5.Stream<_i4.UserProfile?>);
+          as _i7.Stream<_i3.UserProfile?>);
 
   @override
   bool get isAuthenticated =>
@@ -403,22 +512,22 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
           as Map<String, dynamic>);
 
   @override
-  _i5.Future<void> initialize() =>
+  _i7.Future<void> initialize() =>
       (super.noSuchMethod(
             Invocation.method(#initialize, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i7.Future<void>);
 
   @override
-  _i5.Future<_i4.AuthResult> createNewIdentity({String? biometricPrompt}) =>
+  _i7.Future<_i3.AuthResult> createNewIdentity({String? biometricPrompt}) =>
       (super.noSuchMethod(
             Invocation.method(#createNewIdentity, [], {
               #biometricPrompt: biometricPrompt,
             }),
-            returnValue: _i5.Future<_i4.AuthResult>.value(
-              _FakeAuthResult_2(
+            returnValue: _i7.Future<_i3.AuthResult>.value(
+              _FakeAuthResult_1(
                 this,
                 Invocation.method(#createNewIdentity, [], {
                   #biometricPrompt: biometricPrompt,
@@ -426,10 +535,10 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
               ),
             ),
           )
-          as _i5.Future<_i4.AuthResult>);
+          as _i7.Future<_i3.AuthResult>);
 
   @override
-  _i5.Future<_i4.AuthResult> importFromNsec(
+  _i7.Future<_i3.AuthResult> importFromNsec(
     String? nsec, {
     String? biometricPrompt,
   }) =>
@@ -439,8 +548,8 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
               [nsec],
               {#biometricPrompt: biometricPrompt},
             ),
-            returnValue: _i5.Future<_i4.AuthResult>.value(
-              _FakeAuthResult_2(
+            returnValue: _i7.Future<_i3.AuthResult>.value(
+              _FakeAuthResult_1(
                 this,
                 Invocation.method(
                   #importFromNsec,
@@ -450,10 +559,10 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
               ),
             ),
           )
-          as _i5.Future<_i4.AuthResult>);
+          as _i7.Future<_i3.AuthResult>);
 
   @override
-  _i5.Future<_i4.AuthResult> importFromHex(
+  _i7.Future<_i3.AuthResult> importFromHex(
     String? privateKeyHex, {
     String? biometricPrompt,
   }) =>
@@ -463,8 +572,8 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
               [privateKeyHex],
               {#biometricPrompt: biometricPrompt},
             ),
-            returnValue: _i5.Future<_i4.AuthResult>.value(
-              _FakeAuthResult_2(
+            returnValue: _i7.Future<_i3.AuthResult>.value(
+              _FakeAuthResult_1(
                 this,
                 Invocation.method(
                   #importFromHex,
@@ -474,59 +583,59 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
               ),
             ),
           )
-          as _i5.Future<_i4.AuthResult>);
+          as _i7.Future<_i3.AuthResult>);
 
   @override
-  _i5.Future<void> refreshCurrentProfile(
-    _i10.UserProfileService? userProfileService,
+  _i7.Future<void> refreshCurrentProfile(
+    _i9.UserProfileService? userProfileService,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#refreshCurrentProfile, [userProfileService]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i7.Future<void>);
 
   @override
-  _i5.Future<void> acceptTermsOfService() =>
+  _i7.Future<void> acceptTermsOfService() =>
       (super.noSuchMethod(
             Invocation.method(#acceptTermsOfService, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i7.Future<void>);
 
   @override
-  _i5.Future<void> signOut({bool? deleteKeys = false}) =>
+  _i7.Future<void> signOut({bool? deleteKeys = false}) =>
       (super.noSuchMethod(
             Invocation.method(#signOut, [], {#deleteKeys: deleteKeys}),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i7.Future<void>);
 
   @override
-  _i5.Future<String?> getPrivateKeyForSigning({String? biometricPrompt}) =>
+  _i7.Future<String?> getPrivateKeyForSigning({String? biometricPrompt}) =>
       (super.noSuchMethod(
             Invocation.method(#getPrivateKeyForSigning, [], {
               #biometricPrompt: biometricPrompt,
             }),
-            returnValue: _i5.Future<String?>.value(),
+            returnValue: _i7.Future<String?>.value(),
           )
-          as _i5.Future<String?>);
+          as _i7.Future<String?>);
 
   @override
-  _i5.Future<String?> exportNsec({String? biometricPrompt}) =>
+  _i7.Future<String?> exportNsec({String? biometricPrompt}) =>
       (super.noSuchMethod(
             Invocation.method(#exportNsec, [], {
               #biometricPrompt: biometricPrompt,
             }),
-            returnValue: _i5.Future<String?>.value(),
+            returnValue: _i7.Future<String?>.value(),
           )
-          as _i5.Future<String?>);
+          as _i7.Future<String?>);
 
   @override
-  _i5.Future<_i7.Event?> createAndSignEvent({
+  _i7.Future<_i8.Event?> createAndSignEvent({
     required int? kind,
     required String? content,
     List<List<String>>? tags,
@@ -539,9 +648,9 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
               #tags: tags,
               #biometricPrompt: biometricPrompt,
             }),
-            returnValue: _i5.Future<_i7.Event?>.value(),
+            returnValue: _i7.Future<_i8.Event?>.value(),
           )
-          as _i5.Future<_i7.Event?>);
+          as _i7.Future<_i8.Event?>);
 
   @override
   void dispose() => super.noSuchMethod(
@@ -553,7 +662,7 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
 /// A class which mocks [NostrKeyManager].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
+class MockNostrKeyManager extends _i1.Mock implements _i4.NostrKeyManager {
   MockNostrKeyManager() {
     _i1.throwOnMissingStub(this);
   }
@@ -574,46 +683,46 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
           as bool);
 
   @override
-  _i5.Future<void> initialize() =>
+  _i7.Future<void> initialize() =>
       (super.noSuchMethod(
             Invocation.method(#initialize, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i7.Future<void>);
 
   @override
-  _i5.Future<_i2.Keychain> generateKeys() =>
+  _i7.Future<_i4.Keychain> generateKeys() =>
       (super.noSuchMethod(
             Invocation.method(#generateKeys, []),
-            returnValue: _i5.Future<_i2.Keychain>.value(
-              _FakeKeychain_3(this, Invocation.method(#generateKeys, [])),
+            returnValue: _i7.Future<_i4.Keychain>.value(
+              _FakeKeychain_2(this, Invocation.method(#generateKeys, [])),
             ),
           )
-          as _i5.Future<_i2.Keychain>);
+          as _i7.Future<_i4.Keychain>);
 
   @override
-  _i5.Future<_i2.Keychain> importPrivateKey(String? privateKey) =>
+  _i7.Future<_i4.Keychain> importPrivateKey(String? privateKey) =>
       (super.noSuchMethod(
             Invocation.method(#importPrivateKey, [privateKey]),
-            returnValue: _i5.Future<_i2.Keychain>.value(
-              _FakeKeychain_3(
+            returnValue: _i7.Future<_i4.Keychain>.value(
+              _FakeKeychain_2(
                 this,
                 Invocation.method(#importPrivateKey, [privateKey]),
               ),
             ),
           )
-          as _i5.Future<_i2.Keychain>);
+          as _i7.Future<_i4.Keychain>);
 
   @override
-  _i5.Future<_i2.Keychain> importFromNsec(String? nsec) =>
+  _i7.Future<_i4.Keychain> importFromNsec(String? nsec) =>
       (super.noSuchMethod(
             Invocation.method(#importFromNsec, [nsec]),
-            returnValue: _i5.Future<_i2.Keychain>.value(
-              _FakeKeychain_3(this, Invocation.method(#importFromNsec, [nsec])),
+            returnValue: _i7.Future<_i4.Keychain>.value(
+              _FakeKeychain_2(this, Invocation.method(#importFromNsec, [nsec])),
             ),
           )
-          as _i5.Future<_i2.Keychain>);
+          as _i7.Future<_i4.Keychain>);
 
   @override
   String exportPrivateKey() =>
@@ -638,70 +747,70 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
           as String);
 
   @override
-  _i5.Future<Map<String, dynamic>> replaceKeyWithBackup() =>
+  _i7.Future<Map<String, dynamic>> replaceKeyWithBackup() =>
       (super.noSuchMethod(
             Invocation.method(#replaceKeyWithBackup, []),
-            returnValue: _i5.Future<Map<String, dynamic>>.value(
+            returnValue: _i7.Future<Map<String, dynamic>>.value(
               <String, dynamic>{},
             ),
           )
-          as _i5.Future<Map<String, dynamic>>);
+          as _i7.Future<Map<String, dynamic>>);
 
   @override
-  _i5.Future<void> restoreFromBackup() =>
+  _i7.Future<void> restoreFromBackup() =>
       (super.noSuchMethod(
             Invocation.method(#restoreFromBackup, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i7.Future<void>);
 
   @override
-  _i5.Future<void> clearBackup() =>
+  _i7.Future<void> clearBackup() =>
       (super.noSuchMethod(
             Invocation.method(#clearBackup, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i7.Future<void>);
 
   @override
-  _i5.Future<List<String>> createMnemonicBackup() =>
+  _i7.Future<List<String>> createMnemonicBackup() =>
       (super.noSuchMethod(
             Invocation.method(#createMnemonicBackup, []),
-            returnValue: _i5.Future<List<String>>.value(<String>[]),
+            returnValue: _i7.Future<List<String>>.value(<String>[]),
           )
-          as _i5.Future<List<String>>);
+          as _i7.Future<List<String>>);
 
   @override
-  _i5.Future<_i2.Keychain> restoreFromMnemonic(List<String>? mnemonic) =>
+  _i7.Future<_i4.Keychain> restoreFromMnemonic(List<String>? mnemonic) =>
       (super.noSuchMethod(
             Invocation.method(#restoreFromMnemonic, [mnemonic]),
-            returnValue: _i5.Future<_i2.Keychain>.value(
-              _FakeKeychain_3(
+            returnValue: _i7.Future<_i4.Keychain>.value(
+              _FakeKeychain_2(
                 this,
                 Invocation.method(#restoreFromMnemonic, [mnemonic]),
               ),
             ),
           )
-          as _i5.Future<_i2.Keychain>);
+          as _i7.Future<_i4.Keychain>);
 
   @override
-  _i5.Future<bool> verifyBackup(List<String>? mnemonic, String? privateKey) =>
+  _i7.Future<bool> verifyBackup(List<String>? mnemonic, String? privateKey) =>
       (super.noSuchMethod(
             Invocation.method(#verifyBackup, [mnemonic, privateKey]),
-            returnValue: _i5.Future<bool>.value(false),
+            returnValue: _i7.Future<bool>.value(false),
           )
-          as _i5.Future<bool>);
+          as _i7.Future<bool>);
 
   @override
-  _i5.Future<void> clearKeys() =>
+  _i7.Future<void> clearKeys() =>
       (super.noSuchMethod(
             Invocation.method(#clearKeys, []),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i7.Future<void>.value(),
+            returnValueForMissingStub: _i7.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i7.Future<void>);
 
   @override
   Map<String, dynamic> getIdentitySummary() =>
@@ -715,7 +824,7 @@ class MockNostrKeyManager extends _i1.Mock implements _i2.NostrKeyManager {
 /// A class which mocks [Keychain].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockKeychain extends _i1.Mock implements _i2.Keychain {
+class MockKeychain extends _i1.Mock implements _i4.Keychain {
   MockKeychain() {
     _i1.throwOnMissingStub(this);
   }

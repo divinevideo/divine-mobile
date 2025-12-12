@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/services/nostr_service.dart';
+import 'package:openvine/services/nostr_service_factory.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/thumbnail_api_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -155,10 +155,10 @@ Examples:
 
       // Create Nostr service to connect to relay
       final keyManager = NostrKeyManager();
-      final nostrService = NostrService(keyManager);
+      final nostrService = NostrServiceFactory.create(keyManager);
 
-      // Initialize with only the relay we want to query
-      await nostrService.initialize(customRelays: [relayUrl]);
+      // Initialize
+      await nostrService.initialize();
 
       // Create filter for video events
       final filter = Filter(
@@ -172,7 +172,7 @@ Examples:
       );
 
       // Subscribe to events and collect them
-      final subscription = nostrService.subscribeToEvents(filters: [filter]);
+      final subscription = nostrService.subscribe([filter]);
       final eventCount = <int>[0]; // Use list to allow modification in callback
 
       await for (final event in subscription) {
@@ -199,8 +199,8 @@ Examples:
       }
 
       // Clean up
-      await nostrService.closeAllSubscriptions();
-      nostrService.dispose();
+      nostrService.closeAllSubscriptions();
+      await nostrService.dispose();
     } catch (e) {
       Log.error(
         'Failed to fetch events from relay: $e',

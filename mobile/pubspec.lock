@@ -153,14 +153,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.0"
-  bluez:
-    dependency: transitive
-    description:
-      name: bluez
-      sha256: "61a7204381925896a374301498f2f5399e59827c6498ae1e924aaa598751b545"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.8.3"
   blurhash_dart:
     dependency: "direct main"
     description:
@@ -814,54 +806,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_blue_plus:
-    dependency: transitive
-    description:
-      name: flutter_blue_plus
-      sha256: bfcfcd60cd39846d32944f1c1a84f270437ce2d8e7a3e8a1cf8bf9ac9c9a423c
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.2"
-  flutter_blue_plus_android:
-    dependency: transitive
-    description:
-      name: flutter_blue_plus_android
-      sha256: e62c1cfa4da3594cc8360333bc3f9208a84963bfcbae192fb95a61635caf75fe
-      url: "https://pub.dev"
-    source: hosted
-    version: "8.0.1"
-  flutter_blue_plus_darwin:
-    dependency: transitive
-    description:
-      name: flutter_blue_plus_darwin
-      sha256: d789861c37aee73101515df99f1d6d162b0ea69a13b961e1b3339f27ea06dcb6
-      url: "https://pub.dev"
-    source: hosted
-    version: "8.0.1"
-  flutter_blue_plus_linux:
-    dependency: transitive
-    description:
-      name: flutter_blue_plus_linux
-      sha256: "1fd456e7f17f6c9e50a2bdfca8bcfd5dfee83e3c0a9fd7d493dd73d4e60b9755"
-      url: "https://pub.dev"
-    source: hosted
-    version: "8.0.1"
-  flutter_blue_plus_platform_interface:
-    dependency: transitive
-    description:
-      name: flutter_blue_plus_platform_interface
-      sha256: "8d8440360bed1dce921f3140510c9294ec81d21945c30607afd29bda9a8a87d6"
-      url: "https://pub.dev"
-    source: hosted
-    version: "8.0.1"
-  flutter_blue_plus_web:
-    dependency: transitive
-    description:
-      name: flutter_blue_plus_web
-      sha256: "87d4d63cd06e1e3e9c4b4f5774cea6d2a8516b5693dce0e4dbf7c9d4e63dbcfd"
-      url: "https://pub.dev"
-    source: hosted
-    version: "8.0.1"
   flutter_cache_manager:
     dependency: "direct main"
     description:
@@ -875,15 +819,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_embedded_nostr_relay:
-    dependency: "direct main"
-    description:
-      path: flutter_embedded_nostr_relay
-      ref: HEAD
-      resolved-ref: "0fbd1d62ea545cd14741279315a772db40c44c30"
-      url: "https://github.com/rabble/flutter_embedded_nostr_relay.git"
-    source: git
-    version: "0.1.0"
   flutter_launcher_icons:
     dependency: "direct dev"
     description:
@@ -1392,14 +1327,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.2"
-  nearby_connections:
-    dependency: transitive
-    description:
-      name: nearby_connections
-      sha256: "94d500bdb11f9a3db3b1cb2949ab438107e581f0142380efc17ecc8038e99369"
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.3.0"
   nm:
     dependency: transitive
     description:

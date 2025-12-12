@@ -11,16 +11,16 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/profile_videos_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/video_event_service.dart';
 
-@GenerateMocks([INostrService, VideoEventService])
+@GenerateMocks([NostrClient, VideoEventService])
 import 'profile_videos_provider_test.mocks.dart';
 
 void main() {
   group('ProfileVideosProvider', () {
     late ProviderContainer container;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockVideoEventService mockVideoEventService;
 
     /// Helper to setup mock subscription with onEose callback support
@@ -31,8 +31,8 @@ void main() {
       void Function()? capturedOnEose;
       final subscriptionStarted = Completer<void>();
       when(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
+        mockNostrService.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
       ).thenAnswer((invocation) {
@@ -52,7 +52,7 @@ void main() {
     }
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockVideoEventService = MockVideoEventService();
 
       container = ProviderContainer(
@@ -168,10 +168,10 @@ void main() {
           final controller = StreamController<Event>();
           void Function()? capturedOnEose;
           when(
-            mockNostrService.subscribeToEvents(
-              filters: anyNamed('filters'),
-              onEose: anyNamed('onEose'),
-            ),
+            mockNostrService.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
           ).thenAnswer((invocation) {
             capturedOnEose =
                 invocation.namedArguments[#onEose] as void Function()?;
@@ -218,10 +218,10 @@ void main() {
           mockVideoEventService.getVideosByAuthor(testPubkey),
         ).thenReturn([]);
         when(
-          mockNostrService.subscribeToEvents(
-            filters: anyNamed('filters'),
-            onEose: anyNamed('onEose'),
-          ),
+          mockNostrService.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
         ).thenAnswer((_) => Stream.error(Exception('Network error')));
 
         // Act
@@ -337,10 +337,10 @@ void main() {
             onTimeout: () {
               // Debug: check if subscribeToEvents was ever called
               final verification = verify(
-                mockNostrService.subscribeToEvents(
-                  filters: anyNamed('filters'),
-                  onEose: anyNamed('onEose'),
-                ),
+                mockNostrService.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
               );
               final callCount = verification.callCount;
               throw Exception(
@@ -378,10 +378,10 @@ void main() {
           mockVideoEventService.getVideosByAuthor(testPubkey),
         ).thenReturn([]);
         when(
-          mockNostrService.subscribeToEvents(
-            filters: anyNamed('filters'),
-            onEose: anyNamed('onEose'),
-          ),
+          mockNostrService.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
         ).thenAnswer((_) => Stream.error(Exception('Test error')));
 
         final notifier = container.read(profileVideosProvider.notifier);
@@ -589,10 +589,10 @@ void main() {
         void Function()? capturedOnEose;
 
         when(
-          mockNostrService.subscribeToEvents(
-            filters: anyNamed('filters'),
-            onEose: anyNamed('onEose'),
-          ),
+          mockNostrService.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
         ).thenAnswer((invocation) {
           // Capture the onEose callback
           capturedOnEose =

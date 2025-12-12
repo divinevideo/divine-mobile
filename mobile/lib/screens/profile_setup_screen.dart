@@ -999,7 +999,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         category: LogCategory.ui,
       );
 
-      final result = await nostrService.broadcastEvent(event);
+      final result = await nostrService.broadcast(event);
       final success = result.isSuccessful;
 
       Log.info(

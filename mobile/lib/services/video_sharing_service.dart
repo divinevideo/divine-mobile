@@ -5,7 +5,7 @@ import 'dart:async';
 
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
@@ -45,13 +45,13 @@ class ShareResult {
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class VideoSharingService {
   VideoSharingService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
     required AuthService authService,
     required UserProfileService userProfileService,
   }) : _nostrService = nostrService,
        _authService = authService,
        _userProfileService = userProfileService;
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final AuthService _authService;
   final UserProfileService _userProfileService;
 
@@ -102,7 +102,7 @@ class VideoSharingService {
       }
 
       // Broadcast the DM
-      final result = await _nostrService.broadcastEvent(event);
+      final result = await _nostrService.broadcast(event);
 
       if (result.successCount > 0) {
         // Update sharing history

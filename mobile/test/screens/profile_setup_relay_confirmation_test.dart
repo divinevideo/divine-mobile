@@ -7,15 +7,15 @@ import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/user_profile_service.dart';
 
-@GenerateMocks([INostrService, AuthService, UserProfileService])
+@GenerateMocks([NostrClient, AuthService, UserProfileService])
 import 'profile_setup_relay_confirmation_test.mocks.dart';
 
 void main() {
   group('Profile Setup Relay Confirmation', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockUserProfileService mockUserProfileService;
     late String testPubkey;
@@ -23,7 +23,7 @@ void main() {
     late int testTimestamp;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockUserProfileService = MockUserProfileService();
 
@@ -64,7 +64,7 @@ void main() {
           ),
         ).thenAnswer((_) async => publishedEvent);
 
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: publishedEvent,
             successCount: 1,
@@ -120,7 +120,7 @@ void main() {
           tags: [],
         );
 
-        final broadcastResult = await mockNostrService.broadcastEvent(event!);
+        final broadcastResult = await mockNostrService.broadcast(event!);
         expect(broadcastResult.isSuccessful, isTrue);
 
         // THE CRITICAL PART: Wait for relay to return updated profile
@@ -211,7 +211,7 @@ void main() {
         ),
       ).thenAnswer((_) async => publishedEvent);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: publishedEvent,
           successCount: 1,
@@ -244,7 +244,7 @@ void main() {
         tags: [],
       );
 
-      await mockNostrService.broadcastEvent(event!);
+      await mockNostrService.broadcast(event!);
 
       // Try to get updated profile with retries
       UserProfile? confirmedProfile;
@@ -313,7 +313,7 @@ void main() {
           ),
         ).thenAnswer((_) async => publishedEvent);
 
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: publishedEvent,
             successCount: 1,
@@ -344,7 +344,7 @@ void main() {
           tags: [],
         );
 
-        await mockNostrService.broadcastEvent(event!);
+        await mockNostrService.broadcast(event!);
 
         // Try to get updated profile
         UserProfile? confirmedProfile;

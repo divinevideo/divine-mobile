@@ -1128,17 +1128,17 @@ final class AuthStateStreamProvider
 
 String _$authStateStreamHash() => r'bd5c1864e57cfd46c9676d3dc1fe3aa358c2a14b';
 
-/// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities
+/// Core Nostr client for relay communication
 
 @ProviderFor(nostrService)
 const nostrServiceProvider = NostrServiceProvider._();
 
-/// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities
+/// Core Nostr client for relay communication
 
 final class NostrServiceProvider
-    extends $FunctionalProvider<INostrService, INostrService, INostrService>
-    with $Provider<INostrService> {
-  /// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities
+    extends $FunctionalProvider<NostrClient, NostrClient, NostrClient>
+    with $Provider<NostrClient> {
+  /// Core Nostr client for relay communication
   const NostrServiceProvider._()
     : super(
         from: null,
@@ -1155,24 +1155,24 @@ final class NostrServiceProvider
 
   @$internal
   @override
-  $ProviderElement<INostrService> $createElement($ProviderPointer pointer) =>
+  $ProviderElement<NostrClient> $createElement($ProviderPointer pointer) =>
       $ProviderElement(pointer);
 
   @override
-  INostrService create(Ref ref) {
+  NostrClient create(Ref ref) {
     return nostrService(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(INostrService value) {
+  Override overrideWithValue(NostrClient value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<INostrService>(value),
+      providerOverride: $SyncValueProvider<NostrClient>(value),
     );
   }
 }
 
-String _$nostrServiceHash() => r'e83bb74d0adf803fa7119aa120a3572dc5d6b1ec';
+String _$nostrServiceHash() => r'3cef9fb4179b84d40e88b0b0125b4b9dfdf82188';
 
 /// Subscription manager for centralized subscription management
 
@@ -1928,7 +1928,7 @@ final class ContentReportingServiceProvider
 }
 
 String _$contentReportingServiceHash() =>
-    r'90600ce05c4cc607ee58bb9166d14fb5982b7430';
+    r'712ba97763d6c97219529986b5b90594a1ed0e60';
 
 /// Lists state notifier - manages curated lists state
 
@@ -2212,7 +2212,7 @@ final class ContentDeletionServiceProvider
 }
 
 String _$contentDeletionServiceHash() =>
-    r'8594abe369924c5d080809e29ba7745da70450c0';
+    r'2ce696eb4f88e1fceb3c67a446d7790394901395';
 
 /// Account Deletion Service for NIP-62 Request to Vanish
 
@@ -2265,7 +2265,7 @@ final class AccountDeletionServiceProvider
 }
 
 String _$accountDeletionServiceHash() =>
-    r'659c0ee712559ba34e462dc9b236c40c80651240';
+    r'1c48ec2012838ad7a6611f430dc5a24f44cc1dab';
 
 /// Broken video tracker service for filtering non-functional videos
 

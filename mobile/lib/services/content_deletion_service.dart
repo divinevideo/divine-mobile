@@ -3,10 +3,11 @@
 
 import 'dart:convert';
 
+import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -71,13 +72,16 @@ class ContentDeletion {
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class ContentDeletionService {
   ContentDeletionService({
-    required INostrService nostrService,
+    required NostrClient nostrService,
+    required NostrKeyManager keyManager,
     required SharedPreferences prefs,
   }) : _nostrService = nostrService,
+       _keyManager = keyManager,
        _prefs = prefs {
     _loadDeletionHistory();
   }
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
+  final NostrKeyManager _keyManager;
   final SharedPreferences _prefs;
 
   static const String deletionsStorageKey = 'content_deletions_history';
@@ -143,7 +147,7 @@ class ContentDeletionService {
       );
 
       if (deleteEvent != null) {
-        final broadcastResult = await _nostrService.broadcastEvent(deleteEvent);
+        final broadcastResult = await _nostrService.broadcast(deleteEvent);
         if (broadcastResult.successCount == 0) {
           Log.error(
             'Failed to broadcast delete request to relays',
@@ -284,7 +288,7 @@ class ContentDeletionService {
       // Create kind 5 event using nostr_sdk (same pattern as other events)
       final createdAt = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       final event = Event(
-        _nostrService.keyManager.keyPair!.public,
+        _keyManager.keyPair!.public,
         5, // NIP-09 delete event kind
         tags,
         deleteContent,
@@ -292,7 +296,7 @@ class ContentDeletionService {
       );
 
       // Sign the event
-      event.sign(_nostrService.keyManager.keyPair!.private);
+      event.sign(_keyManager.keyPair!.private);
 
       Log.info(
         '📱️ Created NIP-09 delete event (kind 5): ${event.id}',
@@ -335,7 +339,6 @@ class ContentDeletionService {
   /// Check if this is the user's own content
   bool _isUserOwnContent(VideoEvent video) {
     final userPubkey = _nostrService.publicKey;
-    if (userPubkey == null) return false;
 
     return video.pubkey == userPubkey;
   }

@@ -11,7 +11,7 @@ import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blurhash_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/upload_manager.dart';
@@ -25,7 +25,7 @@ import 'package:openvine/constants/nip71_migration.dart';
 class VideoEventPublisher {
   VideoEventPublisher({
     required UploadManager uploadManager,
-    required INostrService nostrService,
+    required NostrClient nostrService,
     AuthService? authService,
     PersonalEventCacheService? personalEventCache,
     VideoEventService? videoEventService,
@@ -35,7 +35,7 @@ class VideoEventPublisher {
        _personalEventCache = personalEventCache,
        _videoEventService = videoEventService;
   final UploadManager _uploadManager;
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final AuthService? _authService;
   final PersonalEventCacheService? _personalEventCache;
   final VideoEventService? _videoEventService;
@@ -151,7 +151,7 @@ class VideoEventPublisher {
       }
 
       // Use the existing Nostr service to broadcast
-      final broadcastResult = await _nostrService.broadcastEvent(event);
+      final broadcastResult = await _nostrService.broadcast(event);
 
       Log.info(
         '✅ Event broadcast completed with result: successful=${broadcastResult.successCount}, failed=${broadcastResult.failedRelays.length}',

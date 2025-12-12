@@ -14,7 +14,7 @@ import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/seen_videos_notifier.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 import '../test_data/video_test_data.dart';
@@ -26,17 +26,17 @@ class _FakeAppForeground extends AppForeground {
   bool build() => true; // Default to foreground
 }
 
-@GenerateMocks([VideoEventService, INostrService])
+@GenerateMocks([VideoEventService, NostrClient])
 void main() {
   group('Video Loading Flow Integration Tests', () {
     late MockVideoEventService mockVideoEventService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late List<VideoEvent> testVideos;
     late ProviderContainer container;
 
     setUp(() {
       mockVideoEventService = MockVideoEventService();
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
 
       // Create test videos using proper helper
       testVideos = List.generate(

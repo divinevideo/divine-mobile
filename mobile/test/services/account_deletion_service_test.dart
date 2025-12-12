@@ -9,14 +9,14 @@ import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 
 import 'account_deletion_service_test.mocks.dart';
 
-@GenerateMocks([INostrService, AuthService, NostrKeyManager, Keychain])
+@GenerateMocks([NostrClient, AuthService, NostrKeyManager, Keychain])
 void main() {
   group('AccountDeletionService', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockNostrKeyManager mockKeyManager;
     late MockKeychain mockKeychain;
@@ -29,17 +29,17 @@ void main() {
       testPrivateKey = generatePrivateKey();
       testPublicKey = getPublicKey(testPrivateKey);
 
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockKeyManager = MockNostrKeyManager();
       mockKeychain = MockKeychain();
       service = AccountDeletionService(
         nostrService: mockNostrService,
+        keyManager: mockKeyManager,
         authService: mockAuthService,
       );
 
       // Setup common mocks with valid keys
-      when(mockNostrService.keyManager).thenReturn(mockKeyManager);
       when(mockKeyManager.keyPair).thenReturn(mockKeychain);
       when(mockKeychain.public).thenReturn(testPublicKey);
       when(mockKeychain.private).thenReturn(testPrivateKey);
@@ -101,7 +101,7 @@ void main() {
       when(mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
       when(mockNostrService.hasKeys).thenReturn(true);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: Event(
             testPublicKey,
@@ -123,7 +123,7 @@ void main() {
       await expectLater(service.deleteAccount(), completes);
 
       // Assert
-      verify(mockNostrService.broadcastEvent(any)).called(1);
+      verify(mockNostrService.broadcast(any)).called(1);
     });
 
     test(
@@ -133,7 +133,7 @@ void main() {
         when(mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
         when(mockNostrService.hasKeys).thenReturn(true);
 
-        when(mockNostrService.broadcastEvent(any)).thenAnswer(
+        when(mockNostrService.broadcast(any)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: Event(
               testPublicKey,
@@ -165,7 +165,7 @@ void main() {
       when(mockAuthService.currentPublicKeyHex).thenReturn(testPublicKey);
       when(mockNostrService.hasKeys).thenReturn(true);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: Event(
             testPublicKey,

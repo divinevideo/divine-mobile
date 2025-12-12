@@ -8,12 +8,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 // Mock classes
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 class MockVideoEventService extends Mock implements VideoEventService {}
 
@@ -69,7 +69,7 @@ void main() {
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       when(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       ).thenAnswer((_) => eventStreamController.stream);
 
       final testSubscriptionManager = TestSubscriptionManager(

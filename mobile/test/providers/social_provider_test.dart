@@ -8,12 +8,12 @@ import 'package:nostr_sdk/event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/state/social_state.dart';
 
 // Mock classes
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 class MockAuthService extends Mock implements AuthService {}
 
@@ -82,7 +82,7 @@ void main() {
       // Mock event streams
       when(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       ).thenAnswer((_) => const Stream<Event>.empty());
 
       // Initialize
@@ -94,7 +94,7 @@ void main() {
       // Verify it tried to load user data
       verify(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       ).called(greaterThan(0));
     });
 
@@ -125,7 +125,7 @@ void main() {
         errors: {},
       );
       when(
-        () => mockNostrService.broadcastEvent(any()),
+        () => mockNostrService.broadcast(any()),
       ).thenAnswer((_) async => mockBroadcastResult);
 
       // Toggle like (should add)
@@ -182,7 +182,7 @@ void main() {
         errors: {},
       );
       when(
-        () => mockNostrService.broadcastEvent(any()),
+        () => mockNostrService.broadcast(any()),
       ).thenAnswer((_) async => mockBroadcastResult);
 
       // Follow user
@@ -229,7 +229,7 @@ void main() {
         errors: {},
       );
       when(
-        () => mockNostrService.broadcastEvent(any()),
+        () => mockNostrService.broadcast(any()),
       ).thenAnswer((_) async => mockBroadcastResult);
 
       // Repost event
@@ -321,7 +321,7 @@ void main() {
         errors: {},
       );
       when(
-        () => mockNostrService.broadcastEvent(any()),
+        () => mockNostrService.broadcast(any()),
       ).thenAnswer((_) async => mockBroadcastResult);
 
       // Initial state: no likes tracked
@@ -379,7 +379,7 @@ void main() {
       // Mock event streams
       when(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       ).thenAnswer((_) => const Stream<Event>.empty());
 
       // Create new container with authenticated state
@@ -399,7 +399,7 @@ void main() {
       // Should have attempted to fetch contacts (verify subscription called)
       verify(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       ).called(greaterThan(0));
 
       state = container.read(socialProvider);
@@ -415,7 +415,7 @@ void main() {
       // Mock event streams
       when(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       ).thenAnswer((_) => const Stream<Event>.empty());
 
       // Call initialize multiple times rapidly (simulating race condition)
@@ -432,7 +432,7 @@ void main() {
       // The first call should succeed, subsequent calls should see isInitialized=true and return early
       final verificationResult = verify(
         () =>
-            mockNostrService.subscribeToEvents(filters: any(named: 'filters')),
+            mockNostrService.subscribe(any(named: 'filters')),
       );
 
       // Should be called 2 times (once for followList, once for reactions in the first initialize)

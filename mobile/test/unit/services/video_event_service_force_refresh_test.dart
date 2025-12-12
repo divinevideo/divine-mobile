@@ -7,12 +7,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 // Mock classes
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 class MockEvent extends Mock implements Event {}
 
@@ -47,6 +47,7 @@ class FakeFilter extends Fake implements Filter {}
 void main() {
   setUpAll(() {
     registerFallbackValue(FakeFilter());
+    registerFallbackValue(<Filter>[]);
   });
 
   group('VideoEventService Force Refresh', () {
@@ -62,10 +63,9 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       when(
-        () => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'),
+        () => mockNostrService.subscribe(
+          any(),
           onEose: any(named: 'onEose'),
-          bypassLimits: any(named: 'bypassLimits'),
         ),
       ).thenAnswer((invocation) {
         // Simulate EOSE immediately

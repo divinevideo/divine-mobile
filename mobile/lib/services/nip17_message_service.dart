@@ -9,22 +9,22 @@ import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/relay/relay.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Service for sending encrypted private messages using NIP-17 gift wrapping
 class NIP17MessageService {
   NIP17MessageService({
     required NostrKeyManager keyManager,
-    required INostrService nostrService,
+    required NostrClient nostrService,
   }) : _keyManager = keyManager,
        _nostrService = nostrService;
 
   final NostrKeyManager _keyManager;
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
 
   /// Access to the underlying NostrService for relay management
-  INostrService get nostrService => _nostrService;
+  NostrClient get nostrService => _nostrService;
 
   /// Send a private encrypted message to a recipient
   ///
@@ -100,7 +100,7 @@ class NIP17MessageService {
       );
 
       // Broadcast the gift wrap event
-      final broadcastResult = await _nostrService.broadcastEvent(giftWrapEvent);
+      final broadcastResult = await _nostrService.broadcast(giftWrapEvent);
 
       if (broadcastResult.successCount > 0) {
         Log.info(

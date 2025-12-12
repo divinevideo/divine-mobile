@@ -276,8 +276,7 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     final receivedVideos = <VideoEvent>[...cachedVideos];
     final seenIds = <String>{...cachedVideos.map((v) => v.id)};
 
-    final subscription = nostrService.subscribeToEvents(
-      filters: [filter],
+    final subscription = nostrService.subscribe([filter],
       onEose: () {
         Log.info(
           '📱 Streaming EOSE: received ${receivedVideos.length} events for ${pubkey}',
@@ -502,8 +501,7 @@ class ProfileVideosNotifier extends _$ProfileVideosNotifier {
     final completer = Completer<void>();
     final newVideos = <VideoEvent>[];
 
-    final subscription = nostrService.subscribeToEvents(
-      filters: [filter],
+    final subscription = nostrService.subscribe([filter],
       onEose: () {
         Log.info(
           '📱 Load more EOSE: received ${newVideos.length} additional events for ${_currentPubkey!}',

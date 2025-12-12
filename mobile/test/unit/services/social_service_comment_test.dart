@@ -6,17 +6,17 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
 // Generate mocks
-@GenerateMocks([INostrService, AuthService, SubscriptionManager])
+@GenerateMocks([NostrClient, AuthService, SubscriptionManager])
 import 'social_service_comment_test.mocks.dart';
 
 void main() {
   group('SocialService Comment Unit Tests', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockSubscriptionManager mockSubscriptionManager;
     late SocialService socialService;
@@ -31,7 +31,7 @@ void main() {
     const testCommentContent = 'This is a test comment';
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockSubscriptionManager = MockSubscriptionManager();
 
@@ -40,7 +40,7 @@ void main() {
 
       // Mock subscribeToEvents to prevent initialization calls
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => const Stream<Event>.empty());
 
       // Mock createSubscription for fetchCommentsForEvent
@@ -146,7 +146,7 @@ void main() {
             ),
           ).thenAnswer((_) async => testEvent);
 
-          when(mockNostrService.broadcastEvent(testEvent)).thenAnswer(
+          when(mockNostrService.broadcast(testEvent)).thenAnswer(
             (_) async => NostrBroadcastResult(
               event: testEvent,
               successCount: 1,
@@ -216,7 +216,7 @@ void main() {
           ),
         ).thenAnswer((_) async => testEvent);
 
-        when(mockNostrService.broadcastEvent(testEvent)).thenAnswer(
+        when(mockNostrService.broadcast(testEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: testEvent,
             successCount: 1,
@@ -277,7 +277,7 @@ void main() {
           ),
         ).thenAnswer((_) async => testEvent);
 
-        when(mockNostrService.broadcastEvent(testEvent)).thenAnswer(
+        when(mockNostrService.broadcast(testEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: testEvent,
             successCount: 1,
@@ -295,7 +295,7 @@ void main() {
         );
 
         // Assert
-        verify(mockNostrService.broadcastEvent(testEvent)).called(1);
+        verify(mockNostrService.broadcast(testEvent)).called(1);
       });
 
       test('should throw exception when event creation fails', () async {
@@ -353,7 +353,7 @@ void main() {
           ),
         ).thenAnswer((_) async => testEvent);
 
-        when(mockNostrService.broadcastEvent(testEvent)).thenAnswer(
+        when(mockNostrService.broadcast(testEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: testEvent,
             successCount: 0,
@@ -410,7 +410,7 @@ void main() {
           ),
         ).thenAnswer((_) async => testEvent);
 
-        when(mockNostrService.broadcastEvent(testEvent)).thenAnswer(
+        when(mockNostrService.broadcast(testEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: testEvent,
             successCount: 1,

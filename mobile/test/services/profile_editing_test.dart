@@ -7,12 +7,12 @@ import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
 
 @GenerateMocks([
-  INostrService,
+  NostrClient,
   AuthService,
   UserProfileService,
   SubscriptionManager,
@@ -21,12 +21,12 @@ import 'profile_editing_test.mocks.dart';
 
 void main() {
   group('Profile Editing Tests', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockUserProfileService mockUserProfileService;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockUserProfileService = MockUserProfileService();
 
@@ -75,7 +75,7 @@ void main() {
         ),
       ).thenAnswer((_) async => mockEvent);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: Event(
             '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
@@ -135,7 +135,7 @@ void main() {
         ),
       ).thenAnswer((_) async => mockEvent);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: Event(
             '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
@@ -157,12 +157,12 @@ void main() {
         tags: [],
       );
 
-      final publishResult = await mockNostrService.broadcastEvent(event);
+      final publishResult = await mockNostrService.broadcast(event);
 
       // Assert
       expect(publishResult.isSuccessful, isTrue);
       expect(publishResult.successCount, equals(1));
-      verify(mockNostrService.broadcastEvent(event)).called(1);
+      verify(mockNostrService.broadcast(event)).called(1);
     });
 
     test('should handle publish failure gracefully', () async {
@@ -183,12 +183,12 @@ void main() {
       ).thenAnswer((_) async => mockEvent);
 
       when(
-        mockNostrService.broadcastEvent(any),
+        mockNostrService.broadcast(any),
       ).thenThrow(Exception('Network error'));
 
       // Act & Assert
       expect(
-        () => mockNostrService.broadcastEvent(mockEvent),
+        () => mockNostrService.broadcast(mockEvent),
         throwsA(isA<Exception>()),
       );
     });
@@ -217,7 +217,7 @@ void main() {
         ),
       ).thenAnswer((_) async => mockEvent);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: Event(
             '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
@@ -244,7 +244,7 @@ void main() {
         tags: [],
       );
 
-      await mockNostrService.broadcastEvent(event);
+      await mockNostrService.broadcast(event);
 
       // Update cache with new profile
       final updatedProfile = UserProfile(
@@ -352,7 +352,7 @@ void main() {
         ),
       ).thenAnswer((_) async => mockEvent2);
 
-      when(mockNostrService.broadcastEvent(any)).thenAnswer(
+      when(mockNostrService.broadcast(any)).thenAnswer(
         (_) async => NostrBroadcastResult(
           event: Event(
             '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
@@ -370,11 +370,11 @@ void main() {
       // Act - simulate concurrent updates
       final future1 = mockAuthService
           .createAndSignEvent(kind: 0, content: '{"name":"Update 1"}', tags: [])
-          .then((event) => mockNostrService.broadcastEvent(event));
+          .then((event) => mockNostrService.broadcast(event));
 
       final future2 = mockAuthService
           .createAndSignEvent(kind: 0, content: '{"name":"Update 2"}', tags: [])
-          .then((event) => mockNostrService.broadcastEvent(event));
+          .then((event) => mockNostrService.broadcast(event));
 
       // Wait for both to complete
       final results = await Future.wait([future1, future2]);
@@ -385,7 +385,7 @@ void main() {
       expect(results[1].isSuccessful, isTrue);
 
       // Both events should have been published
-      verify(mockNostrService.broadcastEvent(any)).called(2);
+      verify(mockNostrService.broadcast(any)).called(2);
     });
 
     test('should retry failed publishes with exponential backoff', () async {
@@ -409,7 +409,7 @@ void main() {
 
       // First two attempts fail, third succeeds
       when(
-        mockNostrService.broadcastEvent(any),
+        mockNostrService.broadcast(any),
       ).thenThrow(Exception('Network error'));
 
       // This test verifies that retry logic would work if implemented
@@ -421,7 +421,7 @@ void main() {
       for (var i = 0; i < 3; i++) {
         try {
           attempts++;
-          await mockNostrService.broadcastEvent(mockEvent);
+          await mockNostrService.broadcast(mockEvent);
           break; // Success, exit loop
         } catch (e) {
           if (attempts >= 3) rethrow;

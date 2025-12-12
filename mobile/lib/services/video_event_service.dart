@@ -30,7 +30,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/content_blocklist_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
@@ -137,7 +137,7 @@ class VideoEventService extends ChangeNotifier {
        _gatewaySettings = gatewaySettings {
     _initializePaginationStates();
   }
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final UserProfileService? _userProfileService;
   final EventRouter? _eventRouter;
   final VideoFilterBuilder? _videoFilterBuilder;
@@ -378,7 +378,7 @@ class VideoEventService extends ChangeNotifier {
 
     // Check settings and relay configuration
     return gatewaySettings.shouldUseGateway(
-      configuredRelays: _nostrService.relays,
+      configuredRelays: _nostrService.configuredRelays,
     );
   }
 
@@ -644,7 +644,7 @@ class VideoEventService extends ChangeNotifier {
       );
 
       // Subscribe to events
-      final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
+      final eventStream = _nostrService.subscribe([filter]);
       late StreamSubscription<Event> streamSubscription;
 
       // Set timeout for receiving events
@@ -1334,8 +1334,8 @@ class VideoEventService extends ChangeNotifier {
         // 🎯 RELAY DEBUG: Track loop counts from relay
         final relayLoopCounts = <int>[];
 
-        final eventStream = _nostrService.subscribeToEvents(
-          filters: filters,
+        final eventStream = _nostrService.subscribe(
+          filters,
           onEose: () {
             eoseReceived = true;
             feedLoadingTimeout
@@ -2575,7 +2575,7 @@ class VideoEventService extends ChangeNotifier {
 
     try {
       // Stream events from NostrService
-      final eventStream = _nostrService.subscribeToEvents(filters: filters);
+      final eventStream = _nostrService.subscribe(filters);
       late StreamSubscription<Event> streamSubscription;
 
       // Set timeout for receiving events
@@ -2966,7 +2966,7 @@ class VideoEventService extends ChangeNotifier {
 
     try {
       // Use direct NostrService streaming approach like ProfileWebSocketService
-      final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
+      final eventStream = _nostrService.subscribe([filter]);
       late StreamSubscription<Event> streamSubscription;
 
       // Set a reasonable timeout for receiving events
@@ -3100,7 +3100,7 @@ class VideoEventService extends ChangeNotifier {
         category: LogCategory.video,
       );
 
-      final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
+      final eventStream = _nostrService.subscribe([filter]);
       late StreamSubscription subscription;
 
       subscription = eventStream.listen(
@@ -3220,7 +3220,7 @@ class VideoEventService extends ChangeNotifier {
       category: LogCategory.video,
     );
 
-    final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
+    final eventStream = _nostrService.subscribe([filter]);
     late StreamSubscription subscription;
 
     subscription = eventStream.listen(
@@ -3498,8 +3498,7 @@ class VideoEventService extends ChangeNotifier {
       );
 
       // Create a one-shot subscription to fetch the specific event
-      final eventStream = _nostrService.subscribeToEvents(
-        filters: [
+      final eventStream = _nostrService.subscribe([
           Filter(ids: [originalEventId]),
         ],
       );
@@ -3668,7 +3667,7 @@ class VideoEventService extends ChangeNotifier {
       );
 
       // Create a one-shot subscription to fetch the specific event
-      final eventStream = _nostrService.subscribeToEvents(filters: [filter]);
+      final eventStream = _nostrService.subscribe([filter]);
 
       // Listen for the original event
       late StreamSubscription subscription;
@@ -5051,7 +5050,7 @@ class VideoEventService extends ChangeNotifier {
 
     try {
       // 1. Check relay connection status
-      final relays = _nostrService.relays;
+      final relays = _nostrService.configuredRelays;
       final connectedRelays = _nostrService.connectedRelays;
       final connectedCount = _nostrService.connectedRelayCount;
 
@@ -5142,12 +5141,9 @@ class VideoEventService extends ChangeNotifier {
         category: LogCategory.video,
       );
 
-      final directQueryEvents = await _nostrService.getEvents(
-        filters: [
-          Filter(kinds: [34236], limit: 100),
-        ],
-        limit: 100,
-      );
+      final directQueryEvents = await _nostrService.queryEvents([
+        Filter(kinds: [34236], limit: 100),
+      ]);
 
       Log.warning(
         '✅ Direct query returned ${directQueryEvents.length} video events',

@@ -7,23 +7,23 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
-@GenerateNiceMocks([MockSpec<INostrService>()])
+@GenerateNiceMocks([MockSpec<NostrClient>()])
 import 'subscription_manager_cache_test.mocks.dart';
 
 void main() {
   group('SubscriptionManager Event Cache Pruning', () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late StreamController<Event> eventController;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       eventController = StreamController<Event>.broadcast();
 
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => eventController.stream);
     });
 
@@ -90,9 +90,7 @@ void main() {
         // Assert: Relay subscription should only request uncached event
         final capturedFilter =
             verify(
-                  mockNostrService.subscribeToEvents(
-                    filters: captureAnyNamed('filters'),
-                  ),
+                  mockNostrService.subscribe(captureAny()),
                 ).captured.single
                 as List<Filter>;
 
@@ -141,7 +139,7 @@ void main() {
 
         // Assert: No relay subscription created
         verifyNever(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         );
 
         // Assert: onComplete was called immediately
@@ -170,9 +168,7 @@ void main() {
         // Assert: Filter passed through unchanged
         final capturedFilter =
             verify(
-                  mockNostrService.subscribeToEvents(
-                    filters: captureAnyNamed('filters'),
-                  ),
+                  mockNostrService.subscribe(captureAny()),
                 ).captured.single
                 as List<Filter>;
 
@@ -201,9 +197,7 @@ void main() {
         // Assert: All event IDs passed to relay (no caching)
         final capturedFilter =
             verify(
-                  mockNostrService.subscribeToEvents(
-                    filters: captureAnyNamed('filters'),
-                  ),
+                  mockNostrService.subscribe(captureAny()),
                 ).captured.single
                 as List<Filter>;
 
@@ -247,9 +241,7 @@ void main() {
       // Assert: Both filters sent to relay (filter1 pruned, filter2 unchanged)
       final capturedFilters =
           verify(
-                mockNostrService.subscribeToEvents(
-                  filters: captureAnyNamed('filters'),
-                ),
+                mockNostrService.subscribe(captureAny()),
               ).captured.single
               as List<Filter>;
 

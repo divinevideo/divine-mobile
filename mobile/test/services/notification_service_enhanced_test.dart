@@ -6,23 +6,23 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:openvine/models/notification_model.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 
-@GenerateMocks([INostrService, UserProfileService, VideoEventService])
+@GenerateMocks([NostrClient, UserProfileService, VideoEventService])
 import 'notification_service_enhanced_test.mocks.dart';
 
 void main() {
   group('NotificationServiceEnhanced Race Condition Tests', () {
     late NotificationServiceEnhanced service;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockUserProfileService mockProfileService;
     late MockVideoEventService mockVideoService;
 
     setUp(() {
       service = NotificationServiceEnhanced();
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockProfileService = MockUserProfileService();
       mockVideoService = MockVideoEventService();
 
@@ -30,7 +30,7 @@ void main() {
       when(mockNostrService.hasKeys).thenReturn(true);
       when(mockNostrService.publicKey).thenReturn('test-pubkey-123');
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream.empty());
     });
 

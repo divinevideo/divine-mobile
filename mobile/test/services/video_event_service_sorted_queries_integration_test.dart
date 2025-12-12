@@ -10,7 +10,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/services/event_router.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/relay_capability_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
@@ -18,7 +18,7 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 
 @GenerateMocks([
-  INostrService,
+  NostrClient,
   SubscriptionManager,
   UserProfileService,
   EventRouter,
@@ -29,32 +29,38 @@ import 'video_event_service_sorted_queries_integration_test.mocks.dart';
 void main() {
   group('VideoEventService Sorted Queries Integration', () {
     late VideoEventService service;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockSubscriptionManager mockSubscriptionManager;
     late MockUserProfileService mockUserProfileService;
     late MockEventRouter mockEventRouter;
     late MockRelayCapabilityService mockRelayCapabilityService;
     late VideoFilterBuilder filterBuilder;
     late StreamController<Event> eventStreamController;
+    late List<List<Filter>> capturedFiltersList;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockSubscriptionManager = MockSubscriptionManager();
       mockUserProfileService = MockUserProfileService();
       mockEventRouter = MockEventRouter();
       mockRelayCapabilityService = MockRelayCapabilityService();
       eventStreamController = StreamController<Event>.broadcast();
+      capturedFiltersList = [];
 
       // Mock NostrService as initialized
       when(mockNostrService.isInitialized).thenReturn(true);
       when(mockNostrService.connectedRelayCount).thenReturn(1);
       when(
-        mockNostrService.subscribeToEvents(
-          filters: anyNamed('filters'),
-          bypassLimits: anyNamed('bypassLimits'),
+        mockNostrService.subscribe(
+          argThat(anything),
           onEose: anyNamed('onEose'),
         ),
-      ).thenAnswer((_) => eventStreamController.stream);
+      ).thenAnswer((invocation) {
+        capturedFiltersList.add(
+          invocation.positionalArguments[0] as List<Filter>,
+        );
+        return eventStreamController.stream;
+      });
 
       // Create real VideoFilterBuilder with mocked RelayCapabilityService
       filterBuilder = VideoFilterBuilder(mockRelayCapabilityService);
@@ -102,16 +108,15 @@ void main() {
         );
 
         // Verify subscribeToEvents was called
-        final captured = verify(
-          mockNostrService.subscribeToEvents(
-            filters: captureAnyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
+        verify(
+          mockNostrService.subscribe(
+            argThat(anything),
             onEose: anyNamed('onEose'),
           ),
-        ).captured;
+        ).called(1);
 
-        expect(captured.isNotEmpty, true);
-        final filters = captured[0] as List<Filter>;
+        expect(capturedFiltersList.isNotEmpty, true);
+        final filters = capturedFiltersList.last;
         expect(filters.length, greaterThan(0));
 
         // Check that filter includes sort field
@@ -133,15 +138,14 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(
-          mockNostrService.subscribeToEvents(
-            filters: captureAnyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
+        verify(
+          mockNostrService.subscribe(
+            argThat(anything),
             onEose: anyNamed('onEose'),
           ),
-        ).captured;
+        ).called(1);
 
-        final filters = captured[0] as List<Filter>;
+        final filters = capturedFiltersList.last;
         final filterJson = filters[0].toJson();
 
         expect(filterJson['sort']['field'], 'likes');
@@ -155,15 +159,14 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(
-          mockNostrService.subscribeToEvents(
-            filters: captureAnyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
+        verify(
+          mockNostrService.subscribe(
+            argThat(anything),
             onEose: anyNamed('onEose'),
           ),
-        ).captured;
+        ).called(1);
 
-        final filters = captured[0] as List<Filter>;
+        final filters = capturedFiltersList.last;
         final filterJson = filters[0].toJson();
 
         expect(filterJson['sort']['field'], 'views');
@@ -177,15 +180,14 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(
-          mockNostrService.subscribeToEvents(
-            filters: captureAnyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
+        verify(
+          mockNostrService.subscribe(
+            argThat(anything),
             onEose: anyNamed('onEose'),
           ),
-        ).captured;
+        ).called(1);
 
-        final filters = captured[0] as List<Filter>;
+        final filters = capturedFiltersList.last;
         final filterJson = filters[0].toJson();
 
         expect(filterJson['sort']['field'], 'created_at');
@@ -201,15 +203,14 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(
-          mockNostrService.subscribeToEvents(
-            filters: captureAnyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
+        verify(
+          mockNostrService.subscribe(
+            argThat(anything),
             onEose: anyNamed('onEose'),
           ),
-        ).captured;
+        ).called(1);
 
-        final filters = captured[0] as List<Filter>;
+        final filters = capturedFiltersList.last;
         final filterJson = filters[0].toJson();
 
         // Should have sort AND other filters
@@ -226,15 +227,14 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(
-          mockNostrService.subscribeToEvents(
-            filters: captureAnyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
+        verify(
+          mockNostrService.subscribe(
+            argThat(anything),
             onEose: anyNamed('onEose'),
           ),
-        ).captured;
+        ).called(1);
 
-        final filters = captured[0] as List<Filter>;
+        final filters = capturedFiltersList.last;
         final filterJson = filters[0].toJson();
 
         // Should NOT have sort field
@@ -273,15 +273,14 @@ void main() {
             limit: 50,
           );
 
-          final captured = verify(
-            mockNostrService.subscribeToEvents(
-              filters: captureAnyNamed('filters'),
-              bypassLimits: anyNamed('bypassLimits'),
-              onEose: anyNamed('onEose'),
-            ),
-          ).captured;
+          verify(
+          mockNostrService.subscribe(
+            argThat(anything),
+            onEose: anyNamed('onEose'),
+          ),
+        ).called(1);
 
-          final filters = captured[0] as List<Filter>;
+        final filters = capturedFiltersList.last;
           final filterJson = filters[0].toJson();
 
           // Should NOT have sort field (fallback to standard)
@@ -304,11 +303,10 @@ void main() {
 
         // Should still call subscribeToEvents (with standard filter)
         verify(
-          mockNostrService.subscribeToEvents(
-            filters: anyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
-            onEose: anyNamed('onEose'),
-          ),
+          mockNostrService.subscribe(
+          argThat(anything),
+          onEose: anyNamed('onEose'),
+        ),
         ).called(1);
       });
     });
@@ -335,15 +333,14 @@ void main() {
             limit: 50,
           );
 
-          final captured = verify(
-            mockNostrService.subscribeToEvents(
-              filters: captureAnyNamed('filters'),
-              bypassLimits: anyNamed('bypassLimits'),
-              onEose: anyNamed('onEose'),
-            ),
-          ).captured;
+          verify(
+          mockNostrService.subscribe(
+            argThat(anything),
+            onEose: anyNamed('onEose'),
+          ),
+        ).called(1);
 
-          final filters = captured[0] as List<Filter>;
+        final filters = capturedFiltersList.last;
           final filterJson = filters[0].toJson();
 
           // Should fall back to standard filter
@@ -369,15 +366,14 @@ void main() {
             limit: 50,
           );
 
-          final captured = verify(
-            mockNostrService.subscribeToEvents(
-              filters: captureAnyNamed('filters'),
-              bypassLimits: anyNamed('bypassLimits'),
-              onEose: anyNamed('onEose'),
-            ),
-          ).captured;
+          verify(
+          mockNostrService.subscribe(
+            argThat(anything),
+            onEose: anyNamed('onEose'),
+          ),
+        ).called(1);
 
-          final filters = captured[0] as List<Filter>;
+        final filters = capturedFiltersList.last;
           final filterJson = filters[0].toJson();
 
           // Should use standard filter (builder not available)
@@ -418,15 +414,14 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(
-          mockNostrService.subscribeToEvents(
-            filters: captureAnyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
+        verify(
+          mockNostrService.subscribe(
+            argThat(anything),
             onEose: anyNamed('onEose'),
           ),
-        ).captured;
+        ).called(1);
 
-        final filters = captured[0] as List<Filter>;
+        final filters = capturedFiltersList.last;
         final filterJson = filters[0].toJson();
 
         expect(filterJson['sort']['field'], 'created_at');
@@ -441,15 +436,14 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(
-          mockNostrService.subscribeToEvents(
-            filters: captureAnyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
+        verify(
+          mockNostrService.subscribe(
+            argThat(anything),
             onEose: anyNamed('onEose'),
           ),
-        ).captured;
+        ).called(1);
 
-        final filters = captured[0] as List<Filter>;
+        final filters = capturedFiltersList.last;
         final filterJson = filters[0].toJson();
 
         expect(filterJson['sort']['field'], 'likes');
@@ -464,15 +458,14 @@ void main() {
           limit: 50,
         );
 
-        final captured = verify(
-          mockNostrService.subscribeToEvents(
-            filters: captureAnyNamed('filters'),
-            bypassLimits: anyNamed('bypassLimits'),
+        verify(
+          mockNostrService.subscribe(
+            argThat(anything),
             onEose: anyNamed('onEose'),
           ),
-        ).captured;
+        ).called(1);
 
-        final filters = captured[0] as List<Filter>;
+        final filters = capturedFiltersList.last;
         final filterJson = filters[0].toJson();
 
         expect(filterJson['sort']['field'], 'loop_count');

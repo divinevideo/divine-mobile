@@ -115,7 +115,7 @@ class LatestVideos extends _$LatestVideos {
       }
 
       // Subscribe to events
-      final eventStream = nostrService.subscribeToEvents(filters: [filter]);
+      final eventStream = nostrService.subscribe([filter]);
 
       final newVideos = <VideoEvent>[];
 

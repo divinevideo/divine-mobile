@@ -17,7 +17,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/providers/video_feed_provider.dart';
 import 'package:openvine/services/curation_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/state/curation_state.dart';
 import 'package:openvine/state/user_profile_state.dart';
@@ -27,7 +27,7 @@ class MockVideoEvent extends Mock implements VideoEvent {}
 
 class MockUserProfile extends Mock implements UserProfile {}
 
-class MockNostrService extends Mock implements INostrService {}
+class MockNostrService extends Mock implements NostrClient {}
 
 class MockSubscriptionManager extends Mock implements SubscriptionManager {}
 

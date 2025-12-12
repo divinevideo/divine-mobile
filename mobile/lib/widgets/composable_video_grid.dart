@@ -294,7 +294,7 @@ class ComposableVideoGrid extends ConsumerWidget {
     // Check if user owns this video
     final nostrService = ref.read(nostrServiceProvider);
     final userPubkey = nostrService.publicKey;
-    final isOwnVideo = userPubkey != null && userPubkey == video.pubkey;
+    final isOwnVideo = userPubkey == video.pubkey;
 
     // Only show context menu for own videos
     if (!isOwnVideo) {

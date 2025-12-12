@@ -96,7 +96,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final nostrService = ref.watch(nostrServiceProvider);
-    final externalRelays = nostrService.relays;
+    final externalRelays = nostrService.configuredRelays;
 
     Log.info(
       'Displaying ${externalRelays.length} external relays',
@@ -748,7 +748,7 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
         ),
       );
 
-      await nostrService.retryInitialization();
+      await nostrService.retryDisconnectedRelays();
 
       // Check if any relays are now connected
       final connectedCount = nostrService.connectedRelayCount;

@@ -10,22 +10,22 @@ import 'package:openvine/models/curation_set.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curation_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 
-@GenerateMocks([INostrService, VideoEventService, SocialService, AuthService])
+@GenerateMocks([NostrClient, VideoEventService, SocialService, AuthService])
 import 'curation_service_trending_fetch_test.mocks.dart';
 
 void main() {
   late CurationService curationService;
-  late MockINostrService mockNostrService;
+  late MockNostrClient mockNostrService;
   late MockVideoEventService mockVideoEventService;
   late MockSocialService mockSocialService;
   late MockAuthService mockAuthService;
 
   setUp(() {
-    mockNostrService = MockINostrService();
+    mockNostrService = MockNostrClient();
     mockVideoEventService = MockVideoEventService();
     mockSocialService = MockSocialService();
     mockAuthService = MockAuthService();
@@ -40,7 +40,7 @@ void main() {
 
     // Mock subscribeToEvents to avoid MissingStubError when fetching Editor's Picks list
     when(
-      mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+      mockNostrService.subscribe(argThat(anything)),
     ).thenAnswer((_) => Stream<Event>.empty());
 
     curationService = CurationService(
@@ -79,7 +79,7 @@ void main() {
 
       final streamController = StreamController<Event>();
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) {
         // Emit the video event
         Timer(const Duration(milliseconds: 100), () {
@@ -100,7 +100,7 @@ void main() {
       // it would fetch the missing videos
       final filter = Filter(kinds: [22], ids: missingEventIds, h: ['vine']);
 
-      final eventStream = mockNostrService.subscribeToEvents(filters: [filter]);
+      final eventStream = mockNostrService.subscribe([filter]);
       final fetchedEvents = <Event>[];
 
       await for (final event in eventStream) {

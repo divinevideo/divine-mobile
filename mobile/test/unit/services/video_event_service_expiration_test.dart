@@ -3,20 +3,20 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/video_event.dart';
 
-class _MockNostrService extends Mock implements INostrService {}
+class _MockNostrService extends Mock implements NostrClient {}
 
 class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 void main() {
   group('VideoEventService NIP-40 Expiration Filtering', () {
     late VideoEventService service;
-    late INostrService nostrService;
+    late NostrClient nostrService;
     late SubscriptionManager subscriptionManager;
 
     setUp(() {

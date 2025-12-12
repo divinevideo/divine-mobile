@@ -9,7 +9,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/services/connection_status_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/profile_cache_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -21,7 +21,7 @@ class UserProfileService extends ChangeNotifier {
     this._nostrService, {
     required SubscriptionManager subscriptionManager,
   }) : _subscriptionManager = subscriptionManager;
-  final INostrService _nostrService;
+  final NostrClient _nostrService;
   final ConnectionStatusService _connectionService = ConnectionStatusService();
 
   final Map<String, UserProfile> _profileCache =

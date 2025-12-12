@@ -3,23 +3,23 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 
 // Generate mocks
-@GenerateMocks([INostrService, AuthService, SubscriptionManager])
+@GenerateMocks([NostrClient, AuthService, SubscriptionManager])
 import 'social_service_test.mocks.dart';
 
 void main() {
   group('SocialService', () {
     late SocialService socialService;
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockAuthService mockAuthService;
     late MockSubscriptionManager mockSubscriptionManager;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockAuthService = MockAuthService();
       mockSubscriptionManager = MockSubscriptionManager();
 
@@ -29,7 +29,7 @@ void main() {
 
       // Set up default stubs for NostrService
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream.fromIterable([]));
 
       // Mock createSubscription for SocialService initialization
@@ -115,7 +115,7 @@ void main() {
           ).thenAnswer((_) async => mockEvent);
 
           // Mock successful broadcast
-          when(mockNostrService.broadcastEvent(mockEvent)).thenAnswer(
+          when(mockNostrService.broadcast(mockEvent)).thenAnswer(
             (_) async => NostrBroadcastResult(
               event: mockEvent,
               successCount: 1,
@@ -141,7 +141,7 @@ void main() {
           ).called(1);
 
           // Verify broadcast was called
-          verify(mockNostrService.broadcastEvent(mockEvent)).called(1);
+          verify(mockNostrService.broadcast(mockEvent)).called(1);
 
           // Verify event is now liked locally
           expect(socialService.isLiked(testEventId), true);
@@ -171,7 +171,7 @@ void main() {
         ).thenAnswer((_) async => mockEvent);
 
         // Mock failed broadcast
-        when(mockNostrService.broadcastEvent(mockEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockEvent,
             successCount: 0,
@@ -250,7 +250,7 @@ void main() {
           ),
         ).thenAnswer((_) async => mockEvent);
 
-        when(mockNostrService.broadcastEvent(mockEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockEvent,
             successCount: 1,
@@ -276,7 +276,7 @@ void main() {
           ),
         ).thenAnswer((_) async => mockDeletionEvent);
 
-        when(mockNostrService.broadcastEvent(mockDeletionEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockDeletionEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockDeletionEvent,
             successCount: 1,
@@ -295,7 +295,7 @@ void main() {
         expect(socialService.isLiked(testEventId), false);
 
         // Verify two network calls were made (like + unlike deletion)
-        verify(mockNostrService.broadcastEvent(any)).called(2);
+        verify(mockNostrService.broadcast(any)).called(2);
       });
     });
 
@@ -494,7 +494,7 @@ void main() {
         // Mock two sequential subscription calls
         var callCount = 0;
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((invocation) {
           callCount++;
           if (callCount == 1) {
@@ -510,7 +510,7 @@ void main() {
 
         // Verify two subscriptions were called (reactions, then videos)
         verify(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).called(2);
 
         // Should return the actual video events
@@ -523,7 +523,7 @@ void main() {
       test('should return empty list when user has no liked events', () async {
         // Mock empty reaction stream
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => Stream.fromIterable([]));
 
         final result = await socialService.fetchLikedEvents(testUserPubkey);
@@ -534,7 +534,7 @@ void main() {
       test('should handle errors when fetching liked events', () async {
         // Mock stream with error
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => Stream.error('Network error'));
 
         final result = await socialService.fetchLikedEvents(testUserPubkey);
@@ -585,15 +585,15 @@ void main() {
         when(mockAuthService.currentPublicKeyHex).thenReturn(publicKey);
 
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => Stream.fromIterable([contactListEvent]));
 
         await socialService.fetchCurrentUserFollowList();
 
         // Verify subscription was called for Kind 3 events
         verify(
-          mockNostrService.subscribeToEvents(
-            filters: argThat(isA<List>(), named: 'filters'),
+          mockNostrService.subscribe(
+            argThat(isA<List<dynamic>>()),
           ),
         ).called(1);
 
@@ -625,7 +625,7 @@ void main() {
           ),
         ).thenAnswer((_) async => mockContactListEvent);
 
-        when(mockNostrService.broadcastEvent(mockContactListEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockContactListEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockContactListEvent,
             successCount: 1,
@@ -650,7 +650,7 @@ void main() {
         ).called(1);
 
         // Verify broadcast was called
-        verify(mockNostrService.broadcastEvent(mockContactListEvent)).called(1);
+        verify(mockNostrService.broadcast(mockContactListEvent)).called(1);
 
         // Verify user is now followed locally
         expect(socialService.isFollowing(testTargetPubkey), true);
@@ -679,7 +679,7 @@ void main() {
         ).thenAnswer((_) async => mockEmptyContactListEvent);
 
         when(
-          mockNostrService.broadcastEvent(mockEmptyContactListEvent),
+          mockNostrService.broadcast(mockEmptyContactListEvent),
         ).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockEmptyContactListEvent,
@@ -700,7 +700,7 @@ void main() {
 
         // Verify broadcast was called
         verify(
-          mockNostrService.broadcastEvent(mockEmptyContactListEvent),
+          mockNostrService.broadcast(mockEmptyContactListEvent),
         ).called(1);
 
         // Verify user is no longer followed locally
@@ -735,7 +735,7 @@ void main() {
             return event;
           });
 
-          when(mockNostrService.broadcastEvent(any)).thenAnswer((
+          when(mockNostrService.broadcast(any)).thenAnswer((
             invocation,
           ) async {
             final event = invocation.positionalArguments[0] as Event;
@@ -786,7 +786,7 @@ void main() {
           ).thenAnswer((_) async => mockUpdatedContactListEvent);
 
           when(
-            mockNostrService.broadcastEvent(mockUpdatedContactListEvent),
+            mockNostrService.broadcast(mockUpdatedContactListEvent),
           ).thenAnswer(
             (_) async => NostrBroadcastResult(
               event: mockUpdatedContactListEvent,
@@ -874,7 +874,7 @@ void main() {
           ),
         ).thenAnswer((_) async => mockContactListEvent);
 
-        when(mockNostrService.broadcastEvent(mockContactListEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockContactListEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockContactListEvent,
             successCount: 0,
@@ -964,7 +964,7 @@ void main() {
 
         // Mock subscription calls
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((invocation) {
           final filters =
               invocation.namedArguments[const Symbol('filters')] as List;
@@ -991,7 +991,7 @@ void main() {
 
         // First call will fetch from network
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => Stream.fromIterable([]));
 
         final firstResult = await socialService.getFollowerStats(targetPubkey);
@@ -1003,7 +1003,7 @@ void main() {
 
         // Should only call network once
         verify(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).called(2); // Once for following, once for followers
       });
 
@@ -1011,7 +1011,7 @@ void main() {
         const targetPubkey = 'target_pubkey';
 
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => Stream.error('Network error'));
 
         final stats = await socialService.getFollowerStats(targetPubkey);
@@ -1059,7 +1059,7 @@ void main() {
         ];
 
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => Stream.fromIterable(videoEvents));
 
         final count = await socialService.getUserVideoCount(testUserPubkey);
@@ -1068,15 +1068,15 @@ void main() {
 
         // Verify subscription was called for video events
         verify(
-          mockNostrService.subscribeToEvents(
-            filters: argThat(isA<List>(), named: 'filters'),
+          mockNostrService.subscribe(
+            argThat(isA<List<dynamic>>()),
           ),
         ).called(1);
       });
 
       test('should return zero for user with no videos', () async {
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => Stream.fromIterable([]));
 
         final count = await socialService.getUserVideoCount(testUserPubkey);
@@ -1130,7 +1130,7 @@ void main() {
         ];
 
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => Stream.fromIterable(videoEvents));
 
         final count = await socialService.getUserVideoCount(testUserPubkey);
@@ -1141,9 +1141,7 @@ void main() {
         // Verify subscription was called with correct NIP-71 kinds filter
         final captured =
             verify(
-                  mockNostrService.subscribeToEvents(
-                    filters: captureAnyNamed('filters'),
-                  ),
+                  mockNostrService.subscribe(captureAny()),
                 ).captured.single
                 as List<Filter>;
 
@@ -1220,7 +1218,7 @@ void main() {
         ];
 
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((invocation) {
           final filters =
               invocation.namedArguments[const Symbol('filters')] as List;
@@ -1244,13 +1242,13 @@ void main() {
 
         // Should call subscription twice: once for videos, once for likes
         verify(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).called(2);
       });
 
       test('should return zero likes for user with no videos', () async {
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => Stream.fromIterable([]));
 
         final totalLikes = await socialService.getUserTotalLikes(
@@ -1262,7 +1260,7 @@ void main() {
 
       test('should handle video count fetch error gracefully', () async {
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => Stream.error('Network error'));
 
         final count = await socialService.getUserVideoCount(testUserPubkey);
@@ -1272,7 +1270,7 @@ void main() {
 
       test('should handle total likes fetch error gracefully', () async {
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => Stream.error('Network error'));
 
         final totalLikes = await socialService.getUserTotalLikes(
@@ -1292,7 +1290,7 @@ void main() {
         when(mockAuthService.isAuthenticated).thenReturn(true);
         when(mockAuthService.currentPublicKeyHex).thenReturn(testUserPubkey);
         when(
-          mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+          mockNostrService.subscribe(argThat(anything)),
         ).thenAnswer((_) => Stream.fromIterable([]));
       });
 
@@ -1337,7 +1335,7 @@ void main() {
             ),
           ).thenAnswer((_) async => mockDeletionEvent);
 
-          when(mockNostrService.broadcastEvent(mockDeletionEvent)).thenAnswer(
+          when(mockNostrService.broadcast(mockDeletionEvent)).thenAnswer(
             (_) async => NostrBroadcastResult(
               event: mockDeletionEvent,
               successCount: 1,
@@ -1370,7 +1368,7 @@ void main() {
           ).called(1);
 
           // Verify broadcast was called
-          verify(mockNostrService.broadcastEvent(mockDeletionEvent)).called(1);
+          verify(mockNostrService.broadcast(mockDeletionEvent)).called(1);
         },
       );
 
@@ -1441,7 +1439,7 @@ void main() {
         );
 
         // Verify no broadcast was attempted
-        verifyNever(mockNostrService.broadcastEvent(any));
+        verifyNever(mockNostrService.broadcast(any));
       });
 
       test('should handle broadcast failure gracefully', () async {
@@ -1489,7 +1487,7 @@ void main() {
           ),
         ).thenAnswer((_) async => mockDeletionEvent);
 
-        when(mockNostrService.broadcastEvent(mockDeletionEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockDeletionEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockDeletionEvent,
             successCount: 0,
@@ -1560,7 +1558,7 @@ void main() {
           ),
         ).thenAnswer((_) async => mockDeletionEvent);
 
-        when(mockNostrService.broadcastEvent(mockDeletionEvent)).thenAnswer(
+        when(mockNostrService.broadcast(mockDeletionEvent)).thenAnswer(
           (_) async => NostrBroadcastResult(
             event: mockDeletionEvent,
             successCount: 1,
@@ -1591,7 +1589,7 @@ void main() {
           ),
         ).called(1);
 
-        verify(mockNostrService.broadcastEvent(mockDeletionEvent)).called(1);
+        verify(mockNostrService.broadcast(mockDeletionEvent)).called(1);
       });
     });
   });

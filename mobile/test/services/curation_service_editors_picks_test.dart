@@ -10,22 +10,22 @@ import 'package:openvine/models/curation_set.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curation_service.dart';
-import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 import 'curation_service_test.mocks.dart';
 
-@GenerateMocks([INostrService, VideoEventService, SocialService, AuthService])
+@GenerateMocks([NostrClient, VideoEventService, SocialService, AuthService])
 void main() {
   group("CurationService Editor's Picks", () {
-    late MockINostrService mockNostrService;
+    late MockNostrClient mockNostrService;
     late MockVideoEventService mockVideoEventService;
     late MockSocialService mockSocialService;
     late MockAuthService mockAuthService;
 
     setUp(() {
-      mockNostrService = MockINostrService();
+      mockNostrService = MockNostrClient();
       mockVideoEventService = MockVideoEventService();
       mockSocialService = MockSocialService();
       mockAuthService = MockAuthService();
@@ -36,7 +36,7 @@ void main() {
       when(mockVideoEventService.discoveryVideos).thenReturn([]);
       // Mock subscribeToEvents to avoid MissingStubError when fetching Editor's Picks list
       when(
-        mockNostrService.subscribeToEvents(filters: anyNamed('filters')),
+        mockNostrService.subscribe(argThat(anything)),
       ).thenAnswer((_) => Stream<Event>.empty());
     });
 
