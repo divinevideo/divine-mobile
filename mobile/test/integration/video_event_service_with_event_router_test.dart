@@ -27,9 +27,13 @@ class MockNostrService implements NostrClient {
   int get connectedRelayCount => 1; // Pretend we have 1 relay connected
 
   @override
-  Stream<Event> subscribeToEvents({
-    required List<Filter> filters,
-    bool bypassLimits = false,
+  Stream<Event> subscribe(
+    List<Filter> filters, {
+    String? subscriptionId,
+    List<String>? tempRelays,
+    List<String>? targetRelays,
+    List<int> relayTypes = const [],
+    bool sendAfterAuth = false,
     void Function()? onEose,
   }) {
     _subscriptionFilters.addAll(filters);

@@ -1,6 +1,8 @@
 // ABOUTME: Unit tests for CuratedListService query operations
 // ABOUTME: Tests searching, filtering, and retrieving lists
 
+// ignore_for_file: invalid_use_of_null_value
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
@@ -416,11 +418,11 @@ void main() {
         final captured = verify(
           mockNostr.subscribe(
             captureAny(),
-            
             onEose: anyNamed('onEose'),
           ),
         ).captured;
-        final filters = captured[0] as List<Filter>;
+        expect(captured, isNotEmpty);
+        final filters = captured.first as List<Filter>;
         expect(filters[0].kinds, contains(30005));
         expect(filters[0].e, contains(targetVideoId));
 

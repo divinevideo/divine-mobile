@@ -30,7 +30,8 @@
       "Bash(pod install:*)",
       "Bash(xcrun simctl:*)",
       "Bash(dart fix:*)",
-      "Bash(dart run build_runner build:*)"
+      "Bash(dart run build_runner build:*)",
+      "mcp__dart__run_tests"
     ],
     "deny": [],
     "ask": []

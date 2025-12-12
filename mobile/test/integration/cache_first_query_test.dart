@@ -31,9 +31,13 @@ class MockNostrServiceWithDelay implements NostrClient {
   bool get eoseCalled => _eoseCalled;
 
   @override
-  Stream<Event> subscribeToEvents({
-    required List<Filter> filters,
-    bool bypassLimits = false,
+  Stream<Event> subscribe(
+    List<Filter> filters, {
+    String? subscriptionId,
+    List<String>? tempRelays,
+    List<String>? targetRelays,
+    List<int> relayTypes = const [],
+    bool sendAfterAuth = false,
     void Function()? onEose,
   }) {
     // Simulate relay delay: call onEose after 100ms

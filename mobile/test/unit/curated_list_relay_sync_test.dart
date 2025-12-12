@@ -1,6 +1,8 @@
 // ABOUTME: Unit tests for CuratedListService relay sync functionality
 // ABOUTME: Tests the relay sync implementation without requiring real relay connections
 
+// ignore_for_file: invalid_use_of_null_value
+
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';

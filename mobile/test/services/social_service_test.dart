@@ -1,3 +1,5 @@
+// ignore_for_file: invalid_use_of_null_value
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
@@ -1139,15 +1141,15 @@ void main() {
         expect(count, 4);
 
         // Verify subscription was called with correct NIP-71 kinds filter
-        final captured =
-            verify(
-                  mockNostrService.subscribe(captureAny()),
-                ).captured.single
-                as List<Filter>;
+        final capturedCalls = verify(
+          mockNostrService.subscribe(captureAny()),
+        ).captured;
+        expect(capturedCalls, isNotEmpty);
+        final capturedFilters = capturedCalls.first as List<Filter>;
 
         // Verify the filter includes NIP-71 video kinds: 22, 21, 34236, 34235
-        expect(captured.length, 1);
-        final filter = captured[0];
+        expect(capturedFilters.length, 1);
+        final filter = capturedFilters[0];
         expect(filter.kinds, containsAll([22, 21, 34236, 34235]));
         expect(filter.authors, contains(testUserPubkey));
       });

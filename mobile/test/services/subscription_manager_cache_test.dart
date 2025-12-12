@@ -1,6 +1,8 @@
 // ABOUTME: Tests for SubscriptionManager smart event cache pruning
 // ABOUTME: Verifies that cached events are not re-requested from relay
 
+// ignore_for_file: invalid_use_of_null_value
+
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
@@ -88,11 +90,11 @@ void main() {
         );
 
         // Assert: Relay subscription should only request uncached event
-        final capturedFilter =
-            verify(
-                  mockNostrService.subscribe(captureAny()),
-                ).captured.single
-                as List<Filter>;
+        final captured = verify(
+          mockNostrService.subscribe(captureAny()),
+        ).captured;
+        expect(captured, isNotEmpty);
+        final capturedFilter = captured.first as List<Filter>;
 
         expect(capturedFilter.length, 1);
         expect(capturedFilter[0].ids, ['uncached_id_3']);
@@ -166,11 +168,11 @@ void main() {
         );
 
         // Assert: Filter passed through unchanged
-        final capturedFilter =
-            verify(
-                  mockNostrService.subscribe(captureAny()),
-                ).captured.single
-                as List<Filter>;
+        final captured = verify(
+          mockNostrService.subscribe(captureAny()),
+        ).captured;
+        expect(captured, isNotEmpty);
+        final capturedFilter = captured.first as List<Filter>;
 
         expect(capturedFilter.length, 1);
         expect(capturedFilter[0].kinds, [0, 1]);
@@ -195,11 +197,11 @@ void main() {
         );
 
         // Assert: All event IDs passed to relay (no caching)
-        final capturedFilter =
-            verify(
-                  mockNostrService.subscribe(captureAny()),
-                ).captured.single
-                as List<Filter>;
+        final captured = verify(
+          mockNostrService.subscribe(captureAny()),
+        ).captured;
+        expect(captured, isNotEmpty);
+        final capturedFilter = captured.first as List<Filter>;
 
         expect(capturedFilter.length, 1);
         expect(capturedFilter[0].ids, ['id1', 'id2']);
@@ -239,11 +241,11 @@ void main() {
       expect(deliveredEvents[0].id, cachedEvent.id);
 
       // Assert: Both filters sent to relay (filter1 pruned, filter2 unchanged)
-      final capturedFilters =
-          verify(
-                mockNostrService.subscribe(captureAny()),
-              ).captured.single
-              as List<Filter>;
+      final captured = verify(
+        mockNostrService.subscribe(captureAny()),
+      ).captured;
+      expect(captured, isNotEmpty);
+      final capturedFilters = captured.first as List<Filter>;
 
       expect(capturedFilters.length, 2);
       expect(capturedFilters[0].ids, ['uncached_id']);

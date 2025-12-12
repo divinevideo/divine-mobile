@@ -24,9 +24,13 @@ class FakeNostrService implements NostrClient {
   void injectEvent(Event event) => _eventController.add(event);
 
   @override
-  Stream<Event> subscribeToEvents({
-    required List<Filter> filters,
-    bool bypassLimits = false,
+  Stream<Event> subscribe(
+    List<Filter> filters, {
+    String? subscriptionId,
+    List<String>? tempRelays,
+    List<String>? targetRelays,
+    List<int> relayTypes = const [],
+    bool sendAfterAuth = false,
     void Function()? onEose,
   }) => _eventController.stream;
 

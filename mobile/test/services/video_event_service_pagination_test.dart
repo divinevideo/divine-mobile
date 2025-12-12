@@ -1,6 +1,8 @@
 // ABOUTME: Tests for video pagination and relay loading in VideoEventService
 // ABOUTME: Verifies that the service properly loads videos from relays when scrolling
 
+// ignore_for_file: invalid_use_of_null_value
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
