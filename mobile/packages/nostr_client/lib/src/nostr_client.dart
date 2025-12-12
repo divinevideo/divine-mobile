@@ -288,7 +288,11 @@ class NostrClient {
     );
     if (events.isNotEmpty) {
       // Cache websocket result (fire-and-forget)
-      unawaited(_nostrEventsDao?.upsertEvent(events.first));
+      try {
+        unawaited(_nostrEventsDao?.upsertEvent(events.first));
+      } on Object {
+        // Ignore cache errors
+      }
       return events.first;
     }
     return null;
