@@ -109,12 +109,6 @@ class NostrClient {
     await _relayManager.initialize();
   }
 
-  /// Alias for [configuredRelayCount] for API compatibility
-  int get relayCount => configuredRelayCount;
-
-  /// Alias for [configuredRelays] for API compatibility
-  List<String> get relays => configuredRelays;
-
   /// Map of subscription IDs to their filter hashes (for deduplication)
   final Map<String, String> _subscriptionFilters = {};
 
@@ -133,41 +127,6 @@ class NostrClient {
       event,
       targetRelays: targetRelays,
     );
-  }
-
-  /// Broadcasts an event and returns detailed result
-  ///
-  /// Alias for [broadcast] for API compatibility with INostrService.
-  Future<NostrBroadcastResult> broadcastEvent(Event event) => broadcast(event);
-
-  /// Gets events matching filters
-  ///
-  /// Alias for [queryEvents] for API compatibility with INostrService.
-  Future<List<Event>> getEvents({
-    required List<Filter> filters,
-    int? limit,
-  }) async {
-    // Apply limit to filters if specified
-    final adjustedFilters = limit != null
-        ? filters
-              .map(
-                (f) => Filter(
-                  ids: f.ids,
-                  authors: f.authors,
-                  kinds: f.kinds,
-                  since: f.since,
-                  until: f.until,
-                  limit: limit,
-                  search: f.search,
-                  e: f.e,
-                  p: f.p,
-                  t: f.t,
-                  d: f.d,
-                ),
-              )
-              .toList()
-        : filters;
-    return queryEvents(adjustedFilters);
   }
 
   /// Queries events with given filters
@@ -272,17 +231,6 @@ class NostrClient {
     ];
     final events = await queryEvents(filters, useGateway: false);
     return events.isEmpty ? null : events.first;
-  }
-
-  /// Subscribes to events matching the given filters
-  ///
-  /// Alias for [subscribe] for API compatibility with INostrService.
-  Stream<Event> subscribeToEvents({
-    required List<Filter> filters,
-    bool bypassLimits = false,
-    void Function()? onEose,
-  }) {
-    return subscribe(filters, onEose: onEose);
   }
 
   /// Subscribes to events matching the given filters
@@ -419,16 +367,6 @@ class NostrClient {
   Future<void> retryDisconnectedRelays() async {
     await _relayManager.retryDisconnectedRelays();
   }
-
-  /// Reconnects to all relays
-  ///
-  /// Alias for [retryDisconnectedRelays] for API compatibility.
-  Future<void> reconnectAll() => retryDisconnectedRelays();
-
-  /// Retries initialization
-  ///
-  /// Alias for [retryDisconnectedRelays] for API compatibility.
-  Future<void> retryInitialization() => retryDisconnectedRelays();
 
   /// Gets relay connection status as a simple map
   ///
