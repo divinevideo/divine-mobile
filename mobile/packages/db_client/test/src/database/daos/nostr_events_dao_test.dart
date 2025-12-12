@@ -1111,6 +1111,43 @@ void main() {
         expect(result[1].id, equals(events[2].id)); // 50 loops
         expect(result[2].id, equals(events[0].id)); // 10 loops
       });
+
+      test('re-emits when video metrics change (sortBy join table)', () async {
+        // Insert video events with initial metrics
+        final events = [
+          createVideoEvent(loops: 10, createdAt: 3000),
+          createVideoEvent(loops: 100, createdAt: 1000),
+        ];
+        await dao.upsertEventsBatch(events);
+
+        final stream = dao.watchEventsByFilter(
+          Filter(kinds: [34236]),
+          sortBy: 'loop_count',
+        );
+
+        // Collect two emissions
+        final emissionsFuture = stream.take(2).toList();
+
+        // Wait for stream to be listening
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        // Update metrics for first event (10 loops -> 200 loops)
+        // This should re-order the results
+        final updatedEvent = createVideoEvent(loops: 200, createdAt: 3000)
+          ..id = events[0].id;
+        await database.videoMetricsDao.upsertVideoMetrics(updatedEvent);
+
+        final emissions = await emissionsFuture;
+        expect(emissions.length, equals(2));
+
+        // First emission: 100 loops first, then 10 loops
+        expect(emissions[0][0].id, equals(events[1].id)); // 100 loops
+        expect(emissions[0][1].id, equals(events[0].id)); // 10 loops
+
+        // Second emission after metrics update: 200 loops first, then 100 loops
+        expect(emissions[1][0].id, equals(events[0].id)); // Now 200 loops
+        expect(emissions[1][1].id, equals(events[1].id)); // Still 100 loops
+      });
     });
 
     group('cache expiry', () {
