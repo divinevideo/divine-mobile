@@ -802,12 +802,17 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
 
       // Check if we need to clear user-specific data due to identity change
-      if (_userDataCleanupService.shouldClearDataForUser(keyContainer.npub)) {
-        Log.info(
+      final shouldClean = _userDataCleanupService.shouldClearDataForUser(
+        keyContainer.publicKeyHex,
+      );
+
+      if (shouldClean) {
+        Log.debug(
           'Identity change detected, clearing user-specific cached data',
           name: 'AuthService',
           category: LogCategory.auth,
         );
+
         await _userDataCleanupService.clearUserSpecificData();
       }
 
