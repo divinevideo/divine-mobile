@@ -134,11 +134,11 @@ class NostrClient {
         );
         if (response != null && response.hasEvents) {
           // Cache gateway results (fire-and-forget)
-          unawaited(
-            _nostrEventsDao?.upsertEventsBatch(response.events).catchError((_) {
-              // Ignore cache errors
-            }),
-          );
+          try {
+            unawaited(_nostrEventsDao?.upsertEventsBatch(response.events));
+          } on Object {
+            // Ignore cache errors
+          }
           return response.events;
         }
       }
@@ -156,11 +156,11 @@ class NostrClient {
 
     // Cache websocket results (fire-and-forget)
     if (events.isNotEmpty) {
-      unawaited(
-        _nostrEventsDao?.upsertEventsBatch(events).catchError((_) {
-          // Ignore cache errors
-        }),
-      );
+      try {
+        unawaited(_nostrEventsDao?.upsertEventsBatch(events));
+      } on Object {
+        // Ignore cache errors
+      }
     }
 
     return events;
@@ -201,11 +201,11 @@ class NostrClient {
         );
         if (event != null) {
           // Cache gateway result (fire-and-forget)
-          unawaited(
-            _nostrEventsDao?.upsertEvent(event).catchError((_) {
-              // Ignore cache errors
-            }),
-          );
+          try {
+            unawaited(_nostrEventsDao?.upsertEvent(event));
+          } on Object {
+            // Ignore cache errors
+          }
           return event;
         }
       }
@@ -223,11 +223,12 @@ class NostrClient {
     );
     if (events.isNotEmpty) {
       // Cache websocket result (fire-and-forget)
-      unawaited(
-        _nostrEventsDao?.upsertEvent(events.first).catchError((_) {
-          // Ignore cache errors
-        }),
-      );
+      try {
+        unawaited(_nostrEventsDao?.upsertEvent(events.first));
+      } on Object {
+        // Ignore cache errors
+      }
+
       return events.first;
     }
     return null;
@@ -266,11 +267,11 @@ class NostrClient {
         );
         if (profile != null) {
           // Cache gateway result (fire-and-forget)
-          unawaited(
-            _nostrEventsDao?.upsertEvent(profile).catchError((_) {
-              // Ignore cache errors
-            }),
-          );
+          try {
+            unawaited(_nostrEventsDao?.upsertEvent(profile));
+          } on Object {
+            // Ignore cache errors
+          }
           return profile;
         }
       }
