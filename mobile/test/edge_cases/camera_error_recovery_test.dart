@@ -28,7 +28,7 @@ void main() {
       final controller = VineRecordingController();
 
       expect(
-        () async => await controller.initialize(),
+        () async => controller.initialize(),
         throwsA(
           predicate(
             (e) =>

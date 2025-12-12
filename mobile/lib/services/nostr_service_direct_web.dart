@@ -16,9 +16,6 @@ class NostrServiceDirectWeb extends NostrServiceWeb {
   @override
   NostrKeyManager get keyManager => _keyManager;
 
-  @override
-  Future<Map<String, dynamic>?> getRelayStats() => super.getRelayStats();
-
   /// Expose the onInitialized callback so the base class can call it
   void Function()? get onInitialized => _onInitialized;
 }

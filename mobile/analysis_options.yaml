@@ -1,0 +1,33 @@
+linter:
+  rules:
+    - library_prefixes
+    - library_private_types_in_public_api
+    - literal_only_boolean_expressions
+    - missing_code_block_language_in_doc_comment
+    - no_adjacent_strings_in_list
+    - no_duplicate_case_values
+    - no_leading_underscores_for_library_prefixes
+    - prefer_adjacent_string_concatenation
+    - prefer_asserts_in_initializer_lists
+    - prefer_conditional_assignment
+    - prefer_const_constructors_in_immutables
+    - prefer_contains
+    - unnecessary_await_in_return
+    - unnecessary_const
+    - unnecessary_constructor_name
+    - unnecessary_late
+    - unnecessary_new
+    - unnecessary_null_aware_assignments
+    - unnecessary_null_checks
+    - unnecessary_null_in_if_null_operators
+    - unnecessary_nullable_for_final_variable_declarations
+    - unnecessary_overrides
+    - use_full_hex_values_for_flutter_colors
+    - use_key_in_widget_constructors
+    - use_rethrow_when_possible
+    - use_string_buffers
+    - use_string_in_part_of_directives
+    - use_test_throws_matchers
+    - use_to_and_as_if_applicable
+    - valid_regexps
+    - void_checks

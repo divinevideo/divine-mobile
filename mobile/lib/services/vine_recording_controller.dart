@@ -883,7 +883,7 @@ class MacOSCameraInterface extends CameraPlatformInterface
       return null;
     }
 
-    return await completeRecording();
+    return completeRecording();
   }
 
   /// Wait for recording completion using proper async pattern
@@ -1063,7 +1063,7 @@ class WebCameraInterface extends CameraPlatformInterface {
 
       // Create preview widget with the initialized camera service
       _previewWidget = camera_service.WebCameraPreview(
-        cameraService: _webCameraService!,
+        cameraService: _webCameraService,
       );
 
       Log.info(

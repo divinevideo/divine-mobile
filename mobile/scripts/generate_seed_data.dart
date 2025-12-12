@@ -144,7 +144,6 @@ Future<void> main() async {
     }
 
     // Step 3: Query for additional popular videos to fill up to 250 total
-    final remainingSlots = targetVideoCount - editorPicksVideos.length;
     print('[SEED GEN] Querying for top videos by loop count...');
 
     final allVideos = await relay.query({

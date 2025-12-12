@@ -119,7 +119,7 @@ class UploadManager {
 
   /// Check if Blossom is available and configured
   Future<bool> isBlossomAvailable() async {
-    return await _blossomService.isBlossomEnabled();
+    return _blossomService.isBlossomEnabled();
   }
 
   /// Initialize the upload manager and load persisted uploads

@@ -23,7 +23,7 @@ class BackButtonHandler {
     if (!kIsWeb && Platform.isAndroid) {
       _channel.setMethodCallHandler((call) async {
         if (call.method == 'onBackPressed') {
-          return await _handleBackButton();
+          return _handleBackButton();
         }
         return false;
       });

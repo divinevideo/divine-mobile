@@ -143,7 +143,7 @@ void main() {
 
       // Act & Assert: Should not throw, just log error
       expect(
-        () async => await SeedMediaPreloadService.loadSeedMediaIfNeeded(),
+        () async => SeedMediaPreloadService.loadSeedMediaIfNeeded(),
         returnsNormally,
         reason: 'Missing manifest should be non-critical',
       );
@@ -164,7 +164,7 @@ void main() {
 
         // Act & Assert: Should not throw
         expect(
-          () async => await SeedMediaPreloadService.loadSeedMediaIfNeeded(),
+          () async => SeedMediaPreloadService.loadSeedMediaIfNeeded(),
           returnsNormally,
           reason: 'Corrupted manifest should be non-critical',
         );

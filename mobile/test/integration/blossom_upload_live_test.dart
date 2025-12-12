@@ -118,7 +118,7 @@ void main() {
       expect(result.videoId, isNotNull, reason: 'Should return video ID');
       expect(
         result.cdnUrl,
-        contains(result.videoId!),
+        contains(result.videoId),
         reason: 'CDN URL should contain video ID',
       );
     });
