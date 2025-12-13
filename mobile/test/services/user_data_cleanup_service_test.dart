@@ -119,6 +119,41 @@ void main() {
 
         expect(prefs.containsKey('vine_drafts'), isFalse);
       });
+
+      test('returns count of cleared keys', () async {
+        // Set up some user-specific data
+        await prefs.setStringList('curated_lists', ['list1']);
+        await prefs.setString('seen_video_ids', 'video1');
+        await prefs.setBool('age_verified_16_plus', true);
+
+        final clearedCount = await service.clearUserSpecificData();
+
+        expect(clearedCount, equals(3));
+      });
+
+      test('returns zero when no data to clear', () async {
+        final clearedCount = await service.clearUserSpecificData();
+
+        expect(clearedCount, equals(0));
+      });
+
+      test('accepts reason parameter for tracking', () async {
+        await prefs.setStringList('curated_lists', ['list1']);
+
+        // Should complete without error with various reasons
+        final count1 = await service.clearUserSpecificData(
+          reason: 'explicit_logout',
+        );
+        expect(count1, equals(1));
+
+        // Reset data
+        await prefs.setStringList('curated_lists', ['list1']);
+
+        final count2 = await service.clearUserSpecificData(
+          reason: 'identity_change',
+        );
+        expect(count2, equals(1));
+      });
     });
 
     group('userSpecificKeys', () {

@@ -431,6 +431,14 @@ class AuthService {
       await prefs.remove('age_verified_16_plus');
       await prefs.remove('terms_accepted_at');
 
+      // Clear user-specific cached data on explicit logout
+      await _userDataCleanupService.clearUserSpecificData(
+        reason: 'explicit_logout',
+      );
+
+      // Clear the stored pubkey tracking so next login is treated as new
+      await prefs.remove('current_user_pubkey_hex');
+
       if (deleteKeys) {
         Log.debug(
           '📱️ Deleting stored keys',
@@ -807,13 +815,9 @@ class AuthService {
       );
 
       if (shouldClean) {
-        Log.debug(
-          'Identity change detected, clearing user-specific cached data',
-          name: 'AuthService',
-          category: LogCategory.auth,
+        await _userDataCleanupService.clearUserSpecificData(
+          reason: 'identity_change',
         );
-
-        await _userDataCleanupService.clearUserSpecificData();
       }
 
       await prefs.setString(

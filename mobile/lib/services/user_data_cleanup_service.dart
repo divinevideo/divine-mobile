@@ -88,25 +88,47 @@ class UserDataCleanupService {
   /// This removes cached lists, bookmarks, mutes, viewing history,
   /// and other user-specific data while preserving device/app settings
   /// like relay URLs, analytics preferences, etc.
-  Future<void> clearUserSpecificData() async {
+  ///
+  /// Returns the number of keys that were cleared for tracking purposes.
+  Future<int> clearUserSpecificData({String? reason}) async {
+    final cleanupReason = reason ?? 'unspecified';
     Log.info(
-      'Clearing user-specific cached data (${userSpecificKeys.length} keys)',
+      'Starting user data cleanup (reason: $cleanupReason, checking ${userSpecificKeys.length} keys)',
       name: 'UserDataCleanupService',
       category: LogCategory.auth,
     );
 
     int clearedCount = 0;
+    final clearedKeys = <String>[];
+
     for (final key in userSpecificKeys) {
       if (_prefs.containsKey(key)) {
         await _prefs.remove(key);
         clearedCount++;
+        clearedKeys.add(key);
       }
     }
 
-    Log.info(
-      'Cleared $clearedCount user-specific data entries',
-      name: 'UserDataCleanupService',
-      category: LogCategory.auth,
-    );
+    // Log detailed cleanup results for observability
+    if (clearedCount > 0) {
+      Log.info(
+        'User data cleanup complete: cleared $clearedCount entries',
+        name: 'UserDataCleanupService',
+        category: LogCategory.auth,
+      );
+      Log.debug(
+        'Cleared keys: ${clearedKeys.join(", ")}',
+        name: 'UserDataCleanupService',
+        category: LogCategory.auth,
+      );
+    } else {
+      Log.debug(
+        'User data cleanup: no data to clear',
+        name: 'UserDataCleanupService',
+        category: LogCategory.auth,
+      );
+    }
+
+    return clearedCount;
   }
 }
