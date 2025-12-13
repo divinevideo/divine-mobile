@@ -7,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,14 +38,17 @@ void main() {
 
         try {
           // Initialize services
-          final authService = AuthService();
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final authService = AuthService(
+            userDataCleanupService: UserDataCleanupService(prefs),
+          );
           final blossomService = BlossomUploadService(
             authService: authService,
             nostrService: nostrService,
           );
 
           // Override Blossom server to blossom.divine.video
-          final prefs = await SharedPreferences.getInstance();
           await prefs.setString(
             'blossom_server',
             'https://blossom.divine.video',

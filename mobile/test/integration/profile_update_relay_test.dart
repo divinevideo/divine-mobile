@@ -5,14 +5,20 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/user_profile_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'profile_update_relay_test.mocks.dart';
+
+@GenerateMocks([UserDataCleanupService])
 void main() {
   setUpAll(() async {
     // Initialize Flutter bindings for testing
@@ -25,11 +31,14 @@ void main() {
     late UserProfileService userProfileService;
     late SubscriptionManager subscriptionManager;
     late NostrKeyManager keyManager;
+    late MockUserDataCleanupService mockCleanupService;
 
     setUp(() async {
+      SharedPreferences.setMockInitialValues({});
       keyManager = NostrKeyManager();
       nostrService = NostrService(keyManager);
-      authService = AuthService();
+      mockCleanupService = MockUserDataCleanupService();
+      authService = AuthService(userDataCleanupService: mockCleanupService);
       subscriptionManager = SubscriptionManager(nostrService);
       userProfileService = UserProfileService(
         nostrService,

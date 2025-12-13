@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
@@ -12,12 +14,24 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/state/social_state.dart';
 import 'package:openvine/ui/overlay_policy.dart';
 import 'package:openvine/widgets/video_feed_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'video_editor_route_test.mocks.dart';
+
+late MockUserDataCleanupService _mockCleanupService;
+
+@GenerateMocks([UserDataCleanupService])
 void main() {
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    _mockCleanupService = MockUserDataCleanupService();
+    when(_mockCleanupService.shouldClearDataForUser(any)).thenReturn(false);
+  });
+
   group('VideoEditorRoute - Edit Button Tests', () {
     late VideoEvent testVideo;
     late String testUserPubkey;
@@ -47,6 +61,7 @@ void main() {
             // Override auth service to return our test user as authenticated
             authServiceProvider.overrideWith((ref) {
               return _MockAuthService(
+                cleanupService: _mockCleanupService,
                 pubkey: testUserPubkey,
                 authenticated: true,
               );
@@ -94,6 +109,7 @@ void main() {
           overrides: [
             authServiceProvider.overrideWith((ref) {
               return _MockAuthService(
+                cleanupService: _mockCleanupService,
                 pubkey: 'different-user-pubkey', // Different user!
                 authenticated: true,
               );
@@ -138,6 +154,7 @@ void main() {
         overrides: [
           authServiceProvider.overrideWith((ref) {
             return _MockAuthService(
+              cleanupService: _mockCleanupService,
               pubkey: testUserPubkey,
               authenticated: true,
             );
@@ -179,7 +196,11 @@ void main() {
 // Mock classes for testing
 
 class _MockAuthService extends AuthService {
-  _MockAuthService({required this.pubkey, required this.authenticated});
+  _MockAuthService({
+    required UserDataCleanupService cleanupService,
+    required this.pubkey,
+    required this.authenticated,
+  }) : super(userDataCleanupService: cleanupService);
 
   final String? pubkey;
   final bool authenticated;

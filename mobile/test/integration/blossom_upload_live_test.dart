@@ -7,8 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/nostr_service_interface.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/nostr_service_factory.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/service_init_helper.dart';
 
 void main() {
@@ -57,8 +59,13 @@ void main() {
       nostrService = NostrServiceFactory.create(keyManager);
       NostrServiceFactory.initialize(nostrService);
 
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
       final keyStorage = SecureKeyStorage();
-      authService = AuthService(keyStorage: keyStorage);
+      authService = AuthService(
+        userDataCleanupService: UserDataCleanupService(prefs),
+        keyStorage: keyStorage,
+      );
       await authService.initialize();
 
       blossomService = BlossomUploadService(

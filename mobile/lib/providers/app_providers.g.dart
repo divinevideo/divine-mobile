@@ -1040,17 +1040,17 @@ final class DraftStorageServiceProvider
 String _$draftStorageServiceHash() =>
     r'e4db2a5863ba06a6c634366edda6e724ea6c67f2';
 
-/// Authentication service depends on secure key storage
+/// Authentication service depends on secure key storage and user data cleanup
 
 @ProviderFor(authService)
 const authServiceProvider = AuthServiceProvider._();
 
-/// Authentication service depends on secure key storage
+/// Authentication service depends on secure key storage and user data cleanup
 
 final class AuthServiceProvider
     extends $FunctionalProvider<AuthService, AuthService, AuthService>
     with $Provider<AuthService> {
-  /// Authentication service depends on secure key storage
+  /// Authentication service depends on secure key storage and user data cleanup
   const AuthServiceProvider._()
     : super(
         from: null,
@@ -1084,7 +1084,7 @@ final class AuthServiceProvider
   }
 }
 
-String _$authServiceHash() => r'26555c9f1c9a9a0c322592b6425ac0a6808090d8';
+String _$authServiceHash() => r'79d0e4b6411299b6a291f193d48cf7db53615f5d';
 
 /// Stream provider for reactive auth state changes
 /// Widgets should watch this instead of authService.authState to get rebuilds
@@ -1127,6 +1127,62 @@ final class AuthStateStreamProvider
 }
 
 String _$authStateStreamHash() => r'bd5c1864e57cfd46c9676d3dc1fe3aa358c2a14b';
+
+/// User data cleanup service for handling identity changes
+/// Prevents data leakage between different Nostr accounts
+
+@ProviderFor(userDataCleanupService)
+const userDataCleanupServiceProvider = UserDataCleanupServiceProvider._();
+
+/// User data cleanup service for handling identity changes
+/// Prevents data leakage between different Nostr accounts
+
+final class UserDataCleanupServiceProvider
+    extends
+        $FunctionalProvider<
+          UserDataCleanupService,
+          UserDataCleanupService,
+          UserDataCleanupService
+        >
+    with $Provider<UserDataCleanupService> {
+  /// User data cleanup service for handling identity changes
+  /// Prevents data leakage between different Nostr accounts
+  const UserDataCleanupServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'userDataCleanupServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$userDataCleanupServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<UserDataCleanupService> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  UserDataCleanupService create(Ref ref) {
+    return userDataCleanupService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(UserDataCleanupService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<UserDataCleanupService>(value),
+    );
+  }
+}
+
+String _$userDataCleanupServiceHash() =>
+    r'345374b31e304274527a8109edba3133f499f53a';
 
 /// Core Nostr service with platform-aware embedded relay functionality and P2P capabilities
 

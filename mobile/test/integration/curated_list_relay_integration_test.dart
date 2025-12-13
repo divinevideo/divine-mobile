@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/nostr_service.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -109,7 +110,9 @@ void main() {
       prefs = await SharedPreferences.getInstance();
 
       // Create auth service
-      authService = AuthService();
+      authService = AuthService(
+        userDataCleanupService: UserDataCleanupService(prefs),
+      );
 
       Log.info(
         '✅ Test services initialized',
