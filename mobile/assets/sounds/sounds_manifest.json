@@ -1,74 +1,221 @@
 {
   "sounds": [
     {
-      "id": "vine_what_are_those",
-      "title": "What Are Those",
-      "assetPath": "assets/sounds/what_are_those.mp3",
-      "durationMs": 3000,
-      "tags": ["meme", "shoes", "classic"]
-    },
-    {
-      "id": "vine_road_work_ahead",
-      "title": "Road Work Ahead",
-      "assetPath": "assets/sounds/road_work_ahead.mp3",
+      "id": "potato_flew",
+      "title": "A Potato Flew Around My Room",
+      "assetPath": "assets/sounds/a-potato-flew-around-my-room-before-you-came.mp3",
       "durationMs": 4000,
-      "tags": ["meme", "sign", "classic"]
+      "tags": ["meme", "music", "classic"]
     },
     {
-      "id": "vine_chilis",
-      "title": "Hi Welcome to Chili's",
-      "assetPath": "assets/sounds/chilis.mp3",
-      "durationMs": 2500,
-      "tags": ["meme", "greeting", "classic"]
+      "id": "bing_chilling",
+      "title": "Bing Chilling (John Cena)",
+      "assetPath": "assets/sounds/bing-chilling-john-cena.mp3",
+      "durationMs": 12000,
+      "tags": ["meme", "cena", "china"]
     },
     {
-      "id": "vine_roommates",
-      "title": "And They Were Roommates",
-      "assetPath": "assets/sounds/roommates.mp3",
+      "id": "bing_chilling_beat",
+      "title": "Bing Chilling Type Beat",
+      "assetPath": "assets/sounds/bing-chilling-type-beat_1JBOIfr.mp3",
+      "durationMs": 7000,
+      "tags": ["meme", "beat", "music"]
+    },
+    {
+      "id": "bruh",
+      "title": "Bruh Sound Effect",
+      "assetPath": "assets/sounds/bruh-sound-effect.mp3",
+      "durationMs": 1000,
+      "tags": ["meme", "reaction", "classic"]
+    },
+    {
+      "id": "chinese_vine_boom",
+      "title": "Chinese Guy Talk With Vine Boom",
+      "assetPath": "assets/sounds/chinese-guy-talk-with-vine-boom.mp3",
+      "durationMs": 10000,
+      "tags": ["meme", "boom", "talk"]
+    },
+    {
+      "id": "drop_the_bass",
+      "title": "D-D-D-Drop The Bass",
+      "assetPath": "assets/sounds/d-d-d-d-drop-the-bass.mp3",
+      "durationMs": 8000,
+      "tags": ["meme", "bass", "music", "dubstep"]
+    },
+    {
+      "id": "deez_nuts",
+      "title": "Deez Nuts - Got Eem!",
+      "assetPath": "assets/sounds/deez-nuts-got-eem-original-vine-mp3cut.mp3",
+      "durationMs": 4000,
+      "tags": ["meme", "classic", "prank"]
+    },
+    {
+      "id": "mums_car",
+      "title": "I'm In Me Mum's Car",
+      "assetPath": "assets/sounds/im-in-me-mums-car.mp3",
+      "durationMs": 4000,
+      "tags": ["meme", "classic", "british"]
+    },
+    {
+      "id": "lebron_james",
+      "title": "LeBron James Vine",
+      "assetPath": "assets/sounds/lebron james vine by lil jerry.mp3",
       "durationMs": 3500,
-      "tags": ["meme", "gossip", "classic"]
+      "tags": ["meme", "sports", "classic"]
     },
     {
-      "id": "vine_hot_tub",
-      "title": "Two Bros Chillin in a Hot Tub",
-      "assetPath": "assets/sounds/hot_tub.mp3",
-      "durationMs": 5000,
-      "tags": ["meme", "bros", "classic"]
+      "id": "my_name_jeff_lol",
+      "title": "My Name Is Jeff (LOL)",
+      "assetPath": "assets/sounds/My Name Is Jeff (lol sound).mp3",
+      "durationMs": 3500,
+      "tags": ["meme", "classic", "jeff"]
     },
     {
-      "id": "vine_wednesday",
-      "title": "It's Wednesday My Dudes",
-      "assetPath": "assets/sounds/wednesday.mp3",
-      "durationMs": 3000,
-      "tags": ["meme", "frog", "classic"]
+      "id": "my_name_jeff",
+      "title": "My Name Is Jeff",
+      "assetPath": "assets/sounds/My Name Is Jeff.mp3",
+      "durationMs": 1000,
+      "tags": ["meme", "classic", "jeff"]
     },
     {
-      "id": "vine_why_running",
-      "title": "Why Are You Running",
-      "assetPath": "assets/sounds/why_running.mp3",
-      "durationMs": 2500,
-      "tags": ["meme", "running", "classic"]
-    },
-    {
-      "id": "vine_chickens",
-      "title": "Look at All Those Chickens",
-      "assetPath": "assets/sounds/chickens.mp3",
+      "id": "my_name_jeffffff",
+      "title": "My Name Is Jeffffff",
+      "assetPath": "assets/sounds/my name is jeffffff.mp3",
       "durationMs": 2000,
-      "tags": ["meme", "birds", "classic"]
+      "tags": ["meme", "classic", "jeff"]
     },
     {
-      "id": "vine_cant_believe",
-      "title": "I Can't Believe You've Done This",
-      "assetPath": "assets/sounds/cant_believe.mp3",
+      "id": "oh_hell_no_short",
+      "title": "Oh Hell No!",
+      "assetPath": "assets/sounds/Oh hell no!.mp3",
+      "durationMs": 1500,
+      "tags": ["meme", "reaction", "classic"]
+    },
+    {
+      "id": "oh_hell_no_dramatic",
+      "title": "Oh Hell No (Dramatic)",
+      "assetPath": "assets/sounds/oh-hell- long dramatic.mp3",
+      "durationMs": 4000,
+      "tags": ["meme", "dramatic", "reaction"]
+    },
+    {
+      "id": "oh_my_god",
+      "title": "Oh My God Vine",
+      "assetPath": "assets/sounds/oh-my-god-vine.mp3",
       "durationMs": 3000,
-      "tags": ["meme", "shocked", "classic"]
+      "tags": ["meme", "reaction", "classic"]
     },
     {
-      "id": "vine_freshman",
-      "title": "Freshman",
-      "assetPath": "assets/sounds/freshman.mp3",
+      "id": "omg_bruh",
+      "title": "OMG Bruh Oh Hell Nah Man",
+      "assetPath": "assets/sounds/omg-bruh-oh-hell-nah-man.mp3",
+      "durationMs": 11000,
+      "tags": ["meme", "reaction", "combo"]
+    },
+    {
+      "id": "rizzbot_laugh",
+      "title": "Rizzbot Laugh",
+      "assetPath": "assets/sounds/rizzbot-laugh.mp3",
+      "durationMs": 3000,
+      "tags": ["meme", "laugh", "funny"]
+    },
+    {
+      "id": "run",
+      "title": "Run Vine Sound Effect",
+      "assetPath": "assets/sounds/run-vine-sound-effect.mp3",
+      "durationMs": 9000,
+      "tags": ["meme", "run", "classic"]
+    },
+    {
+      "id": "shinchan_clean",
+      "title": "Shinchan Clean",
+      "assetPath": "assets/sounds/shinchan-clean.mp3",
+      "durationMs": 7500,
+      "tags": ["anime", "music", "shinchan"]
+    },
+    {
+      "id": "shinchan_risa",
+      "title": "Shinchan Risa",
+      "assetPath": "assets/sounds/shinchan-risa.mp3",
+      "durationMs": 14000,
+      "tags": ["anime", "music", "shinchan"]
+    },
+    {
+      "id": "vine_boom_thud_loud",
+      "title": "Vine Boom and Thud (Loud)",
+      "assetPath": "assets/sounds/vine-boom-and-or-thud-but-you-die-from-ear-pain_wzP1skh.mp3",
       "durationMs": 2500,
-      "tags": ["meme", "school", "classic"]
+      "tags": ["meme", "boom", "loud"]
+    },
+    {
+      "id": "vine_boom_thud",
+      "title": "Vine Boom and Thud",
+      "assetPath": "assets/sounds/vine-boom-and-thud.mp3",
+      "durationMs": 2500,
+      "tags": ["meme", "boom", "effect"]
+    },
+    {
+      "id": "vine_boom_bass",
+      "title": "Vine Boom Bass Boost",
+      "assetPath": "assets/sounds/vine-boom-bass-boost-sound-effect.mp3",
+      "durationMs": 4000,
+      "tags": ["meme", "boom", "bass"]
+    },
+    {
+      "id": "vine_boom_slow",
+      "title": "Vine Boom Slow",
+      "assetPath": "assets/sounds/vine-boom-slow.mp3",
+      "durationMs": 7000,
+      "tags": ["meme", "boom", "slow"]
+    },
+    {
+      "id": "vine_boom_multiple",
+      "title": "Vine Boom (Multiple)",
+      "assetPath": "assets/sounds/vine-boom-sound-effect-multiple times.mp3",
+      "durationMs": 16000,
+      "tags": ["meme", "boom", "multiple"]
+    },
+    {
+      "id": "vine_boom",
+      "title": "Vine Boom",
+      "assetPath": "assets/sounds/vine-boom-sound-effect.mp3",
+      "durationMs": 7000,
+      "tags": ["meme", "boom", "classic"]
+    },
+    {
+      "id": "vine_boom_triple",
+      "title": "Vine Boom x3",
+      "assetPath": "assets/sounds/vine-boom-vine-boom-vine-boom-sound-effect.mp3",
+      "durationMs": 7000,
+      "tags": ["meme", "boom", "triple"]
+    },
+    {
+      "id": "watch_profanity",
+      "title": "Watch Your Profanity",
+      "assetPath": "assets/sounds/watch-your-profanity_1.mp3",
+      "durationMs": 2500,
+      "tags": ["meme", "classic", "profanity"]
+    },
+    {
+      "id": "what_da_dog_doing",
+      "title": "What Da Dog Doing",
+      "assetPath": "assets/sounds/what-what-da-dog-doing.mp3",
+      "durationMs": 2000,
+      "tags": ["meme", "dog", "classic"]
+    },
+    {
+      "id": "yankee_no_brim",
+      "title": "Yankee With No Brim",
+      "assetPath": "assets/sounds/yankee-wit-no-brim-sound-effect-high-quality.mp3",
+      "durationMs": 10000,
+      "tags": ["meme", "yankee", "classic"]
+    },
+    {
+      "id": "not_my_dad",
+      "title": "You're Not My Dad",
+      "assetPath": "assets/sounds/You_re Not My Dad.mp3",
+      "durationMs": 1000,
+      "tags": ["meme", "classic", "vine"]
     }
   ]
 }
