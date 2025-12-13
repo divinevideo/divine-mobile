@@ -7,7 +7,6 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/models/video_event.dart';
 import 'package:openvine/router/app_shell.dart';
 import 'package:openvine/screens/explore_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
@@ -501,15 +500,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/edit-video',
         name: 'edit-video',
         builder: (ctx, st) {
-          final video = st.extra as VideoEvent?;
-          if (video == null) {
+          final videoPath = st.extra as String?;
+          if (videoPath == null) {
             // If no video provided, show error screen
             return Scaffold(
               appBar: AppBar(title: const Text('Error')),
               body: const Center(child: Text('No video selected for editing')),
             );
           }
-          return VideoEditorScreen(video: video);
+          return VideoEditorScreen(videoPath: videoPath);
         },
       ),
     ],
