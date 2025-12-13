@@ -1,0 +1,74 @@
+{
+  "sounds": [
+    {
+      "id": "vine_what_are_those",
+      "title": "What Are Those",
+      "assetPath": "assets/sounds/what_are_those.mp3",
+      "durationMs": 3000,
+      "tags": ["meme", "shoes", "classic"]
+    },
+    {
+      "id": "vine_road_work_ahead",
+      "title": "Road Work Ahead",
+      "assetPath": "assets/sounds/road_work_ahead.mp3",
+      "durationMs": 4000,
+      "tags": ["meme", "sign", "classic"]
+    },
+    {
+      "id": "vine_chilis",
+      "title": "Hi Welcome to Chili's",
+      "assetPath": "assets/sounds/chilis.mp3",
+      "durationMs": 2500,
+      "tags": ["meme", "greeting", "classic"]
+    },
+    {
+      "id": "vine_roommates",
+      "title": "And They Were Roommates",
+      "assetPath": "assets/sounds/roommates.mp3",
+      "durationMs": 3500,
+      "tags": ["meme", "gossip", "classic"]
+    },
+    {
+      "id": "vine_hot_tub",
+      "title": "Two Bros Chillin in a Hot Tub",
+      "assetPath": "assets/sounds/hot_tub.mp3",
+      "durationMs": 5000,
+      "tags": ["meme", "bros", "classic"]
+    },
+    {
+      "id": "vine_wednesday",
+      "title": "It's Wednesday My Dudes",
+      "assetPath": "assets/sounds/wednesday.mp3",
+      "durationMs": 3000,
+      "tags": ["meme", "frog", "classic"]
+    },
+    {
+      "id": "vine_why_running",
+      "title": "Why Are You Running",
+      "assetPath": "assets/sounds/why_running.mp3",
+      "durationMs": 2500,
+      "tags": ["meme", "running", "classic"]
+    },
+    {
+      "id": "vine_chickens",
+      "title": "Look at All Those Chickens",
+      "assetPath": "assets/sounds/chickens.mp3",
+      "durationMs": 2000,
+      "tags": ["meme", "birds", "classic"]
+    },
+    {
+      "id": "vine_cant_believe",
+      "title": "I Can't Believe You've Done This",
+      "assetPath": "assets/sounds/cant_believe.mp3",
+      "durationMs": 3000,
+      "tags": ["meme", "shocked", "classic"]
+    },
+    {
+      "id": "vine_freshman",
+      "title": "Freshman",
+      "assetPath": "assets/sounds/freshman.mp3",
+      "durationMs": 2500,
+      "tags": ["meme", "school", "classic"]
+    }
+  ]
+}
