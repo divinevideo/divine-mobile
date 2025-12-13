@@ -51,6 +51,7 @@ class SafeJsonCacheInfoRepository extends JsonCacheInfoRepository {
   }
 
   /// Delete the corrupted cache JSON file
+  /// Note: JsonCacheInfoRepository stores its JSON in getApplicationSupportDirectory()
   Future<void> _deleteCacheFile() async {
     try {
       final directory = await getApplicationSupportDirectory();
