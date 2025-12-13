@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
@@ -901,10 +902,17 @@ class _ShareVideoMenuState extends ConsumerState<ShareVideoMenu> {
     );
   }
 
-  /// Copy event ID to clipboard
+  /// Copy event ID to clipboard as nevent (NIP-19 bech32 encoded)
   Future<void> _copyEventId() async {
     try {
-      await Clipboard.setData(ClipboardData(text: widget.video.id));
+      final nevent = NIP19Tlv.encodeNevent(
+        Nevent(
+          id: widget.video.id,
+          author: widget.video.pubkey,
+          relays: ['wss://relay.divine.video'],
+        ),
+      );
+      await Clipboard.setData(ClipboardData(text: nevent));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
