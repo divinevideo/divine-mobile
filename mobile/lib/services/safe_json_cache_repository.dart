@@ -16,8 +16,8 @@ import 'package:path/path.dart' as path;
 /// cache can be created.
 class SafeJsonCacheInfoRepository extends JsonCacheInfoRepository {
   SafeJsonCacheInfoRepository({required String databaseName})
-      : _databaseName = databaseName,
-        super(databaseName: databaseName);
+    : _databaseName = databaseName,
+      super(databaseName: databaseName);
 
   final String _databaseName;
 

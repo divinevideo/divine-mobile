@@ -32,8 +32,9 @@ void main() {
     test('open succeeds with fresh cache', () async {
       // This test verifies the repository can be created
       // Full open() testing requires mocking file system which is complex
-      final repo =
-          SafeJsonCacheInfoRepository(databaseName: 'test_fresh_cache');
+      final repo = SafeJsonCacheInfoRepository(
+        databaseName: 'test_fresh_cache',
+      );
       expect(repo, isNotNull);
     });
 
@@ -64,9 +65,7 @@ void main() {
         }
       });
 
-      test(
-          'cache JSON should be stored in app support directory (not temp)',
-          () async {
+      test('cache JSON should be stored in app support directory (not temp)', () async {
         // This test verifies that the cache file path uses getApplicationSupportDirectory
         // which is the same directory JsonCacheInfoRepository uses internally.
         //
@@ -80,8 +79,9 @@ void main() {
 
         // Create a corrupted JSON file in the app support directory
         // (where JsonCacheInfoRepository actually stores its data)
-        final appSupportCacheFile =
-            File('${appSupportDir.path}/$databaseName.json');
+        final appSupportCacheFile = File(
+          '${appSupportDir.path}/$databaseName.json',
+        );
         await appSupportCacheFile.writeAsString('{ corrupted json ');
 
         // Create a decoy file in temp directory
@@ -90,19 +90,30 @@ void main() {
         await tempCacheFile.writeAsString('{ corrupted json ');
 
         // Verify both files exist before test
-        expect(await tempCacheFile.exists(), isTrue,
-            reason: 'Temp cache file should exist before test');
-        expect(await appSupportCacheFile.exists(), isTrue,
-            reason: 'App support cache file should exist before test');
+        expect(
+          await tempCacheFile.exists(),
+          isTrue,
+          reason: 'Temp cache file should exist before test',
+        );
+        expect(
+          await appSupportCacheFile.exists(),
+          isTrue,
+          reason: 'App support cache file should exist before test',
+        );
 
         // The SafeJsonCacheInfoRepository should target appSupportDir, not tempDir
         // We can verify this by checking the path_provider behavior matches what
         // JsonCacheInfoRepository expects
         expect(await mockPathProvider.getTemporaryPath(), equals(tempDir.path));
-        expect(await mockPathProvider.getApplicationSupportPath(),
-            equals(appSupportDir.path));
-        expect(tempDir.path, isNot(equals(appSupportDir.path)),
-            reason: 'Temp and app support directories must be different');
+        expect(
+          await mockPathProvider.getApplicationSupportPath(),
+          equals(appSupportDir.path),
+        );
+        expect(
+          tempDir.path,
+          isNot(equals(appSupportDir.path)),
+          reason: 'Temp and app support directories must be different',
+        );
       });
     });
   });
