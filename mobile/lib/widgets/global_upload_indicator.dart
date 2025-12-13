@@ -2,12 +2,13 @@
 // ABOUTME: Displays active uploads as a small overlay that can be tapped for details
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/models/pending_upload.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/upload_progress_indicator.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/providers/app_providers.dart';
 
 /// Global upload indicator that shows active uploads
 class GlobalUploadIndicator extends ConsumerWidget {
@@ -165,7 +166,7 @@ class GlobalUploadIndicator extends ConsumerWidget {
                       Icons.close,
                       color: VineTheme.secondaryText,
                     ),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                   ),
                 ],
               ),
@@ -183,7 +184,7 @@ class GlobalUploadIndicator extends ConsumerWidget {
                   onCancel: () {
                     // Use captured uploadManagerNotifier instead of ref
                     uploadManagerNotifier.cancelUpload(uploads[index].id);
-                    Navigator.of(context).pop();
+                    context.pop();
                   },
                   onRetry: () {
                     // Use captured uploadManagerNotifier instead of ref
@@ -193,7 +194,7 @@ class GlobalUploadIndicator extends ConsumerWidget {
                     // Use captured uploadManagerNotifier instead of ref
                     uploadManagerNotifier.deleteUpload(uploads[index].id);
                     if (uploads.length == 1) {
-                      Navigator.of(context).pop();
+                      context.pop();
                     }
                   },
                 ),

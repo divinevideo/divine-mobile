@@ -5,9 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/screens/blossom_settings_screen.dart';
-import 'package:openvine/screens/notification_settings_screen.dart';
-import 'package:openvine/screens/relay_settings_screen.dart';
 // import 'package:openvine/screens/p2p_sync_screen.dart'; // Hidden for release
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
@@ -142,8 +139,9 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                         print(
                           '🔍 NAV DEBUG: Current location: ${GoRouterState.of(context).uri}',
                         );
-                        Navigator.pop(context); // Close drawer
-                        context.push('/edit-profile');
+                        context
+                          ..pop()
+                          ..push('/edit-profile');
                         print('🔍 NAV DEBUG: Returned from push /edit-profile');
                       },
                     ),
@@ -156,8 +154,9 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                     icon: Icons.settings,
                     title: 'Settings',
                     onTap: () {
-                      Navigator.pop(context); // Close drawer
-                      context.push('/settings');
+                      context
+                        ..pop()
+                        ..push('/settings');
                     },
                   ),
                   _buildDrawerItem(
@@ -165,14 +164,10 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                     title: 'Relays',
                     subtitle: 'Manage Nostr relay connections',
                     onTap: () {
-                      Navigator.pop(context); // Close drawer
                       disposeAllVideoControllers(ref);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RelaySettingsScreen(),
-                        ),
-                      );
+                      context
+                        ..pop()
+                        ..push('/relay-settings');
                     },
                   ),
                   _buildDrawerItem(
@@ -180,14 +175,10 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                     title: 'Media Servers',
                     subtitle: 'Configure Blossom upload servers',
                     onTap: () {
-                      Navigator.pop(context); // Close drawer
                       disposeAllVideoControllers(ref);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const BlossomSettingsScreen(),
-                        ),
-                      );
+                      context
+                        ..pop()
+                        ..push('/blossom-settings');
                     },
                   ),
                   // P2P Sync hidden for release - not ready for production
@@ -210,15 +201,10 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                     title: 'Notifications',
                     subtitle: 'Manage notification preferences',
                     onTap: () {
-                      Navigator.pop(context); // Close drawer
                       disposeAllVideoControllers(ref);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const NotificationSettingsScreen(),
-                        ),
-                      );
+                      context
+                        ..pop()
+                        ..push('/notification-settings');
                     },
                   ),
 
@@ -245,24 +231,22 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                       );
                       final userPubkey = authService.currentPublicKeyHex;
 
-                      // Get navigator context before closing drawer
-                      final navigatorContext = Navigator.of(context).context;
+                      // Get root context before closing drawer
+                      final rootContext = context;
 
-                      Navigator.pop(context); // Close drawer
+                      context.pop(); // Close drawer
 
                       // Wait for drawer close animation
                       await Future.delayed(const Duration(milliseconds: 300));
-                      if (!navigatorContext.mounted) {
-                        print(
-                          '⚠️ Navigator context not mounted after drawer close',
-                        );
+                      if (!rootContext.mounted) {
+                        print('⚠️ Context not mounted after drawer close');
                         return;
                       }
 
-                      // Show support options dialog using navigator context
+                      // Show support options dialog using root context
                       // Pass captured services instead of ref
                       _showSupportOptionsDialog(
-                        navigatorContext,
+                        rootContext,
                         bugReportService,
                         userPubkey,
                         isZendeskAvailable,
@@ -274,7 +258,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                     title: 'Save Logs',
                     subtitle: 'Export logs to file for manual sending',
                     onTap: () async {
-                      Navigator.pop(context); // Close drawer
+                      context.pop(); // Close drawer
 
                       // Wait for drawer close animation to complete
                       await Future.delayed(const Duration(milliseconds: 300));
@@ -318,7 +302,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                     title: 'Privacy Policy',
                     subtitle: 'How we handle your data',
                     onTap: () {
-                      Navigator.pop(context); // Close drawer
+                      context.pop(); // Close drawer
                       _launchWebPage(
                         context,
                         'https://divine.video/privacy',
@@ -331,7 +315,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                     title: 'Safety Center',
                     subtitle: 'Community safety guidelines',
                     onTap: () {
-                      Navigator.pop(context); // Close drawer
+                      context.pop(); // Close drawer
                       _launchWebPage(
                         context,
                         'https://divine.video/safety',
@@ -344,7 +328,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                     title: 'FAQ',
                     subtitle: 'Frequently asked questions',
                     onTap: () {
-                      Navigator.pop(context); // Close drawer
+                      context.pop(); // Close drawer
                       _launchWebPage(
                         context,
                         'https://divine.video/faq',
@@ -434,7 +418,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
               title: 'Report a Bug',
               subtitle: 'Technical issues with the app',
               onTap: () {
-                Navigator.pop(dialogContext);
+                dialogContext.pop();
                 _handleBugReportWithServices(
                   context,
                   bugReportService,
@@ -450,7 +434,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
               title: 'Report Content',
               subtitle: 'Inappropriate videos or users',
               onTap: () {
-                Navigator.pop(dialogContext);
+                dialogContext.pop();
                 _handleContentReportWithServices(
                   context,
                   bugReportService,
@@ -466,7 +450,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
               title: 'View Past Messages',
               subtitle: 'Check responses from support',
               onTap: () async {
-                Navigator.pop(dialogContext);
+                dialogContext.pop();
                 if (isZendeskAvailable) {
                   print('💬 Opening Zendesk ticket list');
                   await ZendeskSupportService.showTicketList();
@@ -489,7 +473,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
               title: 'View FAQ',
               subtitle: 'Common questions & answers',
               onTap: () {
-                Navigator.pop(dialogContext);
+                dialogContext.pop();
                 _launchWebPage(context, 'https://divine.video/faq', 'FAQ');
               },
             ),
@@ -497,7 +481,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
+            onPressed: () => dialogContext.pop(),
             child: const Text(
               'Cancel',
               style: TextStyle(color: VineTheme.vineGreen),

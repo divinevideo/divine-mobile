@@ -20,6 +20,9 @@ import 'package:openvine/screens/followers_screen.dart';
 import 'package:openvine/screens/following_screen.dart';
 import 'package:openvine/screens/key_import_screen.dart';
 import 'package:openvine/screens/profile_setup_screen.dart';
+import 'package:openvine/screens/blossom_settings_screen.dart';
+import 'package:openvine/screens/notification_settings_screen.dart';
+import 'package:openvine/screens/relay_settings_screen.dart';
 import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_editor_screen.dart';
@@ -62,6 +65,9 @@ int tabIndexFromLocation(String loc) {
       return 3;
     case 'search':
     case 'settings':
+    case 'relay-settings':
+    case 'blossom-settings':
+    case 'notification-settings':
     case 'edit-profile':
     case 'setup-profile':
     case 'import-key':
@@ -396,6 +402,21 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         name: 'settings',
         builder: (_, __) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/relay-settings',
+        name: 'relay-settings',
+        builder: (_, __) => const RelaySettingsScreen(),
+      ),
+      GoRoute(
+        path: '/blossom-settings',
+        name: 'blossom-settings',
+        builder: (_, __) => const BlossomSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/notification-settings',
+        name: 'notification-settings',
+        builder: (_, __) => const NotificationSettingsScreen(),
       ),
       GoRoute(
         path: '/edit-profile',

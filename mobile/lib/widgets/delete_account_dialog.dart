@@ -2,6 +2,7 @@
 // ABOUTME: Warning dialog with confirmation and completion dialog with next steps
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:openvine/theme/vine_theme.dart';
 
 /// Show warning dialog for removing keys from device only
@@ -33,7 +34,7 @@ Future<void> showRemoveKeysWarningDialog({
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           child: const Text(
             'Cancel',
             style: TextStyle(color: Colors.grey, fontSize: 16),
@@ -41,7 +42,7 @@ Future<void> showRemoveKeysWarningDialog({
         ),
         ElevatedButton(
           onPressed: () {
-            Navigator.of(context).pop();
+            context.pop();
             onConfirm();
           },
           style: ElevatedButton.styleFrom(
@@ -89,7 +90,7 @@ Future<void> showDeleteAllContentWarningDialog({
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           child: const Text(
             'Cancel',
             style: TextStyle(color: Colors.grey, fontSize: 16),
@@ -97,7 +98,7 @@ Future<void> showDeleteAllContentWarningDialog({
         ),
         ElevatedButton(
           onPressed: () {
-            Navigator.of(context).pop();
+            context.pop();
             // Show second confirmation dialog
             _showDeleteAllContentFinalConfirmation(
               context: context,
@@ -178,7 +179,7 @@ Future<void> _showDeleteAllContentFinalConfirmation({
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.pop(),
             child: const Text(
               'Cancel',
               style: TextStyle(color: Colors.grey, fontSize: 16),
@@ -187,7 +188,7 @@ Future<void> _showDeleteAllContentFinalConfirmation({
           ElevatedButton(
             onPressed: confirmationController.text == requiredText
                 ? () {
-                    Navigator.of(context).pop();
+                    context.pop();
                     onConfirm();
                   }
                 : null,
@@ -233,7 +234,7 @@ Future<void> showDeleteAccountCompletionDialog({
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           child: const Text(
             'Close',
             style: TextStyle(color: Colors.grey, fontSize: 16),
@@ -241,7 +242,7 @@ Future<void> showDeleteAccountCompletionDialog({
         ),
         ElevatedButton(
           onPressed: () {
-            Navigator.of(context).pop();
+            context.pop();
             onCreateNewAccount();
           },
           style: ElevatedButton.styleFrom(

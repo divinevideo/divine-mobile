@@ -31,6 +31,15 @@ jobs:
       - name: 📦 Install dependencies
         run: flutter pub get
 
+      - name: 🔨 Verify generated files are up-to-date
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "⚠️ Generated files are out of date. Please run 'dart run build_runner build' and commit the changes."
+            git diff --name-only
+            exit 1
+          fi
+
       - name: ✨ Check formatting
         run: dart format --output=none --set-exit-if-changed lib test
 
