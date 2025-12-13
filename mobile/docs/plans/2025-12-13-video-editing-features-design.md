@@ -49,12 +49,19 @@ Allow users to review recorded segments, delete unwanted takes, and reorder clip
 
 **Header**
 - Back button (discard and return to camera)
-- Total duration display (e.g., "4.2s / 6s")
+- Total duration display (e.g., "4.2s / 6.3s")
 - "Next" button (proceed to Editor screen)
+
+**Record More Button**
+- Shown when total duration < 6.3 seconds
+- Displays remaining time (e.g., "+ Record (2.1s left)")
+- Tap returns to camera screen with existing segments preserved
+- New recordings append to segment list
+- Button hidden when at max duration
 
 **Empty State**
 - If all segments deleted, show "No clips" message
-- "Record more" button returns to camera
+- "Record" button returns to camera (same as Record More)
 
 ### Data Model
 
