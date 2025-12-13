@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Cache JSON Corruption Crash (2025-12-13)
+
+#### Bug Fixes
+- **Fixed app crash when cache JSON is corrupted** - App would crash with FormatException when cache metadata JSON file was empty or malformed (e.g., due to app crash during write)
+  - Added `SafeJsonCacheInfoRepository` wrapper that catches FormatException and recovers gracefully
+  - Deletes corrupted cache file and retries with fresh cache
+  - Also handles malformed JSON in Nostr events database tags
+
+#### Technical Details
+- Added `lib/services/safe_json_cache_repository.dart`:
+  - Wraps `JsonCacheInfoRepository` from flutter_cache_manager
+  - Catches FormatException on `open()` and deletes corrupted JSON from `getApplicationSupportDirectory()`
+  - Note: Cache metadata JSON is stored in app support dir, not temp dir (where cached files go)
+- Modified `lib/services/video_cache_manager.dart` and `lib/services/image_cache_manager.dart`:
+  - Use `SafeJsonCacheInfoRepository` instead of default repository
+- Modified `lib/database/daos/nostr_events_dao.dart`:
+  - Added try-catch around `jsonDecode` for event tags to prevent crash on malformed data
+
 ### Fixed - Profile Edit Navigation Crash (2025-12-11)
 
 #### Bug Fixes
