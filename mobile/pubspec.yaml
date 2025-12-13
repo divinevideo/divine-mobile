@@ -137,6 +137,7 @@ dependencies:
       ref: master
   convert: ^3.1.2
   just_audio: ^0.10.5
+  pro_video_editor: ^0.4.0
 
 dependency_overrides:
   device_info_plus: ^10.1.2

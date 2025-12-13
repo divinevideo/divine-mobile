@@ -1640,6 +1640,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  pro_video_editor:
+    dependency: "direct main"
+    description:
+      name: pro_video_editor
+      sha256: "7cedae0b7efee072024fcaeabfb3ac665c8a76475e594362162ee4eef8a22983"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.0"
   process:
     dependency: transitive
     description:
