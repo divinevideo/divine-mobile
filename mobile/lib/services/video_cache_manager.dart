@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/io_client.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
+import 'package:openvine/services/safe_json_cache_repository.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -40,7 +41,7 @@ class VideoCacheManager extends CacheManager {
           key,
           stalePeriod: _stalePeriod,
           maxNrOfCacheObjects: _maxCacheObjects,
-          repo: JsonCacheInfoRepository(databaseName: key),
+          repo: SafeJsonCacheInfoRepository(databaseName: key),
           fileService: _createVideoHttpFileService(),
         ),
       );

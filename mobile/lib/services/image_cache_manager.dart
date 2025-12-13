@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/io_client.dart';
+import 'package:openvine/services/safe_json_cache_repository.dart';
 
 class ImageCacheManager extends CacheManager {
   static const key = 'openvine_image_cache';
@@ -21,7 +22,7 @@ class ImageCacheManager extends CacheManager {
           key,
           stalePeriod: const Duration(days: 7),
           maxNrOfCacheObjects: 200,
-          repo: JsonCacheInfoRepository(databaseName: key),
+          repo: SafeJsonCacheInfoRepository(databaseName: key),
           fileService: _createHttpFileService(),
         ),
       );
