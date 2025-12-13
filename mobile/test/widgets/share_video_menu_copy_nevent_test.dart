@@ -14,10 +14,7 @@ void main() {
 
     test('encodes event ID to nevent format with author', () {
       final nevent = NIP19Tlv.encodeNevent(
-        Nevent(
-          id: testEventId,
-          author: testAuthorPubkey,
-        ),
+        Nevent(id: testEventId, author: testAuthorPubkey),
       );
 
       expect(nevent, startsWith('nevent1'));
@@ -26,10 +23,7 @@ void main() {
 
     test('nevent can be decoded back to original values', () {
       final nevent = NIP19Tlv.encodeNevent(
-        Nevent(
-          id: testEventId,
-          author: testAuthorPubkey,
-        ),
+        Nevent(id: testEventId, author: testAuthorPubkey),
       );
 
       final decoded = NIP19Tlv.decodeNevent(nevent);
@@ -57,24 +51,27 @@ void main() {
       expect(decoded.relays, contains('wss://nos.lol'));
     });
 
-    test('nevent encoding preserves id and author (kind not encoded by SDK)', () {
-      // Note: The nostr_sdk encodeNevent doesn't encode kind field,
-      // but the important fields for sharing are id and author
-      final nevent = NIP19Tlv.encodeNevent(
-        Nevent(
-          id: testEventId,
-          author: testAuthorPubkey,
-          kind: videoEventKind,
-        ),
-      );
+    test(
+      'nevent encoding preserves id and author (kind not encoded by SDK)',
+      () {
+        // Note: The nostr_sdk encodeNevent doesn't encode kind field,
+        // but the important fields for sharing are id and author
+        final nevent = NIP19Tlv.encodeNevent(
+          Nevent(
+            id: testEventId,
+            author: testAuthorPubkey,
+            kind: videoEventKind,
+          ),
+        );
 
-      final decoded = NIP19Tlv.decodeNevent(nevent);
+        final decoded = NIP19Tlv.decodeNevent(nevent);
 
-      expect(decoded, isNotNull);
-      expect(decoded!.id, equals(testEventId));
-      expect(decoded.author, equals(testAuthorPubkey));
-      // Kind is not encoded by the SDK's encodeNevent implementation
-    });
+        expect(decoded, isNotNull);
+        expect(decoded!.id, equals(testEventId));
+        expect(decoded.author, equals(testAuthorPubkey));
+        // Kind is not encoded by the SDK's encodeNevent implementation
+      },
+    );
 
     test('video event nevent includes id, author, and relay hints', () {
       // This tests the full nevent encoding that ShareVideoMenu should produce
@@ -97,9 +94,7 @@ void main() {
 
     test('minimal nevent with only event ID works', () {
       // Sometimes we may only have the event ID
-      final nevent = NIP19Tlv.encodeNevent(
-        Nevent(id: testEventId),
-      );
+      final nevent = NIP19Tlv.encodeNevent(Nevent(id: testEventId));
 
       expect(nevent, startsWith('nevent1'));
 
