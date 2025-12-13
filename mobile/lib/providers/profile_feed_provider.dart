@@ -21,7 +21,7 @@ part 'profile_feed_provider.g.dart';
 /// final feed = ref.watch(profileFeedProvider(userId));
 /// await ref.read(profileFeedProvider(userId).notifier).loadMore();
 /// ```
-@riverpod
+@Riverpod(keepAlive: true) // Keep alive to prevent reload on tab switches
 class ProfileFeed extends _$ProfileFeed {
   @override
   Future<VideoFeedState> build(String userId) async {

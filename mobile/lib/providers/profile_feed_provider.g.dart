@@ -50,7 +50,7 @@ final class ProfileFeedProvider
   }) : super(
          retry: null,
          name: r'profileFeedProvider',
-         isAutoDispose: true,
+         isAutoDispose: false,
          dependencies: null,
          $allTransitiveDependencies: null,
        );
@@ -108,7 +108,7 @@ final class ProfileFeedFamily extends $Family
         name: r'profileFeedProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
-        isAutoDispose: true,
+        isAutoDispose: false,
       );
 
   /// Profile feed provider - shows videos for a specific user with pagination

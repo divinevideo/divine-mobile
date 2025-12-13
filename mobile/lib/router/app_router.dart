@@ -46,6 +46,8 @@ final _searchGridKey = GlobalKey<NavigatorState>(debugLabel: 'search-grid');
 final _searchFeedKey = GlobalKey<NavigatorState>(debugLabel: 'search-feed');
 final _hashtagGridKey = GlobalKey<NavigatorState>(debugLabel: 'hashtag-grid');
 final _hashtagFeedKey = GlobalKey<NavigatorState>(debugLabel: 'hashtag-feed');
+final _profileGridKey = GlobalKey<NavigatorState>(debugLabel: 'profile-grid');
+final _profileFeedKey = GlobalKey<NavigatorState>(debugLabel: 'profile-feed');
 
 /// Maps URL location to bottom nav tab index
 /// Returns -1 for non-tab routes (like search, settings, edit-profile) to hide bottom nav
@@ -279,28 +281,31 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/profile/:npub',
             name: 'profile',
-            pageBuilder: (ctx, st) {
-              // ProfileScreenRouter gets npub from pageContext (router-driven)
-              // Use MaterialPage for swipe-back gesture support
-              return MaterialPage(
-                key: st.pageKey,
-                child: const ProfileScreenRouter(),
-              );
-            },
+            pageBuilder: (ctx, st) => NoTransitionPage(
+              key: st.pageKey,
+              child: Navigator(
+                key: _profileGridKey,
+                onGenerateRoute: (r) => MaterialPageRoute(
+                  builder: (_) => const ProfileScreenRouter(),
+                  settings: const RouteSettings(name: 'ProfileScreen'),
+                ),
+              ),
+            ),
           ),
 
           // PROFILE tab subtree - feed mode (with video index)
-          // Note: /profile/me/:index is handled by ProfileScreenRouter detecting "me" and redirecting
           GoRoute(
             path: '/profile/:npub/:index',
-            pageBuilder: (ctx, st) {
-              // ProfileScreenRouter gets npub from pageContext (router-driven)
-              // Use MaterialPage for swipe-back gesture support
-              return MaterialPage(
-                key: st.pageKey,
-                child: const ProfileScreenRouter(),
-              );
-            },
+            pageBuilder: (ctx, st) => NoTransitionPage(
+              key: st.pageKey,
+              child: Navigator(
+                key: _profileFeedKey,
+                onGenerateRoute: (r) => MaterialPageRoute(
+                  builder: (_) => const ProfileScreenRouter(),
+                  settings: const RouteSettings(name: 'ProfileScreen'),
+                ),
+              ),
+            ),
           ),
 
           // SEARCH route - empty search
