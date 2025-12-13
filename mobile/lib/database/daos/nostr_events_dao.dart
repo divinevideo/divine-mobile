@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/database/app_database.dart';
 import 'package:openvine/database/tables.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 part 'nostr_events_dao.g.dart';
 
@@ -315,10 +316,23 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Convert database row to Event model
+  ///
+  /// Handles malformed JSON in tags field gracefully by using empty tags list
+  /// instead of crashing. This can happen if database becomes corrupted.
   Event _rowToEvent(QueryRow row) {
-    final tags = (jsonDecode(row.read<String>('tags')) as List)
-        .map((tag) => (tag as List).map((e) => e.toString()).toList())
-        .toList();
+    List<List<String>> tags;
+    try {
+      tags = (jsonDecode(row.read<String>('tags')) as List)
+          .map((tag) => (tag as List).map((e) => e.toString()).toList())
+          .toList();
+    } catch (e) {
+      Log.warning(
+        '⚠️ Failed to parse tags JSON for event ${row.read<String>('id')}: $e',
+        name: 'NostrEventsDao',
+        category: LogCategory.storage,
+      );
+      tags = [];
+    }
 
     final event = Event(
       row.read<String>('pubkey'),
