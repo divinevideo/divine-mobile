@@ -22,38 +22,39 @@ class SoundListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      leading: IconButton(
-        icon: Icon(
-          isPlaying ? Icons.pause : Icons.play_arrow,
-          color: Colors.white,
-        ),
-        onPressed: onPlayPause,
-      ),
-      title: Text(
-        sound.title,
-        style: const TextStyle(color: Colors.white),
-      ),
-      subtitle: Text(
-        sound.artist ?? 'Unknown Artist',
-        style: const TextStyle(color: Colors.grey),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '${sound.durationInSeconds.round()}s',
-            style: const TextStyle(color: Colors.grey),
+    return Container(
+      color: isSelected ? Colors.green.withValues(alpha: 0.2) : Colors.transparent,
+      child: ListTile(
+        onTap: onTap,
+        leading: IconButton(
+          icon: Icon(
+            isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+            color: isPlaying ? Colors.green : Colors.white,
+            size: 32,
           ),
-          if (isSelected) ...[
-            const SizedBox(width: 8),
-            const Icon(
-              Icons.check_circle,
-              color: Colors.white,
-            ),
-          ],
-        ],
+          onPressed: onPlayPause,
+        ),
+        title: Text(
+          sound.title,
+          style: TextStyle(
+            color: isSelected ? Colors.green : Colors.white,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        subtitle: Text(
+          sound.artist ?? '${sound.durationInSeconds.round()}s',
+          style: const TextStyle(color: Colors.grey),
+        ),
+        trailing: isSelected
+            ? const Icon(
+                Icons.check_circle,
+                color: Colors.green,
+                size: 28,
+              )
+            : Text(
+                '${sound.durationInSeconds.round()}s',
+                style: const TextStyle(color: Colors.grey),
+              ),
       ),
     );
   }

@@ -1,7 +1,6 @@
 // ABOUTME: Pure universal camera screen using revolutionary Riverpod architecture
 // ABOUTME: Cross-platform recording without VideoManager dependencies using pure providers
 
-import 'dart:convert';
 import 'dart:io';
 import 'package:camera/camera.dart' show FlashMode;
 import 'package:flutter/foundation.dart';
@@ -10,13 +9,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:models/models.dart' as vine show AspectRatio;
-import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
-import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
-import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
-import 'package:openvine/screens/pure/video_metadata_screen_pure.dart';
 import 'package:openvine/services/camera/native_macos_camera.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -25,7 +20,8 @@ import 'package:openvine/widgets/macos_camera_preview.dart'
 import 'package:openvine/widgets/dynamic_zoom_selector.dart';
 import 'package:openvine/services/camera/camerawesome_mobile_camera_interface.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/services/video_thumbnail_service.dart';
 
 /// Pure universal camera screen using revolutionary single-controller Riverpod architecture
 class UniversalCameraScreenPure extends ConsumerStatefulWidget {
@@ -205,8 +201,23 @@ class _UniversalCameraScreenPureState
   /// Perform async initialization after the first frame
   Future<void> _performAsyncInitialization() async {
     try {
-      // Clean up any old temp files and reset state from previous recordings
-      ref.read(vineRecordingProvider.notifier).cleanupAndReset();
+      // Check if we're coming back to record more (ClipManager has existing clips)
+      final clipManagerState = ref.read(clipManagerProvider);
+      final existingDuration = clipManagerState.totalDuration;
+
+      if (existingDuration > Duration.zero) {
+        // Coming back to record more - don't reset, just set the offset
+        Log.info(
+          '📹 Recording more - existing clips: ${clipManagerState.clipCount}, duration: ${existingDuration.inMilliseconds}ms',
+          category: LogCategory.video,
+        );
+        ref
+            .read(vineRecordingProvider.notifier)
+            .setPreviouslyRecordedDuration(existingDuration);
+      } else {
+        // Fresh start - clean up any old temp files and reset state
+        ref.read(vineRecordingProvider.notifier).cleanupAndReset();
+      }
 
       // Check platform and request permissions if needed
       if (Platform.isMacOS) {
@@ -774,6 +785,10 @@ class _UniversalCameraScreenPureState
   Widget _buildTopProgressBar(VineRecordingUIState recordingState) {
     final progress = recordingState.progress;
     final hasSegments = recordingState.hasSegments;
+    // Also check if ClipManager has existing clips (from previous recording sessions)
+    final clipManagerState = ref.watch(clipManagerProvider);
+    final hasExistingClips = clipManagerState.hasClips;
+    final canProceed = hasSegments || hasExistingClips;
 
     return Container(
       height: 44, // Taller to accommodate buttons
@@ -838,13 +853,19 @@ class _UniversalCameraScreenPureState
           // > button (publish/proceed) on the right
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: hasSegments
+            onTap: canProceed
                 ? () {
                     Log.info(
-                      '📹 > PUBLISH BUTTON PRESSED',
+                      '📹 > PUBLISH BUTTON PRESSED (hasSegments=$hasSegments, hasExistingClips=$hasExistingClips)',
                       category: LogCategory.video,
                     );
-                    _finishRecording();
+                    if (hasSegments) {
+                      // New segments recorded - process them
+                      _finishRecording();
+                    } else {
+                      // Only existing clips - go directly to ClipManager
+                      context.push('/clip-manager');
+                    }
                   }
                 : null,
             child: Container(
@@ -853,7 +874,7 @@ class _UniversalCameraScreenPureState
               alignment: Alignment.center,
               child: Icon(
                 Icons.chevron_right,
-                color: hasSegments
+                color: canProceed
                     ? Colors.white
                     : Colors.white.withValues(alpha: 0.3),
                 size: 32,
@@ -887,19 +908,59 @@ class _UniversalCameraScreenPureState
           ),
         ),
 
-        // Show segment count on mobile (reserve space to prevent layout shift)
+        // Show segment count on mobile with clear button (reserve space to prevent layout shift)
         if (!kIsWeb)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              recordingState.hasSegments
-                  ? '${recordingState.segments.length} ${recordingState.segments.length == 1 ? "segment" : "segments"}'
-                  : '', // Empty but reserves space
-              style: TextStyle(
-                color: VineTheme.vineGreen.withValues(alpha: 0.9),
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  recordingState.hasSegments
+                      ? '${recordingState.segmentCount} ${recordingState.segmentCount == 1 ? "clip" : "clips"}'
+                      : '', // Empty but reserves space
+                  style: TextStyle(
+                    color: VineTheme.vineGreen.withValues(alpha: 0.9),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                // Clear/Reset button - appears when there are segments or clips
+                if (recordingState.hasSegments || ref.watch(clipManagerProvider).hasClips)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: GestureDetector(
+                      onTap: _showClearConfirmation,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              color: Colors.red.withValues(alpha: 0.9),
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Clear',
+                              style: TextStyle(
+                                color: Colors.red.withValues(alpha: 0.9),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
 
@@ -1226,21 +1287,22 @@ class _UniversalCameraScreenPureState
     try {
       final notifier = ref.read(vineRecordingProvider.notifier);
       Log.info(
-        '📹 Finishing recording and concatenating segments',
+        '📹 Extracting individual segments (without concatenating)',
         category: LogCategory.video,
       );
 
-      final (videoFile, proofManifest) = await notifier.finishRecording();
+      // Extract individual segment files instead of concatenating
+      final segmentFiles = await notifier.extractSegmentFiles();
       Log.info(
-        '📹 Recording finished, video: ${videoFile?.path}, proof: ${proofManifest != null}',
+        '📹 Extracted ${segmentFiles.length} segment files',
         category: LogCategory.video,
       );
 
-      if (videoFile != null && mounted) {
-        _processRecording(videoFile, proofManifest);
+      if (segmentFiles.isNotEmpty && mounted) {
+        _processSegments(segmentFiles);
       } else {
         Log.warning(
-          '📹 No file returned from finishRecording',
+          '📹 No segments extracted from recording',
           category: LogCategory.video,
         );
         // Reset processing state since nothing to process
@@ -1393,58 +1455,46 @@ class _UniversalCameraScreenPureState
     );
   }
 
-  void _processRecording(
-    File recordedFile,
-    NativeProofData? nativeProof,
-  ) async {
-    // Note: _isProcessing is set by _finishRecording() before this is called
-    // to ensure the "Processing video..." UI shows during FFmpeg processing
-
+  /// Process individual segment files and add each as a separate clip to ClipManager
+  /// This allows users to reorder/delete segments before final concatenation at export
+  void _processSegments(List<(File, Duration)> segmentFiles) async {
     try {
       Log.info(
-        '📹 UniversalCameraScreenPure: Processing recorded file: ${recordedFile.path}',
+        '📹 Processing ${segmentFiles.length} segments as individual clips',
         category: LogCategory.video,
       );
 
-      // Create a draft for the recorded video
-      final prefs = await SharedPreferences.getInstance();
-      final draftService = DraftStorageService(prefs);
+      // Keep processing state while generating thumbnails
+      final clipManager = ref.read(clipManagerProvider.notifier);
 
-      // Serialize NativeProofData to JSON if available
-      String? proofManifestJson;
-      if (nativeProof != null) {
-        try {
-          proofManifestJson = jsonEncode(nativeProof.toJson());
-          Log.info(
-            '📜 Native ProofMode data attached to draft from universal camera',
-            category: LogCategory.video,
-          );
-        } catch (e) {
-          Log.error(
-            'Failed to serialize NativeProofData for draft: $e',
-            category: LogCategory.video,
-          );
-        }
+      for (var i = 0; i < segmentFiles.length; i++) {
+        final (file, duration) = segmentFiles[i];
+
+        // Generate thumbnail for this segment
+        Log.info(
+          '📹 Generating thumbnail for segment $i',
+          category: LogCategory.video,
+        );
+
+        final thumbnailPath = await VideoThumbnailService.extractThumbnail(
+          videoPath: file.path,
+          timeMs: VideoThumbnailService.getOptimalTimestamp(duration),
+        );
+
+        clipManager.addClip(
+          filePath: file.path,
+          duration: duration,
+          thumbnailPath: thumbnailPath,
+        );
+
+        Log.info(
+          '📹 Added segment $i to ClipManager: ${file.path}, duration: ${duration.inMilliseconds}ms, thumbnail: ${thumbnailPath ?? "none"}',
+          category: LogCategory.video,
+        );
       }
 
-      // Get current aspect ratio from recording state
-      final recordingState = ref.read(vineRecordingProvider);
-
-      final draft = VineDraft.create(
-        videoFile: recordedFile,
-        title: '',
-        description: '',
-        hashtags: [],
-        frameCount: 0,
-        selectedApproach: 'video',
-        proofManifestJson: proofManifestJson,
-        aspectRatio: recordingState.aspectRatio,
-      );
-
-      await draftService.saveDraft(draft);
-
       Log.info(
-        '📹 Created draft with ID: ${draft.id}',
+        '📹 Added ${segmentFiles.length} clips to ClipManager',
         category: LogCategory.video,
       );
 
@@ -1453,42 +1503,17 @@ class _UniversalCameraScreenPureState
           _isProcessing = false;
         });
 
-        // Navigate to metadata screen
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => VideoMetadataScreenPure(draftId: draft.id),
-          ),
+        // Navigate to ClipManager screen
+        context.push('/clip-manager');
+
+        Log.info(
+          '📹 Navigated to clip-manager',
+          category: LogCategory.video,
         );
-
-        // After metadata screen returns, navigate to profile
-        if (mounted) {
-          disposeAllVideoControllers(ref);
-
-          Log.info(
-            '📹 Returned from metadata screen, navigating to profile',
-            category: LogCategory.video,
-          );
-
-          // CRITICAL: Dispose all controllers again before navigation
-          // This ensures no stale controllers exist when switching to profile tab
-          Log.info(
-            '🗑️ Disposed controllers before profile navigation',
-            category: LogCategory.video,
-          );
-
-          // Navigate to user's own profile using GoRouter
-          context.go('/profile/me/0');
-          Log.info(
-            '📹 Successfully navigated to profile',
-            category: LogCategory.video,
-          );
-
-          // Reset processing flag after navigation
-        }
       }
     } catch (e) {
       Log.error(
-        '📹 UniversalCameraScreenPure: Processing failed: $e',
+        '📹 UniversalCameraScreenPure: Processing segments failed: $e',
         category: LogCategory.video,
       );
 
@@ -1673,6 +1698,72 @@ class _UniversalCameraScreenPureState
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  /// Show confirmation dialog before clearing all segments and clips
+  void _showClearConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          'Clear Recording?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'This will delete all recorded segments and clips. This action cannot be undone.',
+          style: TextStyle(color: Colors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _clearAllRecordings();
+            },
+            child: const Text(
+              'Clear',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Clear all segments from vineRecordingProvider and clips from ClipManager
+  Future<void> _clearAllRecordings() async {
+    try {
+      Log.info(
+        '📹 Clearing all recordings and clips',
+        category: LogCategory.video,
+      );
+
+      // Clear clips from ClipManager
+      ref.read(clipManagerProvider.notifier).clearAll();
+
+      // Clean up temp files and reset vineRecordingProvider
+      await ref.read(vineRecordingProvider.notifier).cleanupAndReset();
+
+      Log.info(
+        '📹 All recordings and clips cleared',
+        category: LogCategory.video,
+      );
+
+      _showSuccessSnackBar('All recordings cleared');
+    } catch (e) {
+      Log.error(
+        '📹 Failed to clear recordings: $e',
+        category: LogCategory.video,
+      );
+      _showErrorSnackBar('Failed to clear recordings: $e');
+    }
   }
 }
 

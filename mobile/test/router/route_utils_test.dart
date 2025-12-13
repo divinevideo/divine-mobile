@@ -52,6 +52,20 @@ void main() {
       expect(result.videoIndex, isNull);
     });
 
+    test('parses clip-manager route', () {
+      final result = parseRoute('/clip-manager');
+
+      expect(result.type, RouteType.clipManager);
+      expect(result.videoIndex, isNull);
+    });
+
+    test('parses edit-video route', () {
+      final result = parseRoute('/edit-video');
+
+      expect(result.type, RouteType.editVideo);
+      expect(result.videoIndex, isNull);
+    });
+
     test('defaults to home/0 for unknown route', () {
       final result = parseRoute('/unknown/path');
 
@@ -112,6 +126,18 @@ void main() {
       expect(buildRoute(context), '/settings');
     });
 
+    test('builds clip-manager route', () {
+      final context = RouteContext(type: RouteType.clipManager);
+
+      expect(buildRoute(context), '/clip-manager');
+    });
+
+    test('builds edit-video route', () {
+      final context = RouteContext(type: RouteType.editVideo);
+
+      expect(buildRoute(context), '/edit-video');
+    });
+
     test('defaults missing index to 0 for video routes', () {
       final context = RouteContext(type: RouteType.home);
 
@@ -128,6 +154,8 @@ void main() {
         '/hashtag/nostr/1',
         '/camera',
         '/settings',
+        '/clip-manager',
+        '/edit-video',
       ];
 
       for (final url in urls) {

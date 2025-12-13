@@ -2,6 +2,7 @@
 // ABOUTME: Converts between normalized (0.0-1.0) and absolute pixel coordinates
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:openvine/models/text_overlay.dart';
 
 class DraggableTextOverlay extends StatefulWidget {
@@ -72,33 +73,30 @@ class _DraggableTextOverlayState extends State<DraggableTextOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned(
-          left: _currentPosition.dx,
-          top: _currentPosition.dy,
-          child: GestureDetector(
-            onPanUpdate: _handleDragUpdate,
-            onPanEnd: _handleDragEnd,
-            child: Text(
-              widget.overlay.text,
-              style: TextStyle(
-                fontSize: widget.overlay.fontSize,
-                color: widget.overlay.color,
-                fontFamily: widget.overlay.fontFamily,
-                shadows: [
-                  Shadow(
-                    offset: const Offset(1, 1),
-                    blurRadius: 3.0,
-                    color: Colors.black.withValues(alpha: 0.8),
-                  ),
-                ],
+    // Return Positioned directly - this widget should be placed inside a Stack
+    return Positioned(
+      left: _currentPosition.dx,
+      top: _currentPosition.dy,
+      child: GestureDetector(
+        onPanUpdate: _handleDragUpdate,
+        onPanEnd: _handleDragEnd,
+        child: Text(
+          widget.overlay.text,
+          style: GoogleFonts.getFont(
+            widget.overlay.fontFamily,
+            fontSize: widget.overlay.fontSize,
+            color: widget.overlay.color,
+            shadows: [
+              Shadow(
+                offset: const Offset(1, 1),
+                blurRadius: 3.0,
+                color: Colors.black.withValues(alpha: 0.8),
               ),
-              textAlign: widget.overlay.alignment,
-            ),
+            ],
           ),
+          textAlign: widget.overlay.alignment,
         ),
-      ],
+      ),
     );
   }
 }

@@ -1,9 +1,10 @@
 // ABOUTME: Tests for SoundLibraryService - loads and searches bundled sounds
-// ABOUTME: Validates manifest loading and search functionality
+// ABOUTME: Validates manifest loading, search, and custom sound import functionality
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/vine_sound.dart';
 import 'package:openvine/services/sound_library_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('SoundLibraryService', () {
@@ -80,6 +81,99 @@ void main() {
       final results = SoundLibraryService.searchSounds(sounds, '');
 
       expect(results.length, equals(2));
+    });
+  });
+
+  group('Custom Sound Import', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('addCustomSound adds sound to library', () async {
+      final service = SoundLibraryService();
+
+      final customSound = VineSound(
+        id: 'custom_001',
+        title: 'My Custom Sound',
+        assetPath: '/path/to/custom/sound.mp3',
+        duration: const Duration(seconds: 5),
+        artist: 'User Upload',
+        tags: ['custom'],
+      );
+
+      await service.addCustomSound(customSound);
+
+      expect(service.sounds.any((s) => s.id == 'custom_001'), isTrue);
+      expect(service.getSoundById('custom_001')?.title, equals('My Custom Sound'));
+    });
+
+    test('addCustomSound persists custom sounds', () async {
+      final service = SoundLibraryService();
+
+      final customSound = VineSound(
+        id: 'custom_002',
+        title: 'Persisted Sound',
+        assetPath: '/path/to/sound.mp3',
+        duration: const Duration(seconds: 3),
+      );
+
+      await service.addCustomSound(customSound);
+
+      // Create new service instance and load
+      final newService = SoundLibraryService();
+      await newService.loadCustomSounds();
+
+      expect(newService.customSounds.any((s) => s.id == 'custom_002'), isTrue);
+    });
+
+    test('removeCustomSound removes sound from library', () async {
+      final service = SoundLibraryService();
+
+      final customSound = VineSound(
+        id: 'custom_003',
+        title: 'To Be Removed',
+        assetPath: '/path/to/sound.mp3',
+        duration: const Duration(seconds: 2),
+      );
+
+      await service.addCustomSound(customSound);
+      expect(service.sounds.any((s) => s.id == 'custom_003'), isTrue);
+
+      await service.removeCustomSound('custom_003');
+      expect(service.sounds.any((s) => s.id == 'custom_003'), isFalse);
+    });
+
+    test('custom sounds appear in search results', () async {
+      final service = SoundLibraryService();
+
+      final customSound = VineSound(
+        id: 'custom_004',
+        title: 'Unique Audio Track',
+        assetPath: '/path/to/sound.mp3',
+        duration: const Duration(seconds: 4),
+        tags: ['special'],
+      );
+
+      await service.addCustomSound(customSound);
+
+      final results = service.search('unique');
+      expect(results.any((s) => s.id == 'custom_004'), isTrue);
+    });
+
+    test('customSounds getter returns only custom sounds', () async {
+      final service = SoundLibraryService();
+
+      final customSound = VineSound(
+        id: 'custom_005',
+        title: 'Custom Only',
+        assetPath: '/path/to/sound.mp3',
+        duration: const Duration(seconds: 3),
+      );
+
+      await service.addCustomSound(customSound);
+
+      expect(service.customSounds.length, equals(1));
+      expect(service.customSounds.first.id, equals('custom_005'));
     });
   });
 }

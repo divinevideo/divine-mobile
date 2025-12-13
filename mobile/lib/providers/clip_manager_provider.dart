@@ -56,6 +56,10 @@ class ClipManagerNotifier extends StateNotifier<ClipManagerState> {
     _service.updateThumbnail(clipId, thumbnailPath);
   }
 
+  void selectClip(String? clipId) {
+    state = state.copyWith(selectedClipId: clipId);
+  }
+
   void setPreviewingClip(String? clipId) {
     state = state.copyWith(previewingClipId: clipId);
   }
@@ -70,6 +74,14 @@ class ClipManagerNotifier extends StateNotifier<ClipManagerState> {
 
   void setError(String? message) {
     state = state.copyWith(errorMessage: message, clearError: message == null);
+  }
+
+  void toggleMuteOriginalAudio() {
+    state = state.copyWith(muteOriginalAudio: !state.muteOriginalAudio);
+  }
+
+  void setMuteOriginalAudio(bool mute) {
+    state = state.copyWith(muteOriginalAudio: mute);
   }
 
   void clearAll() {

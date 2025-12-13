@@ -1040,6 +1040,53 @@ final class DraftStorageServiceProvider
 String _$draftStorageServiceHash() =>
     r'e4db2a5863ba06a6c634366edda6e724ea6c67f2';
 
+/// Clip library service for persisting individual video clips
+
+@ProviderFor(clipLibraryService)
+const clipLibraryServiceProvider = ClipLibraryServiceProvider._();
+
+/// Clip library service for persisting individual video clips
+
+final class ClipLibraryServiceProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ClipLibraryService>,
+          ClipLibraryService,
+          FutureOr<ClipLibraryService>
+        >
+    with
+        $FutureModifier<ClipLibraryService>,
+        $FutureProvider<ClipLibraryService> {
+  /// Clip library service for persisting individual video clips
+  const ClipLibraryServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'clipLibraryServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$clipLibraryServiceHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ClipLibraryService> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ClipLibraryService> create(Ref ref) {
+    return clipLibraryService(ref);
+  }
+}
+
+String _$clipLibraryServiceHash() =>
+    r'03a82c6ee8d6870afe118d6889eacef5445d2abf';
+
 /// Authentication service depends on secure key storage
 
 @ProviderFor(authService)

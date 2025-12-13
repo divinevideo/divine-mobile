@@ -2,11 +2,13 @@
 // ABOUTME: Handles concatenation, text overlays, audio mixing, and thumbnail generation
 
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:models/models.dart' show AspectRatio;
 import 'package:openvine/models/recording_clip.dart';
 import 'package:openvine/models/text_overlay.dart';
 import 'package:openvine/services/text_overlay_renderer.dart';
@@ -36,24 +38,52 @@ class ExportResult {
 
 /// Service for exporting video clips with FFmpeg operations
 class VideoExportService {
-  /// Concatenates multiple video segments into a single video
+  /// Build crop filter string for the given aspect ratio
   ///
-  /// Uses FFmpeg's concat demuxer for lossless concatenation.
-  /// Creates a temporary file list in the format:
-  /// ```
-  /// file '/path/to/clip1.mp4'
-  /// file '/path/to/clip2.mp4'
-  /// ```
-  /// Then runs: `ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp4`
-  Future<String> concatenateSegments(List<RecordingClip> clips) async {
+  /// Handles any input orientation (landscape or portrait) by conditionally
+  /// cropping width or height to achieve the target aspect ratio.
+  String _buildCropFilter(AspectRatio aspectRatio) {
+    switch (aspectRatio) {
+      case AspectRatio.square:
+        // Center crop to 1:1 (minimum dimension)
+        return "crop=min(iw\\,ih):min(iw\\,ih):(iw-min(iw\\,ih))/2:(ih-min(iw\\,ih))/2";
+      case AspectRatio.vertical:
+        // Center crop to 9:16 (portrait) - handles both landscape and portrait inputs
+        // If input is wider than 9:16: crop width, keep height
+        // If input is taller than 9:16: keep width, crop height
+        // Uses if(condition, true_val, false_val) to select crop dimensions
+        return "crop=if(gt(iw/ih\\,9/16)\\,ih*9/16\\,iw):if(gt(iw/ih\\,9/16)\\,ih\\,iw*16/9):(iw-out_w)/2:(ih-out_h)/2";
+    }
+  }
+
+  /// Get platform-appropriate video encoder arguments
+  String _getVideoEncoderArgs() {
+    if (defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      return '-c:v h264_videotoolbox -b:v 4M';
+    }
+    return '-c:v libx264 -preset fast -crf 23';
+  }
+
+  /// Concatenates multiple video segments into a single video with optional aspect ratio crop
+  ///
+  /// If [aspectRatio] is provided, applies the crop filter to the final output.
+  /// If [muteAudio] is true, strips all audio from the output.
+  /// Otherwise uses lossless copy mode.
+  Future<String> concatenateSegments(
+    List<RecordingClip> clips, {
+    AspectRatio? aspectRatio,
+    bool muteAudio = false,
+  }) async {
     if (clips.isEmpty) {
       throw ArgumentError('Cannot concatenate empty clip list');
     }
 
-    // If only one clip, return it directly
-    if (clips.length == 1) {
+    // If only one clip and no processing needed, return it directly
+    // If crop or mute is needed, we still need to process even a single clip
+    if (clips.length == 1 && aspectRatio == null && !muteAudio) {
       Log.info(
-        'Single clip detected, skipping concatenation',
+        'Single clip detected, no processing needed, skipping FFmpeg',
         name: 'VideoExportService',
         category: LogCategory.system,
       );
@@ -62,7 +92,7 @@ class VideoExportService {
 
     try {
       Log.info(
-        'Concatenating ${clips.length} clips',
+        'Processing ${clips.length} clips${aspectRatio != null ? " with ${aspectRatio.name} crop" : ""}${muteAudio ? " (muted)" : ""}',
         name: 'VideoExportService',
         category: LogCategory.system,
       );
@@ -89,12 +119,26 @@ class VideoExportService {
         category: LogCategory.system,
       );
 
-      // Run FFmpeg concat command
-      final command =
-          '-f concat -safe 0 -i "$listFilePath" -c copy "$outputPath"';
+      // Build FFmpeg command - with or without crop filter and audio
+      String command;
+      final audioArgs = muteAudio ? '-an' : '-c:a aac';
+
+      if (aspectRatio != null) {
+        // With crop: need to re-encode
+        final cropFilter = _buildCropFilter(aspectRatio);
+        command =
+            '-y -f concat -safe 0 -i "$listFilePath" -vf "$cropFilter" ${_getVideoEncoderArgs()} $audioArgs "$outputPath"';
+      } else if (muteAudio) {
+        // No crop but muting: need to process to strip audio
+        command =
+            '-y -f concat -safe 0 -i "$listFilePath" -c:v copy $audioArgs "$outputPath"';
+      } else {
+        // Without crop or mute: lossless copy
+        command = '-f concat -safe 0 -i "$listFilePath" -c copy "$outputPath"';
+      }
 
       Log.info(
-        'Running FFmpeg concat: $command',
+        'Running FFmpeg: $command',
         name: 'VideoExportService',
         category: LogCategory.system,
       );
@@ -104,7 +148,7 @@ class VideoExportService {
 
       if (ReturnCode.isSuccess(returnCode)) {
         Log.info(
-          'Successfully concatenated clips to: $outputPath',
+          'Successfully processed clips to: $outputPath',
           name: 'VideoExportService',
           category: LogCategory.system,
         );
@@ -115,11 +159,11 @@ class VideoExportService {
         return outputPath;
       } else {
         final output = await session.getOutput();
-        throw Exception('FFmpeg concat failed: $output');
+        throw Exception('FFmpeg processing failed: $output');
       }
     } catch (e, stackTrace) {
       Log.error(
-        'Failed to concatenate clips: $e',
+        'Failed to process clips: $e',
         name: 'VideoExportService',
         category: LogCategory.system,
         error: e,
@@ -202,36 +246,49 @@ class VideoExportService {
 
   /// Mixes background audio with video
   ///
-  /// Copies audio asset from Flutter assets to temp file,
-  /// then runs: `ffmpeg -i video.mp4 -i audio.mp3 -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 -shortest output.mp4`
+  /// For bundled assets, copies from Flutter assets to temp file.
+  /// For custom sounds (file paths), uses the file directly.
+  /// Runs: `ffmpeg -i video.mp4 -i audio.mp3 -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 -shortest output.mp4`
   Future<String> mixAudio(
     String videoPath,
-    String audioAssetPath,
+    String audioPath,
   ) async {
     try {
       Log.info(
-        'Mixing audio from asset: $audioAssetPath with video: $videoPath',
+        'Mixing audio: $audioPath with video: $videoPath',
         name: 'VideoExportService',
         category: LogCategory.system,
       );
 
-      // Get temp directory for audio file and output
+      // Get temp directory for output
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final audioFilePath = '${tempDir.path}/audio_$timestamp.mp3';
       final outputPath = '${tempDir.path}/with_audio_$timestamp.mp4';
 
-      // Copy audio asset to temp file
-      final audioBytes = await rootBundle.load(audioAssetPath);
-      await File(audioFilePath).writeAsBytes(
-        audioBytes.buffer.asUint8List(),
-      );
+      String audioFilePath;
 
-      Log.info(
-        'Saved audio asset to: $audioFilePath',
-        name: 'VideoExportService',
-        category: LogCategory.system,
-      );
+      // Check if it's a file path (custom sound) or asset path (bundled sound)
+      if (audioPath.startsWith('/') || audioPath.startsWith('file://')) {
+        // Custom sound - use file path directly
+        audioFilePath = audioPath.replaceFirst('file://', '');
+        Log.info(
+          'Using custom sound file: $audioFilePath',
+          name: 'VideoExportService',
+          category: LogCategory.system,
+        );
+      } else {
+        // Bundled asset - copy to temp file
+        audioFilePath = '${tempDir.path}/audio_$timestamp.mp3';
+        final audioBytes = await rootBundle.load(audioPath);
+        await File(audioFilePath).writeAsBytes(
+          audioBytes.buffer.asUint8List(),
+        );
+        Log.info(
+          'Copied asset to: $audioFilePath',
+          name: 'VideoExportService',
+          category: LogCategory.system,
+        );
+      }
 
       // Run FFmpeg audio mixing command
       // -c:v copy = copy video codec (no re-encoding)
@@ -258,8 +315,10 @@ class VideoExportService {
           category: LogCategory.system,
         );
 
-        // Clean up temp audio file
-        await File(audioFilePath).delete();
+        // Clean up temp audio file only if we copied from assets
+        if (!audioPath.startsWith('/') && !audioPath.startsWith('file://')) {
+          await File(audioFilePath).delete();
+        }
 
         return outputPath;
       } else {

@@ -4,6 +4,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:openvine/models/text_overlay.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
@@ -82,13 +83,13 @@ class TextOverlayRenderer {
     final absoluteX = overlay.normalizedPosition.dx * videoSize.width;
     final absoluteY = overlay.normalizedPosition.dy * videoSize.height;
 
-    // Create text painter
+    // Create text painter with Google Fonts
     final textSpan = TextSpan(
       text: overlay.text,
-      style: TextStyle(
+      style: GoogleFonts.getFont(
+        overlay.fontFamily,
         fontSize: overlay.fontSize,
         color: overlay.color,
-        fontFamily: overlay.fontFamily,
       ),
     );
 

@@ -46,6 +46,7 @@ class VineRecordingUIState {
     required this.canRecord,
     required this.segments,
     required this.hasSegments,
+    required this.segmentCount,
     required this.isCameraInitialized,
     required this.canSwitchCamera,
     required this.aspectRatio,
@@ -60,6 +61,8 @@ class VineRecordingUIState {
   final List<RecordingSegment> segments;
   final bool
   hasSegments; // From controller.hasSegments - includes virtual segments for macOS
+  final int
+  segmentCount; // From controller.segmentCount - includes virtual segments for macOS
   final bool isCameraInitialized;
   final bool canSwitchCamera;
   final model.AspectRatio aspectRatio;
@@ -84,6 +87,7 @@ class VineRecordingUIState {
     bool? canRecord,
     List<RecordingSegment>? segments,
     bool? hasSegments,
+    int? segmentCount,
     bool? isCameraInitialized,
     bool? canSwitchCamera,
     model.AspectRatio? aspectRatio,
@@ -98,6 +102,7 @@ class VineRecordingUIState {
       canRecord: canRecord ?? this.canRecord,
       segments: segments ?? this.segments,
       hasSegments: hasSegments ?? this.hasSegments,
+      segmentCount: segmentCount ?? this.segmentCount,
       isCameraInitialized: isCameraInitialized ?? this.isCameraInitialized,
       canSwitchCamera: canSwitchCamera ?? this.canSwitchCamera,
       aspectRatio: aspectRatio ?? this.aspectRatio,
@@ -118,6 +123,7 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
           canRecord: _controller.canRecord,
           segments: _controller.segments,
           hasSegments: _controller.hasSegments,
+          segmentCount: _controller.segmentCount,
           isCameraInitialized: _controller.isCameraInitialized,
           canSwitchCamera: _controller.canSwitchCamera,
           aspectRatio: _controller.aspectRatio,
@@ -168,6 +174,8 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
       segments: _controller.segments,
       hasSegments: _controller
           .hasSegments, // CRITICAL: Use controller's hasSegments which includes virtual segments for macOS
+      segmentCount: _controller
+          .segmentCount, // CRITICAL: Use controller's segmentCount which includes virtual segments for macOS
       isCameraInitialized: _controller.isCameraInitialized,
       canSwitchCamera: _controller.canSwitchCamera,
       aspectRatio: _controller.aspectRatio,
@@ -304,6 +312,14 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
     return result;
   }
 
+  /// Extract individual segment files without concatenating
+  /// Returns a list of (File, Duration) pairs for each segment
+  Future<List<(File, Duration)>> extractSegmentFiles() async {
+    final result = await _controller.extractSegmentFiles();
+    updateState();
+    return result;
+  }
+
   Future<void> switchCamera() async {
     await _controller.switchCamera();
 
@@ -316,6 +332,13 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
   /// Set aspect ratio for recording
   void setAspectRatio(model.AspectRatio ratio) {
     _controller.setAspectRatio(ratio);
+    updateState();
+  }
+
+  /// Set the duration of previously recorded clips from ClipManager
+  /// Call this when returning to camera to record additional segments
+  void setPreviouslyRecordedDuration(Duration duration) {
+    _controller.setPreviouslyRecordedDuration(duration);
     updateState();
   }
 
@@ -490,6 +513,7 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
         hashtags: [],
         frameCount: 0,
         selectedApproach: 'auto',
+        aspectRatio: _controller.aspectRatio,
       );
 
       await draftStorage.saveDraft(draft);

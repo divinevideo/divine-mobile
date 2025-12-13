@@ -10,6 +10,8 @@ enum RouteType {
   hashtag, // Still supported as push route within explore
   search,
   camera,
+  clipManager, // Clip management screen for recorded segments
+  editVideo, // Video editor screen for text/sound overlays
   importKey,
   settings,
   editProfile, // Profile editing screen
@@ -132,6 +134,12 @@ RouteContext parseRoute(String path) {
     case 'camera':
       return const RouteContext(type: RouteType.camera);
 
+    case 'clip-manager':
+      return const RouteContext(type: RouteType.clipManager);
+
+    case 'edit-video':
+      return const RouteContext(type: RouteType.editVideo);
+
     case 'settings':
       return const RouteContext(type: RouteType.settings);
 
@@ -223,6 +231,12 @@ String buildRoute(RouteContext context) {
 
     case RouteType.camera:
       return '/camera';
+
+    case RouteType.clipManager:
+      return '/clip-manager';
+
+    case RouteType.editVideo:
+      return '/edit-video';
 
     case RouteType.settings:
       return '/settings';

@@ -25,7 +25,8 @@ import 'package:openvine/screens/relay_settings_screen.dart';
 import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_editor_screen.dart';
-import 'package:openvine/screens/vine_drafts_screen.dart';
+import 'package:openvine/screens/clip_manager_screen.dart';
+import 'package:openvine/screens/clip_library_screen.dart';
 import 'package:openvine/screens/welcome_screen.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -72,6 +73,8 @@ int tabIndexFromLocation(String loc) {
     case 'import-key':
     case 'welcome':
     case 'camera':
+    case 'clip-manager':
+    case 'edit-video':
     case 'drafts':
     case 'followers':
     case 'following':
@@ -398,6 +401,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const UniversalCameraScreenPure(),
       ),
       GoRoute(
+        path: '/clip-manager',
+        name: 'clip-manager',
+        builder: (_, __) => const ClipManagerScreen(),
+      ),
+      GoRoute(
         path: '/settings',
         name: 'settings',
         builder: (_, __) => const SettingsScreen(),
@@ -445,8 +453,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/drafts',
-        name: 'drafts',
-        builder: (_, __) => const VineDraftsScreen(),
+        name: 'clips',
+        builder: (_, __) => const ClipLibraryScreen(),
       ),
       // Followers screen
       GoRoute(

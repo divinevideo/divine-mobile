@@ -360,5 +360,67 @@ void main() {
         controller.dispose();
       }
     });
+
+    testWidgets(
+      'BUG FIX: cleanupFiles should call native stopRecording to sync state',
+      (WidgetTester tester) async {
+        if (kIsWeb || !Platform.isMacOS) {
+          return;
+        }
+
+        final controller = VineRecordingController();
+
+        try {
+          await controller.initialize();
+
+          // Clear method calls to track only recording-related calls
+          methodCalls.clear();
+
+          // Start recording
+          await controller.startRecording();
+          expect(controller.state, equals(VineRecordingState.recording));
+
+          // Verify startRecording was called
+          expect(
+            methodCalls.any((call) => call.method == 'startRecording'),
+            isTrue,
+            reason: 'Native startRecording should have been called',
+          );
+
+          // Simulate some recording time
+          await tester.pump(const Duration(milliseconds: 500));
+
+          // Clear method calls again to track cleanup calls
+          methodCalls.clear();
+
+          // Cleanup files (simulates user pressing "Clear" button)
+          controller.cleanupFiles();
+
+          // BUG: stopRecording should be called during cleanup to sync native state
+          // This prevents "Already recording" error when trying to record again
+          expect(
+            methodCalls.any((call) => call.method == 'stopRecording'),
+            isTrue,
+            reason:
+                'Native stopRecording should be called during cleanup to sync state with native layer',
+          );
+
+          // Clear method calls to verify we can record again
+          methodCalls.clear();
+
+          // Verify we can start a new recording (this was failing before the fix)
+          await controller.startRecording();
+          expect(controller.state, equals(VineRecordingState.recording));
+
+          expect(
+            methodCalls.any((call) => call.method == 'startRecording'),
+            isTrue,
+            reason: 'Should be able to start recording after cleanup',
+          );
+        } finally {
+          controller.dispose();
+        }
+      },
+    );
   });
 }

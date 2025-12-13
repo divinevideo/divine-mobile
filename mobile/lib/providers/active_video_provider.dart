@@ -70,6 +70,8 @@ final activeVideoIdProvider = Provider<String?>((ref) {
       break;
     case RouteType.notifications:
     case RouteType.camera:
+    case RouteType.clipManager:
+    case RouteType.editVideo:
     case RouteType.settings:
     case RouteType.editProfile:
     case RouteType.drafts:

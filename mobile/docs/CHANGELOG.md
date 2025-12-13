@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Video Editing, Clips, and Audio Features (2025-12-14)
+
+#### New Features
+- **Video Editor Screen** - Full-featured video editor with text overlays and sound mixing
+  - Add draggable text overlays with customizable fonts, colors, and styles
+  - Select background music from built-in sound library
+  - Preview audio synced with video playback
+  - Text overlays burned into final video using FFmpeg
+
+- **Clip Manager** - Manage multiple video clips before combining
+  - Preview recorded clips with tap-to-pause functionality
+  - Reorder clips via drag-and-drop
+  - Delete individual clips
+  - Combine clips into final video with aspect ratio crop applied
+
+- **Sound Picker** - Full-screen modal for selecting background sounds
+  - Search sounds by title, artist, or tags
+  - Preview sounds with play/pause controls
+  - Import custom audio from device (mp3, wav, aac, m4a, ogg, flac)
+  - "None" option to keep original video audio
+
+- **Improved Camera Screen**
+  - Shows clip count during recording ("1 clip", "2 clips", etc.)
+  - Clear/reset button to discard recorded clips
+  - Mute audio toggle during recording
+  - Better aspect ratio handling through recording pipeline
+
+#### Bug Fixes
+- **Fixed video aspect ratio on metadata screen** - Videos now display with correct aspect ratio (vertical 9:16 or square) instead of always appearing square
+- **Fixed segment count showing 0 on macOS** - Clip count now correctly shows virtual segments recorded on macOS
+- **Fixed video constantly looping on metadata screen** - Added tap-to-pause with play icon overlay
+- **Fixed sound preview not working in editor** - Audio now plays synced with video preview
+
+#### Technical Details
+- Modified `lib/screens/video_editor_screen.dart`:
+  - Integrated text overlay editor and sound picker
+  - Audio preview synced with video playback using just_audio
+  - Passes aspect ratio from recording state to draft creation
+- Modified `lib/screens/clip_manager_screen.dart`:
+  - Enhanced preview with FittedBox for correct aspect ratio
+  - Added clip reordering, deletion, and combination logic
+- Modified `lib/providers/vine_recording_provider.dart`:
+  - Added `segmentCount` field to VineRecordingUIState
+  - Auto-draft creation now preserves aspect ratio
+- Modified `lib/services/vine_recording_controller.dart`:
+  - Added `segmentCount` getter that includes macOS virtual segments
+  - Audio muting support during recording
+- Added `lib/widgets/sound_picker/sound_picker_modal.dart`:
+  - Full-screen sound selection with search and preview
+  - Custom audio import from device storage
+- Added `lib/widgets/text_overlay/text_overlay_editor.dart`:
+  - Text customization with fonts, colors, alignment
+  - Draggable positioning on video preview
+- Modified `lib/services/video_export_service.dart`:
+  - FFmpeg audio mixing for background sounds
+  - Text overlay burning into video
+
 ### Fixed - Cache JSON Corruption Crash (2025-12-13)
 
 #### Bug Fixes

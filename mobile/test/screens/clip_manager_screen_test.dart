@@ -17,7 +17,7 @@ void main() {
         ),
       );
 
-      expect(find.text('No clips'), findsOneWidget);
+      expect(find.text('No clips recorded'), findsOneWidget);
       expect(find.text('Record'), findsOneWidget);
     });
 
