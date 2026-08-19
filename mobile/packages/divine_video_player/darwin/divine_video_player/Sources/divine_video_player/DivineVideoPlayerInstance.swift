@@ -26,6 +26,15 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
     private var eventSink: FlutterEventSink?
     private var timeObserver: Any?
     private var currentItemObservation: NSKeyValueObservation?
+
+    /// The edge-declick mix built for the loaded composition, kept so it can be
+    /// re-applied to every item `AVPlayerLooper` makes.
+    ///
+    /// The looper does not replay the template item — it builds its own copies,
+    /// and a copy does not carry the template's `audioMix`. Setting it once at
+    /// load time therefore declicks the first lap and no other, which is
+    /// exactly the lap nobody is listening for.
+    private var loopAudioMix: AVAudioMix?
     private var statusObservation: NSKeyValueObservation?
     private var bufferingObservation: NSKeyValueObservation?
     private var likelyToKeepUpObservation: NSKeyValueObservation?
@@ -462,6 +471,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
             }
             playerItem.videoComposition = videoComposition
         }
+        loopAudioMix = audioMix
         if let audioMix { playerItem.audioMix = audioMix }
         return (playerItem, offsets, durations)
     }
@@ -959,6 +969,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
         } else {
             player.insert(item, after: nil)
         }
+        prewarmLoopingOutputs()
         attachCurrentItemOutputs()
     }
 
@@ -1119,8 +1130,24 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
         attachCurrentItemOutputs()
     }
 
+    /// Hands the looper's queued items to the texture output so each one
+    /// carries a video output before it becomes current.
+    ///
+    /// `AVPlayerLooper` builds its copies asynchronously, so the set can still
+    /// be empty right after the looper is created and fills in later; running
+    /// this again on every current-item change picks up whatever it has by
+    /// then. It is idempotent — an item already warmed is skipped.
+    private func prewarmLoopingOutputs() {
+        guard let looper = playerLooper else { return }
+        textureOutput?.prewarm(items: looper.loopingPlayerItems)
+    }
+
     private func attachCurrentItemOutputs() {
         guard let item = player?.currentItem else { return }
+        prewarmLoopingOutputs()
+        if let loopAudioMix, item.audioMix !== loopAudioMix {
+            item.audioMix = loopAudioMix
+        }
         textureOutput?.attach(to: item)
         observeStatus(for: item)
         observeBuffering(for: item)
