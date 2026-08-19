@@ -32,6 +32,21 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     private weak var player: AVPlayer?
     /// Item the output is currently attached to, so we can detach cleanly.
     private weak var attachedItem: AVPlayerItem?
+
+    /// Every item that already carries one of our outputs, newest last.
+    ///
+    /// `AVPlayerLooper` does not replay one item — it cycles a small set of
+    /// copies, so the current item changes at every loop restart. Building the
+    /// output at that moment means `item.add` and the decoder's first frame
+    /// both land on the seam, and until one arrives `copyPixelBuffer` keeps
+    /// returning the previous lap's last frame: a visible freeze, once per
+    /// loop, on any asset. Adding the output to each queued item ahead of time
+    /// leaves nothing to do at the switch but adopt it.
+    ///
+    /// Items are held strongly, which is safe because the set only ever holds
+    /// what [prewarm] was given — the looper's own items, which it retains for
+    /// as long as it exists — and is dropped wholesale on [dispose].
+    private var warmOutputs: [(item: AVPlayerItem, output: AVPlayerItemVideoOutput)] = []
     /// One-shot observation that triggers the initial frame pull as soon
     /// as the freshly attached item reports `.readyToPlay`. Without this,
     /// the first `copyPixelBuffer(forItemTime:)` can race the decoder
@@ -129,22 +144,15 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
 
     // MARK: - Public API
 
-    /// Attaches the video output to a player item so frames can be
-    /// pulled from it.
-    func attach(to item: AVPlayerItem) {
-        // Remove the old output from the item it was actually added to.
-        if let old = videoOutput, let prev = attachedItem {
-            prev.remove(old)
-        }
-        itemStatusObservation?.invalidate()
-        itemStatusObservation = nil
-
-        // Request 32BGRA: Flutter's external-texture upload path expects
-        // a BGRA `CVPixelBuffer` and renders garbage / black on YpCbCr
-        // buffers. AVFoundation will color-convert 10-bit / HDR sources
-        // into BGRA for us — at the cost of HDR range, but that's the
-        // same tradeoff the official video_player plugin makes when it
-        // doesn't pass an explicit Metal renderer.
+    /// Builds an output configured for Flutter's external-texture path.
+    ///
+    /// Request 32BGRA: Flutter's external-texture upload path expects a BGRA
+    /// `CVPixelBuffer` and renders garbage / black on YpCbCr buffers.
+    /// AVFoundation will color-convert 10-bit / HDR sources into BGRA for us —
+    /// at the cost of HDR range, but that's the same tradeoff the official
+    /// video_player plugin makes when it doesn't pass an explicit Metal
+    /// renderer.
+    private func makeVideoOutput() -> AVPlayerItemVideoOutput {
         let attrs: [String: Any] = [
             kCVPixelBufferPixelFormatTypeKey as String:
                 kCVPixelFormatType_32BGRA,
@@ -152,10 +160,68 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             // the GPU as a Flutter texture without an extra copy.
             kCVPixelBufferIOSurfacePropertiesKey as String: [:],
         ]
-        let output = AVPlayerItemVideoOutput(
-            pixelBufferAttributes: attrs
-        )
+        let output = AVPlayerItemVideoOutput(pixelBufferAttributes: attrs)
         output.setDelegate(self, queue: .main)
+        return output
+    }
+
+    /// Gives every item in [items] an output before it becomes current.
+    ///
+    /// Pass `AVPlayerLooper.loopingPlayerItems`. The looper cycles that same
+    /// small set, so after the first pass every lap finds its output already
+    /// attached and [attach] has nothing to build at the seam. Items the
+    /// looper no longer owns are dropped, so rebuilding the queue cannot pin
+    /// an old item's decoder for the life of the player.
+    func prewarm(items: [AVPlayerItem]) {
+        for entry in warmOutputs
+        where !items.contains(where: { $0 === entry.item }) && entry.item !== attachedItem {
+            entry.item.remove(entry.output)
+        }
+        warmOutputs.removeAll { entry in
+            !items.contains(where: { $0 === entry.item })
+        }
+
+        for item in items where !warmOutputs.contains(where: { $0.item === item }) {
+            // The current item already has one; adopt it rather than adding a
+            // second output to the same item.
+            if item === attachedItem, let existing = videoOutput {
+                warmOutputs.append((item: item, output: existing))
+                continue
+            }
+            let output = makeVideoOutput()
+            item.add(output)
+            warmOutputs.append((item: item, output: output))
+        }
+    }
+
+    /// Attaches the video output to a player item so frames can be
+    /// pulled from it.
+    func attach(to item: AVPlayerItem) {
+        itemStatusObservation?.invalidate()
+        itemStatusObservation = nil
+
+        // Already warmed by [prewarm] — adopt it. Nothing is torn down: the
+        // outgoing item keeps its own output so it is warm again when the
+        // looper comes back around to it.
+        if let warm = warmOutputs.first(where: { $0.item === item })?.output {
+            videoOutput = warm
+            attachedItem = item
+            pendingSeekTime = .invalid
+            mediaDataRearmCount = 0
+            lastDeliveredItemTime = .invalid
+            nextStallRecoveryTime = 0
+            warm.requestNotificationOfMediaDataChange(withAdvanceInterval: 0)
+            return
+        }
+
+        // Remove the old output from the item it was actually added to.
+        if let old = videoOutput,
+           let prev = attachedItem,
+           !warmOutputs.contains(where: { $0.item === prev }) {
+            prev.remove(old)
+        }
+
+        let output = makeVideoOutput()
         item.add(output)
         videoOutput = output
         attachedItem = item
@@ -315,6 +381,7 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         itemStatusObservation?.invalidate()
         itemStatusObservation = nil
         registry.unregisterTexture(textureId)
+        warmOutputs.removeAll()
         videoOutput = nil
         latestPixelBuffer = nil
         onFirstFrame = nil
