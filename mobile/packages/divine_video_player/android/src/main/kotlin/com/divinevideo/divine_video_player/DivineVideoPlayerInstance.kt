@@ -195,6 +195,17 @@ internal class DivineVideoPlayerInstance(
     private var deferredSetClips: DeferredSetClips? = null
 
     /**
+     * A resolved track-end clamp waiting for a loop restart to be applied.
+     *
+     * Held when the read lands on a player that is already playing, where
+     * swapping the item outright would jump the video back to its start. At
+     * the loop boundary the position is already back at zero, so the swap
+     * costs nothing there. Superseded by the generation check like every other
+     * piece of late background work.
+     */
+    private var pendingCommonTrackEndClamp: PendingCommonTrackEndClamp? = null
+
+    /**
      * Gives up waiting for the track lengths and starts the player unclamped.
      *
      * The read has to be bounded. `MediaExtractor` fetches a remote source
@@ -479,6 +490,7 @@ internal class DivineVideoPlayerInstance(
 
         // Any newer call supersedes a resolution still in flight.
         val generation = ++setClipsGeneration
+        pendingCommonTrackEndClamp = null
         deferredSetClips?.let { settleDeferredSetClips(it, apply = false) }
 
         val unresolved = if (trackDurationProbingDisabled) {
@@ -578,7 +590,7 @@ internal class DivineVideoPlayerInstance(
 
     /**
      * Tightens the loaded playlist to the track ends a background read just
-     * resolved, while doing so is still free.
+     * resolved, at the first moment doing so is free.
      *
      * A clamp lives in the item's `ClippingConfiguration`, and
      * `ClippingMediaSource.canUpdateMediaItem` compares that configuration, so
@@ -587,10 +599,16 @@ internal class DivineVideoPlayerInstance(
      * the position to the *default* position of the one that takes its place.
      * On a player that has not started that is invisible — a preloaded tile
      * sits paused at frame zero, and the feed preloads a window around the
-     * current index. On one that is already playing it is the video jumping
-     * back to its start mid-watch, which is a worse artifact than the seam it
-     * removes, so that load keeps the seam and the cached lengths clamp the
-     * next `setClips` for the source instead.
+     * current index.
+     *
+     * On one that is already playing, swapping *now* would be the video
+     * jumping back to its start mid-watch. Waiting for the source's next
+     * `setClips` is not a fix either: for a remote source the read never lands
+     * before the tile the viewer is on starts playing, so the video they are
+     * actually watching keeps the seam for its whole visit. Instead the clamp
+     * is parked and applied at the next loop restart, where the position has
+     * already returned to zero and resolving to the default position is where
+     * playback is anyway.
      */
     private fun applyResolvedCommonTrackEnds(
         generation: Long,
@@ -599,8 +617,37 @@ internal class DivineVideoPlayerInstance(
         if (generation != setClipsGeneration) return
         val exoPlayer = player ?: return
         if (exoPlayer.mediaItemCount != clipsRaw.size) return
-        if (exoPlayer.playWhenReady || exoPlayer.currentPosition > 0L) return
+        if (exoPlayer.playWhenReady || exoPlayer.currentPosition > 0L) {
+            pendingCommonTrackEndClamp =
+                PendingCommonTrackEndClamp(generation, clipsRaw)
+            return
+        }
+        pendingCommonTrackEndClamp = null
+        clampLoadedClipsToResolvedTrackEnds(exoPlayer, clipsRaw)
+    }
 
+    /**
+     * Applies a clamp parked by [applyResolvedCommonTrackEnds] now that the
+     * player has looped.
+     *
+     * Runs from [Player.Listener.onPositionDiscontinuity] on an automatic
+     * transition, which for the feed's single-clip `REPEAT_MODE_ALL` player is
+     * the loop restart itself.
+     */
+    private fun applyPendingCommonTrackEndClamp() {
+        val pending = pendingCommonTrackEndClamp ?: return
+        pendingCommonTrackEndClamp = null
+        if (pending.generation != setClipsGeneration) return
+        val exoPlayer = player ?: return
+        if (exoPlayer.mediaItemCount != pending.clipsRaw.size) return
+        clampLoadedClipsToResolvedTrackEnds(exoPlayer, pending.clipsRaw)
+    }
+
+    /** Rebuilds every loaded item whose resolved clamp differs from its own. */
+    private fun clampLoadedClipsToResolvedTrackEnds(
+        exoPlayer: ExoPlayer,
+        clipsRaw: List<Map<String, Any?>>,
+    ) {
         var changed = false
         clipsRaw.forEachIndexed loop@{ index, map ->
             val uri = map["uri"] as? String ?: return@loop
@@ -709,6 +756,13 @@ internal class DivineVideoPlayerInstance(
                 null
             }
             val effectiveEndMs = listOfNotNull(endMs, commonEndMs).minOrNull()
+            if (trimToCommonTrackEnd) {
+                DivineVideoPlayerLog.debug(
+                    "Player $playerId clip end requested=${endMs}ms " +
+                        "common=${commonEndMs}ms effective=${effectiveEndMs}ms for $uri",
+                    name = "DivineVideoPlayer.Load",
+                )
+            }
             val clipVol = (map["volume"] as? Number)?.toFloat() ?: 1.0f
             val clipSpeed = ((map["playbackSpeed"] as? Number)?.toFloat() ?: 1.0f)
                 .coerceAtLeast(MIN_PLAYBACK_SPEED)
@@ -949,6 +1003,11 @@ internal class DivineVideoPlayerInstance(
             if (videoUs <= 0 || audioUs <= 0) {
                 NO_TRACK_PAIR
             } else {
+                DivineVideoPlayerLog.debug(
+                    "Player $playerId read track ends video=${videoUs / 1000}ms " +
+                        "audio=${audioUs / 1000}ms for $uri",
+                    name = "DivineVideoPlayer.Load",
+                )
                 longArrayOf(videoUs, audioUs)
             }
         } catch (e: Exception) {
@@ -1501,6 +1560,14 @@ internal class DivineVideoPlayerInstance(
             newPosition: Player.PositionInfo,
             reason: Int,
         ) {
+            // The loop restart is the free moment to install a track-end clamp
+            // that resolved while this player was already playing. Deliberately
+            // outside the mediaItemIndex guard below: a single-clip
+            // REPEAT_MODE_ALL loop reports index 0 on both sides, and that loop
+            // is the case the clamp exists for.
+            if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION) {
+                applyPendingCommonTrackEndClamp()
+            }
             // Apply per-clip speed/volume as early as possible on auto-transition.
             // [onMediaItemTransition] fires later in the pipeline, after a few
             // frames of the new clip have already rendered with the previous
@@ -1807,6 +1874,7 @@ internal class DivineVideoPlayerInstance(
         legacyEntry?.release()
         legacyEntry = null
         audioOverlayManager.releaseAll()
+        pendingCommonTrackEndClamp = null
         eventSink = null
     }
 
@@ -1829,6 +1897,18 @@ internal class DivineVideoPlayerInstance(
          */
         var settled: Boolean = false
     }
+
+    /**
+     * A resolved track-end clamp waiting for the loop restart that makes
+     * installing it free.
+     *
+     * [generation] is the `setClips` the clamp was resolved for, so a newer one
+     * discards it rather than clamping the wrong playlist.
+     */
+    private class PendingCommonTrackEndClamp(
+        val generation: Long,
+        val clipsRaw: List<Map<String, Any?>>,
+    )
 
     companion object {
         private const val POSITION_UPDATE_INTERVAL_MS = 200L

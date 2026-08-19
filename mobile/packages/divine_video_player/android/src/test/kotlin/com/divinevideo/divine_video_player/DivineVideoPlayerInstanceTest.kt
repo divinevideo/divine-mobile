@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.SystemClock
 import android.view.Surface
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
@@ -1172,8 +1173,22 @@ class DivineVideoPlayerInstanceTest {
         assertEquals(6_000L, replaced.captured.clippingConfiguration.endPositionMs)
     }
 
+    /** A [Player.PositionInfo] carrying only the field the listener reads. */
+    private fun positionInfo(mediaItemIndex: Int): Player.PositionInfo =
+        Player.PositionInfo(
+            /* windowUid = */ null,
+            /* mediaItemIndex = */ mediaItemIndex,
+            /* mediaItem = */ null,
+            /* periodUid = */ null,
+            /* periodIndex = */ mediaItemIndex,
+            /* positionMs = */ 0L,
+            /* contentPositionMs = */ 0L,
+            /* adGroupIndex = */ C.INDEX_UNSET,
+            /* adIndexInAdGroup = */ C.INDEX_UNSET,
+        )
+
     @Test
-    fun `a resolved clamp is not applied over a playlist already playing`() {
+    fun `a resolved clamp is parked rather than applied mid-watch`() {
         every { mockPlayer.mediaItemCount } returns 1
         every { mockPlayer.getMediaItemAt(0) } returns MediaItem.Builder().build()
         every { mockPlayer.playWhenReady } returns true
@@ -1186,9 +1201,98 @@ class DivineVideoPlayerInstanceTest {
             capturePostedRunnables().forEach { it.run() }
         }
 
-        // A clipping configuration cannot be updated in place, so this would
-        // remove and re-insert the period being played and restart the video
-        // from zero mid-watch — worse than the seam it removes.
+        // A clipping configuration cannot be updated in place, so applying it
+        // here would remove and re-insert the period being played and restart
+        // the video from zero mid-watch — worse than the seam it removes.
+        verify(exactly = 0) { mockPlayer.replaceMediaItem(any(), any()) }
+    }
+
+    @Test
+    fun `a parked clamp is applied at the loop restart`() {
+        every { mockPlayer.mediaItemCount } returns 1
+        every { mockPlayer.getMediaItemAt(0) } returns MediaItem.Builder().build()
+        every { mockPlayer.playWhenReady } returns true
+        val listenerSlot = slot<Player.Listener>()
+        every { mockPlayer.addListener(capture(listenerSlot)) } just runs
+
+        withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
+            instance.onMethodCall(
+                trimmingSetClipsCall("https://cdn.example/playing.mp4"),
+                mockk(relaxed = true),
+            )
+            capturePostedRunnables().forEach { it.run() }
+        }
+        verify(exactly = 0) { mockPlayer.replaceMediaItem(any(), any()) }
+
+        // A single-clip REPEAT_MODE_ALL loop reports the same media item index
+        // on both sides of the restart, which is why the clamp hook sits
+        // outside the index guard the speed/volume block uses.
+        listenerSlot.captured.onPositionDiscontinuity(
+            positionInfo(mediaItemIndex = 0),
+            positionInfo(mediaItemIndex = 0),
+            Player.DISCONTINUITY_REASON_AUTO_TRANSITION,
+        )
+
+        val replaced = slot<MediaItem>()
+        verify { mockPlayer.replaceMediaItem(0, capture(replaced)) }
+        assertEquals(6_000L, replaced.captured.clippingConfiguration.endPositionMs)
+    }
+
+    @Test
+    fun `a parked clamp is applied only once`() {
+        every { mockPlayer.mediaItemCount } returns 1
+        every { mockPlayer.getMediaItemAt(0) } returns MediaItem.Builder().build()
+        every { mockPlayer.playWhenReady } returns true
+        val listenerSlot = slot<Player.Listener>()
+        every { mockPlayer.addListener(capture(listenerSlot)) } just runs
+
+        withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
+            instance.onMethodCall(
+                trimmingSetClipsCall("https://cdn.example/playing.mp4"),
+                mockk(relaxed = true),
+            )
+            capturePostedRunnables().forEach { it.run() }
+        }
+
+        repeat(3) {
+            listenerSlot.captured.onPositionDiscontinuity(
+                positionInfo(mediaItemIndex = 0),
+                positionInfo(mediaItemIndex = 0),
+                Player.DISCONTINUITY_REASON_AUTO_TRANSITION,
+            )
+        }
+
+        // Every later lap must cost nothing: re-installing the same clipping
+        // configuration would rebuild the period at each loop, which is the
+        // stutter the clamp exists to remove.
+        verify(exactly = 1) { mockPlayer.replaceMediaItem(0, any()) }
+    }
+
+    @Test
+    fun `a parked clamp is not applied on a seek`() {
+        every { mockPlayer.mediaItemCount } returns 1
+        every { mockPlayer.getMediaItemAt(0) } returns MediaItem.Builder().build()
+        every { mockPlayer.playWhenReady } returns true
+        val listenerSlot = slot<Player.Listener>()
+        every { mockPlayer.addListener(capture(listenerSlot)) } just runs
+
+        withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
+            instance.onMethodCall(
+                trimmingSetClipsCall("https://cdn.example/playing.mp4"),
+                mockk(relaxed = true),
+            )
+            capturePostedRunnables().forEach { it.run() }
+        }
+
+        // A seek lands anywhere, so the remove-and-insert would drop playback
+        // back to the default position — the mid-watch restart the parking
+        // exists to avoid.
+        listenerSlot.captured.onPositionDiscontinuity(
+            positionInfo(mediaItemIndex = 0),
+            positionInfo(mediaItemIndex = 0),
+            Player.DISCONTINUITY_REASON_SEEK,
+        )
+
         verify(exactly = 0) { mockPlayer.replaceMediaItem(any(), any()) }
     }
 
