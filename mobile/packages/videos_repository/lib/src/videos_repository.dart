@@ -717,10 +717,11 @@ class VideosRepository {
     return _transformAndFilter(events);
   }
 
-  /// Fetches the latest videos in chronological order (newest first).
+  /// Fetches the latest originally published videos (newest first).
   ///
   /// This is the "New" feed mode - shows all public videos sorted by
-  /// creation time.
+  /// their original publication time. Editing an older video does not move it
+  /// back to the front of the feed.
   ///
   /// Deliberately does not apply seen-freshness reordering. This feed is
   /// surfaced as "New", and that label is a chronological promise: a video
@@ -741,7 +742,7 @@ class VideosRepository {
   ///
   /// Parameters:
   /// - [limit]: Maximum number of videos to return (default 5)
-  /// - [until]: Only return videos created before this Unix timestamp
+  /// - [until]: Only return videos published before this Unix timestamp
   ///   (for pagination - pass `previousVideo.createdAt`)
   /// - [skipCache]: Full manual refresh (pull-to-refresh) — bypasses the
   ///   in-memory first-page cache and merges newer relay events into a
@@ -751,7 +752,7 @@ class VideosRepository {
   ///   fresh first page is wanted but the pull-to-refresh relay round-trip
   ///   is not.
   ///
-  /// Returns a [HomeFeedResult] whose videos are sorted by creation time
+  /// Returns a [HomeFeedResult] whose videos are sorted by publication time
   /// (newest first), with [HomeFeedResult.hasMore] reporting whether more
   /// sits behind this page — the source's own flag where it states one,
   /// otherwise whether the page filled.
@@ -887,7 +888,20 @@ class VideosRepository {
       ).timeout(_recentRelayRefreshTimeout);
       if (relayVideos.isEmpty) return apiVideos;
 
-      final candidates = [...relayVideos, ...apiVideos]
+      final oldestApiPublication = apiVideos.isEmpty
+          ? null
+          : apiVideos
+                .map((video) => video.createdAt)
+                .reduce(
+                  (oldest, current) => current < oldest ? current : oldest,
+                );
+      final relayRefresh = oldestApiPublication == null
+          ? relayVideos
+          : relayVideos
+                .where((video) => video.createdAt >= oldestApiPublication)
+                .toList();
+
+      final candidates = [...relayRefresh, ...apiVideos]
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final merged = <VideoEvent>[];
       _appendUniqueVideos(merged, candidates, seenVideoKeys: <String>{});
@@ -1810,7 +1824,10 @@ class VideosRepository {
   int? _cursorBeforeOldestStats(List<VideoStats> stats) {
     if (stats.isEmpty) return null;
     final oldest = stats
-        .map((stat) => stat.createdAt.millisecondsSinceEpoch ~/ 1000)
+        .map(
+          (stat) =>
+              stat.publishedAt ?? stat.createdAt.millisecondsSinceEpoch ~/ 1000,
+        )
         .reduce((a, b) => a < b ? a : b);
     return oldest - 1;
   }
