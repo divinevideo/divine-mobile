@@ -321,13 +321,16 @@ class _MarketingOptInCheckbox extends StatelessWidget {
                   !value,
                 )
               : null,
-          child: DivineCheckbox(
-            state: value
-                ? DivineCheckboxState.selected
-                : DivineCheckboxState.unselected,
-            label: Text(
-              context.l10n.authCreateAccountMarketingOptIn,
-              style: VineTheme.bodyLargeFont(color: palette.primaryText),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: DivineCheckbox(
+              state: value
+                  ? DivineCheckboxState.selected
+                  : DivineCheckboxState.unselected,
+              label: Text(
+                context.l10n.authCreateAccountMarketingOptIn,
+                style: VineTheme.bodyLargeFont(color: palette.primaryText),
+              ),
             ),
           ),
         ),
