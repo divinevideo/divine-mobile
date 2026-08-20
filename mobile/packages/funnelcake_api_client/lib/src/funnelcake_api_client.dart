@@ -569,12 +569,16 @@ class FunnelcakeApiClient {
     }
   }
 
-  /// Fetches recent videos sorted by creation time (newest first).
+  /// Fetches recent videos sorted by original publication time (newest first).
+  ///
+  /// Funnelcake preserves `published_at` across addressable-event edits, so a
+  /// thumbnail or metadata revision does not move an old video back to the
+  /// head of the New feed.
   ///
   /// [limit] is the maximum number of videos to return (defaults to 50).
   /// [before] is an optional Unix timestamp cursor for pagination.
   ///
-  /// Returns a list of [VideoStats] objects sorted by recency.
+  /// Returns a list of [VideoStats] objects sorted by publication recency.
   ///
   /// Throws:
   /// - [FunnelcakeNotConfiguredException] if the API is not configured.
@@ -589,8 +593,8 @@ class FunnelcakeApiClient {
     return response.videos;
   }
 
-  /// Fetches recent videos sorted by creation time, preserving how many rows
-  /// the server actually returned.
+  /// Fetches recent videos sorted by original publication time, preserving how
+  /// many rows the server actually returned.
   ///
   /// Prefer this over [getRecentVideos] when paginating: [getRecentVideos]
   /// drops malformed rows, so its length cannot distinguish "the source ran
@@ -606,7 +610,7 @@ class FunnelcakeApiClient {
     }
 
     final queryParams = _videoQueryParameters({
-      'sort': 'recent',
+      'sort': 'published',
       'limit': limit.toString(),
     });
     if (before != null) {

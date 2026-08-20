@@ -288,7 +288,7 @@ void main() {
         expect(videos.first.title, equals('Recent Video'));
       });
 
-      test('constructs correct URL with sort=recent', () async {
+      test('constructs New-feed URL with sort=published', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),
         ).thenAnswer((_) async => http.Response('[]', 200));
@@ -302,7 +302,7 @@ void main() {
 
         final uri = captured.first as Uri;
         expect(uri.path, equals('/api/videos'));
-        expect(uri.queryParameters['sort'], equals('recent'));
+        expect(uri.queryParameters['sort'], equals('published'));
         expect(uri.queryParameters['limit'], equals('50'));
         expect(uri.queryParameters['nsfw'], equals('show'));
         expect(
