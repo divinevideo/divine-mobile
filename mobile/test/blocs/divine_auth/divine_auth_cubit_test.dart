@@ -226,6 +226,23 @@ void main() {
       );
     });
 
+    group('updateMarketingConsent', () {
+      blocTest<DivineAuthCubit, DivineAuthState>(
+        'sets marketingConsent when the user opts in',
+        build: buildCubit,
+        seed: () => const DivineAuthFormState(),
+        act: (cubit) => cubit.updateMarketingConsent(true),
+        expect: () => [const DivineAuthFormState(marketingConsent: true)],
+      );
+
+      blocTest<DivineAuthCubit, DivineAuthState>(
+        'does nothing when state is not $DivineAuthFormState',
+        build: buildCubit,
+        act: (cubit) => cubit.updateMarketingConsent(true),
+        expect: () => <DivineAuthState>[],
+      );
+    });
+
     group('submit', () {
       group('validation', () {
         blocTest<DivineAuthCubit, DivineAuthState>(
@@ -1023,6 +1040,58 @@ void main() {
                 email: any(named: 'email'),
                 password: any(named: 'password'),
                 scope: any(named: 'scope'),
+              ),
+            ).called(1);
+
+            await cubit.close();
+          },
+        );
+
+        test(
+          'forwards marketingConsent to headlessRegister when opted in',
+          () async {
+            when(
+              () => mockOAuth.headlessRegister(
+                email: any(named: 'email'),
+                password: any(named: 'password'),
+                scope: any(named: 'scope'),
+                marketingConsent: any(named: 'marketingConsent'),
+              ),
+            ).thenAnswer(
+              (_) async => (
+                HeadlessRegisterResult(
+                  success: true,
+                  pubkey: 'test-pubkey',
+                  verificationRequired: true,
+                  deviceCode: testDeviceCode,
+                  email: testEmail,
+                ),
+                testVerifier,
+              ),
+            );
+            when(
+              () => mockPendingVerification.save(
+                deviceCode: any(named: 'deviceCode'),
+                verifier: any(named: 'verifier'),
+                email: any(named: 'email'),
+                inviteCode: any(named: 'inviteCode'),
+              ),
+            ).thenAnswer((_) async {});
+
+            final cubit = buildCubit()
+              ..initialize()
+              ..updateEmail(testEmail)
+              ..updatePassword(testPassword)
+              ..updateMarketingConsent(true);
+
+            await cubit.submit();
+
+            verify(
+              () => mockOAuth.headlessRegister(
+                email: any(named: 'email'),
+                password: any(named: 'password'),
+                scope: any(named: 'scope'),
+                marketingConsent: true,
               ),
             ).called(1);
 
@@ -2107,8 +2176,9 @@ void main() {
           inviteRecoverySourceSlug: 'lele-pons',
           obscurePassword: false,
           isSubmitting: true,
+          marketingConsent: true,
         );
-        expect(state.props, hasLength(17));
+        expect(state.props, hasLength(18));
       });
     });
 

@@ -43,6 +43,7 @@ class AuthFormScaffold extends StatelessWidget {
     this.onConfirmPasswordChanged,
     this.errorWidget,
     this.headerWidget,
+    this.belowFieldsWidget,
     this.secondaryButton,
     this.onBack,
     this.emailLabel = 'Email',
@@ -89,6 +90,10 @@ class AuthFormScaffold extends StatelessWidget {
 
   /// Optional content displayed between the title and form fields.
   final Widget? headerWidget;
+
+  /// Optional content displayed directly below the form fields (e.g. a
+  /// marketing opt-in checkbox on the create-account form).
+  final Widget? belowFieldsWidget;
 
   /// The primary action button (e.g. "Create account").
   final Widget primaryButton;
@@ -213,6 +218,11 @@ class AuthFormScaffold extends StatelessWidget {
                               ),
                             ),
                           ),
+
+                          if (belowFieldsWidget != null) ...[
+                            const SizedBox(height: 16),
+                            belowFieldsWidget!,
+                          ],
 
                           const SizedBox(height: 16),
 

@@ -439,6 +439,49 @@ void main() {
         );
       });
 
+      test('sends marketing_consent true in body when opted in', () async {
+        final mockClient = MockClient((request) async {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['marketing_consent'], isTrue);
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'pubkey': 'pubkey',
+              'verification_required': true,
+            }),
+            200,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        await oauth.headlessRegister(
+          email: 'test@example.com',
+          password: 'password123',
+          marketingConsent: true,
+        );
+      });
+
+      test('sends marketing_consent false in body by default', () async {
+        final mockClient = MockClient((request) async {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['marketing_consent'], isFalse);
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'pubkey': 'pubkey',
+              'verification_required': true,
+            }),
+            200,
+          );
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        await oauth.headlessRegister(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+      });
+
       test('returns error on 404 response', () async {
         final mockClient = MockClient((request) async {
           return http.Response('Not Found', 404);

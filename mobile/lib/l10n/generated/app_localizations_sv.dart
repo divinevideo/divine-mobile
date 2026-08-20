@@ -3187,6 +3187,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get authCreateAccountTitle => 'Skapa konto';
 
   @override
+  String get authCreateAccountMarketingOptIn => 'Send me Divine inspiration';
+
+  @override
   String get authBackToInviteCode => 'Tillbaka till inbjudningskod';
 
   @override

@@ -347,12 +347,15 @@ class KeycastOAuth {
   /// [exchangeCode].
   ///
   /// [nsec] - Optional: import existing Nostr key instead of generating new one
+  /// [marketingConsent] - Whether the user opted in to marketing
+  /// communications at sign-up. Recorded on the account by keycast.
   Future<(HeadlessRegisterResult, String verifier)> headlessRegister({
     required String email,
     required String password,
     String scope = 'policy:social',
     String? nsec,
     String? state,
+    bool marketingConsent = false,
   }) async {
     String? byokPubkey;
     if (nsec != null) {
@@ -371,6 +374,7 @@ class KeycastOAuth {
         'scope': scope,
         'code_challenge': challenge,
         'code_challenge_method': 'S256',
+        'marketing_consent': marketingConsent,
       };
 
       if (byokPubkey != null) {

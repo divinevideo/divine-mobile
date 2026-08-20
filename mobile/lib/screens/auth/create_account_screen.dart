@@ -260,6 +260,10 @@ class _CreateAccountBodyState extends State<_CreateAccountBody> {
           context.read<DivineAuthCubit>().updatePassword(value),
       onConfirmPasswordChanged: (value) =>
           context.read<DivineAuthCubit>().updateConfirmPassword(value),
+      belowFieldsWidget: _MarketingOptInCheckbox(
+        value: widget.state.marketingConsent,
+        enabled: !isDisabled,
+      ),
       errorWidget: widget.state.generalError != null
           ? Column(
               mainAxisSize: MainAxisSize.min,
@@ -289,6 +293,44 @@ class _CreateAccountBodyState extends State<_CreateAccountBody> {
         isSkipping: isSkipping,
         isDisabled: isDisabled,
         onPressed: _skip,
+      ),
+    );
+  }
+}
+
+/// Unchecked-by-default opt-in for marketing communications, shown on the
+/// email/password create-account form. Toggles [DivineAuthCubit]'s
+/// marketing-consent state; the value is sent with headless registration.
+class _MarketingOptInCheckbox extends StatelessWidget {
+  const _MarketingOptInCheckbox({required this.value, required this.enabled});
+
+  final bool value;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.vineColors;
+    return MergeSemantics(
+      child: Semantics(
+        checked: value,
+        enabled: enabled,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: enabled
+              ? () => context.read<DivineAuthCubit>().updateMarketingConsent(
+                  !value,
+                )
+              : null,
+          child: DivineCheckbox(
+            state: value
+                ? DivineCheckboxState.selected
+                : DivineCheckboxState.unselected,
+            label: Text(
+              context.l10n.authCreateAccountMarketingOptIn,
+              style: VineTheme.bodyLargeFont(color: palette.primaryText),
+            ),
+          ),
+        ),
       ),
     );
   }

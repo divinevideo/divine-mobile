@@ -59,6 +59,7 @@ class DivineAuthFormState extends DivineAuthState {
     this.obscurePassword = true,
     this.isSubmitting = false,
     this.isSkipping = false,
+    this.marketingConsent = false,
   });
 
   /// User's email address
@@ -115,6 +116,12 @@ class DivineAuthFormState extends DivineAuthState {
   /// Whether anonymous account creation is in progress
   final bool isSkipping;
 
+  /// Whether the user opted in to marketing communications at sign-up.
+  ///
+  /// Sign-up only and unchecked by default (explicit opt-in). Sent to keycast
+  /// with headless registration and recorded on the account.
+  final bool marketingConsent;
+
   /// Returns true if form has no validation errors and fields are filled
   bool get canSubmit =>
       email.isNotEmpty &&
@@ -144,6 +151,7 @@ class DivineAuthFormState extends DivineAuthState {
     bool? obscurePassword,
     bool? isSubmitting,
     bool? isSkipping,
+    bool? marketingConsent,
     bool clearEmailError = false,
     bool clearPasswordError = false,
     bool clearConfirmPasswordError = false,
@@ -185,6 +193,7 @@ class DivineAuthFormState extends DivineAuthState {
       obscurePassword: obscurePassword ?? this.obscurePassword,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       isSkipping: isSkipping ?? this.isSkipping,
+      marketingConsent: marketingConsent ?? this.marketingConsent,
     );
   }
 
@@ -207,6 +216,7 @@ class DivineAuthFormState extends DivineAuthState {
     obscurePassword,
     isSubmitting,
     isSkipping,
+    marketingConsent,
   ];
 }
 
