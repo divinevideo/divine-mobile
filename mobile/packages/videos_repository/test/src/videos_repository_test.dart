@@ -285,6 +285,14 @@ void main() {
             ).thenAnswer(
               (_) async => _recentPage([
                 _createVideoStats(
+                  id: 'newer-api-video',
+                  pubkey: 'newer-api-pubkey',
+                  dTag: 'newer-api-dtag',
+                  videoUrl: 'https://example.com/newer-api.mp4',
+                  createdAt: 2200,
+                  publishedAt: 2200,
+                ),
+                _createVideoStats(
                   id: 'api-video',
                   pubkey: 'api-pubkey',
                   dTag: 'api-dtag',
@@ -325,7 +333,11 @@ void main() {
 
             expect(
               result.map((video) => video.id),
-              equals(['new-relay-video', 'api-video']),
+              equals([
+                'new-relay-video',
+                'newer-api-video',
+                'api-video',
+              ]),
             );
           },
         );
