@@ -53,13 +53,35 @@ internal class ClipAudioLoopTrack private constructor(
         runCatching {
             track.setVolume(volume)
             if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
-                if (frameCount > 0) {
-                    val frame = ((positionMs * sampleRate) / 1000L).toInt()
-                    track.setPlaybackHeadPosition(frame % frameCount)
-                }
+                moveHead(positionMs)
                 track.play()
             }
         }
+    }
+
+    /**
+     * Moves the loop to [positionMs] of the clip.
+     *
+     * The player's own seek only moves the picture; without this the sound
+     * keeps running from wherever it had got to and the two stay apart for the
+     * rest of the visit. A static track can only be repositioned while it is
+     * not playing, so a running loop is paused across the move.
+     */
+    fun seekTo(positionMs: Long) {
+        if (released) return
+        runCatching {
+            val wasPlaying = track.playState == AudioTrack.PLAYSTATE_PLAYING
+            if (wasPlaying) track.pause()
+            moveHead(positionMs)
+            if (wasPlaying) track.play()
+        }
+    }
+
+    /** Puts the playback head at [positionMs], wrapped into the loop. */
+    private fun moveHead(positionMs: Long) {
+        if (frameCount <= 0) return
+        val frame = ((positionMs * sampleRate) / 1000L).toInt()
+        track.setPlaybackHeadPosition(frame.mod(frameCount))
     }
 
     fun pause() {
@@ -88,12 +110,6 @@ internal class ClipAudioLoopTrack private constructor(
         private const val MAX_PCM_BYTES = 16 * 1024 * 1024
 
         private const val DEQUEUE_TIMEOUT_US = 10_000L
-
-        /** Blend length at the seam, taken from beyond the loop point. */
-        private const val CROSSFADE_MS = 100L
-
-        /** Fallback when nothing lies beyond it: enough to kill the click. */
-        private const val RAMP_MS = 5L
 
         /**
          * Decodes [uri]'s audio to 16-bit PCM, cut to [loopMs] and blended at
@@ -196,12 +212,14 @@ internal class ClipAudioLoopTrack private constructor(
                 }
 
                 val raw = pcm.toByteArray()
-                if (raw.isEmpty() || sampleRate <= 0 || channels <= 0) return null
+                // A wider decode would be written to a stereo track as it
+                // stands and played as interleaved nonsense, so it stays with
+                // ExoPlayer.
+                if (raw.isEmpty() || sampleRate <= 0 || channels !in 1..2) return null
 
                 val samples = ShortArray(raw.size / 2)
                 ByteBuffer.wrap(raw).order(ByteOrder.LITTLE_ENDIAN)
                     .asShortBuffer().get(samples)
-                val decodedFrames = samples.size / channels
 
                 val prepared = LoopPcm.prepare(
                     samples = samples,
@@ -229,7 +247,7 @@ internal class ClipAudioLoopTrack private constructor(
                             .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                             .setSampleRate(sampleRate)
                             .setChannelMask(
-                                if (channels >= 2) {
+                                if (channels == 2) {
                                     AudioFormat.CHANNEL_OUT_STEREO
                                 } else {
                                     AudioFormat.CHANNEL_OUT_MONO
