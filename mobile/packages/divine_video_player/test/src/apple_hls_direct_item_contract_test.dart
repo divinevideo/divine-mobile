@@ -87,17 +87,52 @@ void main() {
         'private func makeHlsPlayerItem(',
       );
 
+      // The path is no longer HLS-only: a single unchanged local file takes
+      // it too, and that one does need its tracks, both to decide rotation and
+      // to clamp the loop to the shorter track. HLS must survive that
+      // unchanged, and it can only do so if every track read is optional --
+      // loadTracks hands back an empty array for it.
       expect(
         body,
-        isNot(contains('loadTracks')),
+        isNot(
+          contains('let videoTrack = try await asset.loadTracks'),
+        ),
         reason:
-            'loadTracks returns an empty array for HLS. Reintroducing it here '
-            'is exactly the failure this path exists to avoid.',
+            'A non-optional track read would crash or throw for HLS, which '
+            'exposes none.',
+      );
+      expect(
+        body,
+        contains(
+          'if let videoTrack = videoTracks.first, '
+          'let audioTrack = audioTracks.first {',
+        ),
+        reason:
+            'The clamp may only run when both tracks are really there, so an '
+            'HLS source falls through it untouched.',
+      );
+      expect(
+        _functionBody(
+          _appleSourceFile().readAsStringSync(),
+          'private static func directItemSuitsRotation(',
+        ),
+        contains('if isHls { return true }'),
+        reason:
+            'The rotation check must short-circuit before it asks an HLS '
+            'asset for tracks it does not have.',
       );
       expect(
         body,
         contains('AVPlayerItem(asset: asset)'),
         reason: 'The item must come straight from the AVURLAsset.',
+      );
+      expect(
+        body,
+        contains('loopTimeRange'),
+        reason:
+            'AVPlayerLooper ignores forwardPlaybackEndTime when it wraps, so '
+            'a clip whose container outlives its picture needs the trim as the '
+            'looper range instead.',
       );
       expect(
         body,

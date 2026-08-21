@@ -22,6 +22,17 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
 
     private var player: AVQueuePlayer?
     private var playerLooper: AVPlayerLooper?
+
+    /// Bereich, den [AVPlayerLooper] wiederholen soll, wenn er kuerzer ist als
+    /// das Item.
+    ///
+    /// Der Direktpfad spielt das Asset unveraendert, kann den gemeinsamen
+    /// Spurenschluss also nicht wie die Composition in eine Zeitspanne
+    /// schneiden. Ohne diesen Bereich laeuft der Loop bis zum Container-Ende
+    /// weiter, und ueber die Strecke, auf der die kuerzere Spur schon
+    /// ausgelaufen ist, steht das Bild -- auf dem Simulator gemessen als 86ms
+    /// Standbild je Runde.
+    private var loopTimeRange: CMTimeRange?
     private var templateItem: AVPlayerItem?
     private var eventSink: FlutterEventSink?
     private var timeObserver: Any?
@@ -258,9 +269,24 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
                 let playerItem: AVPlayerItem
                 let offsets: [Double]
                 let durations: [Double]
-                if let hlsClip = Self.soleHlsClip(in: clipsRaw) {
-                    (playerItem, offsets, durations) =
-                        try await self.makeHlsPlayerItem(from: hlsClip)
+                // Der Direktpfad ist die bessere Wahl, kann aber nicht jeden
+                // Clip darstellen -- ein gedrehtes Video braucht die
+                // Layer-Instruction der Composition. Er meldet das selbst.
+                var direct: (AVPlayerItem, [Double], [Double])?
+                if let clip = Self.soleHlsClip(in: clipsRaw) {
+                    do {
+                        direct = try await self.makeHlsPlayerItem(from: clip)
+                    } catch CompositionError.directItemNotApplicable {
+                        direct = nil
+                        DivineVideoPlayerLog.shared.warning(
+                            "Player \(self.playerId) uses the composition: "
+                                + "clip needs rotation",
+                            name: "DivineVideoPlayer.Load"
+                        )
+                    }
+                }
+                if let direct {
+                    (playerItem, offsets, durations) = direct
                 } else {
                     (playerItem, offsets, durations) =
                         try await self.makeCompositionPlayerItem(from: clipsRaw)
@@ -389,12 +415,52 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
     /// do today rather than playing something subtly wrong. Multi-clip
     /// timelines likewise still need a composition to stitch — the editor's
     /// multi-clip sources are local files, never HLS.
+    /// Whether [uri] may skip the composition and be played from the asset.
+    ///
+    /// A single unchanged clip has nothing to compose, and `AVPlayerLooper`
+    /// only closes the seam over the asset itself -- over a composition of the
+    /// same file it does not. Remote URLs stay on the composition path, which
+    /// owns the buffering and header handling for them.
+    ///
+    /// Rotation is decided later, against the loaded asset, in
+    /// [directItemSuitsRotation] -- it cannot be read from the URL.
+    /// Whether a clip may skip the composition once its asset is loaded.
+    ///
+    /// The composition rights a rotated track with a layer instruction.
+    /// `AVPlayerItemVideoOutput` hands the pixel buffer over as decoded and
+    /// applies no `preferredTransform`, and the Apple side -- unlike Android --
+    /// sends Dart no rotation to compensate with. HLS is exempt: its renditions
+    /// are upright, and an HLS asset exposes no tracks to inspect anyway.
+    private static func directItemSuitsRotation(
+        _ asset: AVURLAsset,
+        isHls: Bool
+    ) async -> Bool {
+        if isHls { return true }
+        do {
+            guard
+                let track = try await asset.loadTracks(withMediaType: .video).first
+            else { return false }
+            let (naturalSize, transform) = try await track.load(
+                .naturalSize, .preferredTransform
+            )
+            return transform.standardized(for: naturalSize).isEffectivelyIdentity
+        } catch {
+            // Unreadable is not upright; let the composition handle it.
+            return false
+        }
+    }
+
+    private static func takesDirectItemPath(_ uri: String) -> Bool {
+        if URL(string: uri)?.pathExtension.lowercased() == "m3u8" { return true }
+        return !uri.hasPrefix("http")
+    }
+
     private static func soleHlsClip(
         in clipsRaw: [[String: Any]]
     ) -> [String: Any]? {
         guard clipsRaw.count == 1, let clip = clipsRaw.first,
             let uri = clip["uri"] as? String,
-            URL(string: uri)?.pathExtension.lowercased() == "m3u8",
+            Self.takesDirectItemPath(uri),
             (clip["startMs"] as? NSNumber)?.int64Value ?? 0 == 0,
             (clip["volume"] as? NSNumber)?.doubleValue ?? 1.0 == 1.0,
             (clip["playbackSpeed"] as? NSNumber)?.doubleValue ?? 1.0 == 1.0
@@ -420,7 +486,19 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
     private func makeHlsPlayerItem(
         from clipMap: [String: Any]
     ) async throws -> (AVPlayerItem, [Double], [Double]) {
-        guard let uri = clipMap["uri"] as? String, let url = URL(string: uri) else {
+        guard let uri = clipMap["uri"] as? String else {
+            throw CompositionError.noPlayableVideoTracks
+        }
+        // Ein blosser Dateipfad ist keine URL mit Schema; URL(string:) liefert
+        // dafuer etwas, das AVURLAsset nicht laden kann. Der Composition-Pfad
+        // unterscheidet hier schon, dieser hat es nie gebraucht, weil er bis
+        // jetzt nur HLS-URLs sah.
+        let url: URL
+        if uri.hasPrefix("/") {
+            url = URL(fileURLWithPath: uri)
+        } else if let parsed = URL(string: uri) {
+            url = parsed
+        } else {
             throw CompositionError.noPlayableVideoTracks
         }
         let httpHeaders = clipMap["httpHeaders"] as? [String: String]
@@ -428,6 +506,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
             [Self.avURLAssetHTTPHeaderFieldsKey: $0]
         }
         let asset = AVURLAsset(url: url, options: assetOptions)
+        let isHls = url.pathExtension.lowercased() == "m3u8"
+        guard await Self.directItemSuitsRotation(asset, isHls: isHls) else {
+            throw CompositionError.directItemNotApplicable
+        }
         let assetDuration = try await asset.load(.duration)
 
         // soleHlsClip guarantees startMs == 0, so the item's timeline is
@@ -440,11 +522,48 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
             throw CompositionError.noPlayableVideoTracks
         }
 
+        // Denselben Schnitt wie die Composition: die Wiedergabe endet dort, wo
+        // die kuerzere der beiden Spuren ausgeht, nicht am Container-Ende.
+        // Hier kann er nicht in eine Zeitspanne geschnitten werden -- das Asset
+        // bleibt unveraendert -- also bekommt ihn der Looper als Bereich.
+        var loopEnd = endTime
+        let trimToCommonTrackEnd =
+            (clipMap["trimToCommonTrackEnd"] as? NSNumber)?.boolValue ?? false
+        if trimToCommonTrackEnd {
+            let videoTracks = try await asset.loadTracks(withMediaType: .video)
+            let audioTracks = try await asset.loadTracks(withMediaType: .audio)
+            if let videoTrack = videoTracks.first, let audioTrack = audioTracks.first {
+                do {
+                    let videoRange = try await videoTrack.load(.timeRange)
+                    let audioRange = try await audioTrack.load(.timeRange)
+                    if let commonEnd = boundedCommonTrackEnd(
+                        startTime: .zero,
+                        requestedEnd: endTime,
+                        videoEnd: videoRange.end,
+                        audioEnd: audioRange.end
+                    ) {
+                        loopEnd = CMTimeMinimum(loopEnd, commonEnd)
+                    }
+                } catch {
+                    DivineVideoPlayerLog.shared.warning(
+                        "Player \(playerId) could not read track durations: "
+                            + "\(error.localizedDescription)",
+                        name: "DivineVideoPlayer.Load"
+                    )
+                }
+            }
+        }
+
         let playerItem = AVPlayerItem(asset: asset)
-        if CMTimeCompare(endTime, assetDuration) < 0 {
+        // forwardPlaybackEndTime und der Looper beschreiben dieselbe Grenze auf
+        // zwei Wegen; nur der Looper-Bereich wird beim Wiederholen beachtet.
+        loopTimeRange = CMTimeCompare(loopEnd, assetDuration) < 0
+            ? CMTimeRange(start: .zero, end: loopEnd)
+            : nil
+        if loopTimeRange == nil, CMTimeCompare(endTime, assetDuration) < 0 {
             playerItem.forwardPlaybackEndTime = endTime
         }
-        return (playerItem, [0], [endTime.seconds])
+        return (playerItem, [0], [loopEnd.seconds])
     }
 
     /// Builds a player item backed by an AVMutableComposition of every clip.
@@ -454,6 +573,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
         let (composition, videoComposition, offsets, durations, audioMix) =
             try await buildComposition(from: clipsRaw)
 
+        loopTimeRange = nil
         let playerItem = AVPlayerItem(asset: composition)
         // Validate BEFORE assigning. -[AVPlayerItem setVideoComposition:]
         // throws an Objective-C NSInvalidArgumentException on an invalid
@@ -965,7 +1085,15 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler {
         playerLooper = nil
         player.removeAllItems()
         if isLooping {
-            playerLooper = AVPlayerLooper(player: player, templateItem: item)
+            if let range = loopTimeRange {
+                playerLooper = AVPlayerLooper(
+                    player: player,
+                    templateItem: item,
+                    timeRange: range
+                )
+            } else {
+                playerLooper = AVPlayerLooper(player: player, templateItem: item)
+            }
         } else {
             player.insert(item, after: nil)
         }
@@ -1605,6 +1733,7 @@ private enum CompositionError: Error, LocalizedError {
     case noPlayableVideoTracks
     case invalidRenderSize
     case invalidFrameDuration
+    case directItemNotApplicable
 
     var errorDescription: String? {
         switch self {
@@ -1616,6 +1745,8 @@ private enum CompositionError: Error, LocalizedError {
             return "Video composition has an invalid render size."
         case .invalidFrameDuration:
             return "Video composition has an invalid frame duration."
+        case .directItemNotApplicable:
+            return "Clip needs the composition path."
         }
     }
 }
