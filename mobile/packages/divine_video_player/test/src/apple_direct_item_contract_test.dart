@@ -2,27 +2,30 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// An HLS `AVURLAsset` exposes no tracks — `loadTracks(withMediaType:)` returns
-/// an empty array — so an `AVMutableComposition` built from one always ends in
-/// `CompositionError.noPlayableVideoTracks` and can never play. A single HLS
-/// clip therefore has to bypass the composition entirely and be handed to
-/// `AVPlayerItem` directly.
+/// A single unchanged clip is handed to `AVPlayerItem` directly instead of
+/// being copied into an `AVMutableComposition`, for two separate reasons. An
+/// HLS `AVURLAsset` exposes no tracks — `loadTracks(withMediaType:)` returns an
+/// empty array — so a composition built from one always ends in
+/// `CompositionError.noPlayableVideoTracks` and can never play. A local file
+/// has nothing to compose, and `AVPlayerLooper` closes the loop seam over an
+/// asset while it does not over a composition of the same file.
 ///
 /// None of this has a Dart runtime surface, and the package has no Swift test
 /// harness, so the invariants are pinned as a source contract the same way the
-/// composition guards are: a refactor that routes HLS back through
+/// composition guards are: a refactor that routes these sources back through
 /// `buildComposition` keeps every runtime test green while restoring
-/// "No playable video tracks found." for every HLS source.
+/// "No playable video tracks found." for every HLS source and the loop seam
+/// for every local one.
 void main() {
-  group('Apple native HLS direct-item contract', () {
-    test('a single m3u8 clip is diverted away from the composition', () {
+  group('Apple native direct-item contract', () {
+    test('a single unchanged clip is diverted away from the composition', () {
       final source = _appleSourceFile().readAsStringSync();
 
       expect(
         source,
-        contains('soleHlsClip'),
+        contains('soleDirectItemClip'),
         reason:
-            'The HLS detection helper is what keeps an HLS source out of '
+            'The eligibility helper is what keeps a divertable source out of '
             'buildComposition.',
       );
       expect(
@@ -30,14 +33,22 @@ void main() {
         contains('pathExtension.lowercased() == "m3u8"'),
         reason:
             'Every app-constructed HLS URL ends in .m3u8, so the path '
-            'extension is the cheap deterministic signal for which builder '
-            'runs - no extra load to discover the asset has no tracks.',
+            'extension is the cheap deterministic signal that admits one - no '
+            'extra load to discover the asset has no tracks.',
+      );
+      expect(
+        source,
+        contains('return !uri.hasPrefix("http")'),
+        reason:
+            'A remote non-HLS URL keeps taking the composition, which owns the '
+            'buffering and header handling for it; only a local file joins HLS '
+            'on the direct path.',
       );
       expect(
         source,
         contains('clipsRaw.count == 1'),
         reason:
-            'Only a whole-timeline HLS source may skip the composition — a '
+            'Only a whole-timeline source may skip the composition — a '
             'multi-clip timeline still needs one to stitch.',
       );
       expect(
@@ -66,7 +77,7 @@ void main() {
             'so a clip with custom volume must keep taking that path.',
       );
 
-      final dispatch = source.indexOf('Self.soleHlsClip(in: clipsRaw)');
+      final dispatch = source.indexOf('Self.soleDirectItemClip(in: clipsRaw)');
       final compositionCall = source.indexOf(
         'makeCompositionPlayerItem(from: clipsRaw)',
       );
@@ -76,22 +87,22 @@ void main() {
         dispatch,
         lessThan(compositionCall),
         reason:
-            'The HLS check must gate the composition call, not follow it — '
-            'otherwise the composition is built first and throws.',
+            'The eligibility check must gate the composition call, not follow '
+            'it — otherwise the composition is built first and throws.',
       );
     });
 
-    test('the HLS builder never asks the asset for tracks', () {
+    test('the direct builder never demands tracks an HLS asset lacks', () {
       final body = _functionBody(
         _appleSourceFile().readAsStringSync(),
-        'private func makeHlsPlayerItem(',
+        'private func makeDirectPlayerItem(',
       );
 
-      // The path is no longer HLS-only: a single unchanged local file takes
-      // it too, and that one does need its tracks, both to decide rotation and
-      // to clamp the loop to the shorter track. HLS must survive that
-      // unchanged, and it can only do so if every track read is optional --
-      // loadTracks hands back an empty array for it.
+      // The path is not HLS-only: a single unchanged local file takes it too,
+      // and that one does need its tracks, both to decide rotation and to
+      // clamp the loop to the shorter track. HLS must survive that unchanged,
+      // and it can only do so if every track read is optional — loadTracks
+      // hands back an empty array for it.
       expect(
         body,
         isNot(
@@ -147,6 +158,14 @@ void main() {
         reason:
             'Gated HLS playback authenticates with a viewer-auth header, which '
             'is lost if the asset is built without the header options.',
+      );
+      expect(
+        body,
+        contains('loopAudioMix = nil'),
+        reason:
+            'A direct item has no audio mix, so a mix left behind by an '
+            'earlier composition would be re-applied to every item the looper '
+            'builds - with input parameters addressing another asset.',
       );
     });
   });
