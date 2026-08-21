@@ -203,71 +203,19 @@ internal class ClipAudioLoopTrack private constructor(
                     .asShortBuffer().get(samples)
                 val decodedFrames = samples.size / channels
 
-                // [loopMs] is the length the player presents, which is what the
-                // picture loops on. The extractor's track duration is the media
-                // length and ignores the edit list -- for a clip whose edit list
-                // was corrected those differ, and looping on the media length
-                // walks the sound away from the picture every lap.
-                val loopFrames = minOf(
-                    (loopMs * sampleRate / 1000L).toInt(),
-                    decodedFrames,
-                )
-                if (loopFrames <= 0) return null
-
-                // Blend the seam shut. The prototype takes the material that
-                // lies past the loop point, which is the better source: the
-                // wrap then lands on two consecutive samples of the recording.
-                // Android's decoder applies the container's gapless trimming
-                // and hands back exactly the presented length, so there usually
-                // is none -- measured as "0 frames spare" on every fixture. The
-                // loop's own tail is then blended into its head instead, which
-                // is not the same material but closes the same step.
-                // Blend the seam shut with the material that lies past the
-                // loop point: the wrap then lands on two consecutive samples of
-                // the recording, which is what makes the prototype's loop sound
-                // closed rather than restarted.
-                //
-                // Folding the loop's own tail into its head instead was tried
-                // and is worse than doing nothing: the tail has to fade out or
-                // it is heard twice, so the seam becomes a dip to near-silence
-                // followed by material that jumps back. Without spare material
-                // the only honest option is a short ramp, which kills the click
-                // and leaves the restart audible.
-                val spare = decodedFrames - loopFrames
-                val fadeFrames = minOf(
-                    (CROSSFADE_MS * sampleRate / 1000L).toInt(),
-                    spare,
-                )
-                for (i in 0 until fadeFrames) {
-                    val a = i.toFloat() / fadeFrames
-                    for (channel in 0 until channels) {
-                        val head = samples[i * channels + channel].toFloat()
-                        val past = samples[(loopFrames + i) * channels + channel]
-                            .toFloat()
-                        samples[i * channels + channel] =
-                            (past * (1f - a) + head * a)
-                                .coerceIn(-32768f, 32767f).toInt().toShort()
-                    }
-                }
-                if (fadeFrames == 0) {
-                    val rampFrames = minOf(
-                        (RAMP_MS * sampleRate / 1000L).toInt(),
-                        loopFrames / 8,
-                    )
-                    for (i in 0 until rampFrames) {
-                        val gain = i.toFloat() / rampFrames
-                        for (channel in 0 until channels) {
-                            val head = i * channels + channel
-                            val tail = (loopFrames - 1 - i) * channels + channel
-                            samples[head] = (samples[head] * gain).toInt().toShort()
-                            samples[tail] = (samples[tail] * gain).toInt().toShort()
-                        }
-                    }
-                }
+                val prepared = LoopPcm.prepare(
+                    samples = samples,
+                    channels = channels,
+                    sampleRate = sampleRate,
+                    loopMs = loopMs,
+                ) ?: return null
+                val loopFrames = prepared.loopFrames
+                val fadeFrames = prepared.fadeFrames
+                val fromPast = prepared.blendedFromPastTheLoop
 
                 val bytes = ByteArray(loopFrames * channels * 2)
                 ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
-                    .asShortBuffer().put(samples, 0, loopFrames * channels)
+                    .asShortBuffer().put(prepared.samples, 0, loopFrames * channels)
 
                 val track = AudioTrack.Builder()
                     .setAudioAttributes(
@@ -302,9 +250,8 @@ internal class ClipAudioLoopTrack private constructor(
 
                 DivineVideoPlayerLog.debug(
                     "Looping clip audio outside ExoPlayer: ${loopFrames} frames " +
-                        "at ${sampleRate}Hz, ${fadeFrames} frame crossfade " +
-                        "(${if (fadeFrames > 0) "crossfade" else "ramp only"}), " +
-                        "${spare} frames spare",
+                        "at ${sampleRate}Hz, ${fadeFrames} frame " +
+                        "${if (fromPast) "crossfade" else "ramp"}",
                     name = "DivineVideoPlayer.AudioLoop",
                 )
                 return ClipAudioLoopTrack(track, sampleRate, loopFrames)
