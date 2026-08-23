@@ -15,6 +15,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
+import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -410,6 +411,25 @@ class _DeveloperOptionsScreenState
                     style: VineTheme.bodyMediumFont(
                       color: context.vineColors.secondaryText,
                     ),
+                  ),
+                ),
+                // PROTOTYPE (#8076). Remove with the prototype.
+                ListTile(
+                  title: Text(
+                    'DM inbox: 4-tab prototype',
+                    style: VineTheme.titleMediumFont(
+                      color: context.vineColors.primaryText,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Official / Inbox / Requests / Likely spam on fixture '
+                    'data, with live-tunable weights.',
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.secondaryText,
+                    ),
+                  ),
+                  onTap: () => context.pushNamed(
+                    DmInboxTabsPrototypeScreen.routeName,
                   ),
                 ),
                 ListTile(

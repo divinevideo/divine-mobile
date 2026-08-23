@@ -9,12 +9,14 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
 import 'package:openvine/models/authentication_source.dart';
+import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
+import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
@@ -295,6 +297,13 @@ List<RouteBase> settingsRoutes(Ref ref) {
       path: ClipRecoveryScreen.path,
       name: ClipRecoveryScreen.routeName,
       builder: (_, _) => const ClipRecoveryScreen(),
+    ),
+    // PROTOTYPE (#8076): four-tab DM inbox on fixture data. Remove with it.
+    GoRoute(
+      path: DmInboxTabsPrototypeScreen.path,
+      name: DmInboxTabsPrototypeScreen.routeName,
+      parentNavigatorKey: NavigatorKeys.root,
+      builder: (_, _) => const DmInboxTabsPrototypeScreen(),
     ),
     GoRoute(
       path: DeveloperOptionsScreen.path,
