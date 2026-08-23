@@ -28,6 +28,9 @@ abstract final class RoutePaths {
   static const curatedListFeedBase = '/list';
   static const developerOptions = '/developer-options';
   static const discoverLists = '/discover-lists';
+
+  /// PROTOTYPE (#8076). Remove with the prototype.
+  static const dmInboxTabsPrototype = '/developer-options/dm-inbox-tabs';
   static const emailVerification = '/verify-email';
   static const explore = '/explore';
   static const followersBase = '/followers';
