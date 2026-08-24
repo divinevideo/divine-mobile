@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
@@ -25,6 +26,7 @@ import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit
 import 'package:openvine/blocs/video_playback_status/video_playback_status_state.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag_state.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -35,6 +37,7 @@ import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
 import 'package:openvine/models/viewer_auth_result.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/community_content_label_provider.dart';
@@ -103,6 +106,18 @@ class _MockCommentsRepository extends Mock implements CommentsRepository {}
 class _MockRepostsRepository extends Mock implements RepostsRepository {}
 
 class _MockFeatureFlagService extends Mock implements FeatureFlagService {}
+
+class _RecordingAnalytics extends NoOpAnalyticsEventSink {
+  final events = <({String name, Map<String, Object> parameters})>[];
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    events.add((name: name, parameters: parameters));
+  }
+}
 
 /// Flag service with community content warnings ON, everything else OFF.
 FeatureFlagService _communityFlagsOn() {
@@ -2413,6 +2428,37 @@ void main() {
   });
 
   group('activity wiring', () {
+    testWidgets('records the first real swipe at depth two', (tester) async {
+      final analytics = _RecordingAnalytics();
+      final firstVideo = _makeVideo();
+      final secondVideo = _makeVideo(
+        id: 'b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234a1',
+      );
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [firstVideo, secondVideo],
+        additionalOverrides: [
+          consumptionAnalyticsTrackerProvider.overrideWithValue(
+            ConsumptionAnalyticsTracker(analytics: analytics),
+          ),
+        ],
+      );
+
+      final feed = tester.widget<InfiniteVideoFeed>(
+        find.byType(InfiniteVideoFeed),
+      );
+      feed.onActiveVideoChanged?.call(secondVideo, 1);
+      await tester.pump();
+
+      expect(analytics.events, hasLength(1));
+      expect(analytics.events.single.name, 'feed_scrolled');
+      expect(analytics.events.single.parameters, {
+        'feed_type': 'unknown',
+        'depth': 2,
+      });
+    });
+
     testWidgets('passes effective activity through to InfiniteVideoFeed', (
       tester,
     ) async {

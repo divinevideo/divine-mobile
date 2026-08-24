@@ -143,7 +143,6 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   final Set<String> _revealedContentWarningVideoIds = <String>{};
   late final ConsumptionAnalyticsTracker _consumptionAnalytics;
   final Set<String> _seenVideoIds = {};
-  bool _hasObservedActiveVideo = false;
 
   @override
   void initState() {
@@ -349,13 +348,8 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             .onPlaybackVolumeChanged,
         onActiveVideoChanged: (video, index) {
           _resumeAutoAdvanceAfterSwipe();
-          if (!_hasObservedActiveVideo) {
-            _hasObservedActiveVideo = true;
-            _seenVideoIds.add(video.id);
-            widget.onActiveVideoChanged?.call(video, index);
-            return;
-          }
-          if (_seenVideoIds.add(video.id)) {
+          final isProgrammaticActivation = index == widget.currentIndex;
+          if (_seenVideoIds.add(video.id) && !isProgrammaticActivation) {
             unawaited(
               _consumptionAnalytics.feedScrolled(
                 trafficSource: widget.trafficSource,
