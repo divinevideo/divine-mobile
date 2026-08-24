@@ -448,6 +448,54 @@ void main() {
     });
 
     testWidgets(
+      'consumption completion falls back to the current controller duration',
+      (tester) async {
+        final consumptionSink = _RecordingEventSink();
+        final isActive = ValueNotifier(true);
+        final video = ValueNotifier(_video);
+        final controller = _stubController(
+          isPlaying: true,
+          duration: Duration.zero,
+        );
+
+        await tester.pumpWidget(
+          _buildTrackerHarness(
+            authService: authService,
+            analyticsService: analyticsService,
+            seenVideosService: seenVideosService,
+            controller: controller.controller,
+            video: video,
+            isActive: isActive,
+            clock: () => now,
+            consumptionAnalytics: ConsumptionAnalyticsTracker(
+              analytics: consumptionSink,
+            ),
+          ),
+        );
+
+        now = now.add(const Duration(seconds: 5));
+        controller.setStateSilently(
+          const DivineVideoPlayerState(
+            status: PlaybackStatus.playing,
+            duration: Duration(seconds: 5),
+            isFirstFrameRendered: true,
+          ),
+        );
+        isActive.value = false;
+        await tester.pump();
+
+        expect(consumptionSink.eventNames, [
+          'video_started',
+          'video_completed',
+        ]);
+
+        isActive.dispose();
+        video.dispose();
+        await controller.close();
+      },
+    );
+
+    testWidgets(
       'active to inactive under one second records a partial-loop view',
       (tester) async {
         final isActive = ValueNotifier(true);
@@ -1184,6 +1232,7 @@ List<_TrackedAnalyticsEvent> _viewEndEvents(
 ({
   DivineVideoPlayerController controller,
   void Function(DivineVideoPlayerState state) setState,
+  void Function(DivineVideoPlayerState state) setStateSilently,
   Future<void> Function() close,
 })
 _stubController({
@@ -1208,6 +1257,7 @@ _stubController({
       state = next;
       stateController.add(next);
     },
+    setStateSilently: (DivineVideoPlayerState next) => state = next,
     close: () async {
       await stateController.close();
       state = const DivineVideoPlayerState();

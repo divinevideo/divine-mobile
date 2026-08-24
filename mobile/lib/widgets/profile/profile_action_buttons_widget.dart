@@ -11,6 +11,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -107,6 +108,7 @@ class ProfileActionButtons extends ConsumerWidget {
           create: (_) => MyFollowingBloc(
             followRepository: followRepository,
             contentBlocklistRepository: contentBlocklistRepository,
+            consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
           )..add(const MyFollowingListLoadRequested()),
         ),
         if (canShowBell)

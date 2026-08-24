@@ -281,6 +281,7 @@ class _DivineVideoMetricsTrackerState
         video: widget.video,
         trafficSource: widget.trafficSource,
         position: _sessionPosition!,
+        sourceDetail: widget.sourceDetail,
       ),
     );
 
@@ -427,10 +428,18 @@ class _DivineVideoMetricsTrackerState
   void _recordConsumptionSession(VideoEvent video) {
     if (!_hasStartedPlayback) return;
 
-    final durationMs = _lastKnownDuration?.inMilliseconds ?? 0;
+    Duration? totalDuration = _lastKnownDuration;
+    if (totalDuration == null) {
+      try {
+        totalDuration = widget.controller?.state.duration;
+      } catch (_) {
+        totalDuration = null;
+      }
+    }
+    final durationMs = totalDuration?.inMilliseconds ?? 0;
     final watchMs = _watchTotal.inMilliseconds;
     final pctWatched = durationMs <= 0 ? 0.0 : watchMs / durationMs * 100;
-    final loops = _cumulativeLoops(_lastKnownDuration).floor();
+    final loops = _cumulativeLoops(totalDuration).floor();
     if (loops > 0 || pctWatched >= 90) {
       unawaited(
         _consumptionAnalytics.videoCompleted(

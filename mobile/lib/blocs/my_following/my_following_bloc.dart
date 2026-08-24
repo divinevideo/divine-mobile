@@ -32,7 +32,7 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
   MyFollowingBloc({
     required FollowRepository followRepository,
     required ContentBlocklistRepository contentBlocklistRepository,
-    ConsumptionAnalyticsTracker? consumptionAnalytics,
+    required ConsumptionAnalyticsTracker consumptionAnalytics,
     UserRankingSignalsLoader? rankingSignalsLoader,
     bool rankForList = false,
     MyFollowingState? initialState,
@@ -113,7 +113,7 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
   final bool _rankForList;
   final FollowRepository _followRepository;
   final ContentBlocklistRepository _blocklistRepository;
-  final ConsumptionAnalyticsTracker? _consumptionAnalytics;
+  final ConsumptionAnalyticsTracker _consumptionAnalytics;
   StreamSubscription<List<String>>? _followingSubscription;
 
   /// Filter pubkeys by removing blocked users.
@@ -306,7 +306,7 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
           final wasFollowing = _followRepository.followingPubkeys.contains(pubkey);
           await _followRepository.follow(pubkey);
           if (!wasFollowing) {
-            unawaited(_consumptionAnalytics?.followAdded(targetPubkey: pubkey));
+            unawaited(_consumptionAnalytics.followAdded(targetPubkey: pubkey));
           }
         case MyFollowingUnfollowRequested(:final pubkey):
           await _followRepository.unfollow(pubkey);
