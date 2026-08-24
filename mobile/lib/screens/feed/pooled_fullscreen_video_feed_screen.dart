@@ -600,8 +600,10 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
 
     return BlocProvider<InlineCommentComposerCubit>(
       key: ValueKey(commentsRepository),
-      create: (_) =>
-          InlineCommentComposerCubit(commentsRepository: commentsRepository),
+      create: (_) => InlineCommentComposerCubit(
+        commentsRepository: commentsRepository,
+        consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
+      ),
       child: MultiBlocProvider(
         providers: [
           BlocProvider.value(value: _autoAdvanceCubit),

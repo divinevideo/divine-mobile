@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:models/models.dart' show NIP71VideoKinds;
 import 'package:openvine/blocs/video_interactions/reportable_sites.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -44,6 +45,7 @@ class VideoInteractionsBloc
     int? initialCommentCount,
     int? initialRepostCount,
     bool includeVideoReplies = false,
+    ConsumptionAnalyticsTracker? consumptionAnalytics,
   }) : _eventId = eventId,
        _authorPubkey = authorPubkey,
        _likesRepository = likesRepository,
@@ -52,6 +54,7 @@ class VideoInteractionsBloc
        _addressableId = addressableId,
        _archivedLikeCount = archivedLikeCount,
        _includeVideoReplies = includeVideoReplies,
+       _consumptionAnalytics = consumptionAnalytics,
        super(
          VideoInteractionsState(
            likeCount: initialLikeCount,
@@ -84,6 +87,7 @@ class VideoInteractionsBloc
   final CommentsRepository _commentsRepository;
   final RepostsRepository _repostsRepository;
   final bool _includeVideoReplies;
+  final ConsumptionAnalyticsTracker? _consumptionAnalytics;
 
   /// Addressable ID for repost operations (format: `kind:pubkey:d-tag`).
   /// Null if the video doesn't have a d-tag (non-addressable event).
@@ -335,7 +339,7 @@ class VideoInteractionsBloc
             : null,
       );
       outcome = isNowLiked == optimisticLiked
-          ? const _LikeSettleConfirmed()
+          ? _LikeSettleConfirmed(isLiked: isNowLiked)
           : _LikeSettleOutOfBand(actualIsLiked: isNowLiked);
     } on AlreadyLikedException {
       outcome = const _LikeSettleAlready();
@@ -377,7 +381,15 @@ class VideoInteractionsBloc
   ) {
     if (event.revision != _likeToggleRevision) return;
     switch (event.outcome) {
-      case _LikeSettleConfirmed():
+      case _LikeSettleConfirmed(:final isLiked):
+        if (isLiked) {
+          unawaited(
+            _consumptionAnalytics?.reactionSent(
+              targetVideoId: _eventId,
+              targetPubkey: _authorPubkey,
+            ),
+          );
+        }
         // Optimistic emit already matches the publish result; no-op.
         return;
       case _LikeSettleOutOfBand(:final actualIsLiked):
