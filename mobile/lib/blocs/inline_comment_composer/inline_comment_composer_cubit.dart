@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'inline_comment_composer_state.dart';
@@ -24,11 +25,15 @@ part 'inline_comment_composer_state.dart';
 /// reference.
 class InlineCommentComposerCubit extends Cubit<InlineCommentComposerState>
     with CloseGuardedEmit<InlineCommentComposerState> {
-  InlineCommentComposerCubit({required CommentsRepository commentsRepository})
-    : _commentsRepository = commentsRepository,
-      super(const InlineCommentComposerState());
+  InlineCommentComposerCubit({
+    required CommentsRepository commentsRepository,
+    ConsumptionAnalyticsTracker? consumptionAnalytics,
+  }) : _commentsRepository = commentsRepository,
+       _consumptionAnalytics = consumptionAnalytics,
+       super(const InlineCommentComposerState());
 
   final CommentsRepository _commentsRepository;
+  final ConsumptionAnalyticsTracker? _consumptionAnalytics;
 
   /// Posts [content] as a top-level comment on [video].
   ///
@@ -55,6 +60,12 @@ class InlineCommentComposerCubit extends Cubit<InlineCommentComposerState>
         rootEventKind: NIP71VideoKinds.addressableShortVideo,
         rootEventAuthorPubkey: video.pubkey,
         rootAddressableId: video.addressableId,
+      );
+      unawaited(
+        _consumptionAnalytics?.commentSent(
+          targetVideoId: video.id,
+          targetPubkey: video.pubkey,
+        ),
       );
       emitIfOpen(state.copyWith(status: InlineCommentComposerStatus.submitted));
     } catch (error, stackTrace) {

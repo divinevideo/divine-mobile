@@ -7,9 +7,11 @@ import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -71,6 +73,7 @@ class _DivineVideoMetricsTrackerState
   /// AnalyticsService suppresses double-fires within a session but lets a
   /// remount re-watch report its own start.
   String? _sessionToken;
+  int? _sessionPosition;
 
   /// Whether playback has actually started at least once in this session.
   /// The view is counted at that moment, not at mount: a scroll-past that
@@ -119,6 +122,7 @@ class _DivineVideoMetricsTrackerState
   StreamSubscription<DivineVideoPlayerState>? _stateSubscription;
 
   late AnalyticsService _analyticsService;
+  late ConsumptionAnalyticsTracker _consumptionAnalytics;
   ProviderSubscription<AnalyticsService>? _analyticsServiceSubscription;
   late AuthService _authService;
   late SeenVideosService _seenVideosService;
@@ -127,6 +131,7 @@ class _DivineVideoMetricsTrackerState
   void initState() {
     super.initState();
     _analyticsService = ref.read(analyticsServiceProvider);
+    _consumptionAnalytics = ref.read(consumptionAnalyticsTrackerProvider);
     _analyticsServiceSubscription = ref.listenManual<AnalyticsService>(
       analyticsServiceProvider,
       (_, next) => _analyticsService = next,
@@ -151,6 +156,7 @@ class _DivineVideoMetricsTrackerState
         oldWidget.video,
         productEndReason: ProductAnalyticsV2PlaybackEndReason.navigation,
       );
+      _recordConsumptionSession(oldWidget.video);
       _resetTracking();
     } else if (becameInactive) {
       // Either way the visible segment ends, so report the delta so far.
@@ -159,6 +165,7 @@ class _DivineVideoMetricsTrackerState
         productEndReason: ProductAnalyticsV2PlaybackEndReason.navigation,
       );
       if (!widget.isActive) {
+        _recordConsumptionSession(widget.video);
         // Scrolled away. The session is over; scrolling back is a fresh
         // watch and must count its own view (#7231).
         _resetViewSession();
@@ -267,6 +274,15 @@ class _DivineVideoMetricsTrackerState
     if (_hasStartedPlayback) return;
     _hasStartedPlayback = true;
     _sessionToken = const Uuid().v4();
+    _sessionPosition = widget.position < 0 ? 0 : widget.position;
+
+    unawaited(
+      _consumptionAnalytics.videoStarted(
+        video: widget.video,
+        trafficSource: widget.trafficSource,
+        position: _sessionPosition!,
+      ),
+    );
 
     unawaited(
       _analyticsService
@@ -408,6 +424,33 @@ class _DivineVideoMetricsTrackerState
     _productPlaybackSessionId = null;
   }
 
+  void _recordConsumptionSession(VideoEvent video) {
+    if (!_hasStartedPlayback) return;
+
+    final durationMs = _lastKnownDuration?.inMilliseconds ?? 0;
+    final watchMs = _watchTotal.inMilliseconds;
+    final pctWatched = durationMs <= 0 ? 0.0 : watchMs / durationMs * 100;
+    final loops = _cumulativeLoops(_lastKnownDuration).floor();
+    if (loops > 0 || pctWatched >= 90) {
+      unawaited(
+        _consumptionAnalytics.videoCompleted(
+          videoId: video.id,
+          watchMs: watchMs,
+          pctWatched: pctWatched.clamp(0, 100).toDouble(),
+          loops: loops,
+        ),
+      );
+    } else {
+      unawaited(
+        _consumptionAnalytics.videoSkipped(
+          videoId: video.id,
+          watchMs: watchMs,
+          position: _sessionPosition ?? 0,
+        ),
+      );
+    }
+  }
+
   void _updateProductImpressionTimer() {
     final qualifies = _isTracking && widget.visibilityRatio >= 0.5;
     if (_hasRecordedProductImpression || !qualifies) {
@@ -506,6 +549,7 @@ class _DivineVideoMetricsTrackerState
   /// belongs to the mount rather than to the session.
   void _resetViewSession() {
     _sessionToken = null;
+    _sessionPosition = null;
     _hasStartedPlayback = false;
     _mountedAt = _isTracking ? widget._clock() : null;
     _playIntervalStartedAt = null;
@@ -530,6 +574,7 @@ class _DivineVideoMetricsTrackerState
       widget.video,
       productEndReason: ProductAnalyticsV2PlaybackEndReason.navigation,
     );
+    _recordConsumptionSession(widget.video);
     unawaited(_stateSubscription?.cancel());
     _analyticsServiceSubscription?.close();
     super.dispose();

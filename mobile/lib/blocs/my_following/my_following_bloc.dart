@@ -8,6 +8,7 @@ import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'my_following_event.dart';
@@ -24,8 +25,10 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
   MyFollowingBloc({
     required FollowRepository followRepository,
     required ContentBlocklistRepository contentBlocklistRepository,
+    ConsumptionAnalyticsTracker? consumptionAnalytics,
   }) : _followRepository = followRepository,
        _blocklistRepository = contentBlocklistRepository,
+       _consumptionAnalytics = consumptionAnalytics,
        super(
          MyFollowingState(
            status: followRepository.followingPubkeys.isEmpty
@@ -53,6 +56,7 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
 
   final FollowRepository _followRepository;
   final ContentBlocklistRepository _blocklistRepository;
+  final ConsumptionAnalyticsTracker? _consumptionAnalytics;
   StreamSubscription<List<String>>? _followingSubscription;
 
   /// Filter pubkeys by removing blocked users.
@@ -189,7 +193,15 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
     }
 
     try {
+      final wasFollowing = _followRepository.followingPubkeys.contains(
+        event.pubkey,
+      );
       await _followRepository.toggleFollow(event.pubkey);
+      if (!wasFollowing) {
+        unawaited(
+          _consumptionAnalytics?.followAdded(targetPubkey: event.pubkey),
+        );
+      }
     } catch (e) {
       Log.error(
         'Failed to toggle follow for user: $e',

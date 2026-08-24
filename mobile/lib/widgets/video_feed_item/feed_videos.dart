@@ -17,10 +17,12 @@ import 'package:openvine/blocs/video_playback_status/video_playback_status_state
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/community_content_label_provider.dart';
@@ -139,6 +141,18 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   /// [InfiniteVideoFeed.canAutoPlay] must consult it before starting
   /// playback — a warned video must stay paused until revealed.
   final Set<String> _revealedContentWarningVideoIds = <String>{};
+  late final ConsumptionAnalyticsTracker _consumptionAnalytics;
+  final Set<String> _seenVideoIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _consumptionAnalytics = ref.read(consumptionAnalyticsTrackerProvider);
+    if (widget.currentIndex >= 0 &&
+        widget.currentIndex < widget.videos.length) {
+      _seenVideoIds.add(widget.videos[widget.currentIndex].id);
+    }
+  }
 
   /// Warn labels for [video] merging creator/trusted labels with any
   /// crossed-threshold community labels (#4771), so the autoplay gate and
@@ -334,6 +348,14 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             .onPlaybackVolumeChanged,
         onActiveVideoChanged: (video, index) {
           _resumeAutoAdvanceAfterSwipe();
+          if (_seenVideoIds.add(video.id)) {
+            unawaited(
+              _consumptionAnalytics.feedScrolled(
+                trafficSource: widget.trafficSource,
+                depth: _seenVideoIds.length,
+              ),
+            );
+          }
           widget.onActiveVideoChanged?.call(video, index);
         },
         // Nothing in the feed plays longer than a Vine, not even a 60s file a
@@ -1150,6 +1172,9 @@ class __OverlayState extends ConsumerState<_Overlay> {
                     archivedLikeCount: video.originalLikes,
                     initialCommentCount: liveCommentCountSeed(video),
                     initialRepostCount: liveRepostCountSeed(video),
+                    consumptionAnalytics: ref.read(
+                      consumptionAnalyticsTrackerProvider,
+                    ),
                   )
                   ..add(const VideoInteractionsSubscriptionRequested())
                   ..add(const VideoInteractionsFetchRequested()),

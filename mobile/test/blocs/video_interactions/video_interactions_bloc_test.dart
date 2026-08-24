@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 
@@ -18,6 +19,9 @@ class _MockLikesRepository extends Mock implements LikesRepository {}
 class _MockCommentsRepository extends Mock implements CommentsRepository {}
 
 class _MockRepostsRepository extends Mock implements RepostsRepository {}
+
+class _MockConsumptionAnalytics extends Mock
+    implements ConsumptionAnalyticsTracker {}
 
 class _CapturingObserver extends BlocObserver {
   final List<Object> errors = [];
@@ -34,6 +38,7 @@ void main() {
     late _MockLikesRepository mockLikesRepository;
     late _MockCommentsRepository mockCommentsRepository;
     late _MockRepostsRepository mockRepostsRepository;
+    late _MockConsumptionAnalytics mockConsumptionAnalytics;
     late StreamController<List<String>> likedIdsController;
     late StreamController<Set<String>> likedAddressableIdsController;
     late StreamController<Set<String>> repostedIdsController;
@@ -46,6 +51,7 @@ void main() {
       mockLikesRepository = _MockLikesRepository();
       mockCommentsRepository = _MockCommentsRepository();
       mockRepostsRepository = _MockRepostsRepository();
+      mockConsumptionAnalytics = _MockConsumptionAnalytics();
       likedIdsController = StreamController<List<String>>.broadcast();
       likedAddressableIdsController = StreamController<Set<String>>.broadcast();
       repostedIdsController = StreamController<Set<String>>.broadcast();
@@ -69,6 +75,12 @@ void main() {
       when(
         () => mockRepostsRepository.isReposted(any()),
       ).thenAnswer((_) async => false);
+      when(
+        () => mockConsumptionAnalytics.reactionSent(
+          targetVideoId: any(named: 'targetVideoId'),
+          targetPubkey: any(named: 'targetPubkey'),
+        ),
+      ).thenAnswer((_) async {});
     });
 
     tearDown(() => likedIdsController.close());
@@ -92,6 +104,7 @@ void main() {
       archivedLikeCount: archivedLikeCount,
       initialCommentCount: initialCommentCount,
       initialRepostCount: initialRepostCount,
+      consumptionAnalytics: mockConsumptionAnalytics,
     );
 
     test('initial state is initial with default values', () {
@@ -988,6 +1001,14 @@ void main() {
             likeCount: 11,
           ),
         ],
+        verify: (_) {
+          verify(
+            () => mockConsumptionAnalytics.reactionSent(
+              targetVideoId: testEventId,
+              targetPubkey: testAuthorPubkey,
+            ),
+          ).called(1);
+        },
       );
 
       blocTest<VideoInteractionsBloc, VideoInteractionsState>(
