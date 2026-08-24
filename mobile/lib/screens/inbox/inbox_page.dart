@@ -13,6 +13,7 @@ import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -122,6 +123,7 @@ class InboxPage extends ConsumerWidget {
           create: (_) => MyFollowingBloc(
             followRepository: followRepository,
             contentBlocklistRepository: blocklistRepository,
+            consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
           )..add(const MyFollowingListLoadRequested()),
         ),
         // Re-keyed on the async-resolving reportingService alone (last in

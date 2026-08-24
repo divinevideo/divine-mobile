@@ -98,6 +98,27 @@ void main() {
       });
     });
 
+    test('uses the existing feed performance vocabulary', () async {
+      await tracker.videoStarted(
+        video: _video,
+        trafficSource: ViewTrafficSource.home,
+        sourceDetail: 'foryou',
+        position: 0,
+      );
+      await tracker.feedScrolled(
+        trafficSource: ViewTrafficSource.discoveryNew,
+        depth: 2,
+      );
+      await tracker.feedScrolled(
+        trafficSource: ViewTrafficSource.discoveryPopular,
+        depth: 3,
+      );
+
+      expect(analytics.events[0].parameters['feed_type'], 'forYou');
+      expect(analytics.events[1].parameters['feed_type'], 'new_vines');
+      expect(analytics.events[2].parameters['feed_type'], 'popular');
+    });
+
     test('does not let sink failures escape into product actions', () async {
       final failingTracker = ConsumptionAnalyticsTracker(
         analytics: _ThrowingAnalytics(),

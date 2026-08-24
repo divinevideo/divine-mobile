@@ -16,10 +16,11 @@ class ConsumptionAnalyticsTracker {
     required VideoEvent video,
     required ViewTrafficSource trafficSource,
     required int position,
+    String? sourceDetail,
   }) => _log('video_started', {
     'video_id': video.id,
     'author_pubkey': video.pubkey,
-    'feed_type': trafficSource.tagValue,
+    'feed_type': _feedType(trafficSource, sourceDetail),
     'position_in_feed': position,
     'is_archive': video.isOriginalVine ? 1 : 0,
   });
@@ -49,8 +50,9 @@ class ConsumptionAnalyticsTracker {
   Future<void> feedScrolled({
     required ViewTrafficSource trafficSource,
     required int depth,
+    String? sourceDetail,
   }) => _log('feed_scrolled', {
-    'feed_type': trafficSource.tagValue,
+    'feed_type': _feedType(trafficSource, sourceDetail),
     'depth': depth,
   });
 
@@ -83,6 +85,26 @@ class ConsumptionAnalyticsTracker {
 
   Future<void> followAdded({required String targetPubkey}) =>
       _log('follow_added', {'target_pubkey': targetPubkey});
+
+  String _feedType(ViewTrafficSource trafficSource, String? sourceDetail) {
+    if (trafficSource == ViewTrafficSource.home) {
+      return switch (sourceDetail) {
+        'foryou' => 'forYou',
+        'following' || 'list' => 'following',
+        'new' => 'latest',
+        'classic' => 'classic',
+        _ => trafficSource.tagValue,
+      };
+    }
+
+    return switch (trafficSource) {
+      ViewTrafficSource.discoveryNew => 'new_vines',
+      ViewTrafficSource.discoveryClassic => 'classics',
+      ViewTrafficSource.discoveryForYou => 'for_you',
+      ViewTrafficSource.discoveryPopular => 'popular',
+      _ => trafficSource.tagValue,
+    };
+  }
 
   Future<void> _targetEvent(
     String name, {

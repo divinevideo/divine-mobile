@@ -11,6 +11,7 @@ import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/others_following/others_following_bloc.dart';
 import 'package:openvine/features/people_lists/models/people_list_entry_point.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/nav_extensions.dart';
@@ -53,6 +54,7 @@ class OthersFollowingScreen extends ConsumerWidget {
           create: (_) => MyFollowingBloc(
             followRepository: followRepository,
             contentBlocklistRepository: blocklistRepository,
+            consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
           )..add(const MyFollowingListLoadRequested()),
         ),
         // Deliberately not keyed on profileRepository: it resolves from null

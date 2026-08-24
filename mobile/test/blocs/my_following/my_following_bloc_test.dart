@@ -3,12 +3,14 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -19,6 +21,7 @@ void main() {
   group(MyFollowingBloc, () {
     late _MockFollowRepository mockFollowRepository;
     late _MockContentBlocklistRepository mockBlocklistRepository;
+    late _RecordingAnalytics analytics;
 
     // Helper to create valid hex pubkeys (64 hex characters)
     String validPubkey(String suffix) {
@@ -31,6 +34,7 @@ void main() {
     setUp(() async {
       mockFollowRepository = _MockFollowRepository();
       mockBlocklistRepository = _MockContentBlocklistRepository();
+      analytics = _RecordingAnalytics();
 
       // Default: nothing is blocked
       when(() => mockBlocklistRepository.isBlocked(any())).thenReturn(false);
@@ -43,6 +47,7 @@ void main() {
     MyFollowingBloc createBloc() => MyFollowingBloc(
       followRepository: mockFollowRepository,
       contentBlocklistRepository: mockBlocklistRepository,
+      consumptionAnalytics: ConsumptionAnalyticsTracker(analytics: analytics),
     );
 
     test('initial state is initial when repository cache is empty', () async {
@@ -284,6 +289,7 @@ void main() {
           verify(
             () => mockFollowRepository.toggleFollow(validPubkey('user')),
           ).called(1);
+          expect(analytics.eventNames, ['follow_added']);
         },
       );
 
@@ -877,4 +883,16 @@ void main() {
       });
     });
   });
+}
+
+class _RecordingAnalytics extends NoOpAnalyticsEventSink {
+  final eventNames = <String>[];
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    eventNames.add(name);
+  }
 }
