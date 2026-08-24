@@ -2428,6 +2428,34 @@ void main() {
   });
 
   group('activity wiring', () {
+    testWidgets('does not record a same-index programmatic activation', (
+      tester,
+    ) async {
+      final analytics = _RecordingAnalytics();
+      final firstVideo = _makeVideo();
+      final replacementVideo = _makeVideo(
+        id: 'c3d4e5f6789012345678901234567890abcdef123456789012345678901234a1b2',
+      );
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [firstVideo],
+        additionalOverrides: [
+          consumptionAnalyticsTrackerProvider.overrideWithValue(
+            ConsumptionAnalyticsTracker(analytics: analytics),
+          ),
+        ],
+      );
+
+      final feed = tester.widget<InfiniteVideoFeed>(
+        find.byType(InfiniteVideoFeed),
+      );
+      feed.onActiveVideoChanged?.call(replacementVideo, 0);
+      await tester.pump();
+
+      expect(analytics.events, isEmpty);
+    });
+
     testWidgets('records the first real swipe at depth two', (tester) async {
       final analytics = _RecordingAnalytics();
       final firstVideo = _makeVideo();
