@@ -327,6 +327,46 @@ void main() {
         },
       );
 
+      blocTest<MyFollowingBloc, MyFollowingState>(
+        'does not record follow_added when the toggle is an unfollow',
+        setUp: () {
+          when(
+            () => mockFollowRepository.followingPubkeys,
+          ).thenReturn([validPubkey('user')]);
+          when(
+            () => mockFollowRepository.toggleFollow(any()),
+          ).thenAnswer((_) async {});
+          when(
+            () => mockFollowRepository.watchMyFollowingCached(),
+          ).thenAnswer((_) => const Stream.empty());
+        },
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
+        verify: (_) {
+          verify(
+            () => mockFollowRepository.toggleFollow(validPubkey('user')),
+          ).called(1);
+          expect(analytics.eventNames, isEmpty);
+        },
+      );
+
+      blocTest<MyFollowingBloc, MyFollowingState>(
+        'does not record follow_added when the follow fails',
+        setUp: () {
+          when(
+            () => mockFollowRepository.toggleFollow(any()),
+          ).thenThrow(Exception('Network error'));
+        },
+        build: createBloc,
+        act: (bloc) =>
+            bloc.add(MyFollowingToggleRequested(validPubkey('user'))),
+        verify: (bloc) {
+          expect(bloc.state.status, MyFollowingStatus.toggleFailure);
+          expect(analytics.eventNames, isEmpty);
+        },
+      );
+
       test(
         'does not revert follow state after a successful toggle (#5144)',
         () async {
