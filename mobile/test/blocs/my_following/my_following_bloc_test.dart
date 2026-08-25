@@ -397,13 +397,17 @@ void main() {
         },
         build: createBloc,
         act: (bloc) =>
-            bloc.add(MyFollowingFollowRequested(validPubkey('user'))),
+            bloc.add(MyFollowingFollowRequested(validPubkey('user'), targetVideoId: 'video-id')),
         verify: (_) {
           verify(
             () => mockFollowRepository.follow(validPubkey('user')),
           ).called(1);
           verifyNever(() => mockFollowRepository.unfollow(any()));
           expect(analytics.eventNames, ['follow_added']);
+          expect(analytics.parameters.single, {
+            'target_pubkey': validPubkey('user'),
+            'target_video_id': 'video-id',
+          });
         },
       );
 
@@ -427,6 +431,9 @@ void main() {
           // followingStream/_onRepositoryUpdated, not a watchMyFollowingCached
           // re-read.
           verifyNever(() => mockFollowRepository.watchMyFollowingCached());
+          expect(analytics.parameters.single, {
+            'target_pubkey': validPubkey('user'),
+          });
         },
       );
 
@@ -1053,6 +1060,7 @@ void main() {
 
 class _RecordingAnalytics extends NoOpAnalyticsEventSink {
   final eventNames = <String>[];
+  final parameters = <Map<String, Object>>[];
 
   @override
   Future<void> logEvent({
@@ -1060,5 +1068,6 @@ class _RecordingAnalytics extends NoOpAnalyticsEventSink {
     required Map<String, Object> parameters,
   }) async {
     eventNames.add(name);
+    this.parameters.add(parameters);
   }
 }

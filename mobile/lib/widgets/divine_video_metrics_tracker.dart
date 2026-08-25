@@ -315,6 +315,16 @@ class _DivineVideoMetricsTrackerState
     _isPlaying = false;
   }
 
+  Duration? _resolveTotalDuration() {
+    final knownDuration = _lastKnownDuration;
+    if (knownDuration != null) return knownDuration;
+    try {
+      return widget.controller?.state.duration;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Flush the watch/loop delta since the last flush as an end-phase event.
   /// Non-terminal by construction: a segment with no new playback emits
   /// nothing, so flush triggers (cover, video change, dispose) can all run
@@ -325,14 +335,7 @@ class _DivineVideoMetricsTrackerState
   }) {
     _closePlayInterval(widget._clock());
 
-    Duration? totalDuration = _lastKnownDuration;
-    if (totalDuration == null) {
-      try {
-        totalDuration = widget.controller?.state.duration;
-      } catch (_) {
-        totalDuration = null;
-      }
-    }
+    final totalDuration = _resolveTotalDuration();
 
     _recordSeen(video, totalDuration);
     _recordProductPlayback(video, totalDuration, productEndReason);
@@ -428,14 +431,7 @@ class _DivineVideoMetricsTrackerState
   void _recordConsumptionSession(VideoEvent video) {
     if (!_hasStartedPlayback) return;
 
-    Duration? totalDuration = _lastKnownDuration;
-    if (totalDuration == null) {
-      try {
-        totalDuration = widget.controller?.state.duration;
-      } catch (_) {
-        totalDuration = null;
-      }
-    }
+    final totalDuration = _resolveTotalDuration();
     final durationMs = totalDuration?.inMilliseconds ?? 0;
     final watchMs = _watchTotal.inMilliseconds;
     final pctWatched = durationMs <= 0 ? 0.0 : watchMs / durationMs * 100;

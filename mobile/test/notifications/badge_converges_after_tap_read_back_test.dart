@@ -6,12 +6,14 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
 import 'package:openvine/services/app_badge_service.dart';
 import 'package:rxdart/rxdart.dart' hide NotificationKind;
@@ -131,6 +133,9 @@ void main() {
           notificationRepository: repository,
           followRepository: followRepository,
           appBadgeClearer: const _NoopAppBadgeClearer(),
+          consumptionAnalytics: ConsumptionAnalyticsTracker(
+            analytics: const NoOpAnalyticsEventSink(),
+          ),
         );
         addTearDown(bloc.close);
         final badge = NotificationBadgeCubit(repository: repository);
@@ -180,6 +185,9 @@ void main() {
           notificationRepository: repository,
           followRepository: followRepository,
           appBadgeClearer: const _NoopAppBadgeClearer(),
+          consumptionAnalytics: ConsumptionAnalyticsTracker(
+            analytics: const NoOpAnalyticsEventSink(),
+          ),
         );
         addTearDown(bloc.close);
         final badge = NotificationBadgeCubit(repository: repository);
@@ -211,6 +219,9 @@ void main() {
         notificationRepository: repository,
         followRepository: followRepository,
         appBadgeClearer: const _NoopAppBadgeClearer(),
+        consumptionAnalytics: ConsumptionAnalyticsTracker(
+          analytics: const NoOpAnalyticsEventSink(),
+        ),
       );
       addTearDown(bloc.close);
       final badge = NotificationBadgeCubit(repository: repository);

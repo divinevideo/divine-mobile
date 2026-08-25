@@ -283,4 +283,15 @@ void main() {
       expect(VideoFeedSource.isCuratedListPreference('forYou'), isFalse);
     });
   });
+
+  group('VideoFeedBlocState feed session', () {
+    test('defaults to zero and participates in copies and equality', () {
+      const initial = VideoFeedBlocState();
+      final next = initial.copyWith(feedSessionRevision: 1);
+
+      expect(initial.feedSessionRevision, 0);
+      expect(next.feedSessionRevision, 1);
+      expect(next, isNot(initial));
+    });
+  });
 }

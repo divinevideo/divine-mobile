@@ -822,6 +822,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       listOnlyVideoIds: const {},
       clearPaginationCursor: true,
       currentIndex: 0,
+      feedSessionRevision: state.feedSessionRevision + 1,
     );
     final servedCache = _emitCachedFeed(
       source,
@@ -1018,7 +1019,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       ),
     );
 
-    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
+    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true, startsNewFeedSession: true);
   }
 
   /// Handle auto-refresh request (dispatched by UI on app resume).
@@ -1074,6 +1075,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       feedLoad: feedLoad,
       skipCache: state.source.type != VideoFeedSourceType.newVideos,
       revalidate: state.source.type == VideoFeedSourceType.newVideos,
+      startsNewFeedSession: true,
     );
   }
 
@@ -1118,7 +1120,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
     );
-    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
+    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true, startsNewFeedSession: true);
   }
 
   /// Reconciles the active feed with current curated-list subscriptions.
@@ -1414,7 +1416,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       reason: FeedLoadReason.refresh,
     );
 
-    await _loadVideos(source, emit, feedLoad: feedLoad, skipCache: true);
+    await _loadVideos(source, emit, feedLoad: feedLoad, skipCache: true, startsNewFeedSession: true);
   }
 
   /// Handle blocklist changes.
@@ -1492,9 +1494,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     bool skipCache = false,
     bool revalidate = false,
     List<VideoEvent>? prefetchedCachedVideos,
+    bool startsNewFeedSession = false,
   }) async {
     final generation = ++_loadGeneration;
     _paginationGeneration++;
+    final nextFeedSessionRevision = startsNewFeedSession
+        ? state.feedSessionRevision + 1
+        : state.feedSessionRevision;
     bool canEmit() =>
         generation == _loadGeneration && _canEmitForSource(source, emit);
     try {
@@ -1506,6 +1512,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
             skipCache,
             feedLoad,
             generation: generation,
+            feedSessionRevision: nextFeedSessionRevision,
           );
       if (!canEmit()) return;
 
@@ -1565,6 +1572,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           listOnlyVideoIds: result.listOnlyVideoIds,
           paginationCursor: result.paginationCursor,
           clearPaginationCursor: result.paginationCursor == null,
+          feedSessionRevision: nextFeedSessionRevision,
         ),
       );
 
@@ -1655,10 +1663,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     bool skipCache,
     FeedLoadHandle? feedLoad, {
     required int generation,
+    required int feedSessionRevision,
   }) async {
     final cachedValid = await _readCachedFeed(source, skipCache: skipCache);
     if (generation != _loadGeneration) return false;
-    return _emitCachedFeed(source, cachedValid, emit, feedLoad: feedLoad);
+    return _emitCachedFeed(source, cachedValid, emit, feedLoad: feedLoad, feedSessionRevision: feedSessionRevision);
   }
 
   Future<List<VideoEvent>> _readCachedFeed(
@@ -1681,6 +1690,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     List<VideoEvent> cachedValid,
     Emitter<VideoFeedBlocState> emit, {
     VideoFeedBlocState? baseState,
+    int? feedSessionRevision,
     bool requireCurrentSource = true,
     FeedLoadHandle? feedLoad,
   }) {
@@ -1702,6 +1712,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         hasMore: true,
         clearPaginationCursor: true,
         clearError: true,
+        feedSessionRevision: feedSessionRevision,
       ),
     );
     if (feedLoad != null) {

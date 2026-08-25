@@ -27,13 +27,13 @@ class InlineCommentComposerCubit extends Cubit<InlineCommentComposerState>
     with CloseGuardedEmit<InlineCommentComposerState> {
   InlineCommentComposerCubit({
     required CommentsRepository commentsRepository,
-    ConsumptionAnalyticsTracker? consumptionAnalytics,
+    required ConsumptionAnalyticsTracker consumptionAnalytics,
   }) : _commentsRepository = commentsRepository,
        _consumptionAnalytics = consumptionAnalytics,
        super(const InlineCommentComposerState());
 
   final CommentsRepository _commentsRepository;
-  final ConsumptionAnalyticsTracker? _consumptionAnalytics;
+  final ConsumptionAnalyticsTracker _consumptionAnalytics;
 
   /// Posts [content] as a top-level comment on [video].
   ///
@@ -62,7 +62,7 @@ class InlineCommentComposerCubit extends Cubit<InlineCommentComposerState>
         rootAddressableId: video.addressableId,
       );
       unawaited(
-        _consumptionAnalytics?.commentSent(
+        _consumptionAnalytics.commentSent(
           targetVideoId: video.id,
           targetPubkey: video.pubkey,
         ),

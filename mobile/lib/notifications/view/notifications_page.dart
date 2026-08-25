@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/notifications/view/notifications_view.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 
@@ -65,6 +66,7 @@ class NotificationsPage extends ConsumerWidget {
         notificationRepository: notificationRepository,
         followRepository: followRepository,
         appBadgeClearer: appBadgeClearer,
+        consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
       )..add(const NotificationFeedStarted()),
       child: const NotificationsView(),
     );

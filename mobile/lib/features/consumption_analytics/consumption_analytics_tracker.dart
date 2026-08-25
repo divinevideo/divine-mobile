@@ -6,12 +6,19 @@ import 'package:models/models.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// Records best-effort video consumption and engagement events.
+///
+/// Delivery failures are absorbed so analytics never changes product actions.
+/// Feed types use the normalized `for_you`, `following`, `list`, `new_vines`,
+/// `classics`, `popular`, and `featured` vocabulary.
 class ConsumptionAnalyticsTracker {
+  /// Creates a tracker backed by [analytics].
   ConsumptionAnalyticsTracker({required AnalyticsEventSink analytics})
     : _analytics = analytics;
 
   final AnalyticsEventSink _analytics;
 
+  /// Records that playback started for [video] at [position].
   Future<void> videoStarted({
     required VideoEvent video,
     required ViewTrafficSource trafficSource,
@@ -25,6 +32,7 @@ class ConsumptionAnalyticsTracker {
     'is_archive': video.isOriginalVine ? 1 : 0,
   });
 
+  /// Records a playback session that completed or looped.
   Future<void> videoCompleted({
     required String videoId,
     required int watchMs,
@@ -37,6 +45,7 @@ class ConsumptionAnalyticsTracker {
     'loops': loops,
   });
 
+  /// Records a playback session that ended before completion.
   Future<void> videoSkipped({
     required String videoId,
     required int watchMs,
@@ -47,6 +56,7 @@ class ConsumptionAnalyticsTracker {
     'position_in_feed': position,
   });
 
+  /// Records a real user swipe at the unique-video [depth] for one feed session.
   Future<void> feedScrolled({
     required ViewTrafficSource trafficSource,
     required int depth,
@@ -56,6 +66,7 @@ class ConsumptionAnalyticsTracker {
     'depth': depth,
   });
 
+  /// Records a successfully published reaction.
   Future<void> reactionSent({
     required String targetVideoId,
     required String targetPubkey,
@@ -65,6 +76,7 @@ class ConsumptionAnalyticsTracker {
     targetPubkey: targetPubkey,
   );
 
+  /// Records a successfully published comment.
   Future<void> commentSent({
     required String targetVideoId,
     required String targetPubkey,
@@ -74,6 +86,7 @@ class ConsumptionAnalyticsTracker {
     targetPubkey: targetPubkey,
   );
 
+  /// Records share intent when the share surface is opened.
   Future<void> shareTapped({
     required String targetVideoId,
     required String targetPubkey,
@@ -83,16 +96,26 @@ class ConsumptionAnalyticsTracker {
     targetPubkey: targetPubkey,
   );
 
-  Future<void> followAdded({required String targetPubkey}) =>
-      _log('follow_added', {'target_pubkey': targetPubkey});
+  /// Records a confirmed follow.
+  ///
+  /// [targetVideoId] is present only when the follow originated from a video's
+  /// author overlay. Profile, list, and notification follows omit it.
+  Future<void> followAdded({
+    required String targetPubkey,
+    String? targetVideoId,
+  }) => _log('follow_added', {
+    'target_pubkey': targetPubkey,
+    'target_video_id': ?targetVideoId,
+  });
 
   String _feedType(ViewTrafficSource trafficSource, String? sourceDetail) {
     if (trafficSource == ViewTrafficSource.home) {
       return switch (sourceDetail) {
-        'foryou' => 'forYou',
-        'following' || 'list' => 'following',
-        'new' => 'latest',
-        'classic' => 'classic',
+        'foryou' => 'for_you',
+        'following' => 'following',
+        'list' => 'list',
+        'new' => 'new_vines',
+        'classic' => 'classics',
         _ => trafficSource.tagValue,
       };
     }
@@ -102,6 +125,7 @@ class ConsumptionAnalyticsTracker {
       ViewTrafficSource.discoveryClassic => 'classics',
       ViewTrafficSource.discoveryForYou => 'for_you',
       ViewTrafficSource.discoveryPopular => 'popular',
+      ViewTrafficSource.discoveryFeatured => 'featured',
       _ => trafficSource.tagValue,
     };
   }

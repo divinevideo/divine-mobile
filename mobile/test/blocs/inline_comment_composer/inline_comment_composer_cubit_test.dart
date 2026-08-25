@@ -9,12 +9,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/inline_comment_composer/inline_comment_composer_cubit.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 
 class _MockCommentsRepository extends Mock implements CommentsRepository {}
+
+class _MockConsumptionAnalytics extends Mock
+    implements ConsumptionAnalyticsTracker {}
 
 void main() {
   group(InlineCommentComposerCubit, () {
     late _MockCommentsRepository commentsRepository;
+    late _MockConsumptionAnalytics consumptionAnalytics;
 
     VideoEvent buildVideo({
       String id = 'video-id',
@@ -44,11 +49,19 @@ void main() {
 
     setUp(() {
       commentsRepository = _MockCommentsRepository();
+      consumptionAnalytics = _MockConsumptionAnalytics();
+      when(
+        () => consumptionAnalytics.commentSent(
+          targetVideoId: any(named: 'targetVideoId'),
+          targetPubkey: any(named: 'targetPubkey'),
+        ),
+      ).thenAnswer((_) async {});
     });
 
     test('starts in idle status', () {
       final cubit = InlineCommentComposerCubit(
         commentsRepository: commentsRepository,
+        consumptionAnalytics: consumptionAnalytics,
       );
       addTearDown(cubit.close);
       expect(cubit.state.status, InlineCommentComposerStatus.idle);
@@ -70,6 +83,7 @@ void main() {
         },
         build: () => InlineCommentComposerCubit(
           commentsRepository: commentsRepository,
+          consumptionAnalytics: consumptionAnalytics,
         ),
         act: (cubit) =>
             cubit.submit(video: buildVideo(), content: 'hello world'),
@@ -91,6 +105,12 @@ void main() {
               rootAddressableId: any(named: 'rootAddressableId'),
             ),
           ).called(1);
+          verify(
+            () => consumptionAnalytics.commentSent(
+              targetVideoId: 'video-id',
+              targetPubkey: 'author-pubkey',
+            ),
+          ).called(1);
         },
       );
 
@@ -109,6 +129,7 @@ void main() {
         },
         build: () => InlineCommentComposerCubit(
           commentsRepository: commentsRepository,
+          consumptionAnalytics: consumptionAnalytics,
         ),
         act: (cubit) =>
             cubit.submit(video: buildVideo(), content: '   hi there  \n'),
@@ -129,6 +150,7 @@ void main() {
         'is a no-op for empty / whitespace-only content',
         build: () => InlineCommentComposerCubit(
           commentsRepository: commentsRepository,
+          consumptionAnalytics: consumptionAnalytics,
         ),
         act: (cubit) async {
           await cubit.submit(video: buildVideo(), content: '');
@@ -166,6 +188,7 @@ void main() {
         },
         build: () => InlineCommentComposerCubit(
           commentsRepository: commentsRepository,
+          consumptionAnalytics: consumptionAnalytics,
         ),
         act: (cubit) => cubit.submit(video: buildVideo(), content: 'oops'),
         expect: () => const [
@@ -177,6 +200,14 @@ void main() {
           ),
         ],
         errors: () => [isA<PostCommentFailedException>()],
+        verify: (_) {
+          verifyNever(
+            () => consumptionAnalytics.commentSent(
+              targetVideoId: any(named: 'targetVideoId'),
+              targetPubkey: any(named: 'targetPubkey'),
+            ),
+          );
+        },
       );
 
       test('drops re-entrant submits while one is in flight', () async {
@@ -192,6 +223,7 @@ void main() {
         ).thenAnswer((_) => publishResult.future);
         final cubit = InlineCommentComposerCubit(
           commentsRepository: commentsRepository,
+          consumptionAnalytics: consumptionAnalytics,
         );
         final firstSubmit = cubit.submit(video: buildVideo(), content: 'first');
         Future<void>? secondSubmit;
@@ -252,6 +284,7 @@ void main() {
         ),
         build: () => InlineCommentComposerCubit(
           commentsRepository: commentsRepository,
+          consumptionAnalytics: consumptionAnalytics,
         ),
         act: (cubit) => cubit.acknowledge(),
         expect: () => const [InlineCommentComposerState()],
@@ -264,6 +297,7 @@ void main() {
         ),
         build: () => InlineCommentComposerCubit(
           commentsRepository: commentsRepository,
+          consumptionAnalytics: consumptionAnalytics,
         ),
         act: (cubit) => cubit.acknowledge(),
         expect: () => const [InlineCommentComposerState()],
@@ -273,6 +307,7 @@ void main() {
         'is a no-op when already idle',
         build: () => InlineCommentComposerCubit(
           commentsRepository: commentsRepository,
+          consumptionAnalytics: consumptionAnalytics,
         ),
         act: (cubit) => cubit.acknowledge(),
         expect: () => <InlineCommentComposerState>[],

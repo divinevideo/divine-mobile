@@ -594,6 +594,7 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                             // For You, following, list, new and classic feeds
                             // are indistinguishable in view_traffic_sources.
                             sourceDetail: state.source.type.analyticsTag,
+                            feedSessionRevision: state.feedSessionRevision,
                             onActiveVideoChanged: (_, index) {
                               final isTuningAutoAdvance =
                                   _pendingTuningAutoAdvanceIndex == index;

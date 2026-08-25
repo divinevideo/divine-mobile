@@ -39,13 +39,13 @@ class VideoInteractionsBloc
     required LikesRepository likesRepository,
     required CommentsRepository commentsRepository,
     required RepostsRepository repostsRepository,
+    required ConsumptionAnalyticsTracker consumptionAnalytics,
     String? addressableId,
     int? initialLikeCount,
     int? archivedLikeCount,
     int? initialCommentCount,
     int? initialRepostCount,
     bool includeVideoReplies = false,
-    ConsumptionAnalyticsTracker? consumptionAnalytics,
   }) : _eventId = eventId,
        _authorPubkey = authorPubkey,
        _likesRepository = likesRepository,
@@ -87,7 +87,7 @@ class VideoInteractionsBloc
   final CommentsRepository _commentsRepository;
   final RepostsRepository _repostsRepository;
   final bool _includeVideoReplies;
-  final ConsumptionAnalyticsTracker? _consumptionAnalytics;
+  final ConsumptionAnalyticsTracker _consumptionAnalytics;
 
   /// Addressable ID for repost operations (format: `kind:pubkey:d-tag`).
   /// Null if the video doesn't have a d-tag (non-addressable event).
@@ -384,7 +384,7 @@ class VideoInteractionsBloc
       case _LikeSettleConfirmed(:final isLiked):
         if (isLiked) {
           unawaited(
-            _consumptionAnalytics?.reactionSent(
+            _consumptionAnalytics.reactionSent(
               targetVideoId: _eventId,
               targetPubkey: _authorPubkey,
             ),
