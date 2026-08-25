@@ -85,6 +85,7 @@ final creationAnalyticsTrackerProvider = Provider<CreationAnalyticsTracker>(
   ),
 );
 
+/// Provides the shared best-effort consumption and engagement tracker.
 final consumptionAnalyticsTrackerProvider =
     Provider<ConsumptionAnalyticsTracker>(
       (ref) => ConsumptionAnalyticsTracker(

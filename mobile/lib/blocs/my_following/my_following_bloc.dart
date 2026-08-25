@@ -199,7 +199,10 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState> {
       await _followRepository.toggleFollow(event.pubkey);
       if (!wasFollowing) {
         unawaited(
-          _consumptionAnalytics.followAdded(targetPubkey: event.pubkey),
+          _consumptionAnalytics.followAdded(
+            targetPubkey: event.pubkey,
+            targetVideoId: event.targetVideoId,
+          ),
         );
       }
     } catch (e) {

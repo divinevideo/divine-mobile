@@ -1573,7 +1573,8 @@ void main() {
           isA<VideoFeedBlocState>()
               .having((s) => s.status, 'status', VideoFeedStatus.success)
               .having((s) => s.hasMore, 'hasMore', false)
-              .having((s) => s.videos.length, 'videos count', 2),
+              .having((s) => s.videos.length, 'videos count', 2)
+              .having((s) => s.feedSessionRevision, 'feed session', 1),
         ],
         verify: (_) {
           verify(
@@ -2796,7 +2797,8 @@ void main() {
           isA<VideoFeedBlocState>()
               .having((s) => s.status, 'status', VideoFeedStatus.success)
               .having((s) => s.videos.length, 'videos count', pageSize)
-              .having((s) => s.hasMore, 'hasMore', true),
+              .having((s) => s.hasMore, 'hasMore', true)
+              .having((s) => s.feedSessionRevision, 'feed session', 1),
         ],
         verify: (_) {
           // Verify called without 'until' parameter (fresh fetch)
@@ -3399,8 +3401,15 @@ void main() {
           followingController.add(['author', 'new-author']);
         },
         skip: 2, // Skip loading + success from VideoFeedStarted
-        // No state changes — same videos returned, Equatable deduplicates
-        expect: () => <VideoFeedBlocState>[],
+        // The collection is the same, but a completed full refresh starts a
+        // new feed-depth analytics session.
+        expect: () => [
+          isA<VideoFeedBlocState>().having(
+            (state) => state.feedSessionRevision,
+            'feed session',
+            1,
+          ),
+        ],
         verify: (_) {
           // Called 2 times: initial + runtime (replay is skipped)
           verify(

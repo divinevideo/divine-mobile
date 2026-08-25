@@ -81,7 +81,10 @@ void main() {
         targetVideoId: _video.id,
         targetPubkey: _video.pubkey,
       );
-      await tracker.followAdded(targetPubkey: _video.pubkey);
+      await tracker.followAdded(
+        targetPubkey: _video.pubkey,
+        targetVideoId: _video.id,
+      );
 
       expect(analytics.events.map((event) => event.name), [
         'reaction_sent',
@@ -94,29 +97,45 @@ void main() {
         {'target_video_id': 'video_id', 'target_pubkey': 'creator_pubkey'},
       );
       expect(analytics.events.last.parameters, {
+        'target_video_id': 'video_id',
         'target_pubkey': 'creator_pubkey',
       });
     });
 
-    test('uses the existing feed performance vocabulary', () async {
-      await tracker.videoStarted(
-        video: _video,
-        trafficSource: ViewTrafficSource.home,
-        sourceDetail: 'foryou',
-        position: 0,
-      );
-      await tracker.feedScrolled(
-        trafficSource: ViewTrafficSource.discoveryNew,
-        depth: 2,
-      );
-      await tracker.feedScrolled(
-        trafficSource: ViewTrafficSource.discoveryPopular,
-        depth: 3,
-      );
+    test('omits video context for non-video follows', () async {
+      await tracker.followAdded(targetPubkey: _video.pubkey);
 
-      expect(analytics.events[0].parameters['feed_type'], 'forYou');
-      expect(analytics.events[1].parameters['feed_type'], 'new_vines');
-      expect(analytics.events[2].parameters['feed_type'], 'popular');
+      expect(analytics.events.single.parameters, {
+        'target_pubkey': 'creator_pubkey',
+      });
+    });
+
+    test('normalizes every home and discovery feed source', () async {
+      const cases = [
+        (ViewTrafficSource.home, 'foryou', 'for_you'),
+        (ViewTrafficSource.home, 'following', 'following'),
+        (ViewTrafficSource.home, 'list', 'list'),
+        (ViewTrafficSource.home, 'new', 'new_vines'),
+        (ViewTrafficSource.home, 'classic', 'classics'),
+        (ViewTrafficSource.discoveryForYou, null, 'for_you'),
+        (ViewTrafficSource.discoveryNew, null, 'new_vines'),
+        (ViewTrafficSource.discoveryClassic, null, 'classics'),
+        (ViewTrafficSource.discoveryPopular, null, 'popular'),
+        (ViewTrafficSource.discoveryFeatured, null, 'featured'),
+      ];
+
+      for (final (trafficSource, sourceDetail, _) in cases) {
+        await tracker.feedScrolled(
+          trafficSource: trafficSource,
+          sourceDetail: sourceDetail,
+          depth: 2,
+        );
+      }
+
+      expect(
+        analytics.events.map((event) => event.parameters['feed_type']),
+        cases.map((entry) => entry.$3),
+      );
     });
 
     test('does not let sink failures escape into product actions', () async {

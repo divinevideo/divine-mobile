@@ -44,12 +44,12 @@ class CommentComposerBloc
     required String rootEventId,
     required int rootEventKind,
     required String rootAuthorPubkey,
+    required ConsumptionAnalyticsTracker consumptionAnalytics,
     String? rootAddressableId,
     ProfileRepository? profileRepository,
     MentionResolutionService? mentionResolutionService,
     MentionCandidatePubkeysProvider? mentionCandidatePubkeysProvider,
     DuplicateCommentChecker? isDuplicateSubmission,
-    ConsumptionAnalyticsTracker? consumptionAnalytics,
   }) : _commentsRepository = commentsRepository,
        _authService = authService,
        _rootEventId = rootEventId,
@@ -94,7 +94,7 @@ class CommentComposerBloc
   final MentionResolutionService? _mentionResolutionService;
   final MentionCandidatePubkeysProvider? _mentionCandidatePubkeysProvider;
   final DuplicateCommentChecker? _isDuplicateSubmission;
-  final ConsumptionAnalyticsTracker? _consumptionAnalytics;
+  final ConsumptionAnalyticsTracker _consumptionAnalytics;
   final String _rootEventId;
   final int _rootEventKind;
   final String _rootAuthorPubkey;
@@ -243,7 +243,7 @@ class CommentComposerBloc
         ),
       );
       unawaited(
-        _consumptionAnalytics?.commentSent(
+        _consumptionAnalytics.commentSent(
           targetVideoId: _rootEventId,
           targetPubkey: _rootAuthorPubkey,
         ),

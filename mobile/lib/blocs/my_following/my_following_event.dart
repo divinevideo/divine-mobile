@@ -16,10 +16,13 @@ final class MyFollowingListLoadRequested extends MyFollowingEvent {
 /// Request to toggle follow status for a user.
 /// The bloc will determine whether to follow or unfollow based on current state.
 final class MyFollowingToggleRequested extends MyFollowingEvent {
-  const MyFollowingToggleRequested(this.pubkey);
+  const MyFollowingToggleRequested(this.pubkey, {this.targetVideoId});
 
   /// The public key of the user to follow/unfollow
   final String pubkey;
+
+  /// Video that supplied the follow affordance, when applicable.
+  final String? targetVideoId;
 }
 
 /// Notification that the blocklist has changed, requiring re-filtering.
