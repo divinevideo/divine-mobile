@@ -2564,6 +2564,76 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
     });
 
+    testWidgets(
+      'resets depth when only the session revision changes (list to list)',
+      (tester) async {
+        // Switching between two subscribed lists keeps trafficSource=home and
+        // sourceDetail='list', so the session revision is the *only* reset
+        // trigger. Without it, list B's first swipe would report depth 3.
+        final analytics = _RecordingAnalytics();
+        final feedKey = GlobalKey<FeedVideosState>();
+        final firstVideo = _makeVideo();
+        final secondVideo = _makeVideo(
+          id:
+              'b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234'
+              'a1',
+        );
+        final replacementFirst = _makeVideo(
+          id:
+              'c3d4e5f6789012345678901234567890abcdef123456789012345678901234a1'
+              'b2',
+        );
+        final replacementSecond = _makeVideo(
+          id:
+              'd4e5f6789012345678901234567890abcdef123456789012345678901234a1b2'
+              'c3',
+        );
+        final overrides = [
+          consumptionAnalyticsTrackerProvider.overrideWithValue(
+            ConsumptionAnalyticsTracker(analytics: analytics),
+          ),
+        ];
+
+        final container = await _pumpFeedVideos(
+          tester,
+          videos: [firstVideo, secondVideo],
+          feedKey: feedKey,
+          trafficSource: ViewTrafficSource.home,
+          sourceDetail: 'list',
+          feedSessionRevision: 1,
+          additionalOverrides: overrides,
+        );
+        tester
+            .widget<InfiniteVideoFeed>(find.byType(InfiniteVideoFeed))
+            .onActiveVideoChanged
+            ?.call(secondVideo, 1);
+        await tester.pump();
+
+        await _pumpFeedVideos(
+          tester,
+          videos: [replacementFirst, replacementSecond],
+          feedKey: feedKey,
+          trafficSource: ViewTrafficSource.home,
+          sourceDetail: 'list',
+          feedSessionRevision: 2,
+          providerContainer: container,
+        );
+        tester
+            .widget<InfiniteVideoFeed>(find.byType(InfiniteVideoFeed))
+            .onActiveVideoChanged
+            ?.call(replacementSecond, 1);
+        await tester.pump();
+
+        expect(analytics.events, hasLength(2));
+        expect(analytics.events.last.parameters, {
+          'feed_type': 'list',
+          'depth': 2,
+        });
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 4));
+      },
+    );
+
     testWidgets('passes effective activity through to InfiniteVideoFeed', (
       tester,
     ) async {
