@@ -1072,6 +1072,15 @@ void main() {
             likeCount: 9,
           ),
         ],
+        verify: (_) {
+          // reaction_sent marks a like, so a confirmed unlike must not emit it.
+          verifyNever(
+            () => mockConsumptionAnalytics.reactionSent(
+              targetVideoId: any(named: 'targetVideoId'),
+              targetPubkey: any(named: 'targetPubkey'),
+            ),
+          );
+        },
       );
 
       blocTest<VideoInteractionsBloc, VideoInteractionsState>(
@@ -1169,6 +1178,15 @@ void main() {
           // below.
           const VideoInteractionsState(status: VideoInteractionsStatus.success),
         ],
+        verify: (_) {
+          // A failed like is not a like, so nothing is reported to analytics.
+          verifyNever(
+            () => mockConsumptionAnalytics.reactionSent(
+              targetVideoId: any(named: 'targetVideoId'),
+              targetPubkey: any(named: 'targetPubkey'),
+            ),
+          );
+        },
         errors: () => [isA<Exception>()],
       );
 
