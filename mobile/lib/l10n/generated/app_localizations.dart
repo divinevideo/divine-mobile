@@ -8719,6 +8719,24 @@ abstract class AppLocalizations {
   /// **'Private key copied to clipboard!\n\nStore it somewhere safe.'**
   String get keyManagementExportSuccess;
 
+  /// Reason shown by the operating system's local-auth prompt before an nsec is copied.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to copy your private key.'**
+  String get keyManagementExportAuthReason;
+
+  /// Shown when the user cancels or fails device-local authentication for nsec export.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t verify it\'s you. Your private key wasn\'t copied.'**
+  String get keyManagementExportAuthDenied;
+
+  /// Shown when the device cannot perform local authentication for nsec export.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up a device passcode, PIN, or biometric lock before copying your private key.'**
+  String get keyManagementExportAuthUnavailable;
+
   /// No description provided for @keyManagementExportFailed.
   ///
   /// In en, this message translates to:

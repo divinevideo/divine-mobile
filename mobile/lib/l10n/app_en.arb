@@ -3188,6 +3188,18 @@
   "keyManagementImportFailed": "Failed to import key. Please try again.",
   "keyManagementExportSuccess": "Private key copied to clipboard!\n\nStore it somewhere safe.",
   "keyManagementExportFailed": "Failed to export key. Please try again.",
+  "keyManagementExportAuthReason": "Authenticate to copy your private key.",
+  "@keyManagementExportAuthReason": {
+    "description": "Reason shown by the operating system's local-auth prompt before an nsec is copied."
+  },
+  "keyManagementExportAuthDenied": "We couldn't verify it's you. Your private key wasn't copied.",
+  "@keyManagementExportAuthDenied": {
+    "description": "Shown when the user cancels or fails device-local authentication for nsec export."
+  },
+  "keyManagementExportAuthUnavailable": "Set up a device passcode, PIN, or biometric lock before copying your private key.",
+  "@keyManagementExportAuthUnavailable": {
+    "description": "Shown when the device cannot perform local authentication for nsec export."
+  },
   "keyManagementYourPublicKeyLabel": "Your public key (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

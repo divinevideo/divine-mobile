@@ -5057,6 +5057,18 @@ class AppLocalizationsTr extends AppLocalizations {
       'Özel anahtar panoya kopyalandı!\n\nGüvenli bir yerde sakla.';
 
   @override
+  String get keyManagementExportAuthReason =>
+      'Authenticate to copy your private key.';
+
+  @override
+  String get keyManagementExportAuthDenied =>
+      'We couldn\'t verify it\'s you. Your private key wasn\'t copied.';
+
+  @override
+  String get keyManagementExportAuthUnavailable =>
+      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
+
+  @override
   String get keyManagementExportFailed =>
       'Anahtar dışa aktarılamadı. Lütfen tekrar dene.';
 

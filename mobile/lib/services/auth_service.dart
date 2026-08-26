@@ -1267,7 +1267,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   }
 
   /// Create a new Nostr identity
-  Future<AuthResult> createNewIdentity({String? biometricPrompt}) async {
+  Future<AuthResult> createNewIdentity() async {
     Log.debug(
       '📱 Creating new secure Nostr identity',
       name: 'AuthService',
@@ -1279,9 +1279,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
     try {
       // Generate new secure key container
-      final keyContainer = await _keyStorage.generateAndStoreKeys(
-        biometricPrompt: biometricPrompt,
-      );
+      final keyContainer = await _keyStorage.generateAndStoreKeys();
 
       await _setupUserSession(
         keyContainer,
@@ -2330,10 +2328,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   }
 
   /// Import identity from nsec (bech32 private key)
-  Future<AuthResult> importFromNsec(
-    String nsec, {
-    String? biometricPrompt,
-  }) async {
+  Future<AuthResult> importFromNsec(String nsec) async {
     Log.debug(
       'Importing identity from nsec to secure storage',
       name: 'AuthService',
@@ -2350,10 +2345,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       }
 
       // Import keys into secure storage
-      final keyContainer = await _keyStorage.importFromNsec(
-        nsec,
-        biometricPrompt: biometricPrompt,
-      );
+      final keyContainer = await _keyStorage.importFromNsec(nsec);
 
       // Set up user session
       await _setupUserSession(keyContainer, AuthenticationSource.importedKeys);
@@ -2410,10 +2402,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   }
 
   /// Import identity from hex private key
-  Future<AuthResult> importFromHex(
-    String privateKeyHex, {
-    String? biometricPrompt,
-  }) async {
+  Future<AuthResult> importFromHex(String privateKeyHex) async {
     Log.debug(
       'Importing identity from hex to secure storage',
       name: 'AuthService',
@@ -2430,10 +2419,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       }
 
       // Import keys into secure storage
-      final keyContainer = await _keyStorage.importFromHex(
-        privateKeyHex,
-        biometricPrompt: biometricPrompt,
-      );
+      final keyContainer = await _keyStorage.importFromHex(privateKeyHex);
 
       // Set up user session
       await _setupUserSession(keyContainer, AuthenticationSource.importedKeys);
@@ -3550,7 +3536,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   }
 
   /// Export nsec for backup purposes
-  Future<String?> exportNsec({String? biometricPrompt}) async {
+  Future<String?> exportNsec() async {
     if (!isAuthenticated) return null;
 
     if (authenticationSource != AuthenticationSource.automatic &&
@@ -3589,7 +3575,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         return null;
       }
 
-      return await _keyStorage.exportNsec(biometricPrompt: biometricPrompt);
+      return await _keyStorage.exportNsec();
     } catch (e) {
       Log.error(
         'Failed to export nsec: $e',

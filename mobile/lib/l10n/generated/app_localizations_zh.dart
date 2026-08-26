@@ -4786,6 +4786,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get keyManagementExportSuccess => '私钥已复制到剪贴板！\n\n请妥善保管。';
 
   @override
+  String get keyManagementExportAuthReason =>
+      'Authenticate to copy your private key.';
+
+  @override
+  String get keyManagementExportAuthDenied =>
+      'We couldn\'t verify it\'s you. Your private key wasn\'t copied.';
+
+  @override
+  String get keyManagementExportAuthUnavailable =>
+      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
+
+  @override
   String get keyManagementExportFailed => '导出密钥失败，请重试。';
 
   @override

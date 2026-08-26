@@ -549,6 +549,11 @@ const _knownUntranslatedDebt = <String>{
   'listRemoveVideosButton',
   'listRemoveVideosSuccess',
   'listRemoveVideosFailure',
+  // Device-authentication copy added in #8095. Translation is deferred to the
+  // next human l10n pass so security instructions keep their intended meaning.
+  'keyManagementExportAuthReason',
+  'keyManagementExportAuthDenied',
+  'keyManagementExportAuthUnavailable',
   // Log-export copy (#8112 / #8113 / #8114). Left in English until a human
   // translation pass; machine-translating a diagnostic instruction the user
   // has to follow exactly is how it stops meaning what it says.

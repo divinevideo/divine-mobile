@@ -46,9 +46,6 @@ enum SecureStorageCapability {
   /// Hardware-backed security (Secure Enclave, TEE)
   hardwareBackedSecurity,
 
-  /// Biometric authentication integration
-  biometricAuthentication,
-
   /// Tamper detection and security events
   tamperDetection,
 }
@@ -60,9 +57,6 @@ enum SecurityLevel {
 
   /// Hardware-backed security (TEE, Secure Enclave)
   hardware,
-
-  /// Hardware with biometric protection
-  hardwareWithBiometrics,
 }
 
 /// Result of a secure storage operation.
@@ -88,9 +82,7 @@ class SecureStorageResult {
   final Map<String, dynamic>? metadata;
 
   /// Whether the storage is hardware-backed.
-  bool get isHardwareBacked =>
-      securityLevel == SecurityLevel.hardware ||
-      securityLevel == SecurityLevel.hardwareWithBiometrics;
+  bool get isHardwareBacked => securityLevel == SecurityLevel.hardware;
 }
 
 /// Platform detection helpers that work safely on web
@@ -194,7 +186,6 @@ class PlatformSecureStorage {
   Future<SecureStorageResult> storeKey({
     required String keyId,
     required SecureKeyContainer keyContainer,
-    bool requireBiometrics = false,
     bool requireHardwareBacked = true,
   }) async {
     await _ensureInitialized();
@@ -202,8 +193,7 @@ class PlatformSecureStorage {
     _log
       ..fine('📱 Storing key with ID: $keyId')
       ..fine(
-        '⚙️ Requirements - Hardware: $requireHardwareBacked, '
-        'Biometrics: $requireBiometrics',
+        '⚙️ Hardware required: $requireHardwareBacked',
       );
 
     try {
@@ -215,16 +205,6 @@ class PlatformSecureStorage {
         throw const PlatformSecureStorageException(
           'Hardware-backed security required but not available',
           code: 'hardware_not_available',
-        );
-      }
-
-      if (requireBiometrics &&
-          !_capabilities.contains(
-            SecureStorageCapability.biometricAuthentication,
-          )) {
-        throw const PlatformSecureStorageException(
-          'Biometric authentication required but not available',
-          code: 'biometrics_not_available',
         );
       }
 
@@ -324,7 +304,6 @@ class PlatformSecureStorage {
             'privateKeyHex': privateKeyHex,
             'publicKeyHex': keyContainer.publicKeyHex,
             'npub': keyContainer.npub,
-            'requireBiometrics': requireBiometrics,
             'requireHardwareBacked': requireHardwareBacked,
           },
         );
@@ -357,7 +336,6 @@ class PlatformSecureStorage {
   /// Retrieve a secure key container from platform-specific secure storage
   Future<SecureKeyContainer?> retrieveKey({
     required String keyId,
-    String? biometricPrompt,
   }) async {
     await _ensureInitialized();
 
@@ -411,9 +389,6 @@ class PlatformSecureStorage {
         'retrieveKey',
         {
           'keyId': keyId,
-          'biometricPrompt':
-              biometricPrompt ??
-              'Authenticate to access your Nostr identity key',
         },
       );
 
@@ -451,7 +426,6 @@ class PlatformSecureStorage {
   /// Delete a key from platform-specific secure storage
   Future<bool> deleteKey({
     required String keyId,
-    String? biometricPrompt,
   }) async {
     await _ensureInitialized();
 
@@ -474,9 +448,6 @@ class PlatformSecureStorage {
         'deleteKey',
         {
           'keyId': keyId,
-          'biometricPrompt':
-              biometricPrompt ??
-              'Authenticate to delete your Nostr identity key',
         },
       );
 
@@ -532,10 +503,6 @@ class PlatformSecureStorage {
   /// Check if platform supports hardware-backed security
   bool get supportsHardwareSecurity =>
       _capabilities.contains(SecureStorageCapability.hardwareBackedSecurity);
-
-  /// Check if platform supports biometric authentication
-  bool get supportsBiometrics =>
-      _capabilities.contains(SecureStorageCapability.biometricAuthentication);
 
   /// Detect platform capabilities
   Future<void> _detectCapabilities() async {
@@ -767,8 +734,6 @@ class PlatformSecureStorage {
         return SecureStorageCapability.basicSecureStorage;
       case 'hardware_backed_security':
         return SecureStorageCapability.hardwareBackedSecurity;
-      case 'biometric_authentication':
-        return SecureStorageCapability.biometricAuthentication;
       case 'tamper_detection':
         return SecureStorageCapability.tamperDetection;
       default:
@@ -785,8 +750,6 @@ class PlatformSecureStorage {
         return SecurityLevel.software;
       case 'hardware':
         return SecurityLevel.hardware;
-      case 'hardware_with_biometrics':
-        return SecurityLevel.hardwareWithBiometrics;
       default:
         return null;
     }

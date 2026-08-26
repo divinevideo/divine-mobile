@@ -126,7 +126,6 @@ void main() {
       when(
         () => mockKeyStorage.deleteIdentityKeyContainer(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async {});
       when(
@@ -215,7 +214,6 @@ void main() {
       when(
         () => mockKeyStorage.deleteIdentityKeyContainer(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async {});
       when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
@@ -224,9 +222,7 @@ void main() {
       // Auto-create new identity after deletion
       final newKeyContainer = SecureKeyContainer.fromNsec(testNsec);
       when(
-        () => mockKeyStorage.generateAndStoreKeys(
-          biometricPrompt: any(named: 'biometricPrompt'),
-        ),
+        () => mockKeyStorage.generateAndStoreKeys(),
       ).thenAnswer((_) async => newKeyContainer);
 
       // Act: remove local login material without deleting local work.
@@ -261,15 +257,12 @@ void main() {
       when(
         () => mockKeyStorage.deleteIdentityKeyContainer(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async {});
       when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
       when(() => mockKeyStorage.initialize()).thenAnswer((_) async => {});
       when(
-        () => mockKeyStorage.generateAndStoreKeys(
-          biometricPrompt: any(named: 'biometricPrompt'),
-        ),
+        () => mockKeyStorage.generateAndStoreKeys(),
       ).thenAnswer((_) async => SecureKeyContainer.fromNsec(testNsec));
 
       await authService.signOut(deleteKeys: true);
@@ -288,7 +281,6 @@ void main() {
       when(
         () => mockKeyStorage.deleteIdentityKeyContainer(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async {});
       when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
@@ -296,9 +288,7 @@ void main() {
 
       final newKeyContainer = SecureKeyContainer.fromNsec(testNsec);
       when(
-        () => mockKeyStorage.generateAndStoreKeys(
-          biometricPrompt: any(named: 'biometricPrompt'),
-        ),
+        () => mockKeyStorage.generateAndStoreKeys(),
       ).thenAnswer((_) async => newKeyContainer);
 
       await authService.signOut(deleteKeys: true, deleteLocalUserData: true);
@@ -329,16 +319,13 @@ void main() {
         when(
           () => mockKeyStorage.deleteIdentityKeyContainer(
             any(),
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async {});
         when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
         when(() => mockKeyStorage.initialize()).thenAnswer((_) async => {});
         final newKeyContainer = SecureKeyContainer.fromNsec(testNsec);
         when(
-          () => mockKeyStorage.generateAndStoreKeys(
-            biometricPrompt: any(named: 'biometricPrompt'),
-          ),
+          () => mockKeyStorage.generateAndStoreKeys(),
         ).thenAnswer((_) async => newKeyContainer);
 
         await authService.signOut(deleteKeys: true);
@@ -406,16 +393,13 @@ void main() {
           when(
             () => mockKeyStorage.deleteIdentityKeyContainer(
               any(),
-              biometricPrompt: any(named: 'biometricPrompt'),
             ),
           ).thenAnswer((_) async {});
           when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
           when(() => mockKeyStorage.initialize()).thenAnswer((_) async => {});
           final newKeyContainer = SecureKeyContainer.fromNsec(testNsec);
           when(
-            () => mockKeyStorage.generateAndStoreKeys(
-              biometricPrompt: any(named: 'biometricPrompt'),
-            ),
+            () => mockKeyStorage.generateAndStoreKeys(),
           ).thenAnswer((_) async => newKeyContainer);
 
           await authService.signOut(deleteKeys: true);
@@ -649,7 +633,6 @@ void main() {
           when(
             () => mockKeyStorage.deleteIdentityKeyContainer(
               any(),
-              biometricPrompt: any(named: 'biometricPrompt'),
             ),
           ).thenAnswer((_) async {});
           when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => false);
