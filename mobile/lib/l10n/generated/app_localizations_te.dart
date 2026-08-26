@@ -5299,6 +5299,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'ప్రైవేట్ కీ క్లిప్‌బోర్డ్‌కి కాపీ చేయబడింది!\n\nదాన్ని ఎక్కడైనా సురక్షితంగా నిల్వ చేయండి.';
 
   @override
+  String get keyManagementExportFailed =>
+      'కీని ఎగుమతి చేయడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -5308,11 +5312,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed =>
-      'కీని ఎగుమతి చేయడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'మీ పబ్లిక్ కీ (npub)';

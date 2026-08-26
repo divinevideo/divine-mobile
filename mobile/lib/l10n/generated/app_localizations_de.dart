@@ -5183,6 +5183,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Private Key in die Zwischenablage kopiert!\n\nBewahre ihn sicher auf.';
 
   @override
+  String get keyManagementExportFailed =>
+      'Schlüssel konnte nicht exportiert werden. Bitte versuch es nochmal.';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -5192,11 +5196,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed =>
-      'Schlüssel konnte nicht exportiert werden. Bitte versuch es nochmal.';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'Dein Public Key (npub)';

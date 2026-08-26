@@ -5087,6 +5087,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đã sao chép khóa riêng tư vào khay nhớ tạm!\n\nHãy cất nó ở nơi an toàn.';
 
   @override
+  String get keyManagementExportFailed =>
+      'Không xuất được khóa. Vui lòng thử lại.';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -5096,11 +5100,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed =>
-      'Không xuất được khóa. Vui lòng thử lại.';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'Khóa công khai của bạn (npub)';

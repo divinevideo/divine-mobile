@@ -5139,6 +5139,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Privésleutel gekopieerd naar klembord!\n\nBewaar hem ergens veilig.';
 
   @override
+  String get keyManagementExportFailed =>
+      'Sleutel exporteren mislukt. Probeer het opnieuw.';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -5148,11 +5152,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed =>
-      'Sleutel exporteren mislukt. Probeer het opnieuw.';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'Je publieke sleutel (npub)';

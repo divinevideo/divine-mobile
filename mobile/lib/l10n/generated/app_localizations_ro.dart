@@ -5264,6 +5264,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Cheia privată a fost copiată în clipboard!\n\nȚine-o într-un loc sigur.';
 
   @override
+  String get keyManagementExportFailed =>
+      'N-am putut exporta cheia. Încearcă din nou.';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -5273,11 +5277,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed =>
-      'N-am putut exporta cheia. Încearcă din nou.';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'Cheia ta publică (npub)';

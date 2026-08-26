@@ -5186,6 +5186,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Clé privée copiée dans le presse-papiers !\n\nRange-la dans un endroit sûr.';
 
   @override
+  String get keyManagementExportFailed =>
+      'Échec de l\'exportation de la clé. Réessaie.';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -5195,11 +5199,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed =>
-      'Échec de l\'exportation de la clé. Réessaie.';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'Ta clé publique (npub)';

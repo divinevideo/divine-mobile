@@ -3196,7 +3196,7 @@
   "@keyManagementExportAuthDenied": {
     "description": "Shown when the user cancels or fails device-local authentication for nsec export."
   },
-  "keyManagementExportAuthUnavailable": "Set up a device passcode, PIN, or biometric lock before copying your private key.",
+  "keyManagementExportAuthUnavailable": "Device authentication isn't available here. Your private key wasn't copied.",
   "@keyManagementExportAuthUnavailable": {
     "description": "Shown when the device cannot perform local authentication for nsec export."
   },

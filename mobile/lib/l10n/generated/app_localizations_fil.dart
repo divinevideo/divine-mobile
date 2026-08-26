@@ -5153,6 +5153,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nakopya ang private key sa clipboard!\n\nItago ito sa ligtas na lugar.';
 
   @override
+  String get keyManagementExportFailed =>
+      'Hindi na-export ang key. Subukan ulit.';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -5162,11 +5166,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed =>
-      'Hindi na-export ang key. Subukan ulit.';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'Ang public key mo (npub)';

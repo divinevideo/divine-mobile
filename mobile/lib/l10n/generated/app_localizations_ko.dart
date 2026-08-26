@@ -4832,6 +4832,9 @@ class AppLocalizationsKo extends AppLocalizations {
       '개인 키를 클립보드에 복사했어요!\n\n안전한 곳에 보관하세요.';
 
   @override
+  String get keyManagementExportFailed => '키 내보내기에 실패했어요. 다시 시도해보세요.';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -4841,10 +4844,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed => '키 내보내기에 실패했어요. 다시 시도해보세요.';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => '공개 키 (npub)';

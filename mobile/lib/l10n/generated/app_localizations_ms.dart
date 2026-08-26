@@ -5122,6 +5122,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Kunci peribadi disalin ke papan klip!\n\nSimpannya di tempat yang selamat.';
 
   @override
+  String get keyManagementExportFailed =>
+      'Gagal mengeksport kunci. Sila cuba lagi.';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -5131,11 +5135,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed =>
-      'Gagal mengeksport kunci. Sila cuba lagi.';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'Kunci awam anda (npub)';

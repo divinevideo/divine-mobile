@@ -5166,6 +5166,10 @@ class AppLocalizationsEs extends AppLocalizations {
       '¡Clave privada copiada al portapapeles!\n\nGuardala en un lugar seguro.';
 
   @override
+  String get keyManagementExportFailed =>
+      'No se pudo exportar la clave. Probá de nuevo.';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -5175,11 +5179,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed =>
-      'No se pudo exportar la clave. Probá de nuevo.';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'Tu clave pública (npub)';
