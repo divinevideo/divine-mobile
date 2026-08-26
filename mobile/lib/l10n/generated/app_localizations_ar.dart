@@ -5009,6 +5009,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'تم نسخ المفتاح الخاص إلى الحافظة!\n\nاحفظه في مكان آمن.';
 
   @override
+  String get keyManagementExportFailed =>
+      'تعذر تصدير المفتاح. يرجى المحاولة مرّة أخرى.';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -5018,11 +5022,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed =>
-      'تعذر تصدير المفتاح. يرجى المحاولة مرّة أخرى.';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'مفتاحك العام (npub)';

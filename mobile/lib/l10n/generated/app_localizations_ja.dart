@@ -4745,6 +4745,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get keyManagementExportSuccess => '秘密鍵をコピーしたよ！\n\n安全な場所に保管してね。';
 
   @override
+  String get keyManagementExportFailed => '鍵のエクスポートがうまくいかなかった。もう一回試してみて。';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -4754,10 +4757,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed => '鍵のエクスポートがうまくいかなかった。もう一回試してみて。';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'あなたの公開鍵 (npub)';

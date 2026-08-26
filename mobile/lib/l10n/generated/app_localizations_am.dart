@@ -4919,6 +4919,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'የግል ቁልፍ ወደ ቅንጥብ ሰሌዳ ተቀድቷል!\n\nደህንነቱ በተጠበቀ ቦታ ያስቀምጡት።';
 
   @override
+  String get keyManagementExportFailed =>
+      'ቁልፉን ወደ ውጭ መላክ አልተሳካም። እባክህ እንደገና ሞክር።';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -4928,11 +4932,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed =>
-      'ቁልፉን ወደ ውጭ መላክ አልተሳካም። እባክህ እንደገና ሞክር።';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'የህዝብ ቁልፍህ (npub)';

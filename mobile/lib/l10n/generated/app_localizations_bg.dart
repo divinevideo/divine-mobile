@@ -5094,6 +5094,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Частният ключ е копиран в клипборда!\n\nСъхранявайте го на сигурно място.';
 
   @override
+  String get keyManagementExportFailed =>
+      'Неуспешно експортиране на ключ. Опитай пак.';
+
+  @override
   String get keyManagementExportAuthReason =>
       'Authenticate to copy your private key.';
 
@@ -5103,11 +5107,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get keyManagementExportAuthUnavailable =>
-      'Set up a device passcode, PIN, or biometric lock before copying your private key.';
-
-  @override
-  String get keyManagementExportFailed =>
-      'Неуспешно експортиране на ключ. Опитай пак.';
+      'Device authentication isn\'t available here. Your private key wasn\'t copied.';
 
   @override
   String get keyManagementYourPublicKeyLabel => 'Твоят публичен ключ (npub)';
