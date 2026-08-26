@@ -89,7 +89,6 @@ void main() {
     when(
       () => mockKeyStorage.deleteIdentityKeyContainer(
         any(),
-        biometricPrompt: any(named: 'biometricPrompt'),
       ),
     ).thenAnswer((_) async {});
     when(
@@ -99,7 +98,6 @@ void main() {
     when(
       () => mockKeyStorage.switchToIdentity(
         any(),
-        biometricPrompt: any(named: 'biometricPrompt'),
       ),
     ).thenAnswer((_) async => true);
 
@@ -164,7 +162,6 @@ void main() {
       when(
         () => mockKeyStorage.getIdentityKeyContainer(
           npubA,
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async => containerA);
 
@@ -180,7 +177,6 @@ void main() {
       when(
         () => mockKeyStorage.switchToIdentity(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async {
         primaryPrivateKey = privateKeyAHex!;
@@ -190,7 +186,6 @@ void main() {
       when(
         () => mockKeyStorage.withPrivateKey<Event?>(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((invocation) async {
         final operation =
@@ -237,7 +232,6 @@ void main() {
       when(
         () => mockKeyStorage.getIdentityKeyContainer(
           npubA,
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((_) async => containerA);
 
@@ -248,7 +242,6 @@ void main() {
       when(
         () => mockKeyStorage.withPrivateKey<Event?>(
           any(),
-          biometricPrompt: any(named: 'biometricPrompt'),
         ),
       ).thenAnswer((invocation) async {
         final operation =
@@ -291,7 +284,6 @@ void main() {
         when(
           () => mockKeyStorage.getIdentityKeyContainer(
             npubA,
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async => containerA);
 
@@ -301,7 +293,6 @@ void main() {
         when(
           () => mockKeyStorage.switchToIdentity(
             any(),
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async {
           primaryRestored = true;
@@ -311,7 +302,6 @@ void main() {
         when(
           () => mockKeyStorage.withPrivateKey<Event?>(
             any(),
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((invocation) async {
           if (!primaryRestored) {
@@ -358,7 +348,6 @@ void main() {
         when(
           () => mockKeyStorage.getIdentityKeyContainer(
             npubA,
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async => containerA);
 
@@ -367,7 +356,6 @@ void main() {
         when(
           () => mockKeyStorage.withPrivateKey<Event?>(
             any(),
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((invocation) async {
           final operation =

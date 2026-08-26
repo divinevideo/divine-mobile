@@ -79,7 +79,6 @@ void main() {
     when(
       () => mockKeyStorage.deleteIdentityKeyContainer(
         any(),
-        biometricPrompt: any(named: 'biometricPrompt'),
       ),
     ).thenAnswer((_) async {});
     when(

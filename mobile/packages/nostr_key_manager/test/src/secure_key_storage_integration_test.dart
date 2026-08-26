@@ -344,22 +344,13 @@ void main() {
     test('should use strict security by default', () {
       const config = SecurityConfig.strict;
       expect(config.requireHardwareBacked, isTrue);
-      expect(config.requireBiometrics, isFalse);
       expect(config.allowFallbackSecurity, isFalse);
     });
 
     test('should allow desktop configuration', () {
       const config = SecurityConfig.desktop;
       expect(config.requireHardwareBacked, isFalse);
-      expect(config.requireBiometrics, isFalse);
       expect(config.allowFallbackSecurity, isTrue);
-    });
-
-    test('should support maximum security with biometrics', () {
-      const config = SecurityConfig.maximum;
-      expect(config.requireHardwareBacked, isTrue);
-      expect(config.requireBiometrics, isTrue);
-      expect(config.allowFallbackSecurity, isFalse);
     });
   });
 }

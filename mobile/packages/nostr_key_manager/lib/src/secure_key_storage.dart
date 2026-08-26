@@ -39,15 +39,11 @@ class SecurityConfig {
   /// Creates a new [SecurityConfig].
   const SecurityConfig({
     this.requireHardwareBacked = true,
-    this.requireBiometrics = false,
     this.allowFallbackSecurity = false,
   });
 
   /// Whether hardware-backed security is required.
   final bool requireHardwareBacked;
-
-  /// Whether biometric authentication is required.
-  final bool requireBiometrics;
 
   /// Whether fallback to software security is allowed.
   final bool allowFallbackSecurity;
@@ -60,9 +56,6 @@ class SecurityConfig {
     requireHardwareBacked: false,
     allowFallbackSecurity: true,
   );
-
-  /// Maximum security configuration with biometrics
-  static const SecurityConfig maximum = SecurityConfig(requireBiometrics: true);
 
   /// Fallback configuration for older devices
   static const SecurityConfig compatible = SecurityConfig(
@@ -153,20 +146,6 @@ class SecureKeyStorage {
         }
       }
 
-      if (_securityConfig.requireBiometrics &&
-          !_platformStorage.supportsBiometrics) {
-        if (!_securityConfig.allowFallbackSecurity) {
-          throw const SecureKeyStorageException(
-            'Biometric authentication required but not available',
-            code: 'biometrics_not_available',
-          );
-        } else {
-          _log.warning(
-            'Biometrics not available, continuing without protection',
-          );
-        }
-      }
-
       _isInitialized = true;
       _initializationError = null;
 
@@ -191,9 +170,7 @@ class SecureKeyStorage {
   }
 
   /// Generate and store a new secure key pair
-  Future<SecureKeyContainer> generateAndStoreKeys({
-    String? biometricPrompt,
-  }) async {
+  Future<SecureKeyContainer> generateAndStoreKeys() async {
     await _ensureInitialized();
 
     _log.fine('Generating new secure Nostr key pair');
@@ -208,7 +185,6 @@ class SecureKeyStorage {
       final result = await _platformStorage.storeKey(
         keyId: _primaryKeyId,
         keyContainer: keyContainer,
-        requireBiometrics: _securityConfig.requireBiometrics,
         requireHardwareBacked: _securityConfig.requireHardwareBacked,
       );
 
@@ -239,10 +215,7 @@ class SecureKeyStorage {
   }
 
   /// Import keys from nsec (bech32 private key)
-  Future<SecureKeyContainer> importFromNsec(
-    String nsec, {
-    String? biometricPrompt,
-  }) async {
+  Future<SecureKeyContainer> importFromNsec(String nsec) async {
     await _ensureInitialized();
 
     _log.fine('Importing keys from nsec');
@@ -281,7 +254,6 @@ class SecureKeyStorage {
       final result = await _platformStorage.storeKey(
         keyId: _primaryKeyId,
         keyContainer: keyContainer,
-        requireBiometrics: _securityConfig.requireBiometrics,
         requireHardwareBacked: _securityConfig.requireHardwareBacked,
       );
 
@@ -314,7 +286,7 @@ class SecureKeyStorage {
   }
 
   /// Get the current secure key container
-  Future<SecureKeyContainer?> getKeyContainer({String? biometricPrompt}) async {
+  Future<SecureKeyContainer?> getKeyContainer() async {
     await _ensureInitialized();
 
     // Check cache first - if valid, always return the cached container
@@ -329,7 +301,6 @@ class SecureKeyStorage {
 
       final keyContainer = await _platformStorage.retrieveKey(
         keyId: _primaryKeyId,
-        biometricPrompt: biometricPrompt,
       );
 
       if (keyContainer == null) {
@@ -352,10 +323,7 @@ class SecureKeyStorage {
   }
 
   /// Import keys from hex private key
-  Future<SecureKeyContainer> importFromHex(
-    String privateKeyHex, {
-    String? biometricPrompt,
-  }) async {
+  Future<SecureKeyContainer> importFromHex(String privateKeyHex) async {
     await _ensureInitialized();
 
     _log.fine('Importing keys from hex to secure storage');
@@ -392,7 +360,6 @@ class SecureKeyStorage {
       final result = await _platformStorage.storeKey(
         keyId: _primaryKeyId,
         keyContainer: keyContainer,
-        requireBiometrics: _securityConfig.requireBiometrics,
         requireHardwareBacked: _securityConfig.requireHardwareBacked,
       );
 
@@ -425,21 +392,16 @@ class SecureKeyStorage {
   }
 
   /// Get only the public key (npub)
-  Future<String?> getPublicKey({String? biometricPrompt}) async {
-    final keyContainer = await getKeyContainer(
-      biometricPrompt: biometricPrompt,
-    );
+  Future<String?> getPublicKey() async {
+    final keyContainer = await getKeyContainer();
     return keyContainer?.npub;
   }
 
   /// Perform operation with private key (for signing)
   Future<T?> withPrivateKey<T>(
-    T Function(String privateKeyHex) operation, {
-    String? biometricPrompt,
-  }) async {
-    final keyContainer = await getKeyContainer(
-      biometricPrompt: biometricPrompt,
-    );
+    T Function(String privateKeyHex) operation,
+  ) async {
+    final keyContainer = await getKeyContainer();
     if (keyContainer == null) return null;
 
     _log.fine('📱 Private key accessed for signing operation');
@@ -449,10 +411,8 @@ class SecureKeyStorage {
   }
 
   /// Export nsec for backup (use with extreme caution!)
-  Future<String?> exportNsec({String? biometricPrompt}) async {
-    final keyContainer = await getKeyContainer(
-      biometricPrompt: biometricPrompt,
-    );
+  Future<String?> exportNsec() async {
+    final keyContainer = await getKeyContainer();
     if (keyContainer == null) return null;
 
     _log.warning('NSEC export requested - ensure secure handling');
@@ -461,7 +421,7 @@ class SecureKeyStorage {
   }
 
   /// Delete all stored keys (irreversible!)
-  Future<void> deleteKeys({String? biometricPrompt}) async {
+  Future<void> deleteKeys() async {
     await _ensureInitialized();
 
     _log.fine('📱️ Deleting all stored secure keys');
@@ -474,10 +434,7 @@ class SecureKeyStorage {
     // Now attempt platform-level deletion. If this fails the key may still
     // be in the Secure Enclave / Keychain, so we throw to let callers warn
     // the user.
-    final success = await _platformStorage.deleteKey(
-      keyId: _primaryKeyId,
-      biometricPrompt: biometricPrompt,
-    );
+    final success = await _platformStorage.deleteKey(keyId: _primaryKeyId);
 
     if (!success) {
       throw const SecureKeyStorageException(
@@ -501,9 +458,8 @@ class SecureKeyStorage {
   /// Disposing it unconditionally killed the very container being restored, and
   /// `storeKey` then threw on the disposed private key.
   Future<void> restorePrimaryKeyContainer(
-    SecureKeyContainer? keyContainer, {
-    String? biometricPrompt,
-  }) async {
+    SecureKeyContainer? keyContainer,
+  ) async {
     await _ensureInitialized();
 
     if (!identical(_cachedKeyContainer, keyContainer)) {
@@ -512,10 +468,7 @@ class SecureKeyStorage {
     _clearCache();
 
     if (keyContainer == null) {
-      final success = await _platformStorage.deleteKey(
-        keyId: _primaryKeyId,
-        biometricPrompt: biometricPrompt,
-      );
+      final success = await _platformStorage.deleteKey(keyId: _primaryKeyId);
       if (!success) {
         throw const SecureKeyStorageException(
           'Platform primary key deletion failed during restore',
@@ -529,7 +482,6 @@ class SecureKeyStorage {
     final result = await _platformStorage.storeKey(
       keyId: _primaryKeyId,
       keyContainer: keyContainer,
-      requireBiometrics: _securityConfig.requireBiometrics,
       requireHardwareBacked: _securityConfig.requireHardwareBacked,
     );
 
@@ -577,7 +529,6 @@ class SecureKeyStorage {
       final result = await _platformStorage.storeKey(
         keyId: _backupKeyId,
         keyContainer: backupContainer,
-        requireBiometrics: _securityConfig.requireBiometrics,
         requireHardwareBacked: _securityConfig.requireHardwareBacked,
       );
 
@@ -680,7 +631,6 @@ class SecureKeyStorage {
       final result = await _platformStorage.storeKey(
         keyId: identityKeyId,
         keyContainer: keyContainer,
-        requireBiometrics: _securityConfig.requireBiometrics,
         requireHardwareBacked: _securityConfig.requireHardwareBacked,
       );
 
@@ -698,19 +648,13 @@ class SecureKeyStorage {
   }
 
   /// Retrieve a key container for a specific identity
-  Future<SecureKeyContainer?> getIdentityKeyContainer(
-    String npub, {
-    String? biometricPrompt,
-  }) async {
+  Future<SecureKeyContainer?> getIdentityKeyContainer(String npub) async {
     await _ensureInitialized();
 
     try {
       final identityKeyId = '$_savedKeysPrefix$npub';
 
-      return await _platformStorage.retrieveKey(
-        keyId: identityKeyId,
-        biometricPrompt: biometricPrompt,
-      );
+      return await _platformStorage.retrieveKey(keyId: identityKeyId);
     } on Exception catch (e) {
       _log.severe('Error retrieving identity: $e');
       return null;
@@ -723,19 +667,13 @@ class SecureKeyStorage {
   /// independently verify that PRIMARY belongs to the identity being removed
   /// before deleting it, because external-signer sessions can be active while
   /// PRIMARY still belongs to a different local account.
-  Future<void> deleteIdentityKeyContainer(
-    String npub, {
-    String? biometricPrompt,
-  }) async {
+  Future<void> deleteIdentityKeyContainer(String npub) async {
     await _ensureInitialized();
 
     final identityKeyId = '$_savedKeysPrefix$npub';
     _log.fine('📱️ Deleting identity key container for ${pubkeyForLogs(npub)}');
 
-    final success = await _platformStorage.deleteKey(
-      keyId: identityKeyId,
-      biometricPrompt: biometricPrompt,
-    );
+    final success = await _platformStorage.deleteKey(keyId: identityKeyId);
 
     if (!success) {
       throw const SecureKeyStorageException(
@@ -748,12 +686,10 @@ class SecureKeyStorage {
   }
 
   /// Switch to a different identity
-  Future<bool> switchToIdentity(String npub, {String? biometricPrompt}) async {
+  Future<bool> switchToIdentity(String npub) async {
     try {
       // Save current identity first
-      final currentContainer = await getKeyContainer(
-        biometricPrompt: biometricPrompt,
-      );
+      final currentContainer = await getKeyContainer();
       if (currentContainer != null) {
         await storeIdentityKeyContainer(
           currentContainer.npub,
@@ -762,10 +698,7 @@ class SecureKeyStorage {
       }
 
       // Get target identity
-      final targetContainer = await getIdentityKeyContainer(
-        npub,
-        biometricPrompt: biometricPrompt,
-      );
+      final targetContainer = await getIdentityKeyContainer(npub);
       if (targetContainer == null) {
         _log.severe('Target identity not found');
         return false;
@@ -775,7 +708,6 @@ class SecureKeyStorage {
       final result = await _platformStorage.storeKey(
         keyId: _primaryKeyId,
         keyContainer: targetContainer,
-        requireBiometrics: _securityConfig.requireBiometrics,
         requireHardwareBacked: _securityConfig.requireHardwareBacked,
       );
 
@@ -800,11 +732,9 @@ class SecureKeyStorage {
   Map<String, dynamic> get securityInfo => {
     'platform': _platformStorage.platformName,
     'hardware_backed': _platformStorage.supportsHardwareSecurity,
-    'biometrics_available': _platformStorage.supportsBiometrics,
     'capabilities': _platformStorage.capabilities.map((c) => c.name).toList(),
     'security_config': {
       'require_hardware': _securityConfig.requireHardwareBacked,
-      'require_biometrics': _securityConfig.requireBiometrics,
       'allow_fallback': _securityConfig.allowFallbackSecurity,
     },
     'cache_timeout_minutes': _cacheTimeout.inMinutes,
@@ -861,10 +791,6 @@ class SecureKeyStorage {
       parts.add('Hardware-backed');
     } else {
       parts.add('Software-only');
-    }
-
-    if (_platformStorage.supportsBiometrics) {
-      parts.add('Biometric-capable');
     }
 
     return parts.join(', ');

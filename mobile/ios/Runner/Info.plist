@@ -91,6 +91,8 @@
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Divine needs access to your camera to record short videos.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Divine uses Face ID to verify it's you before copying your private key.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Location access allows discovery of nearby devices for optional offline sync while using the app.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
