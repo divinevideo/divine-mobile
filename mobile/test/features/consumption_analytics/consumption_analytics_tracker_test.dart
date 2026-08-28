@@ -31,6 +31,23 @@ void main() {
       expect(analytics.events, isEmpty);
     });
 
+    test('absorbs consent lookup failures', () async {
+      final trackerWithFailingConsent = ConsumptionAnalyticsTracker(
+        analytics: analytics,
+        isEnabled: () => throw StateError('preferences unavailable'),
+      );
+
+      await expectLater(
+        trackerWithFailingConsent.videoStarted(
+          video: _video,
+          trafficSource: ViewTrafficSource.home,
+          position: 0,
+        ),
+        completes,
+      );
+      expect(analytics.events, isEmpty);
+    });
+
     test('records the requested video consumption parameters', () async {
       await tracker.videoStarted(
         video: _video,
