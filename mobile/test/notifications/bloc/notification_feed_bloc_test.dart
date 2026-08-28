@@ -1272,6 +1272,38 @@ void main() {
       );
 
       blocTest<NotificationFeedBloc, NotificationFeedState>(
+        'heals stale notification state without following again',
+        setUp: () {
+          when(
+            () => mockFollowRepo.isFollowing(_bobPubkey),
+          ).thenReturn(true);
+        },
+        build: createBloc,
+        seed: () => NotificationFeedState(
+          notifications: [
+            _actorNotif(id: 'f1', pubkey: _bobPubkey, displayName: 'Bob'),
+          ],
+        ),
+        act: (bloc) => bloc.add(NotificationFeedFollowBack(_bobPubkey)),
+        expect: () => [
+          NotificationFeedState(
+            notifications: [
+              _actorNotif(
+                id: 'f1',
+                pubkey: _bobPubkey,
+                displayName: 'Bob',
+                isFollowingBack: true,
+              ),
+            ],
+          ),
+        ],
+        verify: (_) {
+          verifyNever(() => mockFollowRepo.follow(_bobPubkey));
+          expect(analytics.events, isEmpty);
+        },
+      );
+
+      blocTest<NotificationFeedBloc, NotificationFeedState>(
         'forwards follow errors via addError',
         setUp: () {
           when(

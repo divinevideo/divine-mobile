@@ -692,7 +692,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
     );
-    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true, startsNewFeedSession: true);
+    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
   }
 
   /// Handle curated list subscription changes from [CuratedListRepository].

@@ -3181,6 +3181,7 @@ void main() {
           status: VideoFeedStatus.success,
           mode: FeedMode.following,
           videos: createTestVideos(3),
+          feedSessionRevision: 4,
         ),
         act: (bloc) =>
             bloc.add(const VideoFeedFollowingListChanged(['new-author'])),
@@ -3189,7 +3190,8 @@ void main() {
           isA<VideoFeedBlocState>()
               .having((s) => s.status, 'status', VideoFeedStatus.success)
               .having((s) => s.videos.length, 'videos count', pageSize)
-              .having((s) => s.mode, 'mode', FeedMode.following),
+              .having((s) => s.mode, 'mode', FeedMode.following)
+              .having((s) => s.feedSessionRevision, 'feed session', 4),
         ],
       );
 
@@ -3401,15 +3403,9 @@ void main() {
           followingController.add(['author', 'new-author']);
         },
         skip: 2, // Skip loading + success from VideoFeedStarted
-        // The collection is the same, but a completed full refresh starts a
-        // new feed-depth analytics session.
-        expect: () => [
-          isA<VideoFeedBlocState>().having(
-            (state) => state.feedSessionRevision,
-            'feed session',
-            1,
-          ),
-        ],
+        // The identical silent refresh stays in the current session, so there
+        // is no distinct state to emit.
+        expect: () => <VideoFeedBlocState>[],
         verify: (_) {
           // Called 2 times: initial + runtime (replay is skipped)
           verify(
