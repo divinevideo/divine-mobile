@@ -2495,7 +2495,11 @@ void main() {
       );
 
       unawaited(feedKey.currentState!.animateToPage(1));
-      await tester.pump(const Duration(seconds: 1));
+      tester
+          .widget<InfiniteVideoFeed>(find.byType(InfiniteVideoFeed))
+          .onActiveVideoChanged
+          ?.call(secondVideo, 1);
+      await tester.pump();
 
       expect(analytics.events, isEmpty);
       await tester.pumpWidget(const SizedBox.shrink());

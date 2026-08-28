@@ -146,8 +146,8 @@ class ConsumptionAnalyticsTracker {
   });
 
   Future<void> _log(String name, Map<String, Object> parameters) async {
-    if (!_isEnabled()) return;
     try {
+      if (!_isEnabled()) return;
       await _analytics.logEvent(name: name, parameters: parameters);
     } catch (error) {
       Log.warning(
