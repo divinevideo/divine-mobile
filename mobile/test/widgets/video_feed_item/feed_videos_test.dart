@@ -2475,6 +2475,33 @@ void main() {
       expect(analytics.events.single.parameters['depth'], 2);
     });
 
+    testWidgets('does not record a programmatic page advance', (tester) async {
+      final analytics = _RecordingAnalytics();
+      final feedKey = GlobalKey<FeedVideosState>();
+      final firstVideo = _makeVideo();
+      final secondVideo = _makeVideo(
+        id: 'b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234a1',
+      );
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [firstVideo, secondVideo],
+        feedKey: feedKey,
+        additionalOverrides: [
+          consumptionAnalyticsTrackerProvider.overrideWithValue(
+            ConsumptionAnalyticsTracker(analytics: analytics),
+          ),
+        ],
+      );
+
+      unawaited(feedKey.currentState!.animateToPage(1));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(analytics.events, isEmpty);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 4));
+    });
+
     testWidgets('records the first real swipe at depth two', (tester) async {
       final analytics = _RecordingAnalytics();
       final firstVideo = _makeVideo();
@@ -2629,6 +2656,70 @@ void main() {
           'feed_type': 'list',
           'depth': 2,
         });
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 4));
+      },
+    );
+
+    testWidgets(
+      'keeps depth when videos change without a new session revision',
+      (tester) async {
+        final analytics = _RecordingAnalytics();
+        final feedKey = GlobalKey<FeedVideosState>();
+        final firstVideo = _makeVideo();
+        final secondVideo = _makeVideo(
+          id:
+              'b2c3d4e5f6789012345678901234567890abcdef123456789012345678901234'
+              'a1',
+        );
+        final replacementFirst = _makeVideo(
+          id:
+              'c3d4e5f6789012345678901234567890abcdef123456789012345678901234a1'
+              'b2',
+        );
+        final replacementSecond = _makeVideo(
+          id:
+              'd4e5f6789012345678901234567890abcdef123456789012345678901234a1b2'
+              'c3',
+        );
+        final overrides = [
+          consumptionAnalyticsTrackerProvider.overrideWithValue(
+            ConsumptionAnalyticsTracker(analytics: analytics),
+          ),
+        ];
+
+        final container = await _pumpFeedVideos(
+          tester,
+          videos: [firstVideo, secondVideo],
+          feedKey: feedKey,
+          trafficSource: ViewTrafficSource.home,
+          sourceDetail: 'list',
+          feedSessionRevision: 1,
+          additionalOverrides: overrides,
+        );
+        tester
+            .widget<InfiniteVideoFeed>(find.byType(InfiniteVideoFeed))
+            .onActiveVideoChanged
+            ?.call(secondVideo, 1);
+        await tester.pump();
+
+        await _pumpFeedVideos(
+          tester,
+          videos: [replacementFirst, replacementSecond],
+          feedKey: feedKey,
+          trafficSource: ViewTrafficSource.home,
+          sourceDetail: 'list',
+          feedSessionRevision: 1,
+          providerContainer: container,
+        );
+        tester
+            .widget<InfiniteVideoFeed>(find.byType(InfiniteVideoFeed))
+            .onActiveVideoChanged
+            ?.call(replacementSecond, 1);
+        await tester.pump();
+
+        expect(analytics.events, hasLength(2));
+        expect(analytics.events.last.parameters['depth'], 3);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 4));
       },
