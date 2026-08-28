@@ -16,6 +16,21 @@ void main() {
   });
 
   group(ConsumptionAnalyticsTracker, () {
+    test('does not record events when analytics is disabled', () async {
+      final disabledTracker = ConsumptionAnalyticsTracker(
+        analytics: analytics,
+        isEnabled: () => false,
+      );
+
+      await disabledTracker.videoStarted(
+        video: _video,
+        trafficSource: ViewTrafficSource.home,
+        position: 0,
+      );
+
+      expect(analytics.events, isEmpty);
+    });
+
     test('records the requested video consumption parameters', () async {
       await tracker.videoStarted(
         video: _video,

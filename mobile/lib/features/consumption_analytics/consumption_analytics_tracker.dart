@@ -13,10 +13,16 @@ import 'package:unified_logger/unified_logger.dart';
 /// `classics`, `popular`, and `featured` vocabulary.
 class ConsumptionAnalyticsTracker {
   /// Creates a tracker backed by [analytics].
-  ConsumptionAnalyticsTracker({required AnalyticsEventSink analytics})
-    : _analytics = analytics;
+  ConsumptionAnalyticsTracker({
+    required AnalyticsEventSink analytics,
+    bool Function()? isEnabled,
+  }) : _analytics = analytics,
+       _isEnabled = isEnabled ?? _enabledByDefault;
 
   final AnalyticsEventSink _analytics;
+  final bool Function() _isEnabled;
+
+  static bool _enabledByDefault() => true;
 
   /// Records that playback started for [video] at [position].
   Future<void> videoStarted({
@@ -86,7 +92,7 @@ class ConsumptionAnalyticsTracker {
     targetPubkey: targetPubkey,
   );
 
-  /// Records share intent when the share surface is opened.
+  /// Records share intent when the share action is tapped.
   Future<void> shareTapped({
     required String targetVideoId,
     required String targetPubkey,
@@ -140,6 +146,7 @@ class ConsumptionAnalyticsTracker {
   });
 
   Future<void> _log(String name, Map<String, Object> parameters) async {
+    if (!_isEnabled()) return;
     try {
       await _analytics.logEvent(name: name, parameters: parameters);
     } catch (error) {
