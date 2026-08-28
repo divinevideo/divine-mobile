@@ -1120,7 +1120,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
     );
-    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true, startsNewFeedSession: true);
+    await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
   }
 
   /// Reconciles the active feed with current curated-list subscriptions.

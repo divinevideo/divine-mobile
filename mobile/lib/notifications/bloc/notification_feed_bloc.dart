@@ -479,12 +479,14 @@ class NotificationFeedBloc
     NotificationFeedFollowBack event,
     Emitter<NotificationFeedState> emit,
   ) async {
-    if (_followRepository.isFollowing(event.pubkey)) return;
+    final wasFollowing = _followRepository.isFollowing(event.pubkey);
     try {
-      await _followRepository.follow(event.pubkey);
-      unawaited(
-        _consumptionAnalytics.followAdded(targetPubkey: event.pubkey),
-      );
+      if (!wasFollowing) {
+        await _followRepository.follow(event.pubkey);
+        unawaited(
+          _consumptionAnalytics.followAdded(targetPubkey: event.pubkey),
+        );
+      }
       emit(
         state.copyWith(notifications: _applyFollowState(state.notifications)),
       );
