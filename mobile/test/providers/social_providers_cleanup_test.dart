@@ -13,8 +13,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:models/models.dart' as model;
-import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/models/pending_upload.dart' as hive_model;
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -63,6 +63,16 @@ const _pendingDeletionId =
     '3333333333333333333333333333333333333333333333333333333333333333';
 const _legacyNullConversationId =
     '4444444444444444444444444444444444444444444444444444444444444444';
+
+Event _personalEvent(String pubkey, int createdAt) => Event(
+  pubkey,
+  34236,
+  const [
+    ['d', 'video'],
+  ],
+  '',
+  createdAt: createdAt,
+)..sig = 'f' * 128;
 
 void main() {
   group(userDataCleanupServiceProvider, () {
@@ -322,45 +332,46 @@ void main() {
       expect(incoming.declaredContentLanguage, isNull);
     });
 
-    for (final closeBeforeCleanup in [false, true]) {
-      test(
-        'clears personal-event boxes when '
-        '${closeBeforeCleanup ? 'closed on disk' : 'already open'}',
-        () async {
-          final events = await Hive.openBox<dynamic>(
-            HiveBoxNames.personalEvents,
-          );
-          final metadata = await Hive.openBox<dynamic>(
-            HiveBoxNames.personalEventsMetadata,
-          );
-          addTearDown(() async {
-            await TestHelpers.cleanupHiveBox(HiveBoxNames.personalEvents);
-            await TestHelpers.cleanupHiveBox(
-              HiveBoxNames.personalEventsMetadata,
-            );
-          });
-          await events.put(_reactionIdA, {'kind': 34236});
-          await metadata.put('last_sync', 123);
-          expect(events.containsKey(_reactionIdA), isTrue);
-          expect(metadata.get('last_sync'), 123);
-          if (closeBeforeCleanup) {
-            await events.close();
-            await metadata.close();
-          }
-
-          await container.read(personalEventCacheClearProvider)();
-
-          expect(
-            Hive.box<dynamic>(HiveBoxNames.personalEvents).isEmpty,
-            isTrue,
-          );
-          expect(
-            Hive.box<dynamic>(HiveBoxNames.personalEventsMetadata).isEmpty,
-            isTrue,
-          );
-        },
+    test('clears every owner\'s personal events', () async {
+      await db.personalEventsDao.upsertPersonalEvent(
+        _personalEvent(_pubkeyA, 1700000000),
       );
-    }
+      await db.personalEventsDao.upsertPersonalEvent(
+        _personalEvent(_pubkeyB, 1700000001),
+      );
+      expect(await db.personalEventsDao.countForOwner(_pubkeyA), 1);
+      expect(await db.personalEventsDao.countForOwner(_pubkeyB), 1);
+
+      await container.read(personalEventCacheClearProvider)();
+
+      expect(await db.personalEventsDao.countForOwner(_pubkeyA), 0);
+      expect(await db.personalEventsDao.countForOwner(_pubkeyB), 0);
+    });
+
+    test(
+      'destructive cleanup purges only the departing user personal events',
+      () async {
+        await db.personalEventsDao.upsertPersonalEvent(
+          _personalEvent(_pubkeyA, 1700000000),
+        );
+        await db.personalEventsDao.upsertPersonalEvent(
+          _personalEvent(_pubkeyB, 1700000001),
+        );
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        await subscription.read().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+
+        expect(await db.personalEventsDao.countForOwner(_pubkeyA), 0);
+        expect(await db.personalEventsDao.countForOwner(_pubkeyB), 1);
+      },
+    );
 
     test(
       'account switch stops when shared event-cache cleanup fails',
