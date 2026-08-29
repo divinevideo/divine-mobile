@@ -12,10 +12,8 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/blocs/storage/storage_cubit.dart';
 import 'package:openvine/constants/storage_cache_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/storage_providers.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/services/cache_recovery_service.dart';
 import 'package:openvine/utils/byte_size_format.dart';
 
 /// Settings screen for clearing caches and auditing the clip library.
@@ -38,16 +36,12 @@ class StorageManagementPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final service = ref.watch(storageManagementServiceProvider);
-    final personalEventsDao = ref.watch(databaseProvider).personalEventsDao;
+    final recoverAllCaches = ref.watch(recoverAllCachesProvider);
     return BlocProvider(
-      key: ValueKey((service, personalEventsDao)),
+      key: ValueKey((service, recoverAllCaches)),
       create: (_) => StorageCubit(
         service: service,
-        // personal_events is a Drift table inside the protected database
-        // directory, so the path-based sweep cannot reach it (#6986).
-        recoverAllCaches: () => CacheRecoveryService.clearAllCaches(
-          clearPersonalEvents: personalEventsDao.deleteAll,
-        ),
+        recoverAllCaches: recoverAllCaches,
       )..loadCacheSize(),
       child: const StorageManagementView(),
     );
