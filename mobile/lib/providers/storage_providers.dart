@@ -7,6 +7,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/cache_recovery_service.dart';
 import 'package:openvine/services/clip_recovery_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
@@ -58,7 +59,14 @@ final clipRecoveryServiceProvider = Provider<ClipRecoveryService>((ref) {
 /// service layer through a provider instead of importing it directly.
 final recoverAllCachesProvider = Provider<Future<bool> Function()>((ref) {
   final personalEventsDao = ref.watch(databaseProvider).personalEventsDao;
+  final personalEventCache = ref.watch(personalEventCacheServiceProvider);
   return () => CacheRecoveryService.clearAllCaches(
-    clearPersonalEvents: personalEventsDao.deleteAll,
+    clearPersonalEvents: () async {
+      // Clear the synchronous mirror as well as every account's stored rows.
+      // Calling the DAO alone would leave deleted events readable until the
+      // active account reinitialized or the app restarted.
+      await personalEventCache.clearCache();
+      await personalEventsDao.deleteAll();
+    },
   );
 });
