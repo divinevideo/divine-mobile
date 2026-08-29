@@ -14,13 +14,12 @@ part 'storage_state.dart';
 class StorageCubit extends Cubit<StorageState> {
   /// Creates a cubit backed by [service] and loads the current cache size.
   ///
-  /// [recoverAllCaches] and [measureRecoveryFootprint] default to
-  /// [CacheRecoveryService]'s static entry points and exist so tests can drive
-  /// the repair section without touching the real filesystem.
+  /// [recoverAllCaches] must be injected by a screen that exposes repair so
+  /// every disposable database table participates. When it is absent, repair
+  /// fails closed instead of running an incomplete static wipe.
   StorageCubit({
     required StorageManagementService service,
-    Future<bool> Function() recoverAllCaches =
-        CacheRecoveryService.clearAllCaches,
+    Future<bool> Function()? recoverAllCaches,
     Future<int> Function() measureRecoveryFootprint =
         CacheRecoveryService.cacheSizeBytes,
   }) : _service = service,
@@ -29,7 +28,7 @@ class StorageCubit extends Cubit<StorageState> {
        super(const StorageState());
 
   final StorageManagementService _service;
-  final Future<bool> Function() _recoverAllCaches;
+  final Future<bool> Function()? _recoverAllCaches;
   final Future<int> Function() _measureRecoveryFootprint;
 
   /// Loads the current clearable cache size and configured limit.
@@ -171,7 +170,11 @@ class StorageCubit extends Cubit<StorageState> {
   Future<void> recoverFromCorruptedCache() async {
     emit(state.copyWith(recoveryStatus: StorageRecoveryStatus.recovering));
     try {
-      final succeeded = await _recoverAllCaches();
+      final recoverAllCaches = _recoverAllCaches;
+      if (recoverAllCaches == null) {
+        throw StateError('Cache recovery was not configured for this screen');
+      }
+      final succeeded = await recoverAllCaches();
       if (isClosed) return;
       emit(
         state.copyWith(

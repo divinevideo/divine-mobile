@@ -228,6 +228,17 @@ void main() {
       const footprintBytes = 42 * 1024 * 1024;
 
       blocTest<StorageCubit, StorageState>(
+        'fails closed when cache recovery was not injected',
+        build: build,
+        act: (cubit) => cubit.recoverFromCorruptedCache(),
+        expect: () => const [
+          StorageState(recoveryStatus: StorageRecoveryStatus.recovering),
+          StorageState(recoveryStatus: StorageRecoveryStatus.failure),
+        ],
+        errors: () => [isA<StateError>()],
+      );
+
+      blocTest<StorageCubit, StorageState>(
         'loadRecoveryFootprint emits measuring then the measured footprint',
         build: () => StorageCubit(
           service: service,
