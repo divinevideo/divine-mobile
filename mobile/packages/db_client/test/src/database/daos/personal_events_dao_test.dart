@@ -81,6 +81,39 @@ void main() {
         expect(lists.single.createdAt, 1700000024);
       });
 
+      test('an older collapsing write does not replace a newer row', () async {
+        // The Hive store this replaced kept every version and let readers
+        // sort, so an out-of-order write could not surface an older event.
+        await dao.upsertPersonalEvent(
+          createEvent(kind: 3, content: 'newer', createdAt: 1700000010),
+        );
+        await dao.upsertPersonalEvent(
+          createEvent(kind: 3, content: 'older', createdAt: 1700000000),
+        );
+
+        final rows = await dao.getByKind(pubkey: owner, kind: 3);
+        expect(rows, hasLength(1));
+        expect(rows.single.content, 'newer');
+      });
+
+      test(
+        'a same-second collapsing write replaces rather than drops',
+        () async {
+          // Nostr created_at is second-resolution, so two publishes inside one
+          // second collide. Dropping the later one would lose a real write.
+          await dao.upsertPersonalEvent(
+            createEvent(kind: 3, content: 'first', createdAt: 1700000000),
+          );
+          await dao.upsertPersonalEvent(
+            createEvent(kind: 3, content: 'second', createdAt: 1700000000),
+          );
+
+          final rows = await dao.getByKind(pubkey: owner, kind: 3);
+          expect(rows, hasLength(1));
+          expect(rows.single.content, 'second');
+        },
+      );
+
       test('collapses kind 0 and 10000-range kinds too', () async {
         for (final kind in [0, 10002]) {
           await dao.upsertPersonalEvent(

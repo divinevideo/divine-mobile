@@ -174,7 +174,9 @@ class PersonalEventCacheService {
 
     // Mirror the DAO's retention rule so a synchronous read taken before the
     // durable write completes agrees with what the database will hold.
-    _applyRetentionToMirror(event);
+    if (!_applyRetentionToMirror(event)) {
+      return false;
+    }
 
     try {
       await _dao.upsertPersonalEvent(event);
@@ -194,14 +196,29 @@ class PersonalEventCacheService {
     }
   }
 
-  void _applyRetentionToMirror(Event event) {
+  /// Mirrors [PersonalEventsDao.upsertPersonalEvent]'s retention rule.
+  ///
+  /// Returns false when the write is a no-op, so the caller can skip the
+  /// durable write too and the two stores cannot disagree.
+  bool _applyRetentionToMirror(Event event) {
     if (PersonalEventRetention.forKind(event.kind) ==
         PersonalEventRetention.collapsing) {
-      _events.removeWhere(
-        (_, cached) => cached.kind == event.kind && cached.id != event.id,
+      final sameKind = _events.values.where(
+        (cached) => cached.kind == event.kind,
       );
+      final newestStored = sameKind.fold<int?>(
+        null,
+        (newest, cached) => newest == null || cached.createdAt > newest
+            ? cached.createdAt
+            : newest,
+      );
+      if (newestStored != null && event.createdAt < newestStored) {
+        return false;
+      }
+
+      _events.removeWhere((_, cached) => cached.kind == event.kind);
       _events[event.id] = event;
-      return;
+      return true;
     }
 
     _events[event.id] = event;
@@ -222,6 +239,8 @@ class PersonalEventCacheService {
     for (final evicted in durable.skip(maxDurablePersonalEventsPerOwner)) {
       _events.remove(evicted.id);
     }
+
+    return _events.containsKey(event.id);
   }
 
   /// Get all cached events of a specific kind, newest first.
