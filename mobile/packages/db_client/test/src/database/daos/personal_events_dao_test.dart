@@ -278,6 +278,33 @@ void main() {
         expect(rows, hasLength(1));
         expect(rows.single.pubkey, owner);
       });
+
+      test(
+        'getAllForOwner deletes a malformed row and keeps valid rows',
+        () async {
+          final valid = createEvent(createdAt: 1700000000);
+          await dao.upsertPersonalEvent(valid);
+          await database
+              .into(database.personalEvents)
+              .insert(
+                PersonalEventsCompanion.insert(
+                  id: 'f' * 64,
+                  pubkey: owner,
+                  kind: 34236,
+                  createdAt: 1700000001,
+                  tags: 'not-json',
+                  content: 'corrupt cache row',
+                  sig: 'f' * 128,
+                  retention: PersonalEventRetention.durable.value,
+                ),
+              );
+
+          final rows = await dao.getAllForOwner(owner);
+
+          expect(rows.map((event) => event.id), [valid.id]);
+          expect(await dao.countForOwner(owner), 1);
+        },
+      );
     });
 
     group('deletion', () {
