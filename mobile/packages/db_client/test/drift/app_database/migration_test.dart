@@ -33,6 +33,53 @@ void main() {
       await db.close();
     });
 
+    test('v12 creates personal_events on a v11 database', () async {
+      final schema = await verifier.schemaAt(11);
+      final db = AppDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, 12);
+
+      final rows = await db
+          .customSelect(
+            "SELECT name FROM sqlite_master "
+            "WHERE type = 'table' AND name = 'personal_events'",
+          )
+          .get();
+      expect(rows, hasLength(1));
+      await db.close();
+    });
+
+    test(
+      'a v11 database keeps its rows across the v12 upgrade',
+      () async {
+        // personal_events is a new table, so nothing is migrated into it. The
+        // point of the check is that adding it does not disturb existing data.
+        await verifier.testWithDataIntegrity(
+          oldVersion: 11,
+          newVersion: 12,
+          createOld: v11.DatabaseAtV11.new,
+          createNew: v12.DatabaseAtV12.new,
+          openTestedDatabase: AppDatabase.new,
+          createItems: (batch, oldDb) => batch.insert(
+            oldDb.directMessages,
+            v11.DirectMessagesCompanion.insert(
+              id: 'c' * 64,
+              conversationId: 'd' * 64,
+              senderPubkey: 'a' * 64,
+              content: 'a message that predates personal_events',
+              createdAt: 1700000000,
+              giftWrapId: 'b' * 64,
+            ),
+          ),
+          validateItems: (newDb) async {
+            final row = await newDb.select(newDb.directMessages).getSingle();
+            expect(row.content, 'a message that predates personal_events');
+            final personal = await newDb.select(newDb.personalEvents).get();
+            expect(personal, isEmpty);
+          },
+        );
+      },
+    );
+
     test(
       'a v10 direct message arrives at v11 with no twin already absorbed',
       () async {

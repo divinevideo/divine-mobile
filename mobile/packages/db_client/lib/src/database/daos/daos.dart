@@ -17,6 +17,7 @@ export 'pending_product_events_dao.dart';
 export 'pending_profile_saves_dao.dart';
 export 'pending_uploads_dao.dart';
 export 'pending_view_events_dao.dart';
+export 'personal_events_dao.dart';
 export 'personal_reactions_dao.dart';
 export 'personal_reposts_dao.dart';
 export 'processed_gift_wraps_dao.dart';
