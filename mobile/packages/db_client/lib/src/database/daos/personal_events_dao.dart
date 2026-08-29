@@ -64,6 +64,27 @@ class PersonalEventsDao extends DatabaseAccessor<AppDatabase>
 
     await transaction(() async {
       if (retention == PersonalEventRetention.collapsing) {
+        // Keep the newest version. The Hive store this replaced kept every
+        // version and let readers sort, so an out-of-order write could not
+        // make a read return an older event; collapsing unconditionally
+        // would. Ties replace, so two publishes inside one second — Nostr
+        // `created_at` is second-resolution — do not silently drop the later
+        // one.
+        final existing =
+            await (select(personalEvents)..where(
+                  (t) =>
+                      t.pubkey.equals(event.pubkey) & t.kind.equals(event.kind),
+                ))
+                .get();
+        final newestStored = existing.fold<int?>(
+          null,
+          (newest, row) =>
+              newest == null || row.createdAt > newest ? row.createdAt : newest,
+        );
+        if (newestStored != null && event.createdAt < newestStored) {
+          return;
+        }
+
         await (delete(personalEvents)..where(
               (t) => t.pubkey.equals(event.pubkey) & t.kind.equals(event.kind),
             ))

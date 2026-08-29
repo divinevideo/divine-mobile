@@ -263,6 +263,24 @@ void main() {
       expect(await database.personalEventsDao.countForOwner(userPubkey), 1);
     });
 
+    test('an older contact list does not replace a newer one', () async {
+      await service.initialize(userPubkey);
+
+      service.cacheUserEvent(contactList(1700000010));
+      await TestHelpers.waitForCondition(
+        () => service.getEventsByKind(3).isNotEmpty,
+        timeout: _settleTimeout,
+        description: 'newer contact list to be cached',
+      );
+
+      service.cacheUserEvent(contactList(1700000000));
+      await pumpEventQueue();
+
+      final lists = service.getEventsByKind(3);
+      expect(lists, hasLength(1));
+      expect(lists.single.createdAt, 1700000010);
+    });
+
     test('survives the shared event cache expiry sweep', () async {
       // deleteExpiredEvents removes rows whose expire_at IS NULL as well as
       // past-dated ones, which is why personal events do not live in the
