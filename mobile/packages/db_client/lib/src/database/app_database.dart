@@ -450,13 +450,6 @@ class AppDatabase extends _$AppDatabase {
     ''');
   }
 
-  /// Creates all indexes consolidated from explicit `List<Index>` getters.
-  ///
-  /// The `List<Index> get indexes` getters these replace were never read by
-  /// Drift, so none of these indexes exist on any shipped database (#7040).
-  /// v7 moves the definitions into `@TableIndex.sql()` annotations, which
-  /// `createAll` honours; this backfills them for every database that already
-  /// exists.
   /// Creates the `personal_events` indexes (#6986).
   ///
   /// Kept beside the table's `@TableIndex.sql` annotations, which Drift uses
@@ -474,6 +467,13 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Creates all indexes consolidated from explicit `List<Index>` getters.
+  ///
+  /// The `List<Index> get indexes` getters these replace were never read by
+  /// Drift, so none of these indexes exist on any shipped database (#7040).
+  /// v7 moves the definitions into `@TableIndex.sql()` annotations, which
+  /// `createAll` honours; this backfills them for every database that already
+  /// exists.
   Future<void> _createConsolidatedIndexes() async {
     // VideoMetrics indices
     await customStatement(
