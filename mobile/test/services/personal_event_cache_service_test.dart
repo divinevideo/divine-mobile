@@ -1,10 +1,9 @@
 // ABOUTME: Tests for PersonalEventCacheService initialization race handling.
-// ABOUTME: Ensures signed user events are not dropped while Hive boxes open.
+// ABOUTME: Ensures signed user events are not dropped while the store opens.
 
-import 'dart:io';
-
+import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 
@@ -16,7 +15,7 @@ const Duration _settleTimeout = Duration(seconds: 10);
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late Directory testDir;
+  late AppDatabase database;
   late PersonalEventCacheService service;
 
   final userPubkey = List.filled(64, 'a').join();
@@ -58,36 +57,16 @@ void main() {
   }
 
   setUp(() async {
-    // Defend against Hive state leaked by an earlier file in the shared
-    // very_good --optimization isolate: this service suite and the sibling
-    // provider suite both open boxes under the same fixed names, so force a
-    // clean Hive registry before init (#5738).
-    try {
-      await Hive.close();
-    } on PathNotFoundException catch (_) {}
-    testDir = await Directory.systemTemp.createTemp(
-      'personal_event_cache_service_test_',
-    );
-    Hive.init(testDir.path);
-    service = PersonalEventCacheService();
+    // An in-memory database per test. Unlike the Hive boxes this replaced
+    // (#6986), the store is not opened under a fixed global name, so nothing
+    // leaks into the next file in the shared VGV isolate (#5738).
+    database = AppDatabase.test(NativeDatabase.memory());
+    service = PersonalEventCacheService(dao: database.personalEventsDao);
   });
 
   tearDown(() async {
     service.dispose();
-    // Drain the fire-and-forget box close (dispose -> unawaited _closeBox)
-    // before Hive.close() so the two don't race and leak box state into the
-    // next file in the shared VGV isolate (#5738).
-    await pumpEventQueue();
-    try {
-      await Hive.close();
-    } on PathNotFoundException catch (_) {
-      // Hive may already have removed its lock file during async shutdown.
-    }
-    try {
-      await testDir.delete(recursive: true);
-    } on PathNotFoundException catch (_) {
-      // Lock file may already be gone after Hive.close().
-    }
+    await database.close();
   });
 
   group('PersonalEventCacheService initialization', () {
@@ -244,5 +223,78 @@ void main() {
         expect(service.hasEvent(event.id), isTrue);
       },
     );
+  });
+
+  group('PersonalEventCacheService retention', () {
+    Event contactList(int createdAt) {
+      final event = Event(
+        userPubkey,
+        3,
+        const [
+          ['p', 'a'],
+        ],
+        '',
+        createdAt: createdAt,
+      );
+      event.id = hexId(createdAt);
+      event.sig = event.id.padRight(128, '0').substring(0, 128);
+      return event;
+    }
+
+    test('collapses contact-list history to the newest event', () async {
+      // Every follow, unfollow, block, unblock and automatic re-broadcast
+      // used to append a full kind-3 list that was never evicted (#6986).
+      await service.initialize(userPubkey);
+
+      for (var i = 1; i <= 20; i++) {
+        service.cacheUserEvent(contactList(1700000000 + i));
+        await TestHelpers.waitForCondition(
+          () => service
+              .getEventsByKind(3)
+              .any((event) => event.createdAt == 1700000000 + i),
+          timeout: _settleTimeout,
+          description: 'contact list $i to be cached',
+        );
+      }
+
+      final lists = service.getEventsByKind(3);
+      expect(lists, hasLength(1));
+      expect(lists.single.createdAt, 1700000020);
+      expect(await database.personalEventsDao.countForOwner(userPubkey), 1);
+    });
+
+    test('survives the shared event cache expiry sweep', () async {
+      // deleteExpiredEvents removes rows whose expire_at IS NULL as well as
+      // past-dated ones, which is why personal events do not live in the
+      // shared `event` table (#6986).
+      await service.initialize(userPubkey);
+      final event = createEvent(pubkey: userPubkey, id: hexId(301));
+      service.cacheUserEvent(event);
+      await waitForKindIndex(event);
+
+      await database.nostrEventsDao.deleteExpiredEvents(null);
+      await service.initialize(userPubkey);
+
+      expect(service.hasEvent(event.id), isTrue);
+    });
+
+    test('a failing durable write does not throw to the caller', () async {
+      // `cacheUserEvent` is called from the publish path, which must not fail
+      // because a cache write did. There was no test for this before #6986.
+      await service.initialize(userPubkey);
+      await database.close();
+
+      final event = createEvent(pubkey: userPubkey, id: hexId(302));
+
+      expect(() => service.cacheUserEvent(event), returnsNormally);
+      await pumpEventQueue();
+
+      // The in-memory mirror still answers, so a retry in the same session
+      // can still find the signed event it just wrote.
+      expect(service.getEventById(event.id), isNotNull);
+
+      // Re-open so tearDown's close() does not throw on an already-closed db.
+      database = AppDatabase.test(NativeDatabase.memory());
+    });
   });
 }
