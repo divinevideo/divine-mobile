@@ -9,7 +9,7 @@ import 'package:openvine/services/personal_event_cache_service.dart';
 
 import '../helpers/test_helpers.dart';
 
-/// Wall-clock budget for waits that depend on Hive file I/O.
+/// Wall-clock budget for asynchronous cache persistence.
 const Duration _settleTimeout = Duration(seconds: 10);
 
 void main() {
@@ -27,6 +27,7 @@ void main() {
     required String pubkey,
     required String id,
     String content = 'A plant video',
+    int createdAt = 1700000000,
   }) {
     final event = Event(
       pubkey,
@@ -36,24 +37,25 @@ void main() {
         ['title', 'Plants'],
       ],
       content,
-      createdAt: 1700000000,
+      createdAt: createdAt,
     );
     event.id = id;
     event.sig = id.padRight(128, '0').substring(0, 128);
     return event;
   }
 
-  Future<void> waitForKindIndex(Event event) async {
-    // cacheUserEvent is fire-and-forget: the event record is written before
-    // its kind index. Wait for the index entry instead of assuming that one
-    // event-loop pump means both Hive writes have completed.
-    await TestHelpers.waitForCondition(
-      () => service
-          .getEventsByKind(event.kind)
-          .any((cachedEvent) => cachedEvent.id == event.id),
-      timeout: _settleTimeout,
-      description: 'event ${event.id} to be added to kind ${event.kind} index',
-    );
+  Future<void> waitForDurableWrite(Event event) async {
+    final stopwatch = Stopwatch()..start();
+    Event? stored;
+    while (stopwatch.elapsed < _settleTimeout) {
+      stored = await database.personalEventsDao.getById(
+        pubkey: event.pubkey,
+        id: event.id,
+      );
+      if (stored != null) break;
+      await pumpEventQueue();
+    }
+    expect(stored?.id, event.id, reason: 'personal event was not persisted');
   }
 
   setUp(() async {
@@ -182,11 +184,11 @@ void main() {
 
       await service.initialize(userPubkey);
       service.cacheUserEvent(userEvent);
-      await waitForKindIndex(userEvent);
+      await waitForDurableWrite(userEvent);
 
       await service.initialize(otherPubkey);
       service.cacheUserEvent(otherUserEvent);
-      await waitForKindIndex(otherUserEvent);
+      await waitForDurableWrite(otherUserEvent);
 
       expect(service.hasEvent(userEvent.id), isFalse);
       expect(service.getEventById(userEvent.id), isNull);
@@ -207,7 +209,7 @@ void main() {
 
       await service.initialize(userPubkey);
       service.cacheUserEvent(userEvent);
-      await waitForKindIndex(userEvent);
+      await waitForDurableWrite(userEvent);
 
       final switchAccount = service.initialize(otherPubkey);
 
@@ -227,7 +229,7 @@ void main() {
 
         await service.initialize(userPubkey);
         service.cacheUserEvent(event);
-        await waitForKindIndex(event);
+        await waitForDurableWrite(event);
         expect(service.hasEvent(event.id), isTrue);
 
         service.resetCurrentUser();
@@ -248,7 +250,7 @@ void main() {
 
       await service.initialize(userPubkey);
       service.cacheUserEvent(userEvent);
-      await waitForKindIndex(userEvent);
+      await waitForDurableWrite(userEvent);
       await database.personalEventsDao.upsertPersonalEvent(otherEvent);
 
       await service.clearAllAccounts();
@@ -316,6 +318,51 @@ void main() {
       expect(lists.single.createdAt, 1700000010);
     });
 
+    test('durable retention evicts the same oldest row everywhere', () async {
+      await service.initialize(userPubkey);
+
+      for (var i = 0; i <= maxDurablePersonalEventsPerOwner; i++) {
+        service.cacheUserEvent(
+          createEvent(
+            pubkey: userPubkey,
+            id: hexId(400 + i),
+            createdAt: 1700000000 + i,
+          ),
+        );
+      }
+
+      final stopwatch = Stopwatch()..start();
+      while (await database.personalEventsDao.countForOwner(userPubkey) !=
+              maxDurablePersonalEventsPerOwner &&
+          stopwatch.elapsed < _settleTimeout) {
+        await pumpEventQueue();
+      }
+
+      expect(
+        service.getAllEvents(),
+        hasLength(maxDurablePersonalEventsPerOwner),
+      );
+      expect(service.hasEvent(hexId(400)), isFalse);
+      expect(
+        await database.personalEventsDao.getById(
+          pubkey: userPubkey,
+          id: hexId(400),
+        ),
+        isNull,
+      );
+      expect(
+        service.hasEvent(hexId(400 + maxDurablePersonalEventsPerOwner)),
+        isTrue,
+      );
+      expect(
+        await database.personalEventsDao.getById(
+          pubkey: userPubkey,
+          id: hexId(400 + maxDurablePersonalEventsPerOwner),
+        ),
+        isNotNull,
+      );
+    });
+
     test('survives the shared event cache expiry sweep', () async {
       // deleteExpiredEvents removes rows whose expire_at IS NULL as well as
       // past-dated ones, which is why personal events do not live in the
@@ -323,7 +370,7 @@ void main() {
       await service.initialize(userPubkey);
       final event = createEvent(pubkey: userPubkey, id: hexId(301));
       service.cacheUserEvent(event);
-      await waitForKindIndex(event);
+      await waitForDurableWrite(event);
 
       await database.nostrEventsDao.deleteExpiredEvents(null);
       await service.initialize(userPubkey);
