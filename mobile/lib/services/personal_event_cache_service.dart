@@ -64,6 +64,11 @@ class PersonalEventCacheService {
     }
 
     try {
+      // Hide the previous owner's mirror before loading the next one. Reads are
+      // synchronous, so leaving this initialized across the await would expose
+      // the previous account's events during a direct account switch.
+      _isInitialized = false;
+      _events.clear();
       _currentUserPubkey = userPubkey;
 
       final stored = await _dao.getAllForOwner(userPubkey);

@@ -202,10 +202,28 @@ void main() {
       );
     });
 
+    test('hides the previous owner while switching accounts', () async {
+      final userEvent = createEvent(pubkey: userPubkey, id: hexId(203));
+
+      await service.initialize(userPubkey);
+      service.cacheUserEvent(userEvent);
+      await waitForKindIndex(userEvent);
+
+      final switchAccount = service.initialize(otherPubkey);
+
+      expect(service.isInitialized, isFalse);
+      expect(service.hasEvent(userEvent.id), isFalse);
+      expect(service.getEventById(userEvent.id), isNull);
+      expect(service.getEventsByKind(userEvent.kind), isEmpty);
+
+      await switchAccount;
+      expect(service.isInitialized, isTrue);
+    });
+
     test(
       'resetCurrentUser makes cached events unreadable until reauth',
       () async {
-        final event = createEvent(pubkey: userPubkey, id: hexId(203));
+        final event = createEvent(pubkey: userPubkey, id: hexId(204));
 
         await service.initialize(userPubkey);
         service.cacheUserEvent(event);
