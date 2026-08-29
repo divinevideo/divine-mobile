@@ -73,7 +73,9 @@ VideoFilterBuilder videoFilterBuilder(Ref ref) {
 @riverpod
 PersonalEventCacheService personalEventCacheService(Ref ref) {
   final authService = ref.watch(authServiceProvider);
-  final service = PersonalEventCacheService();
+  final service = PersonalEventCacheService(
+    dao: ref.watch(databaseProvider).personalEventsDao,
+  );
   ref.onDispose(service.dispose);
 
   String? initializingPubkey;

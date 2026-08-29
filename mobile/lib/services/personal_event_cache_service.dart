@@ -1,23 +1,37 @@
-// ABOUTME: Comprehensive cache for ALL of the current user's own Nostr events
-// ABOUTME: Stores every event the user creates/publishes for instant access and offline availability
+// ABOUTME: Cache for the current user's own Nostr events, backed by Drift.
+// ABOUTME: Serves reads from a bounded in-memory mirror of personal_events.
 
 import 'dart:async';
 
-import 'package:hive_ce/hive.dart';
+import 'package:db_client/db_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
-import 'package:openvine/constants/hive_box_names.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Service for aggressively caching ALL of the current user's own events
-/// This ensures the user's own data is always instantly available
+/// Caches the signed-in user's own events so they are instantly available.
+///
+/// Reads are synchronous — `sourceOriginalVideoTags` is a plain function and
+/// `GetCachedEventsByKindCallback` is a synchronous typedef in the
+/// `follow_repository` package — so the service keeps an in-memory mirror of
+/// the owner's rows and writes through to [PersonalEventsDao].
+///
+/// The mirror is what the Hive implementation had too: `Hive.openBox` is
+/// non-lazy, so the whole box was resident. The difference is that the mirror
+/// is now **bounded**, because the DAO collapses replaceable kinds to one row
+/// per `(pubkey, kind)` and trims the rest to a per-owner cap. Before #6986 a
+/// 500-follow contact list was 42.5 KiB and every follow, unfollow, block,
+/// unblock and automatic re-broadcast appended another one that was never
+/// evicted.
 class PersonalEventCacheService {
-  static const String _boxName = HiveBoxNames.personalEvents;
-  static const String _metadataBoxName = HiveBoxNames.personalEventsMetadata;
+  PersonalEventCacheService({required PersonalEventsDao dao}) : _dao = dao;
+
   static const int _maxPendingEventWrites = 100;
 
-  Box<dynamic>? _eventsBox;
-  Box<dynamic>? _metadataBox;
+  final PersonalEventsDao _dao;
+
+  /// The owner's events, keyed by event id. Empty until [initialize].
+  final Map<String, Event> _events = <String, Event>{};
+
   bool _isInitialized = false;
   bool _isDisposed = false;
   int _initializationToken = 0;
@@ -27,15 +41,19 @@ class PersonalEventCacheService {
   /// Check if the cache service is initialized
   bool get isInitialized => _isInitialized;
 
-  /// Reset the active user session without deleting the shared on-disk cache.
+  /// Reset the active user session without deleting the stored rows.
+  ///
+  /// Signing out hides the cache rather than clearing it, so signing back in
+  /// restores it. Only [clearCache] and cache recovery delete anything.
   void resetCurrentUser() {
     _initializationToken++;
     _isInitialized = false;
     _currentUserPubkey = null;
+    _events.clear();
     _pendingEventWrites.clear();
   }
 
-  /// Initialize the personal event cache
+  /// Initialize the personal event cache for [userPubkey].
   Future<void> initialize(String userPubkey) async {
     _isDisposed = false;
     final initializationToken = ++_initializationToken;
@@ -45,104 +63,51 @@ class PersonalEventCacheService {
       return;
     }
 
-    Box<dynamic>? eventsBox;
-    Box<dynamic>? metadataBox;
-
     try {
       _currentUserPubkey = userPubkey;
 
-      // Try to open the events box
-      eventsBox = await Hive.openBox<dynamic>(_boxName);
-
-      // Open the metadata box for indexing
-      metadataBox = await Hive.openBox<dynamic>(_metadataBoxName);
+      final stored = await _dao.getAllForOwner(userPubkey);
 
       if (!_isCurrentInitialization(initializationToken, userPubkey)) {
-        await _closeBox(eventsBox, _boxName);
-        await _closeBox(metadataBox, _metadataBoxName);
         return;
       }
 
-      _eventsBox = eventsBox;
-      _metadataBox = metadataBox;
+      _events
+        ..clear()
+        ..addEntries(stored.map((event) => MapEntry(event.id, event)));
 
       _isInitialized = true;
 
       await _flushPendingEventWrites();
 
       Log.info(
-        'PersonalEventCacheService initialized for ${pubkeyForLogs(userPubkey)} with ${_eventsBox!.length} cached events',
+        'PersonalEventCacheService initialized for '
+        '${pubkeyForLogs(userPubkey)} with ${_events.length} cached events',
         name: 'PersonalEventCache',
         category: LogCategory.storage,
       );
-
-      // Log cache statistics by kind
-      _logCacheStatistics();
     } catch (e) {
       Log.error(
         'Failed to initialize PersonalEventCacheService: $e',
         name: 'PersonalEventCache',
         category: LogCategory.storage,
       );
-
-      // Try to recover by deleting corrupted boxes
-      try {
-        Log.warning(
-          'Attempting to recover from corrupted cache by deleting boxes',
-          name: 'PersonalEventCache',
-          category: LogCategory.storage,
-        );
-
-        if (eventsBox != null) {
-          await _closeBox(eventsBox, _boxName);
-        }
-        if (metadataBox != null) {
-          await _closeBox(metadataBox, _metadataBoxName);
-        }
-
-        await Hive.deleteBoxFromDisk(_boxName);
-        await Hive.deleteBoxFromDisk(_metadataBoxName);
-
-        // Retry opening after deletion
-        eventsBox = await Hive.openBox<dynamic>(_boxName);
-        metadataBox = await Hive.openBox<dynamic>(_metadataBoxName);
-
-        if (!_isCurrentInitialization(initializationToken, userPubkey)) {
-          await _closeBox(eventsBox, _boxName);
-          await _closeBox(metadataBox, _metadataBoxName);
-          return;
-        }
-
-        _eventsBox = eventsBox;
-        _metadataBox = metadataBox;
-
-        _isInitialized = true;
-
-        await _flushPendingEventWrites();
-
-        Log.info(
-          'Successfully recovered PersonalEventCacheService after corruption',
-          name: 'PersonalEventCache',
-          category: LogCategory.storage,
-        );
-      } catch (recoveryError) {
-        Log.error(
-          'Failed to recover from corrupted cache: $recoveryError',
-          name: 'PersonalEventCache',
-          category: LogCategory.storage,
-        );
-        rethrow;
-      }
+      rethrow;
     }
   }
 
-  /// Cache a user's own event (any kind)
+  /// Cache a user's own event (any kind).
+  ///
+  /// Fire-and-forget: the in-memory mirror is updated synchronously so a read
+  /// immediately after this call sees the event, while the durable write runs
+  /// in the background. A failed write is logged and never surfaces to the
+  /// caller — publishing must not fail because a cache write did.
   void cacheUserEvent(Event event) {
     if (_isDisposed) {
       return;
     }
 
-    if (!_isInitialized || _eventsBox == null || _metadataBox == null) {
+    if (!_isInitialized) {
       _queuePendingEventWrite(event);
       return;
     }
@@ -207,35 +172,12 @@ class PersonalEventCacheService {
       return false;
     }
 
+    // Mirror the DAO's retention rule so a synchronous read taken before the
+    // durable write completes agrees with what the database will hold.
+    _applyRetentionToMirror(event);
+
     try {
-      final cachedAt = DateTime.now().millisecondsSinceEpoch;
-
-      // Store the full event data
-      final eventData = {
-        'id': event.id,
-        'pubkey': event.pubkey,
-        'created_at': event.createdAt,
-        'kind': event.kind,
-        'tags': event.tags.map((tag) => tag.toList()).toList(),
-        'content': event.content,
-        'sig': event.sig,
-        'cached_at': cachedAt,
-      };
-
-      await _eventsBox!.put(event.id, eventData);
-
-      // Update metadata for quick queries
-      final kindKey = 'kind_${event.kind}';
-      final rawKindEvents = _metadataBox!.get(kindKey);
-      final kindEvents = rawKindEvents != null
-          ? Map<String, dynamic>.from(rawKindEvents as Map)
-          : <String, dynamic>{};
-      kindEvents[event.id] = {
-        'created_at': event.createdAt,
-        'cached_at': cachedAt,
-      };
-      await _metadataBox!.put(kindKey, kindEvents);
-
+      await _dao.upsertPersonalEvent(event);
       Log.debug(
         '💾 Cached personal event: ${event.id} (kind ${event.kind})',
         name: 'PersonalEventCache',
@@ -252,298 +194,99 @@ class PersonalEventCacheService {
     }
   }
 
-  /// Get all cached events of a specific kind
-  List<Event> getEventsByKind(int kind) {
-    if (!_isInitialized || _eventsBox == null || _metadataBox == null) {
-      return [];
-    }
-
-    try {
-      final kindKey = 'kind_$kind';
-      final rawKindEvents = _metadataBox!.get(kindKey);
-      final kindEvents = rawKindEvents != null
-          ? Map<String, dynamic>.from(rawKindEvents as Map)
-          : <String, dynamic>{};
-
-      final events = <Event>[];
-      for (final eventId in kindEvents.keys) {
-        final rawEventData = _eventsBox!.get(eventId);
-        if (rawEventData != null) {
-          final eventData = Map<String, dynamic>.from(rawEventData as Map);
-          if (!_eventDataBelongsToCurrentUser(eventData)) {
-            continue;
-          }
-          final event = _eventDataToEvent(eventData);
-          if (event != null) {
-            events.add(event);
-          }
-        }
-      }
-
-      // Sort by creation time (newest first)
-      events.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      Log.debug(
-        '📋 Retrieved ${events.length} cached events of kind $kind',
-        name: 'PersonalEventCache',
-        category: LogCategory.storage,
+  void _applyRetentionToMirror(Event event) {
+    if (PersonalEventRetention.forKind(event.kind) ==
+        PersonalEventRetention.collapsing) {
+      _events.removeWhere(
+        (_, cached) => cached.kind == event.kind && cached.id != event.id,
       );
-
-      return events;
-    } catch (e) {
-      Log.error(
-        'Failed to get events by kind $kind: $e',
-        name: 'PersonalEventCache',
-        category: LogCategory.storage,
-      );
-      return [];
-    }
-  }
-
-  /// Get all cached events
-  List<Event> getAllEvents() {
-    if (!_isInitialized || _eventsBox == null) {
-      return [];
-    }
-
-    try {
-      final events = <Event>[];
-      for (final rawEventData in _eventsBox!.values) {
-        if (rawEventData == null) continue;
-        final eventData = Map<String, dynamic>.from(rawEventData as Map);
-        if (!_eventDataBelongsToCurrentUser(eventData)) {
-          continue;
-        }
-        final event = _eventDataToEvent(eventData);
-        if (event != null) {
-          events.add(event);
-        }
-      }
-
-      // Sort by creation time (newest first)
-      events.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      Log.debug(
-        '📋 Retrieved ${events.length} total cached personal events',
-        name: 'PersonalEventCache',
-        category: LogCategory.storage,
-      );
-
-      return events;
-    } catch (e) {
-      Log.error(
-        'Failed to get all personal events: $e',
-        name: 'PersonalEventCache',
-        category: LogCategory.storage,
-      );
-      return [];
-    }
-  }
-
-  /// Get a specific cached event by ID
-  Event? getEventById(String eventId) {
-    if (!_isInitialized || _eventsBox == null) {
-      return null;
-    }
-
-    try {
-      final rawEventData = _eventsBox!.get(eventId);
-      if (rawEventData != null) {
-        final eventData = Map<String, dynamic>.from(rawEventData as Map);
-        if (!_eventDataBelongsToCurrentUser(eventData)) {
-          return null;
-        }
-        return _eventDataToEvent(eventData);
-      }
-    } catch (e) {
-      Log.error(
-        'Failed to get event by ID $eventId: $e',
-        name: 'PersonalEventCache',
-        category: LogCategory.storage,
-      );
-    }
-
-    return null;
-  }
-
-  /// Check if an event is cached
-  bool hasEvent(String eventId) {
-    if (!_isInitialized || _eventsBox == null) {
-      return false;
-    }
-
-    try {
-      final rawEventData = _eventsBox!.get(eventId);
-      if (rawEventData == null) {
-        return false;
-      }
-      final eventData = Map<String, dynamic>.from(rawEventData as Map);
-      return _eventDataBelongsToCurrentUser(eventData);
-    } catch (e) {
-      Log.error(
-        'Failed to check event by ID $eventId: $e',
-        name: 'PersonalEventCache',
-        category: LogCategory.storage,
-      );
-      return false;
-    }
-  }
-
-  /// Get cache statistics
-  Map<String, dynamic> getCacheStats() {
-    if (!_isInitialized || _eventsBox == null || _metadataBox == null) {
-      return {'error': 'not_initialized'};
-    }
-
-    final stats = <String, dynamic>{
-      'total_events': 0,
-      'by_kind': <String, int>{},
-      'user_pubkey': _currentUserPubkey,
-    };
-
-    // Count events by kind
-    for (final kindKey in _metadataBox!.keys) {
-      if (kindKey is String && kindKey.startsWith('kind_')) {
-        final kind = kindKey.substring(5);
-        final rawKindEvents = _metadataBox!.get(kindKey);
-        final kindEvents = rawKindEvents != null
-            ? Map<String, dynamic>.from(rawKindEvents as Map)
-            : <String, dynamic>{};
-        var currentUserEventCount = 0;
-        for (final eventId in kindEvents.keys) {
-          final rawEventData = _eventsBox!.get(eventId);
-          if (rawEventData == null) {
-            continue;
-          }
-          final eventData = Map<String, dynamic>.from(rawEventData as Map);
-          if (_eventDataBelongsToCurrentUser(eventData)) {
-            currentUserEventCount++;
-          }
-        }
-        if (currentUserEventCount > 0) {
-          (stats['by_kind'] as Map<String, int>)[kind] = currentUserEventCount;
-          stats['total_events'] =
-              (stats['total_events'] as int) + currentUserEventCount;
-        }
-      }
-    }
-
-    return stats;
-  }
-
-  /// Log cache statistics for debugging
-  void _logCacheStatistics() {
-    final stats = getCacheStats();
-    Log.info(
-      '📊 Personal Event Cache Statistics:',
-      name: 'PersonalEventCache',
-      category: LogCategory.storage,
-    );
-    Log.info(
-      '  - Total events: ${stats['total_events']}',
-      name: 'PersonalEventCache',
-      category: LogCategory.storage,
-    );
-    Log.info(
-      '  - User: ${pubkeyForLogs(stats['user_pubkey'] as String?)}',
-      name: 'PersonalEventCache',
-      category: LogCategory.storage,
-    );
-
-    final byKind = stats['by_kind'] as Map<String, int>;
-    if (byKind.isNotEmpty) {
-      Log.info(
-        '  - By kind:',
-        name: 'PersonalEventCache',
-        category: LogCategory.storage,
-      );
-      for (final entry in byKind.entries) {
-        final kindName = _getKindName(int.tryParse(entry.key) ?? 0);
-        Log.info(
-          '    Kind ${entry.key} ($kindName): ${entry.value}',
-          name: 'PersonalEventCache',
-          category: LogCategory.storage,
-        );
-      }
-    }
-  }
-
-  bool _eventDataBelongsToCurrentUser(Map<String, dynamic> eventData) {
-    final currentUserPubkey = _currentUserPubkey;
-    return currentUserPubkey != null &&
-        eventData['pubkey'] == currentUserPubkey;
-  }
-
-  /// Convert stored event data back to Event object
-  Event? _eventDataToEvent(Map<String, dynamic> eventData) {
-    try {
-      final event = Event(
-        eventData['pubkey'] as String,
-        eventData['kind'] as int,
-        (eventData['tags'] as List<dynamic>)
-            .map(
-              (tag) => (tag as List<dynamic>)
-                  .map((item) => item.toString())
-                  .toList(),
-            )
-            .toList(),
-        eventData['content'] as String,
-        createdAt: eventData['created_at'] as int,
-      );
-
-      // Manually set the id and signature since these are not constructor parameters
-      event.id = eventData['id'] as String;
-      event.sig = eventData['sig'] as String;
-
-      return event;
-    } catch (e) {
-      Log.error(
-        'Failed to convert event data to Event: $e',
-        name: 'PersonalEventCache',
-        category: LogCategory.storage,
-      );
-      return null;
-    }
-  }
-
-  /// Get human-readable name for event kind
-  String _getKindName(int kind) {
-    switch (kind) {
-      case 0:
-        return 'Profile';
-      case 1:
-        return 'Text Note';
-      case 3:
-        return 'Contact List';
-      case 6:
-        return 'Repost';
-      case 7:
-        return 'Reaction/Like';
-      case 22:
-        return 'Video';
-      case 30000:
-        return 'Follow Set';
-      case 5:
-        return 'Deletion';
-      default:
-        return 'Unknown';
-    }
-  }
-
-  /// Clear all cached events (for testing or cleanup)
-  Future<void> clearCache() async {
-    _pendingEventWrites.clear();
-
-    if (!_isInitialized || _eventsBox == null || _metadataBox == null) {
+      _events[event.id] = event;
       return;
     }
 
+    _events[event.id] = event;
+
+    final durable =
+        _events.values
+            .where(
+              (cached) =>
+                  PersonalEventRetention.forKind(cached.kind) ==
+                  PersonalEventRetention.durable,
+            )
+            .toList()
+          ..sort((a, b) {
+            final byCreatedAt = b.createdAt.compareTo(a.createdAt);
+            return byCreatedAt != 0 ? byCreatedAt : b.id.compareTo(a.id);
+          });
+
+    for (final evicted in durable.skip(maxDurablePersonalEventsPerOwner)) {
+      _events.remove(evicted.id);
+    }
+  }
+
+  /// Get all cached events of a specific kind, newest first.
+  List<Event> getEventsByKind(int kind) {
+    if (!_isInitialized) {
+      return [];
+    }
+
+    final events = _events.values.where((event) => event.kind == kind).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    Log.debug(
+      '📋 Retrieved ${events.length} cached events of kind $kind',
+      name: 'PersonalEventCache',
+      category: LogCategory.storage,
+    );
+
+    return events;
+  }
+
+  /// Get all cached events, newest first.
+  List<Event> getAllEvents() {
+    if (!_isInitialized) {
+      return [];
+    }
+
+    return _events.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  /// Get a specific cached event by ID.
+  Event? getEventById(String eventId) {
+    if (!_isInitialized) {
+      return null;
+    }
+    return _events[eventId];
+  }
+
+  /// Check if an event is cached.
+  bool hasEvent(String eventId) {
+    if (!_isInitialized) {
+      return false;
+    }
+    return _events.containsKey(eventId);
+  }
+
+  /// Clear the current user's cached events.
+  Future<void> clearCache() async {
+    _pendingEventWrites.clear();
+
+    final currentUserPubkey = _currentUserPubkey;
+    if (!_isInitialized || currentUserPubkey == null) {
+      return;
+    }
+
+    _events.clear();
+
     try {
-      await _eventsBox!.clear();
-      await _metadataBox!.clear();
+      // Scoped to the owner: the table is shared across accounts on one
+      // device, and the Hive implementation this replaced cleared every
+      // account's rows here.
+      await _dao.deleteAllForOwner(currentUserPubkey);
 
       Log.info(
-        '🧹 Cleared all personal event cache',
+        '🧹 Cleared personal event cache for ${pubkeyForLogs(currentUserPubkey)}',
         name: 'PersonalEventCache',
         category: LogCategory.storage,
       );
@@ -556,41 +299,19 @@ class PersonalEventCacheService {
     }
   }
 
-  /// Dispose of the cache service
+  /// Dispose of the cache service.
   void dispose() {
     _isDisposed = true;
     _initializationToken++;
-    final eventsBox = _eventsBox;
-    final metadataBox = _metadataBox;
-    _eventsBox = null;
-    _metadataBox = null;
     _isInitialized = false;
     _currentUserPubkey = null;
+    _events.clear();
     _pendingEventWrites.clear();
-
-    if (eventsBox != null) {
-      unawaited(_closeBox(eventsBox, _boxName));
-    }
-    if (metadataBox != null) {
-      unawaited(_closeBox(metadataBox, _metadataBoxName));
-    }
 
     Log.debug(
       '📱 PersonalEventCacheService disposed',
       name: 'PersonalEventCache',
       category: LogCategory.storage,
     );
-  }
-
-  Future<void> _closeBox(Box<dynamic> box, String boxName) async {
-    try {
-      await box.close();
-    } catch (e) {
-      Log.warning(
-        'Failed to close PersonalEventCache box $boxName: $e',
-        name: 'PersonalEventCache',
-        category: LogCategory.storage,
-      );
-    }
   }
 }

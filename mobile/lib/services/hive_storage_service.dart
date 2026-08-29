@@ -57,6 +57,7 @@ abstract final class HiveStorageService {
     }
 
     await _migrateLegacyBoxes(home);
+    await _deleteRetiredBoxes(home);
 
     Hive.init(home.path);
 
@@ -65,6 +66,65 @@ abstract final class HiveStorageService {
       name: _logName,
       category: LogCategory.storage,
     );
+  }
+
+  /// Box files whose owner has moved to Drift and which are now dead weight.
+  ///
+  /// `personal_events` / `personal_events_metadata` backed
+  /// `PersonalEventCacheService` until #6986 moved it onto the `personal_events`
+  /// Drift table. They are removed rather than migrated: the data is
+  /// re-fetchable — `CacheRecoveryService` already classified both boxes
+  /// disposable and deleted them on repair — and the events box was the
+  /// unbounded one, so reading it here would pay the whole cost on the upgrade
+  /// launch, which is the worst possible moment.
+  static const Set<String> _retiredBoxNames = {
+    'personal_events',
+    'personal_events_metadata',
+  };
+
+  /// Deletes retired box files from both the home and the legacy home.
+  ///
+  /// Both locations, because a box stranded by the pre-#6958 split can still
+  /// be sitting in the documents directory, and [_migrateLegacyBoxes] no
+  /// longer sweeps these names now that they are out of [HiveBoxNames.all].
+  ///
+  /// Best-effort, like the migration above: a failure leaves the files for the
+  /// next launch rather than blocking startup.
+  static Future<void> _deleteRetiredBoxes(Directory home) async {
+    try {
+      final directories = <String>{home.path};
+      final legacy = await getApplicationDocumentsDirectory();
+      if (legacy.existsSync()) {
+        directories.add(legacy.path);
+      }
+
+      var deleted = 0;
+      for (final directory in directories) {
+        for (final boxName in _retiredBoxNames) {
+          for (final extension in const ['hive', 'hivec', 'lock']) {
+            final file = File(p.join(directory, '$boxName.$extension'));
+            if (file.existsSync()) {
+              await file.delete();
+              deleted++;
+            }
+          }
+        }
+      }
+
+      if (deleted > 0) {
+        Log.info(
+          'Deleted $deleted retired Hive box file(s)',
+          name: _logName,
+          category: LogCategory.storage,
+        );
+      }
+    } catch (e) {
+      Log.warning(
+        'Failed to delete retired Hive boxes: $e',
+        name: _logName,
+        category: LogCategory.storage,
+      );
+    }
   }
 
   /// Best-effort move of the boxes left in the legacy home into [home].
