@@ -70,16 +70,17 @@ class PersonalEventsDao extends DatabaseAccessor<AppDatabase>
         // would. Ties replace, so two publishes inside one second — Nostr
         // `created_at` is second-resolution — do not silently drop the later
         // one.
-        final existing =
-            await (select(personalEvents)..where(
-                  (t) =>
-                      t.pubkey.equals(event.pubkey) & t.kind.equals(event.kind),
-                ))
-                .get();
-        final newestStored = existing.fold<int?>(
-          null,
-          (newest, row) =>
-              newest == null || row.createdAt > newest ? row.createdAt : newest,
+        final newestStoredRow = await customSelect(
+          'SELECT MAX(created_at) AS newest_created_at '
+          'FROM personal_events WHERE pubkey = ? AND kind = ?',
+          variables: [
+            Variable.withString(event.pubkey),
+            Variable.withInt(event.kind),
+          ],
+          readsFrom: {personalEvents},
+        ).getSingle();
+        final newestStored = newestStoredRow.readNullable<int>(
+          'newest_created_at',
         );
         if (newestStored != null && event.createdAt < newestStored) {
           return;
@@ -166,7 +167,7 @@ class PersonalEventsDao extends DatabaseAccessor<AppDatabase>
                 ),
               ]))
             .get();
-    return rows.map(_toEvent).toList();
+    return _decodeRows(rows);
   }
 
   /// Returns all of the owner's events, newest first.
@@ -181,7 +182,7 @@ class PersonalEventsDao extends DatabaseAccessor<AppDatabase>
                 ),
               ]))
             .get();
-    return rows.map(_toEvent).toList();
+    return _decodeRows(rows);
   }
 
   /// Deletes every row belonging to [pubkey].
@@ -201,10 +202,33 @@ class PersonalEventsDao extends DatabaseAccessor<AppDatabase>
     return row.read<int>('count');
   }
 
+  Future<List<Event>> _decodeRows(List<PersonalEventRow> rows) async {
+    final events = <Event>[];
+    for (final row in rows) {
+      try {
+        events.add(_toEvent(row));
+      } on FormatException {
+        // This table is a disposable cache. Quarantine a malformed JSON row
+        // instead of letting one bad event disable every synchronous cache
+        // reader for the rest of the signed-in session.
+        await (delete(personalEvents)..where((t) => t.id.equals(row.id))).go();
+      }
+    }
+    return events;
+  }
+
   Event _toEvent(PersonalEventRow row) {
-    final tags = (jsonDecode(row.tags) as List)
-        .map((tag) => (tag as List).map((e) => e.toString()).toList())
-        .toList();
+    final decodedTags = jsonDecode(row.tags);
+    if (decodedTags is! List) {
+      throw const FormatException('Event tags must be a JSON array');
+    }
+    final tags = <List<String>>[];
+    for (final tag in decodedTags) {
+      if (tag is! List) {
+        throw const FormatException('Each event tag must be a JSON array');
+      }
+      tags.add(tag.map((value) => value.toString()).toList());
+    }
 
     return Event(
         row.pubkey,
