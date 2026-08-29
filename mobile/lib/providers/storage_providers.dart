@@ -58,15 +58,8 @@ final clipRecoveryServiceProvider = Provider<ClipRecoveryService>((ref) {
 /// Lives here rather than at the call site so the Storage screen reaches the
 /// service layer through a provider instead of importing it directly.
 final recoverAllCachesProvider = Provider<Future<bool> Function()>((ref) {
-  final personalEventsDao = ref.watch(databaseProvider).personalEventsDao;
   final personalEventCache = ref.watch(personalEventCacheServiceProvider);
   return () => CacheRecoveryService.clearAllCaches(
-    clearPersonalEvents: () async {
-      // Clear the synchronous mirror as well as every account's stored rows.
-      // Calling the DAO alone would leave deleted events readable until the
-      // active account reinitialized or the app restarted.
-      await personalEventCache.clearCache();
-      await personalEventsDao.deleteAll();
-    },
+    clearPersonalEvents: personalEventCache.clearAllAccounts,
   );
 });

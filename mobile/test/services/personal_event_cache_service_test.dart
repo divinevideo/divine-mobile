@@ -241,6 +241,23 @@ void main() {
         expect(service.hasEvent(event.id), isTrue);
       },
     );
+
+    test('cache recovery clears the mirror and every owner', () async {
+      final userEvent = createEvent(pubkey: userPubkey, id: hexId(205));
+      final otherEvent = createEvent(pubkey: otherPubkey, id: hexId(206));
+
+      await service.initialize(userPubkey);
+      service.cacheUserEvent(userEvent);
+      await waitForKindIndex(userEvent);
+      await database.personalEventsDao.upsertPersonalEvent(otherEvent);
+
+      await service.clearAllAccounts();
+
+      expect(service.isInitialized, isTrue);
+      expect(service.getAllEvents(), isEmpty);
+      expect(await database.personalEventsDao.countForOwner(userPubkey), 0);
+      expect(await database.personalEventsDao.countForOwner(otherPubkey), 0);
+    });
   });
 
   group('PersonalEventCacheService retention', () {
