@@ -332,9 +332,18 @@ void main() {
       }
 
       final stopwatch = Stopwatch()..start();
-      while (await database.personalEventsDao.countForOwner(userPubkey) !=
-              maxDurablePersonalEventsPerOwner &&
-          stopwatch.elapsed < _settleTimeout) {
+      Event? oldestStored;
+      Event? newestStored;
+      while (stopwatch.elapsed < _settleTimeout) {
+        oldestStored = await database.personalEventsDao.getById(
+          pubkey: userPubkey,
+          id: hexId(400),
+        );
+        newestStored = await database.personalEventsDao.getById(
+          pubkey: userPubkey,
+          id: hexId(400 + maxDurablePersonalEventsPerOwner),
+        );
+        if (oldestStored == null && newestStored != null) break;
         await pumpEventQueue();
       }
 
@@ -343,24 +352,12 @@ void main() {
         hasLength(maxDurablePersonalEventsPerOwner),
       );
       expect(service.hasEvent(hexId(400)), isFalse);
-      expect(
-        await database.personalEventsDao.getById(
-          pubkey: userPubkey,
-          id: hexId(400),
-        ),
-        isNull,
-      );
+      expect(oldestStored, isNull);
       expect(
         service.hasEvent(hexId(400 + maxDurablePersonalEventsPerOwner)),
         isTrue,
       );
-      expect(
-        await database.personalEventsDao.getById(
-          pubkey: userPubkey,
-          id: hexId(400 + maxDurablePersonalEventsPerOwner),
-        ),
-        isNotNull,
-      );
+      expect(newestStored, isNotNull);
     });
 
     test('survives the shared event cache expiry sweep', () async {
