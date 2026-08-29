@@ -323,6 +323,26 @@ class PersonalEventCacheService {
     }
   }
 
+  /// Clears the live mirror and stored rows for every account on this device.
+  ///
+  /// Used only by whole-app cache recovery. The active owner stays initialized
+  /// so events published after the recovery can still be cached normally.
+  Future<void> clearAllAccounts() async {
+    _pendingEventWrites.clear();
+    _events.clear();
+
+    try {
+      await _dao.deleteAll();
+    } catch (e) {
+      Log.error(
+        'Failed to clear all personal event caches: $e',
+        name: 'PersonalEventCache',
+        category: LogCategory.storage,
+      );
+      rethrow;
+    }
+  }
+
   /// Dispose of the cache service.
   void dispose() {
     _isDisposed = true;
