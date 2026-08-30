@@ -42,10 +42,17 @@ import 'package:openvine/widgets/video_feed_item/video_follow_button.dart';
 import 'package:openvine/widgets/video_reply_parent_link.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Size of the avatar block: the avatar plus the sliver of overflow the follow
-/// badge has always drawn into. Also the height the author text is centred
-/// against, so raising it to a 48dp target cannot shift it off the avatar.
+/// Floor size of the avatar block: the avatar plus the sliver of overflow the
+/// follow badge has always drawn into. Also the height the author text is
+/// centred against, so a taller cluster cannot shift the text off the avatar.
+///
+/// A floor rather than a fixed size — the cluster grows to
+/// [_followBadgeOffset] + `followButtonTapTargetSize` while the badge holds a
+/// tap target, and returns here in the states that never draw one.
 const double _avatarClusterSize = 58;
+
+/// Offset of the follow badge from the avatar's top-start corner.
+const double _followBadgeOffset = 31;
 
 class VideoOverlayPreviewData {
   const VideoOverlayPreviewData({
@@ -343,34 +350,46 @@ class VideoOverlayActions extends ConsumerWidget {
                     }
 
                     return Row(
+                      // Top-aligned, not centred. While the badge reserves a
+                      // tap target the cluster is taller than the text column,
+                      // and centring drops the name 10.5dp below the avatar.
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Avatar with follow button overlay
-                        SizedBox(
-                          width: _avatarClusterSize,
-                          height: _avatarClusterSize,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              // Avatar (tappable to go to profile)
-                              UserAvatar(
-                                imageUrl: avatarUrl,
-                                name: displayName,
-                                size: 48,
-                                semanticLabel:
-                                    context.l10n.videoAuthorAvatarSemanticLabel,
-                                onTap: navigateToProfile,
-                              ),
-                              // Follow button positioned at bottom-right of avatar
-                              if (video != null)
-                                PositionedDirectional(
-                                  start: 31,
-                                  top: 31,
-                                  child: VideoFollowButton(
-                                    pubkey: authorPubkey,
-                                  ),
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            // Holds the cluster at its historical floor so the
+                            // states that never draw a badge are unchanged.
+                            const SizedBox(
+                              width: _avatarClusterSize,
+                              height: _avatarClusterSize,
+                            ),
+                            // Avatar (tappable to go to profile)
+                            UserAvatar(
+                              imageUrl: avatarUrl,
+                              name: displayName,
+                              size: 48,
+                              semanticLabel:
+                                  context.l10n.videoAuthorAvatarSemanticLabel,
+                              onTap: navigateToProfile,
+                            ),
+                            // Follow badge at the avatar's bottom-trailing
+                            // corner. Padded rather than positioned, because a
+                            // positioned child does not size its Stack:
+                            // Flutter rejects a hit outside a box before it
+                            // reaches the child, and `Clip.none` only affects
+                            // painting, so the badge's 48dp target would be
+                            // silently clipped back to 27dp.
+                            if (video != null)
+                              Padding(
+                                padding: const EdgeInsetsDirectional.only(
+                                  start: _followBadgeOffset,
+                                  top: _followBadgeOffset,
                                 ),
-                            ],
-                          ),
+                                child: VideoFollowButton(pubkey: authorPubkey),
+                              ),
+                          ],
                         ),
                         const SizedBox(width: 6),
                         // User name and loop count (tappable to go to profile)
