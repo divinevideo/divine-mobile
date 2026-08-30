@@ -293,6 +293,88 @@ void main() {
       expect(find.byType(VideoFollowButtonView), findsOneWidget);
     });
 
+    _MockContentBlocklistRepository blocklist({
+      required String authorPubkey,
+      required bool blocksUs,
+    }) {
+      final mock = _MockContentBlocklistRepository();
+      when(() => mock.hasBlockedUs(authorPubkey)).thenReturn(blocksUs);
+      when(() => mock.isBlocked(any())).thenReturn(false);
+      when(() => mock.isFollowSevered(any())).thenReturn(false);
+      when(() => mock.currentState).thenReturn(
+        ContentPolicyState(
+          currentUserPubkey: 'b' * 64,
+          mutedPubkeys: const {},
+          blockedPubkeys: const {},
+          pubkeysBlockingUs: blocksUs ? {authorPubkey} : const {},
+          pubkeysMutingUs: const {},
+        ),
+      );
+      return mock;
+    }
+
+    Widget hostWith(_MockContentBlocklistRepository mock, String pubkey) =>
+        testMaterialApp(
+          home: Scaffold(body: VideoFollowButton(pubkey: pubkey)),
+          additionalOverrides: [
+            contentBlocklistRepositoryProvider.overrideWithValue(mock),
+          ],
+        );
+
+    testWidgets('holds the reservation when the author blocks us', (
+      tester,
+    ) async {
+      final authorPubkey = 'd' * 64;
+
+      await tester.pumpWidget(
+        hostWith(
+          blocklist(authorPubkey: authorPubkey, blocksUs: true),
+          authorPubkey,
+        ),
+      );
+      await tester.pump();
+
+      // The affordance is absent, but the box it lived in is not: collapsing
+      // the author cluster is itself a tell that correlates with the block.
+      expect(find.byType(VideoFollowButtonView), findsNothing);
+      expect(
+        tester.getSize(find.byType(VideoFollowButton)),
+        const Size(followButtonTapTargetSize, followButtonTapTargetSize),
+      );
+    });
+
+    testWidgets('does not resize when the blocklist flips while on screen', (
+      tester,
+    ) async {
+      // canTargetUser watches blocklistVersion, so it can change under a
+      // mounted item. The reservation is decided in initState and must not
+      // follow it — otherwise the row shifts 21dp in front of the viewer.
+      final authorPubkey = 'e' * 64;
+
+      await tester.pumpWidget(
+        hostWith(
+          blocklist(authorPubkey: authorPubkey, blocksUs: false),
+          authorPubkey,
+        ),
+      );
+      await tester.pump();
+      final before = tester.getSize(find.byType(VideoFollowButton));
+      expect(find.byType(VideoFollowButtonView), findsOneWidget);
+
+      // Same tree, new blocklist: the element is reused, so initState does not
+      // re-run and this is the live flip rather than a fresh mount.
+      await tester.pumpWidget(
+        hostWith(
+          blocklist(authorPubkey: authorPubkey, blocksUs: true),
+          authorPubkey,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(VideoFollowButtonView), findsNothing);
+      expect(tester.getSize(find.byType(VideoFollowButton)), before);
+    });
+
     testWidgets('reserves the tap target before the following list resolves', (
       tester,
     ) async {

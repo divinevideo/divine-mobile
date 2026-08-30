@@ -92,25 +92,29 @@ class _VideoFollowButtonState extends ConsumerState<VideoFollowButton> {
       return const SizedBox.shrink();
     }
 
-    // If the author doesn't accept interactions from us (their published
-    // block/mute list names us), render nothing — absence, never an
-    // explanation (disclosure invariant).
-    if (!ref.watch(canTargetUserProvider(widget.pubkey))) {
-      return const SizedBox.shrink();
-    }
-
     // Reserve the tap target as soon as the button *might* render, not when
-    // it does. Both guards above resolve in initState, so the author cluster
-    // is laid out at its final size before first paint and never resizes when
-    // MyFollowingBloc reports a beat later. Own-video and already-following
-    // authors return above and pay nothing.
+    // it does. The guard above resolves in initState, so the author cluster is
+    // laid out at its final size before first paint and never resizes later.
+    // Own-video and already-following authors return above and pay nothing.
     return SizedBox(
       width: followButtonTapTargetSize,
       height: followButtonTapTargetSize,
-      child: BlocProvider.value(
-        value: _bloc!,
-        child: VideoFollowButtonView(pubkey: widget.pubkey),
-      ),
+      // If the author doesn't accept interactions from us (their published
+      // block/mute list names us), render nothing — absence, never an
+      // explanation (disclosure invariant).
+      //
+      // This sits inside the reservation rather than replacing it, because
+      // canTargetUser watches blocklistVersion and so can flip while the item
+      // is on screen. Collapsing the cluster 79 -> 58 at that moment would
+      // shift the author name 21dp in front of the viewer, which is itself a
+      // tell that correlates with the block. Holding the box keeps the
+      // affordance's disappearance silent.
+      child: ref.watch(canTargetUserProvider(widget.pubkey))
+          ? BlocProvider.value(
+              value: _bloc!,
+              child: VideoFollowButtonView(pubkey: widget.pubkey),
+            )
+          : const SizedBox.shrink(),
     );
   }
 }
