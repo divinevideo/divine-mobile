@@ -55,6 +55,7 @@ void main() {
   Future<void> pumpOverlay(
     WidgetTester tester, {
     required bool alreadyFollowing,
+    TextScaler textScaler = TextScaler.noScaling,
   }) async {
     final follow = createMockFollowRepository();
     when(() => follow.isFollowing(any())).thenReturn(alreadyFollowing);
@@ -77,12 +78,17 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: BlocProvider<VideoInteractionsBloc>.value(
-              value: mockInteractionsBloc,
-              child: VideoOverlayActions(
-                video: testVideo,
-                isVisible: true,
-                isActive: true,
+            body: Builder(
+              builder: (context) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: textScaler),
+                child: BlocProvider<VideoInteractionsBloc>.value(
+                  value: mockInteractionsBloc,
+                  child: VideoOverlayActions(
+                    video: testVideo,
+                    isVisible: true,
+                    isActive: true,
+                  ),
+                ),
               ),
             ),
           ),
@@ -119,6 +125,34 @@ void main() {
         const Size(_clusterFloor, _clusterFloor),
       );
     });
+
+    testWidgets(
+      'keeps the avatar at the top of the row at a large text scale',
+      (
+        tester,
+      ) async {
+        // The author row is not one of the clamped subtrees in
+        // `text_scale_limits.dart`, so it takes the full system scale. Past a
+        // point the text column outgrows the cluster, and the row's alignment
+        // decides where the avatar sits: top-aligned it stays level with the
+        // first line of the name, centred it drifts down the column.
+        await pumpOverlay(
+          tester,
+          alreadyFollowing: true,
+          textScaler: const TextScaler.linear(3),
+        );
+
+        final row = find
+            .ancestor(of: clusterFinder(), matching: find.byType(Row))
+            .first;
+        final rowTop = tester.getTopLeft(row).dy;
+
+        // Guard against a vacuous pass: the case only exists once the column is
+        // taller than the cluster.
+        expect(tester.getSize(row).height, greaterThan(_clusterFloor));
+        expect(tester.getTopLeft(find.byType(UserAvatar)).dy, rowTop);
+      },
+    );
 
     testWidgets('keeps the author name level with the avatar in both states', (
       tester,
