@@ -33,8 +33,15 @@ VideoEvent _video({
   String id = 'video-event',
   String vineId = 'source-video',
   int createdAt = 101,
-  bool allowsReuse = true,
+  String? reuseMarker = 'true',
+  bool isClassicVine = false,
 }) {
+  final rawTags = <String, String>{
+    if (isClassicVine) 'platform': 'vine',
+  };
+  if (reuseMarker case final value?) {
+    rawTags['allow_audio_reuse'] = value;
+  }
   return VideoEvent(
     id: id,
     pubkey: _pubkey,
@@ -46,9 +53,7 @@ VideoEvent _video({
     ),
     vineId: vineId,
     addressableDTag: vineId,
-    rawTags: allowsReuse
-        ? const {'allow_audio_reuse': 'true'}
-        : const {'allow_audio_reuse': 'false'},
+    rawTags: rawTags,
   );
 }
 
@@ -92,7 +97,25 @@ void main() {
     });
 
     test('honours a revocation on the current revision', () async {
-      stubSource([_video(createdAt: 120, allowsReuse: false)]);
+      stubSource([_video(createdAt: 120, reuseMarker: 'false')]);
+
+      expect(await resolver.verify(_sound()), isFalse);
+    });
+
+    test('grants reuse for an unmarked classic Vine source', () async {
+      stubSource([_video(reuseMarker: null, isClassicVine: true)]);
+
+      expect(await resolver.verify(_sound()), isTrue);
+    });
+
+    test('fails closed for an unmarked ordinary source', () async {
+      stubSource([_video(reuseMarker: null)]);
+
+      expect(await resolver.verify(_sound()), isFalse);
+    });
+
+    test('honors an explicit decline on a classic Vine source', () async {
+      stubSource([_video(reuseMarker: 'false', isClassicVine: true)]);
 
       expect(await resolver.verify(_sound()), isFalse);
     });

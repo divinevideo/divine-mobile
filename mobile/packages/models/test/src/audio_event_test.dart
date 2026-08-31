@@ -484,32 +484,47 @@ void main() {
         },
       );
 
-      test('carries allowsReuse from the source video', () {
-        VideoEvent video({required bool allowReuse}) => VideoEvent(
-          id: testHexId,
-          pubkey: testPubkey,
-          createdAt: 1700000000,
-          content: 'classic vine',
-          timestamp: DateTime(2026),
-          videoUrl: 'https://example.com/video.mp4',
-          duration: 6,
-          vineId: 'vine-123',
-          addressableDTag: 'vine-123',
-          rawTags: allowReuse ? const {'allow_audio_reuse': 'true'} : const {},
-        );
+      test('carries definitive reuse terms from the source video', () {
+        VideoEvent video({String? marker, bool isClassicVine = false}) {
+          final rawTags = <String, String>{
+            if (isClassicVine) 'platform': 'vine',
+          };
+          if (marker case final value?) {
+            rawTags['allow_audio_reuse'] = value;
+          }
+          return VideoEvent(
+            id: testHexId,
+            pubkey: testPubkey,
+            createdAt: 1700000000,
+            content: 'classic vine',
+            timestamp: DateTime(2026),
+            videoUrl: 'https://example.com/video.mp4',
+            duration: 6,
+            vineId: 'vine-123',
+            addressableDTag: 'vine-123',
+            rawTags: rawTags,
+          );
+        }
 
-        expect(
-          AudioEvent.fromVideoOriginalSound(
-            video(allowReuse: true),
-          ).allowsReuse,
-          isTrue,
+        final granted = AudioEvent.fromVideoOriginalSound(
+          video(marker: 'true'),
         );
-        expect(
-          AudioEvent.fromVideoOriginalSound(
-            video(allowReuse: false),
-          ).allowsReuse,
-          isFalse,
+        final declined = AudioEvent.fromVideoOriginalSound(
+          video(marker: 'false', isClassicVine: true),
         );
+        final classicCompatibility = AudioEvent.fromVideoOriginalSound(
+          video(isClassicVine: true),
+        );
+        final unspecified = AudioEvent.fromVideoOriginalSound(video());
+
+        expect(granted.allowsReuse, isTrue);
+        expect(granted.hasExplicitReuseConsent, isTrue);
+        expect(declined.allowsReuse, isFalse);
+        expect(declined.hasExplicitReuseConsent, isTrue);
+        expect(classicCompatibility.allowsReuse, isTrue);
+        expect(classicCompatibility.hasExplicitReuseConsent, isTrue);
+        expect(unspecified.allowsReuse, isFalse);
+        expect(unspecified.hasExplicitReuseConsent, isFalse);
       });
 
       test('defaults allowsReuse to true for a plain AudioEvent', () {

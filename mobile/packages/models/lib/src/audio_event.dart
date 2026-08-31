@@ -3,6 +3,7 @@
 // ABOUTME: parsing audio shared for use in other videos
 
 import 'package:meta/meta.dart';
+import 'package:models/src/audio_reuse_policy.dart';
 import 'package:models/src/nostr_hex_utils.dart';
 import 'package:models/src/video_event.dart';
 import 'package:models/src/vine_sound.dart';
@@ -251,6 +252,7 @@ class AudioEvent {
     VideoEvent video, {
     String? creatorName,
   }) {
+    final reuseTerms = originalSoundReuseTerms(video);
     return AudioEvent(
       id: 'video_${video.id}',
       pubkey: video.pubkey,
@@ -260,7 +262,8 @@ class AudioEvent {
       title: creatorName == null ? null : 'Original sound - $creatorName',
       source: 'Original Sound',
       sourceVideoReference: video.addressableId,
-      allowsReuse: video.allowAudioReuse,
+      allowsReuse: reuseTerms ?? false,
+      hasExplicitReuseConsent: reuseTerms != null,
     );
   }
 
@@ -577,10 +580,12 @@ class AudioEvent {
   /// `true` default for bundled and existing in-memory app sounds.
   final bool allowsReuse;
 
-  /// Whether a parsed Kind 1063 explicitly carried an audio-reuse decision.
+  /// Whether this event carries definitive audio-reuse terms.
   ///
-  /// This distinguishes legacy events with no consent tag from an explicit
-  /// `false`, which must remain credit-only.
+  /// Parsed Kind 1063 events set this only for an explicit consent tag.
+  /// Synthetic original sounds also set it when their source video policy is
+  /// definitive, including the classic Vine compatibility verdict. This
+  /// distinguishes those results from legacy events that still need lookup.
   final bool hasExplicitReuseConsent;
 
   /// Whether this audio is currently anchored to a source video clip.

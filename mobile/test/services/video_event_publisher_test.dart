@@ -17,6 +17,7 @@ import 'package:models/models.dart'
         AudioExternalSource,
         AudioLicenseMetadata,
         UserProfile,
+        VideoEvent,
         VideoUrlResolver,
         audioEventKind;
 import 'package:nostr_client/nostr_client.dart';
@@ -707,6 +708,31 @@ void main() {
         hasExplicitReuseConsent: true,
       );
 
+      test('publishes with an unmarked classic Vine original sound', () async {
+        stubSignAndPublish();
+        final classicVideo = VideoEvent(
+          id: sourceVideoId,
+          pubkey: sourceCreator,
+          createdAt: 1700000000,
+          content: '',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
+          videoUrl: 'https://example.com/classic.mp4',
+          addressableDTag: 'classic-vine',
+          rawTags: const {'platform': 'vine'},
+        );
+        final classicSound = AudioEvent.fromVideoOriginalSound(classicVideo);
+
+        final result = await publisher.publishVideoEvent(
+          upload: createUpload(),
+          selectedAudio: classicSound,
+          selectedAudioEventId: classicSound.id,
+        );
+
+        expect(result, isTrue);
+        expect(classicSound.allowsReuse, isTrue);
+        expect(classicSound.hasExplicitReuseConsent, isTrue);
+      });
+
       test(
         'blocks selected audio when the source explicitly forbids reuse',
         () async {
@@ -737,6 +763,20 @@ void main() {
           );
         },
       );
+
+      test('an explicit decline blocks the sound owner', () async {
+        stubSignAndPublish();
+        final ownDeclinedSound = withheldSound.copyWith(pubkey: testPubkey);
+
+        await expectLater(
+          publisher.publishVideoEvent(
+            upload: createUpload(),
+            selectedAudio: ownDeclinedSound,
+            selectedAudioEventId: ownDeclinedSound.id,
+          ),
+          throwsA(isA<AudioReuseNotPermittedException>()),
+        );
+      });
 
       // The legacy resolver's `false` cannot tell a refusal from an
       // unreachable relay, a source video outside the query window, or one the

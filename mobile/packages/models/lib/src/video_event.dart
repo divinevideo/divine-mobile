@@ -20,6 +20,9 @@ String? _usableThumbnailUrl(Object? value) {
   return url;
 }
 
+/// The creator's `allow_audio_reuse` marker on a video event.
+enum AudioReuseConsent { granted, declined, unspecified, invalid }
+
 /// Compact backend-computed ProofMode verification result for feed/list rows.
 @immutable
 class ProofVerificationSummary {
@@ -1035,15 +1038,24 @@ class VideoEvent {
     return pubkeys;
   }
 
-  /// Whether the creator marked this video's audio as reusable.
+  /// The creator's audio-reuse marker without collapsing absent and false.
   ///
   /// Reads the editor-owned `allow_audio_reuse` marker. Prefers
   /// [nostrEventTags] but falls back to [rawTags], so the flag survives a
   /// JSON-cache round-trip — [nostrEventTags] is intentionally not persisted
   /// through `toJson`/`fromJson`, but [rawTags] is, which keeps the edit form
   /// from seeding the toggle `false` on a cache-rehydrated video.
-  bool get allowAudioReuse =>
-      _firstNostrTagValue('allow_audio_reuse') == 'true';
+  AudioReuseConsent get audioReuseConsent {
+    return switch (_firstNostrTagValue('allow_audio_reuse')) {
+      'true' => AudioReuseConsent.granted,
+      'false' => AudioReuseConsent.declined,
+      null => AudioReuseConsent.unspecified,
+      _ => AudioReuseConsent.invalid,
+    };
+  }
+
+  /// Whether the creator explicitly marked this video's audio as reusable.
+  bool get allowAudioReuse => audioReuseConsent == AudioReuseConsent.granted;
 
   /// Whether this video has any content warnings.
   bool get hasContentWarning => contentWarningLabels.isNotEmpty;
@@ -1436,11 +1448,11 @@ class VideoEvent {
     return proofSummary?.shouldShowBasicProofTier == true;
   }
 
-  /// Original Vine: Check if this is a recovered original vine from the
-  /// Internet Archive.  Uses the server-controlled `platform` field from
-  /// Funnelcake (set to "vine" for genuine archive imports).  This cannot
-  /// be spoofed by publishing a crafted Nostr event because `platform` is
-  /// relay metadata, not a user-settable tag.
+  /// Original Vine: Check if this appears to be a recovered original Vine.
+  ///
+  /// The meaning of `platform` differs by ingestion path, so this is a
+  /// compatibility signal rather than authoritative archive provenance.
+  /// #8466 tracks replacing it.
   bool get isOriginalVine {
     return rawTags['platform'] == 'vine';
   }

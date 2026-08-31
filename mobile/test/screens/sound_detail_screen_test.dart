@@ -960,21 +960,29 @@ void main() {
       const creatorPubkey =
           'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
-      VideoEvent sourceVideo({required bool allowReuse}) => VideoEvent(
-        id: sourceVideoId,
-        pubkey: creatorPubkey,
-        createdAt: 1700000000,
-        content: '',
-        timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
-        videoUrl: 'https://example.com/video/$sourceVideoId.mp4',
-        rawTags: allowReuse ? const {'allow_audio_reuse': 'true'} : const {},
-      );
+      VideoEvent sourceVideo({String? marker, bool isClassicVine = false}) {
+        final rawTags = <String, String>{
+          if (isClassicVine) 'platform': 'vine',
+        };
+        if (marker case final value?) {
+          rawTags['allow_audio_reuse'] = value;
+        }
+        return VideoEvent(
+          id: sourceVideoId,
+          pubkey: creatorPubkey,
+          createdAt: 1700000000,
+          content: '',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
+          videoUrl: 'https://example.com/video/$sourceVideoId.mp4',
+          rawTags: rawTags,
+        );
+      }
 
       // The synthesized original sound carries allowsReuse from the video, so
       // the gate works regardless of whether sourceVideo is threaded through.
-      AudioEvent originalSound({required bool allowReuse}) =>
+      AudioEvent originalSound({String? marker, bool isClassicVine = false}) =>
           AudioEvent.fromVideoOriginalSound(
-            sourceVideo(allowReuse: allowReuse),
+            sourceVideo(marker: marker, isClassicVine: isClassicVine),
           );
 
       List<Override> gridOverrides() => [
@@ -987,12 +995,12 @@ void main() {
         audioPlaybackServiceProvider.overrideWithValue(mockAudioService),
       ];
 
-      testWidgets('hides Use Sound when the creator disabled audio reuse', (
+      testWidgets('hides Use Sound when audio reuse is unspecified', (
         tester,
       ) async {
         await tester.pumpWidget(
           createTestWidget(
-            child: SoundDetailScreen(sound: originalSound(allowReuse: false)),
+            child: SoundDetailScreen(sound: originalSound()),
             overrides: gridOverrides(),
           ),
         );
@@ -1013,7 +1021,7 @@ void main() {
           // enabled it.
           await tester.pumpWidget(
             createTestWidget(
-              child: SoundDetailScreen(sound: originalSound(allowReuse: true)),
+              child: SoundDetailScreen(sound: originalSound(marker: 'true')),
               overrides: gridOverrides(),
             ),
           );
@@ -1030,7 +1038,7 @@ void main() {
       ) async {
         final termsCompleter = Completer<bool>();
         final consentCompleter = Completer<bool>();
-        final sound = originalSound(allowReuse: false);
+        final sound = originalSound();
 
         await tester.pumpWidget(
           createTestWidget(
@@ -1066,13 +1074,46 @@ void main() {
         await tester.pumpWidget(
           createTestWidget(
             viewerPubkey: creatorPubkey,
-            child: SoundDetailScreen(sound: originalSound(allowReuse: false)),
+            child: SoundDetailScreen(sound: originalSound()),
             overrides: gridOverrides(),
           ),
         );
         await tester.pump();
 
         expect(find.text('Use Sound'), findsOneWidget);
+      });
+
+      testWidgets('shows Use Sound for an unmarked classic Vine sound', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          createTestWidget(
+            child: SoundDetailScreen(
+              sound: originalSound(isClassicVine: true),
+            ),
+            overrides: gridOverrides(),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Use Sound'), findsOneWidget);
+      });
+
+      testWidgets('an explicit decline overrides the sound owner', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          createTestWidget(
+            viewerPubkey: creatorPubkey,
+            child: SoundDetailScreen(
+              sound: originalSound(marker: 'false', isClassicVine: true),
+            ),
+            overrides: gridOverrides(),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Use Sound'), findsNothing);
       });
     });
 

@@ -347,6 +347,37 @@ void main() {
         expect(find.byType(AudioEditorSelectionOverlay), findsNothing);
       });
 
+      testWidgets('selects an unmarked classic Vine original sound', (
+        tester,
+      ) async {
+        final classicVideo = VideoEvent(
+          id: 'a' * 64,
+          pubkey: 'b' * 64,
+          createdAt: 1704067200,
+          content: '',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
+          videoUrl: 'https://example.com/classic.mp4',
+          rawTags: const {'platform': 'vine'},
+        );
+        final classicSound = AudioEvent.fromVideoOriginalSound(
+          classicVideo,
+          creatorName: 'Classic Creator',
+        );
+
+        await tester.pumpWidget(
+          buildWidget(trendingSoundsAsync: AsyncValue.data([classicSound])),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryCommunity));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Original sound - Classic Creator'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AudioEditorSelectionOverlay), findsOneWidget);
+      });
+
       testWidgets('collapses repeated reuse-blocked toasts into one', (
         tester,
       ) async {
