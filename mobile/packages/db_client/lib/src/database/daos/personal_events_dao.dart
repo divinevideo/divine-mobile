@@ -136,7 +136,9 @@ class PersonalEventsDao extends DatabaseAccessor<AppDatabase>
         await (select(personalEvents)
               ..where((t) => t.id.equals(id) & t.pubkey.equals(pubkey)))
             .getSingleOrNull();
-    return row == null ? null : _toEvent(row);
+    if (row == null) return null;
+    final events = await _decodeRows([row]);
+    return events.isEmpty ? null : events.single;
   }
 
   /// Whether the owner has an event with [id].
