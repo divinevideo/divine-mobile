@@ -536,7 +536,8 @@ class VideoEventPublisher {
         }
 
         event = await authService.createAndSignEvent(
-          kind: NIP71VideoKinds.getPreferredAddressableKind(), // NIP-71 addressable short video
+          kind:
+              NIP71VideoKinds.getPreferredAddressableKind(), // NIP-71 addressable short video
           content: content,
           tags: tags,
         );

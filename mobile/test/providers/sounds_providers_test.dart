@@ -677,6 +677,18 @@ void _ownerExceptionTests() {
       );
     });
 
+    test('an explicit decline overrides the owner exception', () async {
+      final sound = createTestAudioEvent(
+        id: 'own',
+        pubkey: ownerPubkey,
+      ).copyWith(allowsReuse: false, hasExplicitReuseConsent: true);
+      final container = buildContainer(ownerPubkey);
+      await expectLater(
+        container.read(audioReuseConsentProvider(sound).future),
+        completion(isFalse),
+      );
+    });
+
     test("another creator's sound does not get the owner exception", () async {
       final sound = createTestAudioEvent(
         id: 'theirs',

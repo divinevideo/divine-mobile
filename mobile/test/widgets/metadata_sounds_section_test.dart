@@ -67,7 +67,8 @@ void main() {
 
     VideoEvent createVideoWithoutAudio({
       String? authorName,
-      bool allowAudioReuse = false,
+      bool? allowAudioReuse,
+      bool isClassicVine = false,
       InspiredByInfo? inspiredBy,
     }) {
       final now = DateTime.now();
@@ -81,9 +82,11 @@ void main() {
         title: 'Test Video',
         authorName: authorName,
         inspiredByVideo: inspiredBy,
-        rawTags: allowAudioReuse
-            ? const {'allow_audio_reuse': 'true'}
-            : const {},
+        rawTags: {
+          if (allowAudioReuse case final allowed?)
+            'allow_audio_reuse': allowed.toString(),
+          if (isClassicVine) 'platform': 'vine',
+        },
       );
     }
 
@@ -419,8 +422,33 @@ void main() {
         expect(_divineIcon(DivineIconName.caretRight), findsOneWidget);
       });
 
+      testWidgets('shows chevron for an unmarked classic Vine', (tester) async {
+        final video = createVideoWithoutAudio(isClassicVine: true);
+
+        await tester.pumpWidget(buildTestWidget(video: video));
+        await tester.pumpAndSettle();
+
+        expect(_divineIcon(DivineIconName.caretRight), findsOneWidget);
+      });
+
+      testWidgets('honors an explicit decline on a classic Vine', (
+        tester,
+      ) async {
+        final video = createVideoWithoutAudio(
+          allowAudioReuse: false,
+          isClassicVine: true,
+        );
+
+        await tester.pumpWidget(
+          buildTestWidget(video: video, viewerPubkey: testPubkey),
+        );
+        await tester.pumpAndSettle();
+
+        expect(_divineIcon(DivineIconName.caretRight), findsNothing);
+      });
+
       testWidgets(
-        'shows chevron for the creator viewing their own video with reuse off',
+        'shows chevron for the creator viewing their own unmarked video',
         (tester) async {
           final video = createVideoWithoutAudio();
 

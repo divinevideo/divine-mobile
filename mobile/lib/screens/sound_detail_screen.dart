@@ -290,6 +290,7 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
     final sound = widget.sound;
     final knownTerms = audioReuseTermsFromEvent(sound);
     if (knownTerms == true) return true;
+    if (knownTerms == false) return false;
     // Keep the synchronously knowable owner gate local so the button does not
     // disappear for a frame on the creator's own sound.
     ref.watch(currentAuthStateProvider);
@@ -297,7 +298,6 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
     if (viewer != null && viewer.isNotEmpty && viewer == sound.pubkey) {
       return true;
     }
-    if (knownTerms == false) return false;
     return ref.watch(audioReuseConsentProvider(sound)).value ?? false;
   }
 

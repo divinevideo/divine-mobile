@@ -14,6 +14,8 @@ import 'package:models/models.dart'
         AudioExternalSource,
         AudioLicenseMetadata,
         UserProfile,
+        VideoEvent,
+        VideoUrlResolver,
         audioEventKind;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
@@ -191,8 +193,10 @@ void main() {
 
       final result = await publisher.publishVideoEvent(
         upload: createUpload().copyWith(
-          streamingMp4Url: 'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/play_360p.mp4',
-          streamingHlsUrl: 'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/playlist.m3u8',
+          streamingMp4Url:
+              'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/play_360p.mp4',
+          streamingHlsUrl:
+              'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/playlist.m3u8',
           fallbackUrl: 'https://media.divine.video/fa4a90a3.mp4',
           cdnUrl: 'https://stream.divine.video/legacy/playlist.m3u8',
         ),
@@ -308,6 +312,31 @@ void main() {
         hasExplicitReuseConsent: true,
       );
 
+      test('publishes with an unmarked classic Vine original sound', () async {
+        stubSignAndPublish();
+        final classicVideo = VideoEvent(
+          id: sourceVideoId,
+          pubkey: sourceCreator,
+          createdAt: 1700000000,
+          content: '',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
+          videoUrl: 'https://example.com/classic.mp4',
+          addressableDTag: 'classic-vine',
+          rawTags: const {'platform': 'vine'},
+        );
+        final classicSound = AudioEvent.fromVideoOriginalSound(classicVideo);
+
+        final result = await publisher.publishVideoEvent(
+          upload: createUpload(),
+          selectedAudio: classicSound,
+          selectedAudioEventId: classicSound.id,
+        );
+
+        expect(result, isTrue);
+        expect(classicSound.allowsReuse, isTrue);
+        expect(classicSound.hasExplicitReuseConsent, isTrue);
+      });
+
       test(
         'blocks selected audio when the source explicitly forbids reuse',
         () async {
@@ -338,6 +367,20 @@ void main() {
           );
         },
       );
+
+      test('an explicit decline blocks the sound owner', () async {
+        stubSignAndPublish();
+        final ownDeclinedSound = withheldSound.copyWith(pubkey: testPubkey);
+
+        await expectLater(
+          publisher.publishVideoEvent(
+            upload: createUpload(),
+            selectedAudio: ownDeclinedSound,
+            selectedAudioEventId: ownDeclinedSound.id,
+          ),
+          throwsA(isA<AudioReuseNotPermittedException>()),
+        );
+      });
 
       // The legacy resolver's `false` cannot tell a refusal from an
       // unreachable relay, a source video outside the query window, or one the
@@ -478,7 +521,8 @@ void main() {
             audioFilePath: audioPath,
             duration: 6,
             fileSize: 12345,
-            sha256Hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            sha256Hash:
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             mimeType: 'audio/m4a',
           ),
         );
@@ -495,7 +539,8 @@ void main() {
             success: true,
             url: 'https://cdn.example.com/audio.m4a',
             fallbackUrl: 'https://cdn.example.com/audio.m4a',
-            videoId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            videoId:
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           ),
         );
         when(
@@ -586,42 +631,36 @@ void main() {
       // audioExtractionService, so the audio step returns at its first guard —
       // nothing is extracted or uploaded here. The real extraction-failure
       // path is covered in video_event_publisher_audio_degrade_test.dart.
-      test(
-        'an unavailable audio pipeline still publishes the video, without '
-        'claiming reuse',
-        () async {
-          stubSignAndPublish();
+      test('an unavailable audio pipeline still publishes the video, without '
+          'claiming reuse', () async {
+        stubSignAndPublish();
 
-          final result = await publisher.publishVideoEvent(
-            upload: createUpload(localVideoPath: '/tmp/video-with-audio.mp4'),
-            allowAudioReuse: true,
-          );
+        final result = await publisher.publishVideoEvent(
+          upload: createUpload(localVideoPath: '/tmp/video-with-audio.mp4'),
+          allowAudioReuse: true,
+        );
 
-          // A video-only publish beats discarding an already-uploaded video.
-          expect(result, isTrue);
+        // A video-only publish beats discarding an already-uploaded video.
+        expect(result, isTrue);
 
-          final tags =
-              verify(
-                    () => authService.createAndSignEvent(
-                      kind: NIP71VideoKinds.getPreferredAddressableKind(),
-                      content: any(named: 'content'),
-                      tags: captureAny(named: 'tags'),
-                    ),
-                  ).captured.single
-                  as List<List<String>>;
+        final tags =
+            verify(
+                  () => authService.createAndSignEvent(
+                    kind: NIP71VideoKinds.getPreferredAddressableKind(),
+                    content: any(named: 'content'),
+                    tags: captureAny(named: 'tags'),
+                  ),
+                ).captured.single
+                as List<List<String>>;
 
-          // The event must never advertise reusable audio that was never
-          // published — no allow_audio_reuse, and no audio `e` reference.
-          expect(
-            tags.where((tag) => tag.first == 'allow_audio_reuse'),
-            isEmpty,
-          );
-          expect(
-            tags.where((tag) => tag.first == 'e' && tag.last == 'audio'),
-            isEmpty,
-          );
-        },
-      );
+        // The event must never advertise reusable audio that was never
+        // published — no allow_audio_reuse, and no audio `e` reference.
+        expect(tags.where((tag) => tag.first == 'allow_audio_reuse'), isEmpty);
+        expect(
+          tags.where((tag) => tag.first == 'e' && tag.last == 'audio'),
+          isEmpty,
+        );
+      });
 
       test(
         'publishes durable provider credit without claiming ownership',
@@ -990,7 +1029,8 @@ void main() {
               success: true,
               url: 'https://cdn.example/audiohash',
               fallbackUrl: 'https://cdn.example/audiohash',
-              videoId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              videoId:
+                  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             ),
           );
 
@@ -1073,69 +1113,65 @@ void main() {
         },
       );
 
-      test(
-        'a sync failure does not fail the video publish',
-        () async {
-          when(
-            () => syncRepository.publishLocalChange(any()),
-          ).thenThrow(SyncIndexException('relay down'));
+      test('a sync failure does not fail the video publish', () async {
+        when(
+          () => syncRepository.publishLocalChange(any()),
+        ).thenThrow(SyncIndexException('relay down'));
 
-          final audioFile = File(
-            '${Directory.systemTemp.path}/imported_audio_sync_failure.mp3',
-          );
-          await audioFile.writeAsBytes([1, 2, 3]);
-          addTearDown(() {
-            if (audioFile.existsSync()) audioFile.deleteSync();
-          });
+        final audioFile = File(
+          '${Directory.systemTemp.path}/imported_audio_sync_failure.mp3',
+        );
+        await audioFile.writeAsBytes([1, 2, 3]);
+        addTearDown(() {
+          if (audioFile.existsSync()) audioFile.deleteSync();
+        });
 
-          when(
-            () => blossomUploadService.uploadAudio(
-              audioFile: any(named: 'audioFile'),
-              mimeType: 'audio/mpeg',
-              onProgress: any(named: 'onProgress'),
-            ),
-          ).thenAnswer(
-            (_) async => const BlossomUploadResult(
-              success: true,
-              url: 'https://cdn.example/audiohash',
-              fallbackUrl: 'https://cdn.example/audiohash',
-              videoId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-            ),
-          );
+        when(
+          () => blossomUploadService.uploadAudio(
+            audioFile: any(named: 'audioFile'),
+            mimeType: 'audio/mpeg',
+            onProgress: any(named: 'onProgress'),
+          ),
+        ).thenAnswer(
+          (_) async => const BlossomUploadResult(
+            success: true,
+            url: 'https://cdn.example/audiohash',
+            fallbackUrl: 'https://cdn.example/audiohash',
+            videoId:
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          ),
+        );
 
-          final result = await publisher.publishVideoEvent(
-            upload: createUpload(),
-            allowAudioReuse: true,
-            selectedAudio: AudioEvent.fromLocalImport(
-              id: 'local_import_1700000000001',
-              filePath: audioFile.path,
-              createdAt: 1700000000,
-              title: 'imported_audio_sync_failure',
-              mimeType: 'audio/mpeg',
-              duration: 3,
-            ),
-            audioShareAttribution: const AudioShareAttribution(
-              title: 'Rain on a roof',
-              creatorName: 'Field Recordist',
-              creatorUrl: 'https://creator.example/profile',
-              sourceUrl: 'https://creator.example/rain',
-              licenseName: 'CC BY 4.0',
-              licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
-              publicTags: ['rain', 'field-recording'],
-              confirmedOwnWork: false,
-            ),
-          );
+        final result = await publisher.publishVideoEvent(
+          upload: createUpload(),
+          allowAudioReuse: true,
+          selectedAudio: AudioEvent.fromLocalImport(
+            id: 'local_import_1700000000001',
+            filePath: audioFile.path,
+            createdAt: 1700000000,
+            title: 'imported_audio_sync_failure',
+            mimeType: 'audio/mpeg',
+            duration: 3,
+          ),
+          audioShareAttribution: const AudioShareAttribution(
+            title: 'Rain on a roof',
+            creatorName: 'Field Recordist',
+            creatorUrl: 'https://creator.example/profile',
+            sourceUrl: 'https://creator.example/rain',
+            licenseName: 'CC BY 4.0',
+            licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+            publicTags: ['rain', 'field-recording'],
+            confirmedOwnWork: false,
+          ),
+        );
 
-          expect(result, isTrue);
-          verify(() => savedSoundsService.saveSound(any())).called(1);
-          // The mirror sits inside an enclosing catch-and-log, so without
-          // this the test would pass unchanged even if _mirrorSavedSound's
-          // own try/catch — or the mirror call entirely — were deleted.
-          verify(
-            () => syncRepository.publishLocalChange(any()),
-          ).called(1);
-        },
-      );
+        expect(result, isTrue);
+        verify(() => savedSoundsService.saveSound(any())).called(1);
+        // The mirror sits inside an enclosing catch-and-log, so without
+        // this the test would pass unchanged even if _mirrorSavedSound's
+        // own try/catch — or the mirror call entirely — were deleted.
+        verify(() => syncRepository.publishLocalChange(any())).called(1);
+      });
 
       test(
         'publishes video privately without uploading a local import',
