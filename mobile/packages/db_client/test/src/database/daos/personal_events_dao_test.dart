@@ -240,6 +240,27 @@ void main() {
         expect(await dao.getById(pubkey: otherOwner, id: event.id), isNotNull);
       });
 
+      test('getById deletes a malformed row and returns null', () async {
+        final id = 'f' * 64;
+        await database
+            .into(database.personalEvents)
+            .insert(
+              PersonalEventsCompanion.insert(
+                id: id,
+                pubkey: owner,
+                kind: 34236,
+                createdAt: 1700000000,
+                tags: 'not-json',
+                content: 'corrupt cache row',
+                sig: 'f' * 128,
+                retention: PersonalEventRetention.durable.value,
+              ),
+            );
+
+        expect(await dao.getById(pubkey: owner, id: id), isNull);
+        expect(await dao.countForOwner(owner), 0);
+      });
+
       test('hasEvent is owner-scoped', () async {
         final event = createEvent(pubkey: otherOwner, createdAt: 1700000000);
         await dao.upsertPersonalEvent(event);
