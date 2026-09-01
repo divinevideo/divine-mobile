@@ -858,7 +858,10 @@ void main() {
 
       expect(find.text(l10n.settingsSecureAccount), findsNothing);
       expect(find.text(l10n.authSignInButton), findsOneWidget);
-      expect(find.text(l10n.profileSignInToRestore), findsOneWidget);
+      expect(
+        find.text(l10n.authRegisteredKeyRecoveryDescription),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text(l10n.authSignInButton));
       await tester.pumpAndSettle();

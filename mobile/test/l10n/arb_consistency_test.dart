@@ -813,6 +813,9 @@ const _knownUntranslatedDebt = <String>{
   // stays accurate in every locale rather than being machine-translated.
   'bugReportImageInsertionRejected',
   'featureRequestImageInsertionRejected',
+  // Registered-key recovery copy (#7985). Non-English locales fall back to
+  // English until the next human translation pass.
+  'authRegisteredKeyRecoveryDescription',
   // Deletion prep-failure copy (#6126): load-bearing "nothing was deleted"
   // guidance awaits speaker review in the account-deletion pass (#7879).
   'deleteAccountDeletionNotStarted',

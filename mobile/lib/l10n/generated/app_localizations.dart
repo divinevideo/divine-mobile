@@ -5779,6 +5779,12 @@ abstract class AppLocalizations {
   /// **'Sign in with an existing account'**
   String get authSignInDifferentAccount;
 
+  /// Shown in Settings and the profile action sheet after Keycast reports that the current Nostr key already belongs to a registered Divine account. The action opens email sign-in and forgot-password recovery.
+  ///
+  /// In en, this message translates to:
+  /// **'This key is already linked to a Divine account. Sign in with your email to recover it.'**
+  String get authRegisteredKeyRecoveryDescription;
+
   /// Returning-user welcome-screen action label for signing in with a different existing account.
   ///
   /// In en, this message translates to:

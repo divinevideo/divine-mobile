@@ -3492,6 +3492,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get authSignInDifferentAccount => 'Accedi con un account diverso';
 
   @override
+  String get authRegisteredKeyRecoveryDescription =>
+      'This key is already linked to a Divine account. Sign in with your email to recover it.';
+
+  @override
   String get authUseAnotherAccount => 'Usa un altro account';
 
   @override

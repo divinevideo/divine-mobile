@@ -3862,9 +3862,15 @@ void main() {
 
         await tester.tap(find.text(enL10n.authSignInButton));
         await tester.pumpAndSettle();
-        expect(find.text(enL10n.profileSignInToRestore), findsOneWidget);
         expect(
-          find.text(enL10n.authInfoEmailPasswordDescription),
+          find.descendant(
+            of: find.byType(ProfileActionsSheetContent),
+            matching: find.text(enL10n.authSignInTitle),
+          ),
+          findsNWidgets(2),
+        );
+        expect(
+          find.text(enL10n.authRegisteredKeyRecoveryDescription),
           findsOneWidget,
         );
         await tester.tap(

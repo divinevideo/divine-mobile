@@ -455,7 +455,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     DivineListTile(
                       icon: DivineIconName.signIn,
                       title: context.l10n.authSignInButton,
-                      subtitle: context.l10n.profileSignInToRestore,
+                      subtitle:
+                          context.l10n.authRegisteredKeyRecoveryDescription,
                       onTap: () => context.push(
                         WelcomeScreen.loginOptionsPathWithRecovery(
                           email: registeredKeyConflict.email,

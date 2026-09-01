@@ -3227,6 +3227,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authSignInDifferentAccount => '使用已有账号登录';
 
   @override
+  String get authRegisteredKeyRecoveryDescription =>
+      'This key is already linked to a Divine account. Sign in with your email to recover it.';
+
+  @override
   String get authUseAnotherAccount => '使用其他账号';
 
   @override

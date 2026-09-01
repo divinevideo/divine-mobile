@@ -3457,6 +3457,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Mag-sign in gamit ang ibang account';
 
   @override
+  String get authRegisteredKeyRecoveryDescription =>
+      'This key is already linked to a Divine account. Sign in with your email to recover it.';
+
+  @override
   String get authUseAnotherAccount => 'Gumamit ng ibang account';
 
   @override
