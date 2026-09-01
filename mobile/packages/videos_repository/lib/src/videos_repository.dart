@@ -377,7 +377,13 @@ class VideosRepository {
         before: cursor,
       );
 
-      final videos = _transformVideoStats(response.videos);
+      // Keep Funnelcake's order: the Following feed is revision-ordered and
+      // pages on a revision-time `next_cursor`, so re-sorting the page on
+      // publication time would order rows against the clock the cursor walks.
+      final videos = _transformVideoStats(
+        response.videos,
+        sortByCreatedAt: false,
+      );
       final hydratedVideos = await _hydrateVideosWithBulkStats(videos);
       _appendUniqueVideos(
         visible,
