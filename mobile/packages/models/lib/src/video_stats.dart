@@ -809,9 +809,9 @@ int _parseInt(dynamic value) {
 
 int? _parseOptionalUnixSeconds(dynamic value) {
   final parsed = switch (value) {
-    int n => n,
-    double n => n.toInt(),
-    String s => int.tryParse(s),
+    final int n => n,
+    final double n => n.toInt(),
+    final String s => int.tryParse(s),
     _ => null,
   };
   if (parsed == null || parsed <= 0) return null;
