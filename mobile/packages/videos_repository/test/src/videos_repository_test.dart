@@ -1719,6 +1719,62 @@ void main() {
           verifyNever(() => mockNostrClient.queryEvents(any()));
         });
 
+        test(
+          'preserves the Funnelcake page order for the Following feed',
+          () async {
+            // The Following feed stays revision-ordered server-side and
+            // pages on a revision-time `next_cursor`. Re-sorting the page on
+            // publication time would order rows against the clock the cursor
+            // walks, so rows on a later page can be newer by publication than
+            // rows already rendered above them.
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getHomeFeed(
+                pubkey: any(named: 'pubkey'),
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer(
+              (_) async => HomeFeedResponse(
+                videos: [
+                  _createVideoStats(
+                    id: 'revised-recently',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-1',
+                    videoUrl: 'https://example.com/1.mp4',
+                    createdAt: 2000,
+                    publishedAt: 1000,
+                  ),
+                  _createVideoStats(
+                    id: 'published-later',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-2',
+                    videoUrl: 'https://example.com/2.mp4',
+                    createdAt: 1900,
+                    publishedAt: 1800,
+                  ),
+                ],
+              ),
+            );
+
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repositoryWithApi.getHomeFeedVideos(
+              authors: ['followed-user'],
+              userPubkey: 'my-pubkey',
+              limit: 10,
+            );
+
+            expect(
+              result.videos.map((video) => video.id),
+              equals(['revised-recently', 'published-later']),
+            );
+          },
+        );
+
         test('hydrates sparse API results with bulk loop stats', () async {
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
           when(
