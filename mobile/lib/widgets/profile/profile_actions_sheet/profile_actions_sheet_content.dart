@@ -9,6 +9,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
+import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -33,12 +34,14 @@ abstract class ProfileActionsSheetSizing {
 Future<void> showProfileActionsSheet({
   required BuildContext context,
   required List<ProfileActionType> actions,
+  String? recoveryEmail,
   void Function(ProfileActionType action)? onMaybeLater,
 }) {
   final opensTall = switch (actions.first) {
     ProfileActionType.becomeSupporter => true,
     ProfileActionType.accountRestricted ||
     ProfileActionType.secureAccount ||
+    ProfileActionType.recoverAccount ||
     ProfileActionType.completeProfile => false,
   };
   if (opensTall) {
@@ -48,6 +51,7 @@ Future<void> showProfileActionsSheet({
       minChildSize: VineTheme.bottomSheetDismissFloor,
       buildScrollBody: (scrollController) => ProfileActionsSheetContent(
         actions: actions,
+        recoveryEmail: recoveryEmail,
         onMaybeLater: onMaybeLater,
         scrollController: scrollController,
       ),
@@ -58,6 +62,7 @@ Future<void> showProfileActionsSheet({
     showHeaderDivider: false,
     body: ProfileActionsSheetContent(
       actions: actions,
+      recoveryEmail: recoveryEmail,
       onMaybeLater: onMaybeLater,
     ),
   );
@@ -77,6 +82,7 @@ class ProfileActionsSheetContent extends StatefulWidget {
   /// [actions] must contain at least one element.
   const ProfileActionsSheetContent({
     required this.actions,
+    this.recoveryEmail,
     this.onMaybeLater,
     this.scrollController,
     super.key,
@@ -85,6 +91,9 @@ class ProfileActionsSheetContent extends StatefulWidget {
   /// Ordered list of actions to present. The first action is shown
   /// immediately; subsequent ones appear after "Maybe Later".
   final List<ProfileActionType> actions;
+
+  /// Email captured when Keycast reported that the active key is registered.
+  final String? recoveryEmail;
 
   /// Called with the action the user dismissed before the sheet advances.
   final void Function(ProfileActionType action)? onMaybeLater;
@@ -153,6 +162,19 @@ class _ProfileActionsSheetContentState
             primaryLabel: l10n.profileSecurePrimaryButton,
             onPrimaryTap: () =>
                 _openDestination(const SecureAccountRouteData().location),
+            onSecondaryTap: _onMaybeLater,
+          ),
+          ProfileActionType.recoverAccount => _ActionPrompt(
+            key: key,
+            sticker: DivineStickerName.skeletonKey,
+            title: l10n.authSignInButton,
+            subtitle: l10n.authSecureAccountAlreadyRegistered,
+            primaryLabel: l10n.authSignInButton,
+            onPrimaryTap: () => _openDestination(
+              WelcomeScreen.loginOptionsPathWithRecovery(
+                email: widget.recoveryEmail,
+              ),
+            ),
             onSecondaryTap: _onMaybeLater,
           ),
           ProfileActionType.completeProfile => _ActionPrompt(

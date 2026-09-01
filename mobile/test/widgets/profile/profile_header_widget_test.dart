@@ -49,6 +49,7 @@ import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
+import 'package:openvine/services/auth/registered_key_conflict_store.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/og_viner_cache_service.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
@@ -481,6 +482,7 @@ void main() {
           Nip05VerificationStatus.verified,
       SupporterApiClient? supporterClient,
       SupporterRepository? supporterRepository,
+      RegisteredKeyConflict? registeredKeyConflict,
     }) {
       // Pass authService when the test needs the same instance across pumps —
       // e.g. to read tryRefreshCallCount after the header has been unmounted.
@@ -627,6 +629,9 @@ void main() {
           }),
           badgeRepositoryProvider.overrideWithValue(badgeRepository),
           currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+          registeredKeyConflictProvider.overrideWithValue(
+            registeredKeyConflict,
+          ),
         ],
         child: MaterialApp(
           localizationsDelegates: [
@@ -3829,6 +3834,50 @@ void main() {
         expect(find.text(enL10n.profileSecureYourAccount), findsOneWidget);
         // 1 action — badge shows "1"
         expect(find.text('1'), findsOneWidget);
+      });
+
+      testWidgets('replaces Secure action with registered-key recovery', (
+        tester,
+      ) async {
+        final mockGoRouter = MockGoRouter();
+        when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            userIdHex: testUserHex,
+            isOwnProfile: true,
+            profile: createTestProfile(displayName: 'Test User'),
+            isAnonymous: true,
+            registeredKeyConflict: const RegisteredKeyConflict(
+              pubkeyHex: testUserHex,
+              email: 'existing@example.com',
+            ),
+            goRouter: mockGoRouter,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(enL10n.profileSecureYourAccount), findsNothing);
+        expect(find.text(enL10n.authSignInButton), findsOneWidget);
+
+        await tester.tap(find.text(enL10n.authSignInButton));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(ProfileActionsSheetContent),
+            matching: find.widgetWithText(
+              DivineButton,
+              enL10n.authSignInButton,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockGoRouter.push(
+            '/welcome/login-options?email=existing%40example.com',
+          ),
+        ).called(1);
       });
 
       testWidgets(

@@ -30,6 +30,7 @@ import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/following_prefetch_marker.dart';
+import 'package:openvine/services/auth/registered_key_conflict_store.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/c2pa_creator_binding_factory.dart';
 import 'package:openvine/services/cawg_verifier_client.dart';
@@ -277,6 +278,26 @@ class CurrentAccountActivationReceipt
     return authService.committedAccountActivationReceipt;
   }
 }
+
+/// Current active-key conflict and its sign-in recovery context.
+final registeredKeyConflictStoreProvider = Provider<RegisteredKeyConflictStore>(
+  (ref) {
+    final store = RegisteredKeyConflictStore(ref.watch(authServiceProvider));
+    ref.onDispose(store.dispose);
+    return store;
+  },
+);
+
+final registeredKeyConflictProvider = Provider<RegisteredKeyConflict?>((ref) {
+  final authState = ref.watch(currentAuthStateProvider);
+  final store = ref.watch(registeredKeyConflictStoreProvider);
+  store.syncAuthState(authState);
+  final subscription = store.stream.listen((_) {
+    ref.invalidateSelf();
+  });
+  ref.onDispose(subscription.cancel);
+  return store.current;
+});
 
 /// Boundary-safe auth helper for recorder exits.
 ///

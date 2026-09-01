@@ -14,6 +14,10 @@ enum ProfileActionType {
   /// identity.
   secureAccount,
 
+  /// Keycast already owns the active key, so the user should recover its
+  /// registered account instead of trying to register it again.
+  recoverAccount,
+
   /// The user has not yet set a custom display name, bio, or picture.
   completeProfile,
 
@@ -36,12 +40,14 @@ enum ProfileActionType {
     required bool isAnonymous,
     required bool hasAnyProfileInfo,
     required bool canBecomeSupporter,
+    bool hasRegisteredKeyConflict = false,
   }) {
     if (!isOwnProfile) return const [];
 
     return [
       if (isAccountEnforced) accountRestricted,
-      if (isAnonymous) secureAccount,
+      if (isAnonymous && hasRegisteredKeyConflict) recoverAccount,
+      if (isAnonymous && !hasRegisteredKeyConflict) secureAccount,
       if (!hasAnyProfileInfo) completeProfile,
       if (canBecomeSupporter) becomeSupporter,
     ];

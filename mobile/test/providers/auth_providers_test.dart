@@ -519,4 +519,41 @@ void main() {
       expect(analytics.userIds, [pubkey]);
     });
   });
+
+  group('registeredKeyConflictProvider', () {
+    const pubkey =
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+    test('clears the active conflict when authentication ends', () async {
+      var authState = AuthState.authenticated;
+      final authStateController = StreamController<AuthState>.broadcast();
+      addTearDown(authStateController.close);
+      final authService = _MockAuthService();
+      when(() => authService.authState).thenAnswer((_) => authState);
+      when(() => authService.currentPublicKeyHex).thenReturn(pubkey);
+      when(
+        () => authService.authStateStream,
+      ).thenAnswer((_) => authStateController.stream);
+      final container = ProviderContainer(
+        overrides: [authServiceProvider.overrideWithValue(authService)],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(registeredKeyConflictProvider), isNull);
+      container
+          .read(registeredKeyConflictStoreProvider)
+          .record(expectedPubkeyHex: pubkey, email: 'existing@example.com');
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        container.read(registeredKeyConflictProvider)?.email,
+        'existing@example.com',
+      );
+
+      authState = AuthState.unauthenticated;
+      authStateController.add(authState);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(container.read(registeredKeyConflictProvider), isNull);
+    });
+  });
 }

@@ -19,6 +19,7 @@ import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/providers/route_normalization_provider.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/secure_account_screen.dart';
+import 'package:openvine/services/auth/registered_key_conflict_store.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -34,6 +35,9 @@ class _MockAuthService extends Mock implements AuthService {}
 class _MockPendingVerificationService extends Mock
     implements PendingVerificationService {}
 
+class _MockRegisteredKeyConflictStore extends Mock
+    implements RegisteredKeyConflictStore {}
+
 class _MockEmailVerificationCubit extends MockCubit<EmailVerificationState>
     implements EmailVerificationCubit {}
 
@@ -47,12 +51,14 @@ void main() {
     late _MockKeycastOAuth mockOAuth;
     late _MockAuthService mockAuthService;
     late _MockPendingVerificationService mockPendingVerification;
+    late _MockRegisteredKeyConflictStore mockRegisteredKeyConflictStore;
     late StreamController<AuthState> authStateController;
 
     setUp(() {
       mockOAuth = _MockKeycastOAuth();
       mockAuthService = _MockAuthService();
       mockPendingVerification = _MockPendingVerificationService();
+      mockRegisteredKeyConflictStore = _MockRegisteredKeyConflictStore();
       authStateController = StreamController<AuthState>.broadcast();
 
       // Default stubs
@@ -87,6 +93,9 @@ void main() {
           ...getStandardTestOverrides(),
           oauthClientProvider.overrideWithValue(mockOAuth),
           authServiceProvider.overrideWithValue(mockAuthService),
+          registeredKeyConflictStoreProvider.overrideWithValue(
+            mockRegisteredKeyConflictStore,
+          ),
         ],
         child: BlocProvider<EmailVerificationCubit>(
           create: (_) => EmailVerificationCubit(
@@ -669,6 +678,15 @@ void main() {
     });
 
     group('Key conflict recovery', () {
+      setUp(() {
+        when(
+          () => mockRegisteredKeyConflictStore.record(
+            expectedPubkeyHex: any(named: 'expectedPubkeyHex'),
+            email: any(named: 'email'),
+          ),
+        ).thenReturn(null);
+      });
+
       Future<GoRouter> pumpConflict(
         WidgetTester tester, {
         String errorCode = 'CONFLICT',
@@ -719,6 +737,9 @@ void main() {
               ...getStandardTestOverrides(),
               oauthClientProvider.overrideWithValue(mockOAuth),
               authServiceProvider.overrideWithValue(mockAuthService),
+              registeredKeyConflictStoreProvider.overrideWithValue(
+                mockRegisteredKeyConflictStore,
+              ),
             ],
             child: MaterialApp.router(
               localizationsDelegates: appLocalizationsDelegates,
@@ -802,6 +823,37 @@ void main() {
           expect(emailField.enabled, isTrue);
           // The raw server sentence never reaches the user.
           expect(find.textContaining('Nostr key'), findsNothing);
+          verify(
+            () => mockRegisteredKeyConflictStore.record(
+              expectedPubkeyHex: automaticOwnerPublicKeyHex,
+              email: 'existing@example.com',
+            ),
+          ).called(1);
+        },
+      );
+
+      testWidgets(
+        'email reuse stays retryable without recording a key conflict',
+        (
+          tester,
+        ) async {
+          await pumpConflict(tester, errorCode: 'EMAIL_ALREADY_EXISTS');
+          final l10n = lookupAppLocalizations(const Locale('en'));
+
+          expect(
+            find.text(l10n.authSecureAccountAlreadyRegistered),
+            findsOneWidget,
+          );
+          expect(
+            find.widgetWithText(DivineButton, l10n.authSecureAccountTitle),
+            findsOneWidget,
+          );
+          verifyNever(
+            () => mockRegisteredKeyConflictStore.record(
+              expectedPubkeyHex: any(named: 'expectedPubkeyHex'),
+              email: any(named: 'email'),
+            ),
+          );
         },
       );
 

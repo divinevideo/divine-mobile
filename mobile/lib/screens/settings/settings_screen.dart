@@ -417,6 +417,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final authService = ref.watch(authServiceProvider);
     final accountEnforced = ref.watch(isAccountEnforcedProvider);
     final authState = ref.watch(currentAuthStateProvider);
+    final registeredKeyConflict = ref.watch(registeredKeyConflictProvider);
     final isAuthenticated = authState == AuthState.authenticated;
     final hasExpiredOAuthSession = ref.watch(hasExpiredOAuthSessionProvider);
     final accountSwitchingEnabled = ref.watch(
@@ -450,7 +451,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onSwitchAccount: _handleSwitchAccount,
                     accountSwitchingEnabled: accountSwitchingEnabled,
                   ),
-                  if (authService.isAnonymous)
+                  if (authService.isAnonymous && registeredKeyConflict != null)
+                    DivineListTile(
+                      icon: DivineIconName.signIn,
+                      title: context.l10n.authSignInButton,
+                      subtitle: context.l10n.authSecureAccountAlreadyRegistered,
+                      onTap: () => context.push(
+                        WelcomeScreen.loginOptionsPathWithRecovery(
+                          email: registeredKeyConflict.email,
+                        ),
+                      ),
+                    )
+                  else if (authService.isAnonymous)
                     DivineListTile(
                       icon: DivineIconName.shieldCheck,
                       title: context.l10n.settingsSecureAccount,

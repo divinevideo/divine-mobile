@@ -15,6 +15,7 @@ import 'package:openvine/router/routes/router_guards.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/services/auth/registered_key_conflict_store.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:openvine/widgets/auth/auth_error_box.dart';
 import 'package:openvine/widgets/auth/auth_form_scaffold.dart';
@@ -128,6 +129,10 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
       // Use authService.exportNsec() which accesses keys from secure storage
       // This works for both auto-generated and imported keys
       final authService = ref.read(authServiceProvider);
+      final registeredKeyConflictStore = ref.read(
+        registeredKeyConflictStoreProvider,
+      );
+      final ownerPublicKeyHex = authService.currentPublicKeyHex;
       final nsec = await authService.exportNsec();
 
       if (nsec == null) {
@@ -140,7 +145,8 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
         email: email,
         password: password,
         nsec: nsec,
-        ownerPublicKeyHex: authService.currentPublicKeyHex,
+        ownerPublicKeyHex: ownerPublicKeyHex,
+        registeredKeyConflictStore: registeredKeyConflictStore,
       );
     } catch (e) {
       Log.error(
@@ -162,6 +168,7 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
     required String password,
     required String nsec,
     required String? ownerPublicKeyHex,
+    required RegisteredKeyConflictStore registeredKeyConflictStore,
   }) async {
     final (result, verifier) = await oauth.headlessRegister(
       email: email,
@@ -171,12 +178,17 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
     );
 
     if (!result.success) {
-      // A registration conflict means the key or entered email already has an
-      // account (commonly a registered key forgotten after anonymous fallback).
-      // Show recovery choices in place instead of dead-ending on raw server
-      // text: sign in for the recoverable case, or contact support for duplicate
-      // or credential-less accounts.
+      // Keycast distinguishes a BYOK key collision from an email collision.
+      // Only the former changes future Secure account entry points; an email
+      // collision can still be retried here with another address.
+      final isRegisteredKey = result.errorCode == 'CONFLICT';
       if (result.failure == KeycastRegisterFailure.emailAlreadyRegistered) {
+        if (isRegisteredKey && ownerPublicKeyHex != null) {
+          registeredKeyConflictStore.record(
+            expectedPubkeyHex: ownerPublicKeyHex,
+            email: email,
+          );
+        }
         if (!mounted) return;
         setState(() {
           _hasConflict = true;
