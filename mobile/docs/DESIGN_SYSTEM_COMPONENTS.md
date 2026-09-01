@@ -53,7 +53,13 @@ Complete dark-mode design system providing:
 | `VineBottomSheetDragHandle` | Reusable drag handle widget |
 | `VineBottomSheetHeader` | Header with title/subtitle for bottom sheets |
 | `VineBottomSheetSelectionMenu` | Selection menu variant (pick from options) |
-| `VineBottomSheetTileMenu` | Tile-based menu variant |
+
+**Removed:** `VineBottomSheetTileMenu` — an icon-and-label tile menu, never
+exported from the package barrel and never called. Use
+`VineBottomSheetActionMenu` for icon-and-label action lists, or
+`VineBottomSheet.show<T>` with private tiles that pop a typed result
+(`lib/screens/comments/widgets/comment_options_modal.dart` is the worked
+example).
 
 ### Text Field
 
