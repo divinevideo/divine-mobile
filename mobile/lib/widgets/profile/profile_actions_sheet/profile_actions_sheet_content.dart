@@ -167,8 +167,8 @@ class _ProfileActionsSheetContentState
           ProfileActionType.recoverAccount => _ActionPrompt(
             key: key,
             sticker: DivineStickerName.skeletonKey,
-            title: l10n.authSignInButton,
-            subtitle: l10n.authSecureAccountAlreadyRegistered,
+            title: l10n.profileSignInToRestore,
+            subtitle: l10n.authInfoEmailPasswordDescription,
             primaryLabel: l10n.authSignInButton,
             onPrimaryTap: () => _openDestination(
               WelcomeScreen.loginOptionsPathWithRecovery(

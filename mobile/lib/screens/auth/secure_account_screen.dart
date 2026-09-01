@@ -15,7 +15,6 @@ import 'package:openvine/router/routes/router_guards.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/services/auth/registered_key_conflict_store.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:openvine/widgets/auth/auth_error_box.dart';
 import 'package:openvine/widgets/auth/auth_form_scaffold.dart';
@@ -132,6 +131,13 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
       final registeredKeyConflictStore = ref.read(
         registeredKeyConflictStoreProvider,
       );
+      void recordRegisteredKeyConflict({
+        required String expectedPubkeyHex,
+        required String email,
+      }) => registeredKeyConflictStore.record(
+        expectedPubkeyHex: expectedPubkeyHex,
+        email: email,
+      );
       final ownerPublicKeyHex = authService.currentPublicKeyHex;
       final nsec = await authService.exportNsec();
 
@@ -146,7 +152,7 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
         password: password,
         nsec: nsec,
         ownerPublicKeyHex: ownerPublicKeyHex,
-        registeredKeyConflictStore: registeredKeyConflictStore,
+        recordRegisteredKeyConflict: recordRegisteredKeyConflict,
       );
     } catch (e) {
       Log.error(
@@ -168,7 +174,11 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
     required String password,
     required String nsec,
     required String? ownerPublicKeyHex,
-    required RegisteredKeyConflictStore registeredKeyConflictStore,
+    required void Function({
+      required String expectedPubkeyHex,
+      required String email,
+    })
+    recordRegisteredKeyConflict,
   }) async {
     final (result, verifier) = await oauth.headlessRegister(
       email: email,
@@ -184,7 +194,7 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
       final isRegisteredKey = result.errorCode == 'CONFLICT';
       if (result.failure == KeycastRegisterFailure.emailAlreadyRegistered) {
         if (isRegisteredKey && ownerPublicKeyHex != null) {
-          registeredKeyConflictStore.record(
+          recordRegisteredKeyConflict(
             expectedPubkeyHex: ownerPublicKeyHex,
             email: email,
           );

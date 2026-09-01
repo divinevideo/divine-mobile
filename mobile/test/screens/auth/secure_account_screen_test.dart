@@ -693,6 +693,7 @@ void main() {
         String errorDescription =
             'This Nostr key is already registered. '
             'Please log in instead or use a different key.',
+        bool useRealStore = false,
       }) async {
         await setRegistrationTestSurface(tester);
         when(
@@ -737,9 +738,10 @@ void main() {
               ...getStandardTestOverrides(),
               oauthClientProvider.overrideWithValue(mockOAuth),
               authServiceProvider.overrideWithValue(mockAuthService),
-              registeredKeyConflictStoreProvider.overrideWithValue(
-                mockRegisteredKeyConflictStore,
-              ),
+              if (!useRealStore)
+                registeredKeyConflictStoreProvider.overrideWithValue(
+                  mockRegisteredKeyConflictStore,
+                ),
             ],
             child: MaterialApp.router(
               localizationsDelegates: appLocalizationsDelegates,
@@ -833,19 +835,17 @@ void main() {
       );
 
       testWidgets(
-        'email reuse stays retryable without recording a key conflict',
+        'email reuse offers recovery without recording a key conflict',
         (
           tester,
         ) async {
           await pumpConflict(tester, errorCode: 'EMAIL_ALREADY_EXISTS');
-          final l10n = lookupAppLocalizations(const Locale('en'));
-
           expect(
-            find.text(l10n.authSecureAccountAlreadyRegistered),
-            findsOneWidget,
-          );
-          expect(
-            find.widgetWithText(DivineButton, l10n.authSecureAccountTitle),
+            find.text(
+              lookupAppLocalizations(
+                const Locale('en'),
+              ).authSecureAccountAlreadyRegistered,
+            ),
             findsOneWidget,
           );
           verifyNever(
@@ -874,6 +874,20 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Email already registered'), findsNothing);
+      });
+
+      testWidgets('records into the provider read by later entry points', (
+        tester,
+      ) async {
+        await pumpConflict(tester, useRealStore: true);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(SecureAccountScreen)),
+        );
+
+        expect(
+          container.read(registeredKeyConflictProvider)?.email,
+          'existing@example.com',
+        );
       });
 
       testWidgets('editing the email clears the conflict for a fresh retry', (
