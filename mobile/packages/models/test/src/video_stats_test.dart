@@ -304,6 +304,50 @@ void main() {
         expect(stats.publishedAt, equals(1473050841));
       });
 
+      test('reads top-level published_at when tags are omitted', () {
+        final stats = VideoStats.fromJson(const {
+          'id': 'abc123',
+          'pubkey': 'pub456',
+          'created_at': 1788200570,
+          'published_at': 1784431685,
+          'kind': 34236,
+          'd_tag': 'video-1',
+          'title': 'Message to the Grassroots',
+          'thumbnail': 'https://example.com/thumb.jpg',
+          'video_url': 'https://example.com/video.mp4',
+          'reactions': 0,
+          'comments': 0,
+          'reposts': 0,
+          'engagement_score': 0,
+        });
+
+        expect(stats.publishedAt, equals(1784431685));
+        final video = stats.toVideoEvent();
+        expect(video.createdAt, equals(1784431685));
+        expect(video.nostrCreatedAt, equals(1788200570));
+      });
+
+      test('ignores zero and invalid top-level published_at', () {
+        final stats = VideoStats.fromJson(const {
+          'id': 'abc123',
+          'pubkey': 'pub456',
+          'created_at': 1788200570,
+          'published_at': 0,
+          'kind': 34236,
+          'd_tag': 'video-1',
+          'title': 'Test',
+          'thumbnail': 'https://example.com/thumb.jpg',
+          'video_url': 'https://example.com/video.mp4',
+          'reactions': 0,
+          'comments': 0,
+          'reposts': 0,
+          'engagement_score': 0,
+        });
+
+        expect(stats.publishedAt, isNull);
+        expect(stats.toVideoEvent().createdAt, equals(1788200570));
+      });
+
       test('normalizes invalid engagement counters to zero', () {
         final stats = VideoStats.fromJson(const {
           'id': 'test-id',
