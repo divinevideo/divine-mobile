@@ -2,11 +2,10 @@
 // ABOUTME: Shows stacked video thumbnails with a count badge,
 // ABOUTME: plus title and description below. Designed for 2-column grid layout.
 
-import 'package:count_formatter/count_formatter.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:models/models.dart' hide AspectRatio;
-import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
+import 'package:openvine/widgets/list_card_parts.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 
 /// Number of portrait card slots to display.
@@ -54,47 +53,15 @@ class CuratedListSearchCard extends StatelessWidget {
               videoCount: curatedList.videoEventIds.length,
             ),
             const SizedBox(height: 8),
-            _ListTitle(title: curatedList.name),
+            ListCardTitle(title: curatedList.name),
             if (curatedList.description != null &&
                 curatedList.description!.isNotEmpty) ...[
               const SizedBox(height: 2),
-              _ListDescription(description: curatedList.description!),
+              ListCardDescription(description: curatedList.description!),
             ],
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ListTitle extends StatelessWidget {
-  const _ListTitle({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: VineTheme.titleSmallFont(color: context.vineColors.primaryText),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-}
-
-class _ListDescription extends StatelessWidget {
-  const _ListDescription({required this.description});
-
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return LinkifiedText(
-      text: description,
-      style: VineTheme.bodySmallFont(color: context.vineColors.secondaryText),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
     );
   }
 }
@@ -142,7 +109,10 @@ class _StackedThumbnails extends StatelessWidget {
               Positioned(
                 left: 8,
                 bottom: 9,
-                child: _CountBadge(count: videoCount),
+                child: ListCardBadge(
+                  icon: DivineIconName.play,
+                  count: videoCount,
+                ),
               ),
             ],
           ),
@@ -180,42 +150,6 @@ class _ThumbnailCard extends StatelessWidget {
                 logPrefix: 'List thumbnail',
               )
             : const SizedBox(),
-      ),
-    );
-  }
-}
-
-class _CountBadge extends StatelessWidget {
-  const _CountBadge({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return MediaQuery.withNoTextScaling(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: VineTheme.backgroundColor.withValues(alpha: 0.65),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 4,
-            children: [
-              const DivineIcon(
-                icon: DivineIconName.play,
-                color: VineTheme.primaryText,
-                size: 16,
-              ),
-              Text(
-                CountFormatter.formatCompact(count),
-                style: VineTheme.labelSmallFont(color: VineTheme.whiteText),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
