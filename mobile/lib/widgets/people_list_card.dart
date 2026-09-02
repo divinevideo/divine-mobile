@@ -166,14 +166,14 @@ class _MemberTile extends ConsumerWidget {
           )
         : VineCachedImage(imageUrl: pictureUrl);
 
-    // The 2px seams between tiles read as the page showing through, matching
-    // the video card's bordered fan.
+    // The 2px surface-container-high seams between tiles match the video
+    // card's bordered fan.
     return DecoratedBox(
       position: DecorationPosition.foreground,
       decoration: BoxDecoration(
         border: Border.all(
           width: _tileBorder,
-          color: context.vineColors.surface,
+          color: context.vineColors.surfaceContainerHigh,
         ),
       ),
       child: tile,
