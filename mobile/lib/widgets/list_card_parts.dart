@@ -67,7 +67,14 @@ class ListCardFooter extends StatelessWidget {
   }
 }
 
-/// Single-line list title under a card's media.
+/// The line box a [style] produces at the current text scale, independent
+/// of content: emoji and fallback-font glyphs can stretch a line past the
+/// style's declared height, and a content-dependent line silently breaks
+/// the gallery's equal-height row contract.
+double _scaledLineHeight(BuildContext context, TextStyle style) =>
+    style.height! * MediaQuery.textScalerOf(context).scale(style.fontSize!);
+
+/// Single-line list title under a card's media, in a fixed one-line box.
 class ListCardTitle extends StatelessWidget {
   const ListCardTitle({required this.title, super.key});
 
@@ -75,11 +82,19 @@ class ListCardTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: VineTheme.titleSmallFont(color: context.vineColors.primaryText),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+    final style = VineTheme.titleSmallFont(
+      color: context.vineColors.primaryText,
+    );
+    return SizedBox(
+      height: _scaledLineHeight(context, style),
+      width: double.infinity,
+      child: Text(
+        title,
+        style: style,
+        strutStyle: StrutStyle.fromTextStyle(style, forceStrutHeight: true),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }
@@ -99,15 +114,12 @@ class ListCardDescription extends StatelessWidget {
     final style = VineTheme.bodySmallFont(
       color: context.vineColors.secondaryText,
     );
-    final lineHeight =
-        style.height! * MediaQuery.textScalerOf(context).scale(style.fontSize!);
     return SizedBox(
-      height: lineHeight * 2,
+      height: _scaledLineHeight(context, style) * 2,
       width: double.infinity,
       child: switch (description) {
-        final text? when text.isNotEmpty => _PlainLinkText(
-          text: text,
-          style: style,
+        final text? when text.isNotEmpty => ClipRect(
+          child: _PlainLinkText(text: text, style: style),
         ),
         _ => null,
       },

@@ -180,6 +180,7 @@ void main() {
                         child: CuratedListSearchCard(
                           curatedList: createList(
                             id: 'with-description',
+                            name: 'SLOP \u{1F51D} TEN',
                             description:
                                 'A description long enough to wrap onto a '
                                 'second line and then keep going past it.',

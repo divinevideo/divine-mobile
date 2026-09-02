@@ -109,7 +109,7 @@ void main() {
           videoLists: [
             CuratedList(
               id: 'skate',
-              name: 'Video skate',
+              name: 'Video \u{1F51D} skate',
               description:
                   'A description long enough to wrap onto a second line '
                   'and then keep going past it for the ellipsis.',
