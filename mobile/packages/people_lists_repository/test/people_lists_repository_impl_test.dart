@@ -1401,6 +1401,98 @@ void main() {
       });
     });
 
+    group('fetchPublicList', () {
+      const secondOwner =
+          '4444444444444444444444444444444444444444444444444444444444444444';
+
+      Event peopleEvent({
+        required String pubkey,
+        required String dTag,
+        required String title,
+        int? createdAt,
+      }) {
+        return Event(
+          pubkey,
+          _peopleListKind,
+          [
+            ['d', dTag],
+            ['title', title],
+            ['p', secondOwner],
+          ],
+          '',
+          createdAt: createdAt,
+        );
+      }
+
+      test('queries by author and d tag and returns the match', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(pubkey: _ownerPubkey, dTag: 'crew', title: 'Crew'),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final list = await repository.fetchPublicList(
+          ownerPubkey: _ownerPubkey,
+          listId: 'crew',
+        );
+
+        expect(list, isNotNull);
+        expect(list!.name, equals('Crew'));
+
+        final capturedFilters = verify(
+          () => client.queryEvents(
+            captureAny(),
+            useCache: any(named: 'useCache'),
+          ),
+        ).captured.cast<List<Filter>>();
+        final filter = capturedFilters.single.single;
+        expect(filter.authors, equals([_ownerPubkey]));
+        expect(filter.d, equals(['crew']));
+      });
+
+      test('ignores a same-d list from another author', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(pubkey: secondOwner, dTag: 'crew', title: 'Impostor'),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final list = await repository.fetchPublicList(
+          ownerPubkey: _ownerPubkey,
+          listId: 'crew',
+        );
+
+        expect(list, isNull);
+      });
+
+      test('returns null when relays hold nothing', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer((_) async => const []);
+
+        final repository = buildRepository(nostrClient: client);
+
+        expect(
+          await repository.fetchPublicList(
+            ownerPubkey: _ownerPubkey,
+            listId: 'crew',
+          ),
+          isNull,
+        );
+      });
+    });
+
     group('searchPublicLists', () {
       // Second owner pubkey for multi-owner deduplication tests.
       const secondOwner =
