@@ -105,14 +105,34 @@ class ListCardDescription extends StatelessWidget {
       height: lineHeight * 2,
       width: double.infinity,
       child: switch (description) {
-        final text? when text.isNotEmpty => LinkifiedText(
+        final text? when text.isNotEmpty => _PlainLinkText(
           text: text,
           style: style,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
         ),
         _ => null,
       },
+    );
+  }
+}
+
+/// [LinkifiedText] keeps its resolution behaviour (nostr mentions render as
+/// display names) but drops the accent link styling: in a card preview the
+/// whole card is the tap target, so links are plain description text.
+class _PlainLinkText extends StatelessWidget {
+  const _PlainLinkText({required this.text, required this.style});
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return LinkifiedText(
+      text: text,
+      style: style,
+      linkStyle: style,
+      mentionStyle: style,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }
