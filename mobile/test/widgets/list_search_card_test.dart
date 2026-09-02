@@ -113,6 +113,40 @@ void main() {
         expect(find.textContaining('nostr:$mentionedNpub'), findsNothing);
       });
 
+      testWidgets('renders links in the plain description style', (
+        tester,
+      ) async {
+        // A URL in a preview is plain muted text — the whole card is the
+        // tap target, so no accent color, weight, or size change.
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(
+              description: 'DIY Merch: https://example.org/shop',
+            ),
+          ),
+        );
+
+        final richText = tester.widget<RichText>(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.byType(RichText),
+          ),
+        );
+        final spanStyles = <TextStyle>[];
+        richText.text.visitChildren((span) {
+          if (span is TextSpan && span.style != null) {
+            spanStyles.add(span.style!);
+          }
+          return true;
+        });
+
+        expect(spanStyles, isNotEmpty);
+        for (final style in spanStyles) {
+          expect(style.color, isNot(VineTheme.info));
+          expect(style.fontSize, VineTheme.bodySmallFont().fontSize);
+        }
+      });
+
       testWidgets('no description when null', (tester) async {
         await tester.pumpWidget(buildSubject(curatedList: createList()));
 
