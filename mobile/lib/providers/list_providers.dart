@@ -8,9 +8,6 @@ import 'package:nostr_client/nostr_client.dart'
     show NostrClient, RelaySubscriptionRefusedException;
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
-import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -23,34 +20,6 @@ import 'package:unified_logger/unified_logger.dart';
 
 part 'list_providers.g.dart';
 
-/// Provider for all user lists (NIP-51 kind 30000 people lists).
-///
-/// Sources data from the cache-backed [PeopleListsRepository] and re-emits on
-/// every local mutation. Emits an empty list when:
-/// - the [FeatureFlag.curatedLists] feature flag is disabled, or
-/// - no user is currently authenticated (no owner pubkey to scope by).
-@riverpod
-Stream<List<UserList>> userLists(Ref ref) {
-  final isEnabled = ref.watch(
-    isFeatureEnabledProvider(FeatureFlag.curatedLists),
-  );
-  if (!isEnabled) {
-    return Stream.value(const <UserList>[]);
-  }
-
-  // Rebuild when auth state changes so sign-in / sign-out / account
-  // switches re-scope the stream to the new owner.
-  ref.watch(currentAuthStateProvider);
-
-  final ownerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
-  if (ownerPubkey == null || ownerPubkey.isEmpty) {
-    return Stream.value(const <UserList>[]);
-  }
-
-  final repository = ref.watch(peopleListsRepositoryProvider);
-  return repository.watchLists(ownerPubkey: ownerPubkey);
-}
-
 /// Provider for all curated video lists (kind 30005)
 @riverpod
 Future<List<CuratedList>> curatedLists(Ref ref) async {
@@ -58,95 +27,7 @@ Future<List<CuratedList>> curatedLists(Ref ref) async {
   return service;
 }
 
-/// Combined provider for both types of lists
-@riverpod
-Future<({List<UserList> userLists, List<CuratedList> curatedLists})> allLists(
-  Ref ref,
-) async {
-  // Fetch both in parallel for better performance
-  final results = await Future.wait([
-    ref.watch(userListsProvider.future),
-    ref.watch(curatedListsProvider.future),
-  ]);
-
-  return (
-    userLists: results[0] as List<UserList>,
-    curatedLists: results[1] as List<CuratedList>,
-  );
-}
-
 /// State class for discovered public lists
-class DiscoveredListsState {
-  const DiscoveredListsState({
-    this.lists = const [],
-    this.isLoading = false,
-    this.oldestTimestamp,
-  });
-
-  final List<CuratedList> lists;
-  final bool isLoading;
-  final DateTime? oldestTimestamp;
-
-  DiscoveredListsState copyWith({
-    List<CuratedList>? lists,
-    bool? isLoading,
-    DateTime? oldestTimestamp,
-  }) {
-    return DiscoveredListsState(
-      lists: lists ?? this.lists,
-      isLoading: isLoading ?? this.isLoading,
-      oldestTimestamp: oldestTimestamp ?? this.oldestTimestamp,
-    );
-  }
-}
-
-/// Provider that caches discovered public lists across navigation
-/// This persists the lists so they're not lost when leaving/returning to screen
-@Riverpod(keepAlive: true)
-class DiscoveredLists extends _$DiscoveredLists {
-  @override
-  DiscoveredListsState build() {
-    return const DiscoveredListsState();
-  }
-
-  /// Update the list of discovered lists
-  void setLists(List<CuratedList> lists) {
-    state = state.copyWith(lists: lists);
-  }
-
-  /// Add new lists (for pagination/streaming)
-  void addLists(List<CuratedList> newLists) {
-    final existingIds = state.lists.map((l) => l.id).toSet();
-    final trulyNew = newLists
-        .where((l) => !existingIds.contains(l.id))
-        .toList();
-    if (trulyNew.isNotEmpty) {
-      final combined = [...state.lists, ...trulyNew]
-        ..sort(
-          (a, b) => b.videoEventIds.length.compareTo(a.videoEventIds.length),
-        );
-      state = state.copyWith(lists: combined);
-    }
-  }
-
-  /// Set loading state
-  void setLoading(bool loading) {
-    state = state.copyWith(isLoading: loading);
-  }
-
-  /// Update oldest timestamp for pagination
-  void updateOldestTimestamp(DateTime timestamp) {
-    if (state.oldestTimestamp == null ||
-        timestamp.isBefore(state.oldestTimestamp!)) {
-      state = state.copyWith(oldestTimestamp: timestamp);
-    }
-  }
-
-  /// Clear all discovered lists (for manual refresh)
-  void clear() {
-    state = const DiscoveredListsState();
-  }
-}
 
 /// Provider for videos in a specific curated list
 @riverpod
@@ -297,6 +178,21 @@ Future<CuratedList?> publicCuratedList(
   await ref.read(curatedListsStateProvider.future);
   final service = notifier.service;
   return service?.fetchPublicList(authorPubkey: authorPubkey, listId: listId);
+}
+
+/// Resolves a discovered public people list by author + d-tag from relays.
+///
+/// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
+/// discovery cards and deep links to someone else's list resolve through
+/// this instead.
+@riverpod
+Future<UserList?> publicPeopleList(
+  Ref ref, {
+  required String ownerPubkey,
+  required String listId,
+}) {
+  final repository = ref.watch(peopleListsRepositoryProvider);
+  return repository.fetchPublicList(ownerPubkey: ownerPubkey, listId: listId);
 }
 
 /// Provider that fetches actual VideoEvent objects for a curated list
