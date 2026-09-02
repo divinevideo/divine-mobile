@@ -65,12 +65,10 @@ class PeopleListCard extends StatelessWidget {
               memberCount: userList.pubkeys.length,
             ),
             const SizedBox(height: 8),
-            ListCardTitle(title: userList.name),
-            if (userList.description case final description?
-                when description.isNotEmpty) ...[
-              const SizedBox(height: 2),
-              ListCardDescription(description: description),
-            ],
+            ListCardFooter(
+              title: userList.name,
+              description: userList.description,
+            ),
           ],
         ),
       ),
@@ -104,17 +102,29 @@ class _MemberCollage extends StatelessWidget {
               children: [
                 Expanded(
                   flex: (_largeTileFraction * 1000).round(),
-                  child: _MemberTile(pubkey: _pubkeyAt(0), toneIndex: 0),
+                  child: _MemberTile(
+                    pubkey: _pubkeyAt(0),
+                    toneIndex: 0,
+                    bordered: false,
+                  ),
                 ),
                 Expanded(
                   flex: ((1 - _largeTileFraction) * 1000).round(),
                   child: Column(
                     children: [
                       Expanded(
-                        child: _MemberTile(pubkey: _pubkeyAt(1), toneIndex: 1),
+                        child: _MemberTile(
+                          pubkey: _pubkeyAt(1),
+                          toneIndex: 1,
+                          bordered: true,
+                        ),
                       ),
                       Expanded(
-                        child: _MemberTile(pubkey: _pubkeyAt(2), toneIndex: 2),
+                        child: _MemberTile(
+                          pubkey: _pubkeyAt(2),
+                          toneIndex: 2,
+                          bordered: true,
+                        ),
                       ),
                     ],
                   ),
@@ -140,10 +150,18 @@ class _MemberCollage extends StatelessWidget {
 /// with a generic avatar glyph when the profile has none (or no member fills
 /// this slot).
 class _MemberTile extends ConsumerWidget {
-  const _MemberTile({required this.pubkey, required this.toneIndex});
+  const _MemberTile({
+    required this.pubkey,
+    required this.toneIndex,
+    required this.bordered,
+  });
 
   final String? pubkey;
   final int toneIndex;
+
+  /// Per Figma, only the two small right tiles carry the 2px seam border;
+  /// the large left tile is borderless.
+  final bool bordered;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -166,8 +184,9 @@ class _MemberTile extends ConsumerWidget {
           )
         : VineCachedImage(imageUrl: pictureUrl);
 
-    // The 2px surface-container-high seams between tiles match the video
-    // card's bordered fan.
+    if (!bordered) return tile;
+
+    // The 2px surface-container-high seams match the video card's fan.
     return DecoratedBox(
       position: DecorationPosition.foreground,
       decoration: BoxDecoration(
