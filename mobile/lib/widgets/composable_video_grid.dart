@@ -463,7 +463,18 @@ class _VideoItem extends StatelessWidget {
           borderRadius: borderRadius,
           child: Stack(
             children: [
-              _VideoThumbnail(video: video),
+              // Per the design, a selected tile dims to half opacity over
+              // the page surface so the pending removal reads at a glance.
+              if (isSelected ?? false)
+                ColoredBox(
+                  color: context.vineColors.surface,
+                  child: Opacity(
+                    opacity: 0.5,
+                    child: _VideoThumbnail(video: video),
+                  ),
+                )
+              else
+                _VideoThumbnail(video: video),
               Positioned(
                 left: 0,
                 right: 0,
@@ -489,8 +500,8 @@ class _VideoItem extends StatelessWidget {
                 ),
               if (isSelected case final isSelected?)
                 PositionedDirectional(
-                  top: 8,
-                  end: 8,
+                  top: 10,
+                  end: 10,
                   child: _SelectionBadge(isSelected: isSelected),
                 ),
             ],
@@ -520,23 +531,59 @@ class _SelectionBadge extends StatelessWidget {
         height: 24,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isSelected ? VineTheme.vineGreen : VineTheme.scrim15,
+          color: isSelected
+              ? VineTheme.vineGreen
+              : VineTheme.whiteText.withValues(alpha: 0.25),
           border: isSelected
               ? null
               : Border.all(color: VineTheme.whiteText, width: 2),
+          // Figma's shadow-10 pair, so the circle reads on bright frames.
+          boxShadow: const [
+            BoxShadow(
+              color: VineTheme.innerShadow,
+              offset: Offset(0.343, 0.343),
+              blurRadius: 0.514,
+            ),
+            BoxShadow(
+              color: VineTheme.innerShadow,
+              offset: Offset(0.857, 0.857),
+              blurRadius: 0.857,
+            ),
+          ],
         ),
         child: isSelected
-            ? const Center(
-                child: DivineIcon(
-                  icon: DivineIconName.check,
-                  size: 14,
-                  color: VineTheme.whiteText,
-                ),
-              )
+            ? const CustomPaint(painter: _SelectedCheckPainter())
             : null,
       ),
     );
   }
+}
+
+/// The selected badge's check: the design's 2px round-capped stroke from
+/// (7,13) to (10,16) to (17,9) on the 24-unit grid, inked in
+/// [VineTheme.onPrimaryButton] — the same dark ink the filled brand button
+/// uses on [VineTheme.vineGreen].
+class _SelectedCheckPainter extends CustomPainter {
+  const _SelectedCheckPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scale = size.width / 24;
+    final paint = Paint()
+      ..color = VineTheme.onPrimaryButton
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2 * scale
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final path = Path()
+      ..moveTo(7 * scale, 13 * scale)
+      ..lineTo(10 * scale, 16 * scale)
+      ..lineTo(17 * scale, 9 * scale);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_SelectedCheckPainter oldDelegate) => false;
 }
 
 class _VideoInfoSection extends StatelessWidget {
