@@ -4791,17 +4791,6 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count لوگ',
-      one: '1 شخص',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'از ';
 
   @override

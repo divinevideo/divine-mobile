@@ -4754,17 +4754,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count người',
-      one: '1 người',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'Bởi ';
 
   @override
