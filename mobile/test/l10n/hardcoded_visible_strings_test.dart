@@ -23,9 +23,6 @@ void main() {
     });
 
     test('Explore-adjacent cards and search use localized counts', () {
-      final listCardSource = File(
-        'lib/widgets/list_card.dart',
-      ).readAsStringSync();
       final exploreListsTabSource = File(
         'lib/screens/explore/tabs/explore_lists_tab.dart',
       ).readAsStringSync();
@@ -39,10 +36,7 @@ void main() {
         'lib/screens/search_results/widgets/search_results_app_bar.dart',
       ).readAsStringSync();
 
-      expect(listCardSource, isNot(contains("'person' : 'people'")));
-      expect(listCardSource, isNot(contains("'video' : 'videos'")));
-      expect(listCardSource, contains('context.l10n.listPersonCount'));
-      expect(listCardSource, contains('context.l10n.listVideoCount'));
+      expect(curatedListFeedSource, contains('context.l10n.listVideoCount'));
 
       expect(exploreListsTabSource, isNot(contains("'video' : 'videos'")));
       expect(
