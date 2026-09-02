@@ -139,7 +139,7 @@ class _ThumbnailCard extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border.all(
           width: _cardBorder,
-          color: context.vineColors.surfaceContainerHigh,
+          color: context.vineColors.surface,
         ),
         borderRadius: BorderRadius.circular(_cardRadius),
       ),

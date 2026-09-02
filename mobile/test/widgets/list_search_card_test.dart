@@ -206,7 +206,7 @@ void main() {
         expect(seams, isNotEmpty);
         final border =
             ((seams.first.decoration as BoxDecoration).border! as Border).top;
-        expect(border.color, VineTheme.darkColors.surfaceContainerHigh);
+        expect(border.color, VineTheme.darkColors.surface);
       });
 
       testWidgets('video count badge', (tester) async {
