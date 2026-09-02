@@ -525,6 +525,7 @@ const _knownUntranslatedDebt = <String>{
   // stays accurate in every locale rather than being machine-translated.
   'bugReportImageInsertionRejected',
   'featureRequestImageInsertionRejected',
+  'listsDiscoveryEmpty',
   // Deletion prep-failure copy (feature #6126). Deferred to the l10n
   // translation-debt pass (#7632) rather than machine-translating a
   // safety-critical "nothing was deleted" message. Mirror the translated

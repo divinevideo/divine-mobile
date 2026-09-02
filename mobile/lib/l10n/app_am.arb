@@ -544,15 +544,6 @@
             }
         }
     },
-    "exploreDiscoverLists": "ዝርዝሮችን ያግኙ",
-    "exploreAboutLists": "ስለ ዝርዝሮች",
-    "exploreAboutListsDescription": "ዝርዝሮች የDivine ይዘትን በሁለት መንገድ እንዲያደራጁ እና እንዲያዘጋጁ ያግዝዎታል፡",
-    "explorePeopleLists": "የሰዎች ዝርዝሮች",
-    "explorePeopleListsDescription": "የፈጣሪዎችን ቡድኖች ይከተሉ እና የቅርብ ጊዜ ቪዲዮዎቻቸውን ይመልከቱ",
-    "exploreVideoLists": "የቪዲዮ ዝርዝሮች",
-    "exploreVideoListsDescription": "በኋላ ለመመልከት የሚወዷቸውን ቪዲዮዎች አጫዋች ዝርዝሮችን ይፍጠሩ",
-    "exploreMyLists": "የእኔ ዝርዝሮች",
-    "exploreSubscribedLists": "የተመዘገቡ ዝርዝሮች",
     "exploreErrorLoadingLists": "ዝርዝሮችን መጫን ላይ ስህተት። እባክህ እንደገና ሞክር።",
     "exploreNewVideosCount": "{count, plural, =1{{count} አዲስ ቪዲዮ} other{{count} አዳዲስ ቪዲዮዎች}}",
     "@exploreNewVideosCount": {
@@ -2450,14 +2441,6 @@
         }
     },
     "discoverListsFailedToUpdateSubscription": "የደንበኝነት ምዝገባን ማዘመን አልተሳካም። እባክህ እንደገና ሞክር።",
-    "discoverListsTitle": "ዝርዝሮችን ያግኙ",
-    "discoverListsFailedToLoad": "ዝርዝሮችን መጫን አልተሳካም",
-    "discoverListsLoading": "የህዝብ ዝርዝሮችን በመፈለግ ላይ...",
-    "discoverListsRelayTimeout": "ሪሌው በጊዜው ዝርዝሮችን አልመለሰም። እንደገና ሞክር።",
-    "discoverListsServiceUnavailable": "አገልግሎቱ አይገኝም።",
-    "discoverListsEmptyTitle": "ምንም የህዝብ ዝርዝሮች አልተገኙም",
-    "discoverListsEmptySubtitle": "ለአዳዲስ ዝርዝሮች ቆይተው ይመልከቱ",
-    "discoverListsByAuthorPrefix": "በ",
     "curatedListEmptyTitle": "በዚህ ዝርዝር ውስጥ ምንም ቪዲዮዎች የሉም",
     "curatedListEmptySubtitle": "ለመጀመር ቪዲዮዎችን ያክሉ",
     "curatedListLoadingVideos": "ቪዲዮዎችን በመጫን ላይ...",

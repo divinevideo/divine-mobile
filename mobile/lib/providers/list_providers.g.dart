@@ -8,65 +8,6 @@ part of 'list_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Provider for all user lists (NIP-51 kind 30000 people lists).
-///
-/// Sources data from the cache-backed [PeopleListsRepository] and re-emits on
-/// every local mutation. Emits an empty list when:
-/// - the [FeatureFlag.curatedLists] feature flag is disabled, or
-/// - no user is currently authenticated (no owner pubkey to scope by).
-
-@ProviderFor(userLists)
-final userListsProvider = UserListsProvider._();
-
-/// Provider for all user lists (NIP-51 kind 30000 people lists).
-///
-/// Sources data from the cache-backed [PeopleListsRepository] and re-emits on
-/// every local mutation. Emits an empty list when:
-/// - the [FeatureFlag.curatedLists] feature flag is disabled, or
-/// - no user is currently authenticated (no owner pubkey to scope by).
-
-final class UserListsProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<List<UserList>>,
-          List<UserList>,
-          Stream<List<UserList>>
-        >
-    with $FutureModifier<List<UserList>>, $StreamProvider<List<UserList>> {
-  /// Provider for all user lists (NIP-51 kind 30000 people lists).
-  ///
-  /// Sources data from the cache-backed [PeopleListsRepository] and re-emits on
-  /// every local mutation. Emits an empty list when:
-  /// - the [FeatureFlag.curatedLists] feature flag is disabled, or
-  /// - no user is currently authenticated (no owner pubkey to scope by).
-  UserListsProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'userListsProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$userListsHash();
-
-  @$internal
-  @override
-  $StreamProviderElement<List<UserList>> $createElement(
-    $ProviderPointer pointer,
-  ) => $StreamProviderElement(pointer);
-
-  @override
-  Stream<List<UserList>> create(Ref ref) {
-    return userLists(ref);
-  }
-}
-
-String _$userListsHash() => r'6e9c114c2c52d95c433c3eb6c7093c446f5dc6b9';
-
 /// Provider for all curated video lists (kind 30005)
 
 @ProviderFor(curatedLists)
@@ -113,128 +54,13 @@ final class CuratedListsProvider
 
 String _$curatedListsHash() => r'74de3f9b86d5444e78e7f2c797370ca75f29f9f5';
 
-/// Combined provider for both types of lists
-
-@ProviderFor(allLists)
-final allListsProvider = AllListsProvider._();
-
-/// Combined provider for both types of lists
-
-final class AllListsProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<
-            ({List<CuratedList> curatedLists, List<UserList> userLists})
-          >,
-          ({List<CuratedList> curatedLists, List<UserList> userLists}),
-          FutureOr<({List<CuratedList> curatedLists, List<UserList> userLists})>
-        >
-    with
-        $FutureModifier<
-          ({List<CuratedList> curatedLists, List<UserList> userLists})
-        >,
-        $FutureProvider<
-          ({List<CuratedList> curatedLists, List<UserList> userLists})
-        > {
-  /// Combined provider for both types of lists
-  AllListsProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'allListsProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$allListsHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<
-    ({List<CuratedList> curatedLists, List<UserList> userLists})
-  >
-  $createElement($ProviderPointer pointer) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<({List<CuratedList> curatedLists, List<UserList> userLists})> create(
-    Ref ref,
-  ) {
-    return allLists(ref);
-  }
-}
-
-String _$allListsHash() => r'8d7c4fb84d445151d5bb84764da34cedf4e7e8a6';
-
-/// Provider that caches discovered public lists across navigation
-/// This persists the lists so they're not lost when leaving/returning to screen
-
-@ProviderFor(DiscoveredLists)
-final discoveredListsProvider = DiscoveredListsProvider._();
-
-/// Provider that caches discovered public lists across navigation
-/// This persists the lists so they're not lost when leaving/returning to screen
-final class DiscoveredListsProvider
-    extends $NotifierProvider<DiscoveredLists, DiscoveredListsState> {
-  /// Provider that caches discovered public lists across navigation
-  /// This persists the lists so they're not lost when leaving/returning to screen
-  DiscoveredListsProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'discoveredListsProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$discoveredListsHash();
-
-  @$internal
-  @override
-  DiscoveredLists create() => DiscoveredLists();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(DiscoveredListsState value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<DiscoveredListsState>(value),
-    );
-  }
-}
-
-String _$discoveredListsHash() => r'9e2be25f90d5cab30d9183aba33e474201db0938';
-
-/// Provider that caches discovered public lists across navigation
-/// This persists the lists so they're not lost when leaving/returning to screen
-
-abstract class _$DiscoveredLists extends $Notifier<DiscoveredListsState> {
-  DiscoveredListsState build();
-  @$mustCallSuper
-  @override
-  WhenComplete runBuild() {
-    final ref = this.ref as $Ref<DiscoveredListsState, DiscoveredListsState>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<DiscoveredListsState, DiscoveredListsState>,
-              DiscoveredListsState,
-              Object?,
-              Object?
-            >;
-    return element.handleCreate(ref, build);
-  }
-}
-
+/// State class for discovered public lists
 /// Provider for videos in a specific curated list
 
 @ProviderFor(curatedListVideos)
 final curatedListVideosProvider = CuratedListVideosFamily._();
 
+/// State class for discovered public lists
 /// Provider for videos in a specific curated list
 
 final class CuratedListVideosProvider
@@ -245,6 +71,7 @@ final class CuratedListVideosProvider
           FutureOr<List<String>>
         >
     with $FutureModifier<List<String>>, $FutureProvider<List<String>> {
+  /// State class for discovered public lists
   /// Provider for videos in a specific curated list
   CuratedListVideosProvider._({
     required CuratedListVideosFamily super.from,
@@ -292,6 +119,7 @@ final class CuratedListVideosProvider
 
 String _$curatedListVideosHash() => r'ce7db4b5ea59279d88325cdc9e928dc5a89a92b0';
 
+/// State class for discovered public lists
 /// Provider for videos in a specific curated list
 
 final class CuratedListVideosFamily extends $Family
@@ -305,6 +133,7 @@ final class CuratedListVideosFamily extends $Family
         isAutoDispose: true,
       );
 
+  /// State class for discovered public lists
   /// Provider for videos in a specific curated list
 
   CuratedListVideosProvider call(String listId) =>
@@ -642,6 +471,122 @@ final class PublicCuratedListFamily extends $Family
 
   @override
   String toString() => r'publicCuratedListProvider';
+}
+
+/// Resolves a discovered public people list by author + d-tag from relays.
+///
+/// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
+/// discovery cards and deep links to someone else's list resolve through
+/// this instead.
+
+@ProviderFor(publicPeopleList)
+final publicPeopleListProvider = PublicPeopleListFamily._();
+
+/// Resolves a discovered public people list by author + d-tag from relays.
+///
+/// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
+/// discovery cards and deep links to someone else's list resolve through
+/// this instead.
+
+final class PublicPeopleListProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<UserList?>,
+          UserList?,
+          FutureOr<UserList?>
+        >
+    with $FutureModifier<UserList?>, $FutureProvider<UserList?> {
+  /// Resolves a discovered public people list by author + d-tag from relays.
+  ///
+  /// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
+  /// discovery cards and deep links to someone else's list resolve through
+  /// this instead.
+  PublicPeopleListProvider._({
+    required PublicPeopleListFamily super.from,
+    required ({String ownerPubkey, String listId}) super.argument,
+  }) : super(
+         retry: null,
+         name: r'publicPeopleListProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$publicPeopleListHash();
+
+  @override
+  String toString() {
+    return r'publicPeopleListProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<UserList?> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<UserList?> create(Ref ref) {
+    final argument = this.argument as ({String ownerPubkey, String listId});
+    return publicPeopleList(
+      ref,
+      ownerPubkey: argument.ownerPubkey,
+      listId: argument.listId,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PublicPeopleListProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$publicPeopleListHash() => r'986437af516d1010431e1fc765d9e51a035d8413';
+
+/// Resolves a discovered public people list by author + d-tag from relays.
+///
+/// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
+/// discovery cards and deep links to someone else's list resolve through
+/// this instead.
+
+final class PublicPeopleListFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<UserList?>,
+          ({String ownerPubkey, String listId})
+        > {
+  PublicPeopleListFamily._()
+    : super(
+        retry: null,
+        name: r'publicPeopleListProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Resolves a discovered public people list by author + d-tag from relays.
+  ///
+  /// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so
+  /// discovery cards and deep links to someone else's list resolve through
+  /// this instead.
+
+  PublicPeopleListProvider call({
+    required String ownerPubkey,
+    required String listId,
+  }) => PublicPeopleListProvider._(
+    argument: (ownerPubkey: ownerPubkey, listId: listId),
+    from: this,
+  );
+
+  @override
+  String toString() => r'publicPeopleListProvider';
 }
 
 /// Provider that fetches actual VideoEvent objects for a curated list

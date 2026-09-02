@@ -17,6 +17,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/scroll_to_hide_mixin.dart';
@@ -31,7 +32,11 @@ enum _PeopleListAction { delete }
 /// from [PeopleListsBloc] with a [BlocSelector], so edits made elsewhere
 /// (add/remove member, rename) are reflected without rebuilding the route.
 class UserListPeopleScreen extends StatefulWidget {
-  const UserListPeopleScreen({required this.listId, super.key});
+  const UserListPeopleScreen({
+    required this.listId,
+    this.ownerPubkey,
+    super.key,
+  });
 
   /// GoRouter name for this route.
   static const routeName = 'people-list-members';
@@ -41,6 +46,11 @@ class UserListPeopleScreen extends StatefulWidget {
 
   /// Full list id (NIP-51 addressable identifier). Never truncated.
   final String listId;
+
+  /// Author of a discovered list (lowercase hex), from the route's `owner`
+  /// query param. When set to someone other than the signed-in owner, the
+  /// list resolves from relays read-only instead of the owner-scoped bloc.
+  final String? ownerPubkey;
 
   @override
   State<UserListPeopleScreen> createState() => _UserListPeopleScreenState();
@@ -84,6 +94,16 @@ class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final blocOwner = context.select(
+      (PeopleListsBloc bloc) => bloc.state.ownerPubkey,
+    );
+    if (widget.ownerPubkey case final owner? when owner != blocOwner) {
+      return _DiscoveredPeopleListLoader(
+        ownerPubkey: owner,
+        listId: widget.listId,
+      );
+    }
+
     return BlocListener<PeopleListsBloc, PeopleListsState>(
       listenWhen: _pendingDeleteResolved,
       listener: (context, state) {
@@ -136,6 +156,48 @@ class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+/// Resolves a discovered (someone else's) list from relays and renders the
+/// members view read-only — the repository returns it with
+/// `isEditable: false`, which hides every owner affordance.
+class _DiscoveredPeopleListLoader extends ConsumerWidget {
+  const _DiscoveredPeopleListLoader({
+    required this.ownerPubkey,
+    required this.listId,
+  });
+
+  final String ownerPubkey;
+  final String listId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final listAsync = ref.watch(
+      publicPeopleListProvider(ownerPubkey: ownerPubkey, listId: listId),
+    );
+    return listAsync.when(
+      data: (userList) {
+        if (userList == null) {
+          return const _ListNotFoundView();
+        }
+        return _UserListPeopleView(
+          userList: userList,
+          // Unreachable: the delete menu only renders for editable lists.
+          onDeleteConfirmed: (_) {},
+        );
+      },
+      loading: () => Scaffold(
+        backgroundColor: context.vineColors.background,
+        appBar: DiVineAppBar(
+          title: context.l10n.peopleListsRouteTitle,
+          showBackButton: true,
+          onBackPressed: context.pop,
+        ),
+        body: const Center(child: BrandedLoadingIndicator(size: 60)),
+      ),
+      error: (error, stackTrace) => const _ListNotFoundView(),
     );
   }
 }

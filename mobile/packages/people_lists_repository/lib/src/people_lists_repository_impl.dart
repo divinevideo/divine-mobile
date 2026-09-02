@@ -328,7 +328,9 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     );
     for (final result in results) {
       if (result.ownerPubkey == ownerPubkey && result.list.id == listId) {
-        return result.list;
+        // Someone else's list: the members render, the owner affordances
+        // (add people, delete) must not.
+        return result.list.copyWith(isEditable: false);
       }
     }
     return null;
