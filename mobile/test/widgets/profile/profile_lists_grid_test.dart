@@ -16,8 +16,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/widgets/list_search_card.dart';
-import 'package:openvine/widgets/people_list_card.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/profile/profile_lists_grid.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -136,9 +135,9 @@ void main() {
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
 
-        expect(find.byType(CuratedListSearchCard), findsOneWidget);
+        expect(find.byType(DivineListThumbnail), findsNWidgets(2));
         expect(find.text('Video skate'), findsOneWidget);
-        expect(find.byType(PeopleListCard), findsOneWidget);
+
         expect(find.text('People crew'), findsOneWidget);
       });
 

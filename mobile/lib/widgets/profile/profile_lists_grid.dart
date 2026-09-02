@@ -20,8 +20,7 @@ import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
-import 'package:openvine/widgets/list_search_card.dart';
-import 'package:openvine/widgets/people_list_card.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
 
 /// My Lists surface for the current user's profile: the same two-column
 /// card gallery as the Explore discovery tab, scoped to lists the viewer
@@ -155,7 +154,7 @@ class _VideoListsColumn extends StatelessWidget {
       spacing: 20,
       children: [
         for (final list in lists)
-          CuratedListSearchCard(
+          DivineListThumbnail.videos(
             curatedList: list,
             onTap: () => context.push(
               CuratedListFeedScreen.pathForId(list.id),
@@ -179,7 +178,7 @@ class _PeopleListsColumn extends StatelessWidget {
       spacing: 20,
       children: [
         for (final list in lists)
-          PeopleListCard(
+          DivineListThumbnail.people(
             userList: list,
             onTap: () => context.push(RoutePaths.peopleListForId(list.id)),
           ),
