@@ -11,17 +11,18 @@ import 'package:openvine/widgets/video_thumbnail_widget.dart';
 /// Number of portrait card slots to display.
 const _thumbnailSlotCount = 5;
 
-/// How far each card overlaps the one behind it.
-const _cardOverlap = 60.0;
-
 /// Border width around each portrait card.
 const _cardBorder = 2.0;
 
-/// Corner radius for each portrait card.
+/// Corner radius of the media block and each portrait card.
 const _cardRadius = 16.0;
 
-/// Portrait aspect ratio (width:height = 3:4, from Figma 177:236).
-const double _cardAspectRatio = 3 / 4;
+/// Media block aspect ratio (from Figma 177:120, shared with the people
+/// card so equal-width cards come out equal-height).
+const double _mediaAspectRatio = 177 / 120;
+
+/// Portrait slot aspect ratio (width:height, from Figma 177:236).
+const double _slotAspectRatio = 177 / 236;
 
 /// Search card for a curated video list (kind 30005).
 ///
@@ -53,12 +54,10 @@ class CuratedListSearchCard extends StatelessWidget {
               videoCount: curatedList.videoEventIds.length,
             ),
             const SizedBox(height: 8),
-            ListCardTitle(title: curatedList.name),
-            if (curatedList.description != null &&
-                curatedList.description!.isNotEmpty) ...[
-              const SizedBox(height: 2),
-              ListCardDescription(description: curatedList.description!),
-            ],
+            ListCardFooter(
+              title: curatedList.name,
+              description: curatedList.description,
+            ),
           ],
         ),
       ),
@@ -85,39 +84,42 @@ class _StackedThumbnails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final totalWidth = constraints.maxWidth;
-        final cardWidth =
-            (totalWidth + _cardOverlap * (_thumbnailSlotCount - 1)) /
-            _thumbnailSlotCount;
-        final cardHeight = cardWidth / _cardAspectRatio;
+    return AspectRatio(
+      aspectRatio: _mediaAspectRatio,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(_cardRadius),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final totalWidth = constraints.maxWidth;
+            final cardHeight = constraints.maxHeight;
+            final cardWidth = cardHeight * _slotAspectRatio;
+            // The five slots fan out to fill the media box edge to edge.
+            final step = (totalWidth - cardWidth) / (_thumbnailSlotCount - 1);
 
-        return SizedBox(
-          height: cardHeight,
-          child: Stack(
-            children: [
-              // Cards in reverse order so index 0 is on top.
-              for (int i = _thumbnailSlotCount - 1; i >= 0; i--)
+            return Stack(
+              children: [
+                // Cards in reverse order so index 0 is on top.
+                for (int i = _thumbnailSlotCount - 1; i >= 0; i--)
+                  Positioned(
+                    left: i * step,
+                    top: 0,
+                    width: cardWidth,
+                    height: cardHeight,
+                    child: _ThumbnailCard(imageUrl: _urlAt(i)),
+                  ),
                 Positioned(
-                  left: i * (cardWidth - _cardOverlap),
-                  top: 0,
-                  width: cardWidth,
-                  height: cardHeight,
-                  child: _ThumbnailCard(imageUrl: _urlAt(i)),
+                  left: 8,
+                  bottom: 9,
+                  child: ListCardBadge(
+                    icon: DivineIconName.play,
+                    count: videoCount,
+                  ),
                 ),
-              Positioned(
-                left: 8,
-                bottom: 9,
-                child: ListCardBadge(
-                  icon: DivineIconName.play,
-                  count: videoCount,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }

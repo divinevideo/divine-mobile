@@ -128,6 +128,57 @@ void main() {
         expect(find.text('Test List'), findsOneWidget);
       });
 
+      testWidgets(
+        'keeps the same card height with and without a description',
+        (tester) async {
+          // The footer reserves a fixed two-line description box, so
+          // equal-width cards align into rows in the gallery columns.
+          await tester.pumpWidget(
+            ProviderScope(
+              child: MaterialApp(
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: CuratedListSearchCard(
+                          curatedList: createList(
+                            id: 'with-description',
+                            description:
+                                'A description long enough to wrap onto a '
+                                'second line and then keep going past it.',
+                          ),
+                          onTap: () {},
+                        ),
+                      ),
+                      Expanded(
+                        child: CuratedListSearchCard(
+                          curatedList: createList(id: 'without-description'),
+                          onTap: () {},
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          final sizes = tester
+              .widgetList(find.byType(CuratedListSearchCard))
+              .map(
+                (card) => tester.getSize(
+                  find.byWidget(card),
+                ),
+              )
+              .toList();
+          expect(sizes, hasLength(2));
+          expect(sizes[0].height, sizes[1].height);
+        },
+      );
+
       testWidgets('paints the fan seams over loaded thumbnails', (
         tester,
       ) async {
@@ -187,7 +238,8 @@ void main() {
         (tester) async {
           await tester.pumpWidget(buildSubject(curatedList: createList()));
 
-          expect(find.byType(ClipRRect), findsNWidgets(5));
+          // 5 slot clips plus the outer media-block clip.
+          expect(find.byType(ClipRRect), findsNWidgets(6));
           expect(find.byType(PassiveAuthThumbnailImage), findsNothing);
         },
       );
