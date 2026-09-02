@@ -2017,14 +2017,6 @@
             }
         }
     },
-    "listPersonCount": "{count, plural, =1{{count} ሰው} other{{count} ሰዎች}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "በ",
     "listNewList": "አዲስ ዝርዝር",
     "listDone": "ተከናውኗል",

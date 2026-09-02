@@ -2408,14 +2408,6 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 人} other{{count} 人}}",
-  "@listPersonCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "listByAuthorPrefix": "来自 ",
   "listNewList": "新列表",
   "listDone": "完成",

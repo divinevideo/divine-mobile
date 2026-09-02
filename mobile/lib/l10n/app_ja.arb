@@ -3156,14 +3156,6 @@
     "authConfirmPasswordRequired": "パスワードを確認してね",
     "authPasswordsDoNotMatch": "パスワードが一致しないよ",
     "authConfirmNewPasswordLabel": "新しいパスワードの確認",
-    "listPersonCount": "{count, plural, =1{1人} other{{count}人}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "作成者: ",
     "keyManagementYourPublicKeyLabel": "あなたの公開鍵 (npub)",
     "@keyManagementYourPublicKeyLabel": {

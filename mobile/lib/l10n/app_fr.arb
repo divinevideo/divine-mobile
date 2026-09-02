@@ -3156,14 +3156,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Envoie des demandes de suppression pour ton contenu et te déconnecte sur cet appareil. Les relays, clients, index de recherche et autres appareils connectés peuvent garder des copies.",
     "safetySettingsWhatYouSee": "CE QUE TU VOIS",
     "safetySettingsWhatYouPublish": "CE QUE TU PUBLIES",
-    "listPersonCount": "{count, plural, =1{{count} personne} other{{count} personnes}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Par ",
     "keyManagementYourPublicKeyLabel": "Ta clé publique (npub)",
     "@keyManagementYourPublicKeyLabel": {

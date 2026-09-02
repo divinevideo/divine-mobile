@@ -3160,14 +3160,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Envía solicitudes de eliminación de tu contenido y cierra tu sesión en este dispositivo. Los relays, clientes, índices de búsqueda y otros dispositivos con la sesión iniciada pueden conservar copias.",
     "safetySettingsWhatYouSee": "LO QUE VES",
     "safetySettingsWhatYouPublish": "LO QUE PUBLICÁS",
-    "listPersonCount": "{count, plural, =1{1 persona} other{{count} personas}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Por ",
     "keyManagementYourPublicKeyLabel": "Tu clave pública (npub)",
     "@keyManagementYourPublicKeyLabel": {

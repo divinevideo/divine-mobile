@@ -3156,14 +3156,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Stuurt verwijderverzoeken voor je content en meldt je op dit apparaat af. Relays, clients, zoekindexen en andere aangemelde apparaten kunnen kopieën bewaren.",
     "safetySettingsWhatYouSee": "WAT JIJ ZIET",
     "safetySettingsWhatYouPublish": "WAT JIJ PUBLICEERT",
-    "listPersonCount": "{count, plural, =1{1 persoon} other{{count} personen}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Door ",
     "keyManagementYourPublicKeyLabel": "Je publieke sleutel (npub)",
     "@keyManagementYourPublicKeyLabel": {

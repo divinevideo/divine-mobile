@@ -3156,14 +3156,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Wysyła żądania usunięcia twoich treści i wylogowuje cię na tym urządzeniu. Przekaźniki, klienty, indeksy wyszukiwania i inne zalogowane urządzenia mogą zachować kopie.",
     "safetySettingsWhatYouSee": "CO WIDZISZ",
     "safetySettingsWhatYouPublish": "CO PUBLIKUJESZ",
-    "listPersonCount": "{count, plural, =1{1 osoba} few{{count} osoby} many{{count} osób} other{{count} osoby}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Autor: ",
     "keyManagementYourPublicKeyLabel": "Twój klucz publiczny (npub)",
     "@keyManagementYourPublicKeyLabel": {

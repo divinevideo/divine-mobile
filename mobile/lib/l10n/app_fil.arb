@@ -2231,7 +2231,6 @@
     "categoriesNoCategoriesAvailable": "Walang available na category",
     "exploreSearchHint": "Maghanap...",
     "categoryVideoCount": "{count} na video",
-    "listPersonCount": "{count, plural, =1{{count} tao} other{{count} tao}}",
     "listByAuthorPrefix": "Ni ",
     "videoActionLikeLabel": "I-like",
     "videoActionReplyLabel": "Sumagot",

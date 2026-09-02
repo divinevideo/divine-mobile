@@ -4948,17 +4948,6 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$countవ్యక్తులు',
-      one: '1 వ్యక్తి',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => 'ద్వారా ';
 
   @override

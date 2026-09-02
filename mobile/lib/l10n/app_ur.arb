@@ -2408,14 +2408,6 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 شخص} other{{count} لوگ}}",
-  "@listPersonCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "listByAuthorPrefix": "از ",
   "listNewList": "نئی فہرست",
   "listDone": "ہو گیا",

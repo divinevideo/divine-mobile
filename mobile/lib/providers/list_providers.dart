@@ -180,6 +180,21 @@ Future<CuratedList?> publicCuratedList(
   return service?.fetchPublicList(authorPubkey: authorPubkey, listId: listId);
 }
 
+/// The viewer's own video lists with card-fan thumbnails resolved.
+///
+/// The profile's My Lists gallery renders instantly from the service's
+/// lists (placeholder fans) and swaps to these enriched copies when the
+/// resolver returns.
+@riverpod
+Future<List<CuratedList>> myListsWithThumbnails(Ref ref) async {
+  await ref.watch(curatedListsStateProvider.future);
+  final service = ref.watch(curatedListsStateProvider.notifier).service;
+  final lists = service?.myLists ?? const <CuratedList>[];
+  if (lists.isEmpty) return lists;
+  final repository = ref.watch(curatedListRepositoryProvider);
+  return repository.resolveListThumbnails(lists);
+}
+
 /// Resolves a discovered public people list by author + d-tag from relays.
 ///
 /// The owner-scoped [PeopleListsBloc] only holds the viewer's own lists, so

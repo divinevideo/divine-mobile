@@ -3156,14 +3156,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Sendet Löschanfragen für deine Inhalte und meldet dich auf diesem Gerät ab. Relays, Clients, Suchindizes und andere angemeldete Geräte behalten möglicherweise Kopien.",
     "safetySettingsWhatYouSee": "WAS DU SIEHST",
     "safetySettingsWhatYouPublish": "WAS DU VERÖFFENTLICHST",
-    "listPersonCount": "{count, plural, =1{1 Person} other{{count} Personen}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Von ",
     "keyManagementYourPublicKeyLabel": "Dein Public Key (npub)",
     "@keyManagementYourPublicKeyLabel": {

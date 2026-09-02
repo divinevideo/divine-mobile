@@ -3156,14 +3156,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Skickar raderingsförfrågningar för ditt innehåll och loggar ut dig på den här enheten. Reläer, klienter, sökindex och andra inloggade enheter kan behålla kopior.",
     "safetySettingsWhatYouSee": "VAD DU SER",
     "safetySettingsWhatYouPublish": "VAD DU PUBLICERAR",
-    "listPersonCount": "{count, plural, =1{1 person} other{{count} personer}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Av ",
     "keyManagementYourPublicKeyLabel": "Din publika nyckel (npub)",
     "@keyManagementYourPublicKeyLabel": {

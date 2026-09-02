@@ -3156,14 +3156,6 @@
     "nostrSettingsDeleteAccountSubtitle": "İçeriğin için silme istekleri gönderir ve bu cihazda oturumunu kapatır. Röleler, istemciler, arama dizinleri ve oturum açmış diğer cihazlar kopyaları saklayabilir.",
     "safetySettingsWhatYouSee": "GÖRDÜKLERİN",
     "safetySettingsWhatYouPublish": "PAYLAŞTIKLARIN",
-    "listPersonCount": "{count, plural, =1{1 kişi} other{{count} kişi}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Yazan ",
     "keyManagementYourPublicKeyLabel": "Açık anahtarın (npub)",
     "@keyManagementYourPublicKeyLabel": {

@@ -3287,14 +3287,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Изпраща заявки за изтриване на съдържанието ти и те отписва на това устройство. Релетата, клиентите, индексите за търсене и другите устройства с вход може да запазят копия.",
     "safetySettingsWhatYouSee": "КАКВО ВИЖДАШ",
     "safetySettingsWhatYouPublish": "КАКВО ПУБЛИКУВАШ",
-    "listPersonCount": "{count, plural, =1{1 човек} other{{count} души}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "От ",
     "keyManagementYourPublicKeyLabel": "Твоят публичен ключ (npub)",
     "@keyManagementYourPublicKeyLabel": {

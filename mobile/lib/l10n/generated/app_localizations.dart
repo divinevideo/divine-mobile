@@ -8173,12 +8173,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{{count} video} other{{count} videos}}'**
   String listVideoCount(int count);
 
-  /// No description provided for @listPersonCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 person} other{{count} people}}'**
-  String listPersonCount(int count);
-
   /// No description provided for @listByAuthorPrefix.
   ///
   /// In en, this message translates to:

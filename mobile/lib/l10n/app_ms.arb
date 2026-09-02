@@ -2408,14 +2408,6 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 orang} other{{count} orang}}",
-  "@listPersonCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "listByAuthorPrefix": "Oleh ",
   "listNewList": "Senarai Baharu",
   "listDone": "Siap",

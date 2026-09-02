@@ -3156,14 +3156,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Envia solicitações de exclusão do seu conteúdo e desconecta você neste dispositivo. Relays, clientes, índices de busca e outros dispositivos conectados podem manter cópias.",
     "safetySettingsWhatYouSee": "O QUE VOCÊ VÊ",
     "safetySettingsWhatYouPublish": "O QUE VOCÊ PUBLICA",
-    "listPersonCount": "{count, plural, =1{{count} pessoa} other{{count} pessoas}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Por ",
     "keyManagementYourPublicKeyLabel": "Sua chave pública (npub)",
     "@keyManagementYourPublicKeyLabel": {

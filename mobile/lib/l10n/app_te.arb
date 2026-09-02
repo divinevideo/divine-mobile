@@ -2931,14 +2931,6 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 వ్యక్తి} other{{count}వ్యక్తులు}}",
-  "@listPersonCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "listByAuthorPrefix": "ద్వారా ",
   "listNewList": "కొత్త జాబితా",
   "listDone": "పూర్తయింది",

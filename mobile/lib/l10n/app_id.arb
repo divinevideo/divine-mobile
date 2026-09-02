@@ -3156,14 +3156,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Mengirim permintaan penghapusan untuk kontenmu dan mengeluarkanmu dari akun di perangkat ini. Relay, klien, indeks pencarian, dan perangkat lain yang masih masuk mungkin menyimpan salinan.",
     "safetySettingsWhatYouSee": "YANG KAMU LIHAT",
     "safetySettingsWhatYouPublish": "YANG KAMU PUBLIKASIKAN",
-    "listPersonCount": "{count, plural, =1{1 orang} other{{count} orang}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "Oleh ",
     "keyManagementYourPublicKeyLabel": "Kunci publikmu (npub)",
     "@keyManagementYourPublicKeyLabel": {

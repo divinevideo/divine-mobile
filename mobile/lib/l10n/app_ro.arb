@@ -3156,14 +3156,6 @@
     "nostrSettingsDeleteAccountSubtitle": "Trimite cereri de ștergere pentru conținutul tău și te deconectează pe acest dispozitiv. Relay-urile, clienții, indexurile de căutare și alte dispozitive conectate pot păstra copii.",
     "safetySettingsWhatYouSee": "CE VEZI",
     "safetySettingsWhatYouPublish": "CE PUBLICI",
-    "listPersonCount": "{count, plural, =1{1 persoană} few{{count} persoane} other{{count} de persoane}}",
-    "@listPersonCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "listByAuthorPrefix": "De ",
     "keyManagementYourPublicKeyLabel": "Cheia ta publică (npub)",
     "@keyManagementYourPublicKeyLabel": {
