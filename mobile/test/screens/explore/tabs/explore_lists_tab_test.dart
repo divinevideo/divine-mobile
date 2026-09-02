@@ -94,6 +94,44 @@ void main() {
       expect(find.text('People crew'), findsOneWidget);
     });
 
+    testWidgets('video and people cards align to equal heights', (
+      tester,
+    ) async {
+      // Both card types share the media aspect ratio and the fixed
+      // two-line footer, so equal-width columns read as rows — even when
+      // one list has a description and the other does not.
+      whenListen(
+        cubit,
+        const Stream<ListsDiscoveryState>.empty(),
+        initialState: ListsDiscoveryState(
+          videoStatus: ListsDiscoveryColumnStatus.success,
+          peopleStatus: ListsDiscoveryColumnStatus.success,
+          videoLists: [
+            CuratedList(
+              id: 'skate',
+              name: 'Video skate',
+              description:
+                  'A description long enough to wrap onto a second line '
+                  'and then keep going past it for the ellipsis.',
+              pubkey: _author,
+              videoEventIds: const ['v1'],
+              createdAt: DateTime(2026),
+              updatedAt: DateTime(2026),
+            ),
+          ],
+          peopleLists: [_peopleList('crew')],
+        ),
+      );
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      final videoSize = tester.getSize(find.byType(CuratedListSearchCard));
+      final peopleSize = tester.getSize(find.byType(PeopleListCard));
+      expect(videoSize.width, peopleSize.width);
+      expect(videoSize.height, peopleSize.height);
+    });
+
     testWidgets('keeps one column alive while the other loads', (
       tester,
     ) async {

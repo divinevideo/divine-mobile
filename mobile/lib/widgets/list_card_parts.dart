@@ -1,5 +1,5 @@
 // ABOUTME: Shared pieces of the discovery list cards: the scrim count badge
-// ABOUTME: and the title/description text block under the media collage.
+// ABOUTME: and the title/description footer block under the media collage.
 
 import 'package:count_formatter/count_formatter.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -34,12 +34,35 @@ class ListCardBadge extends StatelessWidget {
               DivineIcon(icon: icon, color: VineTheme.primaryText, size: 16),
               Text(
                 CountFormatter.formatCompact(count),
-                style: VineTheme.labelSmallFont(color: VineTheme.whiteText),
+                style: VineTheme.labelMediumFont(color: VineTheme.whiteText),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Title and description block under a list card's media.
+///
+/// Both card types share this structure so equal-width cards come out
+/// equal-height and the two-column gallery reads as rows.
+class ListCardFooter extends StatelessWidget {
+  const ListCardFooter({required this.title, this.description, super.key});
+
+  final String title;
+  final String? description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ListCardTitle(title: title),
+        ListCardDescription(description: description),
+      ],
     );
   }
 }
@@ -61,19 +84,35 @@ class ListCardTitle extends StatelessWidget {
   }
 }
 
-/// Two-line list description under a card's title.
+/// List description under a card's title, in a fixed two-line box.
+///
+/// The box keeps its two-line height whether the text overflows (trimmed
+/// with an ellipsis), fits on one line, or is absent — that reserved space
+/// is what keeps gallery rows level.
 class ListCardDescription extends StatelessWidget {
   const ListCardDescription({required this.description, super.key});
 
-  final String description;
+  final String? description;
 
   @override
   Widget build(BuildContext context) {
-    return LinkifiedText(
-      text: description,
-      style: VineTheme.bodySmallFont(color: context.vineColors.secondaryText),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
+    final style = VineTheme.bodySmallFont(
+      color: context.vineColors.secondaryText,
+    );
+    final lineHeight =
+        style.height! * MediaQuery.textScalerOf(context).scale(style.fontSize!);
+    return SizedBox(
+      height: lineHeight * 2,
+      width: double.infinity,
+      child: switch (description) {
+        final text? when text.isNotEmpty => LinkifiedText(
+          text: text,
+          style: style,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        _ => null,
+      },
     );
   }
 }
