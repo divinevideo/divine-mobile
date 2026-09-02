@@ -129,6 +129,80 @@ void main() {
       expect(glyphTiles(), findsNWidgets(2));
     });
 
+    testWidgets('paints the Figma seam structure over the collage', (
+      tester,
+    ) async {
+      // Container outline 2, large tile right 2, and the two small tiles
+      // splitting the horizontal seam as bottom 1 / top 1.
+      await tester.pumpWidget(
+        buildSubject(
+          userList: _userList(pubkeys: ['a' * 64]),
+          profileOverrides: [
+            fetchUserProfileProvider(
+              'a' * 64,
+            ).overrideWith((ref) async => _profile('a' * 64)),
+          ],
+        ),
+      );
+      await tester.pump();
+
+      final seams = tester
+          .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+          .where((box) => box.position == DecorationPosition.foreground)
+          .map((box) => (box.decoration as BoxDecoration).border)
+          .whereType<Border>()
+          .toList();
+
+      final surface = VineTheme.darkColors.surface;
+      bool only(BorderSide side, double width) =>
+          side.width == width && side.color == surface;
+
+      expect(
+        seams.any(
+          (b) =>
+              only(b.top, 2) &&
+              only(b.bottom, 2) &&
+              only(b.left, 2) &&
+              only(b.right, 2),
+        ),
+        isTrue,
+        reason: 'collage container outline',
+      );
+      expect(
+        seams.any(
+          (b) =>
+              only(b.right, 2) &&
+              b.top == BorderSide.none &&
+              b.bottom == BorderSide.none &&
+              b.left == BorderSide.none,
+        ),
+        isTrue,
+        reason: 'large tile right seam',
+      );
+      expect(
+        seams.any(
+          (b) =>
+              only(b.bottom, 1) &&
+              b.top == BorderSide.none &&
+              b.left == BorderSide.none &&
+              b.right == BorderSide.none,
+        ),
+        isTrue,
+        reason: 'top small tile bottom half-seam',
+      );
+      expect(
+        seams.any(
+          (b) =>
+              only(b.top, 1) &&
+              b.bottom == BorderSide.none &&
+              b.left == BorderSide.none &&
+              b.right == BorderSide.none,
+        ),
+        isTrue,
+        reason: 'bottom small tile top half-seam',
+      );
+    });
+
     testWidgets('invokes onTap when tapped', (tester) async {
       var tapped = false;
       await tester.pumpWidget(

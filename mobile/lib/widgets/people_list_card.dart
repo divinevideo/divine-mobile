@@ -91,55 +91,69 @@ class _MemberCollage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Seam structure from Figma: the large tile carries the vertical seam
+    // (right 2), the two small tiles split the horizontal seam (bottom 1 /
+    // top 1), and the whole collage wears a 2px outline.
+    final seamColor = context.vineColors.surface;
+    final seam = BorderSide(width: _tileBorder, color: seamColor);
+    final halfSeam = seam.copyWith(width: _tileBorder / 2);
+
     return AspectRatio(
       aspectRatio: _mediaAspectRatio,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(_mediaRadius),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  flex: (_largeTileFraction * 1000).round(),
-                  child: _MemberTile(
-                    pubkey: _pubkeyAt(0),
-                    toneIndex: 0,
-                    bordered: false,
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(
+          border: Border.fromBorderSide(seam),
+          borderRadius: BorderRadius.circular(_mediaRadius),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(_mediaRadius),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    flex: (_largeTileFraction * 1000).round(),
+                    child: _MemberTile(
+                      pubkey: _pubkeyAt(0),
+                      toneIndex: 0,
+                      seams: Border(right: seam),
+                    ),
                   ),
-                ),
-                Expanded(
-                  flex: ((1 - _largeTileFraction) * 1000).round(),
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: _MemberTile(
-                          pubkey: _pubkeyAt(1),
-                          toneIndex: 1,
-                          bordered: true,
+                  Expanded(
+                    flex: ((1 - _largeTileFraction) * 1000).round(),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: _MemberTile(
+                            pubkey: _pubkeyAt(1),
+                            toneIndex: 1,
+                            seams: Border(bottom: halfSeam),
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: _MemberTile(
-                          pubkey: _pubkeyAt(2),
-                          toneIndex: 2,
-                          bordered: true,
+                        Expanded(
+                          child: _MemberTile(
+                            pubkey: _pubkeyAt(2),
+                            toneIndex: 2,
+                            seams: Border(top: halfSeam),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            Positioned(
-              left: 8,
-              bottom: 9,
-              child: ListCardBadge(
-                icon: DivineIconName.users,
-                count: memberCount,
+                ],
               ),
-            ),
-          ],
+              Positioned(
+                left: 8,
+                bottom: 9,
+                child: ListCardBadge(
+                  icon: DivineIconName.users,
+                  count: memberCount,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -153,15 +167,14 @@ class _MemberTile extends ConsumerWidget {
   const _MemberTile({
     required this.pubkey,
     required this.toneIndex,
-    required this.bordered,
+    required this.seams,
   });
 
   final String? pubkey;
   final int toneIndex;
 
-  /// Per Figma, only the two small right tiles carry the 2px seam border;
-  /// the large left tile is borderless.
-  final bool bordered;
+  /// This tile's share of the collage seams, painted over the image.
+  final Border seams;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -184,17 +197,9 @@ class _MemberTile extends ConsumerWidget {
           )
         : VineCachedImage(imageUrl: pictureUrl);
 
-    if (!bordered) return tile;
-
-    // The 2px surface-container-high seams match the video card's fan.
     return DecoratedBox(
       position: DecorationPosition.foreground,
-      decoration: BoxDecoration(
-        border: Border.all(
-          width: _tileBorder,
-          color: context.vineColors.surfaceContainerHigh,
-        ),
-      ),
+      decoration: BoxDecoration(border: seams),
       child: tile,
     );
   }
