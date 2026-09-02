@@ -682,16 +682,59 @@ void main() {
         );
       }
 
-      testWidgets('shows a check only on the selected tile', (tester) async {
+      Finder selectedBadges() => find.byWidgetPredicate(
+        (widget) =>
+            widget is Container &&
+            widget.constraints?.maxWidth == 24 &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration! as BoxDecoration).color == VineTheme.vineGreen,
+      );
+
+      Finder unselectedBadges() => find.byWidgetPredicate(
+        (widget) =>
+            widget is Container &&
+            widget.constraints?.maxWidth == 24 &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration! as BoxDecoration).color ==
+                VineTheme.whiteText.withValues(alpha: 0.25),
+      );
+
+      testWidgets('marks only the selected tile with the filled badge', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildGrid(selectedVideoIds: {'video1'}));
+        await tester.pump();
+
+        expect(selectedBadges(), findsOneWidget);
+        expect(unselectedBadges(), findsOneWidget);
+      });
+
+      testWidgets('paints the selected badge per the design', (tester) async {
+        // Figma: vineGreen circle with a stroked check in the dark button
+        // ink, and the selected thumbnail dimmed to half opacity.
         await tester.pumpWidget(buildGrid(selectedVideoIds: {'video1'}));
         await tester.pump();
 
         expect(
-          find.byWidgetPredicate(
-            (widget) =>
-                widget is DivineIcon && widget.icon == DivineIconName.check,
+          find.descendant(
+            of: selectedBadges(),
+            matching: find.byType(CustomPaint),
           ),
           findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is Opacity && widget.opacity == 0.5,
+          ),
+          findsOneWidget,
+        );
+
+        final unselected =
+            tester.widget<Container>(unselectedBadges()).decoration!
+                as BoxDecoration;
+        expect(
+          unselected.border,
+          Border.all(color: VineTheme.whiteText, width: 2),
         );
       });
 
@@ -733,13 +776,8 @@ void main() {
         );
         await tester.pump();
 
-        expect(
-          find.byWidgetPredicate(
-            (widget) =>
-                widget is DivineIcon && widget.icon == DivineIconName.check,
-          ),
-          findsNothing,
-        );
+        expect(selectedBadges(), findsNothing);
+        expect(unselectedBadges(), findsNothing);
       });
     });
 
