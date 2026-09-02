@@ -2368,14 +2368,6 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 người} other{{count} người}}",
-  "@listPersonCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "listByAuthorPrefix": "Bởi ",
   "listNewList": "Danh sách mới",
   "listDone": "Xong",

@@ -108,36 +108,39 @@ void main() {
       },
     );
 
-    test('render the real count in every locale whose `one` is not exactly 1', () {
-      // Regression pins for the four locales that were shipping wrong numbers.
-      // fr/am/pt selected `one` at n=0; fil selects `one` for most integers.
-      const cases = <String, List<int>>{
-        'fr': [0, 2, 22],
-        'am': [0, 2, 22],
-        'pt': [0, 2, 22],
-        'fil': [0, 2, 5, 22, 100],
-      };
+    test(
+      'render the real count in every locale whose `one` is not exactly 1',
+      () {
+        // Regression pins for the four locales that were shipping wrong numbers.
+        // fr/am/pt selected `one` at n=0; fil selects `one` for most integers.
+        const cases = <String, List<int>>{
+          'fr': [0, 2, 22],
+          'am': [0, 2, 22],
+          'pt': [0, 2, 22],
+          'fil': [0, 2, 5, 22, 100],
+        };
 
-      for (final entry in cases.entries) {
-        final l10n = lookupAppLocalizations(Locale(entry.key));
-        for (final count in entry.value) {
-          expect(
-            l10n.listPersonCount(count),
-            contains('$count'),
-            reason:
-                '${entry.key}: listPersonCount($count) must show $count, not a '
-                'hardcoded 1 — got "${l10n.listPersonCount(count)}"',
-          );
-          expect(
-            l10n.notificationsBadgeUnread(count),
-            contains('$count'),
-            reason:
-                '${entry.key}: notificationsBadgeUnread($count) must show '
-                '$count — got "${l10n.notificationsBadgeUnread(count)}"',
-          );
+        for (final entry in cases.entries) {
+          final l10n = lookupAppLocalizations(Locale(entry.key));
+          for (final count in entry.value) {
+            expect(
+              l10n.listVideoCount(count),
+              contains('$count'),
+              reason:
+                  '${entry.key}: listVideoCount($count) must show $count, not a '
+                  'hardcoded 1 — got "${l10n.listVideoCount(count)}"',
+            );
+            expect(
+              l10n.notificationsBadgeUnread(count),
+              contains('$count'),
+              reason:
+                  '${entry.key}: notificationsBadgeUnread($count) must show '
+                  '$count — got "${l10n.notificationsBadgeUnread(count)}"',
+            );
+          }
         }
-      }
-    });
+      },
+    );
   });
 }
 

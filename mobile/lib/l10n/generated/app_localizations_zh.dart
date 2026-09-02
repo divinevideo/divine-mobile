@@ -4458,17 +4458,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count 人',
-      one: '1 人',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get listByAuthorPrefix => '来自 ';
 
   @override

@@ -2975,14 +2975,6 @@
       }
     }
   },
-  "listPersonCount": "{count, plural, =1{1 person} other{{count} people}}",
-  "@listPersonCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "listByAuthorPrefix": "By ",
   "listNewList": "New List",
   "listDone": "Done",
