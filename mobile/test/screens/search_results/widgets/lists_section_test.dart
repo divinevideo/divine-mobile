@@ -1,6 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -10,6 +11,11 @@ import 'package:openvine/screens/search_results/widgets/lists_section.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
+
+import '../../../helpers/go_router.dart';
+import '../../../helpers/test_provider_overrides.dart';
 
 class _MockListSearchBloc extends MockBloc<ListSearchEvent, ListSearchState>
     implements ListSearchBloc {}
@@ -142,16 +148,69 @@ void main() {
         },
       );
 
-      // Note: rendering PeopleListSearchCard in a test viewport triggers a
-      // pre-existing layout bug in `UserAvatar(size: double.infinity)` inside
-      // its AspectRatio collage. That is owned by the card widget, not this
-      // section. We cover the behavior at two layers instead:
-      //   - BLoC: `list_search_bloc_test.dart` verifies peopleResults are
-      //     populated correctly from the repository.
-      //   - Integration: `_PeopleListCard.onTap` is a compile-time no-op in
-      //     `lists_section.dart` (see the comment "Intentionally disabled
-      //     until public people-list routes include owner pubkey"), so the
-      //     non-navigation guarantee is enforced structurally, not at runtime.
+      testWidgets(
+        'renders a people result and navigates with the owner param',
+        (tester) async {
+          final goRouter = MockGoRouter();
+          when(
+            () => goRouter.push<Object?>(any()),
+          ).thenAnswer((_) async => null);
+          when(() => mockBloc.state).thenReturn(
+            ListSearchState(
+              status: ListSearchStatus.success,
+              query: 'test',
+              videoResults: [testList],
+              peopleResults: [
+                PeopleListSearchResult(
+                  ownerPubkey: _authorOne,
+                  list: UserList(
+                    id: 'pl1',
+                    name: 'Crew',
+                    pubkeys: const [],
+                    createdAt: now,
+                    updatedAt: now,
+                  ),
+                ),
+              ],
+            ),
+          );
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [...getStandardTestOverrides()],
+              child: MaterialApp(
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: SizedBox(
+                    width: 800,
+                    height: 1000,
+                    child: BlocProvider<ListSearchBloc>.value(
+                      value: mockBloc,
+                      child: MockGoRouterProvider(
+                        goRouter: goRouter,
+                        child: const CustomScrollView(
+                          slivers: [ListsSection()],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(find.byType(DivineListThumbnail), findsNWidgets(2));
+          expect(find.text('Crew'), findsOneWidget);
+
+          await tester.tap(find.text('Crew'));
+
+          verify(
+            () => goRouter.push<Object?>('/people-lists/pl1?owner=$_authorOne'),
+          ).called(1);
+        },
+      );
     });
 
     testWidgets('retry dispatches $ListSearchQueryChanged with current query', (

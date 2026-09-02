@@ -13,8 +13,7 @@ import 'package:openvine/features/lists_discovery/cubit/lists_discovery_cubit.da
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/screens/explore/tabs/explore_lists_tab.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
-import 'package:openvine/widgets/list_search_card.dart';
-import 'package:openvine/widgets/people_list_card.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
 import '../../../helpers/go_router.dart';
@@ -88,9 +87,8 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pump();
 
-      expect(find.byType(CuratedListSearchCard), findsOneWidget);
+      expect(find.byType(DivineListThumbnail), findsNWidgets(2));
       expect(find.text('Video skate'), findsOneWidget);
-      expect(find.byType(PeopleListCard), findsOneWidget);
       expect(find.text('People crew'), findsOneWidget);
     });
 
@@ -126,8 +124,10 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pump();
 
-      final videoSize = tester.getSize(find.byType(CuratedListSearchCard));
-      final peopleSize = tester.getSize(find.byType(PeopleListCard));
+      final cards = find.byType(DivineListThumbnail);
+      expect(cards, findsNWidgets(2));
+      final videoSize = tester.getSize(cards.at(0));
+      final peopleSize = tester.getSize(cards.at(1));
       expect(videoSize.width, peopleSize.width);
       expect(videoSize.height, peopleSize.height);
     });
@@ -148,7 +148,7 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pump();
 
-      expect(find.byType(CuratedListSearchCard), findsOneWidget);
+      expect(find.byType(DivineListThumbnail), findsOneWidget);
       expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
     });
 
@@ -169,7 +169,7 @@ void main() {
       await tester.pump();
 
       expect(find.text(l10n.exploreErrorLoadingLists), findsOneWidget);
-      expect(find.byType(CuratedListSearchCard), findsOneWidget);
+      expect(find.byType(DivineListThumbnail), findsOneWidget);
     });
 
     testWidgets('shows the empty message when both columns finish empty', (
@@ -188,7 +188,7 @@ void main() {
       await tester.pump();
 
       expect(find.text(l10n.listsDiscoveryEmpty), findsOneWidget);
-      expect(find.byType(CuratedListSearchCard), findsNothing);
+      expect(find.byType(DivineListThumbnail), findsNothing);
     });
 
     testWidgets('video card navigates to the list detail route', (

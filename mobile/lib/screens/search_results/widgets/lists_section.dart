@@ -12,13 +12,13 @@ import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
-import 'package:openvine/widgets/list_search_card.dart';
-import 'package:openvine/widgets/people_list_search_card.dart';
+import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -154,11 +154,8 @@ class _ResultsGrid extends StatelessWidget {
             }
             final peopleResult = peopleResults[index - videoResults.length];
             return _PeopleListCard(
-              userList: peopleResult.list,
-              onTap: () {
-                // Intentionally disabled until public people-list routes
-                // include owner pubkey.
-              },
+              result: peopleResult,
+              onTap: () => _navigateToPeopleList(context, peopleResult),
             );
           }, childCount: totalCount),
         ),
@@ -187,11 +184,8 @@ class _ResultsGrid extends StatelessWidget {
             if (previewPeople != null)
               Expanded(
                 child: _PeopleListCard(
-                  userList: previewPeople.list,
-                  onTap: () {
-                    // Intentionally disabled until public people-list routes
-                    // include owner pubkey.
-                  },
+                  result: previewPeople,
+                  onTap: () => _navigateToPeopleList(context, previewPeople),
                 ),
               ),
             // If only one item, fill the second slot with empty space.
@@ -212,20 +206,20 @@ class _ListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CuratedListSearchCard(curatedList: curatedList, onTap: onTap);
+    return DivineListThumbnail.videos(curatedList: curatedList, onTap: onTap);
   }
 }
 
 /// Card widget for a people list result.
 class _PeopleListCard extends StatelessWidget {
-  const _PeopleListCard({required this.userList, required this.onTap});
+  const _PeopleListCard({required this.result, required this.onTap});
 
-  final UserList userList;
+  final PeopleListSearchResult result;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return PeopleListSearchCard(userList: userList, onTap: onTap);
+    return DivineListThumbnail.people(userList: result.list, onTap: onTap);
   }
 }
 
@@ -345,6 +339,15 @@ class _ListCardSkeletonItem extends StatelessWidget {
       ],
     );
   }
+}
+
+void _navigateToPeopleList(
+  BuildContext context,
+  PeopleListSearchResult result,
+) {
+  context.push(
+    RoutePaths.peopleListForId(result.list.id, ownerPubkey: result.ownerPubkey),
+  );
 }
 
 void _navigateToCuratedList(BuildContext context, CuratedList list) {
