@@ -360,6 +360,17 @@ class CuratedListRepository {
   /// Each list gets up to [maxThumbnails] thumbnail URLs populated from
   /// its [CuratedList.videoEventIds]. Resolution is best-effort — lists
   /// that fail silently keep their original (empty) thumbnailUrls.
+  /// Resolves up to [maxThumbnails] thumbnail URLs for each of [lists].
+  ///
+  /// The same funnelcake-first, batched-relay-fallback pipeline the search
+  /// stream uses to enrich its results, exposed for discovery surfaces that
+  /// fetch their lists elsewhere (the relay discovery stream) and render
+  /// thumbnail collages.
+  Future<List<CuratedList>> resolveListThumbnails(
+    List<CuratedList> lists, {
+    int maxThumbnails = 5,
+  }) => _resolveAllThumbnails(lists, maxThumbnails: maxThumbnails);
+
   Future<List<CuratedList>> _resolveAllThumbnails(
     List<CuratedList> lists, {
     required int maxThumbnails,
