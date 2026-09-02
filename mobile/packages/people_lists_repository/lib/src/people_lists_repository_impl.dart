@@ -315,18 +315,44 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     return List.unmodifiable(results);
   }
 
+  @override
+  Future<UserList?> fetchPublicList({
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    final results = await _queryPublicLists(
+      limit: 10,
+      logContext: 'for $ownerPubkey/$listId',
+      author: ownerPubkey,
+      dTag: listId,
+    );
+    for (final result in results) {
+      if (result.ownerPubkey == ownerPubkey && result.list.id == listId) {
+        return result.list;
+      }
+    }
+    return null;
+  }
+
   /// Shared relay query + decode + filter + coordinate-dedup pipeline behind
-  /// [searchPublicLists] and [discoverPublicLists].
+  /// [searchPublicLists], [discoverPublicLists], and [fetchPublicList].
   Future<List<PeopleListSearchResult>> _queryPublicLists({
     required int limit,
     required String logContext,
     bool Function(UserList list)? where,
     String? excludeAuthor,
+    String? author,
+    String? dTag,
   }) async {
     final List<Event> events;
     try {
       events = await _nostrClient.queryEvents([
-        Filter(kinds: const [Nip51PeopleListCodec.kind], limit: limit),
+        Filter(
+          kinds: const [Nip51PeopleListCodec.kind],
+          limit: limit,
+          authors: author == null ? null : [author],
+          d: dTag == null ? null : [dTag],
+        ),
       ]);
     } on Object catch (error, stackTrace) {
       Log.error(
