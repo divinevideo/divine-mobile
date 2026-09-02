@@ -27,11 +27,11 @@ const _largeTileFraction = 0.661;
 /// Placeholder accents for members without a profile picture, matching the
 /// design's colored generic-avatar tiles. Brand accents, not surface tokens:
 /// the tile is media, identical in both appearances.
-const _placeholderTones = [
-  Color(0xFFD2FF40), // lime
-  Color(0xFFB49CFF), // violet
-  Color(0xFFFF9B3E), // orange
-  Color(0xFFFF9CE9), // pink
+const List<Color> _placeholderTones = [
+  VineTheme.accentLime,
+  VineTheme.accentViolet,
+  VineTheme.accentOrange,
+  VineTheme.accentPink,
 ];
 
 /// Discovery card for a people list (kind 30000).

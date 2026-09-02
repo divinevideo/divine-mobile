@@ -15,7 +15,6 @@ lib/screens/auth/invite_gate_screen.dart	1
 lib/screens/auth/nostr_connect_screen.dart	1
 lib/screens/category_gallery_screen.dart	1
 lib/screens/curated_list_feed_screen.dart	1
-lib/screens/explore/tabs/explore_lists_tab.dart	1
 lib/screens/inbox/conversation/widgets/reaction_picker_overlay.dart	1
 lib/screens/inbox/inbox_view.dart	1
 lib/screens/inbox/new_message_sheet.dart	1
