@@ -5,7 +5,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:models/models.dart' as model show AspectRatio, CuratedList;
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:nostr_sdk/nostr_sdk.dart' show generatePrivateKey;
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -182,38 +182,6 @@ List<ClassicViner> screenshotOgVinersFixtures() => const [
         '365e3398cda8ffefbb5fd3cabb8077a1f000b4267228d3899f0750b02d473a8f',
   ),
 ];
-
-/// Clean, on-brand discovered-list fixtures for the `06_lists` capture.
-///
-/// Live discovery surfaces real public kind-30005 lists, some with
-/// off-brand or misspelled names; screenshot mode seeds these deterministic
-/// lists instead so the marketing shot is always clean.
-/// `pubkey` is left null so no author by-line can surface an off-brand name.
-List<model.CuratedList> screenshotDiscoverListsFixtures() {
-  final now = DateTime.utc(2026);
-  model.CuratedList list(String id, String name, String desc, int count) =>
-      model.CuratedList(
-        id: id,
-        name: name,
-        description: desc,
-        videoEventIds: List<String>.generate(count, (i) => '$id-$i'),
-        createdAt: now,
-        updatedAt: now,
-      );
-  return [
-    list(
-      'favorite-classic-vines',
-      'Favorite Classic Vines',
-      'The loops that started it all',
-      152,
-    ),
-    list('cat-chaos', 'Cat Chaos', 'Certified feline nonsense', 223),
-    list('art-lives-here', 'Art Lives Here', 'Animators, painters, makers', 96),
-    list('comedy-gold', 'Comedy Gold', 'Loops that never miss', 287),
-    list('nature-loops', 'Nature Loops', 'Six seconds of calm', 61),
-    list('music-vault', 'Music Vault', 'Beats, covers, originals', 81),
-  ];
-}
 
 /// Hand-curated classic-Vine fixtures used only as editor timeline clips by
 /// the App Store screenshot pipeline.
