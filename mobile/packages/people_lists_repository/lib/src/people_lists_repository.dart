@@ -88,4 +88,19 @@ abstract interface class PeopleListsRepository {
     String query, {
     int limit = 50,
   });
+
+  /// Discovers public kind `30000` people lists on connected relays.
+  ///
+  /// The same relay query, decoding, filtering, and addressable-coordinate
+  /// dedup as [searchPublicLists], without the text match. Results come
+  /// newest first by `updatedAt`. Lists authored by [excludeAuthor] are
+  /// dropped, so a discovery surface can keep the viewer's own lists on
+  /// their profile instead.
+  ///
+  /// Returns an empty list when the relay returns no events or none survive
+  /// the filters.
+  Future<List<PeopleListSearchResult>> discoverPublicLists({
+    int limit = 50,
+    String? excludeAuthor,
+  });
 }

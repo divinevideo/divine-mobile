@@ -1271,6 +1271,136 @@ void main() {
       );
     });
 
+    group('discoverPublicLists', () {
+      const secondOwner =
+          '4444444444444444444444444444444444444444444444444444444444444444';
+
+      Event peopleEvent({
+        required String pubkey,
+        required String dTag,
+        required String title,
+        required List<String> pubkeys,
+        int? createdAt,
+      }) {
+        return Event(
+          pubkey,
+          _peopleListKind,
+          [
+            ['d', dTag],
+            ['title', title],
+            for (final pk in pubkeys) ['p', pk],
+          ],
+          '',
+          createdAt: createdAt,
+        );
+      }
+
+      test('returns lists newest first without a text filter', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'older',
+              title: 'Older crew',
+              pubkeys: [secondOwner],
+              createdAt: 1000,
+            ),
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'newer',
+              title: 'Newer crew',
+              pubkeys: [secondOwner],
+              createdAt: 2000,
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results, hasLength(2));
+        expect(results.first.list.name, equals('Newer crew'));
+        expect(results.last.list.name, equals('Older crew'));
+      });
+
+      test('drops lists authored by excludeAuthor', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'mine',
+              title: 'My own list',
+              pubkeys: [secondOwner],
+            ),
+            peopleEvent(
+              pubkey: secondOwner,
+              dTag: 'theirs',
+              title: 'Someone else',
+              pubkeys: [_ownerPubkey],
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final results = await repository.discoverPublicLists(
+          excludeAuthor: _ownerPubkey,
+        );
+
+        expect(results, hasLength(1));
+        expect(results.single.ownerPubkey, equals(secondOwner));
+      });
+
+      test('keeps the newest event per addressable coordinate', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Stale name',
+              pubkeys: [secondOwner],
+              createdAt: 1000,
+            ),
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Fresh name',
+              pubkeys: [secondOwner],
+              createdAt: 2000,
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results, hasLength(1));
+        expect(results.single.list.name, equals('Fresh name'));
+      });
+
+      test('returns empty when the relay has nothing', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer((_) async => const []);
+
+        final repository = buildRepository(nostrClient: client);
+
+        expect(await repository.discoverPublicLists(), isEmpty);
+      });
+    });
+
     group('searchPublicLists', () {
       // Second owner pubkey for multi-owner deduplication tests.
       const secondOwner =
