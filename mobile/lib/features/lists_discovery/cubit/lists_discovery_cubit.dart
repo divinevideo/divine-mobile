@@ -51,6 +51,25 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
   /// pending [load] future would dangle forever.
   Completer<void>? _videoStreamSettled;
 
+  /// Seeds both columns with fixed data and skips relay loading entirely.
+  ///
+  /// Screenshot mode only (see `app_bootstrap`): marketing captures need
+  /// deterministic, on-brand lists, and the live discovery feed cannot
+  /// promise either.
+  void seedForScreenshots({
+    required List<CuratedList> videoLists,
+    List<PeopleListSearchResult> peopleLists = const [],
+  }) {
+    emit(
+      ListsDiscoveryState(
+        videoStatus: ListsDiscoveryColumnStatus.success,
+        peopleStatus: ListsDiscoveryColumnStatus.success,
+        videoLists: videoLists,
+        peopleLists: peopleLists,
+      ),
+    );
+  }
+
   /// Loads both columns. Safe to call again to refresh.
   Future<void> load() => Future.wait([_loadVideoLists(), _loadPeopleLists()]);
 

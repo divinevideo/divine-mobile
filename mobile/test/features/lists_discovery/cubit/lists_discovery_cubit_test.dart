@@ -67,6 +67,27 @@ void main() {
       viewerPubkey: _viewer,
     );
 
+    group('seedForScreenshots', () {
+      test('emits both columns successful without touching relays', () {
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        cubit.seedForScreenshots(videoLists: [_videoList('fixture')]);
+
+        expect(
+          cubit.state.videoStatus,
+          equals(ListsDiscoveryColumnStatus.success),
+        );
+        expect(
+          cubit.state.peopleStatus,
+          equals(ListsDiscoveryColumnStatus.success),
+        );
+        expect(cubit.state.videoLists.single.id, equals('fixture'));
+        verifyZeroInteractions(service);
+        verifyZeroInteractions(peopleRepository);
+      });
+    });
+
     group('load', () {
       test('populates both columns, newest first, without own lists', () async {
         final older = _videoList('older', createdAtYear: 2024);
