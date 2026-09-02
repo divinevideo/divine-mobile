@@ -19,8 +19,6 @@ lib/screens/auth/reset_password.dart	2
 lib/screens/auth/welcome_screen.dart	1
 lib/screens/comments/widgets/comment_item.dart	1
 lib/screens/comments/widgets/comments_empty_state.dart	2
-lib/screens/discover_lists_screen.dart	13
-lib/screens/explore/tabs/explore_lists_tab.dart	4
 lib/screens/explore/widgets/explore_buffered_videos_banner.dart	1
 lib/screens/explore_screen_router.dart	1
 lib/screens/feed/video_feed_page/feed_empty_widget.dart	1
@@ -56,7 +54,6 @@ lib/widgets/global_error_widget.dart	7
 lib/widgets/library/sounds_tab.dart	7
 lib/widgets/linkified_text/linkified_text.dart	2
 lib/widgets/linkified_text/selectable_linkified_text.dart	2
-lib/widgets/list_card.dart	8
 lib/widgets/markdown/markdown_text_span_builder.dart	1
 lib/widgets/new_videos_tab.dart	4
 lib/widgets/og_viner_badge.dart	1

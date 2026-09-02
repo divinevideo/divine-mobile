@@ -17,7 +17,6 @@ lib/screens/auth/nostr_connect_screen.dart	1
 lib/screens/comments/widgets/comment_input.dart	3
 lib/screens/comments/widgets/comment_options_modal.dart	1
 lib/screens/curated_list_feed_screen.dart	2
-lib/screens/discover_lists_screen.dart	2
 lib/screens/feed/video_feed_page/feed_empty_widget.dart	1
 lib/screens/followers/my_followers_screen.dart	1
 lib/screens/followers/others_followers_screen.dart	1
