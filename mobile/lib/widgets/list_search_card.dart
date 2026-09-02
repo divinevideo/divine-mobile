@@ -130,26 +130,34 @@ class _ThumbnailCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Foreground border, or the full-bleed thumbnail paints over it and
+    // only the empty placeholder cards show their seams.
     return DecoratedBox(
+      position: DecorationPosition.foreground,
       decoration: BoxDecoration(
         border: Border.all(
           width: _cardBorder,
-          color: context.vineColors.surface,
+          color: context.vineColors.surfaceContainerHigh,
         ),
         borderRadius: BorderRadius.circular(_cardRadius),
-        color: context.vineColors.containerLow,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(_cardRadius),
-        child: imageUrl != null
-            ? PassiveAuthThumbnailImage(
-                url: imageUrl!,
-                alignment: Alignment.center,
-                errorWidget: (_, _, _) => const SizedBox(),
-                logName: 'CuratedListSearchCard',
-                logPrefix: 'List thumbnail',
-              )
-            : const SizedBox(),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(_cardRadius),
+          color: context.vineColors.containerLow,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(_cardRadius),
+          child: imageUrl != null
+              ? PassiveAuthThumbnailImage(
+                  url: imageUrl!,
+                  alignment: Alignment.center,
+                  errorWidget: (_, _, _) => const SizedBox(),
+                  logName: 'CuratedListSearchCard',
+                  logPrefix: 'List thumbnail',
+                )
+              : const SizedBox(),
+        ),
       ),
     );
   }
