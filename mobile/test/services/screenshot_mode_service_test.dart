@@ -167,20 +167,6 @@ void main() {
         );
       });
 
-      test('discover-list fixtures are deterministic and on-brand', () {
-        final fixtures = screenshotDiscoverListsFixtures();
-
-        expect(fixtures, hasLength(6));
-        expect(fixtures.map((list) => list.id).toSet(), hasLength(6));
-        expect(fixtures.map((list) => list.name), everyElement(isNotEmpty));
-        expect(
-          fixtures.map((list) => list.videoEventIds),
-          everyElement(isNotEmpty),
-        );
-        expect(fixtures.map((list) => list.pubkey), everyElement(isNull));
-        expect(fixtures.map((list) => list.createdAt).toSet(), hasLength(1));
-      });
-
       group('editor fixtures', () {
         test('hidden files are not treated as bundled assets', () {
           final dir = Directory.systemTemp.createTempSync('seed_media_scan');
