@@ -1324,36 +1324,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'کوئی ویڈیو دستیاب نہیں';
 
   @override
-  String get exploreDiscoverLists => 'فہرستیں دریافت کریں';
-
-  @override
-  String get exploreAboutLists => 'فہرستوں کے بارے میں';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'فہرستیں Divine مواد کو دو طریقوں سے ترتیب دینے اور منتخب کرنے میں مدد دیتی ہیں:';
-
-  @override
-  String get explorePeopleLists => 'لوگوں کی فہرستیں';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'کریئیٹرز کے گروہوں کو فالو کریں اور ان کی تازہ ویڈیوز دیکھیں';
-
-  @override
-  String get exploreVideoLists => 'ویڈیو فہرستیں';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'بعد میں دیکھنے کے لیے اپنی پسندیدہ ویڈیوز کی پلے لسٹیں بنائیں';
-
-  @override
-  String get exploreMyLists => 'میری فہرستیں';
-
-  @override
-  String get exploreSubscribedLists => 'سبسکرائب شدہ فہرستیں';
-
-  @override
   String get exploreErrorLoadingLists =>
       'فہرستیں لوڈ کرنے میں خرابی۔ براہ کرم دوبارہ کوشش کریں۔';
 
@@ -4928,6 +4898,9 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get listsDiscoveryEmpty => 'Nothing to discover yet. Pull to refresh.';
+
+  @override
   String get listShareAction => 'فہرست شیئر کریں';
 
   @override
@@ -6019,31 +5992,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'سبسکرپشن اپڈیٹ نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
-
-  @override
-  String get discoverListsTitle => 'فہرستیں دریافت کریں';
-
-  @override
-  String get discoverListsFailedToLoad => 'فہرستیں لوڈ نہیں ہو سکیں';
-
-  @override
-  String get discoverListsLoading => 'عوامی فہرستیں دریافت ہو رہی ہیں...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'ریلے نے وقت پر فہرستیں واپس نہیں کیں۔ دوبارہ کوشش کریں۔';
-
-  @override
-  String get discoverListsServiceUnavailable => 'سروس دستیاب نہیں ہے۔';
-
-  @override
-  String get discoverListsEmptyTitle => 'کوئی عوامی فہرست نہیں ملی';
-
-  @override
-  String get discoverListsEmptySubtitle => 'نئی فہرستوں کے لیے بعد میں دیکھیں';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'از';
 
   @override
   String get curatedListEmptyTitle => 'اس فہرست میں کوئی ویڈیو نہیں';

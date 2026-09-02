@@ -1261,36 +1261,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Hiç video yok';
 
   @override
-  String get exploreDiscoverLists => 'Listeleri Keşfet';
-
-  @override
-  String get exploreAboutLists => 'Listeler Hakkında';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listeler, Divine içeriğini iki şekilde düzenlemene ve derlemene yardımcı olur:';
-
-  @override
-  String get explorePeopleLists => 'Kişi Listeleri';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'İçerik üretici gruplarını takip et ve en son videolarını gör';
-
-  @override
-  String get exploreVideoLists => 'Video Listeleri';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Sonra izlemek için favori videolarından oynatma listeleri oluştur';
-
-  @override
-  String get exploreMyLists => 'Listelerim';
-
-  @override
-  String get exploreSubscribedLists => 'Abone Olunan Listeler';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Listeler yüklenirken hata. Lütfen tekrar dene.';
 
@@ -4864,6 +4834,9 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get listsDiscoveryEmpty => 'Nothing to discover yet. Pull to refresh.';
+
+  @override
   String get listShareAction => 'Listeyi paylaş';
 
   @override
@@ -5948,32 +5921,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Abonelik güncellenemedi. Lütfen tekrar dene.';
-
-  @override
-  String get discoverListsTitle => 'Listeleri Keşfet';
-
-  @override
-  String get discoverListsFailedToLoad => 'Listeler yüklenemedi';
-
-  @override
-  String get discoverListsLoading => 'Herkese açık listeler keşfediliyor...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay listeleri zamanında döndürmedi. Tekrar dene.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Hizmet kullanılamıyor.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Herkese açık liste bulunamadı';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Yeni listeler için sonra tekrar bak';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'yazan';
 
   @override
   String get curatedListEmptyTitle => 'Bu listede video yok';

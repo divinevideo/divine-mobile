@@ -32,7 +32,6 @@ import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/environment_provider.dart';
-import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/repositories/shorebird_patch_repository.dart';
 import 'package:openvine/services/app_engagement_store.dart';
 import 'package:openvine/services/build_provenance_service.dart';
@@ -664,8 +663,6 @@ Future<void> startOpenVineApp({
         topClassicVinersProvider.overrideWith(
           (ref) async => screenshotOgVinersFixtures(),
         ),
-      if (ScreenshotMode.enabled)
-        discoveredListsProvider.overrideWith(ScreenshotDiscoveredLists.new),
     ],
   );
 

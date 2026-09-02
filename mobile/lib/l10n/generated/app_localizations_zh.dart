@@ -1213,33 +1213,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exploreNoVideosAvailable => '暂无视频';
 
   @override
-  String get exploreDiscoverLists => '发现列表';
-
-  @override
-  String get exploreAboutLists => '关于列表';
-
-  @override
-  String get exploreAboutListsDescription => '列表帮你用两种方式整理和策划 Divine 内容：';
-
-  @override
-  String get explorePeopleLists => '人物列表';
-
-  @override
-  String get explorePeopleListsDescription => '关注一群创作者，查看他们的最新视频';
-
-  @override
-  String get exploreVideoLists => '视频列表';
-
-  @override
-  String get exploreVideoListsDescription => '把喜欢的视频做成播放列表，稍后观看';
-
-  @override
-  String get exploreMyLists => '我的列表';
-
-  @override
-  String get exploreSubscribedLists => '订阅的列表';
-
-  @override
   String get exploreErrorLoadingLists => '加载列表出错，请重试。';
 
   @override
@@ -4609,6 +4582,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get listsDiscoveryEmpty => 'Nothing to discover yet. Pull to refresh.';
+
+  @override
   String get listShareAction => '分享列表';
 
   @override
@@ -5662,30 +5638,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get discoverListsFailedToUpdateSubscription => '更新订阅失败，请重试。';
-
-  @override
-  String get discoverListsTitle => '发现列表';
-
-  @override
-  String get discoverListsFailedToLoad => '列表加载失败';
-
-  @override
-  String get discoverListsLoading => '正在发现公开列表...';
-
-  @override
-  String get discoverListsRelayTimeout => '中继没有及时返回列表。再试一次。';
-
-  @override
-  String get discoverListsServiceUnavailable => '服务不可用。';
-
-  @override
-  String get discoverListsEmptyTitle => '没有找到公开列表';
-
-  @override
-  String get discoverListsEmptySubtitle => '过会儿再来看看新列表';
-
-  @override
-  String get discoverListsByAuthorPrefix => '来自';
 
   @override
   String get curatedListEmptyTitle => '该列表还没有视频';

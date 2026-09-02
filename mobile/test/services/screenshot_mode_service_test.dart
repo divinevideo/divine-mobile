@@ -3,13 +3,11 @@
 
 import 'dart:io';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/providers/classic_vines_provider.dart'
     show ClassicViner;
-import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/screenshot_mode_service.dart';
 import 'package:yaml/yaml.dart';
@@ -181,31 +179,6 @@ void main() {
         );
         expect(fixtures.map((list) => list.pubkey), everyElement(isNull));
         expect(fixtures.map((list) => list.createdAt).toSet(), hasLength(1));
-      });
-
-      test('discover-list provider override ignores live mutations', () {
-        final container = ProviderContainer(
-          overrides: [
-            discoveredListsProvider.overrideWith(ScreenshotDiscoveredLists.new),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        final notifier = container.read(discoveredListsProvider.notifier);
-        final initial = container.read(discoveredListsProvider);
-        expect(initial.lists, isNotEmpty);
-
-        notifier.clear();
-        notifier.setLoading(true);
-        notifier.addLists([
-          initial.lists.first.copyWith(
-            id: 'live-relay-list',
-            name: 'Live relay list',
-            videoEventIds: List<String>.generate(999, (index) => 'live-$index'),
-          ),
-        ]);
-
-        expect(container.read(discoveredListsProvider), initial);
       });
 
       group('editor fixtures', () {

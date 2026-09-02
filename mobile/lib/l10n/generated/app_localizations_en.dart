@@ -1330,36 +1330,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exploreNoVideosAvailable => 'No videos available';
 
   @override
-  String get exploreDiscoverLists => 'Discover Lists';
-
-  @override
-  String get exploreAboutLists => 'About Lists';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Lists help you organize and curate Divine content in two ways:';
-
-  @override
-  String get explorePeopleLists => 'People Lists';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Follow groups of creators and see their latest videos';
-
-  @override
-  String get exploreVideoLists => 'Video Lists';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Create playlists of your favorite videos to watch later';
-
-  @override
-  String get exploreMyLists => 'My Lists';
-
-  @override
-  String get exploreSubscribedLists => 'Subscribed Lists';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Error loading lists. Please try again.';
 
@@ -5015,6 +4985,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get listsDiscoveryEmpty => 'Nothing to discover yet. Pull to refresh.';
+
+  @override
   String get listShareAction => 'Share list';
 
   @override
@@ -6115,31 +6088,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Failed to update subscription. Please try again.';
-
-  @override
-  String get discoverListsTitle => 'Discover Lists';
-
-  @override
-  String get discoverListsFailedToLoad => 'Failed to load lists';
-
-  @override
-  String get discoverListsLoading => 'Discovering public lists...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'The relay did not return lists in time. Try again.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Service not available.';
-
-  @override
-  String get discoverListsEmptyTitle => 'No public lists found';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Check back later for new lists';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'by';
 
   @override
   String get curatedListEmptyTitle => 'No videos in this list';

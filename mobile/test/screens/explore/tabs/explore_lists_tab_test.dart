@@ -1,64 +1,211 @@
-// ABOUTME: Regression test for the Explore Lists tab's top inset (#6797).
-// ABOUTME: Pins that the tab's ListView carries an explicit padding, so the
-// ABOUTME: status-bar inset never reappears as a gap above the first button.
+// ABOUTME: Tests for the Explore Lists discovery gallery view: two
+// ABOUTME: independent columns, per-column loading/error, empty state,
+// ABOUTME: and card navigation.
 
-import 'package:divine_ui/divine_ui.dart';
+import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/features/lists_discovery/cubit/lists_discovery_cubit.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
-import 'package:openvine/providers/list_providers.dart';
-import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/screens/explore/tabs/explore_lists_tab.dart';
-import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/list_search_card.dart';
+import 'package:openvine/widgets/people_list_card.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
 
+import '../../../helpers/go_router.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
-class _FakeCuratedListsState extends CuratedListsState {
-  @override
-  CuratedListService? get service => null;
+class _MockListsDiscoveryCubit extends MockCubit<ListsDiscoveryState>
+    implements ListsDiscoveryCubit {}
 
-  @override
-  Future<List<CuratedList>> build() async => const [];
-}
+final String _author = 'a' * 64;
+
+CuratedList _videoList(String id) => CuratedList(
+  id: id,
+  name: 'Video $id',
+  pubkey: _author,
+  videoEventIds: const ['v1'],
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
+
+PeopleListSearchResult _peopleList(String id) => PeopleListSearchResult(
+  ownerPubkey: _author,
+  list: UserList(
+    id: id,
+    name: 'People $id',
+    pubkeys: [_author],
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+  ),
+);
 
 void main() {
-  group(ExploreListsTab, () {
-    testWidgets('drops the status-bar inset above the first button', (
-      tester,
-    ) async {
-      // 120 physical px / 3.0 test devicePixelRatio = 40 logical px of status
-      // bar. The tab renders inside Explore, whose shell Scaffold has no app
-      // bar, so the top inset is still in MediaQuery here. Without an explicit
-      // padding BoxScrollView would fall back to it and gap the first button.
-      tester.view.padding = const FakeViewPadding(top: 120);
-      addTearDown(tester.view.resetPadding);
+  group(ExploreListsView, () {
+    late _MockListsDiscoveryCubit cubit;
+    final l10n = lookupAppLocalizations(const Locale('en'));
 
-      await tester.pumpWidget(
-        testProviderScope(
-          additionalOverrides: [
-            allListsProvider.overrideWith(
-              (ref) async =>
-                  (userLists: <UserList>[], curatedLists: <CuratedList>[]),
+    setUp(() {
+      cubit = _MockListsDiscoveryCubit();
+    });
+
+    Widget buildSubject({MockGoRouter? goRouter}) {
+      const view = ExploreListsView();
+      return ProviderScope(
+        overrides: [...getStandardTestOverrides()],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: BlocProvider<ListsDiscoveryCubit>.value(
+              value: cubit,
+              child: goRouter == null
+                  ? view
+                  : MockGoRouterProvider(goRouter: goRouter, child: view),
             ),
-            curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: ExploreListsTab()),
           ),
         ),
       );
-      await tester.pumpAndSettle();
+    }
 
-      // The Discover Lists button's own EdgeInsets.all(16) is the only offset
-      // that may sit between the viewport top and the button.
-      expect(
-        tester.getRect(find.byType(DivineButton).first).top -
-            tester.getRect(find.byType(ListView)).top,
-        moreOrLessEquals(16, epsilon: 0.5),
+    testWidgets('renders both columns from state', (tester) async {
+      whenListen(
+        cubit,
+        const Stream<ListsDiscoveryState>.empty(),
+        initialState: ListsDiscoveryState(
+          videoStatus: ListsDiscoveryColumnStatus.success,
+          peopleStatus: ListsDiscoveryColumnStatus.success,
+          videoLists: [_videoList('skate')],
+          peopleLists: [_peopleList('crew')],
+        ),
       );
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      expect(find.byType(CuratedListSearchCard), findsOneWidget);
+      expect(find.text('Video skate'), findsOneWidget);
+      expect(find.byType(PeopleListCard), findsOneWidget);
+      expect(find.text('People crew'), findsOneWidget);
+    });
+
+    testWidgets('keeps one column alive while the other loads', (
+      tester,
+    ) async {
+      whenListen(
+        cubit,
+        const Stream<ListsDiscoveryState>.empty(),
+        initialState: ListsDiscoveryState(
+          videoStatus: ListsDiscoveryColumnStatus.success,
+          peopleStatus: ListsDiscoveryColumnStatus.loading,
+          videoLists: [_videoList('skate')],
+        ),
+      );
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      expect(find.byType(CuratedListSearchCard), findsOneWidget);
+      expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+    });
+
+    testWidgets('shows a quiet error line for a failed empty column', (
+      tester,
+    ) async {
+      whenListen(
+        cubit,
+        const Stream<ListsDiscoveryState>.empty(),
+        initialState: ListsDiscoveryState(
+          videoStatus: ListsDiscoveryColumnStatus.success,
+          peopleStatus: ListsDiscoveryColumnStatus.failure,
+          videoLists: [_videoList('skate')],
+        ),
+      );
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      expect(find.text(l10n.exploreErrorLoadingLists), findsOneWidget);
+      expect(find.byType(CuratedListSearchCard), findsOneWidget);
+    });
+
+    testWidgets('shows the empty message when both columns finish empty', (
+      tester,
+    ) async {
+      whenListen(
+        cubit,
+        const Stream<ListsDiscoveryState>.empty(),
+        initialState: const ListsDiscoveryState(
+          videoStatus: ListsDiscoveryColumnStatus.success,
+          peopleStatus: ListsDiscoveryColumnStatus.success,
+        ),
+      );
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      expect(find.text(l10n.listsDiscoveryEmpty), findsOneWidget);
+      expect(find.byType(CuratedListSearchCard), findsNothing);
+    });
+
+    testWidgets('video card navigates to the list detail route', (
+      tester,
+    ) async {
+      final goRouter = MockGoRouter();
+      when(
+        () => goRouter.push<Object?>(any(), extra: any(named: 'extra')),
+      ).thenAnswer((_) async => null);
+      whenListen(
+        cubit,
+        const Stream<ListsDiscoveryState>.empty(),
+        initialState: ListsDiscoveryState(
+          videoStatus: ListsDiscoveryColumnStatus.success,
+          peopleStatus: ListsDiscoveryColumnStatus.success,
+          videoLists: [_videoList('skate')],
+        ),
+      );
+
+      await tester.pumpWidget(buildSubject(goRouter: goRouter));
+      await tester.pump();
+
+      await tester.tap(find.text('Video skate'));
+
+      verify(
+        () => goRouter.push<Object?>(
+          '/list/skate',
+          extra: any(named: 'extra'),
+        ),
+      ).called(1);
+    });
+
+    testWidgets('people card navigates with the owner query param', (
+      tester,
+    ) async {
+      final goRouter = MockGoRouter();
+      when(() => goRouter.push<Object?>(any())).thenAnswer((_) async => null);
+      whenListen(
+        cubit,
+        const Stream<ListsDiscoveryState>.empty(),
+        initialState: ListsDiscoveryState(
+          videoStatus: ListsDiscoveryColumnStatus.success,
+          peopleStatus: ListsDiscoveryColumnStatus.success,
+          peopleLists: [_peopleList('crew')],
+        ),
+      );
+
+      await tester.pumpWidget(buildSubject(goRouter: goRouter));
+      await tester.pump();
+
+      await tester.tap(find.text('People crew'));
+
+      verify(
+        () => goRouter.push<Object?>('/people-lists/crew?owner=$_author'),
+      ).called(1);
     });
   });
 }

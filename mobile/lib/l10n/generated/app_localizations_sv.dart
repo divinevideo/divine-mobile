@@ -1309,36 +1309,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Inga videor tillgängliga';
 
   @override
-  String get exploreDiscoverLists => 'Upptäck listor';
-
-  @override
-  String get exploreAboutLists => 'Om listor';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listor hjälper dig organisera och kuratera Divine-innehåll på två sätt:';
-
-  @override
-  String get explorePeopleLists => 'Personlistor';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Följ grupper av kreatörer och se deras senaste videor';
-
-  @override
-  String get exploreVideoLists => 'Videolistor';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Skapa spellistor med dina favoritvideor för att titta på senare';
-
-  @override
-  String get exploreMyLists => 'Mina listor';
-
-  @override
-  String get exploreSubscribedLists => 'Prenumererade listor';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Fel vid inläsning av listor. Försök igen.';
 
@@ -4920,6 +4890,9 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String get listsDiscoveryEmpty => 'Nothing to discover yet. Pull to refresh.';
+
+  @override
   String get listShareAction => 'Dela lista';
 
   @override
@@ -6011,31 +5984,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Kunde inte uppdatera prenumerationen. Försök igen.';
-
-  @override
-  String get discoverListsTitle => 'Upptäck listor';
-
-  @override
-  String get discoverListsFailedToLoad => 'Kunde inte ladda listor';
-
-  @override
-  String get discoverListsLoading => 'Söker upp publika listor...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relayen returnerade inga listor i tid. Försök igen.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Tjänsten är inte tillgänglig.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Inga publika listor hittades';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Kom tillbaka senare för nya listor';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'av';
 
   @override
   String get curatedListEmptyTitle => 'Inga videor i den här listan';

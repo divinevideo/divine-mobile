@@ -1293,36 +1293,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Tiada video tersedia';
 
   @override
-  String get exploreDiscoverLists => 'Terokai Senarai';
-
-  @override
-  String get exploreAboutLists => 'Perihal Senarai';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Senarai membantu anda menyusun dan mengurus kandungan Divine dalam dua cara:';
-
-  @override
-  String get explorePeopleLists => 'Senarai Orang';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Ikut kumpulan pencipta dan lihat video terbaharu mereka';
-
-  @override
-  String get exploreVideoLists => 'Senarai Video';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Cipta senarai main video kegemaran anda untuk ditonton nanti';
-
-  @override
-  String get exploreMyLists => 'Senarai Saya';
-
-  @override
-  String get exploreSubscribedLists => 'Senarai Langganan';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Ralat memuatkan senarai. Sila cuba lagi.';
 
@@ -4927,6 +4897,9 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String get listsDiscoveryEmpty => 'Nothing to discover yet. Pull to refresh.';
+
+  @override
   String get listShareAction => 'Kongsi senarai';
 
   @override
@@ -6023,32 +5996,6 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Gagal mengemas kini langganan. Sila cuba lagi.';
-
-  @override
-  String get discoverListsTitle => 'Terokai Senarai';
-
-  @override
-  String get discoverListsFailedToLoad => 'Gagal memuatkan senarai';
-
-  @override
-  String get discoverListsLoading => 'Menemui senarai awam...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay tidak memulangkan senarai tepat pada masanya. Cuba lagi.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Perkhidmatan tidak tersedia.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Tiada senarai awam ditemui';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Semak semula nanti untuk senarai baharu';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'oleh';
 
   @override
   String get curatedListEmptyTitle => 'Tiada video dalam senarai ini';

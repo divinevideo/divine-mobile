@@ -1348,36 +1348,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Aucune vidéo disponible';
 
   @override
-  String get exploreDiscoverLists => 'Découvrir les listes';
-
-  @override
-  String get exploreAboutLists => 'À propos des listes';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Les listes t\'aident à organiser et curater le contenu Divine de deux façons :';
-
-  @override
-  String get explorePeopleLists => 'Listes de personnes';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Suis des groupes de créateurs et vois leurs dernières vidéos';
-
-  @override
-  String get exploreVideoLists => 'Listes de vidéos';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Crée des playlists de tes vidéos préférées à regarder plus tard';
-
-  @override
-  String get exploreMyLists => 'Mes listes';
-
-  @override
-  String get exploreSubscribedLists => 'Listes abonnées';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Erreur de chargement des listes. Réessaie.';
 
@@ -4992,6 +4962,9 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get listsDiscoveryEmpty => 'Nothing to discover yet. Pull to refresh.';
+
+  @override
   String get listShareAction => 'Partager la liste';
 
   @override
@@ -6092,32 +6065,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Impossible de mettre à jour l\'abonnement. Réessaie.';
-
-  @override
-  String get discoverListsTitle => 'Découvrir des listes';
-
-  @override
-  String get discoverListsFailedToLoad => 'Échec du chargement des listes';
-
-  @override
-  String get discoverListsLoading => 'Recherche de listes publiques...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Le relais n\'a pas renvoyé de listes à temps. Réessaie.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Service indisponible.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Aucune liste publique trouvée';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Reviens plus tard pour de nouvelles listes';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'par';
 
   @override
   String get curatedListEmptyTitle => 'Aucune vidéo dans cette liste';

@@ -1203,35 +1203,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exploreNoVideosAvailable => '動画がないよ';
 
   @override
-  String get exploreDiscoverLists => 'リストを見つけよう';
-
-  @override
-  String get exploreAboutLists => 'リストについて';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'リストを使うと、Divine のコンテンツを2つの方法で整理・キュレーションできるよ:';
-
-  @override
-  String get explorePeopleLists => 'ピープルリスト';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'クリエイターのグループをフォローして、最新の動画をチェックしよう';
-
-  @override
-  String get exploreVideoLists => 'ビデオリスト';
-
-  @override
-  String get exploreVideoListsDescription => 'お気に入りの動画をプレイリストにまとめて、あとで見よう';
-
-  @override
-  String get exploreMyLists => 'マイリスト';
-
-  @override
-  String get exploreSubscribedLists => '購読中のリスト';
-
-  @override
   String get exploreErrorLoadingLists => 'リストの読み込みに失敗。もう一回試してみて。';
 
   @override
@@ -4631,6 +4602,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get listsDiscoveryEmpty => 'Nothing to discover yet. Pull to refresh.';
+
+  @override
   String get listShareAction => 'リストを共有';
 
   @override
@@ -5696,30 +5670,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'サブスクリプションの更新がうまくいかなかった。もう一回試してみて。';
-
-  @override
-  String get discoverListsTitle => 'リストを見つける';
-
-  @override
-  String get discoverListsFailedToLoad => 'リストの読み込みに失敗';
-
-  @override
-  String get discoverListsLoading => '公開リストを探してるよ...';
-
-  @override
-  String get discoverListsRelayTimeout => 'リレーが時間内にリストを返さなかったよ。もう一度試してね。';
-
-  @override
-  String get discoverListsServiceUnavailable => 'サービスを利用できません。';
-
-  @override
-  String get discoverListsEmptyTitle => '公開リストが見つからなかった';
-
-  @override
-  String get discoverListsEmptySubtitle => 'あとでまたチェックしてみてね';
-
-  @override
-  String get discoverListsByAuthorPrefix => '作成者:';
 
   @override
   String get curatedListEmptyTitle => 'このリストには動画がないよ';

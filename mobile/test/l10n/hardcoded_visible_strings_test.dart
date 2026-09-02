@@ -26,8 +26,8 @@ void main() {
       final listCardSource = File(
         'lib/widgets/list_card.dart',
       ).readAsStringSync();
-      final discoverListsSource = File(
-        'lib/screens/discover_lists_screen.dart',
+      final exploreListsTabSource = File(
+        'lib/screens/explore/tabs/explore_lists_tab.dart',
       ).readAsStringSync();
       final curatedListFeedSource = File(
         'lib/screens/curated_list_feed_screen.dart',
@@ -44,8 +44,11 @@ void main() {
       expect(listCardSource, contains('context.l10n.listPersonCount'));
       expect(listCardSource, contains('context.l10n.listVideoCount'));
 
-      expect(discoverListsSource, isNot(contains("'video' : 'videos'")));
-      expect(discoverListsSource, contains('context.l10n.listVideoCount'));
+      expect(exploreListsTabSource, isNot(contains("'video' : 'videos'")));
+      expect(
+        exploreListsTabSource,
+        contains('context.l10n.listsDiscoveryEmpty'),
+      );
 
       expect(curatedListFeedSource, isNot(contains("'video' : 'videos'")));
       expect(curatedListFeedSource, contains('context.l10n.listVideoCount'));
@@ -114,8 +117,8 @@ void main() {
       final contentWarningSource = File(
         'lib/widgets/content_warning.dart',
       ).readAsStringSync();
-      final discoverListsSource = File(
-        'lib/screens/discover_lists_screen.dart',
+      final exploreListsTabSource = File(
+        'lib/screens/explore/tabs/explore_lists_tab.dart',
       ).readAsStringSync();
       final appsPermissionsSource = File(
         'lib/screens/apps/apps_permissions_screen.dart',
@@ -203,23 +206,19 @@ void main() {
         contains('contentWarningSensitiveContent'),
       );
 
-      expect(discoverListsSource, isNot(contains("title: 'Discover Lists'")));
       expect(
-        discoverListsSource,
-        isNot(contains("'Discovering public lists...'")),
+        exploreListsTabSource,
+        isNot(contains("title: 'Discover Lists'")),
       );
-      expect(discoverListsSource, isNot(contains("'Failed to load lists'")));
-      expect(discoverListsSource, isNot(contains("'No public lists found'")));
+      expect(exploreListsTabSource, isNot(contains("'Failed to load lists'")));
       expect(
-        discoverListsSource,
-        isNot(contains("'Check back later for new lists'")),
+        exploreListsTabSource,
+        isNot(contains("'No public lists found'")),
       );
       expect(
-        discoverListsSource,
-        contains('context.l10n.discoverListsTitle'),
+        exploreListsTabSource,
+        contains('context.l10n.exploreErrorLoadingLists'),
       );
-      expect(discoverListsSource, contains('discoverListsFailedToLoad'));
-      expect(discoverListsSource, contains('discoverListsLoading'));
 
       expect(
         curatedListFeedSource,

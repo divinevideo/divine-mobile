@@ -1292,36 +1292,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get exploreNoVideosAvailable => 'ምንም ቪዲዮዎች የሉም';
 
   @override
-  String get exploreDiscoverLists => 'ዝርዝሮችን ያግኙ';
-
-  @override
-  String get exploreAboutLists => 'ስለ ዝርዝሮች';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'ዝርዝሮች የDivine ይዘትን በሁለት መንገድ እንዲያደራጁ እና እንዲያዘጋጁ ያግዝዎታል፡';
-
-  @override
-  String get explorePeopleLists => 'የሰዎች ዝርዝሮች';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'የፈጣሪዎችን ቡድኖች ይከተሉ እና የቅርብ ጊዜ ቪዲዮዎቻቸውን ይመልከቱ';
-
-  @override
-  String get exploreVideoLists => 'የቪዲዮ ዝርዝሮች';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'በኋላ ለመመልከት የሚወዷቸውን ቪዲዮዎች አጫዋች ዝርዝሮችን ይፍጠሩ';
-
-  @override
-  String get exploreMyLists => 'የእኔ ዝርዝሮች';
-
-  @override
-  String get exploreSubscribedLists => 'የተመዘገቡ ዝርዝሮች';
-
-  @override
   String get exploreErrorLoadingLists => 'ዝርዝሮችን መጫን ላይ ስህተት። እባክህ እንደገና ሞክር።';
 
   @override
@@ -4802,6 +4772,9 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get listsDiscoveryEmpty => 'Nothing to discover yet. Pull to refresh.';
+
+  @override
   String get listShareAction => 'ዝርዝር አጋራ';
 
   @override
@@ -5875,30 +5848,6 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'የደንበኝነት ምዝገባን ማዘመን አልተሳካም። እባክህ እንደገና ሞክር።';
-
-  @override
-  String get discoverListsTitle => 'ዝርዝሮችን ያግኙ';
-
-  @override
-  String get discoverListsFailedToLoad => 'ዝርዝሮችን መጫን አልተሳካም';
-
-  @override
-  String get discoverListsLoading => 'የህዝብ ዝርዝሮችን በመፈለግ ላይ...';
-
-  @override
-  String get discoverListsRelayTimeout => 'ሪሌው በጊዜው ዝርዝሮችን አልመለሰም። እንደገና ሞክር።';
-
-  @override
-  String get discoverListsServiceUnavailable => 'አገልግሎቱ አይገኝም።';
-
-  @override
-  String get discoverListsEmptyTitle => 'ምንም የህዝብ ዝርዝሮች አልተገኙም';
-
-  @override
-  String get discoverListsEmptySubtitle => 'ለአዳዲስ ዝርዝሮች ቆይተው ይመልከቱ';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'በ';
 
   @override
   String get curatedListEmptyTitle => 'በዚህ ዝርዝር ውስጥ ምንም ቪዲዮዎች የሉም';

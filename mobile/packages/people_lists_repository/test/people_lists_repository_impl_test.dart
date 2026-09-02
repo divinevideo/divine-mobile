@@ -1443,6 +1443,8 @@ void main() {
 
         expect(list, isNotNull);
         expect(list!.name, equals('Crew'));
+        // Someone else's list must not surface owner affordances.
+        expect(list.isEditable, isFalse);
 
         final capturedFilters = verify(
           () => client.queryEvents(
