@@ -581,6 +581,46 @@ void main() {
       });
     });
 
+    group('resolveListThumbnails', () {
+      test('enriches lists with resolved thumbnail URLs', () async {
+        when(() => funnelcakeApiClient.getVideoStats(_videoEventId)).thenAnswer(
+          (_) async => VideoStats(
+            id: _videoEventId,
+            pubkey: _testPubkey,
+            createdAt: DateTime(2025),
+            kind: 34236,
+            dTag: 'd',
+            title: 'Test',
+            thumbnail: 'https://example.com/thumb.jpg',
+            videoUrl: 'https://example.com/video.mp4',
+            reactions: 0,
+            comments: 0,
+            reposts: 0,
+            engagementScore: 0,
+          ),
+        );
+
+        final enriched = await repository.resolveListThumbnails([
+          createList(id: 'list-1', videoEventIds: [_videoEventId]),
+        ]);
+
+        expect(enriched, hasLength(1));
+        expect(
+          enriched.single.thumbnailUrls,
+          equals(['https://example.com/thumb.jpg']),
+        );
+      });
+
+      test('leaves a list without videos untouched', () async {
+        final list = createList(id: 'list-1');
+
+        final enriched = await repository.resolveListThumbnails([list]);
+
+        expect(enriched.single.thumbnailUrls, isEmpty);
+        verifyNever(() => funnelcakeApiClient.getVideoStats(any()));
+      });
+    });
+
     group('searchAllLists', () {
       setUp(() {
         registerFallbackValue(<Filter>[]);
