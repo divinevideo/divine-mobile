@@ -1,3 +1,4 @@
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -127,6 +128,36 @@ void main() {
         expect(find.text('Test List'), findsOneWidget);
       });
 
+      testWidgets('paints the fan seams over loaded thumbnails', (
+        tester,
+      ) async {
+        // Regression: a background-positioned border sits under the
+        // full-bleed thumbnail image, so populated cards lost their seams
+        // while empty placeholder cards kept them.
+        await tester.pumpWidget(
+          buildSubject(
+            curatedList: createList(
+              videoEventIds: ['v1'],
+              thumbnailUrls: ['https://example.com/t.jpg'],
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final seams = tester
+            .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+            .where(
+              (box) =>
+                  box.position == DecorationPosition.foreground &&
+                  (box.decoration as BoxDecoration).border != null,
+            )
+            .toList();
+        expect(seams, isNotEmpty);
+        final border =
+            ((seams.first.decoration as BoxDecoration).border! as Border).top;
+        expect(border.color, VineTheme.darkColors.surfaceContainerHigh);
+      });
+
       testWidgets('video count badge', (tester) async {
         await tester.pumpWidget(
           buildSubject(
@@ -156,7 +187,7 @@ void main() {
         (tester) async {
           await tester.pumpWidget(buildSubject(curatedList: createList()));
 
-          expect(find.byType(DecoratedBox), findsNWidgets(6));
+          expect(find.byType(ClipRRect), findsNWidgets(5));
           expect(find.byType(PassiveAuthThumbnailImage), findsNothing);
         },
       );
