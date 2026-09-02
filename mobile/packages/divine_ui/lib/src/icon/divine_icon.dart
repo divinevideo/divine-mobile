@@ -190,6 +190,7 @@ enum DivineIconName {
   spinner('spinner'),
   squareDuo('square_duo'),
   squareFill('square_fill'),
+  squaresFour('squares_four'),
   stackSimple('stack_simple'),
   sticker('sticker'),
   sun('sun'),
