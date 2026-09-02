@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
@@ -193,7 +194,9 @@ class _DiscoveredPeopleListLoader extends ConsumerWidget {
         appBar: DiVineAppBar(
           title: context.l10n.peopleListsRouteTitle,
           showBackButton: true,
-          onBackPressed: context.pop,
+          // safePop: a cold deep link here is the only route on the stack,
+          // and a raw pop would throw GoError (#6112).
+          onBackPressed: context.safePop,
         ),
         body: const Center(child: BrandedLoadingIndicator(size: 60)),
       ),
