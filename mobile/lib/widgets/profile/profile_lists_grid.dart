@@ -42,11 +42,15 @@ class ProfileListsGrid extends ConsumerWidget {
         final ownLists =
             ref.read(curatedListsStateProvider.notifier).service?.myLists ??
             const <CuratedList>[];
-        // Instant render from the service's lists (placeholder fans); the
-        // enriched copies swap in once the thumbnail resolver returns.
+        // Membership comes from the service, so a list created or deleted
+        // just now is on screen immediately. The resolver only supplies
+        // thumbnails, and it lags: riverpod carries the previous value
+        // through a dependency-driven recompute, so a list the user just
+        // made is missing from `hydrated` for as long as every other list
+        // takes to resolve.
         final hydrated = ref.watch(myListsWithThumbnailsProvider).value;
         return _ProfileListsContent(
-          videoLists: hydrated ?? ownLists,
+          videoLists: _withResolvedThumbnails(ownLists, hydrated),
           peopleEnabled: peopleEnabled,
         );
       },
@@ -61,6 +65,30 @@ class ProfileListsGrid extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// [ownLists] with thumbnails filled in from [hydrated] where the resolver
+/// has caught up.
+///
+/// Lists it has not reached yet keep their placeholder fan rather than
+/// dropping out of the gallery.
+List<CuratedList> _withResolvedThumbnails(
+  List<CuratedList> ownLists,
+  List<CuratedList>? hydrated,
+) {
+  if (hydrated == null) return ownLists;
+  final thumbnailsById = <String, List<String>>{
+    for (final list in hydrated)
+      if (list.thumbnailUrls.isNotEmpty) list.id: list.thumbnailUrls,
+  };
+  if (thumbnailsById.isEmpty) return ownLists;
+  return [
+    for (final list in ownLists)
+      if (thumbnailsById[list.id] case final urls?)
+        list.copyWith(thumbnailUrls: urls)
+      else
+        list,
+  ];
 }
 
 class _ProfileListsContent extends StatelessWidget {
