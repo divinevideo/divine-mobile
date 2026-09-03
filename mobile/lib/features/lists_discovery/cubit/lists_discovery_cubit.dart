@@ -78,9 +78,16 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
       state.copyWith(videoStatus: ListsDiscoveryColumnStatus.loading),
     );
 
-    await _videoSubscription?.cancel();
+    // Take over the latch before yielding. `cancel()` fires neither onDone
+    // nor onError, so a superseded load's completer has to be settled here
+    // or its `load()` future hangs forever — and once this field points at
+    // the new completer, `close()` can no longer reach the old one.
     final completion = Completer<void>();
+    final superseded = _videoStreamSettled;
     _videoStreamSettled = completion;
+    if (superseded != null && !superseded.isCompleted) superseded.complete();
+
+    await _videoSubscription?.cancel();
     var latest = const <CuratedList>[];
 
     _videoSubscription = _curatedListService
@@ -122,13 +129,22 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
         );
 
     await completion.future;
-    await _hydrateThumbnails(latest);
+    await _hydrateThumbnails(latest, generation: completion);
   }
 
   /// Streamed lists render immediately with placeholder fans; the enriched
   /// copies replace them once the resolver returns.
-  Future<void> _hydrateThumbnails(List<CuratedList> lists) async {
+  ///
+  /// [generation] is the load this resolve belongs to. Resolving is slow —
+  /// per video a funnelcake call plus a batched relay query — so a refresh
+  /// can land while it is in flight; emitting then would replace the fresh
+  /// lists with the ones this load started from.
+  Future<void> _hydrateThumbnails(
+    List<CuratedList> lists, {
+    required Completer<void> generation,
+  }) async {
     if (lists.isEmpty || isClosed) return;
+    if (!identical(_videoStreamSettled, generation)) return;
     try {
       final enriched = await _curatedListRepository.resolveListThumbnails(
         lists,
@@ -137,6 +153,7 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
         // ignore: avoid_redundant_argument_values
         maxThumbnails: kListsDiscoveryThumbnails,
       );
+      if (!identical(_videoStreamSettled, generation)) return;
       emitIfOpen(state.copyWith(videoLists: _sortedVideoLists(enriched)));
     } catch (error, stackTrace) {
       // Thumbnails are progressive enhancement: the cards already render
