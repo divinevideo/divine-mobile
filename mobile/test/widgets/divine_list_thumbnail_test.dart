@@ -4,6 +4,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' hide AspectRatio;
@@ -324,6 +325,22 @@ void main() {
         // 5 card slots + 1 count badge remain regardless of how many
         // thumbnails are supplied.
         expect(find.byType(DecoratedBox), findsAtLeastNWidgets(6));
+      });
+
+      testWidgets('announces each card as a button', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(curatedList: createList(name: 'Dance Moves')),
+        );
+
+        final card = tester
+            .getSemantics(find.byType(DivineListThumbnail))
+            .getSemanticsData();
+        expect(
+          card.flagsCollection.isButton,
+          isTrue,
+          reason: 'a list card is a tap target, not a label',
+        );
+        expect(card.hasAction(SemanticsAction.tap), isTrue);
       });
 
       testWidgets('calls onTap when tapped', (tester) async {
