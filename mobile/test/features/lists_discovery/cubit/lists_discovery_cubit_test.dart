@@ -280,6 +280,107 @@ void main() {
         expect(cubit.state.videoLists.single.thumbnailUrls, isEmpty);
       });
 
+      test(
+        'completes a superseded load future when a refresh cancels it',
+        () async {
+          final first = StreamController<List<CuratedList>>();
+          final second = StreamController<List<CuratedList>>();
+          var call = 0;
+          when(
+            () =>
+                service.streamPublicListsFromRelays(limit: any(named: 'limit')),
+          ).thenAnswer((_) => call++ == 0 ? first.stream : second.stream);
+          when(
+            () => peopleRepository.discoverPublicLists(
+              limit: any(named: 'limit'),
+              excludeAuthor: any(named: 'excludeAuthor'),
+            ),
+          ).thenAnswer((_) async => const []);
+
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+
+          // BlocProvider.create fires this one and never awaits it.
+          var firstDone = false;
+          unawaited(cubit.load().then((_) => firstDone = true));
+          await pumpEventQueue();
+
+          // RefreshIndicator fires this one and does await it.
+          var secondDone = false;
+          unawaited(cubit.load().then((_) => secondDone = true));
+          await pumpEventQueue();
+
+          second.add([_videoList('fresh')]);
+          await second.close();
+          await pumpEventQueue();
+
+          expect(secondDone, isTrue);
+          expect(
+            firstDone,
+            isTrue,
+            reason:
+                'cancel() fires no onDone, so the superseded latch must be '
+                'released by the load that supersedes it',
+          );
+          await first.close();
+        },
+      );
+
+      test('a superseded hydration does not overwrite a newer load', () async {
+        final first = StreamController<List<CuratedList>>();
+        final second = StreamController<List<CuratedList>>();
+        var call = 0;
+        when(
+          () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
+        ).thenAnswer((_) => call++ == 0 ? first.stream : second.stream);
+        when(
+          () => peopleRepository.discoverPublicLists(
+            limit: any(named: 'limit'),
+            excludeAuthor: any(named: 'excludeAuthor'),
+          ),
+        ).thenAnswer((_) async => const []);
+
+        // The first resolve is still in flight when the refresh lands.
+        final slowResolve = Completer<List<CuratedList>>();
+        var resolves = 0;
+        when(
+          () => curatedRepository.resolveListThumbnails(
+            any(),
+            maxThumbnails: any(named: 'maxThumbnails'),
+          ),
+        ).thenAnswer((invocation) {
+          if (resolves++ == 0) return slowResolve.future;
+          return Future.value(
+            invocation.positionalArguments.first as List<CuratedList>,
+          );
+        });
+
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        unawaited(cubit.load());
+        await pumpEventQueue();
+        first.add([_videoList('stale')]);
+        await first.close();
+        await pumpEventQueue();
+
+        unawaited(cubit.load());
+        await pumpEventQueue();
+        second.add([_videoList('fresh')]);
+        await second.close();
+        await pumpEventQueue();
+        expect(cubit.state.videoLists.single.id, equals('fresh'));
+
+        slowResolve.complete([_videoList('stale')]);
+        await pumpEventQueue();
+
+        expect(
+          cubit.state.videoLists.single.id,
+          equals('fresh'),
+          reason: 'the first load resolve must not revert the refreshed column',
+        );
+      });
+
       test('drops emissions after close without throwing', () async {
         final controller = StreamController<List<CuratedList>>();
         when(
