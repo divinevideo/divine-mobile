@@ -180,6 +180,10 @@ void main() {
         await tester.pumpWidget(buildSubject(curatedList: createList()));
 
         expect(find.text('Test List'), findsOneWidget);
+        // The reserved two-line box stays (see the equal-height test below),
+        // but nothing is rendered into it — asserting only the title would
+        // still pass if the box held a literal "null" or a stray empty Text.
+        expect(find.byType(LinkifiedText), findsNothing);
       });
 
       testWidgets('renders no description text when empty', (tester) async {
@@ -188,6 +192,7 @@ void main() {
         );
 
         expect(find.text('Test List'), findsOneWidget);
+        expect(find.byType(LinkifiedText), findsNothing);
       });
 
       testWidgets('keeps the same card height with and without a description', (
@@ -322,9 +327,11 @@ void main() {
         )) {
           expect(image.alignment, equals(Alignment.center));
         }
-        // 5 card slots + 1 count badge remain regardless of how many
-        // thumbnails are supplied.
-        expect(find.byType(DecoratedBox), findsAtLeastNWidgets(6));
+        // All 5 slots stay regardless of how many thumbnails arrive: 5 slot
+        // clips plus the outer media-block clip, same count as the
+        // no-thumbnails case above. `findsAtLeastN` on DecoratedBox could
+        // not catch a drop to 3 slots — each slot builds two of them.
+        expect(find.byType(ClipRRect), findsNWidgets(6));
       });
 
       testWidgets('announces each card as a button', (tester) async {

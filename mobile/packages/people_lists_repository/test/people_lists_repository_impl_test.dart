@@ -1839,6 +1839,46 @@ void main() {
         expect(emissions.single.single.list.name, equals('Crew Lower id'));
       });
 
+      test('keeps the newest event when the newer one arrives first', () async {
+        // Relay/cache merge order is not guaranteed (queryEvents builds
+        // an EventMemBox with sortAfterAdd: false), and the cache holding
+        // the newer version while a lagging relay serves the older one
+        // produces exactly this order. Fed oldest-first only, the dedup
+        // guard can be deleted outright and the sibling test stays green.
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+
+        final older = peopleEvent(
+          pubkey: _ownerPubkey,
+          dTag: 'crew',
+          title: 'Crew',
+          pubkeys: const [_memberA],
+          createdAt: 1710000000,
+        );
+        final newer = peopleEvent(
+          pubkey: _ownerPubkey,
+          dTag: 'crew',
+          title: 'Crew Updated',
+          pubkeys: const [_memberA, _memberB],
+          createdAt: 1710000500,
+        );
+        when(
+          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+        ).thenAnswer((_) async => [newer, older]);
+
+        final repository = buildRepository(nostrClient: client);
+
+        final emissions = await repository.searchPublicLists('crew').toList();
+
+        expect(emissions, hasLength(1));
+        expect(emissions.single, hasLength(1));
+        expect(emissions.single.single.list.name, equals('Crew Updated'));
+        expect(
+          emissions.single.single.list.pubkeys,
+          equals(const [_memberA, _memberB]),
+        );
+      });
+
       test('does not yield when no events match the query', () async {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
