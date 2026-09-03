@@ -2,10 +2,13 @@
 // ABOUTME: of own video and people lists, the create button, and the
 // ABOUTME: bookmarks entry that keeps kind 10003 saves readable.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
@@ -244,6 +247,72 @@ void main() {
         // Own list: no owner query param, so the members screen selects it
         // from the owner-scoped bloc.
         expect(pushedRoute, equals('/people-lists/crew'));
+      });
+    });
+
+    group('list membership vs thumbnail hydration', () {
+      testWidgets('renders a list the resolver has not caught up with', (
+        tester,
+      ) async {
+        _fakeLists = [_videoList('a')];
+        when(() => mockListService.myLists).thenReturn([_videoList('a')]);
+
+        // Faithful to the real provider: depends on curatedListsStateProvider,
+        // then awaits the resolver. The second pass is held open so the
+        // recompute window is observable.
+        var pass = 0;
+        final slowResolve = Completer<void>();
+
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              curatedListsStateProvider.overrideWith(
+                _FakeCuratedListsState.new,
+              ),
+              myListsWithThumbnailsProvider.overrideWith((ref) async {
+                await ref.watch(curatedListsStateProvider.future);
+                final lists = mockListService.myLists;
+                if (lists.isEmpty) return lists;
+                if (pass++ > 0) await slowResolve.future;
+                return lists;
+              }),
+            ],
+            child: BlocProvider<PeopleListsBloc>.value(
+              value: peopleListsBloc,
+              child: const MaterialApp(
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: ProfileListsGrid()),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Video a'), findsOneWidget);
+
+        // The user creates a list: the service gains it and notifies, so
+        // curatedListsStateProvider re-emits and the resolver restarts.
+        _fakeLists = [_videoList('a'), _videoList('b')];
+        when(
+          () => mockListService.myLists,
+        ).thenReturn([_videoList('a'), _videoList('b')]);
+        ProviderScope.containerOf(
+          tester.element(find.byType(ProfileListsGrid)),
+        ).invalidate(curatedListsStateProvider);
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('Video a'), findsOneWidget);
+        expect(
+          find.text('Video b'),
+          findsOneWidget,
+          reason:
+              'a just-created list must not wait for every other list to '
+              'resolve its thumbnails',
+        );
+
+        slowResolve.complete();
+        await tester.pumpAndSettle();
       });
     });
   });
