@@ -88,6 +88,10 @@ class DivineListThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       label: name,
+      // Without this the card is announced as text: the tap action is
+      // exposed by the GestureDetector, but the role is not, so it never
+      // shows up in a screen reader's button rotor.
+      button: true,
       container: true,
       child: GestureDetector(
         onTap: onTap,
