@@ -2,6 +2,7 @@
 // ABOUTME: Tests data gathering, sensitive data removal, and report packaging
 
 import 'dart:io' show Platform;
+import 'dart:ui' show Locale;
 
 import 'package:analytics/analytics.dart';
 import 'package:flutter/services.dart';
@@ -451,6 +452,46 @@ void main() {
           ? 'Only runs on iOS/Android'
           : null,
     );
+
+    group('locale diagnostics', () {
+      // For most of the 21+ supported locales there is no native reviewer, so
+      // a copy report is the only signal - and it can only be routed if it says
+      // which language the app was rendering. The resolved UI locale is that
+      // language; the device locale is recorded only when it differs, because
+      // a device set to Amharic that is showing the English fallback is a
+      // different bug from a bad Amharic string (#7939).
+      test('records the resolved UI locale in deviceInfo', () async {
+        final service = BugReportService(
+          resolvedUiLocaleLoader: () => const Locale('am'),
+          deviceLocaleLoader: () => const Locale('am'),
+        );
+
+        final data = await service.collectDiagnostics(
+          userDescription: 'This screen is showing bad copy',
+        );
+
+        expect(data.deviceInfo['locale'], 'am');
+        // Same language shown as requested, so no device-locale line to add.
+        expect(data.deviceInfo.containsKey('deviceLocale'), isFalse);
+      });
+
+      test(
+        'records the device locale when it differs from the resolved locale',
+        () async {
+          final service = BugReportService(
+            resolvedUiLocaleLoader: () => const Locale('en'),
+            deviceLocaleLoader: () => const Locale('am', 'ET'),
+          );
+
+          final data = await service.collectDiagnostics(
+            userDescription: 'App is in English but my phone is Amharic',
+          );
+
+          expect(data.deviceInfo['locale'], 'en');
+          expect(data.deviceInfo['deviceLocale'], 'am-ET');
+        },
+      );
+    });
 
     group('clearCapturedLogs', () {
       test('empties the in-memory capture buffer', () async {

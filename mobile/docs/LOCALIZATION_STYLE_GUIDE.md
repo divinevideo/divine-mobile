@@ -485,11 +485,12 @@ screen and a language is a Tier 3 finding with a source behind it — the thing
 this repo otherwise cannot generate. Treat it as an ordinary bug, fix the key,
 and if it overturns a decision in this file, change the file too.
 
-The report carries platform, device model, OS and app version
-(`bug_report_service.dart`) but **not the app's locale**, so a copy report
-arrives without the one field that would route it — tracked in
-[#7939](https://github.com/divinevideo/divine-mobile/issues/7939). Until that
-lands, ask which language they were reading.
+The report carries platform, device model, OS and app version, and the
+**resolved app UI locale** — the language the app was actually rendering —
+plus the device locale when it differs (`bug_report_service.dart`, #7939). So a
+copy report already names the language to route it by; a resolved locale that is
+English while the device asked for another language is itself a signal (a
+missing translation forcing the fallback), not a bad string in that language.
 
 ### Who signs off
 

@@ -2,6 +2,7 @@
 // ABOUTME: Lives outside social_providers so it can watch the storage service
 // ABOUTME: without creating an import cycle with storage_providers.
 
+import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
@@ -25,6 +26,9 @@ BugReportService bugReportService(Ref ref) {
   return BugReportService(
     errorTracker: ref.watch(errorAnalyticsTrackerProvider),
     storageManagementService: ref.watch(storageManagementServiceProvider),
+    // Preference-aware so a language chosen in Settings is reflected, not just
+    // the device locales.
+    resolvedUiLocaleLoader: () => currentAppUiLocale(preferences),
     supportDiagnosticsLoader: () async {
       final recovery = DatabaseRecoveryStore(preferences: preferences).read();
       final localContent = await LocalContentDiagnosticsService(

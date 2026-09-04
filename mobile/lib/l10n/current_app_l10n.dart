@@ -16,16 +16,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// without requiring a [BuildContext]. Use this from services that are
 /// constructed inside Riverpod factories or other context-less call sites
 /// — e.g. `CollaboratorInviteService` built by `VideoPublishService`.
-AppLocalizations currentAppL10n(SharedPreferences prefs) {
+AppLocalizations currentAppL10n(SharedPreferences prefs) =>
+    lookupAppLocalizations(currentAppUiLocale(prefs));
+
+/// Returns the [Locale] the app UI is currently rendering in, without a
+/// [BuildContext].
+///
+/// Mirrors what `MaterialApp.router` resolves at runtime: the user's saved
+/// preference (`LocaleCubit`) when set and supported, otherwise the device
+/// locales resolved through [resolveAppUiLocale] (which can fall back to
+/// English). This is the resolved value, not the raw device language — a
+/// device set to a locale with no translation is reading the fallback.
+Locale currentAppUiLocale(SharedPreferences prefs) {
   final saved = prefs.getString(LocalePreferenceService.prefsKey);
   const supported = AppLocalizations.supportedLocales;
   final isSupported =
       saved != null && supported.any((locale) => locale.languageCode == saved);
-  final locale = isSupported
+  return isSupported
       ? Locale(saved)
       : resolveAppUiLocale(
           PlatformDispatcher.instance.locales,
           supported,
         );
-  return lookupAppLocalizations(locale);
 }
