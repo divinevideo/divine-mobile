@@ -434,7 +434,7 @@ class UploadProgressReporter {
         'file_exists': !_isWeb && File(upload.localVideoPath).existsSync(),
         // Network connectivity information
         'network_type': networkTypeString(connectivity),
-        'network_status': connectivity.toString(),
+        'network_status': _legacyConnectivityName(connectivity),
         'is_offline': connectivity == UploadConnectivity.none,
         'is_cellular': connectivity == UploadConnectivity.mobile,
         'is_wifi': connectivity == UploadConnectivity.wifi,
@@ -524,6 +524,16 @@ ${metrics != null ? '- File Size: ${metrics.fileSizeMB} MB\n- Duration: ${metric
       _ => false,
     };
   }
+
+  static String _legacyConnectivityName(UploadConnectivity connectivity) =>
+      switch (connectivity) {
+        UploadConnectivity.wifi => 'ConnectivityResult.wifi',
+        UploadConnectivity.mobile => 'ConnectivityResult.mobile',
+        UploadConnectivity.ethernet => 'ConnectivityResult.ethernet',
+        UploadConnectivity.vpn => 'ConnectivityResult.vpn',
+        UploadConnectivity.none => 'ConnectivityResult.none',
+        UploadConnectivity.other => 'ConnectivityResult.other',
+      };
 
   /// Send an initialization-failure report to Crashlytics.
   Future<void> sendInitializationFailureCrashReport(
