@@ -822,6 +822,8 @@ void main() {
       ]);
 
       expect(result.count, equals(42));
+      final firstId = relay1.sentMessages.single[1] as String;
+      expect(RegExp(r'^[0-9a-z]{16}_0$').hasMatch(firstId), isTrue);
     });
 
     test('count succeeds when some relays fail and some succeed', () async {

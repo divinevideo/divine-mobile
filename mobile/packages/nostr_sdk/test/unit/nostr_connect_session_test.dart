@@ -228,6 +228,24 @@ void main() {
       session.dispose();
     });
 
+    test(
+      'uses a 12-character subscription id from the name alphabet',
+      () async {
+        final relay = await TestRelayServer.start();
+        addTearDown(relay.close);
+        final session = NostrConnectSession(relays: [relay.url]);
+        addTearDown(session.dispose);
+
+        await session.start();
+        await _waitUntil(() => relay.receivedMessages.any(_isReqMessage));
+        final request = relay.receivedMessages.firstWhere(_isReqMessage);
+        final subscriptionId = request[1] as String;
+
+        expect(subscriptionId, hasLength(12));
+        expect(RegExp(r'^[0-9a-z]{12}$').hasMatch(subscriptionId), isTrue);
+      },
+    );
+
     test('cancel from idle state transitions to cancelled', () {
       final session = NostrConnectSession(relays: ['wss://relay.example.com']);
 
