@@ -84,6 +84,10 @@ List<RouteBase> shellRoutes() {
           routes: [
             GoRoute(
               path: RoutePaths.followingNew,
+              // This contract location intentionally parses as RouteType.following
+              // while rendering the home branch's Following feed. Keep the exact
+              // literal ahead of /following/:pubkey so `new` is never treated as
+              // an account identifier.
               pageBuilder: (ctx, st) => _branchPage(
                 st,
                 const VideoFeedPage(initialMode: FeedMode.following),
