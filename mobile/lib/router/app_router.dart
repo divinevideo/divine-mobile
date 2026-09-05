@@ -1,22 +1,17 @@
 // ABOUTME: GoRouter configuration with ShellRoute for per-tab state preservation
 // ABOUTME: URL is source of truth, bottom nav bound to routes; routes split by feature
 
-import 'dart:async';
-
 import 'package:analytics/analytics.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/blocs/invite_availability/invite_availability_cubit.dart';
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
-import 'package:openvine/models/invite_availability.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/invite_availability_providers.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/product_analytics_navigation_observer.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
@@ -91,35 +86,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = RouterRefreshListenable(
     authService.authStateStream,
   );
-  var lastInviteRedirectSignature = (false, true);
-  StreamSubscription<InviteAvailabilityState>? inviteAvailabilitySub;
-
-  void refreshForInviteAvailability(InviteAvailabilityState state) {
-    final signature = (state.hasResolved, state.isEnabled);
-    if (signature == lastInviteRedirectSignature) return;
-    lastInviteRedirectSignature = signature;
-    refreshListenable.refresh();
-  }
-
-  void subscribeToInviteAvailability(InviteAvailabilityCubit cubit) {
-    unawaited(inviteAvailabilitySub?.cancel());
-    lastInviteRedirectSignature = (
-      cubit.state.hasResolved,
-      cubit.state.isEnabled,
-    );
-    inviteAvailabilitySub = cubit.stream.listen(refreshForInviteAvailability);
-  }
-
-  subscribeToInviteAvailability(ref.read(inviteAvailabilityCubitProvider));
-  ref.listen(inviteAvailabilityCubitProvider, (previous, next) {
-    if (identical(previous, next)) return;
-    subscribeToInviteAvailability(next);
-    refreshListenable.refresh();
-  });
-  ref.onDispose(() {
-    unawaited(inviteAvailabilitySub?.cancel());
-  });
-
   ref.listen(currentMinorAccountReviewStatusProvider, (previous, next) {
     // A resume/background refetch that resolves to a routing-identical status
     // (active → active) must not refresh: refreshing churns the route pipeline

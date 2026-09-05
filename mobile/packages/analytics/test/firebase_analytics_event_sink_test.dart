@@ -68,15 +68,22 @@ void main() {
 
     test('forwards user properties to Firebase Analytics', () async {
       when(
-        () =>
-            analytics.setUserProperty(name: 'invite_code', value: 'ABCD-EFGH'),
+        () => analytics.setUserProperty(
+          name: 'experiment_variant',
+          value: 'variant-a',
+        ),
       ).thenAnswer((_) async {});
 
-      await sink.setUserProperty(name: 'invite_code', value: 'ABCD-EFGH');
+      await sink.setUserProperty(
+        name: 'experiment_variant',
+        value: 'variant-a',
+      );
 
       verify(
-        () =>
-            analytics.setUserProperty(name: 'invite_code', value: 'ABCD-EFGH'),
+        () => analytics.setUserProperty(
+          name: 'experiment_variant',
+          value: 'variant-a',
+        ),
       ).called(1);
     });
 

@@ -41,7 +41,7 @@ String? pendingEmailVerificationRestoreLocation(PendingVerification? pending) {
   if (pending == null || pending.isExpired) return null;
   // The deviceCode and verifier are secrets and must never ride on a URL that
   // could be logged or leaked. Only the (log-redacted) email and the restore
-  // flag travel here; the screen rehydrates deviceCode / verifier / inviteCode
+  // flag travel here; the screen rehydrates deviceCode and verifier
   // from the persisted record on the restore path.
   return pendingEmailVerificationLocation(email: pending.email);
 }

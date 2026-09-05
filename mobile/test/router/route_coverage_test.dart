@@ -30,7 +30,6 @@ import 'package:openvine/screens/relay_settings_screen.dart';
 import 'package:openvine/screens/safety_settings_screen.dart';
 import 'package:openvine/screens/settings/appearance_settings_screen.dart';
 import 'package:openvine/screens/settings/crossposting_settings_screen.dart';
-import 'package:openvine/screens/settings/invites_screen.dart';
 import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
 import 'package:openvine/screens/settings/nip05_settings_screen.dart';
 import 'package:openvine/screens/settings/nostr_settings_screen.dart';
@@ -122,14 +121,6 @@ void main() {
           expect(context.type, RouteType.safetySettings);
         },
       );
-
-      // Regression: /invites used to fall through to RouteType.home, which
-      // caused routeNormalizationProvider to rewrite /invites → /home/0 the
-      // moment the user tapped the "you have N invites to share" notification.
-      test('${InvitesScreen.path} parses to RouteType.invites', () {
-        final context = parseRoute(InvitesScreen.path);
-        expect(context.type, RouteType.invites);
-      });
 
       test('${BadgesScreen.path} parses to RouteType.badges', () {
         final context = parseRoute(BadgesScreen.path);
@@ -613,7 +604,6 @@ void main() {
       'relay settings': RelaySettingsScreen.path,
       'video edit': VideoMetadataEditScreen.pathFor('test-id-abc'),
       'subtitle edit': SubtitleEditorScreen.pathFor('test-id-abc'),
-      'invites': InvitesScreen.path,
       'people list create': CreatePeopleListPage.path,
       'people list members': '/people-lists/list%3A123',
       'people list add people': '/people-lists/list%3A123/add-people',
@@ -651,7 +641,6 @@ void main() {
         RouteType.videoEdit: VideoMetadataEditScreen.pathFor('test-id-abc'),
         RouteType.subtitleEdit: SubtitleEditorScreen.pathFor('test-id-abc'),
         RouteType.importKey: KeyImportScreen.path,
-        RouteType.invites: InvitesScreen.path,
         RouteType.badges: BadgesScreen.path,
         RouteType.settings: SettingsScreen.path,
         RouteType.crosspostingSettings: CrosspostingSettingsScreen.path,

@@ -14,11 +14,6 @@ class AppConfig {
     defaultValue: 'https://api.divine.video',
   );
 
-  static const String inviteServerBaseUrl = String.fromEnvironment(
-    'INVITE_SERVER_URL',
-    defaultValue: 'https://invite.divine.video',
-  );
-
   static const String appsDirectoryBaseUrl = String.fromEnvironment(
     'APPS_DIRECTORY_URL',
     defaultValue: 'https://apps.divine.video',
@@ -39,10 +34,6 @@ class AppConfig {
   static bool get isDevelopment => environment == 'development';
   static bool get isStaging => environment == 'staging';
   static bool get isProduction => environment == 'production';
-  static const bool isGhActionsPrPreviewBuild = bool.fromEnvironment(
-    'GH_ACTIONS_PR_PREVIEW',
-  );
-
   // App configuration
   static const String appName = 'Divine';
 
@@ -80,12 +71,10 @@ class AppConfig {
   static Map<String, dynamic> getConfigSummary() => {
     'environment': environment,
     'backendUrl': backendBaseUrl,
-    'inviteServerUrl': inviteServerBaseUrl,
     'appsDirectoryUrl': appsDirectoryBaseUrl,
     'crossposterUrl': crossposterBaseUrl,
     'isDevelopment': isDevelopment,
     'isProduction': isProduction,
-    'isGhActionsPrPreviewBuild': isGhActionsPrPreviewBuild,
     // External relay configuration DELETED
     // Multi-agent development flags
     'enableCameraOptimizations': enableCameraOptimizations,

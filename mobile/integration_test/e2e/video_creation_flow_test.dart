@@ -1,6 +1,6 @@
 // ABOUTME: Complete end-to-end integration test for video creation flow
 // ABOUTME: Tests app start -> welcome screen -> auth -> camera navigation
-// ABOUTME: Requires: the local stack's invite service (mise run local_up).
+// ABOUTME: Requires the local stack (mise run local_up).
 // ABOUTME: navigateToCreateAccount needs OnboardingMode.open for LOCAL.
 
 @Tags(['service'])

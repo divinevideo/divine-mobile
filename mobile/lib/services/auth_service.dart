@@ -1091,26 +1091,6 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     _reportAuthError(error, stack, reason: reason, logMessage: reason);
   }
 
-  /// Clears any persisted Divine OAuth session that was created before an
-  /// invite consume completed.
-  ///
-  /// Invite flows can exchange OAuth tokens before invite activation runs.
-  /// If activation then fails, startup must not restore that partial session
-  /// and bypass the invite gate on the next launch.
-  Future<void> clearPendingDivineOAuthSession() async {
-    try {
-      await _clearKeycastSessionAndTokens();
-    } catch (e) {
-      Log.warning(
-        'Failed to clear pending Divine OAuth session: $e',
-        name: 'AuthService',
-        category: LogCategory.auth,
-      );
-      // Invite activation failures can legitimately leave no session to clear.
-      // Keep local visibility without sending expected cleanup noise upstream.
-    }
-  }
-
   /// Initialize the authentication service
   Future<void> initialize() async {
     Log.debug(

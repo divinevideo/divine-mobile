@@ -136,10 +136,7 @@ jobs:
       # axes. The generated-files guard accounts for every suite against these
       # lists or service_suite_exclusions.txt.
       #
-      # local_stack cannot start on a GitHub runner at all:
-      # divine-invite-darshan:e2e is a private GHCR package, compose resolves
-      # every image before starting any, so zero containers come up. The
-      # suites below need none of it — they stand up their own in-process relay
+      # The suites below need no local stack — they stand up their own in-process relay
       # (integration_test/helpers/fake_relay.dart).
       - name: 🚀 Run service integration tests
         env:

@@ -2,7 +2,6 @@
 // ABOUTME: migrated off the factory-singleton pattern to constructor injection (#4743).
 
 import 'package:analytics/analytics.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/features/creation_analytics/creation_analytics_tracker.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
@@ -19,17 +18,6 @@ class AnalyticsIdentityCoordinator {
        _setCrashUserId = setCrashUserId;
 
   static final _hexPubkey = RegExp(r'^[0-9a-fA-F]{64}$');
-
-  /// The identity this app process last applied to Firebase.
-  ///
-  /// Static because the Firebase identity is process-global while this
-  /// coordinator is not: an account switch builds a fresh [ProviderContainer],
-  /// so a per-instance field would start at `null` and read the switch as a
-  /// first login.
-  static String? _lastAppliedUserId;
-
-  @visibleForTesting
-  static void resetLastAppliedUserId() => _lastAppliedUserId = null;
 
   final AnalyticsEventSink _analytics;
   final CrashUserIdSetter _setCrashUserId;
@@ -49,15 +37,6 @@ class AnalyticsIdentityCoordinator {
     // identity is lowercased rather than passed through as received.
     final pubkeyHex = rawPubkeyHex?.toLowerCase();
 
-    // `invite_code` is user-scoped, so it outlives the identity it was
-    // recorded for unless every identity change clears it. Logout is not the
-    // only one: an in-place account switch swaps containers without ever
-    // passing through an unauthenticated state.
-    final previousUserId = _lastAppliedUserId;
-    final identityChanged =
-        previousUserId != null && previousUserId != pubkeyHex;
-    _lastAppliedUserId = pubkeyHex;
-
     try {
       await _analytics.setUserId(pubkeyHex);
     } catch (error) {
@@ -66,21 +45,6 @@ class AnalyticsIdentityCoordinator {
         name: 'AnalyticsIdentityCoordinator',
         category: LogCategory.auth,
       );
-    }
-
-    if (pubkeyHex == null || identityChanged) {
-      try {
-        await _analytics.setUserProperty(
-          name: AnalyticsUserProperty.inviteCode,
-          value: null,
-        );
-      } catch (error) {
-        Log.warning(
-          'Failed to clear Firebase Analytics invite attribution: $error',
-          name: 'AnalyticsIdentityCoordinator',
-          category: LogCategory.auth,
-        );
-      }
     }
 
     try {

@@ -21,7 +21,6 @@ void main() {
         location == '/welcome' ||
         location == '/welcome/login-options' ||
         location == '/welcome/create-account' ||
-        location == '/welcome/invite' ||
         location == '/nostr-connect';
 
     // A non-default timeout keeps the floor explicit in the elapse math.

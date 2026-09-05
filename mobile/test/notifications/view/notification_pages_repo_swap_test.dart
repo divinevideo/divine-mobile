@@ -19,11 +19,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:notification_repository/notification_repository.dart';
-import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
@@ -63,9 +61,6 @@ _MockBadgeRepository _stubBadgeRepository({int pendingAwards = 0}) {
   );
   return repository;
 }
-
-class _MockInviteStatusCubit extends MockCubit<InviteStatusState>
-    implements InviteStatusCubit {}
 
 final _notificationRepoSwap = StateProvider<int>((ref) => 0);
 final _followRepoSwap = StateProvider<int>((ref) => 0);
@@ -287,14 +282,12 @@ void main() {
     late _MockNotificationRepository mockNotificationRepoB;
     late _MockFollowRepository mockFollowRepoA;
     late _MockFollowRepository mockFollowRepoB;
-    late _MockInviteStatusCubit mockInviteCubit;
 
     setUp(() {
       mockNotificationRepoA = _MockNotificationRepository();
       mockNotificationRepoB = _MockNotificationRepository();
       mockFollowRepoA = _MockFollowRepository();
       mockFollowRepoB = _MockFollowRepository();
-      mockInviteCubit = _MockInviteStatusCubit();
 
       for (final repo in [mockNotificationRepoA, mockNotificationRepoB]) {
         when(
@@ -309,19 +302,6 @@ void main() {
       for (final repo in [mockFollowRepoA, mockFollowRepoB]) {
         when(() => repo.isFollowing(any())).thenReturn(false);
       }
-
-      when(() => mockInviteCubit.state).thenReturn(
-        const InviteStatusState(
-          status: InviteStatusLoadingStatus.loaded,
-          inviteStatus: InviteStatus(
-            canInvite: false,
-            remaining: 0,
-            total: 0,
-            codes: [],
-          ),
-        ),
-      );
-      when(mockInviteCubit.load).thenAnswer((_) async {});
     });
 
     testWidgets(
@@ -343,10 +323,7 @@ void main() {
         await tester.pumpWidget(
           _TestApp(
             container: container,
-            home: BlocProvider<InviteStatusCubit>.value(
-              value: mockInviteCubit,
-              child: const Scaffold(body: InboxNotificationsPage()),
-            ),
+            home: const Scaffold(body: InboxNotificationsPage()),
           ),
         );
         await tester.pump();
@@ -390,10 +367,7 @@ void main() {
         await tester.pumpWidget(
           _TestApp(
             container: container,
-            home: BlocProvider<InviteStatusCubit>.value(
-              value: mockInviteCubit,
-              child: const Scaffold(body: InboxNotificationsPage()),
-            ),
+            home: const Scaffold(body: InboxNotificationsPage()),
           ),
         );
         await tester.pump();
@@ -437,10 +411,7 @@ void main() {
             container: container,
             home: RebuildHost(
               key: rebuildKey,
-              child: BlocProvider<InviteStatusCubit>.value(
-                value: mockInviteCubit,
-                child: const Scaffold(body: InboxNotificationsPage()),
-              ),
+              child: const Scaffold(body: InboxNotificationsPage()),
             ),
           ),
         );
@@ -475,10 +446,7 @@ void main() {
         await tester.pumpWidget(
           _TestApp(
             container: container,
-            home: BlocProvider<InviteStatusCubit>.value(
-              value: mockInviteCubit,
-              child: const Scaffold(body: InboxNotificationsPage()),
-            ),
+            home: const Scaffold(body: InboxNotificationsPage()),
           ),
         );
         await tester.pump();
@@ -534,10 +502,7 @@ void main() {
         await tester.pumpWidget(
           _TestApp(
             container: container,
-            home: BlocProvider<InviteStatusCubit>.value(
-              value: mockInviteCubit,
-              child: const Scaffold(body: InboxNotificationsPage()),
-            ),
+            home: const Scaffold(body: InboxNotificationsPage()),
           ),
         );
         await tester.pumpAndSettle();

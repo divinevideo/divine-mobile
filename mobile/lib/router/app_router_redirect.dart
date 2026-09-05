@@ -220,7 +220,6 @@ bool _isAuthEntryLocation(String location) {
       location.startsWith('${WelcomeScreen.path}/') ||
       location.startsWith(KeyImportScreen.path) ||
       location.startsWith(NostrConnectScreen.path) ||
-      location == WelcomeScreen.inviteGatePath ||
       location.startsWith(WelcomeScreen.resetPasswordPath) ||
       location.startsWith(ResetPasswordScreen.path) ||
       location.startsWith(EmailVerificationScreen.path) ||
@@ -524,7 +523,6 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
   if (authState == AuthState.authenticated &&
       (location == WelcomeScreen.path ||
           location == NostrConnectScreen.path ||
-          location == WelcomeScreen.inviteGatePath ||
           location == WelcomeScreen.createAccountPath ||
           location == WelcomeScreen.loginOptionsPath)) {
     // A live NIP-46 pairing returns through divine://nostrconnect, which

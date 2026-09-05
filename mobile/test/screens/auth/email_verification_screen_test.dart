@@ -11,12 +11,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
-import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
@@ -36,8 +34,6 @@ class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
 class _MockPendingVerificationService extends Mock
     implements PendingVerificationService {}
 
-class _MockInviteApiClient extends Mock implements InviteApiClient {}
-
 Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
 
@@ -46,7 +42,6 @@ void main() {
   late _MockAuthService mockAuthService;
   late _MockKeycastOAuth mockOAuth;
   late _MockPendingVerificationService mockPendingVerification;
-  late _MockInviteApiClient mockInviteApiClient;
   late StreamController<AuthState> authStateController;
 
   setUp(() {
@@ -54,7 +49,6 @@ void main() {
     mockAuthService = _MockAuthService();
     mockOAuth = _MockKeycastOAuth();
     mockPendingVerification = _MockPendingVerificationService();
-    mockInviteApiClient = _MockInviteApiClient();
     authStateController = StreamController<AuthState>.broadcast();
 
     // Stub authService stream
@@ -108,57 +102,50 @@ void main() {
           mockPendingVerification,
         ),
       ],
-      child: RepositoryProvider<InviteApiClient>.value(
-        value: mockInviteApiClient,
-        child: BlocProvider(
-          create: (_) => InviteGateBloc(inviteApiClient: mockInviteApiClient),
-          child: MaterialApp.router(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            theme: VineTheme.theme.copyWith(platform: platform),
-            routerConfig: GoRouter(
-              initialLocation: '/verify-email',
-              routes: [
-                GoRoute(path: '/', builder: (_, _) => const Scaffold()),
-                GoRoute(
-                  path: '/verify-email',
-                  builder: (_, _) => BlocProvider<EmailVerificationCubit>.value(
-                    value: mockCubit,
-                    child: EmailVerificationScreen(
-                      deviceCode: deviceCode,
-                      verifier: verifier,
-                      email: email,
-                      token: token,
-                      restored: restored,
-                    ),
-                  ),
+      child: MaterialApp.router(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: VineTheme.theme.copyWith(platform: platform),
+        routerConfig: GoRouter(
+          initialLocation: '/verify-email',
+          routes: [
+            GoRoute(path: '/', builder: (_, _) => const Scaffold()),
+            GoRoute(
+              path: '/verify-email',
+              builder: (_, _) => BlocProvider<EmailVerificationCubit>.value(
+                value: mockCubit,
+                child: EmailVerificationScreen(
+                  deviceCode: deviceCode,
+                  verifier: verifier,
+                  email: email,
+                  token: token,
+                  restored: restored,
                 ),
-                GoRoute(
-                  path: '/login-options',
-                  builder: (_, _) =>
-                      const Scaffold(body: Text('Login Options')),
-                ),
-                GoRoute(
-                  path: '/welcome/login-options',
-                  builder: (_, state) => Scaffold(
-                    body: Text(
-                      'Login Options ${state.uri.queryParameters['email'] ?? ''}',
-                    ),
-                  ),
-                ),
-                GoRoute(
-                  path: '/explore',
-                  builder: (_, _) => const Scaffold(body: Text('Explore')),
-                ),
-                GoRoute(
-                  path: '/explore/tab/:tab',
-                  builder: (_, state) => Scaffold(
-                    body: Text('Explore ${state.pathParameters['tab']}'),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            GoRoute(
+              path: '/login-options',
+              builder: (_, _) => const Scaffold(body: Text('Login Options')),
+            ),
+            GoRoute(
+              path: '/welcome/login-options',
+              builder: (_, state) => Scaffold(
+                body: Text(
+                  'Login Options ${state.uri.queryParameters['email'] ?? ''}',
+                ),
+              ),
+            ),
+            GoRoute(
+              path: '/explore',
+              builder: (_, _) => const Scaffold(body: Text('Explore')),
+            ),
+            GoRoute(
+              path: '/explore/tab/:tab',
+              builder: (_, state) => Scaffold(
+                body: Text('Explore ${state.pathParameters['tab']}'),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -421,29 +408,6 @@ void main() {
         );
       });
 
-      testWidgets('renders invite recovery button when available', (
-        tester,
-      ) async {
-        await tester.pumpWidget(
-          createTestWidget(
-            deviceCode: 'test-device-code',
-            verifier: 'test-verifier',
-            initialState: const EmailVerificationState(
-              status: EmailVerificationStatus.failure,
-              errorCode: EmailVerificationError.inviteUnknown,
-              showInviteGateRecovery: true,
-              inviteRecoveryCode: 'AB12-EF34',
-            ),
-          ),
-        );
-        await tester.pump();
-
-        expect(
-          find.widgetWithText(DivineButton, 'Back to invite code'),
-          findsOneWidget,
-        );
-      });
-
       testWidgets('renders sign-in recovery for duplicate email conflicts', (
         tester,
       ) async {
@@ -548,7 +512,6 @@ void main() {
             deviceCode: any(named: 'deviceCode'),
             verifier: any(named: 'verifier'),
             email: any(named: 'email'),
-            inviteCode: any(named: 'inviteCode'),
           ),
         ).thenReturn(null);
 
@@ -619,7 +582,6 @@ void main() {
               deviceCode: any(named: 'deviceCode'),
               verifier: any(named: 'verifier'),
               email: any(named: 'email'),
-              inviteCode: any(named: 'inviteCode'),
             ),
           );
           verify(() => mockPendingVerification.clear()).called(greaterThan(0));
@@ -641,7 +603,6 @@ void main() {
               deviceCode: any(named: 'deviceCode'),
               verifier: any(named: 'verifier'),
               email: any(named: 'email'),
-              inviteCode: any(named: 'inviteCode'),
             ),
           ).thenReturn(null);
 
@@ -676,7 +637,6 @@ void main() {
               deviceCode: any(named: 'deviceCode'),
               verifier: any(named: 'verifier'),
               email: any(named: 'email'),
-              inviteCode: any(named: 'inviteCode'),
             ),
           );
         },
@@ -1207,52 +1167,6 @@ void main() {
       );
 
       testWidgets(
-        'polling-mode restore hydrates inviteCode from the persisted record',
-        (tester) async {
-          // The restore URL carries deviceCode/verifier/email but cannot carry
-          // the invite; on a cold start the in-memory grant is gone, so the
-          // invite must come from the persisted record.
-          when(() => mockPendingVerification.load()).thenAnswer(
-            (_) async => PendingVerification(
-              deviceCode: 'test-device-code',
-              verifier: 'test-verifier',
-              email: 'user@example.com',
-              createdAt: DateTime(2026),
-              inviteCode: 'INV-CODE',
-            ),
-          );
-          when(
-            () => mockCubit.startPolling(
-              deviceCode: any(named: 'deviceCode'),
-              verifier: any(named: 'verifier'),
-              email: any(named: 'email'),
-              inviteCode: any(named: 'inviteCode'),
-            ),
-          ).thenReturn(null);
-
-          await pumpVerificationScreen(
-            tester,
-            deviceCode: 'test-device-code',
-            verifier: 'test-verifier',
-            email: 'user@example.com',
-            restored: true,
-            initialState: pollingState,
-          );
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 10));
-
-          verify(
-            () => mockCubit.startPolling(
-              deviceCode: 'test-device-code',
-              verifier: 'test-verifier',
-              email: 'user@example.com',
-              inviteCode: 'INV-CODE',
-            ),
-          ).called(1);
-        },
-      );
-
-      testWidgets(
         'Start Over from a terminal failure clears the pending record',
         (tester) async {
           await pumpVerificationScreen(
@@ -1282,7 +1196,6 @@ void main() {
               verifier: 'record-verifier',
               email: 'user@example.com',
               createdAt: DateTime.now(),
-              inviteCode: 'record-invite',
             ),
           );
           when(
@@ -1290,7 +1203,6 @@ void main() {
               deviceCode: any(named: 'deviceCode'),
               verifier: any(named: 'verifier'),
               email: any(named: 'email'),
-              inviteCode: any(named: 'inviteCode'),
             ),
           ).thenReturn(null);
 
@@ -1310,7 +1222,6 @@ void main() {
               deviceCode: 'record-device',
               verifier: 'record-verifier',
               email: 'user@example.com',
-              inviteCode: 'record-invite',
             ),
           ).called(1);
         },
@@ -1344,7 +1255,6 @@ void main() {
               deviceCode: any(named: 'deviceCode'),
               verifier: any(named: 'verifier'),
               email: any(named: 'email'),
-              inviteCode: any(named: 'inviteCode'),
             ),
           ).thenReturn(null);
 
@@ -1362,7 +1272,6 @@ void main() {
               deviceCode: any(named: 'deviceCode'),
               verifier: any(named: 'verifier'),
               email: any(named: 'email'),
-              inviteCode: any(named: 'inviteCode'),
             ),
           );
         },

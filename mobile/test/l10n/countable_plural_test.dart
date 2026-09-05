@@ -16,7 +16,6 @@ Map<String, String Function(AppLocalizations, int)> get _countableKeys => {
   'listVideoCount': (l, n) => l.listVideoCount(n),
   'soundVideoCount': (l, n) => l.soundVideoCount(n),
   'profileFollowerCountUsers': (l, n) => l.profileFollowerCountUsers(n),
-  'notificationsInvitePlural': (l, n) => l.notificationsInvitePlural(n),
   'monetizationSettingsConfiguredCount': (l, n) =>
       l.monetizationSettingsConfiguredCount(n),
   'monetizationTipsSettingsConfiguredCount': (l, n) =>

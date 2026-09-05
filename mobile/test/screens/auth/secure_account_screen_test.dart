@@ -9,12 +9,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
-import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/app_router.dart';
@@ -38,8 +36,6 @@ class _MockPendingVerificationService extends Mock
 
 class _MockEmailVerificationCubit extends MockCubit<EmailVerificationState>
     implements EmailVerificationCubit {}
-
-class _MockInviteApiClient extends Mock implements InviteApiClient {}
 
 Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
@@ -329,7 +325,6 @@ void main() {
           await LogCaptureService().clearAllLogs();
           final autofillRecorder = AutofillContextRecorder.install();
           final verificationCubit = _MockEmailVerificationCubit();
-          final inviteApiClient = _MockInviteApiClient();
           const verificationState = EmailVerificationState(
             status: EmailVerificationStatus.polling,
             pendingEmail: 'test@example.com',
@@ -364,7 +359,6 @@ void main() {
               deviceCode: any(named: 'deviceCode'),
               verifier: any(named: 'verifier'),
               email: any(named: 'email'),
-              inviteCode: any(named: 'inviteCode'),
               ownerPublicKeyHex: any(named: 'ownerPublicKeyHex'),
             ),
           ).thenAnswer((_) async {});
@@ -414,20 +408,13 @@ void main() {
               child: Consumer(
                 builder: (context, ref, _) {
                   ref.watch(routeNormalizationProvider);
-                  return RepositoryProvider<InviteApiClient>.value(
-                    value: inviteApiClient,
-                    child: BlocProvider(
-                      create: (_) =>
-                          InviteGateBloc(inviteApiClient: inviteApiClient),
-                      child: BlocProvider<EmailVerificationCubit>.value(
-                        value: verificationCubit,
-                        child: MaterialApp.router(
-                          theme: VineTheme.theme,
-                          localizationsDelegates: appLocalizationsDelegates,
-                          supportedLocales: AppLocalizations.supportedLocales,
-                          routerConfig: router,
-                        ),
-                      ),
+                  return BlocProvider<EmailVerificationCubit>.value(
+                    value: verificationCubit,
+                    child: MaterialApp.router(
+                      theme: VineTheme.theme,
+                      localizationsDelegates: appLocalizationsDelegates,
+                      supportedLocales: AppLocalizations.supportedLocales,
+                      routerConfig: router,
                     ),
                   );
                 },
