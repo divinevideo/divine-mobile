@@ -225,6 +225,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
             // OpenVideoTarget or OpenListTarget because it carries a video or
             // list target.
             break;
+          case OpenAppRouteTarget():
+            // Campaign-only target; in-app notification rows never create it.
+            break;
         }
       case ActorNotification(
         :final actor,
@@ -272,6 +275,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
           case OpenProfileTarget(:final actorPubkey):
             _navigateToProfile(context, actorPubkey);
           case OpenInboxTarget():
+            break;
+          case OpenAppRouteTarget():
+            // Campaign-only target; in-app notification rows never create it.
             break;
         }
     }

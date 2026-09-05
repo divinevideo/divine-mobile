@@ -23,8 +23,8 @@
 /// three sites cannot drift apart when a routing field is added or renamed.
 abstract class NotificationPayloadKeys {
   /// FCM wire key for the notification type (lowercase
-  /// `like`/`comment`/`follow`/`mention`/`repost`). Stored on a locally-emitted
-  /// payload under [notificationType].
+  /// `like`/`comment`/`follow`/`mention`/`repost`/`campaign`). Stored on a
+  /// locally-emitted payload under [notificationType].
   static const String wireType = 'type';
 
   /// The event acted upon (present for like/comment/repost; absent for
@@ -46,6 +46,13 @@ abstract class NotificationPayloadKeys {
 
   /// Hex pubkey of the actor — used to route follows and unresolved taps.
   static const String senderPubkey = 'senderPubkey';
+
+  /// Campaign destination type. The campaign service currently emits
+  /// `app_route`.
+  static const String tapTargetType = 'tapTargetType';
+
+  /// Campaign destination value, such as an absolute in-app route.
+  static const String tapTargetValue = 'tapTargetValue';
 }
 
 /// Normalises a raw push-notification payload map into the fields the tap
@@ -63,17 +70,17 @@ abstract class NotificationPayloadKeys {
 /// the source event's signed `a`/`A` tag) so the tap router can route to the
 /// stable address without walking the event.
 ///
-/// Returns `null` only when the payload carries nothing routable — no
-/// `referencedAddress`, no `referencedEventId`, no `eventId`, and no
-/// `senderPubkey`. A `follow`/`mention` carries no `referencedEventId` but is
-/// still routable (via `senderPubkey` / `eventId`), so those are no longer
-/// dropped.
+/// Campaigns are routable through `tapTargetType` / `tapTargetValue` without a
+/// Nostr event. Other payloads return `null` only when they carry no event,
+/// address, or actor target.
 ({
   String? referencedEventId,
   String? referencedAddress,
   String? eventId,
   String? notificationType,
   String? senderPubkey,
+  String? tapTargetType,
+  String? tapTargetValue,
 })?
 parseFcmPayload(Map<String, dynamic> data) {
   String? nonEmpty(String key) {
@@ -88,11 +95,14 @@ parseFcmPayload(Map<String, dynamic> data) {
   final notificationType =
       nonEmpty(NotificationPayloadKeys.wireType) ??
       nonEmpty(NotificationPayloadKeys.notificationType);
+  final tapTargetType = nonEmpty(NotificationPayloadKeys.tapTargetType);
+  final tapTargetValue = nonEmpty(NotificationPayloadKeys.tapTargetValue);
 
   if (referencedEventId == null &&
       referencedAddress == null &&
       eventId == null &&
-      senderPubkey == null) {
+      senderPubkey == null &&
+      notificationType != 'campaign') {
     return null;
   }
 
@@ -102,6 +112,8 @@ parseFcmPayload(Map<String, dynamic> data) {
     eventId: eventId,
     notificationType: notificationType,
     senderPubkey: senderPubkey,
+    tapTargetType: tapTargetType,
+    tapTargetValue: tapTargetValue,
   );
 }
 
@@ -114,11 +126,9 @@ parseFcmPayload(Map<String, dynamic> data) {
 /// rather than re-deriving it.
 ///
 /// The FCM wire key `type` is stored under [NotificationPayloadKeys.
-/// notificationType]; `senderPubkey` is preserved so follow/mention taps (which
-/// carry no `referencedEventId`) can still route. Consumed on tap by
-/// `NotificationService.handleNotificationTapPayload`. Always returns a map
-/// (all-null when nothing routable is present) — the notification still shows
-/// and the tap simply no-ops.
+/// notificationType]; actor and campaign target fields are preserved so taps
+/// without a Nostr event can still route. Consumed on tap by
+/// `NotificationService.handleNotificationTapPayload`.
 Map<String, dynamic> localNotificationTapPayload(Map<String, dynamic> data) {
   final parsed = parseFcmPayload(data);
   return {
@@ -127,5 +137,7 @@ Map<String, dynamic> localNotificationTapPayload(Map<String, dynamic> data) {
     NotificationPayloadKeys.eventId: parsed?.eventId,
     NotificationPayloadKeys.notificationType: parsed?.notificationType,
     NotificationPayloadKeys.senderPubkey: parsed?.senderPubkey,
+    NotificationPayloadKeys.tapTargetType: ?parsed?.tapTargetType,
+    NotificationPayloadKeys.tapTargetValue: ?parsed?.tapTargetValue,
   };
 }

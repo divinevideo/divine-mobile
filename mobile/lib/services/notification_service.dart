@@ -30,6 +30,8 @@ class NotificationTapEvent {
     this.eventId,
     this.notificationType,
     this.senderPubkey,
+    this.tapTargetType,
+    this.tapTargetValue,
   });
 
   /// The event acted upon (present for like/comment/repost). Null for
@@ -50,6 +52,12 @@ class NotificationTapEvent {
   /// to a profile.
   final String? senderPubkey;
 
+  /// Campaign destination type, currently `app_route`.
+  final String? tapTargetType;
+
+  /// Campaign destination value, such as an absolute in-app route.
+  final String? tapTargetValue;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -58,7 +66,9 @@ class NotificationTapEvent {
           referencedAddress == other.referencedAddress &&
           eventId == other.eventId &&
           notificationType == other.notificationType &&
-          senderPubkey == other.senderPubkey;
+          senderPubkey == other.senderPubkey &&
+          tapTargetType == other.tapTargetType &&
+          tapTargetValue == other.tapTargetValue;
 
   @override
   int get hashCode => Object.hash(
@@ -67,6 +77,8 @@ class NotificationTapEvent {
     eventId,
     notificationType,
     senderPubkey,
+    tapTargetType,
+    tapTargetValue,
   );
 }
 
@@ -538,21 +550,25 @@ class NotificationService {
       );
       final eventId = field(NotificationPayloadKeys.eventId);
       final senderPubkey = field(NotificationPayloadKeys.senderPubkey);
+      final notificationType = field(NotificationPayloadKeys.notificationType);
       // A follow/mention carries no referencedEventId but is still routable
       // via senderPubkey / eventId, and a referencedAddress alone is a valid
       // video target, so route whenever any of these exist.
       if (referencedEventId == null &&
           referencedAddress == null &&
           eventId == null &&
-          senderPubkey == null) {
+          senderPubkey == null &&
+          notificationType != 'campaign') {
         return null;
       }
       return NotificationTapEvent(
         referencedEventId: referencedEventId,
         referencedAddress: referencedAddress,
         eventId: eventId,
-        notificationType: field(NotificationPayloadKeys.notificationType),
+        notificationType: notificationType,
         senderPubkey: senderPubkey,
+        tapTargetType: field(NotificationPayloadKeys.tapTargetType),
+        tapTargetValue: field(NotificationPayloadKeys.tapTargetValue),
       );
     } catch (e) {
       // Malformed payload (non-JSON, non-object, or unexpected shape).

@@ -277,6 +277,8 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
                 eventId: parsed.eventId,
                 notificationType: parsed.notificationType,
                 senderPubkey: parsed.senderPubkey,
+                tapTargetType: parsed.tapTargetType,
+                tapTargetValue: parsed.tapTargetValue,
                 container: container,
               ),
             );
@@ -304,6 +306,8 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
               eventId: launchTap.eventId,
               notificationType: launchTap.notificationType,
               senderPubkey: launchTap.senderPubkey,
+              tapTargetType: launchTap.tapTargetType,
+              tapTargetValue: launchTap.tapTargetValue,
               container: container,
             ),
           );
@@ -326,6 +330,8 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
                 eventId: parsed.eventId,
                 notificationType: parsed.notificationType,
                 senderPubkey: parsed.senderPubkey,
+                tapTargetType: parsed.tapTargetType,
+                tapTargetValue: parsed.tapTargetValue,
                 container: container,
               ),
             );

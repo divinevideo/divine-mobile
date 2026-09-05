@@ -402,6 +402,8 @@ class _DivineAppState extends ConsumerState<DivineApp>
               eventId: tapEvent.eventId,
               notificationType: tapEvent.notificationType,
               senderPubkey: tapEvent.senderPubkey,
+              tapTargetType: tapEvent.tapTargetType,
+              tapTargetValue: tapEvent.tapTargetValue,
               container: container,
             ),
           );
