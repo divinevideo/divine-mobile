@@ -26,9 +26,17 @@ void main() {
       expect(matches.fullPath, RoutePaths.followingNew);
 
       final appRouter = File('lib/router/app_router.dart').readAsStringSync();
+      final shellOffset = appRouter.indexOf('...shellRoutes()');
+      final profileOffset = appRouter.indexOf('...profileRoutes()');
+      expect(shellOffset, isNonNegative, reason: 'Shell route marker missing.');
       expect(
-        appRouter.indexOf('...profileRoutes()'),
-        greaterThan(appRouter.indexOf('...shellRoutes()')),
+        profileOffset,
+        isNonNegative,
+        reason: 'Profile route marker missing.',
+      );
+      expect(
+        profileOffset,
+        greaterThan(shellOffset),
         reason: 'The literal shell route must precede /following/:pubkey.',
       );
     });
