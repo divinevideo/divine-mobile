@@ -12,6 +12,15 @@ void main() {
     const otherPubkey =
         'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
+    test('generates a 16-character id from the name alphabet', () {
+      final subscription = Subscription([
+        Filter(kinds: const [1]).toJson(),
+      ], (_) {});
+
+      expect(subscription.id, hasLength(16));
+      expect(RegExp(r'^[0-9a-z]{16}$').hasMatch(subscription.id), isTrue);
+    });
+
     test('rejects an unparseable filter at construction', () {
       // `kinds` holding strings is the shape a hand-built filter map takes
       // when it skips Filter.toJson. Parsing per event instead would push the

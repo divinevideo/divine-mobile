@@ -2462,7 +2462,7 @@ class RelayPool {
       // admission gate. The sibling entry points reject this the same way.
       throw ArgumentError("No filters given", "filters");
     }
-    id ??= StringUtil.rndNameStr(16);
+    id ??= StringUtil.rndSecureNameStr(16);
     if (onComplete != null) {
       _queryCompleteCallbacks[id] = onComplete;
     }
@@ -3557,7 +3557,7 @@ class RelayPool {
 
     tempRelays = handleAddrList(tempRelays);
 
-    final subscriptionId = id ?? StringUtil.rndNameStr(16);
+    final subscriptionId = id ?? StringUtil.rndSecureNameStr(16);
 
     // Collect all relays to try
     final relaysToTry = <Relay>[];

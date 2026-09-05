@@ -25,6 +25,19 @@ void main() {
       );
     });
 
+    test('generates a 16-character id from the name alphabet', () {
+      final id = pool.queryByFilters(const {
+        'wss://relay.example': [
+          {
+            'kinds': [1],
+          },
+        ],
+      }, (_) {});
+
+      expect(id, hasLength(16));
+      expect(RegExp(r'^[0-9a-z]{16}$').hasMatch(id), isTrue);
+    });
+
     test('rejects a relay entry carrying no filters', () {
       // The sibling entry points (subscribe, query, addInitQuery) all reject
       // an empty filter list. queryByFilters checked only the outer map, so
