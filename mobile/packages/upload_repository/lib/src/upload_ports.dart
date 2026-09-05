@@ -1,6 +1,39 @@
-// ABOUTME: Port interfaces decoupling the extracted upload concerns from
-// ABOUTME: app-layer services (Firebase crash reporting, video-editor
-// ABOUTME: transient-render cleanup) for the package lift.
+// ABOUTME: Ports decoupling upload orchestration from app and platform APIs.
+// ABOUTME: The app supplies storage, diagnostics, media, and telemetry adapters.
+
+import 'dart:typed_data';
+
+import 'package:hive_ce/hive.dart';
+
+import 'package:upload_repository/src/pending_upload.dart';
+
+/// Opens the app-owned Hive box used to persist uploads.
+typedef PendingUploadBoxOpener =
+    Future<Box<PendingUpload>> Function({bool forceReinit});
+
+/// Network classes needed for upload diagnostics and user-facing errors.
+enum UploadConnectivity { wifi, mobile, ethernet, vpn, none, other }
+
+/// Returns the current network class without coupling to a platform plugin.
+typedef UploadConnectivityProvider = Future<UploadConnectivity> Function();
+
+/// Result of extracting a thumbnail into a local file.
+typedef ThumbnailExtraction = ({String path});
+
+/// Extracts a thumbnail without exposing the app's thumbnail service type.
+typedef ThumbnailExtractor =
+    Future<ThumbnailExtraction?> Function({
+      required String videoPath,
+      required Duration targetTimestamp,
+      required int quality,
+    });
+
+/// Generates a blurhash without coupling the repository to Flutter services.
+typedef UploadBlurhashGenerator = Future<String?> Function(Uint8List bytes);
+
+/// Records one phase of the app's publish timeline.
+typedef UploadTelemetry =
+    void Function(String phase, Duration elapsed, {int? bytes, String? detail});
 
 /// Crash/diagnostics reporting port for the upload pipeline.
 ///

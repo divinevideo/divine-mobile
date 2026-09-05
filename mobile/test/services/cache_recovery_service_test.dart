@@ -8,10 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/models/notification_preferences.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/cache_recovery_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 import '../helpers/test_helpers.dart';
 import '../mocks/mock_path_provider_platform.dart';

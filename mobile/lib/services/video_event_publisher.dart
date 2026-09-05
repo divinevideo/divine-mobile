@@ -25,7 +25,6 @@ import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;

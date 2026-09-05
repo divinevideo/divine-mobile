@@ -14,7 +14,6 @@ import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/models/divine_video_draft.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_publish/video_publish_state.dart';
 import 'package:openvine/services/auth_service.dart';

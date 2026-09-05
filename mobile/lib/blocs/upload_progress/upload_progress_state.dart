@@ -1,7 +1,7 @@
 // ABOUTME: State for UploadProgressCubit — current upload progress + status.
 
 import 'package:equatable/equatable.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 class UploadProgressState extends Equatable {
   const UploadProgressState({

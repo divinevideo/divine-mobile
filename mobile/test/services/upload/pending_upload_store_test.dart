@@ -7,11 +7,10 @@ import 'dart:io';
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
-import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/services/upload/pending_upload_store.dart';
 import 'package:openvine/services/upload_initialization_helper.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 import '../../helpers/test_helpers.dart';
 import '../../mocks/mock_path_provider_platform.dart';
@@ -25,12 +24,22 @@ const _pubkeyA =
 const _pubkeyB =
     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
+PendingUploadStore _newStore({
+  required bool scopeUploadsToCurrentUser,
+  required String? currentNostrPubkey,
+}) => PendingUploadStore(
+  scopeUploadsToCurrentUser: scopeUploadsToCurrentUser,
+  currentNostrPubkey: currentNostrPubkey,
+  openBox: UploadInitializationHelper.initializeUploadsBox,
+  isWeb: false,
+);
+
 /// Create and open an unscoped store backed by a fresh Hive box.
 Future<PendingUploadStore> _openStore({
   bool scopeUploadsToCurrentUser = false,
   String? currentNostrPubkey,
 }) async {
-  final store = PendingUploadStore(
+  final store = _newStore(
     scopeUploadsToCurrentUser: scopeUploadsToCurrentUser,
     currentNostrPubkey: currentNostrPubkey,
   );
@@ -121,7 +130,7 @@ void main() {
 
     group('lifecycle', () {
       test('isReady is false before open', () {
-        final store = PendingUploadStore(
+        final store = _newStore(
           scopeUploadsToCurrentUser: false,
           currentNostrPubkey: null,
         );
@@ -168,7 +177,7 @@ void main() {
       });
 
       test('length returns 0 before open', () {
-        final store = PendingUploadStore(
+        final store = _newStore(
           scopeUploadsToCurrentUser: false,
           currentNostrPubkey: null,
         );
@@ -252,7 +261,7 @@ void main() {
       });
 
       test('update() is a no-op when box is not ready', () async {
-        final store = PendingUploadStore(
+        final store = _newStore(
           scopeUploadsToCurrentUser: false,
           currentNostrPubkey: null,
         );
@@ -300,7 +309,7 @@ void main() {
         () async {
           final isolatedDir = await _forceStorageFailure();
 
-          final store = PendingUploadStore(
+          final store = _newStore(
             scopeUploadsToCurrentUser: false,
             currentNostrPubkey: null,
           );
@@ -330,7 +339,7 @@ void main() {
         () async {
           final isolatedDir = await _forceStorageFailure();
 
-          final store = PendingUploadStore(
+          final store = _newStore(
             scopeUploadsToCurrentUser: false,
             currentNostrPubkey: null,
           );
@@ -361,7 +370,7 @@ void main() {
         () async {
           final isolatedDir = await _forceStorageFailure();
 
-          final store = PendingUploadStore(
+          final store = _newStore(
             scopeUploadsToCurrentUser: false,
             currentNostrPubkey: null,
           );
@@ -389,7 +398,7 @@ void main() {
       test('a drain is a no-op while another drain is in flight', () async {
         final isolatedDir = await _forceStorageFailure();
 
-        final store = PendingUploadStore(
+        final store = _newStore(
           scopeUploadsToCurrentUser: false,
           currentNostrPubkey: null,
         );
@@ -418,7 +427,7 @@ void main() {
           'empty queue', () async {
         final isolatedDir = await _forceStorageFailure();
 
-        final store = PendingUploadStore(
+        final store = _newStore(
           scopeUploadsToCurrentUser: false,
           currentNostrPubkey: null,
         );
@@ -637,7 +646,7 @@ void main() {
         () async {
           final isolatedDir = await _forceStorageFailure();
 
-          final store = PendingUploadStore(
+          final store = _newStore(
             scopeUploadsToCurrentUser: false,
             currentNostrPubkey: null,
           );

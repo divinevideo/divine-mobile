@@ -11,7 +11,6 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/ios_device_attestation_service.dart';
 import 'package:openvine/services/upload_manager.dart';

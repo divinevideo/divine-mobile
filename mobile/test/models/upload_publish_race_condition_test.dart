@@ -1,7 +1,7 @@
 // ABOUTME: Test verifying race condition is fixed - upload completes before publishing
 // ABOUTME: Ensures videoId and cdnUrl are populated when publishDirectUpload is called
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 void main() {
   group('Upload → Publish Race Condition Fix', () {

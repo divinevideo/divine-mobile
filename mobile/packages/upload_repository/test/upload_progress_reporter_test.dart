@@ -4,15 +4,9 @@
 import 'dart:async';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/services/circuit_breaker_service.dart';
-import 'package:openvine/services/upload/pending_upload_store.dart';
-import 'package:openvine/services/upload/upload_ports.dart';
-import 'package:openvine/services/upload/upload_progress_reporter.dart';
-import 'package:openvine/services/upload_manager.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 class _MockPendingUploadStore extends Mock implements PendingUploadStore {}
 
@@ -84,6 +78,9 @@ void main() {
       circuitBreaker: circuitBreaker,
       retryConfig: const UploadRetryConfig(),
       crashReporter: crashReporter,
+      connectivityProvider: () async => UploadConnectivity.wifi,
+      platformName: 'test',
+      isWeb: false,
     );
   });
 
@@ -272,7 +269,7 @@ void main() {
     test('NO_INTERNET → offline copy', () {
       final msg = reporter.getUserFriendlyErrorMessage(
         'NO_INTERNET',
-        ConnectivityResult.none,
+        UploadConnectivity.none,
       );
       expect(msg, contains('No internet connection'));
     });
@@ -280,7 +277,7 @@ void main() {
     test('TIMEOUT → timeout copy', () {
       final msg = reporter.getUserFriendlyErrorMessage(
         'TIMEOUT',
-        ConnectivityResult.wifi,
+        UploadConnectivity.wifi,
       );
       expect(msg, contains('timed out'));
     });
@@ -288,7 +285,7 @@ void main() {
     test('NETWORK_ERROR embeds network type', () {
       final msg = reporter.getUserFriendlyErrorMessage(
         'NETWORK_ERROR',
-        ConnectivityResult.mobile,
+        UploadConnectivity.mobile,
       );
       expect(msg, contains('Cellular'));
     });
@@ -296,7 +293,7 @@ void main() {
     test('UPLOAD_SESSION_EXPIRED → session copy', () {
       final msg = reporter.getUserFriendlyErrorMessage(
         'UPLOAD_SESSION_EXPIRED',
-        ConnectivityResult.wifi,
+        UploadConnectivity.wifi,
       );
       expect(msg, contains('session expired'));
     });
@@ -304,7 +301,7 @@ void main() {
     test('unknown category → generic copy', () {
       final msg = reporter.getUserFriendlyErrorMessage(
         'SOMETHING_NEW',
-        ConnectivityResult.wifi,
+        UploadConnectivity.wifi,
       );
       expect(msg, contains('Upload failed'));
     });
@@ -314,21 +311,21 @@ void main() {
   group('getNetworkTypeString', () {
     test('wifi → "WiFi"', () {
       expect(
-        reporter.getNetworkTypeString(ConnectivityResult.wifi),
+        reporter.getNetworkTypeString(UploadConnectivity.wifi),
         equals('WiFi'),
       );
     });
 
     test('mobile → "Cellular"', () {
       expect(
-        reporter.getNetworkTypeString(ConnectivityResult.mobile),
+        reporter.getNetworkTypeString(UploadConnectivity.mobile),
         equals('Cellular'),
       );
     });
 
     test('none → "Offline"', () {
       expect(
-        reporter.getNetworkTypeString(ConnectivityResult.none),
+        reporter.getNetworkTypeString(UploadConnectivity.none),
         equals('Offline'),
       );
     });
@@ -435,6 +432,9 @@ void main() {
         circuitBreaker: circuitBreaker,
         retryConfig: const UploadRetryConfig(),
         crashReporter: crashReporter,
+        connectivityProvider: () async => UploadConnectivity.wifi,
+        platformName: 'test',
+        isWeb: false,
       );
       expect(reporter.metricsFor('upload-1'), isNull);
     });
@@ -456,7 +456,7 @@ void main() {
           error,
           'NETWORK_ERROR',
           null,
-          ConnectivityResult.wifi,
+          UploadConnectivity.wifi,
           stackTrace: stackTrace,
           isManagerInitialized: true,
         );
@@ -488,7 +488,7 @@ void main() {
           error,
           'UNKNOWN',
           null,
-          ConnectivityResult.wifi,
+          UploadConnectivity.wifi,
           stackTrace: stackTrace,
           isManagerInitialized: true,
         );

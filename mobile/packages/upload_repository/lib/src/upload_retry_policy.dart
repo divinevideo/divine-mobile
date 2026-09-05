@@ -5,13 +5,14 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
-import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/services/upload/pending_upload_store.dart';
-import 'package:openvine/services/upload/upload_config.dart';
-import 'package:openvine/services/upload/upload_session_errors.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Owns the retry and session-persistence concerns extracted from [UploadManager].
+import 'package:upload_repository/src/pending_upload.dart';
+import 'package:upload_repository/src/pending_upload_store.dart';
+import 'package:upload_repository/src/upload_config.dart';
+import 'package:upload_repository/src/upload_session_errors.dart';
+
+/// Owns retry and session persistence for [UploadRepository].
 class UploadRetryPolicy {
   UploadRetryPolicy({
     required PendingUploadStore store,

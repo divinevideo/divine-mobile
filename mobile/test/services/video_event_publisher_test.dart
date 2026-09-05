@@ -27,7 +27,6 @@ import 'package:nostr_sdk/relay/relay_pool.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/saved_sounds_service.dart';

@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/services/upload_publishability.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 void main() {
   group('readyUploadIsPublishable', () {

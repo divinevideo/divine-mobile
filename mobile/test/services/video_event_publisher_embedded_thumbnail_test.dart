@@ -7,8 +7,8 @@ import 'dart:typed_data';
 
 import 'package:blurhash_service/blurhash_service.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 /// Helper to simulate the thumbnail extraction logic from VideoEventPublisher
 class EmbeddedThumbnailGenerator {

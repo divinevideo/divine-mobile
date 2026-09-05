@@ -8,7 +8,6 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/upload_manager.dart';
 

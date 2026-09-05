@@ -1,0 +1,28 @@
+# ABOUTME: CI workflow for the upload_repository package.
+# ABOUTME: Runs package tests, formatting, and analysis for upload core changes.
+
+name: Upload Repository CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/packages/upload_repository/**"
+      - ".github/workflows/upload_repository.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/packages/upload_repository/**"
+      - ".github/workflows/upload_repository.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      working_directory: "mobile/packages/upload_repository"
+      flutter_version: "3.44.9"
+      min_coverage: 32

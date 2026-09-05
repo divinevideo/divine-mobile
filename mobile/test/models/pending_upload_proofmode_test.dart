@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show NativeProofData;
-import 'package:openvine/models/pending_upload.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 void main() {
   group('PendingUpload ProofMode Integration', () {
