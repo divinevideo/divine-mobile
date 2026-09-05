@@ -491,6 +491,44 @@ void main() {
           expect(data.deviceInfo['deviceLocale'], 'am-ET');
         },
       );
+
+      test(
+        'omits the device locale when only the region differs',
+        () async {
+          // Every supported locale is language-only, so the resolved locale
+          // never carries a region. An en-US device reading `en` is reading the
+          // exact language it asked for - there is no fallback to flag, so the
+          // region-only difference must not emit a deviceLocale (#7939).
+          final service = BugReportService(
+            resolvedUiLocaleLoader: () => const Locale('en'),
+            deviceLocaleLoader: () => const Locale('en', 'US'),
+          );
+
+          final data = await service.collectDiagnostics(
+            userDescription: 'This screen is showing bad copy',
+          );
+
+          expect(data.deviceInfo['locale'], 'en');
+          expect(data.deviceInfo.containsKey('deviceLocale'), isFalse);
+        },
+      );
+
+      test('a locale probe failure does not block the report', () async {
+        final service = BugReportService(
+          resolvedUiLocaleLoader: () => throw StateError('locale unavailable'),
+          deviceLocaleLoader: () => const Locale('en'),
+        );
+
+        final data = await service.collectDiagnostics(
+          userDescription: 'This screen is showing bad copy',
+        );
+
+        // Best-effort contract: the report still succeeds, just without the
+        // locale fields.
+        expect(data.userDescription, 'This screen is showing bad copy');
+        expect(data.deviceInfo.containsKey('locale'), isFalse);
+        expect(data.deviceInfo.containsKey('deviceLocale'), isFalse);
+      });
     });
 
     group('clearCapturedLogs', () {

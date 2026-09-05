@@ -200,17 +200,21 @@ class BugReportService {
       // there is no native reviewer, so the user's report is the only signal,
       // and without the language it can't be routed without asking (#7939). The
       // resolved UI locale is what the user was reading; the device locale is
-      // added only when it differs, since a device set to a language with no
-      // translation is reading the English fallback - a distinct bug from a bad
-      // string in that language. Best-effort: a probe failure must not block the
-      // report.
+      // added (as its full tag) only when its language differs from the resolved
+      // one, since a device set to a language with no translation is reading the
+      // English fallback - a distinct bug from a bad string in that language.
+      // Every supported locale is language-only, so the resolved locale never
+      // carries a region; comparing on language keeps a region-only difference
+      // (e.g. an en-US device reading en) from masquerading as a fallback.
+      // Best-effort: a probe failure must not block the report.
       try {
-        final resolvedLocale = _resolvedUiLocaleLoader().toLanguageTag();
-        final deviceLocale = _deviceLocaleLoader().toLanguageTag();
+        final resolvedLocale = _resolvedUiLocaleLoader();
+        final deviceLocale = _deviceLocaleLoader();
         deviceInfo = {
           ...deviceInfo,
-          'locale': resolvedLocale,
-          if (deviceLocale != resolvedLocale) 'deviceLocale': deviceLocale,
+          'locale': resolvedLocale.toLanguageTag(),
+          if (deviceLocale.languageCode != resolvedLocale.languageCode)
+            'deviceLocale': deviceLocale.toLanguageTag(),
         };
       } on Object catch (e) {
         Log.warning(
