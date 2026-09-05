@@ -82,6 +82,7 @@ workspace:
   - packages/time_formatter
   - packages/tv_static_effect
   - packages/unified_logger
+  - packages/upload_repository
   - packages/verifier_client
   - packages/video_event_cache
   - packages/videos_repository
@@ -340,6 +341,9 @@ dependencies:
   # Logging
   logging: ^1.2.0
   unified_logger:
+
+  # Upload Repository - persistent upload orchestration and recovery
+  upload_repository:
 
   # Verifier Client - HTTP client for verifier.divine.video identity attestations
   verifier_client:

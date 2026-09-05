@@ -1,7 +1,7 @@
 // ABOUTME: Unit test verifying video upload completes before Nostr event publishing
 // ABOUTME: Tests TDD failing case: publish should wait for upload to complete and populate videoId/cdnUrl
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/models/pending_upload.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 void main() {
   group('Video Upload → Publish Flow', () {

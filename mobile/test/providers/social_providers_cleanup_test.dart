@@ -15,7 +15,6 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/models/pending_upload.dart' as hive_model;
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
@@ -34,6 +33,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:upload_repository/upload_repository.dart' as hive_model;
 
 import '../helpers/test_helpers.dart';
 import '../mocks/mock_path_provider_platform.dart';

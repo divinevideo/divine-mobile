@@ -9,9 +9,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 /// Robust initialization helper for UploadManager
 class UploadInitializationHelper {

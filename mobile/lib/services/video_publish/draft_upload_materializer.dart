@@ -6,7 +6,6 @@ import 'dart:io';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/temp_render_janitor.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
@@ -14,6 +13,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 /// A draft resolved down to one uploadable file plus its probed metadata.
 ///

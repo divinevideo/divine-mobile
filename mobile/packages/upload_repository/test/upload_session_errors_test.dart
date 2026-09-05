@@ -3,7 +3,7 @@
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/upload/upload_session_errors.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 void main() {
   group('isExpiredResumableSessionError', () {

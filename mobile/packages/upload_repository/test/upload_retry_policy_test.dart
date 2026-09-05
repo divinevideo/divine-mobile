@@ -6,10 +6,7 @@ import 'dart:async';
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/models/pending_upload.dart';
-import 'package:openvine/services/upload/pending_upload_store.dart';
-import 'package:openvine/services/upload/upload_retry_policy.dart';
-import 'package:openvine/services/upload_manager.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 class _MockPendingUploadStore extends Mock implements PendingUploadStore {}
 

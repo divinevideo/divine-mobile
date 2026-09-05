@@ -7,8 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:pro_video_editor/core/models/video/editor_video_model.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 void main() {
   group('ProofMode End-to-End Flow', () {

@@ -10,7 +10,6 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/event_api_client.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
