@@ -242,20 +242,16 @@ Future<void> persistFollowingPrefetchForAuthRedirect({
 /// Widgets should watch this instead of authService.authState directly
 /// to get automatic rebuilds when authentication state changes.
 @Riverpod(keepAlive: true)
-AuthState currentAuthState(Ref ref) {
-  final authService = ref.watch(authServiceProvider);
-
-  // Listen to auth state changes and invalidate this provider when they occur
-  final subscription = authService.authStateStream.listen((_) {
-    // Invalidate to trigger rebuild with new state
-    ref.invalidateSelf();
-  });
-
-  // Clean up subscription when provider is disposed
-  ref.onDispose(subscription.cancel);
-
-  // Return current state
-  return authService.authState;
+class CurrentAuthState extends _$CurrentAuthState {
+  @override
+  AuthState build() {
+    final authService = ref.watch(authServiceProvider);
+    final subscription = authService.authStateStream.listen((authState) {
+      state = authState;
+    });
+    ref.onDispose(subscription.cancel);
+    return authService.authState;
+  }
 }
 
 /// Boundary-safe auth helper for recorder exits.
@@ -300,16 +296,18 @@ class RecorderExitAuthGate {
 /// Widgets and repositories should watch this instead of polling
 /// [AuthService.authRpcCapability] directly.
 @Riverpod(keepAlive: true)
-AuthRpcCapability currentAuthRpcCapability(Ref ref) {
-  final authService = ref.watch(authServiceProvider);
-
-  final subscription = authService.authRpcCapabilityStream.listen((_) {
-    ref.invalidateSelf();
-  });
-
-  ref.onDispose(subscription.cancel);
-
-  return authService.authRpcCapability;
+class CurrentAuthRpcCapability extends _$CurrentAuthRpcCapability {
+  @override
+  AuthRpcCapability build() {
+    final authService = ref.watch(authServiceProvider);
+    final subscription = authService.authRpcCapabilityStream.listen((
+      capability,
+    ) {
+      state = capability;
+    });
+    ref.onDispose(subscription.cancel);
+    return authService.authRpcCapability;
+  }
 }
 
 /// Provider that fetches the list of known accounts from the auth service.

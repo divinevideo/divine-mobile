@@ -74,9 +74,7 @@ void main() {
       when(() => auth.isRegistered).thenReturn(true);
       return ProviderContainer(
         overrides: [
-          currentAuthStateProvider.overrideWith(
-            (ref) => AuthState.authenticated,
-          ),
+          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
           authServiceProvider.overrideWithValue(auth),
           appOAuthSupportProvider.overrideWith((ref) async {
             if (!resolveSupport) {
