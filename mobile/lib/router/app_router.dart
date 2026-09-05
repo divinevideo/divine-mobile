@@ -169,13 +169,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     // order below is load-bearing whenever two routes share a literal first
     // path segment. It's match-safe today because every module's
     // parameterized routes (`:id`, `:listId`, etc.) sit under a first segment
-    // no other module uses. The one same-prefix case in this app
-    // (`/people-lists/new` vs. `/people-lists/:listId`) is contained inside
-    // `lists_routes.dart`, which orders the literal route first and is
-    // guarded by `people_lists_route_order_test.dart`. If you add a bare
-    // `/:slug`-style route or a route that shares a first segment with
-    // another module, place it deliberately and add a similar order guard —
-    // don't rely on this spread order by accident.
+    // no other module uses. The people-list same-prefix case is contained in
+    // `lists_routes.dart`; `/following/new` intentionally spans shell and
+    // profile modules, so `shellRoutes()` must precede `profileRoutes()`.
+    // Both constraints have route-order regression tests. If you add another
+    // shared first segment, place it deliberately and guard the ordering.
     routes: [
       ...videoRoutes(),
       ...shellRoutes(),
