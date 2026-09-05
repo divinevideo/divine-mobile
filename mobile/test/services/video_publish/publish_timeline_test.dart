@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/video_publish/publish_timeline.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:upload_repository/upload_repository.dart';
 
 /// Records what a publish would report to Firebase, without any Firebase.
 class _FakePerformanceTrace implements PerformanceTrace {
@@ -35,6 +36,23 @@ class _FakePerformanceMonitor implements PerformanceTraceMonitor {
 }
 
 void main() {
+  group('upload telemetry phase contract', () {
+    test('package phases stay aligned with the app publish timeline', () {
+      expect(UploadPhases.uploadTransfer, PublishPhases.uploadTransfer);
+      expect(UploadPhases.uploadThumbnail, PublishPhases.uploadThumbnail);
+      expect(
+        UploadPhases.uploadThumbnailExtract,
+        PublishPhases.uploadThumbnailExtract,
+      );
+      expect(
+        UploadPhases.uploadThumbnailBlurhash,
+        PublishPhases.uploadThumbnailBlurhash,
+      );
+      expect(UploadPhases.uploadThumbnailPut, PublishPhases.uploadThumbnailPut);
+      expect(UploadPhases.reusedDetail, PublishPhases.reusedDetail);
+    });
+  });
+
   group(PublishTimeline, () {
     late PublishTimeline timeline;
 
