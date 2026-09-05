@@ -14,6 +14,41 @@ void main() {
   const videoCoordinate = '34236:owner_hex:my-vine-id';
 
   group('pushNotificationTapTarget', () {
+    test('campaign app_route opens the supplied in-app location', () {
+      final result = app.pushNotificationTapTarget(
+        referencedAddress: null,
+        referencedEventId: null,
+        eventId: null,
+        notificationType: 'campaign',
+        senderPubkey: null,
+        tapTargetType: 'app_route',
+        tapTargetValue: '/following/new',
+      );
+
+      expect(result.target, const OpenAppRouteTarget('/following/new'));
+      expect(result.targetEventId, isNull);
+    });
+
+    test('campaign with an unknown or unsafe target opens the inbox', () {
+      for (final target in const [
+        (type: 'web_url', value: 'https://example.com'),
+        (type: 'app_route', value: '//example.com/path'),
+        (type: 'app_route', value: 'settings'),
+      ]) {
+        final result = app.pushNotificationTapTarget(
+          referencedAddress: null,
+          referencedEventId: null,
+          eventId: null,
+          notificationType: 'campaign',
+          senderPubkey: null,
+          tapTargetType: target.type,
+          tapTargetValue: target.value,
+        );
+
+        expect(result.target, const OpenInboxTarget());
+      }
+    });
+
     test('follow opens the actor profile (carries no referencedEventId)', () {
       final result = app.pushNotificationTapTarget(
         referencedAddress: null,
