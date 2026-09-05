@@ -176,6 +176,7 @@ class UploadRepository {
   /// Uses robust initialization with retry logic and recovery strategies
   Future<void> initialize() async {
     if (_isInitialized && _store.isReady) {
+      onStorageReady();
       Log.info(
         'UploadManager already initialized',
         name: 'UploadManager',
@@ -213,6 +214,8 @@ class UploadRepository {
 
       // Clean up old completed/published uploads to prevent accumulation
       await cleanupCompletedUploads();
+
+      onStorageReady();
 
       // Re-drive uploads left in `uploading`/`retrying` by a prior crash or
       // background freeze. Fire-and-forget: this runs on the event loop and
@@ -389,6 +392,7 @@ class UploadRepository {
 
         if (_store.isReady) {
           _isInitialized = true;
+          onStorageReady();
           Log.info(
             '✅ Robust initialization successful',
             name: 'UploadManager',
@@ -562,6 +566,13 @@ class UploadRepository {
       rethrow;
     }
   }
+
+  /// Called whenever upload storage becomes ready.
+  ///
+  /// The app facade uses this hook to attach platform lifecycle handling on
+  /// both eager startup and lazy recovery initialization paths.
+  @protected
+  void onStorageReady() {}
 
   /// Perform upload with circuit breaker and retry logic
   Future<void> _performUpload(
