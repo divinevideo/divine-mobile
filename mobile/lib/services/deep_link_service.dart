@@ -16,7 +16,6 @@ enum DeepLinkType {
   profile,
   hashtag,
   search,
-  invite,
   list,
   savedVideos,
   signerCallback,
@@ -31,7 +30,6 @@ class DeepLink {
     this.npub,
     this.hashtag,
     this.searchTerm,
-    this.inviteCode,
     this.listPubkey,
     this.listId,
     this.signerCallbackRelay,
@@ -49,7 +47,6 @@ class DeepLink {
   final String? npub;
   final String? hashtag;
   final String? searchTerm;
-  final String? inviteCode;
 
   /// Author pubkey of a `/list/:pubkey/:listId` link, normalized to
   /// lowercase hex (NIP-51 kind 30005 lists are addressed by author + d-tag).
@@ -77,8 +74,6 @@ class DeepLink {
         return 'DeepLink(type: hashtag, hashtag: $hashtag$indexStr)';
       case DeepLinkType.search:
         return 'DeepLink(type: search, searchTerm: $searchTerm$indexStr)';
-      case DeepLinkType.invite:
-        return 'DeepLink(type: invite, inviteCode: $redactedSensitiveLogPlaceholder)';
       case DeepLinkType.list:
         return 'DeepLink(type: list, listPubkey: $listPubkey, '
             'listId: $listId)';
@@ -337,24 +332,6 @@ class DeepLinkService {
           listPubkey: listPubkey,
           listId: listId,
         );
-      }
-
-      // Handle /invite/{code} or /invite?code=ABCD-EFGH
-      if (pathSegments.isNotEmpty && pathSegments[0] == 'invite') {
-        final inviteCode = pathSegments.length > 1
-            ? Uri.decodeComponent(pathSegments[1])
-            : uri.queryParameters['code'];
-
-        if (inviteCode != null && inviteCode.isNotEmpty) {
-          Log.info(
-            'Parsed invite deep link (code $redactedSensitiveLogPlaceholder)',
-            name: 'DeepLinkService',
-            category: LogCategory.ui,
-          );
-          return DeepLink(type: DeepLinkType.invite, inviteCode: inviteCode);
-        }
-
-        return const DeepLink(type: DeepLinkType.unknown);
       }
 
       Log.warning(

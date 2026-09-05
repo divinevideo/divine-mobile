@@ -476,20 +476,12 @@ because `searchTags` asserts the `STG` badge.
 ```bash
 # iOS Simulator
 flutter build ios --simulator \
-  --dart-define=DEFAULT_ENV=STAGING \
-  --dart-define=GH_ACTIONS_PR_PREVIEW=true
+  --dart-define=DEFAULT_ENV=STAGING
 
 # Android emulator
 flutter build apk --debug \
-  --dart-define=DEFAULT_ENV=STAGING \
-  --dart-define=GH_ACTIONS_PR_PREVIEW=true
+  --dart-define=DEFAULT_ENV=STAGING
 ```
-
-`GH_ACTIONS_PR_PREVIEW` is what opens the invite gate. Without it, account
-creation stops at "Add your invite code" and every flow that signs up fails.
-It sets `forceOpenOnboarding` on the invite client, so `getClientConfig()`
-reports `OnboardingMode.open` and the gate self-redirects. The flag is named
-for its original PR-preview use; it is not GitHub-Actions specific.
 
 ### 2. Supply credentials
 

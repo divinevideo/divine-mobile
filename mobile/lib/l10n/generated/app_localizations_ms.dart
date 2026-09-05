@@ -3206,9 +3206,6 @@ class AppLocalizationsMs extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'Kembali ke kod jemputan';
-
-  @override
   String get authUseDivineNoBackup => 'Guna Divine tanpa sandaran';
 
   @override
@@ -3325,17 +3322,6 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tidak dapat mengesahkan e-mel. Sila semak sambungan anda dan cuba lagi.';
 
   @override
-  String get authWaitlistConfirmTitle => 'Anda masuk!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'Kami akan berkongsi kemas kini di $email.\nApabila lebih banyak kod jemputan tersedia, kami akan menghantarnya kepada anda.';
-  }
-
-  @override
-  String get authOk => 'OK';
-
-  @override
   String get authTryAgain => 'Cuba lagi';
 
   @override
@@ -3345,35 +3331,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return 'Tidak dapat membuka $email';
   }
-
-  @override
-  String get authAddInviteCode => 'Masukkan kod jemputan anda';
-
-  @override
-  String get authInviteCodeLabel => 'Kod jemputan';
-
-  @override
-  String get authEnterYourCode => 'Masukkan kod anda';
-
-  @override
-  String get authNext => 'Seterusnya';
-
-  @override
-  String get authJoinWaitlist => 'Sertai senarai menunggu';
-
-  @override
-  String get authJoinWaitlistTitle => 'Sertai senarai menunggu';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'Kongsi e-mel anda dan kami akan menghantar kod jemputan apabila akses dibuka.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn =>
-      'Hantarkan saya inspirasi Divine';
-
-  @override
-  String get authInviteAccessHelp => 'Bantuan akses jemputan';
 
   @override
   String get authGeneratingConnection => 'Menjana sambungan...';
@@ -3558,50 +3515,6 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'Kemasukan kod tidak tersedia sekarang. Ketik pautan dalam e-mel anda, atau hantar semula untuk mendapatkan yang baharu.';
-
-  @override
-  String get authInviteCodeErrorMalformed =>
-      'Masukkan kod jemputan seperti ABCD-EFGH.';
-
-  @override
-  String get authInviteCodeErrorNotFound =>
-      'Kod jemputan itu nampaknya tidak sah.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'Kod jemputan itu telah digunakan atau dibatalkan.';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'Jemputan pencipta ini telah habis';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'Kod jemputan itu tidak tersedia. Sertai senarai menunggu dan kami akan menghantar jemputan sebaik ada tempat.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'Kami tidak dapat menyemak kod itu. Cuba lagi.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'Ada sesuatu yang tidak kena. Cuba kod jemputan anda sekali lagi.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'Kod jemputan itu tidak lagi tersedia. Kembali ke kod jemputan anda, sertai senarai menunggu, atau hubungi sokongan.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'Kod jemputan itu tidak boleh digunakan sekarang. Kembali ke kod jemputan anda, sertai senarai menunggu, atau hubungi sokongan.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'Kami tidak dapat mengesahkan jemputan anda sekarang. Kembali ke kod jemputan anda dan cuba lagi, atau hubungi sokongan.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'Kami tidak dapat mengaktifkan jemputan anda. Kembali ke kod jemputan anda, sertai senarai menunggu, atau hubungi sokongan.';
 
   @override
   String get shareSheetSave => 'Simpan';
@@ -4271,15 +4184,6 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'Lakaran kecil video';
-
-  @override
-  String get notificationsInviteSingular =>
-      'Anda mempunyai 1 jemputan untuk dikongsi dengan rakan!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'Anda mempunyai $count jemputan untuk dikongsi dengan rakan-rakan!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7730,63 +7634,6 @@ class AppLocalizationsMs extends AppLocalizations {
       'Penerbitan Bluesky tidak tersedia buat sementara. Sila cuba lagi.';
 
   @override
-  String get invitesTitle => 'Jemput Rakan';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count jemputan sedia untuk dijana',
-      one: '1 jemputan sedia untuk dijana',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'Jana kod apabila anda bersedia untuk berkongsi.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'Jana jemputan';
-
-  @override
-  String get invitesNoneAvailable => 'Tiada jemputan tersedia sekarang';
-
-  @override
-  String get invitesShareWithPeople =>
-      'Kongsi Divine dengan orang yang anda kenali';
-
-  @override
-  String get invitesUsedInvites => 'Jemputan digunakan';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Sertai saya di Divine! Guna kod jemputan $code untuk bermula:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'Salin jemputan';
-
-  @override
-  String get invitesCopied => 'Jemputan disalin!';
-
-  @override
-  String get invitesShareInvite => 'Kongsi jemputan';
-
-  @override
-  String get invitesShareSubject => 'Sertai saya di Divine';
-
-  @override
-  String get invitesClaimed => 'Dituntut';
-
-  @override
-  String get invitesCouldNotLoad => 'Tidak dapat memuatkan jemputan';
-
-  @override
-  String get invitesRetry => 'Cuba Semula';
-
-  @override
   String get searchSomethingWentWrong => 'Sesuatu telah berlaku';
 
   @override
@@ -10641,73 +10488,6 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Penggantian bawah umur dilindungi dikosongkan';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'Jemputan pendaftaran';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'Keadaan semasa';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'Nilai pelayan: sedang dimuatkan';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled =>
-      'Nilai pelayan: dihidupkan';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled =>
-      'Nilai pelayan: dimatikan';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown =>
-      'Nilai pelayan: tidak diketahui';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'Tulis ganti: guna nilai pelayan';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'Tulis ganti: paksa hidup';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'Tulis ganti: paksa mati';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer => 'Guna nilai pelayan';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'Ikut onboardingMode perkhidmatan jemputan';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'Paksa hidup';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'Tunjukkan get jemputan pendaftaran dan pengurusannya secara setempat';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => 'Paksa mati';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'Sembunyikan UI jemputan pendaftaran secara setempat tanpa mengubah pelayan';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'Jemputan pendaftaran kini mengikut pelayan';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'Jemputan pendaftaran dipaksa hidup';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'Jemputan pendaftaran dipaksa mati';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Rakam komen video';

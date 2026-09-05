@@ -1676,7 +1676,6 @@
     "description": "Tappable call-to-action span of the failed-sign-in hint. Opens the sheet listing all sign-in methods."
   },
   "authCreateAccountTitle": "Cipta akaun",
-  "authBackToInviteCode": "Kembali ke kod jemputan",
   "authUseDivineNoBackup": "Guna Divine tanpa sandaran",
   "authSkipConfirmTitle": "Satu lagi perkara...",
   "authSkipConfirmKeyCreated": "Anda masuk! Kami akan mencipta kunci selamat yang menggerakkan akaun Divine anda.",
@@ -1718,17 +1717,6 @@
   "authEmailVerifiedLogin": "E-mel disahkan! Sila log masuk untuk meneruskan.",
   "authVerificationLinkExpired": "Pautan pengesahan ini tidak lagi sah.",
   "authVerificationConnectionError": "Tidak dapat mengesahkan e-mel. Sila semak sambungan anda dan cuba lagi.",
-  "authWaitlistConfirmTitle": "Anda masuk!",
-  "authWaitlistUpdatesAt": "Kami akan berkongsi kemas kini di {email}.\nApabila lebih banyak kod jemputan tersedia, kami akan menghantarnya kepada anda.",
-  "@authWaitlistUpdatesAt": {
-    "description": "Waitlist confirmation message with email",
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
-  "authOk": "OK",
   "authTryAgain": "Cuba lagi",
   "authContactSupport": "Hubungi sokongan",
   "authCouldNotOpenEmail": "Tidak dapat membuka {email}",
@@ -1740,15 +1728,6 @@
       }
     }
   },
-  "authAddInviteCode": "Masukkan kod jemputan anda",
-  "authInviteCodeLabel": "Kod jemputan",
-  "authEnterYourCode": "Masukkan kod anda",
-  "authNext": "Seterusnya",
-  "authJoinWaitlist": "Sertai senarai menunggu",
-  "authJoinWaitlistTitle": "Sertai senarai menunggu",
-  "authJoinWaitlistDescription": "Kongsi e-mel anda dan kami akan menghantar kod jemputan apabila akses dibuka.",
-  "authJoinWaitlistNewsletterOptIn": "Hantarkan saya inspirasi Divine",
-  "authInviteAccessHelp": "Bantuan akses jemputan",
   "authGeneratingConnection": "Menjana sambungan...",
   "authConnectedAuthenticating": "Bersambung! Mengesahkan...",
   "authConnectionTimedOut": "Sambungan tamat masa",
@@ -1808,17 +1787,6 @@
   "authVerificationErrorPinLocked": "Terlalu banyak percubaan. Ketik hantar semula untuk mendapatkan kod baharu.",
   "authVerificationErrorPinFailed": "Kami tidak dapat mengesahkan kod itu. Sila cuba lagi.",
   "authVerificationErrorPinUnavailable": "Kemasukan kod tidak tersedia sekarang. Ketik pautan dalam e-mel anda, atau hantar semula untuk mendapatkan yang baharu.",
-  "authInviteCodeErrorMalformed": "Masukkan kod jemputan seperti ABCD-EFGH.",
-  "authInviteCodeErrorNotFound": "Kod jemputan itu nampaknya tidak sah.",
-  "authInviteCodeErrorAlreadyUsed": "Kod jemputan itu telah digunakan atau dibatalkan.",
-  "authInviteGateErrorCreatorFull": "Jemputan pencipta ini telah habis",
-  "authInviteGateErrorUnavailable": "Kod jemputan itu tidak tersedia. Sertai senarai menunggu dan kami akan menghantar jemputan sebaik ada tempat.",
-  "authInviteGateErrorCheckFailed": "Kami tidak dapat menyemak kod itu. Cuba lagi.",
-  "authInviteGateErrorUnknown": "Ada sesuatu yang tidak kena. Cuba kod jemputan anda sekali lagi.",
-  "authInviteErrorAlreadyUsed": "Kod jemputan itu tidak lagi tersedia. Kembali ke kod jemputan anda, sertai senarai menunggu, atau hubungi sokongan.",
-  "authInviteErrorInvalid": "Kod jemputan itu tidak boleh digunakan sekarang. Kembali ke kod jemputan anda, sertai senarai menunggu, atau hubungi sokongan.",
-  "authInviteErrorTemporary": "Kami tidak dapat mengesahkan jemputan anda sekarang. Kembali ke kod jemputan anda dan cuba lagi, atau hubungi sokongan.",
-  "authInviteErrorUnknown": "Kami tidak dapat mengaktifkan jemputan anda. Kembali ke kod jemputan anda, sertai senarai menunggu, atau hubungi sokongan.",
   "shareSheetSave": "Simpan",
   "shareSheetRemoveFromSaved": "Alih keluar simpanan",
   "shareSheetSaveToGallery": "Simpan ke Galeri",
@@ -2180,15 +2148,6 @@
   "notificationsVideoThumbnail": "Lakaran kecil video",
   "@notificationsVideoThumbnail": {
     "description": "Screen-reader fallback label for the video thumbnail on a video-anchored notification row when the title is missing."
-  },
-  "notificationsInviteSingular": "Anda mempunyai 1 jemputan untuk dikongsi dengan rakan!",
-  "notificationsInvitePlural": "Anda mempunyai {count} jemputan untuk dikongsi dengan rakan-rakan!",
-  "@notificationsInvitePlural": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "notificationsVideoUnavailable": "Video tidak tersedia",
   "feedFailedToLoadVideos": "Gagal memuatkan video",
@@ -4022,42 +3981,6 @@
   "blueskyStatusUnavailableRetry": "Kami tidak dapat menyemak handle Divine anda. Cuba lagi.",
   "blueskySetUpHandle": "Sediakan",
   "blueskyTemporarilyUnavailable": "Penerbitan Bluesky tidak tersedia buat sementara. Sila cuba lagi.",
-  "invitesTitle": "Jemput Rakan",
-  "invitesGenerateCardTitle": "{count, plural, =1{1 jemputan sedia untuk dijana} other{{count} jemputan sedia untuk dijana}}",
-  "@invitesGenerateCardTitle": {
-    "description": "Title of the generate-invite card on the invites screen, shown when the user has invite capacity that has not been generated as codes yet.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "invitesGenerateCardSubtitle": "Jana kod apabila anda bersedia untuk berkongsi.",
-  "@invitesGenerateCardSubtitle": {
-    "description": "Body text on the generate-invite card explaining what tapping the button does."
-  },
-  "invitesGenerateButtonLabel": "Jana jemputan",
-  "@invitesGenerateButtonLabel": {
-    "description": "Label of the button on the generate-invite card that creates a new invite code from remaining capacity."
-  },
-  "invitesNoneAvailable": "Tiada jemputan tersedia sekarang",
-  "invitesShareWithPeople": "Kongsi Divine dengan orang yang anda kenali",
-  "invitesUsedInvites": "Jemputan digunakan",
-  "invitesShareMessage": "Sertai saya di Divine! Guna kod jemputan {code} untuk bermula:\nhttps://divine.video/invite/{code}",
-  "@invitesShareMessage": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
-  },
-  "invitesCopyInvite": "Salin jemputan",
-  "invitesCopied": "Jemputan disalin!",
-  "invitesShareInvite": "Kongsi jemputan",
-  "invitesShareSubject": "Sertai saya di Divine",
-  "invitesClaimed": "Dituntut",
-  "invitesCouldNotLoad": "Tidak dapat memuatkan jemputan",
-  "invitesRetry": "Cuba Semula",
   "searchSomethingWentWrong": "Sesuatu telah berlaku",
   "searchTryAgain": "Cuba lagi",
   "searchForLists": "Cari senarai",
@@ -5647,24 +5570,6 @@
   "devOptionsProtectedMinorEnabledToast": "Keadaan bawah umur dilindungi dipaksa hidup",
   "devOptionsProtectedMinorNonMinorToast": "Keadaan bawah umur dilindungi dipaksa mati",
   "devOptionsProtectedMinorClearedToast": "Penggantian bawah umur dilindungi dikosongkan",
-  "devOptionsInviteAvailabilityTitle": "Jemputan pendaftaran",
-  "devOptionsInviteAvailabilityCurrentLabel": "Keadaan semasa",
-  "devOptionsInviteAvailabilityServerLoading": "Nilai pelayan: sedang dimuatkan",
-  "devOptionsInviteAvailabilityServerEnabled": "Nilai pelayan: dihidupkan",
-  "devOptionsInviteAvailabilityServerDisabled": "Nilai pelayan: dimatikan",
-  "devOptionsInviteAvailabilityServerUnknown": "Nilai pelayan: tidak diketahui",
-  "devOptionsInviteAvailabilityOverrideNone": "Tulis ganti: guna nilai pelayan",
-  "devOptionsInviteAvailabilityOverrideEnabled": "Tulis ganti: paksa hidup",
-  "devOptionsInviteAvailabilityOverrideDisabled": "Tulis ganti: paksa mati",
-  "devOptionsInviteAvailabilityUseServer": "Guna nilai pelayan",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "Ikut onboardingMode perkhidmatan jemputan",
-  "devOptionsInviteAvailabilityForceEnabled": "Paksa hidup",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "Tunjukkan get jemputan pendaftaran dan pengurusannya secara setempat",
-  "devOptionsInviteAvailabilityForceDisabled": "Paksa mati",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "Sembunyikan UI jemputan pendaftaran secara setempat tanpa mengubah pelayan",
-  "devOptionsInviteAvailabilityUseServerToast": "Jemputan pendaftaran kini mengikut pelayan",
-  "devOptionsInviteAvailabilityForceEnabledToast": "Jemputan pendaftaran dipaksa hidup",
-  "devOptionsInviteAvailabilityForceDisabledToast": "Jemputan pendaftaran dipaksa mati",
   "commentsRecordVideoButtonLabel": "Rakam komen video",
   "@commentsRecordVideoButtonLabel": {
     "description": "Semantics label for the button that opens the recorder to create a video reply in comments."

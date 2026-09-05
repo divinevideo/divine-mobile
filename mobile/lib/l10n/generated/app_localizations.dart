@@ -5515,12 +5515,6 @@ abstract class AppLocalizations {
   /// **'Get Divine app updates and news'**
   String get authCreateAccountMarketingOptIn;
 
-  /// No description provided for @authBackToInviteCode.
-  ///
-  /// In en, this message translates to:
-  /// **'Back to invite code'**
-  String get authBackToInviteCode;
-
   /// No description provided for @authUseDivineNoBackup.
   ///
   /// In en, this message translates to:
@@ -5719,24 +5713,6 @@ abstract class AppLocalizations {
   /// **'Unable to verify email. Please check your connection and try again.'**
   String get authVerificationConnectionError;
 
-  /// No description provided for @authWaitlistConfirmTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'You\'re in!'**
-  String get authWaitlistConfirmTitle;
-
-  /// Waitlist confirmation message with email
-  ///
-  /// In en, this message translates to:
-  /// **'We\'ll share updates at {email}.\nWhen more invite codes are available, we\'ll send them your way.'**
-  String authWaitlistUpdatesAt(String email);
-
-  /// No description provided for @authOk.
-  ///
-  /// In en, this message translates to:
-  /// **'OK'**
-  String get authOk;
-
   /// No description provided for @authTryAgain.
   ///
   /// In en, this message translates to:
@@ -5754,60 +5730,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not open {email}'**
   String authCouldNotOpenEmail(String email);
-
-  /// No description provided for @authAddInviteCode.
-  ///
-  /// In en, this message translates to:
-  /// **'Add your invite code'**
-  String get authAddInviteCode;
-
-  /// No description provided for @authInviteCodeLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Invite code'**
-  String get authInviteCodeLabel;
-
-  /// No description provided for @authEnterYourCode.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter your code'**
-  String get authEnterYourCode;
-
-  /// No description provided for @authNext.
-  ///
-  /// In en, this message translates to:
-  /// **'Next'**
-  String get authNext;
-
-  /// No description provided for @authJoinWaitlist.
-  ///
-  /// In en, this message translates to:
-  /// **'Join waitlist'**
-  String get authJoinWaitlist;
-
-  /// No description provided for @authJoinWaitlistTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Join the waitlist'**
-  String get authJoinWaitlistTitle;
-
-  /// No description provided for @authJoinWaitlistDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Share your email and we\'ll send an invite code as access opens up.'**
-  String get authJoinWaitlistDescription;
-
-  /// No description provided for @authJoinWaitlistNewsletterOptIn.
-  ///
-  /// In en, this message translates to:
-  /// **'Send me Divine inspiration'**
-  String get authJoinWaitlistNewsletterOptIn;
-
-  /// No description provided for @authInviteAccessHelp.
-  ///
-  /// In en, this message translates to:
-  /// **'Invite access help'**
-  String get authInviteAccessHelp;
 
   /// No description provided for @authGeneratingConnection.
   ///
@@ -6120,72 +6042,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Code entry isn\'t available right now. Tap the link in your email, or resend to get a fresh one.'**
   String get authVerificationErrorPinUnavailable;
-
-  /// Inline error on the invite-code field when the typed text is not shaped like an invite code.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter an invite code like ABCD-EFGH.'**
-  String get authInviteCodeErrorMalformed;
-
-  /// Inline error on the invite-code field when the server does not recognise the code.
-  ///
-  /// In en, this message translates to:
-  /// **'That invite code does not look valid.'**
-  String get authInviteCodeErrorNotFound;
-
-  /// Inline error on the invite-code field when the code was already claimed or revoked.
-  ///
-  /// In en, this message translates to:
-  /// **'That invite code has already been used or revoked.'**
-  String get authInviteCodeErrorAlreadyUsed;
-
-  /// Block error on the invite gate when the creator has no invites left.
-  ///
-  /// In en, this message translates to:
-  /// **'This creator\'s invites are full'**
-  String get authInviteGateErrorCreatorFull;
-
-  /// Block error on the invite gate when the code is real but no longer usable.
-  ///
-  /// In en, this message translates to:
-  /// **'That invite code is unavailable. Join the waitlist and we\'ll send an invite when there\'s room.'**
-  String get authInviteGateErrorUnavailable;
-
-  /// Block error on the invite gate when the invite service could not give a verdict. Retryable.
-  ///
-  /// In en, this message translates to:
-  /// **'We couldn\'t check that code. Try again.'**
-  String get authInviteGateErrorCheckFailed;
-
-  /// Block error on the invite gate when an inbound link reported an unclassifiable problem.
-  ///
-  /// In en, this message translates to:
-  /// **'Something went wrong. Try your invite code again.'**
-  String get authInviteGateErrorUnknown;
-
-  /// No description provided for @authInviteErrorAlreadyUsed.
-  ///
-  /// In en, this message translates to:
-  /// **'That invite code is no longer available. Go back to your invite code, join the waitlist, or contact support.'**
-  String get authInviteErrorAlreadyUsed;
-
-  /// No description provided for @authInviteErrorInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'That invite code cannot be used right now. Go back to your invite code, join the waitlist, or contact support.'**
-  String get authInviteErrorInvalid;
-
-  /// No description provided for @authInviteErrorTemporary.
-  ///
-  /// In en, this message translates to:
-  /// **'We couldn\'t confirm your invite right now. Go back to your invite code and try again, or contact support.'**
-  String get authInviteErrorTemporary;
-
-  /// No description provided for @authInviteErrorUnknown.
-  ///
-  /// In en, this message translates to:
-  /// **'We couldn\'t activate your invite. Go back to your invite code, join the waitlist, or contact support.'**
-  String get authInviteErrorUnknown;
 
   /// No description provided for @shareSheetSave.
   ///
@@ -7320,18 +7176,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Video thumbnail'**
   String get notificationsVideoThumbnail;
-
-  /// No description provided for @notificationsInviteSingular.
-  ///
-  /// In en, this message translates to:
-  /// **'You have 1 invite to share with a friend!'**
-  String get notificationsInviteSingular;
-
-  /// No description provided for @notificationsInvitePlural.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{You have {count} invite to share with friends!} other{You have {count} invites to share with friends!}}'**
-  String notificationsInvitePlural(int count);
 
   /// Inbox tab listing badge awards that still need an accept or reject, counting those waiting.
   ///
@@ -13162,96 +13006,6 @@ abstract class AppLocalizations {
   /// **'Bluesky publishing is temporarily unavailable. Please try again.'**
   String get blueskyTemporarilyUnavailable;
 
-  /// No description provided for @invitesTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Invite Friends'**
-  String get invitesTitle;
-
-  /// Title of the generate-invite card on the invites screen, shown when the user has invite capacity that has not been generated as codes yet.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 invite ready to generate} other{{count} invites ready to generate}}'**
-  String invitesGenerateCardTitle(int count);
-
-  /// Body text on the generate-invite card explaining what tapping the button does.
-  ///
-  /// In en, this message translates to:
-  /// **'Generate a code when you are ready to share one.'**
-  String get invitesGenerateCardSubtitle;
-
-  /// Label of the button on the generate-invite card that creates a new invite code from remaining capacity.
-  ///
-  /// In en, this message translates to:
-  /// **'Generate invite'**
-  String get invitesGenerateButtonLabel;
-
-  /// No description provided for @invitesNoneAvailable.
-  ///
-  /// In en, this message translates to:
-  /// **'No invites available right now'**
-  String get invitesNoneAvailable;
-
-  /// No description provided for @invitesShareWithPeople.
-  ///
-  /// In en, this message translates to:
-  /// **'Share Divine with people you know'**
-  String get invitesShareWithPeople;
-
-  /// No description provided for @invitesUsedInvites.
-  ///
-  /// In en, this message translates to:
-  /// **'Used invites'**
-  String get invitesUsedInvites;
-
-  /// No description provided for @invitesShareMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Join me on Divine! Use invite code {code} to get started:\nhttps://divine.video/invite/{code}'**
-  String invitesShareMessage(String code);
-
-  /// No description provided for @invitesCopyInvite.
-  ///
-  /// In en, this message translates to:
-  /// **'Copy invite'**
-  String get invitesCopyInvite;
-
-  /// No description provided for @invitesCopied.
-  ///
-  /// In en, this message translates to:
-  /// **'Invite copied!'**
-  String get invitesCopied;
-
-  /// No description provided for @invitesShareInvite.
-  ///
-  /// In en, this message translates to:
-  /// **'Share invite'**
-  String get invitesShareInvite;
-
-  /// No description provided for @invitesShareSubject.
-  ///
-  /// In en, this message translates to:
-  /// **'Join me on Divine'**
-  String get invitesShareSubject;
-
-  /// No description provided for @invitesClaimed.
-  ///
-  /// In en, this message translates to:
-  /// **'Claimed'**
-  String get invitesClaimed;
-
-  /// No description provided for @invitesCouldNotLoad.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not load invites'**
-  String get invitesCouldNotLoad;
-
-  /// No description provided for @invitesRetry.
-  ///
-  /// In en, this message translates to:
-  /// **'Retry'**
-  String get invitesRetry;
-
   /// No description provided for @searchSomethingWentWrong.
   ///
   /// In en, this message translates to:
@@ -17969,114 +17723,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Protected-minor override cleared'**
   String get devOptionsProtectedMinorClearedToast;
-
-  /// No description provided for @devOptionsInviteAvailabilityTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Signup invites'**
-  String get devOptionsInviteAvailabilityTitle;
-
-  /// No description provided for @devOptionsInviteAvailabilityCurrentLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Current state'**
-  String get devOptionsInviteAvailabilityCurrentLabel;
-
-  /// No description provided for @devOptionsInviteAvailabilityServerLoading.
-  ///
-  /// In en, this message translates to:
-  /// **'Server value: loading'**
-  String get devOptionsInviteAvailabilityServerLoading;
-
-  /// No description provided for @devOptionsInviteAvailabilityServerEnabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Server value: enabled'**
-  String get devOptionsInviteAvailabilityServerEnabled;
-
-  /// No description provided for @devOptionsInviteAvailabilityServerDisabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Server value: disabled'**
-  String get devOptionsInviteAvailabilityServerDisabled;
-
-  /// No description provided for @devOptionsInviteAvailabilityServerUnknown.
-  ///
-  /// In en, this message translates to:
-  /// **'Server value: unknown'**
-  String get devOptionsInviteAvailabilityServerUnknown;
-
-  /// No description provided for @devOptionsInviteAvailabilityOverrideNone.
-  ///
-  /// In en, this message translates to:
-  /// **'Override: use server value'**
-  String get devOptionsInviteAvailabilityOverrideNone;
-
-  /// No description provided for @devOptionsInviteAvailabilityOverrideEnabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Override: force enabled'**
-  String get devOptionsInviteAvailabilityOverrideEnabled;
-
-  /// No description provided for @devOptionsInviteAvailabilityOverrideDisabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Override: force disabled'**
-  String get devOptionsInviteAvailabilityOverrideDisabled;
-
-  /// No description provided for @devOptionsInviteAvailabilityUseServer.
-  ///
-  /// In en, this message translates to:
-  /// **'Use server value'**
-  String get devOptionsInviteAvailabilityUseServer;
-
-  /// No description provided for @devOptionsInviteAvailabilityUseServerSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Follow the invite service onboardingMode'**
-  String get devOptionsInviteAvailabilityUseServerSubtitle;
-
-  /// No description provided for @devOptionsInviteAvailabilityForceEnabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Force enabled'**
-  String get devOptionsInviteAvailabilityForceEnabled;
-
-  /// No description provided for @devOptionsInviteAvailabilityForceEnabledSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show signup invite gates and management locally'**
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle;
-
-  /// No description provided for @devOptionsInviteAvailabilityForceDisabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Force disabled'**
-  String get devOptionsInviteAvailabilityForceDisabled;
-
-  /// No description provided for @devOptionsInviteAvailabilityForceDisabledSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Hide signup invite UI locally without changing the server'**
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle;
-
-  /// No description provided for @devOptionsInviteAvailabilityUseServerToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Signup invites now follow the server'**
-  String get devOptionsInviteAvailabilityUseServerToast;
-
-  /// No description provided for @devOptionsInviteAvailabilityForceEnabledToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Signup invites forced on'**
-  String get devOptionsInviteAvailabilityForceEnabledToast;
-
-  /// No description provided for @devOptionsInviteAvailabilityForceDisabledToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Signup invites forced off'**
-  String get devOptionsInviteAvailabilityForceDisabledToast;
 
   /// Semantics label for the button that opens the recorder to create a video reply in comments.
   ///

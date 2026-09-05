@@ -6,7 +6,7 @@ import 'package:openvine/screens/auth/welcome_screen.dart';
 ///
 /// Mirrors that redirect in `goRouterProvider` (`app_router.dart`): an
 /// authenticated user is only redirected home from the sign-in entry points
-/// (`/welcome`, `/nostr-connect`, `/welcome/invite`, `/welcome/create-account`,
+/// (`/welcome`, `/nostr-connect`, `/welcome/create-account`,
 /// `/welcome/login-options`), with the same expired-session and anonymous
 /// recovery exceptions for login options.
 ///
@@ -39,7 +39,6 @@ bool authenticatedRedirectsFromAuthEntry(
   }
   return path == WelcomeScreen.path ||
       path == NostrConnectScreen.path ||
-      path == WelcomeScreen.inviteGatePath ||
       path == WelcomeScreen.createAccountPath ||
       path == WelcomeScreen.loginOptionsPath;
 }

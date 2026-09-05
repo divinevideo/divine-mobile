@@ -1676,7 +1676,6 @@
     "description": "Tappable call-to-action span of the failed-sign-in hint. Opens the sheet listing all sign-in methods."
   },
   "authCreateAccountTitle": "Tạo tài khoản",
-  "authBackToInviteCode": "Quay lại mã mời",
   "authUseDivineNoBackup": "Dùng Divine không cần sao lưu",
   "authSkipConfirmTitle": "Một điều cuối nữa thôi...",
   "authSkipConfirmKeyCreated": "Bạn vào được rồi! Bọn mình sẽ tạo một khóa bảo mật để vận hành tài khoản Divine của bạn.",
@@ -1718,17 +1717,6 @@
   "authEmailVerifiedLogin": "Email đã xác minh! Vui lòng đăng nhập để tiếp tục.",
   "authVerificationLinkExpired": "Liên kết xác minh này không còn hợp lệ.",
   "authVerificationConnectionError": "Không xác minh được email. Kiểm tra kết nối của bạn rồi thử lại nhé.",
-  "authWaitlistConfirmTitle": "Bạn vào được rồi!",
-  "authWaitlistUpdatesAt": "Bọn mình sẽ gửi cập nhật tới {email}.\nKhi có thêm mã mời, bọn mình sẽ gửi cho bạn.",
-  "@authWaitlistUpdatesAt": {
-    "description": "Waitlist confirmation message with email",
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
-  "authOk": "OK",
   "authTryAgain": "Thử lại",
   "authContactSupport": "Liên hệ hỗ trợ",
   "authCouldNotOpenEmail": "Không mở được {email}",
@@ -1740,15 +1728,6 @@
       }
     }
   },
-  "authAddInviteCode": "Nhập mã mời của bạn",
-  "authInviteCodeLabel": "Mã mời",
-  "authEnterYourCode": "Nhập mã của bạn",
-  "authNext": "Tiếp",
-  "authJoinWaitlist": "Tham gia danh sách chờ",
-  "authJoinWaitlistTitle": "Tham gia danh sách chờ",
-  "authJoinWaitlistDescription": "Chia sẻ email của bạn và bọn mình sẽ gửi mã mời khi mở thêm quyền truy cập.",
-  "authJoinWaitlistNewsletterOptIn": "Gửi cho tôi cảm hứng Divine",
-  "authInviteAccessHelp": "Trợ giúp về truy cập bằng mã mời",
   "authGeneratingConnection": "Đang tạo kết nối...",
   "authConnectedAuthenticating": "Đã kết nối! Đang xác thực...",
   "authConnectionTimedOut": "Kết nối hết thời gian chờ",
@@ -1808,17 +1787,6 @@
   "authVerificationErrorPinLocked": "Thử sai quá nhiều lần. Chạm gửi lại để lấy mã mới.",
   "authVerificationErrorPinFailed": "Bọn mình không xác minh được mã đó. Vui lòng thử lại.",
   "authVerificationErrorPinUnavailable": "Hiện không nhập mã được. Hãy bấm liên kết trong email, hoặc gửi lại để lấy mã mới.",
-  "authInviteCodeErrorMalformed": "Nhập mã mời dạng ABCD-EFGH.",
-  "authInviteCodeErrorNotFound": "Mã mời đó có vẻ không hợp lệ.",
-  "authInviteCodeErrorAlreadyUsed": "Mã mời đó đã được dùng hoặc đã bị thu hồi.",
-  "authInviteGateErrorCreatorFull": "Nhà sáng tạo này đã hết lời mời",
-  "authInviteGateErrorUnavailable": "Mã mời đó không khả dụng. Hãy tham gia danh sách chờ, chúng tôi sẽ gửi lời mời khi còn chỗ.",
-  "authInviteGateErrorCheckFailed": "Chúng tôi không kiểm tra được mã đó. Hãy thử lại.",
-  "authInviteGateErrorUnknown": "Đã xảy ra lỗi. Hãy thử lại mã mời của bạn.",
-  "authInviteErrorAlreadyUsed": "Mã mời đó không còn khả dụng. Quay lại mã mời của bạn, tham gia danh sách chờ, hoặc liên hệ hỗ trợ.",
-  "authInviteErrorInvalid": "Mã mời đó hiện không dùng được. Quay lại mã mời của bạn, tham gia danh sách chờ, hoặc liên hệ hỗ trợ.",
-  "authInviteErrorTemporary": "Bọn mình chưa xác nhận được mã mời của bạn. Quay lại mã mời và thử lại, hoặc liên hệ hỗ trợ.",
-  "authInviteErrorUnknown": "Bọn mình không kích hoạt được mã mời của bạn. Quay lại mã mời, tham gia danh sách chờ, hoặc liên hệ hỗ trợ.",
   "shareSheetSave": "Lưu",
   "shareSheetRemoveFromSaved": "Xóa khỏi mục đã lưu",
   "shareSheetSaveToGallery": "Lưu vào thư viện ảnh",
@@ -2180,15 +2148,6 @@
   "notificationsVideoThumbnail": "Ảnh thu nhỏ video",
   "@notificationsVideoThumbnail": {
     "description": "Screen-reader fallback label for the video thumbnail on a video-anchored notification row when the title is missing."
-  },
-  "notificationsInviteSingular": "Bạn có 1 lời mời để chia sẻ với bạn bè!",
-  "notificationsInvitePlural": "Bạn có {count} lời mời để chia sẻ với bạn bè!",
-  "@notificationsInvitePlural": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "notificationsVideoUnavailable": "Video không khả dụng",
   "feedFailedToLoadVideos": "Không tải được video",
@@ -4022,42 +3981,6 @@
   "blueskyStatusUnavailableRetry": "Bọn mình không kiểm tra được tên định danh Divine của bạn. Thử lại nhé.",
   "blueskySetUpHandle": "Thiết lập",
   "blueskyTemporarilyUnavailable": "Đăng lên Bluesky tạm thời không khả dụng. Vui lòng thử lại.",
-  "invitesTitle": "Mời bạn bè",
-  "invitesGenerateCardTitle": "{count, plural, =1{1 lời mời sẵn sàng tạo} other{{count} lời mời sẵn sàng tạo}}",
-  "@invitesGenerateCardTitle": {
-    "description": "Title of the generate-invite card on the invites screen, shown when the user has invite capacity that has not been generated as codes yet.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "invitesGenerateCardSubtitle": "Tạo mã khi bạn sẵn sàng chia sẻ.",
-  "@invitesGenerateCardSubtitle": {
-    "description": "Body text on the generate-invite card explaining what tapping the button does."
-  },
-  "invitesGenerateButtonLabel": "Tạo lời mời",
-  "@invitesGenerateButtonLabel": {
-    "description": "Label of the button on the generate-invite card that creates a new invite code from remaining capacity."
-  },
-  "invitesNoneAvailable": "Hiện chưa có lời mời nào",
-  "invitesShareWithPeople": "Chia sẻ Divine với những người bạn quen",
-  "invitesUsedInvites": "Lời mời đã dùng",
-  "invitesShareMessage": "Tham gia Divine cùng tôi nhé! Dùng mã mời {code} để bắt đầu:\nhttps://divine.video/invite/{code}",
-  "@invitesShareMessage": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
-  },
-  "invitesCopyInvite": "Sao chép lời mời",
-  "invitesCopied": "Đã sao chép lời mời!",
-  "invitesShareInvite": "Chia sẻ lời mời",
-  "invitesShareSubject": "Tham gia Divine cùng tôi nhé",
-  "invitesClaimed": "Đã dùng",
-  "invitesCouldNotLoad": "Không tải được lời mời",
-  "invitesRetry": "Thử lại",
   "searchSomethingWentWrong": "Có gì đó không ổn",
   "searchTryAgain": "Thử lại",
   "searchForLists": "Tìm danh sách",
@@ -5647,24 +5570,6 @@
   "devOptionsProtectedMinorEnabledToast": "Đã ép bật trạng thái vị thành niên được bảo vệ",
   "devOptionsProtectedMinorNonMinorToast": "Đã ép tắt trạng thái vị thành niên được bảo vệ",
   "devOptionsProtectedMinorClearedToast": "Đã xóa ghi đè vị thành niên được bảo vệ",
-  "devOptionsInviteAvailabilityTitle": "Lời mời đăng ký",
-  "devOptionsInviteAvailabilityCurrentLabel": "Trạng thái hiện tại",
-  "devOptionsInviteAvailabilityServerLoading": "Giá trị máy chủ: đang tải",
-  "devOptionsInviteAvailabilityServerEnabled": "Giá trị máy chủ: đã bật",
-  "devOptionsInviteAvailabilityServerDisabled": "Giá trị máy chủ: đã tắt",
-  "devOptionsInviteAvailabilityServerUnknown": "Giá trị máy chủ: không rõ",
-  "devOptionsInviteAvailabilityOverrideNone": "Ghi đè: dùng giá trị máy chủ",
-  "devOptionsInviteAvailabilityOverrideEnabled": "Ghi đè: buộc bật",
-  "devOptionsInviteAvailabilityOverrideDisabled": "Ghi đè: buộc tắt",
-  "devOptionsInviteAvailabilityUseServer": "Dùng giá trị máy chủ",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "Theo onboardingMode của dịch vụ lời mời",
-  "devOptionsInviteAvailabilityForceEnabled": "Buộc bật",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "Hiển thị cổng lời mời đăng ký và phần quản lý ở máy này",
-  "devOptionsInviteAvailabilityForceDisabled": "Buộc tắt",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "Ẩn giao diện lời mời đăng ký ở máy này mà không đổi máy chủ",
-  "devOptionsInviteAvailabilityUseServerToast": "Lời mời đăng ký giờ theo máy chủ",
-  "devOptionsInviteAvailabilityForceEnabledToast": "Đã buộc bật lời mời đăng ký",
-  "devOptionsInviteAvailabilityForceDisabledToast": "Đã buộc tắt lời mời đăng ký",
   "commentsRecordVideoButtonLabel": "Quay bình luận video",
   "@commentsRecordVideoButtonLabel": {
     "description": "Semantics label for the button that opens the recorder to create a video reply in comments."

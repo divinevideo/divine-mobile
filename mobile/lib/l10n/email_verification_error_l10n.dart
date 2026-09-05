@@ -31,14 +31,6 @@ extension EmailVerificationErrorL10n on AppLocalizations {
         return authVerificationConnectionError;
       case EmailVerificationError.emailAlreadyRegistered:
         return authVerificationEmailAlreadyRegistered;
-      case EmailVerificationError.inviteAlreadyUsed:
-        return authInviteErrorAlreadyUsed;
-      case EmailVerificationError.inviteInvalid:
-        return authInviteErrorInvalid;
-      case EmailVerificationError.inviteTemporary:
-        return authInviteErrorTemporary;
-      case EmailVerificationError.inviteUnknown:
-        return authInviteErrorUnknown;
       case EmailVerificationError.pinInvalid:
         return authVerificationErrorPinInvalid;
       case EmailVerificationError.pinExpired:

@@ -24,7 +24,7 @@ const _secretFragments = [
 
 /// A real `DeepLinkService._describeUriForLogs` line.
 const _deepLinkLogLine =
-    'scheme=https, host=divine.video, route=/invite, '
+    'scheme=https, host=divine.video, route=/video, '
     'segments=2, queryKeys=[code, state]';
 
 void main() {
@@ -484,7 +484,7 @@ void main() {
         'https://media.divine.video/abcdef0123456789.mp4',
         'wss://relay.divine.video',
         'GoRouterState: /video/abcdef0123',
-        '/invite',
+        '/settings',
         // `/home/<index>` is the video-feed route (RoutePaths.videoFeedForIndex),
         // not a Unix home directory. A home-dir path always has content below
         // the account name; the route is terminal, so it must survive.

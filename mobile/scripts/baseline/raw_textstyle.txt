@@ -11,9 +11,8 @@ lib/app_update/view/update_dialog.dart	2
 lib/main.dart	2
 lib/mixins/async_value_ui_helpers_mixin.dart	1
 lib/router/widgets/sound_detail_loader.dart	2
-lib/screens/auth/create_account_screen.dart	7
+lib/screens/auth/create_account_screen.dart	6
 lib/screens/auth/email_verification_screen.dart	10
-lib/screens/auth/invite_gate_screen.dart	11
 lib/screens/auth/login_options_screen.dart	4
 lib/screens/auth/nostr_connect_screen.dart	11
 lib/screens/auth/reset_password.dart	2
@@ -82,4 +81,5 @@ lib/widgets/video_feed_item/inspired_by_attribution_row.dart	1
 lib/widgets/video_feed_item/list_attribution_chip.dart	1
 lib/widgets/video_feed_item/reaction_overlay.dart	1
 lib/widgets/video_feed_item/reel_dm_reply_bar.dart	1
-lib/widgets/video_feed_item/video_feed_item.dart	6
+lib/widgets/video_feed_item/video_feed_item.dart	7
+lib/widgets/video_icon_placeholder.dart	2

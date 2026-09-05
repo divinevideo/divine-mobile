@@ -1,5 +1,5 @@
 // ABOUTME: Inbox notifications scaffold — six filter tabs plus actionable
-// ABOUTME: invite and pending-badge banners wrapping NotificationsView.
+// ABOUTME: pending-badge banner wrapping NotificationsView.
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -11,7 +11,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/blocs/badges/badges_cubit.dart';
-import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
@@ -19,8 +18,6 @@ import 'package:openvine/notifications/providers/notification_repository_provide
 import 'package:openvine/notifications/view/notifications_view.dart';
 import 'package:openvine/notifications/view/pending_badge_awards_view.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/screens/settings/invites_screen.dart';
-import 'package:openvine/widgets/signup_invites_availability_builder.dart';
 
 /// Inbox notifications page — owns the BLoC and tab scaffold.
 ///
@@ -95,10 +92,6 @@ class _InboxNotificationsScaffoldState
   void initState() {
     super.initState();
     _badgesCubit = BadgesCubit(repository: widget.badgeRepository)..load();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      context.read<InviteStatusCubit>().load();
-    });
   }
 
   @override
@@ -162,7 +155,6 @@ class _InboxNotificationsScaffoldState
                       isVisible: widget.isVisible,
                       child: Column(
                         children: [
-                          const _InvitesBanner(),
                           _PendingBadgesBanner(
                             onViewPending: () =>
                                 tabController.animateTo(_badgesTabIndex),
@@ -360,43 +352,6 @@ class _PendingBadgesBanner extends StatelessWidget {
       icon: DivineIconName.sealCheck,
       label: context.l10n.notificationsPendingBadges(pendingCount),
       onTap: onViewPending,
-    );
-  }
-}
-
-class _InvitesBanner extends StatelessWidget {
-  const _InvitesBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return SignupInvitesAvailabilityBuilder(
-      builder: (context, availability) {
-        if (!availability.isEnabled) return const SizedBox.shrink();
-        return BlocBuilder<InviteStatusCubit, InviteStatusState>(
-          builder: (context, state) {
-            if (!state.hasAvailableInvites) return const SizedBox.shrink();
-            return _InviteNotificationCard(count: state.availableInviteCount);
-          },
-        );
-      },
-    );
-  }
-}
-
-class _InviteNotificationCard extends StatelessWidget {
-  const _InviteNotificationCard({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = count == 1
-        ? context.l10n.notificationsInviteSingular
-        : context.l10n.notificationsInvitePlural(count);
-    return _InboxBanner(
-      icon: DivineIconName.shareNetwork,
-      label: label,
-      onTap: () => context.push(InvitesScreen.path),
     );
   }
 }

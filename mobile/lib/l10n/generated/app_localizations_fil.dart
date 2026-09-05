@@ -3233,9 +3233,6 @@ class AppLocalizationsFil extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'Bumalik sa invite code';
-
-  @override
   String get authUseDivineNoBackup => 'Gamitin ang Divine nang walang backup';
 
   @override
@@ -3352,17 +3349,6 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi na-verify ang email. Pakitsek ang iyong connection at subukang ulit.';
 
   @override
-  String get authWaitlistConfirmTitle => 'Pasok ka na!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'Magbabahagi kami ng update sa $email.\nKapag may mga bagong invite code na, ipapadala namin sa iyo.';
-  }
-
-  @override
-  String get authOk => 'OK';
-
-  @override
   String get authTryAgain => 'Subukan ulit';
 
   @override
@@ -3372,35 +3358,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return 'Hindi mabuksan ang $email';
   }
-
-  @override
-  String get authAddInviteCode => 'Idagdag ang iyong invite code';
-
-  @override
-  String get authInviteCodeLabel => 'Invite code';
-
-  @override
-  String get authEnterYourCode => 'Ilagay ang iyong code';
-
-  @override
-  String get authNext => 'Susunod';
-
-  @override
-  String get authJoinWaitlist => 'Sumali sa waitlist';
-
-  @override
-  String get authJoinWaitlistTitle => 'Sumali sa waitlist';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'Ibahagi ang iyong email at magpapadala kami ng invite code kapag may bukas na access.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn =>
-      'Padalhan ako ng inspirasyon mula sa Divine';
-
-  @override
-  String get authInviteAccessHelp => 'Tulong sa invite access';
 
   @override
   String get authGeneratingConnection => 'Bumubuo ng connection...';
@@ -3585,50 +3542,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'Hindi available ang paglalagay ng code ngayon. I-tap ang link sa email mo, o ipadala ulit para kumuha ng bago.';
-
-  @override
-  String get authInviteCodeErrorMalformed =>
-      'Maglagay ng invite code tulad ng ABCD-EFGH.';
-
-  @override
-  String get authInviteCodeErrorNotFound =>
-      'Mukhang hindi valid ang invite code na iyan.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'Nagamit na o binawi na ang invite code na iyan.';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'Ubos na ang mga invite ng creator na ito';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'Hindi available ang invite code na iyan. Sumali sa waitlist at padadalhan ka namin ng invite kapag may bakante.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'Hindi namin ma-check ang code na iyan. Subukan ulit.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'May nangyaring mali. Subukan ulit ang invite code mo.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'Hindi na available ang invite code na iyon. Bumalik sa iyong invite code, sumali sa waitlist, o makipag-ugnayan sa support.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'Hindi pwedeng gamitin ngayon ang invite code na iyon. Bumalik sa iyong invite code, sumali sa waitlist, o makipag-ugnayan sa support.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'Hindi namin ma-confirm ang iyong invite ngayon. Bumalik sa iyong invite code at subukang ulit, o makipag-ugnayan sa support.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'Hindi namin na-activate ang iyong invite. Bumalik sa iyong invite code, sumali sa waitlist, o makipag-ugnayan sa support.';
 
   @override
   String get shareSheetSave => 'I-save';
@@ -4305,15 +4218,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'Thumbnail ng video';
-
-  @override
-  String get notificationsInviteSingular =>
-      'May 1 ka pang invite na puwedeng i-share sa kaibigan!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'May $count ka pang invites na puwedeng i-share sa mga kaibigan!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7777,62 +7681,6 @@ class AppLocalizationsFil extends AppLocalizations {
       'Pansamantalang hindi available ang pag-publish sa Bluesky. Subukan ulit.';
 
   @override
-  String get invitesTitle => 'Mag-invite ng Kaibigan';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count imbitasyon ang handa nang gawin',
-      one: '$count imbitasyon ang handa nang gawin',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'Gumawa ng code kapag handa ka nang magbahagi.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'Gumawa ng imbitasyon';
-
-  @override
-  String get invitesNoneAvailable => 'Walang available na invite ngayon';
-
-  @override
-  String get invitesShareWithPeople => 'I-share ang Divine sa mga kakilala mo';
-
-  @override
-  String get invitesUsedInvites => 'Mga nagamit na invite';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Sumali sa akin sa Divine! Gamitin ang invite code $code para magsimula:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'I-copy ang invite';
-
-  @override
-  String get invitesCopied => 'Na-copy ang invite!';
-
-  @override
-  String get invitesShareInvite => 'I-share ang invite';
-
-  @override
-  String get invitesShareSubject => 'Sumali sa akin sa Divine';
-
-  @override
-  String get invitesClaimed => 'Na-claim';
-
-  @override
-  String get invitesCouldNotLoad => 'Hindi na-load ang mga invite';
-
-  @override
-  String get invitesRetry => 'Subukan ulit';
-
-  @override
   String get searchSomethingWentWrong => 'May nangyaring problema';
 
   @override
@@ -10718,75 +10566,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Na-clear ang override na protektadong menor de edad';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle =>
-      'Mga imbitasyon sa pag-sign up';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'Kasalukuyang status';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'Server value: nilo-load';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled =>
-      'Server value: naka-on';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled =>
-      'Server value: naka-off';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown =>
-      'Server value: hindi alam';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'Override: gamitin ang server value';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'Override: piliting i-on';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'Override: piliting i-off';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer =>
-      'Gamitin ang server value';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'Sundin ang onboardingMode ng invite service';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'Piliting i-on';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'Ipakita nang lokal ang mga gate at pamamahala ng invite sa pag-sign up';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => 'Piliting i-off';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'Itago nang lokal ang invite UI nang hindi binabago ang server';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'Sumusunod na sa server ang mga imbitasyon sa pag-sign up';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'Pinilit i-on ang mga imbitasyon sa pag-sign up';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'Pinilit i-off ang mga imbitasyon sa pag-sign up';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Mag-record ng video comment';

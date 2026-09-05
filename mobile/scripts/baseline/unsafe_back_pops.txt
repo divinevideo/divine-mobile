@@ -32,7 +32,6 @@ lib/screens/settings/bluesky_settings_screen.dart	3
 lib/screens/settings/content_preferences_screen.dart	1
 lib/screens/settings/crossposting_settings_screen.dart	1
 lib/screens/settings/general_settings_screen.dart	1
-lib/screens/settings/invites_screen.dart	1
 lib/screens/settings/legal_screen.dart	1
 lib/screens/settings/nip05_settings_screen.dart	2
 lib/screens/settings/nostr_settings_screen.dart	1

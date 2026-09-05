@@ -72,11 +72,6 @@ void main() {
   late _RecordingAnalytics analytics;
   late List<String?> crashUserIds;
 
-  // AnalyticsIdentityCoordinator keeps the last applied user ID in a static,
-  // and the VGV merged isolate shares it with every other suite in the bundle.
-  setUp(AnalyticsIdentityCoordinator.resetLastAppliedUserId);
-  tearDown(AnalyticsIdentityCoordinator.resetLastAppliedUserId);
-
   setUp(() {
     authStates = StreamController<AuthState>.broadcast();
     addTearDown(authStates.close);

@@ -3319,9 +3319,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'Înapoi la codul de invitație';
-
-  @override
   String get authUseDivineNoBackup => 'Folosește Divine fără backup';
 
   @override
@@ -3437,17 +3434,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu am putut verifica emailul. Verifică-ți conexiunea și încearcă din nou.';
 
   @override
-  String get authWaitlistConfirmTitle => 'Ești înăuntru!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'Vom da noutăți la $email.\nCând apar mai multe coduri de invitație, ți le trimitem.';
-  }
-
-  @override
-  String get authOk => 'OK';
-
-  @override
   String get authTryAgain => 'Încearcă din nou';
 
   @override
@@ -3457,35 +3443,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return 'N-am putut deschide $email';
   }
-
-  @override
-  String get authAddInviteCode => 'Adaugă codul de invitație';
-
-  @override
-  String get authInviteCodeLabel => 'Cod de invitație';
-
-  @override
-  String get authEnterYourCode => 'Introdu codul tău';
-
-  @override
-  String get authNext => 'Mai departe';
-
-  @override
-  String get authJoinWaitlist => 'Alătură-te listei de așteptare';
-
-  @override
-  String get authJoinWaitlistTitle => 'Alătură-te listei de așteptare';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'Dă-ne emailul tău și âți vom trimite noutăți pe măsură ce se deschide accesul.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn =>
-      'Trimiteți-mi inspirație de la Divine';
-
-  @override
-  String get authInviteAccessHelp => 'Ajutor pentru accesul prin invitație';
 
   @override
   String get authGeneratingConnection => 'Se generează conexiunea...';
@@ -3670,49 +3627,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'Introducerea codului nu e disponibilă acum. Apasă linkul din email sau retrimite pentru a primi unul nou.';
-
-  @override
-  String get authInviteCodeErrorMalformed =>
-      'Introdu un cod de invitație de forma ABCD-EFGH.';
-
-  @override
-  String get authInviteCodeErrorNotFound => 'Codul de invitație nu pare valid.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'Codul de invitație a fost deja folosit sau revocat.';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'Invitațiile acestui creator s-au epuizat';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'Codul de invitație nu este disponibil. Înscrie-te pe lista de așteptare și îți trimitem o invitație când se eliberează un loc.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'Nu am putut verifica acest cod. Încearcă din nou.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'Ceva nu a mers bine. Încearcă din nou codul de invitație.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'Acest cod de invitație nu mai e disponibil. Întoarce-te la codul tău, alătură-te listei de așteptare sau contactează asistența.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'Acest cod de invitație nu poate fi folosit acum. Întoarce-te la codul tău, alătură-te listei de așteptare sau contactează asistența.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'N-am putut confirma invitația ta acum. Întoarce-te la codul tău și încearcă din nou, sau contactează asistența.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'N-am putut activa invitația ta. Întoarce-te la codul tău, alătură-te listei de așteptare sau contactează asistența.';
 
   @override
   String get shareSheetSave => 'Salvează';
@@ -4403,22 +4317,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'Miniatură video';
-
-  @override
-  String get notificationsInviteSingular =>
-      'Ai 1 invitație de împărțit cu un prieten!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count de invitații',
-      few: '$count invitații',
-      one: '1 invitație',
-    );
-    return 'Ai $_temp0 de împărțit cu prietenii!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7904,64 +7802,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Publicarea pe Bluesky e temporar indisponibilă. Încearcă din nou.';
 
   @override
-  String get invitesTitle => 'Invită prieteni';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count de invitații gata de generat',
-      few: '$count invitații gata de generat',
-      one: '1 invitație gata de generat',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'Generează un cod când ești gata să îl împarți.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'Generează invitație';
-
-  @override
-  String get invitesNoneAvailable => 'Nicio invitație disponibilă acum';
-
-  @override
-  String get invitesShareWithPeople =>
-      'Partajează Divine cu oameni pe care îi cunoști';
-
-  @override
-  String get invitesUsedInvites => 'Invitații folosite';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Vino cu mine pe Divine! Folosește codul de invitație $code ca să începi:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'Copiază invitația';
-
-  @override
-  String get invitesCopied => 'Invitație copiată!';
-
-  @override
-  String get invitesShareInvite => 'Partajează invitația';
-
-  @override
-  String get invitesShareSubject => 'Vino cu mine pe Divine';
-
-  @override
-  String get invitesClaimed => 'Revendicată';
-
-  @override
-  String get invitesCouldNotLoad => 'N-am putut încărca invitațiile';
-
-  @override
-  String get invitesRetry => 'Reîncearcă';
-
-  @override
   String get searchSomethingWentWrong => 'Ceva nu a mers bine';
 
   @override
@@ -10855,75 +10695,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Suprascrierea de minor protejat a fost ștearsă';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'Invitații de înregistrare';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'Starea curentă';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'Valoare server: se încarcă';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled =>
-      'Valoare server: activat';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled =>
-      'Valoare server: dezactivat';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown =>
-      'Valoare server: necunoscută';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'Suprascriere: folosește valoarea serverului';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'Suprascriere: forțează activarea';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'Suprascriere: forțează dezactivarea';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer =>
-      'Folosește valoarea serverului';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'Urmează onboardingMode al serviciului de invitații';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'Forțează activarea';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'Afișează local porțile de invitații și administrarea lor';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled =>
-      'Forțează dezactivarea';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'Ascunde local interfața invitațiilor fără a modifica serverul';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'Invitațiile de înregistrare urmează acum serverul';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'Invitațiile de înregistrare au fost forțate activate';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'Invitațiile de înregistrare au fost forțate dezactivate';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Înregistrează comentariu video';

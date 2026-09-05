@@ -1181,7 +1181,6 @@
     "authInfoAmberTitle": "Amber",
     "authInfoAmberDescription": "Folosește aplicația de semnare Amber pe Android ca să gestionezi cheile tale Nostr în siguranță.",
     "authCreateAccountTitle": "Creează cont",
-    "authBackToInviteCode": "Înapoi la codul de invitație",
     "authUseDivineNoBackup": "Folosește Divine fără backup",
     "authSkipConfirmTitle": "Un ultim lucru...",
     "authSkipConfirmKeyCreated": "Ești înăuntru! Creăm o cheie sigură care va alimenta contul tău Divine.",
@@ -1216,17 +1215,6 @@
     "authEmailVerifiedLogin": "Email verificat! Autentifică-te ca să continui.",
     "authVerificationLinkExpired": "Acest link de verificare nu mai e valid.",
     "authVerificationConnectionError": "Nu am putut verifica emailul. Verifică-ți conexiunea și încearcă din nou.",
-    "authWaitlistConfirmTitle": "Ești înăuntru!",
-    "authWaitlistUpdatesAt": "Vom da noutăți la {email}.\nCând apar mai multe coduri de invitație, ți le trimitem.",
-    "@authWaitlistUpdatesAt": {
-        "description": "Waitlist confirmation message with email",
-        "placeholders": {
-            "email": {
-                "type": "String"
-            }
-        }
-    },
-    "authOk": "OK",
     "authTryAgain": "Încearcă din nou",
     "authContactSupport": "Contactează asistența",
     "authCouldNotOpenEmail": "N-am putut deschide {email}",
@@ -1238,15 +1226,6 @@
             }
         }
     },
-    "authAddInviteCode": "Adaugă codul de invitație",
-    "authInviteCodeLabel": "Cod de invitație",
-    "authEnterYourCode": "Introdu codul tău",
-    "authNext": "Mai departe",
-    "authJoinWaitlist": "Alătură-te listei de așteptare",
-    "authJoinWaitlistTitle": "Alătură-te listei de așteptare",
-    "authJoinWaitlistDescription": "Dă-ne emailul tău și âți vom trimite noutăți pe măsură ce se deschide accesul.",
-    "authJoinWaitlistNewsletterOptIn": "Trimiteți-mi inspirație de la Divine",
-    "authInviteAccessHelp": "Ajutor pentru accesul prin invitație",
     "authGeneratingConnection": "Se generează conexiunea...",
     "authConnectedAuthenticating": "Conectat! Se autentifică...",
     "authConnectionTimedOut": "Conexiunea a expirat",
@@ -1306,17 +1285,6 @@
     "authVerificationErrorPinLocked": "Prea multe încercări. Apasă Retrimite pentru a primi un cod nou.",
     "authVerificationErrorPinFailed": "Nu am putut verifica codul. Încearcă din nou.",
     "authVerificationErrorPinUnavailable": "Introducerea codului nu e disponibilă acum. Apasă linkul din email sau retrimite pentru a primi unul nou.",
-    "authInviteCodeErrorMalformed": "Introdu un cod de invitație de forma ABCD-EFGH.",
-    "authInviteCodeErrorNotFound": "Codul de invitație nu pare valid.",
-    "authInviteCodeErrorAlreadyUsed": "Codul de invitație a fost deja folosit sau revocat.",
-    "authInviteGateErrorCreatorFull": "Invitațiile acestui creator s-au epuizat",
-    "authInviteGateErrorUnavailable": "Codul de invitație nu este disponibil. Înscrie-te pe lista de așteptare și îți trimitem o invitație când se eliberează un loc.",
-    "authInviteGateErrorCheckFailed": "Nu am putut verifica acest cod. Încearcă din nou.",
-    "authInviteGateErrorUnknown": "Ceva nu a mers bine. Încearcă din nou codul de invitație.",
-    "authInviteErrorAlreadyUsed": "Acest cod de invitație nu mai e disponibil. Întoarce-te la codul tău, alătură-te listei de așteptare sau contactează asistența.",
-    "authInviteErrorInvalid": "Acest cod de invitație nu poate fi folosit acum. Întoarce-te la codul tău, alătură-te listei de așteptare sau contactează asistența.",
-    "authInviteErrorTemporary": "N-am putut confirma invitația ta acum. Întoarce-te la codul tău și încearcă din nou, sau contactează asistența.",
-    "authInviteErrorUnknown": "N-am putut activa invitația ta. Întoarce-te la codul tău, alătură-te listei de așteptare sau contactează asistența.",
     "shareSheetSave": "Salvează",
     "shareSheetRemoveFromSaved": "Elimină din salvate",
     "shareSheetSaveToGallery": "Salvează în galerie",
@@ -1462,15 +1430,6 @@
     "notificationsFailedToLoad": "N-am putut încărca notificările",
     "notificationsRetry": "Reîncearcă",
     "notificationsRefreshError": "Actualizare eșuată — se afișează ce există",
-    "notificationsInviteSingular": "Ai 1 invitație de împărțit cu un prieten!",
-    "notificationsInvitePlural": "Ai {count, plural, one{1 invitație} few{{count} invitații} other{{count} de invitații}} de împărțit cu prietenii!",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "notificationsVideoUnavailable": "Videoclip indisponibil",
     "feedFailedToLoadVideos": "N-am putut încărca videoclipurile",
     "feedRetry": "Reîncearcă",
@@ -2038,7 +1997,6 @@
             }
         }
     },
-    "invitesTitle": "Invită prieteni",
     "libraryClipsDeletedCount": "{count, plural, =1{1 clip șters} other{{count} clipuri șterse}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {
@@ -2864,9 +2822,6 @@
     "videoEditorAudioSegmentInstruction": "Alege segmentul audio pentru videoclipul tău",
     "fullscreenFeedRemovedMessage": "Videoclip eliminat",
     "fullscreenFeedEmptyMessage": "Nu mai e nimic de redat aici",
-    "invitesGenerateCardTitle": "{count, plural, =1{1 invitație gata de generat} few{{count} invitații gata de generat} other{{count} de invitații gata de generat}}",
-    "invitesGenerateCardSubtitle": "Generează un cod când ești gata să îl împarți.",
-    "invitesGenerateButtonLabel": "Generează invitație",
     "profileAvatarLightboxBarrierLabel": "Închide avatarul",
     "profileAvatarLightboxCloseSemanticLabel": "Închide previzualizarea avatarului",
     "notificationsUnreadPrefix": "Notificare necitită",
@@ -3374,24 +3329,6 @@
   "blueskyStatusUnavailableRetry": "Nu am putut verifica identificatorul tău Divine. Încearcă din nou.",
   "blueskySetUpHandle": "Configurează",
     "blueskyTemporarilyUnavailable": "Publicarea pe Bluesky e temporar indisponibilă. Încearcă din nou.",
-    "invitesNoneAvailable": "Nicio invitație disponibilă acum",
-    "invitesShareWithPeople": "Partajează Divine cu oameni pe care îi cunoști",
-    "invitesUsedInvites": "Invitații folosite",
-    "invitesShareMessage": "Vino cu mine pe Divine! Folosește codul de invitație {code} ca să începi:\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "Copiază invitația",
-    "invitesCopied": "Invitație copiată!",
-    "invitesShareInvite": "Partajează invitația",
-    "invitesShareSubject": "Vino cu mine pe Divine",
-    "invitesClaimed": "Revendicată",
-    "invitesCouldNotLoad": "N-am putut încărca invitațiile",
-    "invitesRetry": "Reîncearcă",
     "keyImportInsecureBunkerRelay": "Relay-ul bunker trebuie să folosească wss:// (ws:// e permis doar pentru localhost)",
     "@keyImportInsecureBunkerRelay": {
         "description": "Shown when a pasted bunker:// or nostrconnect:// URL contains a relay parameter that uses cleartext ws:// for a non-loopback host."
@@ -3912,24 +3849,6 @@
     "devOptionsProtectedMinorEnabledToast": "Starea de minor protejat a fost forțată",
     "devOptionsProtectedMinorNonMinorToast": "Starea de minor protejat a fost dezactivată",
     "devOptionsProtectedMinorClearedToast": "Suprascrierea de minor protejat a fost ștearsă",
-  "devOptionsInviteAvailabilityTitle": "Invitații de înregistrare",
-  "devOptionsInviteAvailabilityCurrentLabel": "Starea curentă",
-  "devOptionsInviteAvailabilityServerLoading": "Valoare server: se încarcă",
-  "devOptionsInviteAvailabilityServerEnabled": "Valoare server: activat",
-  "devOptionsInviteAvailabilityServerDisabled": "Valoare server: dezactivat",
-  "devOptionsInviteAvailabilityServerUnknown": "Valoare server: necunoscută",
-  "devOptionsInviteAvailabilityOverrideNone": "Suprascriere: folosește valoarea serverului",
-  "devOptionsInviteAvailabilityOverrideEnabled": "Suprascriere: forțează activarea",
-  "devOptionsInviteAvailabilityOverrideDisabled": "Suprascriere: forțează dezactivarea",
-  "devOptionsInviteAvailabilityUseServer": "Folosește valoarea serverului",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "Urmează onboardingMode al serviciului de invitații",
-  "devOptionsInviteAvailabilityForceEnabled": "Forțează activarea",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "Afișează local porțile de invitații și administrarea lor",
-  "devOptionsInviteAvailabilityForceDisabled": "Forțează dezactivarea",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "Ascunde local interfața invitațiilor fără a modifica serverul",
-  "devOptionsInviteAvailabilityUseServerToast": "Invitațiile de înregistrare urmează acum serverul",
-  "devOptionsInviteAvailabilityForceEnabledToast": "Invitațiile de înregistrare au fost forțate activate",
-  "devOptionsInviteAvailabilityForceDisabledToast": "Invitațiile de înregistrare au fost forțate dezactivate",
     "minorAccountReviewParentConsentChecklistAgeBand": "O declarație clară că adolescentul are între 13 și 15 ani și are permisiunea de a folosi Divine",
     "minorAccountReviewUnder13FamilyTitle": "Ce poate face familia ta în schimb",
     "minorAccountReviewUnder13FamilyBody": "Un părinte sau tutore poate deține contul și poate posta, iar tu poți apărea liniștit în videoclipuri alături de ei. Vrem ca familiile să se bucure de Divine așa cum le e lor bine.",

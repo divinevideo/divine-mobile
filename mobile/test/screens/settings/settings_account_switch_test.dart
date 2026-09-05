@@ -17,7 +17,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
-import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
@@ -48,9 +47,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockLocaleCubit extends MockCubit<LocaleState> implements LocaleCubit {}
-
-class _MockInviteStatusCubit extends MockCubit<InviteStatusState>
-    implements InviteStatusCubit {}
 
 class _MockBackgroundPublishBloc
     extends MockBloc<BackgroundPublishEvent, BackgroundPublishState>
@@ -105,7 +101,6 @@ void main() {
   late SharedPreferences sharedPreferences;
   late _MockAuthService authService;
   late _MockLocaleCubit localeCubit;
-  late _MockInviteStatusCubit inviteStatusCubit;
   late _MockBackgroundPublishBloc publishBloc;
   late _MockDraftStorageService draftStorageService;
   late _MockAudioSharingPreferenceService audioSharingService;
@@ -150,7 +145,6 @@ void main() {
     sharedPreferences = await SharedPreferences.getInstance();
     authService = _MockAuthService();
     localeCubit = _MockLocaleCubit();
-    inviteStatusCubit = _MockInviteStatusCubit();
     publishBloc = _MockBackgroundPublishBloc();
     draftStorageService = _MockDraftStorageService();
     audioSharingService = _MockAudioSharingPreferenceService();
@@ -166,12 +160,6 @@ void main() {
     deviceScope = _MockDeviceScope();
 
     when(() => localeCubit.state).thenReturn(const LocaleState());
-    whenListen(
-      inviteStatusCubit,
-      const Stream<InviteStatusState>.empty(),
-      initialState: const InviteStatusState(),
-    );
-    when(() => inviteStatusCubit.load()).thenAnswer((_) async {});
     when(() => publishBloc.parkInFlight()).thenAnswer((_) async {});
     seedPublishState(const BackgroundPublishState());
 
@@ -271,7 +259,6 @@ void main() {
         home: MultiBlocProvider(
           providers: [
             BlocProvider<LocaleCubit>.value(value: localeCubit),
-            BlocProvider<InviteStatusCubit>.value(value: inviteStatusCubit),
             BlocProvider<BackgroundPublishBloc>.value(value: publishBloc),
           ],
           child: child,

@@ -12,7 +12,7 @@ AppLocalizations get _en => lookupAppLocalizations(const Locale('en'));
 ///
 /// The welcome screen has a passive terms notice — no checkboxes needed.
 /// Taps "Create a new Divine account" to reach the registration screen.
-/// Waits for the invite guard to resolve and the form to appear.
+/// Waits for the form to appear.
 Future<void> navigateToCreateAccount(WidgetTester tester) async {
   final createButton = find.text(_en.authCreateNewAccount);
   expect(
@@ -23,8 +23,6 @@ Future<void> navigateToCreateAccount(WidgetTester tester) async {
   await tester.tap(createButton);
   await tester.pumpAndSettle(const Duration(seconds: 1));
 
-  // Wait for the invite guard to resolve and show the create account form.
-  // The InviteProtectedCreateAccountScreen fetches config asynchronously.
   final foundForm = await waitForWidget(
     tester,
     find.byType(DivineAuthTextField),
@@ -32,9 +30,7 @@ Future<void> navigateToCreateAccount(WidgetTester tester) async {
   );
   if (!foundForm) {
     fail(
-      'Create account form did not appear within 20s. '
-      'The invite guard may have redirected to the invite gate screen. '
-      'Ensure the invite server returns OnboardingMode.open for LOCAL env.',
+      'Create account form did not appear within 20s.',
     );
   }
 }

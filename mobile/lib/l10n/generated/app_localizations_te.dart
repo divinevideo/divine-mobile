@@ -3351,9 +3351,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'ఆహ్వాన కోడ్‌కి తిరిగి వెళ్లండి';
-
-  @override
   String get authUseDivineNoBackup => 'బ్యాకప్ లేకుండా Divineని ఉపయోగించండి';
 
   @override
@@ -3468,17 +3465,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఇమెయిల్‌ని ధృవీకరించడం సాధ్యం కాలేదు. దయచేసి మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.';
 
   @override
-  String get authWaitlistConfirmTitle => 'మీరు ఉన్నారు!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'మేము అప్‌డేట్‌లను ఇందులో భాగస్వామ్యం చేస్తాము $email.\nమరిన్ని ఆహ్వాన కోడ్‌లు అందుబాటులో ఉన్నప్పుడు, మేము వాటిని మీకే పంపుతాము.';
-  }
-
-  @override
-  String get authOk => 'సరే';
-
-  @override
   String get authTryAgain => 'మళ్లీ ప్రయత్నించండి';
 
   @override
@@ -3488,34 +3474,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return 'తెరవడం సాధ్యపడలేదు $email';
   }
-
-  @override
-  String get authAddInviteCode => 'మీ ఆహ్వాన కోడ్‌ని జోడించండి';
-
-  @override
-  String get authInviteCodeLabel => 'ఆహ్వాన కోడ్';
-
-  @override
-  String get authEnterYourCode => 'మీ కోడ్‌ని నమోదు చేయండి';
-
-  @override
-  String get authNext => 'తదుపరి';
-
-  @override
-  String get authJoinWaitlist => 'వెయిట్‌లిస్ట్‌లో చేరండి';
-
-  @override
-  String get authJoinWaitlistTitle => 'వెయిట్‌లిస్ట్‌లో చేరండి';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'మీ ఇమెయిల్‌ను భాగస్వామ్యం చేయండి మరియు యాక్సెస్ తెరవబడినప్పుడు మేము ఆహ్వాన కోడ్‌ని పంపుతాము.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn => 'నాకు Divine స్ఫూర్తిని పంపండి';
-
-  @override
-  String get authInviteAccessHelp => 'యాక్సెస్ సహాయాన్ని ఆహ్వానించండి';
 
   @override
   String get authGeneratingConnection => 'కనెక్షన్‌ని రూపొందిస్తోంది...';
@@ -3699,50 +3657,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'కోడ్ నమోదు ప్రస్తుతం అందుబాటులో లేదు. మీ ఇమెయిల్‌లోని లింక్‌ను నొక్కండి లేదా తాజాదాన్ని పొందడానికి మళ్లీ పంపండి.';
-
-  @override
-  String get authInviteCodeErrorMalformed =>
-      'ABCD-EFGH వంటి ఆహ్వాన కోడ్‌ని నమోదు చేయండి.';
-
-  @override
-  String get authInviteCodeErrorNotFound =>
-      'ఆ ఆహ్వాన కోడ్ చెల్లుబాటు అయ్యేలా లేదు.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'ఆ ఆహ్వాన కోడ్ ఇప్పటికే ఉపయోగించబడింది లేదా రద్దు చేయబడింది.';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'ఈ సృష్టికర్త ఆహ్వానాలు నిండిపోయాయి';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'ఆ ఆహ్వాన కోడ్ అందుబాటులో లేదు. వెయిట్‌లిస్ట్‌లో చేరండి మరియు స్థలం ఉన్నప్పుడు మేము ఆహ్వానాన్ని పంపుతాము.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'మేము ఆ కోడ్‌ని తనిఖీ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'ఏదో తప్పు జరిగింది. మీ ఆహ్వాన కోడ్‌ని మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'ఆ ఆహ్వాన కోడ్ అందుబాటులో లేదు. మీ ఆహ్వాన కోడ్‌కి తిరిగి వెళ్లండి, వెయిట్‌లిస్ట్‌లో చేరండి లేదా మద్దతును సంప్రదించండి.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'ఆ ఆహ్వాన కోడ్ ప్రస్తుతం ఉపయోగించబడదు. మీ ఆహ్వాన కోడ్‌కి తిరిగి వెళ్లండి, వెయిట్‌లిస్ట్‌లో చేరండి లేదా మద్దతును సంప్రదించండి.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'మేము ప్రస్తుతం మీ ఆహ్వానాన్ని నిర్ధారించలేకపోయాము. మీ ఆహ్వాన కోడ్‌కి తిరిగి వెళ్లి, మళ్లీ ప్రయత్నించండి లేదా మద్దతును సంప్రదించండి.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'మేము మీ ఆహ్వానాన్ని సక్రియం చేయలేకపోయాము. మీ ఆహ్వాన కోడ్‌కి తిరిగి వెళ్లండి, వెయిట్‌లిస్ట్‌లో చేరండి లేదా మద్దతును సంప్రదించండి.';
 
   @override
   String get shareSheetSave => 'సేవ్ చేయండి';
@@ -4433,23 +4347,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'వీడియో సూక్ష్మచిత్రం';
-
-  @override
-  String get notificationsInviteSingular =>
-      'స్నేహితుడితో భాగస్వామ్యం చేయడానికి మీకు 1 ఆహ్వానం ఉంది!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other:
-          'మీరు కలిగి ఉన్నారు $countస్నేహితులతో భాగస్వామ్యం చేయడానికి ఆహ్వానిస్తున్నారు!',
-      one:
-          'మీరు కలిగి ఉన్నారు $countస్నేహితులతో భాగస్వామ్యం చేయడానికి ఆహ్వానించండి!',
-    );
-    return '$_temp0';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7965,63 +7862,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'Bluesky ప్రచురణ తాత్కాలికంగా అందుబాటులో లేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
   @override
-  String get invitesTitle => 'స్నేహితులను ఆహ్వానించండి';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$countఆహ్వానాలు రూపొందించడానికి సిద్ధంగా ఉన్నాయి',
-      one: '1 ఆహ్వానం రూపొందించడానికి సిద్ధంగా ఉంది',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle =>
-      'మీరు ఒక కోడ్‌ను భాగస్వామ్యం చేయడానికి సిద్ధంగా ఉన్నప్పుడు దాన్ని రూపొందించండి.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'ఆహ్వానాన్ని రూపొందించండి';
-
-  @override
-  String get invitesNoneAvailable => 'ప్రస్తుతం ఆహ్వానాలు ఏవీ అందుబాటులో లేవు';
-
-  @override
-  String get invitesShareWithPeople =>
-      'మీకు తెలిసిన వ్యక్తులతో Divineని భాగస్వామ్యం చేయండి';
-
-  @override
-  String get invitesUsedInvites => 'ఉపయోగించిన ఆహ్వానాలు';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Divineలో నాతో చేరండి! ఆహ్వాన కోడ్‌ని ఉపయోగించండి $codeప్రారంభించడానికి:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'ఆహ్వానాన్ని కాపీ చేయండి';
-
-  @override
-  String get invitesCopied => 'ఆహ్వానం కాపీ చేయబడింది!';
-
-  @override
-  String get invitesShareInvite => 'ఆహ్వానాన్ని భాగస్వామ్యం చేయండి';
-
-  @override
-  String get invitesShareSubject => 'Divineలో నాతో చేరండి';
-
-  @override
-  String get invitesClaimed => 'క్లెయిమ్ చేయబడింది';
-
-  @override
-  String get invitesCouldNotLoad => 'ఆహ్వానాలను లోడ్ చేయడం సాధ్యపడలేదు';
-
-  @override
-  String get invitesRetry => 'మళ్లీ ప్రయత్నించండి';
-
-  @override
   String get searchSomethingWentWrong => 'ఏదో తప్పు జరిగింది';
 
   @override
@@ -10925,76 +10765,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'ప్రొటెక్టెడ్-మైనర్ ఓవర్‌రైడ్ క్లియర్ చేయబడింది';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'సైన్అప్ ఆహ్వానాలు';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'ప్రస్తుత స్థితి';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'సర్వర్ విలువ: లోడ్ అవుతోంది';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled =>
-      'సర్వర్ విలువ: ప్రారంభించబడింది';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled =>
-      'సర్వర్ విలువ: నిలిపివేయబడింది';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown =>
-      'సర్వర్ విలువ: తెలియదు';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'ఓవర్‌రైడ్: సర్వర్ విలువను ఉపయోగించండి';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled =>
-      'ఓవర్‌రైడ్: ఫోర్స్ ఎనేబుల్ చేయబడింది';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled =>
-      'ఓవర్‌రైడ్: ఫోర్స్ డిజేబుల్ చేయబడింది';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer =>
-      'సర్వర్ విలువను ఉపయోగించండి';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'ఆహ్వాన సేవ ఆన్‌బోర్డింగ్ మోడ్‌ను అనుసరించండి';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled =>
-      'ఫోర్స్ ఎనేబుల్ చేయబడింది';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'సైన్అప్ ఆహ్వాన గేట్‌లు మరియు నిర్వహణను స్థానికంగా చూపండి';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled =>
-      'బలవంతంగా నిలిపివేయబడింది';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'సర్వర్‌ని మార్చకుండా స్థానికంగా సైన్అప్ ఆహ్వాన UIని దాచండి';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'సైన్అప్ ఆహ్వానాలు ఇప్పుడు సర్వర్‌ని అనుసరించాయి';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'సైన్అప్ ఆహ్వానాలు బలవంతంగా ఆన్ చేయబడ్డాయి';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'సైన్అప్ ఆహ్వానాలు బలవంతంగా ఆఫ్ చేయబడ్డాయి';
 
   @override
   String get commentsRecordVideoButtonLabel =>

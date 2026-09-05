@@ -7,11 +7,8 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/blocs/invite_availability/invite_availability_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/models/invite_availability.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/screens/developer_options_screen.dart';
@@ -19,7 +16,6 @@ import 'package:openvine/services/environment_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 
-import '../helpers/invite_availability_harness.dart';
 import '../helpers/scroll.dart';
 
 Future<SharedPreferences> mockPrefs() async {
@@ -27,35 +23,25 @@ Future<SharedPreferences> mockPrefs() async {
   return SharedPreferences.getInstance();
 }
 
-Future<InviteAvailabilityCubit> pumpScreen(
+Future<void> pumpScreen(
   WidgetTester tester,
   SharedPreferences prefs, {
-  InviteAvailabilityCubit? availabilityCubit,
   ShorebirdUpdater Function()? shorebirdUpdaterFactory,
 }) async {
-  final cubit = availabilityCubit ?? seededInviteAvailabilityCubit();
-  if (availabilityCubit == null) {
-    addTearDown(cubit.close);
-  }
-
   await tester.pumpWidget(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-      child: wrapWithInviteAvailability(
-        MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: VineTheme.theme,
-          home: DeveloperOptionsScreen(
-            shorebirdUpdaterFactory: shorebirdUpdaterFactory,
-          ),
+      child: MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: VineTheme.theme,
+        home: DeveloperOptionsScreen(
+          shorebirdUpdaterFactory: shorebirdUpdaterFactory,
         ),
-        cubit: cubit,
       ),
     ),
   );
   await tester.pumpAndSettle();
-  return cubit;
 }
 
 class _AvailableShorebirdUpdater implements ShorebirdUpdater {
@@ -142,9 +128,6 @@ void main() {
       await envService.enableDeveloperMode();
       expect(envService.isDeveloperModeEnabled, isTrue);
 
-      final availabilityCubit = seededInviteAvailabilityCubit();
-      addTearDown(availabilityCubit.close);
-
       final router = GoRouter(
         initialLocation: '/settings',
         routes: [
@@ -161,10 +144,7 @@ void main() {
           ),
           GoRoute(
             path: DeveloperOptionsScreen.path,
-            builder: (context, state) => wrapWithInviteAvailability(
-              const DeveloperOptionsScreen(),
-              cubit: availabilityCubit,
-            ),
+            builder: (context, state) => const DeveloperOptionsScreen(),
           ),
         ],
       );
@@ -263,111 +243,6 @@ void main() {
       final stateRow = find.textContaining('Override: forced protected');
       await tester.scrollUntilVisible(stateRow, 300);
       expect(stateRow, findsOneWidget);
-    });
-  });
-
-  group('signup invite availability override', () {
-    late bool previousHitTestWarningShouldBeFatal;
-    final l10n = lookupAppLocalizations(const Locale('en'));
-
-    setUp(() {
-      previousHitTestWarningShouldBeFatal =
-          WidgetController.hitTestWarningShouldBeFatal;
-      WidgetController.hitTestWarningShouldBeFatal = true;
-    });
-
-    tearDown(() {
-      WidgetController.hitTestWarningShouldBeFatal =
-          previousHitTestWarningShouldBeFatal;
-    });
-
-    testWidgets('shows the server value and default override', (tester) async {
-      await pumpScreen(tester, await mockPrefs());
-
-      final currentState = find.textContaining(
-        l10n.devOptionsInviteAvailabilityServerEnabled,
-      );
-      await tester.scrollUntilVisible(currentState, 300);
-      await tester.pumpAndSettle();
-      expect(currentState, findsOneWidget);
-      expect(
-        find.textContaining(l10n.devOptionsInviteAvailabilityOverrideNone),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('force disabled updates the running cubit immediately', (
-      tester,
-    ) async {
-      final cubit = seededInviteAvailabilityCubit();
-      addTearDown(cubit.close);
-
-      await pumpScreen(tester, await mockPrefs(), availabilityCubit: cubit);
-      expect(cubit.state.isEnabled, isTrue);
-
-      await tapTile(tester, l10n.devOptionsInviteAvailabilityForceDisabled);
-
-      expect(
-        cubit.state.developerOverride,
-        InviteAvailabilityOverride.forceDisabled,
-      );
-      expect(cubit.state.isEnabled, isFalse);
-      expect(
-        find.text(l10n.devOptionsInviteAvailabilityForceDisabledToast),
-        findsOneWidget,
-      );
-      expect(
-        find.textContaining(l10n.devOptionsInviteAvailabilityOverrideDisabled),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('force enabled wins over a disabled server value', (
-      tester,
-    ) async {
-      final cubit = seededInviteAvailabilityCubit(
-        serverMode: OnboardingMode.open,
-      );
-      addTearDown(cubit.close);
-
-      await pumpScreen(tester, await mockPrefs(), availabilityCubit: cubit);
-      expect(cubit.state.isEnabled, isFalse);
-
-      await tapTile(tester, l10n.devOptionsInviteAvailabilityForceEnabled);
-
-      expect(
-        cubit.state.developerOverride,
-        InviteAvailabilityOverride.forceEnabled,
-      );
-      expect(cubit.state.isEnabled, isTrue);
-      expect(
-        find.text(l10n.devOptionsInviteAvailabilityForceEnabledToast),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('live switching covers every override state', (tester) async {
-      final cubit = seededInviteAvailabilityCubit();
-      addTearDown(cubit.close);
-
-      await pumpScreen(tester, await mockPrefs(), availabilityCubit: cubit);
-
-      await tapTile(tester, l10n.devOptionsInviteAvailabilityForceDisabled);
-      expect(cubit.state.isEnabled, isFalse);
-
-      await tapTile(tester, l10n.devOptionsInviteAvailabilityForceEnabled);
-      expect(
-        cubit.state.developerOverride,
-        InviteAvailabilityOverride.forceEnabled,
-      );
-      expect(cubit.state.isEnabled, isTrue);
-
-      await tapTile(tester, l10n.devOptionsInviteAvailabilityUseServer);
-      expect(
-        cubit.state.developerOverride,
-        InviteAvailabilityOverride.useServer,
-      );
-      expect(cubit.state.isEnabled, isTrue);
     });
   });
 }

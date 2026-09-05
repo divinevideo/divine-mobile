@@ -3189,9 +3189,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => 'Quay lại mã mời';
-
-  @override
   String get authUseDivineNoBackup => 'Dùng Divine không cần sao lưu';
 
   @override
@@ -3307,17 +3304,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không xác minh được email. Kiểm tra kết nối của bạn rồi thử lại nhé.';
 
   @override
-  String get authWaitlistConfirmTitle => 'Bạn vào được rồi!';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'Bọn mình sẽ gửi cập nhật tới $email.\nKhi có thêm mã mời, bọn mình sẽ gửi cho bạn.';
-  }
-
-  @override
-  String get authOk => 'OK';
-
-  @override
   String get authTryAgain => 'Thử lại';
 
   @override
@@ -3327,34 +3313,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return 'Không mở được $email';
   }
-
-  @override
-  String get authAddInviteCode => 'Nhập mã mời của bạn';
-
-  @override
-  String get authInviteCodeLabel => 'Mã mời';
-
-  @override
-  String get authEnterYourCode => 'Nhập mã của bạn';
-
-  @override
-  String get authNext => 'Tiếp';
-
-  @override
-  String get authJoinWaitlist => 'Tham gia danh sách chờ';
-
-  @override
-  String get authJoinWaitlistTitle => 'Tham gia danh sách chờ';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'Chia sẻ email của bạn và bọn mình sẽ gửi mã mời khi mở thêm quyền truy cập.';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn => 'Gửi cho tôi cảm hứng Divine';
-
-  @override
-  String get authInviteAccessHelp => 'Trợ giúp về truy cập bằng mã mời';
 
   @override
   String get authGeneratingConnection => 'Đang tạo kết nối...';
@@ -3535,48 +3493,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       'Hiện không nhập mã được. Hãy bấm liên kết trong email, hoặc gửi lại để lấy mã mới.';
-
-  @override
-  String get authInviteCodeErrorMalformed => 'Nhập mã mời dạng ABCD-EFGH.';
-
-  @override
-  String get authInviteCodeErrorNotFound => 'Mã mời đó có vẻ không hợp lệ.';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed =>
-      'Mã mời đó đã được dùng hoặc đã bị thu hồi.';
-
-  @override
-  String get authInviteGateErrorCreatorFull =>
-      'Nhà sáng tạo này đã hết lời mời';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'Mã mời đó không khả dụng. Hãy tham gia danh sách chờ, chúng tôi sẽ gửi lời mời khi còn chỗ.';
-
-  @override
-  String get authInviteGateErrorCheckFailed =>
-      'Chúng tôi không kiểm tra được mã đó. Hãy thử lại.';
-
-  @override
-  String get authInviteGateErrorUnknown =>
-      'Đã xảy ra lỗi. Hãy thử lại mã mời của bạn.';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'Mã mời đó không còn khả dụng. Quay lại mã mời của bạn, tham gia danh sách chờ, hoặc liên hệ hỗ trợ.';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'Mã mời đó hiện không dùng được. Quay lại mã mời của bạn, tham gia danh sách chờ, hoặc liên hệ hỗ trợ.';
-
-  @override
-  String get authInviteErrorTemporary =>
-      'Bọn mình chưa xác nhận được mã mời của bạn. Quay lại mã mời và thử lại, hoặc liên hệ hỗ trợ.';
-
-  @override
-  String get authInviteErrorUnknown =>
-      'Bọn mình không kích hoạt được mã mời của bạn. Quay lại mã mời, tham gia danh sách chờ, hoặc liên hệ hỗ trợ.';
 
   @override
   String get shareSheetSave => 'Lưu';
@@ -4242,15 +4158,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => 'Ảnh thu nhỏ video';
-
-  @override
-  String get notificationsInviteSingular =>
-      'Bạn có 1 lời mời để chia sẻ với bạn bè!';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return 'Bạn có $count lời mời để chia sẻ với bạn bè!';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7689,62 +7596,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đăng lên Bluesky tạm thời không khả dụng. Vui lòng thử lại.';
 
   @override
-  String get invitesTitle => 'Mời bạn bè';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count lời mời sẵn sàng tạo',
-      one: '1 lời mời sẵn sàng tạo',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle => 'Tạo mã khi bạn sẵn sàng chia sẻ.';
-
-  @override
-  String get invitesGenerateButtonLabel => 'Tạo lời mời';
-
-  @override
-  String get invitesNoneAvailable => 'Hiện chưa có lời mời nào';
-
-  @override
-  String get invitesShareWithPeople =>
-      'Chia sẻ Divine với những người bạn quen';
-
-  @override
-  String get invitesUsedInvites => 'Lời mời đã dùng';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Tham gia Divine cùng tôi nhé! Dùng mã mời $code để bắt đầu:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => 'Sao chép lời mời';
-
-  @override
-  String get invitesCopied => 'Đã sao chép lời mời!';
-
-  @override
-  String get invitesShareInvite => 'Chia sẻ lời mời';
-
-  @override
-  String get invitesShareSubject => 'Tham gia Divine cùng tôi nhé';
-
-  @override
-  String get invitesClaimed => 'Đã dùng';
-
-  @override
-  String get invitesCouldNotLoad => 'Không tải được lời mời';
-
-  @override
-  String get invitesRetry => 'Thử lại';
-
-  @override
   String get searchSomethingWentWrong => 'Có gì đó không ổn';
 
   @override
@@ -10586,71 +10437,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get devOptionsProtectedMinorClearedToast =>
       'Đã xóa ghi đè vị thành niên được bảo vệ';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => 'Lời mời đăng ký';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => 'Trạng thái hiện tại';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading =>
-      'Giá trị máy chủ: đang tải';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled =>
-      'Giá trị máy chủ: đã bật';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled =>
-      'Giá trị máy chủ: đã tắt';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown =>
-      'Giá trị máy chủ: không rõ';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone =>
-      'Ghi đè: dùng giá trị máy chủ';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled => 'Ghi đè: buộc bật';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled => 'Ghi đè: buộc tắt';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer => 'Dùng giá trị máy chủ';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      'Theo onboardingMode của dịch vụ lời mời';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => 'Buộc bật';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      'Hiển thị cổng lời mời đăng ký và phần quản lý ở máy này';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => 'Buộc tắt';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'Ẩn giao diện lời mời đăng ký ở máy này mà không đổi máy chủ';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      'Lời mời đăng ký giờ theo máy chủ';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      'Đã buộc bật lời mời đăng ký';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      'Đã buộc tắt lời mời đăng ký';
 
   @override
   String get commentsRecordVideoButtonLabel => 'Quay bình luận video';

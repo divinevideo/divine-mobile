@@ -10,8 +10,8 @@ https://divine.video/{type}/{identifier}[/{index}]
 ```
 
 Where:
-- `{type}` = video, profile, hashtag, search, invite, or list
-- `{identifier}` = ID, npub, tag, search term, invite code, or list ID
+- `{type}` = video, profile, hashtag, search, or list
+- `{identifier}` = ID, npub, tag, search term, or list ID
 - `{index}` = Optional 0-based video index for feed view
 
 ## Supported URLs
@@ -223,27 +223,7 @@ https://divine.video/search/nostr/5     → Sixth result for "nostr"
 
 ---
 
-### 8. Invite Links
-
-Opens the invite gate with the supplied invite code.
-
-**Pattern**: `https://divine.video/invite/{code}`
-
-**Parameters**:
-- `code` (required): Invite code
-
-**Examples**:
-```
-https://divine.video/invite/ABCD-EFGH
-```
-
-**Mobile Behavior**:
-- Navigates to the invite gate
-- Preserves the invite code for redemption
-
----
-
-### 9. List Links
+### 8. List Links
 
 Opens a curated video list.
 
@@ -278,7 +258,6 @@ https://divine.video/list/a1b2c3d4e5f6.../my-vines
 | `/hashtag/{tag}/{i}` | Feed | `/hashtag/{tag}/{i}` | Tagged videos (feed) |
 | `/search/{term}` | Grid | `/search/{term}` | Search results (grid) |
 | `/search/{term}/{i}` | Feed | `/search/{term}/{i}` | Search results (feed) |
-| `/invite/{code}` | Auth | `/welcome/invite?code={code}` | Redeem invite |
 | `/list/{listId}` | Grid | `/list/{listId}` | Curated video list |
 | `/list/{pubkey}/{listId}` | Grid | `/list/{pubkey}/{listId}` | Authored curated video list |
 
@@ -404,11 +383,6 @@ https://divine.video/hashtag/nostr/0
 ```
 https://divine.video/search/bitcoin
 https://divine.video/search/bitcoin/0
-```
-
-**Invite**:
-```
-https://divine.video/invite/ABCD-EFGH
 ```
 
 **List**:

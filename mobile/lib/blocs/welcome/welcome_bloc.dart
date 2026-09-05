@@ -269,7 +269,7 @@ class WelcomeBloc extends Bloc<WelcomeEvent, WelcomeState> {
         name: 'WelcomeBloc',
         category: LogCategory.auth,
       );
-      // Auth-flow failures dominate (OAuth/Invite/network) — matrix-NO.
+      // Auth-flow failures dominate (OAuth/network) — matrix-NO.
       // YES-narrowing for invariant types deferred per #4592; analogous
       // to #4597's `_onMessageSent` deferral.
       addError(e, stackTrace);

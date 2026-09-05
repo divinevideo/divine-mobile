@@ -14,7 +14,6 @@ import 'package:patrol/patrol.dart';
 
 import '../helpers/db_helpers.dart';
 import '../helpers/http_helpers.dart';
-import '../helpers/invite_helpers.dart';
 import '../helpers/navigation_helpers.dart';
 import '../helpers/patrol_semantics.dart';
 import '../helpers/test_setup.dart';
@@ -90,50 +89,6 @@ void main() {
         await dismissNotificationPermission($);
         final pubkeyA = authService.currentPublicKeyHex!;
         logPhase('Phase 1: Account A registered — pubkey=$pubkeyA');
-
-        // ══════════════════════════════════════════════════════════
-        // Phase 1b: A Keycast email identity gets the same allocation
-        //
-        // #103 grants the initial allocation on the first authenticated
-        // GET /v1/invite-status, regardless of how the identity signs.
-        // repro_log1 covers the locally generated key; this covers the
-        // Keycast-backed one, where signing goes through the remote
-        // signer rather than a local nsec.
-        //
-        // Requires an invite backend that reports remainingToGenerate.
-        // local_stack pins ghcr.io/divinevideo/divine-invite-darshan:e2e,
-        // which is only republished on push to that repo's main, so until
-        // #103 merges this needs a locally built image:
-        //   docker build -f Dockerfile.local \
-        //     -t ghcr.io/divinevideo/divine-invite-darshan:e2e .
-        // Against an older backend remainingToGenerate is absent,
-        // mintableCount falls back to remaining, and this phase fails.
-        // ══════════════════════════════════════════════════════════
-
-        final grantedA = await waitForLoadedInviteStatus(tester);
-        final grantedStatusA = grantedA.inviteStatus!;
-
-        expect(
-          grantedStatusA.canInvite,
-          isTrue,
-          reason: 'A Keycast identity should be able to invite',
-        );
-        expect(grantedStatusA.remaining, initialInviteAllocation);
-        expect(grantedStatusA.total, initialInviteAllocation);
-        expect(
-          grantedStatusA.codes,
-          isEmpty,
-          reason: 'Entitlement is granted without minting any code',
-        );
-        // Nothing minted yet, so the whole allocation is still generatable.
-        expect(grantedStatusA.mintableCount, initialInviteAllocation);
-
-        logPhase(
-          'Phase 1b: Account A invite allocation — '
-          'remaining=${grantedStatusA.remaining} '
-          'mintable=${grantedStatusA.mintableCount} '
-          'codes=${grantedStatusA.codes.length}',
-        );
 
         // ══════════════════════════════════════════════════════════
         // Phase 2: Sign out A, register Keycast Account B

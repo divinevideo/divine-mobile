@@ -23,7 +23,6 @@ PUB_CACHE_BIN="${PUB_CACHE:-$HOME/.pub-cache}/bin"
 
 # shellcheck source=android_sdk.sh
 source "${SCRIPT_DIR}/android_sdk.sh"
-INVITE_SERVER_URL="$(android_emulator_invite_server_url)"
 
 # --- Ensure DISPLAY is set for emulator (Hyprland/XWayland) ---
 DISPLAY_TO_USE="$(detect_x11_display)"
@@ -95,7 +94,7 @@ fi
 # --- Start docker log capture (background, from now only) ---
 echo "Starting docker log capture..." >&2
 docker compose -f "$COMPOSE_FILE" logs -f -t --since "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    keycast funnelcake-relay funnelcake-api blossom blossom-proxy invite \
+    keycast funnelcake-relay funnelcake-api blossom blossom-proxy \
     > "$DOCKER_LOG" 2>&1 &
 DOCKER_PID=$!
 
@@ -141,7 +140,6 @@ if grep -rq 'patrolTest' "$TEST_PATH"; then
         --device "$DEVICE" \
         --target "$TEST_PATH" \
         --dart-define=DEFAULT_ENV=LOCAL \
-        --dart-define=INVITE_SERVER_URL="$INVITE_SERVER_URL" \
         "${PATROL_EXTRA_ARGS[@]+"${PATROL_EXTRA_ARGS[@]}"}" \
         2>&1 | tee "$APP_LOG"
     TEST_EXIT="${PIPESTATUS[0]}"
@@ -159,7 +157,6 @@ else
         flutter test "$TEST_PATH" \
             --device-id "$DEVICE" \
             --dart-define=DEFAULT_ENV=LOCAL \
-            --dart-define=INVITE_SERVER_URL="$INVITE_SERVER_URL" \
             2>&1 | tee -a "$APP_LOG"
         TEST_EXIT="${PIPESTATUS[0]}"
     else

@@ -1676,7 +1676,6 @@
     "description": "Tappable call-to-action span of the failed-sign-in hint. Opens the sheet listing all sign-in methods."
   },
   "authCreateAccountTitle": "创建账号",
-  "authBackToInviteCode": "返回邀请码",
   "authUseDivineNoBackup": "不备份，直接用 Divine",
   "authSkipConfirmTitle": "最后一件事...",
   "authSkipConfirmKeyCreated": "你进来了！我们会生成一把安全密钥，为你的 Divine 账号保驾护航。",
@@ -1718,17 +1717,6 @@
   "authEmailVerifiedLogin": "邮箱已验证！请登录继续。",
   "authVerificationLinkExpired": "该验证链接已失效。",
   "authVerificationConnectionError": "无法验证邮箱。请检查网络连接后重试。",
-  "authWaitlistConfirmTitle": "你进来了！",
-  "authWaitlistUpdatesAt": "我们会通过 {email} 分享动态。\n有更多邀请码时，会第一时间发给你。",
-  "@authWaitlistUpdatesAt": {
-    "description": "Waitlist confirmation message with email",
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
-  "authOk": "好",
   "authTryAgain": "再试一次",
   "authContactSupport": "联系客服",
   "authCouldNotOpenEmail": "无法打开 {email}",
@@ -1740,15 +1728,6 @@
       }
     }
   },
-  "authAddInviteCode": "输入你的邀请码",
-  "authInviteCodeLabel": "邀请码",
-  "authEnterYourCode": "输入邀请码",
-  "authNext": "下一步",
-  "authJoinWaitlist": "加入等候名单",
-  "authJoinWaitlistTitle": "加入等候名单",
-  "authJoinWaitlistDescription": "留下你的邮箱，开放注册时我们会发送邀请码。",
-  "authJoinWaitlistNewsletterOptIn": "给我发 Divine 灵感",
-  "authInviteAccessHelp": "邀请功能帮助",
   "authGeneratingConnection": "正在生成连接...",
   "authConnectedAuthenticating": "已连接！正在认证...",
   "authConnectionTimedOut": "连接超时",
@@ -1808,17 +1787,6 @@
   "authVerificationErrorPinLocked": "尝试次数过多。点重新发送获取新码。",
   "authVerificationErrorPinFailed": "无法验证该验证码，请重试。",
   "authVerificationErrorPinUnavailable": "暂时无法输入验证码。请点击邮件中的链接，或重新发送获取新码。",
-  "authInviteCodeErrorMalformed": "请输入 ABCD-EFGH 格式的邀请码。",
-  "authInviteCodeErrorNotFound": "这个邀请码看起来无效。",
-  "authInviteCodeErrorAlreadyUsed": "这个邀请码已被使用或已撤销。",
-  "authInviteGateErrorCreatorFull": "这位创作者的邀请名额已满",
-  "authInviteGateErrorUnavailable": "这个邀请码不可用。加入候补名单，有名额时我们会给你发送邀请。",
-  "authInviteGateErrorCheckFailed": "无法验证这个邀请码。请重试。",
-  "authInviteGateErrorUnknown": "出了点问题。请重新输入你的邀请码。",
-  "authInviteErrorAlreadyUsed": "该邀请码已不可用。返回你的邀请码页面、加入等候名单，或联系客服。",
-  "authInviteErrorInvalid": "该邀请码暂时无法使用。返回你的邀请码页面、加入等候名单，或联系客服。",
-  "authInviteErrorTemporary": "暂时无法确认你的邀请。返回你的邀请码页面重试，或联系客服。",
-  "authInviteErrorUnknown": "无法激活你的邀请。返回你的邀请码页面、加入等候名单，或联系客服。",
   "shareSheetSave": "保存",
   "shareSheetRemoveFromSaved": "移除收藏",
   "shareSheetSaveToGallery": "保存到相册",
@@ -2180,15 +2148,6 @@
   "notificationsVideoThumbnail": "视频缩略图",
   "@notificationsVideoThumbnail": {
     "description": "Screen-reader fallback label for the video thumbnail on a video-anchored notification row when the title is missing."
-  },
-  "notificationsInviteSingular": "你有 1 个邀请名额，可以分享给朋友！",
-  "notificationsInvitePlural": "你有 {count} 个邀请名额，可以分享给朋友！",
-  "@notificationsInvitePlural": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
   },
   "notificationsVideoUnavailable": "视频不可用",
   "feedFailedToLoadVideos": "视频加载失败",
@@ -4022,42 +3981,6 @@
   "blueskyStatusUnavailableRetry": "无法检查你的 Divine 用户名，请重试。",
   "blueskySetUpHandle": "去设置",
   "blueskyTemporarilyUnavailable": "Bluesky 发布暂时不可用，请稍后再试。",
-  "invitesTitle": "邀请朋友",
-  "invitesGenerateCardTitle": "{count, plural, =1{1 个邀请名额可生成} other{{count} 个邀请名额可生成}}",
-  "@invitesGenerateCardTitle": {
-    "description": "Title of the generate-invite card on the invites screen, shown when the user has invite capacity that has not been generated as codes yet.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "invitesGenerateCardSubtitle": "准备好分享时，就生成一个邀请码。",
-  "@invitesGenerateCardSubtitle": {
-    "description": "Body text on the generate-invite card explaining what tapping the button does."
-  },
-  "invitesGenerateButtonLabel": "生成邀请码",
-  "@invitesGenerateButtonLabel": {
-    "description": "Label of the button on the generate-invite card that creates a new invite code from remaining capacity."
-  },
-  "invitesNoneAvailable": "暂时没有可用邀请",
-  "invitesShareWithPeople": "把 Divine 分享给你认识的人",
-  "invitesUsedInvites": "已使用的邀请",
-  "invitesShareMessage": "来 Divine 找我玩！使用邀请码 {code} 即可开始：\nhttps://divine.video/invite/{code}",
-  "@invitesShareMessage": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
-  },
-  "invitesCopyInvite": "复制邀请",
-  "invitesCopied": "邀请已复制！",
-  "invitesShareInvite": "分享邀请",
-  "invitesShareSubject": "来 Divine 找我玩",
-  "invitesClaimed": "已使用",
-  "invitesCouldNotLoad": "邀请加载失败",
-  "invitesRetry": "重试",
   "searchSomethingWentWrong": "出了点问题",
   "searchTryAgain": "再试一次",
   "searchForLists": "搜索列表",
@@ -5647,24 +5570,6 @@
   "devOptionsProtectedMinorEnabledToast": "已强制开启未成年保护状态",
   "devOptionsProtectedMinorNonMinorToast": "已强制关闭未成年保护状态",
   "devOptionsProtectedMinorClearedToast": "未成年保护覆盖已清除",
-  "devOptionsInviteAvailabilityTitle": "注册邀请",
-  "devOptionsInviteAvailabilityCurrentLabel": "当前状态",
-  "devOptionsInviteAvailabilityServerLoading": "服务器值：加载中",
-  "devOptionsInviteAvailabilityServerEnabled": "服务器值：已启用",
-  "devOptionsInviteAvailabilityServerDisabled": "服务器值：已禁用",
-  "devOptionsInviteAvailabilityServerUnknown": "服务器值：未知",
-  "devOptionsInviteAvailabilityOverrideNone": "覆盖：使用服务器值",
-  "devOptionsInviteAvailabilityOverrideEnabled": "覆盖：强制启用",
-  "devOptionsInviteAvailabilityOverrideDisabled": "覆盖：强制禁用",
-  "devOptionsInviteAvailabilityUseServer": "使用服务器值",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "跟随邀请服务的 onboardingMode",
-  "devOptionsInviteAvailabilityForceEnabled": "强制启用",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "在本地显示注册邀请门槛和管理界面",
-  "devOptionsInviteAvailabilityForceDisabled": "强制禁用",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "在本地隐藏注册邀请界面，不改动服务器",
-  "devOptionsInviteAvailabilityUseServerToast": "注册邀请现在跟随服务器",
-  "devOptionsInviteAvailabilityForceEnabledToast": "注册邀请已强制启用",
-  "devOptionsInviteAvailabilityForceDisabledToast": "注册邀请已强制禁用",
   "commentsRecordVideoButtonLabel": "录制视频评论",
   "@commentsRecordVideoButtonLabel": {
     "description": "Semantics label for the button that opens the recorder to create a video reply in comments."

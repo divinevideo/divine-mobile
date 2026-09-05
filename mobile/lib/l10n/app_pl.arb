@@ -1181,7 +1181,6 @@
     "authInfoAmberTitle": "Amber",
     "authInfoAmberDescription": "Użyj aplikacji Amber na Androidzie, żeby bezpiecznie zarządzać kluczami Nostr.",
     "authCreateAccountTitle": "Utwórz konto",
-    "authBackToInviteCode": "Wróć do kodu zaproszenia",
     "authUseDivineNoBackup": "Używaj Divine bez kopii zapasowej",
     "authSkipConfirmTitle": "Ostatnia rzecz...",
     "authSkipConfirmKeyCreated": "Jesteś w środku! Utworzymy bezpieczny klucz, który zasila twoje konto Divine.",
@@ -1216,17 +1215,6 @@
     "authEmailVerifiedLogin": "E-mail zweryfikowany! Zaloguj się, żeby kontynuować.",
     "authVerificationLinkExpired": "Ten link weryfikacyjny nie jest już ważny.",
     "authVerificationConnectionError": "Nie można zweryfikować e-maila. Sprawdź połączenie i spróbuj ponownie.",
-    "authWaitlistConfirmTitle": "Jesteś w środku!",
-    "authWaitlistUpdatesAt": "Będziemy dzielić się aktualizacjami na {email}.\nGdy będą dostępne kolejne kody zaproszeń, wyślemy je do ciebie.",
-    "@authWaitlistUpdatesAt": {
-        "description": "Waitlist confirmation message with email",
-        "placeholders": {
-            "email": {
-                "type": "String"
-            }
-        }
-    },
-    "authOk": "OK",
     "authTryAgain": "Spróbuj ponownie",
     "authContactSupport": "Skontaktuj się z pomocą",
     "authCouldNotOpenEmail": "Nie można otworzyć {email}",
@@ -1238,15 +1226,6 @@
             }
         }
     },
-    "authAddInviteCode": "Dodaj swój kod zaproszenia",
-    "authInviteCodeLabel": "Kod zaproszenia",
-    "authEnterYourCode": "Wpisz swój kod",
-    "authNext": "Dalej",
-    "authJoinWaitlist": "Dołącz do listy oczekujących",
-    "authJoinWaitlistTitle": "Dołącz do listy oczekujących",
-    "authJoinWaitlistDescription": "Podaj swój e-mail, a będziemy wysyłać aktualizacje, gdy dostęp się otworzy.",
-    "authJoinWaitlistNewsletterOptIn": "Wysyłajcie mi inspiracje od Divine",
-    "authInviteAccessHelp": "Pomoc z dostępem z zaproszenia",
     "authGeneratingConnection": "Generowanie połączenia...",
     "authConnectedAuthenticating": "Połączono! Uwierzytelnianie...",
     "authConnectionTimedOut": "Przekroczono czas połączenia",
@@ -1306,17 +1285,6 @@
     "authVerificationErrorPinLocked": "Zbyt wiele prób. Dotknij Wyślij ponownie, aby otrzymać nowy kod.",
     "authVerificationErrorPinFailed": "Nie udało się zweryfikować tego kodu. Spróbuj ponownie.",
     "authVerificationErrorPinUnavailable": "Wpisywanie kodu jest teraz niedostępne. Dotknij linku w e-mailu albo wyślij ponownie, aby otrzymać nowy.",
-    "authInviteCodeErrorMalformed": "Wpisz kod zaproszenia w formacie ABCD-EFGH.",
-    "authInviteCodeErrorNotFound": "Ten kod zaproszenia nie wygląda na prawidłowy.",
-    "authInviteCodeErrorAlreadyUsed": "Ten kod zaproszenia został już użyty lub unieważniony.",
-    "authInviteGateErrorCreatorFull": "Zaproszenia tego twórcy się skończyły",
-    "authInviteGateErrorUnavailable": "Ten kod zaproszenia jest niedostępny. Zapisz się na listę oczekujących, a wyślemy zaproszenie, gdy zwolni się miejsce.",
-    "authInviteGateErrorCheckFailed": "Nie udało się sprawdzić tego kodu. Spróbuj ponownie.",
-    "authInviteGateErrorUnknown": "Coś poszło nie tak. Spróbuj ponownie ze swoim kodem zaproszenia.",
-    "authInviteErrorAlreadyUsed": "Ten kod zaproszenia nie jest już dostępny. Wróć do kodu zaproszenia, dołącz do listy oczekujących lub skontaktuj się z pomocą.",
-    "authInviteErrorInvalid": "Ten kod zaproszenia nie może być teraz użyty. Wróć do kodu zaproszenia, dołącz do listy oczekujących lub skontaktuj się z pomocą.",
-    "authInviteErrorTemporary": "Nie mogliśmy teraz potwierdzić twojego zaproszenia. Wróć do kodu zaproszenia i spróbuj ponownie, lub skontaktuj się z pomocą.",
-    "authInviteErrorUnknown": "Nie mogliśmy aktywować twojego zaproszenia. Wróć do kodu zaproszenia, dołącz do listy oczekujących lub skontaktuj się z pomocą.",
     "shareSheetSave": "Zapisz",
     "shareSheetRemoveFromSaved": "Usuń z zapisanych",
     "shareSheetSaveToGallery": "Zapisz w galerii",
@@ -1462,15 +1430,6 @@
     "notificationsFailedToLoad": "Nie udało się wczytać powiadomień",
     "notificationsRetry": "Spróbuj ponownie",
     "notificationsRefreshError": "Nie udało się odświeżyć — pokazuję dostępne",
-    "notificationsInviteSingular": "Masz 1 zaproszenie do podzielenia się z przyjacielem!",
-    "notificationsInvitePlural": "{count, plural, one{Masz 1 zaproszenie do podzielenia się z przyjaciółmi!} few{Masz {count} zaproszenia do podzielenia się z przyjaciółmi!} many{Masz {count} zaproszeń do podzielenia się z przyjaciółmi!} other{Masz {count} zaproszenia do podzielenia się z przyjaciółmi!}}",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "notificationsVideoUnavailable": "Film niedostępny",
     "feedFailedToLoadVideos": "Nie udało się wczytać filmów",
     "feedRetry": "Spróbuj ponownie",
@@ -2038,7 +1997,6 @@
             }
         }
     },
-    "invitesTitle": "Zaproś znajomych",
     "libraryClipsDeletedCount": "{count, plural, =1{Usunięto 1 klip} few{Usunięto {count} klipy} many{Usunięto {count} klipów} other{Usunięto {count} klipów}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {
@@ -2864,9 +2822,6 @@
     "videoEditorAudioSegmentInstruction": "Wybierz fragment audio dla swojego filmu",
     "fullscreenFeedRemovedMessage": "Film usunięty",
     "fullscreenFeedEmptyMessage": "Nie ma tu już nic do odtworzenia",
-    "invitesGenerateCardTitle": "{count, plural, one{1 zaproszenie gotowe do wygenerowania} few{{count} zaproszenia gotowe do wygenerowania} many{{count} zaproszeń gotowych do wygenerowania} other{{count} zaproszenia gotowych do wygenerowania}}",
-    "invitesGenerateCardSubtitle": "Wygeneruj kod, gdy będziesz gotowy(-a) się nim podzielić.",
-    "invitesGenerateButtonLabel": "Wygeneruj zaproszenie",
     "profileAvatarLightboxBarrierLabel": "Zamknij awatar",
     "profileAvatarLightboxCloseSemanticLabel": "Zamknij podgląd awatara",
     "notificationsUnreadPrefix": "Nieprzeczytane powiadomienie",
@@ -3374,24 +3329,6 @@
   "blueskyStatusUnavailableRetry": "Nie udało nam się sprawdzić twojego identyfikatora Divine. Spróbuj ponownie.",
   "blueskySetUpHandle": "Skonfiguruj",
     "blueskyTemporarilyUnavailable": "Publikowanie na Bluesky jest chwilowo niedostępne. Spróbuj ponownie.",
-    "invitesNoneAvailable": "Brak dostępnych zaproszeń w tej chwili",
-    "invitesShareWithPeople": "Udostępniaj Divine ludziom, których znasz",
-    "invitesUsedInvites": "Wykorzystane zaproszenia",
-    "invitesShareMessage": "Dołącz do mnie na Divine! Użyj kodu zaproszenia {code}, żeby zacząć:\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "Kopiuj zaproszenie",
-    "invitesCopied": "Skopiowano zaproszenie!",
-    "invitesShareInvite": "Udostępnij zaproszenie",
-    "invitesShareSubject": "Dołącz do mnie na Divine",
-    "invitesClaimed": "Wykorzystane",
-    "invitesCouldNotLoad": "Nie udało się wczytać zaproszeń",
-    "invitesRetry": "Spróbuj ponownie",
     "keyImportInsecureBunkerRelay": "Przekaźnik bunker musi używać wss:// (ws:// jest dozwolony tylko dla localhost)",
     "@keyImportInsecureBunkerRelay": {
         "description": "Shown when a pasted bunker:// or nostrconnect:// URL contains a relay parameter that uses cleartext ws:// for a non-loopback host."
@@ -3912,24 +3849,6 @@
     "devOptionsProtectedMinorEnabledToast": "Wymuszono stan chronionej osoby niepełnoletniej",
     "devOptionsProtectedMinorNonMinorToast": "Wyłączono stan chronionej osoby niepełnoletniej",
     "devOptionsProtectedMinorClearedToast": "Wyczyszczono nadpisanie chronionej osoby niepełnoletniej",
-  "devOptionsInviteAvailabilityTitle": "Zaproszenia rejestracyjne",
-  "devOptionsInviteAvailabilityCurrentLabel": "Bieżący stan",
-  "devOptionsInviteAvailabilityServerLoading": "Wartość serwera: wczytywanie",
-  "devOptionsInviteAvailabilityServerEnabled": "Wartość serwera: włączone",
-  "devOptionsInviteAvailabilityServerDisabled": "Wartość serwera: wyłączone",
-  "devOptionsInviteAvailabilityServerUnknown": "Wartość serwera: nieznana",
-  "devOptionsInviteAvailabilityOverrideNone": "Nadpisanie: użyj wartości serwera",
-  "devOptionsInviteAvailabilityOverrideEnabled": "Nadpisanie: wymuś włączenie",
-  "devOptionsInviteAvailabilityOverrideDisabled": "Nadpisanie: wymuś wyłączenie",
-  "devOptionsInviteAvailabilityUseServer": "Użyj wartości serwera",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "Podążaj za onboardingMode usługi zaproszeń",
-  "devOptionsInviteAvailabilityForceEnabled": "Wymuś włączenie",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "Pokaż lokalnie bramki zaproszeń rejestracyjnych i zarządzanie nimi",
-  "devOptionsInviteAvailabilityForceDisabled": "Wymuś wyłączenie",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "Ukryj lokalnie interfejs zaproszeń rejestracyjnych bez zmiany serwera",
-  "devOptionsInviteAvailabilityUseServerToast": "Zaproszenia rejestracyjne podążają teraz za serwerem",
-  "devOptionsInviteAvailabilityForceEnabledToast": "Wymuszono włączenie zaproszeń rejestracyjnych",
-  "devOptionsInviteAvailabilityForceDisabledToast": "Wymuszono wyłączenie zaproszeń rejestracyjnych",
     "minorAccountReviewParentConsentChecklistAgeBand": "Wyraźne stwierdzenie, że nastolatek ma od 13 do 15 lat i ma zgodę na korzystanie z Divine",
     "minorAccountReviewUnder13FamilyTitle": "Co zamiast tego może zrobić twoja rodzina",
     "minorAccountReviewUnder13FamilyBody": "Rodzic lub opiekun może prowadzić konto i publikować, a ty spokojnie możesz występować z nimi w filmach. Chcemy, żeby rodziny korzystały z Divine tak, jak im pasuje.",

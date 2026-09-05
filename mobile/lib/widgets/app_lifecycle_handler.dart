@@ -8,7 +8,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:nostr_client/nostr_client.dart' show ForceReconnectOutcome;
-import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -148,7 +147,6 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
               .read(notificationRefreshCoordinatorProvider)
               ?.refresh(reason: NotificationRefreshReason.appResume),
         );
-        unawaited(context.read<InviteStatusCubit?>()?.load());
 
         // Refetch protected-minor account state so a server-side flip that
         // landed while idle-authenticated is picked up on resume, rather than

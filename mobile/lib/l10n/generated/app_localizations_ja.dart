@@ -3013,9 +3013,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'Get Divine app updates and news';
 
   @override
-  String get authBackToInviteCode => '招待コードに戻る';
-
-  @override
   String get authUseDivineNoBackup => 'バックアップなしで Divine を使う';
 
   @override
@@ -3122,17 +3119,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'メールを確認できなかった。接続を確認してもう一回試してみて。';
 
   @override
-  String get authWaitlistConfirmTitle => '登録完了！';
-
-  @override
-  String authWaitlistUpdatesAt(String email) {
-    return 'アップデートは $email に送るね。\n招待コードが使えるようになったら、すぐお知らせするよ。';
-  }
-
-  @override
-  String get authOk => 'OK';
-
-  @override
   String get authTryAgain => 'もう一回';
 
   @override
@@ -3142,34 +3128,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String authCouldNotOpenEmail(String email) {
     return '$email が開けなかった';
   }
-
-  @override
-  String get authAddInviteCode => '招待コードを入力';
-
-  @override
-  String get authInviteCodeLabel => '招待コード';
-
-  @override
-  String get authEnterYourCode => 'コードを入力';
-
-  @override
-  String get authNext => '次へ';
-
-  @override
-  String get authJoinWaitlist => 'ウェイトリストに参加';
-
-  @override
-  String get authJoinWaitlistTitle => 'ウェイトリストに参加';
-
-  @override
-  String get authJoinWaitlistDescription =>
-      'メールアドレスを教えてね。アクセス開放に合わせてアップデートを送るよ。';
-
-  @override
-  String get authJoinWaitlistNewsletterOptIn => 'Divine のインスピレーションを送ってほしい';
-
-  @override
-  String get authInviteAccessHelp => '招待アクセスのヘルプ';
 
   @override
   String get authGeneratingConnection => '接続を生成中...';
@@ -3335,44 +3293,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get authVerificationErrorPinUnavailable =>
       '今はコード入力が使えないよ。メールのリンクをタップするか、再送信で新しいのをもらってね。';
-
-  @override
-  String get authInviteCodeErrorMalformed => 'ABCD-EFGH のような招待コードを入力してください。';
-
-  @override
-  String get authInviteCodeErrorNotFound => 'その招待コードは有効ではないようです。';
-
-  @override
-  String get authInviteCodeErrorAlreadyUsed => 'その招待コードはすでに使用済みか、無効になっています。';
-
-  @override
-  String get authInviteGateErrorCreatorFull => 'このクリエイターの招待枠はいっぱいです';
-
-  @override
-  String get authInviteGateErrorUnavailable =>
-      'その招待コードは利用できません。順番待ちリストに登録すると、空きが出しだい招待をお送りします。';
-
-  @override
-  String get authInviteGateErrorCheckFailed => 'そのコードを確認できませんでした。もう一度お試しください。';
-
-  @override
-  String get authInviteGateErrorUnknown => '問題が発生しました。招待コードをもう一度お試しください。';
-
-  @override
-  String get authInviteErrorAlreadyUsed =>
-      'その招待コードはもう使えないよ。招待コードに戻るか、ウェイトリストに参加するか、サポートに連絡してね。';
-
-  @override
-  String get authInviteErrorInvalid =>
-      'その招待コードは今は使えないよ。招待コードに戻るか、ウェイトリストに参加するか、サポートに連絡してね。';
-
-  @override
-  String get authInviteErrorTemporary =>
-      '今は招待を確認できなかった。招待コードに戻ってもう一回試すか、サポートに連絡してね。';
-
-  @override
-  String get authInviteErrorUnknown =>
-      '招待を有効にできなかった。招待コードに戻るか、ウェイトリストに参加するか、サポートに連絡してね。';
 
   @override
   String get shareSheetSave => '保存';
@@ -4010,14 +3930,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get notificationsVideoThumbnail => '動画のサムネイル';
-
-  @override
-  String get notificationsInviteSingular => '友達に送れる招待が1つあるよ！';
-
-  @override
-  String notificationsInvitePlural(int count) {
-    return '友達に送れる招待が$count個あるよ！';
-  }
 
   @override
   String notificationsTabBadges(int count) {
@@ -7328,60 +7240,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'Bluesky への投稿は一時的に利用できません。もう一度お試しください。';
 
   @override
-  String get invitesTitle => '友達を招待しよう';
-
-  @override
-  String invitesGenerateCardTitle(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count 件の招待を作成できます',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get invitesGenerateCardSubtitle => '共有する準備ができたらコードを作成しましょう。';
-
-  @override
-  String get invitesGenerateButtonLabel => '招待を作成';
-
-  @override
-  String get invitesNoneAvailable => '今は使える招待がないよ';
-
-  @override
-  String get invitesShareWithPeople => 'Divine を周りの人にシェアしよう';
-
-  @override
-  String get invitesUsedInvites => '使用済みの招待';
-
-  @override
-  String invitesShareMessage(String code) {
-    return 'Divine に参加しよう！招待コード $code で始められるよ:\nhttps://divine.video/invite/$code';
-  }
-
-  @override
-  String get invitesCopyInvite => '招待をコピー';
-
-  @override
-  String get invitesCopied => '招待をコピーしたよ！';
-
-  @override
-  String get invitesShareInvite => '招待をシェア';
-
-  @override
-  String get invitesShareSubject => 'Divine に参加しよう';
-
-  @override
-  String get invitesClaimed => '受け取り済み';
-
-  @override
-  String get invitesCouldNotLoad => '招待の読み込みに失敗';
-
-  @override
-  String get invitesRetry => 'もう一回';
-
-  @override
   String get searchSomethingWentWrong => 'なんかうまくいかなかった';
 
   @override
@@ -10092,66 +9950,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get devOptionsProtectedMinorClearedToast => '保護対象の未成年の上書きを解除しました';
-
-  @override
-  String get devOptionsInviteAvailabilityTitle => '登録招待';
-
-  @override
-  String get devOptionsInviteAvailabilityCurrentLabel => '現在の状態';
-
-  @override
-  String get devOptionsInviteAvailabilityServerLoading => 'サーバー値: 読み込み中';
-
-  @override
-  String get devOptionsInviteAvailabilityServerEnabled => 'サーバー値: 有効';
-
-  @override
-  String get devOptionsInviteAvailabilityServerDisabled => 'サーバー値: 無効';
-
-  @override
-  String get devOptionsInviteAvailabilityServerUnknown => 'サーバー値: 不明';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideNone => '上書き: サーバー値を使う';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideEnabled => '上書き: 有効を強制';
-
-  @override
-  String get devOptionsInviteAvailabilityOverrideDisabled => '上書き: 無効を強制';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServer => 'サーバー値を使う';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerSubtitle =>
-      '招待サービスの onboardingMode に従う';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabled => '有効を強制';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledSubtitle =>
-      '登録招待のゲートと管理画面をローカルで表示';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabled => '無効を強制';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledSubtitle =>
-      'サーバーを変更せずに登録招待の UI をローカルで非表示';
-
-  @override
-  String get devOptionsInviteAvailabilityUseServerToast =>
-      '登録招待はサーバーに従うようになりました';
-
-  @override
-  String get devOptionsInviteAvailabilityForceEnabledToast =>
-      '登録招待を強制的に有効にしました';
-
-  @override
-  String get devOptionsInviteAvailabilityForceDisabledToast =>
-      '登録招待を強制的に無効にしました';
 
   @override
   String get commentsRecordVideoButtonLabel => '動画コメントを録画';

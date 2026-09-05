@@ -15,7 +15,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
 import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
-import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/app_router.dart';
@@ -35,9 +34,6 @@ class _MockFollowRepository extends Mock implements FollowRepository {}
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
-
-class _MockInviteStatusCubit extends MockCubit<InviteStatusState>
-    implements InviteStatusCubit {}
 
 class _MockDmUnreadCountCubit extends MockCubit<int>
     implements DmUnreadCountCubit {}
@@ -64,7 +60,6 @@ void main() {
     late _MockFollowRepository mockFollowRepository;
     late _MockContentBlocklistRepository mockBlocklistRepository;
     late MockGoRouter mockGoRouter;
-    late _MockInviteStatusCubit mockInviteCubit;
     late _MockDmUnreadCountCubit mockDmUnreadCountCubit;
 
     setUp(() {
@@ -73,10 +68,7 @@ void main() {
       mockFollowRepository = _MockFollowRepository();
       mockBlocklistRepository = _MockContentBlocklistRepository();
       mockGoRouter = MockGoRouter();
-      mockInviteCubit = _MockInviteStatusCubit();
       mockDmUnreadCountCubit = _MockDmUnreadCountCubit();
-      when(() => mockInviteCubit.state).thenReturn(const InviteStatusState());
-      when(mockInviteCubit.load).thenAnswer((_) async {});
       when(() => mockDmUnreadCountCubit.state).thenReturn(0);
 
       when(
@@ -128,7 +120,6 @@ void main() {
                   BlocProvider<DmUnreadCountCubit>.value(
                     value: mockDmUnreadCountCubit,
                   ),
-                  BlocProvider<InviteStatusCubit>.value(value: mockInviteCubit),
                 ],
                 child: const InboxPage(),
               ),
@@ -173,7 +164,6 @@ void main() {
                 BlocProvider<DmUnreadCountCubit>.value(
                   value: mockDmUnreadCountCubit,
                 ),
-                BlocProvider<InviteStatusCubit>.value(value: mockInviteCubit),
               ],
               child: const InboxPage(),
             ),
@@ -236,7 +226,6 @@ void main() {
               BlocProvider<DmUnreadCountCubit>.value(
                 value: mockDmUnreadCountCubit,
               ),
-              BlocProvider<InviteStatusCubit>.value(value: mockInviteCubit),
             ],
             child: const InboxPage(),
           ),

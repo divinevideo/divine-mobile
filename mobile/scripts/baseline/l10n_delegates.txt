@@ -27,7 +27,6 @@ test/router/app_shell_tab_fade_test.dart	1
 test/router/explore_tab_route_test.dart	1
 test/router/flat_route_cold_entry_back_test.dart	1
 test/router/fullscreen_feed_redirect_test.dart	1
-test/router/invite_availability_redirect_test.dart	3
 test/router/routes/restored_route_extras_test.dart	1
 test/router/shell_route_analytics_test.dart	1
 test/router/shell_transition_test.dart	1

@@ -26,7 +26,6 @@ enum RouteType {
   videoEdit, // Full-screen edit flow for published videos
   subtitleEdit, // Full-screen subtitle edit flow for published videos
   importKey,
-  invites, // Invite codes share/list screen
   badges, // Badge awards dashboard
   settings,
   relaySettings, // Relay configuration screen
@@ -216,7 +215,6 @@ bool _isKnownRouteShape(List<String> segments) {
     case 'content-preferences':
     case 'general-settings':
     case 'storage-management':
-    case 'invites':
     case 'app-language':
     case 'appearance-settings':
     case 'support-center':
@@ -484,9 +482,6 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
 
     case 'storage-management':
       return const RouteContext(type: RouteType.storageManagement);
-
-    case 'invites':
-      return const RouteContext(type: RouteType.invites);
 
     case 'app-language':
       return const RouteContext(type: RouteType.appLanguage);
@@ -776,9 +771,6 @@ String buildRoute(RouteContext context) {
 
     case RouteType.monetizationLinksSettings:
       return RoutePaths.monetizationLinksSettings;
-
-    case RouteType.invites:
-      return RoutePaths.invites;
 
     case RouteType.appLanguage:
       return RoutePaths.appLanguage;

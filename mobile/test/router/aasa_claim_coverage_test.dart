@@ -25,7 +25,6 @@ const _expectedClaimPatternsByHost = <String, List<String>>{
     '/profile/*',
     '/hashtag/*',
     '/search/*',
-    '/invite/*',
     '/list/*',
     '/app/callback',
   ],
@@ -34,7 +33,6 @@ const _expectedClaimPatternsByHost = <String, List<String>>{
     '/profile/*',
     '/hashtag/*',
     '/search/*',
-    '/invite/*',
     '/list/*',
     '/app/callback',
   ],
@@ -61,9 +59,6 @@ const _allowlistedClaims = <String, String>{
 const _customSchemeExclusions = <String, String>{
   '/app/callback':
       'Keycast OAuth redirect consumed by the OAuth client, not routing.',
-  '/invite/*':
-      'No GoRoute to land on; invites are handled by the DeepLinkService '
-      'listener for https links only.',
 };
 
 void main() {

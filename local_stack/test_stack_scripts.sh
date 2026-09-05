@@ -85,17 +85,11 @@ assert_file_matches() {
     fi
 }
 
-# The full interpolation is the behavior: amd64 by default, with a native
-# platform override for locally built images.
-assert_file_matches '^[[:space:]]+platform: \$\{INVITE_PLATFORM:-linux/amd64\}$' "$COMPOSE_FILE" \
-    "the invite image platform default and override should remain configured"
-
 # A count alone says how many statements failed, not which. The skip branch has
 # to name the statement and ClickHouse's reason, or diagnosing "applied 3/4"
 # means reading funnelcake's migration history by hand.
 assert_file_matches '^[[:space:]]+echo "refresh-interval tuning skipped: \$\$stmt"$' "$COMPOSE_FILE" \
     "a skipped tuning statement should name itself"
-
 # --- Sandbox ----------------------------------------------------------------
 
 # Only what these scripts and the stubs actually shell out to. `ss` and `lsof`

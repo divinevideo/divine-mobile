@@ -1178,7 +1178,6 @@
     "authInfoAmberTitle": "Amber",
     "authInfoAmberDescription": "Nostr anahtarlarını güvenli şekilde yönetmek için Android'deki Amber imzalama uygulamasını kullan.",
     "authCreateAccountTitle": "Hesap oluştur",
-    "authBackToInviteCode": "Davet koduna geri dön",
     "authUseDivineNoBackup": "Yedek olmadan Divine kullan",
     "authSkipConfirmTitle": "Son bir şey...",
     "authSkipConfirmKeyCreated": "İçerisin! Divine hesabını güçlendirecek güvenli bir anahtar oluşturalım.",
@@ -1213,17 +1212,6 @@
     "authEmailVerifiedLogin": "E-posta doğrulandı! Devam etmek için giriş yap.",
     "authVerificationLinkExpired": "Bu doğrulama bağlantısı artık geçerli değil.",
     "authVerificationConnectionError": "E-posta doğrulanamıyor. Lütfen bağlantını kontrol et ve tekrar dene.",
-    "authWaitlistConfirmTitle": "İçerisin!",
-    "authWaitlistUpdatesAt": "Güncellemeleri {email} adresine göndereceğiz.\nDaha fazla davet kodu çıktığında sana göndereceğiz.",
-    "@authWaitlistUpdatesAt": {
-        "description": "Waitlist confirmation message with email",
-        "placeholders": {
-            "email": {
-                "type": "String"
-            }
-        }
-    },
-    "authOk": "Tamam",
     "authTryAgain": "Tekrar dene",
     "authContactSupport": "Destekle iletişime geç",
     "authCouldNotOpenEmail": "{email} açılamadı",
@@ -1235,15 +1223,6 @@
             }
         }
     },
-    "authAddInviteCode": "Davet kodunu ekle",
-    "authInviteCodeLabel": "Davet kodu",
-    "authEnterYourCode": "Kodunu gir",
-    "authNext": "İleri",
-    "authJoinWaitlist": "Bekleme listesine katıl",
-    "authJoinWaitlistTitle": "Bekleme listesine katıl",
-    "authJoinWaitlistDescription": "E-postanı paylaş, erişim açıldıkça güncelleme gönderelim.",
-    "authJoinWaitlistNewsletterOptIn": "Bana Divine ilhamı gönderin",
-    "authInviteAccessHelp": "Davet erişimi yardımı",
     "authGeneratingConnection": "Bağlantı oluşturuluyor...",
     "authConnectedAuthenticating": "Bağlandı! Kimlik doğrulanıyor...",
     "authConnectionTimedOut": "Bağlantı zaman aşımı",
@@ -1303,17 +1282,6 @@
     "authVerificationErrorPinLocked": "Çok fazla deneme. Yeni kod almak için Tekrar Gönder'e dokun.",
     "authVerificationErrorPinFailed": "Kod doğrulanamadı. Lütfen tekrar dene.",
     "authVerificationErrorPinUnavailable": "Kod girişi şu anda kullanılamıyor. E-postandaki bağlantıya dokun ya da yenisini almak için tekrar gönder.",
-    "authInviteCodeErrorMalformed": "ABCD-EFGH gibi bir davet kodu gir.",
-    "authInviteCodeErrorNotFound": "Bu davet kodu geçerli görünmüyor.",
-    "authInviteCodeErrorAlreadyUsed": "Bu davet kodu zaten kullanılmış ya da iptal edilmiş.",
-    "authInviteGateErrorCreatorFull": "Bu içerik üreticisinin davetleri tükendi",
-    "authInviteGateErrorUnavailable": "Bu davet kodu kullanılamıyor. Bekleme listesine katıl, yer açılınca sana davet göndereceğiz.",
-    "authInviteGateErrorCheckFailed": "Bu kodu kontrol edemedik. Tekrar dene.",
-    "authInviteGateErrorUnknown": "Bir şeyler ters gitti. Davet kodunu tekrar dene.",
-    "authInviteErrorAlreadyUsed": "Bu davet kodu artık kullanılamıyor. Davet koduna geri dön, bekleme listesine katıl veya destekle iletişime geç.",
-    "authInviteErrorInvalid": "Bu davet kodu şu anda kullanılamıyor. Davet koduna geri dön, bekleme listesine katıl veya destekle iletişime geç.",
-    "authInviteErrorTemporary": "Davetini şu anda doğrulayamadık. Davet koduna geri dönüp tekrar dene veya destekle iletişime geç.",
-    "authInviteErrorUnknown": "Davetini etkinleştiremedik. Davet koduna geri dön, bekleme listesine katıl veya destekle iletişime geç.",
     "shareSheetSave": "Kaydet",
     "shareSheetRemoveFromSaved": "Kaydı kaldır",
     "shareSheetSaveToGallery": "Galeriye Kaydet",
@@ -1459,15 +1427,6 @@
     "notificationsFailedToLoad": "Bildirimler yüklenemedi",
     "notificationsRetry": "Tekrar Dene",
     "notificationsRefreshError": "Yenileme başarısız — mevcut olanlar gösteriliyor",
-    "notificationsInviteSingular": "Bir arkadaşınla paylaşacak 1 davetin var!",
-    "notificationsInvitePlural": "Arkadaşlarınla paylaşacak {count} davetin var!",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "notificationsVideoUnavailable": "Video kullanılamıyor",
     "feedFailedToLoadVideos": "Videolar yüklenemedi",
     "feedRetry": "Tekrar Dene",
@@ -2035,7 +1994,6 @@
             }
         }
     },
-    "invitesTitle": "Arkadaşları Davet Et",
     "libraryClipsDeletedCount": "{count, plural, =1{1 klip silindi} other{{count} klip silindi}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {
@@ -2864,9 +2822,6 @@
     "videoEditorAudioSegmentInstruction": "Videon için ses bölümünü seç",
     "fullscreenFeedRemovedMessage": "Video kaldırıldı",
     "fullscreenFeedEmptyMessage": "Burada oynatılacak başka bir şey yok",
-    "invitesGenerateCardTitle": "{count, plural, =1{Oluşturulmaya hazır 1 davet} other{Oluşturulmaya hazır {count} davet}}",
-    "invitesGenerateCardSubtitle": "Paylaşmaya hazır olduğunda bir kod oluştur.",
-    "invitesGenerateButtonLabel": "Davet oluştur",
     "profileAvatarLightboxBarrierLabel": "Avatarı kapat",
     "profileAvatarLightboxCloseSemanticLabel": "Avatar önizlemesini kapat",
     "notificationsUnreadPrefix": "Okunmamış bildirim",
@@ -3374,24 +3329,6 @@
   "blueskyStatusUnavailableRetry": "Divine kullanıcı adını kontrol edemedik. Tekrar dene.",
   "blueskySetUpHandle": "Ayarla",
     "blueskyTemporarilyUnavailable": "Bluesky'da paylaşım geçici olarak kullanılamıyor. Lütfen tekrar dene.",
-    "invitesNoneAvailable": "Şu anda kullanılabilir davet yok",
-    "invitesShareWithPeople": "Divine'i tanıdığın insanlarla paylaş",
-    "invitesUsedInvites": "Kullanılmış davetler",
-    "invitesShareMessage": "Divine'de bana katıl! Başlamak için {code} davet kodunu kullan:\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "Daveti kopyala",
-    "invitesCopied": "Davet kopyalandı!",
-    "invitesShareInvite": "Daveti paylaş",
-    "invitesShareSubject": "Divine'de bana katıl",
-    "invitesClaimed": "Kullanıldı",
-    "invitesCouldNotLoad": "Davetler yüklenemedi",
-    "invitesRetry": "Tekrar dene",
     "keyImportInsecureBunkerRelay": "Bunker rölesi wss:// kullanmalı (ws:// sadece localhost için izinli)",
     "@keyImportInsecureBunkerRelay": {
         "description": "Shown when a pasted bunker:// or nostrconnect:// URL contains a relay parameter that uses cleartext ws:// for a non-loopback host."
@@ -3912,24 +3849,6 @@
     "devOptionsProtectedMinorEnabledToast": "Korunan-reşit olmayan durumu zorlandı",
     "devOptionsProtectedMinorNonMinorToast": "Korunan-reşit olmayan durumu kapatıldı",
     "devOptionsProtectedMinorClearedToast": "Korunan-reşit olmayan geçersiz kılması temizlendi",
-  "devOptionsInviteAvailabilityTitle": "Kayıt davetleri",
-  "devOptionsInviteAvailabilityCurrentLabel": "Mevcut durum",
-  "devOptionsInviteAvailabilityServerLoading": "Sunucu değeri: yükleniyor",
-  "devOptionsInviteAvailabilityServerEnabled": "Sunucu değeri: açık",
-  "devOptionsInviteAvailabilityServerDisabled": "Sunucu değeri: kapalı",
-  "devOptionsInviteAvailabilityServerUnknown": "Sunucu değeri: bilinmiyor",
-  "devOptionsInviteAvailabilityOverrideNone": "Geçersiz kılma: sunucu değerini kullan",
-  "devOptionsInviteAvailabilityOverrideEnabled": "Geçersiz kılma: açık olarak zorla",
-  "devOptionsInviteAvailabilityOverrideDisabled": "Geçersiz kılma: kapalı olarak zorla",
-  "devOptionsInviteAvailabilityUseServer": "Sunucu değerini kullan",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "Davet servisinin onboardingMode değerini izle",
-  "devOptionsInviteAvailabilityForceEnabled": "Açık olarak zorla",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "Kayıt daveti kapılarını ve yönetimini yerelde göster",
-  "devOptionsInviteAvailabilityForceDisabled": "Kapalı olarak zorla",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "Sunucuyu değiştirmeden kayıt daveti arayüzünü yerelde gizle",
-  "devOptionsInviteAvailabilityUseServerToast": "Kayıt davetleri artık sunucuyu izliyor",
-  "devOptionsInviteAvailabilityForceEnabledToast": "Kayıt davetleri zorla açıldı",
-  "devOptionsInviteAvailabilityForceDisabledToast": "Kayıt davetleri zorla kapatıldı",
     "minorAccountReviewParentConsentChecklistAgeBand": "Gencin 13-15 yaş arasında olduğunu ve Divine'ı kullanma izni olduğunu açıkça belirten bir ifade",
     "minorAccountReviewUnder13FamilyTitle": "Ailen bunun yerine ne yapabilir",
     "minorAccountReviewUnder13FamilyBody": "Bir ebeveyn veya vasi hesabı tutabilir ve paylaşımları yapabilir; sen de kesinlikle onlarla birlikte videolarda olabilirsin. Ailelerin Divine'ı kendilerine uyan şekilde kullanmasını istiyoruz.",

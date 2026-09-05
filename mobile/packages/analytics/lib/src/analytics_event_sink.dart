@@ -17,10 +17,6 @@ abstract interface class AnalyticsEventSink {
   });
 }
 
-abstract final class AnalyticsUserProperty {
-  static const inviteCode = 'invite_code';
-}
-
 class NoOpAnalyticsEventSink implements AnalyticsEventSink {
   const NoOpAnalyticsEventSink();
 

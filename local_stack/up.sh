@@ -30,7 +30,7 @@ esac
 SERVICES=(
   keycast keycast-postgres keycast-redis
   funnelcake-relay funnelcake-api funnelcake-proxy funnelcake-redis funnelcake-clickhouse
-  minio blossom blossom-proxy invite
+  minio blossom blossom-proxy
 )
 
 # SERVICES plus the one-shot jobs compose pulls in as dependencies. Failures

@@ -1172,7 +1172,6 @@
     "authInfoAmberTitle": "Amber",
     "authInfoAmberDescription": "استخدم تطبيق توقيع Amber على أندرويد لإدارة مفاتيح Nostr الخاصة بك بأمان.",
     "authCreateAccountTitle": "إنشاء حساب",
-    "authBackToInviteCode": "العودة إلى رمز الدعوة",
     "authUseDivineNoBackup": "استخدم Divine بدون نسخة احتياطية",
     "authSkipConfirmTitle": "أمر أخير...",
     "authSkipConfirmKeyCreated": "أنت في الداخل! سننشئ مفتاحًا آمنًا يشغّل حسابك في Divine.",
@@ -1207,17 +1206,6 @@
     "authEmailVerifiedLogin": "تم التحقق من البريد! يرجى تسجيل الدخول للمتابعة.",
     "authVerificationLinkExpired": "رابط التحقق هذا لم يعد صالحًا.",
     "authVerificationConnectionError": "تعذّر التحقق من البريد. تحقّق من اتصالك وحاول مرّة أخرى.",
-    "authWaitlistConfirmTitle": "أنت في الداخل!",
-    "authWaitlistUpdatesAt": "سنشارك التحديثات على {email}.\nعندما تتوفر رموز دعوة إضافية، سنرسلها إليك.",
-    "@authWaitlistUpdatesAt": {
-        "description": "Waitlist confirmation message with email",
-        "placeholders": {
-            "email": {
-                "type": "String"
-            }
-        }
-    },
-    "authOk": "حسنًا",
     "authTryAgain": "حاول مرّة أخرى",
     "authContactSupport": "اتصل بالدعم",
     "authCouldNotOpenEmail": "تعذّر فتح {email}",
@@ -1229,15 +1217,6 @@
             }
         }
     },
-    "authAddInviteCode": "أضف رمز الدعوة الخاص بك",
-    "authInviteCodeLabel": "رمز الدعوة",
-    "authEnterYourCode": "أدخل رمزك",
-    "authNext": "التالي",
-    "authJoinWaitlist": "انضم لقائمة الانتظار",
-    "authJoinWaitlistTitle": "انضم إلى قائمة الانتظار",
-    "authJoinWaitlistDescription": "شاركنا بريدك وسنرسل لك التحديثات عند فتح الوصول.",
-    "authJoinWaitlistNewsletterOptIn": "أرسل لي إلهام Divine",
-    "authInviteAccessHelp": "مساعدة وصول الدعوة",
     "authGeneratingConnection": "جاري إنشاء الاتصال...",
     "authConnectedAuthenticating": "تم الاتصال! جاري المصادقة...",
     "authConnectionTimedOut": "انتهت مهلة الاتصال",
@@ -1296,17 +1275,6 @@
     "authVerificationErrorPinLocked": "محاولات كثيرة جدًا. اضغط «إعادة الإرسال» للحصول على رمز جديد.",
     "authVerificationErrorPinFailed": "تعذّر علينا التحقق من هذا الرمز. يرجى المحاولة مرّة أخرى.",
     "authVerificationErrorPinUnavailable": "إدخال الرمز غير متاح حاليًا. اضغط على الرابط في بريدك الإلكتروني، أو أعد الإرسال للحصول على رمز جديد.",
-    "authInviteCodeErrorMalformed": "أدخل رمز دعوة مثل ABCD-EFGH.",
-    "authInviteCodeErrorNotFound": "رمز الدعوة هذا لا يبدو صالحًا.",
-    "authInviteCodeErrorAlreadyUsed": "تم استخدام رمز الدعوة هذا أو إلغاؤه.",
-    "authInviteGateErrorCreatorFull": "نفدت دعوات هذا المنشئ",
-    "authInviteGateErrorUnavailable": "رمز الدعوة هذا غير متاح. انضم إلى قائمة الانتظار وسنرسل دعوة عند توفر مكان.",
-    "authInviteGateErrorCheckFailed": "تعذّر التحقق من هذا الرمز. حاول مرة أخرى.",
-    "authInviteGateErrorUnknown": "حدث خطأ ما. حاول إدخال رمز الدعوة مرة أخرى.",
-    "authInviteErrorAlreadyUsed": "رمز الدعوة هذا لم يعد متاحًا. عد إلى رمز دعوتك، انضم لقائمة الانتظار، أو تواصل مع الدعم.",
-    "authInviteErrorInvalid": "رمز الدعوة هذا لا يمكن استخدامه الآن. عد إلى رمز دعوتك، انضم لقائمة الانتظار، أو تواصل مع الدعم.",
-    "authInviteErrorTemporary": "لم نتمكّن من تأكيد دعوتك الآن. عد إلى رمز دعوتك وحاول مرّة أخرى، أو تواصل مع الدعم.",
-    "authInviteErrorUnknown": "لم نتمكّن من تفعيل دعوتك. عد إلى رمز دعوتك، انضم لقائمة الانتظار، أو تواصل مع الدعم.",
     "shareSheetSave": "حفظ",
     "shareSheetRemoveFromSaved": "إزالة المحفوظ",
     "shareSheetSaveToGallery": "حفظ في المعرض",
@@ -1452,15 +1420,6 @@
     "notificationsFailedToLoad": "تعذر تحميل الإشعارات",
     "notificationsRetry": "إعادة المحاولة",
     "notificationsRefreshError": "تعذّر التحديث — يتم عرض ما هو متاح",
-    "notificationsInviteSingular": "لديك دعوة واحدة لمشاركتها مع صديق!",
-    "notificationsInvitePlural": "لديك {count} دعوات لمشاركتها مع الأصدقاء!",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "notificationsVideoUnavailable": "الفيديو غير متاح",
     "feedFailedToLoadVideos": "تعذر تحميل مقاطع الفيديو",
     "feedRetry": "إعادة المحاولة",
@@ -2028,7 +1987,6 @@
             }
         }
     },
-    "invitesTitle": "دعوة الأصدقاء",
     "libraryClipsDeletedCount": "{count, plural, =1{تم حذف مقطع واحد} other{تم حذف {count} مقاطع}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {
@@ -2857,9 +2815,6 @@
     "videoEditorAudioSegmentInstruction": "حدّد مقطع الصوت لفيديوك",
     "fullscreenFeedRemovedMessage": "تمت إزالة الفيديو",
     "fullscreenFeedEmptyMessage": "لم يتبقَّ شيء لتشغيله هنا",
-    "invitesGenerateCardTitle": "{count, plural, zero{لا توجد دعوات جاهزة للإنشاء} one{دعوة واحدة جاهزة للإنشاء} two{دعوتان جاهزتان للإنشاء} few{{count} دعوات جاهزة للإنشاء} many{{count} دعوة جاهزة للإنشاء} other{{count} دعوة جاهزة للإنشاء}}",
-    "invitesGenerateCardSubtitle": "أنشئ رمزًا عندما تكون مستعدًا لمشاركة واحد.",
-    "invitesGenerateButtonLabel": "إنشاء دعوة",
     "profileAvatarLightboxBarrierLabel": "إغلاق الصورة الرمزية",
     "profileAvatarLightboxCloseSemanticLabel": "إغلاق معاينة الصورة الرمزية",
     "notificationsUnreadPrefix": "إشعار غير مقروء",
@@ -3374,24 +3329,6 @@
   "blueskyStatusUnavailableRetry": "تعذّر علينا التحقق من معرّف Divine الخاص بك. حاول مرة أخرى.",
   "blueskySetUpHandle": "إعداد",
     "blueskyTemporarilyUnavailable": "النشر على Bluesky غير متاح مؤقتًا. حاول مرة أخرى.",
-    "invitesNoneAvailable": "لا توجد دعوات متاحة الآن",
-    "invitesShareWithPeople": "شارك Divine مع من تعرفهم",
-    "invitesUsedInvites": "الدعوات المستخدمة",
-    "invitesShareMessage": "انضمّ إليّ على Divine! استخدم رمز الدعوة {code} للبدء:\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "نسخ الدعوة",
-    "invitesCopied": "تم نسخ الدعوة!",
-    "invitesShareInvite": "مشاركة الدعوة",
-    "invitesShareSubject": "انضمّ إليّ على Divine",
-    "invitesClaimed": "تم استخدامها",
-    "invitesCouldNotLoad": "تعذّر تحميل الدعوات",
-    "invitesRetry": "إعادة المحاولة",
     "keyImportInsecureBunkerRelay": "يجب أن يستخدم محول bunker بروتوكول wss:// (يُسمح بـ ws:// لـ localhost فقط)",
     "@keyImportInsecureBunkerRelay": {
         "description": "Shown when a pasted bunker:// or nostrconnect:// URL contains a relay parameter that uses cleartext ws:// for a non-loopback host."
@@ -3912,24 +3849,6 @@
     "devOptionsProtectedMinorEnabledToast": "تم فرض حالة القاصر المحمي",
     "devOptionsProtectedMinorNonMinorToast": "تم إيقاف حالة القاصر المحمي",
     "devOptionsProtectedMinorClearedToast": "تم مسح تجاوز القاصر المحمي",
-  "devOptionsInviteAvailabilityTitle": "دعوات التسجيل",
-  "devOptionsInviteAvailabilityCurrentLabel": "الحالة الحالية",
-  "devOptionsInviteAvailabilityServerLoading": "قيمة الخادم: جارٍ التحميل",
-  "devOptionsInviteAvailabilityServerEnabled": "قيمة الخادم: مفعّلة",
-  "devOptionsInviteAvailabilityServerDisabled": "قيمة الخادم: معطّلة",
-  "devOptionsInviteAvailabilityServerUnknown": "قيمة الخادم: غير معروفة",
-  "devOptionsInviteAvailabilityOverrideNone": "تجاوز: استخدم قيمة الخادم",
-  "devOptionsInviteAvailabilityOverrideEnabled": "تجاوز: فرض التفعيل",
-  "devOptionsInviteAvailabilityOverrideDisabled": "تجاوز: فرض التعطيل",
-  "devOptionsInviteAvailabilityUseServer": "استخدم قيمة الخادم",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "اتبع onboardingMode الخاص بخدمة الدعوات",
-  "devOptionsInviteAvailabilityForceEnabled": "فرض التفعيل",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "أظهر بوابات دعوات التسجيل وإدارتها محليًا",
-  "devOptionsInviteAvailabilityForceDisabled": "فرض التعطيل",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "أخفِ واجهة دعوات التسجيل محليًا دون تغيير الخادم",
-  "devOptionsInviteAvailabilityUseServerToast": "دعوات التسجيل تتبع الخادم الآن",
-  "devOptionsInviteAvailabilityForceEnabledToast": "تم فرض تفعيل دعوات التسجيل",
-  "devOptionsInviteAvailabilityForceDisabledToast": "تم فرض تعطيل دعوات التسجيل",
     "minorAccountReviewParentConsentChecklistAgeBand": "تصريح واضح بأن عمر المراهق بين 13 و15 وأن لديه إذنًا باستخدام Divine",
     "minorAccountReviewUnder13FamilyTitle": "ما يمكن لعائلتك فعله بدلاً من ذلك",
     "minorAccountReviewUnder13FamilyBody": "يمكن لأحد الوالدين أو الوصي أن يملك الحساب ويتولى النشر، ويمكنك بالتأكيد أن تظهر في الفيديوهات معهم. نريد للعائلات أن تستمتع بـ Divine بالطريقة التي تناسبها.",

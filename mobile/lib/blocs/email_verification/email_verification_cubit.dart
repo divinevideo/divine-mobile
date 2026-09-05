@@ -3,14 +3,11 @@
 
 import 'dart:async';
 
-import 'package:analytics/analytics.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/utils/invite_error_utils.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -57,18 +54,12 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   EmailVerificationCubit({
     required KeycastOAuth oauthClient,
     required AuthService authService,
-    InviteApiClient? inviteApiClient,
-    AnalyticsEventSink analytics = const NoOpAnalyticsEventSink(),
   }) : _oauthClient = oauthClient,
        _authService = authService,
-       _inviteApiClient = inviteApiClient,
-       _analytics = analytics,
        super(const EmailVerificationState());
 
   final KeycastOAuth _oauthClient;
   final AuthService _authService;
-  final InviteApiClient? _inviteApiClient;
-  final AnalyticsEventSink _analytics;
 
   /// Tracks the device code that was already successfully exchanged.
   ///
@@ -84,7 +75,6 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   Timer? _resendTimer;
   String? _pendingDeviceCode;
   String? _pendingVerifier;
-  String? _pendingInviteCode;
   String? _pendingVerificationToken;
   bool _isVerifyingEmailToken = false;
   int _verificationGeneration = 0;
@@ -92,7 +82,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   /// True once a terminal completion has been claimed for the current
   /// verification. Set synchronously at the top of [_exchangeCodeAndLogin]
   /// before the first await, so a racing poll completion and a racing PIN
-  /// submit cannot both reach token exchange / invite consumption. Reset
+  /// submit cannot both reach token exchange. Reset
   /// only by [startPolling] when a fresh verification begins.
   bool _completionClaimed = false;
 
@@ -170,7 +160,6 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
     required String deviceCode,
     required String verifier,
     required String email,
-    String? inviteCode,
   }) {
     Log.info(
       'startPolling called for ${redactEmailForLogs(email)} '
@@ -183,9 +172,6 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
     _verificationGeneration++;
     _pendingDeviceCode = deviceCode;
     _pendingVerifier = verifier;
-    _pendingInviteCode = inviteCode == null
-        ? null
-        : InviteApiClient.normalizeCode(inviteCode);
 
     emit(
       EmailVerificationState(
@@ -519,7 +505,6 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
       deviceCode: deviceCode,
       verifier: verifier,
       email: state.pendingEmail ?? '',
-      inviteCode: _pendingInviteCode,
     );
   }
 
@@ -534,7 +519,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
     if (_isCompletionClaimed) {
       // A poll completion or an earlier PIN submit already claimed the
       // exchange. Submitting again would burn a server-side PIN attempt (and
-      // could double-consume the invite) or overwrite the landed success.
+      // could duplicate the exchange) or overwrite the landed success.
       Log.info(
         'submitPin ignored — completion already claimed',
         name: 'EmailVerificationCubit',
@@ -1020,20 +1005,11 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   /// Delay between token verification retries
   static const _verifyRetryDelay = Duration(seconds: 2);
 
-  /// Maximum retries for invite consumption when the server returns
-  /// HTTP 409 ("Another consumption is in progress; retry"). The conflict
-  /// happens when the server is briefly serializing concurrent attempts
-  /// for the same invite — clearing in a few hundred ms.
-  static const _maxConsumeRetries = 3;
-
-  /// Delay between invite-consumption retries on 409 conflict.
-  static const _consumeRetryDelay = Duration(milliseconds: 500);
-
   Future<void> _exchangeCodeAndLogin(String code, String verifier) async {
     // Atomically claim completion before the first await. A racing poll
     // completion or a second PIN submit that reaches here after the claim
-    // returns immediately, preventing a duplicate token exchange or a double
-    // invite consumption. Snapshot then null the pending device code / verifier
+    // returns immediately, preventing a duplicate token exchange. Snapshot then
+    // null the pending device code / verifier
     // under the claim so a resuming in-flight _poll() reads the cleared context
     // and bails (see the PollStatus.complete guard) instead of landing a second
     // exchange or emitting missingAuthCode over this success.
@@ -1065,10 +1041,6 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
         }
 
         final session = KeycastSession.fromTokenResponse(tokenResponse);
-        await _consumeInviteWithSessionIfNeeded(session);
-        if (isStaleExchange()) {
-          return;
-        }
 
         Log.info(
           'Token exchange successful, showing verification confirmation',
@@ -1114,28 +1086,6 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
         }
 
         return; // Success - exit the retry loop
-      } on InviteApiException catch (e) {
-        if (isStaleExchange()) {
-          return;
-        }
-        await _authService.clearPendingDivineOAuthSession();
-        Log.error(
-          'Invite activation failed: '
-          '${InviteErrorUtils.activationFailureLogDetails(e)}',
-          name: 'EmailVerificationCubit',
-          category: LogCategory.auth,
-        );
-        final inviteCode = _pendingInviteCode;
-        _cleanup();
-        emit(
-          EmailVerificationState(
-            status: EmailVerificationStatus.failure,
-            errorCode: InviteErrorUtils.toEmailVerificationError(e),
-            showInviteGateRecovery: inviteCode != null,
-            inviteRecoveryCode: inviteCode,
-          ),
-        );
-        return;
       } on OAuthException catch (e) {
         if (isStaleExchange()) {
           return;
@@ -1208,56 +1158,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
     _pollTickIndex = 0;
     _pendingDeviceCode = null;
     _pendingVerifier = null;
-    _pendingInviteCode = null;
     _pendingVerificationToken = null;
-  }
-
-  Future<void> _consumeInviteWithSessionIfNeeded(KeycastSession session) async {
-    final inviteCode = _pendingInviteCode;
-    final inviteApiClient = _inviteApiClient;
-    if (inviteCode == null || inviteApiClient == null) {
-      return;
-    }
-
-    for (var attempt = 1; attempt <= _maxConsumeRetries; attempt++) {
-      try {
-        await inviteApiClient.consumeInviteWithSession(
-          code: inviteCode,
-          oauthConfig: _oauthClient.config,
-          session: session,
-        );
-        await _setInviteCodeProperty(inviteCode);
-        return;
-      } on InviteApiException catch (e) {
-        final isLastAttempt = attempt == _maxConsumeRetries;
-        if (e.statusCode != 409 || isLastAttempt) {
-          rethrow;
-        }
-        Log.warning(
-          'Invite consumption conflict, retrying in '
-          '${_consumeRetryDelay.inMilliseconds}ms '
-          '(attempt $attempt/$_maxConsumeRetries): ${e.message}',
-          name: 'EmailVerificationCubit',
-          category: LogCategory.auth,
-        );
-        await Future<void>.delayed(_consumeRetryDelay);
-      }
-    }
-  }
-
-  Future<void> _setInviteCodeProperty(String inviteCode) async {
-    try {
-      await _analytics.setUserProperty(
-        name: AnalyticsUserProperty.inviteCode,
-        value: inviteCode,
-      );
-    } catch (error) {
-      Log.warning(
-        'Failed to set invite attribution: $error',
-        name: 'EmailVerificationCubit',
-        category: LogCategory.auth,
-      );
-    }
   }
 
   @override

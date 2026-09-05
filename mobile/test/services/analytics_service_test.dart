@@ -462,7 +462,7 @@ void main() {
         'utm_content': 'has spaces',
       });
       await analyticsService.recordRegistrationStarted(
-        entryPoint: ProductAnalyticsV2RegistrationEntryPoint.invite,
+        entryPoint: ProductAnalyticsV2RegistrationEntryPoint.deepLink,
       );
 
       final event =
@@ -472,7 +472,7 @@ void main() {
               as ProductAnalyticsV2Event;
       expect(event.eventName, 'registration_started');
       expect(event.propertiesJson, {
-        'entry_point': 'invite',
+        'entry_point': 'deep_link',
         'utm_source': 'newsletter',
         'utm_medium': 'email',
         'utm_campaign': 'launch-1',
@@ -516,7 +516,7 @@ void main() {
         await analyticsService.setAnalyticsEnabled(false);
         await analyticsService.setAnalyticsEnabled(true);
         await analyticsService.recordRegistrationStarted(
-          entryPoint: ProductAnalyticsV2RegistrationEntryPoint.invite,
+          entryPoint: ProductAnalyticsV2RegistrationEntryPoint.deepLink,
         );
 
         verify(queue.clear).called(1);
@@ -691,7 +691,7 @@ void main() {
         // not be joinable to the newly authenticated account.
         await analyticsService.handleIdentityChange();
         await analyticsService.recordRegistrationStarted(
-          entryPoint: ProductAnalyticsV2RegistrationEntryPoint.invite,
+          entryPoint: ProductAnalyticsV2RegistrationEntryPoint.deepLink,
         );
 
         final envelopes =

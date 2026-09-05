@@ -1181,7 +1181,6 @@
     "authInfoAmberTitle": "Amber",
     "authInfoAmberDescription": "Använd Amber-signappen på Android för att hantera dina Nostr-nycklar säkert.",
     "authCreateAccountTitle": "Skapa konto",
-    "authBackToInviteCode": "Tillbaka till inbjudningskod",
     "authUseDivineNoBackup": "Använd Divine utan backup",
     "authSkipConfirmTitle": "En sista grej...",
     "authSkipConfirmKeyCreated": "Du är inne! Vi skapar en säker nyckel som driver ditt Divine-konto.",
@@ -1216,17 +1215,6 @@
     "authEmailVerifiedLogin": "E-post verifierad! Logga in för att fortsätta.",
     "authVerificationLinkExpired": "Den här verifieringslänken är inte längre giltig.",
     "authVerificationConnectionError": "Kunde inte verifiera e-post. Kolla din anslutning och försök igen.",
-    "authWaitlistConfirmTitle": "Du är på listan!",
-    "authWaitlistUpdatesAt": "Vi delar uppdateringar på {email}.\nNär fler inbjudningskoder blir tillgängliga skickar vi dem till dig.",
-    "@authWaitlistUpdatesAt": {
-        "description": "Waitlist confirmation message with email",
-        "placeholders": {
-            "email": {
-                "type": "String"
-            }
-        }
-    },
-    "authOk": "OK",
     "authTryAgain": "Försök igen",
     "authContactSupport": "Kontakta support",
     "authCouldNotOpenEmail": "Kunde inte öppna {email}",
@@ -1238,15 +1226,6 @@
             }
         }
     },
-    "authAddInviteCode": "Lägg till din inbjudningskod",
-    "authInviteCodeLabel": "Inbjudningskod",
-    "authEnterYourCode": "Ange din kod",
-    "authNext": "Nästa",
-    "authJoinWaitlist": "Ansluta till väntelistan",
-    "authJoinWaitlistTitle": "Ansluta till väntelistan",
-    "authJoinWaitlistDescription": "Dela din e-post så skickar vi uppdateringar när åtkomst öppnas.",
-    "authJoinWaitlistNewsletterOptIn": "Skicka mig inspiration från Divine",
-    "authInviteAccessHelp": "Hjälp med inbjudningsåtkomst",
     "authGeneratingConnection": "Genererar anslutning...",
     "authConnectedAuthenticating": "Ansluten! Autentiserar...",
     "authConnectionTimedOut": "Anslutningen tog slut på tid",
@@ -1306,17 +1285,6 @@
     "authVerificationErrorPinLocked": "För många försök. Tryck på Skicka igen för att få en ny kod.",
     "authVerificationErrorPinFailed": "Vi kunde inte verifiera koden. Försök igen.",
     "authVerificationErrorPinUnavailable": "Kodinmatning är inte tillgänglig just nu. Tryck på länken i din e-post eller skicka igen för att få en ny.",
-    "authInviteCodeErrorMalformed": "Ange en inbjudningskod som ABCD-EFGH.",
-    "authInviteCodeErrorNotFound": "Den inbjudningskoden ser inte giltig ut.",
-    "authInviteCodeErrorAlreadyUsed": "Den inbjudningskoden är redan använd eller återkallad.",
-    "authInviteGateErrorCreatorFull": "Den här kreatörens inbjudningar är slut",
-    "authInviteGateErrorUnavailable": "Den inbjudningskoden är inte tillgänglig. Ställ dig i kön så skickar vi en inbjudan när det finns plats.",
-    "authInviteGateErrorCheckFailed": "Vi kunde inte kontrollera koden. Försök igen.",
-    "authInviteGateErrorUnknown": "Något gick fel. Försök med din inbjudningskod igen.",
-    "authInviteErrorAlreadyUsed": "Den inbjudningskoden är inte längre tillgänglig. Gå tillbaka till din inbjudningskod, gå med i väntelistan eller kontakta supporten.",
-    "authInviteErrorInvalid": "Den inbjudningskoden kan inte användas just nu. Gå tillbaka till din inbjudningskod, gå med i väntelistan eller kontakta supporten.",
-    "authInviteErrorTemporary": "Vi kunde inte bekräfta din inbjudan just nu. Gå tillbaka till din inbjudningskod och försök igen, eller kontakta supporten.",
-    "authInviteErrorUnknown": "Vi kunde inte aktivera din inbjudan. Gå tillbaka till din inbjudningskod, gå med i väntelistan eller kontakta supporten.",
     "shareSheetSave": "Spara",
     "shareSheetRemoveFromSaved": "Ta bort från sparade",
     "shareSheetSaveToGallery": "Spara i galleriet",
@@ -1462,15 +1430,6 @@
     "notificationsFailedToLoad": "Kunde inte läsa in aviseringar",
     "notificationsRetry": "Försök igen",
     "notificationsRefreshError": "Kunde inte uppdatera — visar tillgängliga",
-    "notificationsInviteSingular": "Du har 1 inbjudan att dela med en vän!",
-    "notificationsInvitePlural": "Du har {count} inbjudningar att dela med vänner!",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "notificationsVideoUnavailable": "Videon är otillgänglig",
     "feedFailedToLoadVideos": "Kunde inte läsa in videor",
     "feedRetry": "Försök igen",
@@ -2038,7 +1997,6 @@
             }
         }
     },
-    "invitesTitle": "Bjud in vänner",
     "libraryClipsDeletedCount": "{count, plural, =1{1 klipp borttaget} other{{count} klipp borttagna}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {
@@ -2864,9 +2822,6 @@
     "videoEditorAudioSegmentInstruction": "Välj ljudsegmentet för din video",
     "fullscreenFeedRemovedMessage": "Video borttagen",
     "fullscreenFeedEmptyMessage": "Det finns inget mer att spela upp här",
-    "invitesGenerateCardTitle": "{count, plural, =1{1 inbjudan redo att skapas} other{{count} inbjudningar redo att skapas}}",
-    "invitesGenerateCardSubtitle": "Skapa en kod när du är redo att dela en.",
-    "invitesGenerateButtonLabel": "Skapa inbjudan",
     "profileAvatarLightboxBarrierLabel": "Stäng avatar",
     "profileAvatarLightboxCloseSemanticLabel": "Stäng avatarförhandsvisning",
     "notificationsUnreadPrefix": "Oläst avisering",
@@ -3374,24 +3329,6 @@
   "blueskyStatusUnavailableRetry": "Vi kunde inte kontrollera ditt Divine-handtag. Försök igen.",
   "blueskySetUpHandle": "Skapa",
     "blueskyTemporarilyUnavailable": "Publicering på Bluesky är tillfälligt otillgänglig. Försök igen.",
-    "invitesNoneAvailable": "Inga inbjudningar tillgängliga just nu",
-    "invitesShareWithPeople": "Dela Divine med folk du känner",
-    "invitesUsedInvites": "Använda inbjudningar",
-    "invitesShareMessage": "Häng med mig på Divine! Använd inbjudningskoden {code} för att komma igång:\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "Kopiera inbjudan",
-    "invitesCopied": "Inbjudan kopierad!",
-    "invitesShareInvite": "Dela inbjudan",
-    "invitesShareSubject": "Häng med mig på Divine",
-    "invitesClaimed": "Inlöst",
-    "invitesCouldNotLoad": "Kunde inte ladda inbjudningar",
-    "invitesRetry": "Försök igen",
     "keyImportInsecureBunkerRelay": "Bunker-rel måste använda wss:// (ws:// tillåts endast för localhost)",
     "@keyImportInsecureBunkerRelay": {
         "description": "Shown when a pasted bunker:// or nostrconnect:// URL contains a relay parameter that uses cleartext ws:// for a non-loopback host."
@@ -3912,24 +3849,6 @@
     "devOptionsProtectedMinorEnabledToast": "Läget skyddad minderårig tvingat på",
     "devOptionsProtectedMinorNonMinorToast": "Läget skyddad minderårig tvingat av",
     "devOptionsProtectedMinorClearedToast": "Överstyrningen för skyddad minderårig rensad",
-  "devOptionsInviteAvailabilityTitle": "Registreringsinbjudningar",
-  "devOptionsInviteAvailabilityCurrentLabel": "Nuvarande status",
-  "devOptionsInviteAvailabilityServerLoading": "Servervärde: läser in",
-  "devOptionsInviteAvailabilityServerEnabled": "Servervärde: på",
-  "devOptionsInviteAvailabilityServerDisabled": "Servervärde: av",
-  "devOptionsInviteAvailabilityServerUnknown": "Servervärde: okänt",
-  "devOptionsInviteAvailabilityOverrideNone": "Överstyrning: använd servervärdet",
-  "devOptionsInviteAvailabilityOverrideEnabled": "Överstyrning: tvinga på",
-  "devOptionsInviteAvailabilityOverrideDisabled": "Överstyrning: tvinga av",
-  "devOptionsInviteAvailabilityUseServer": "Använd servervärdet",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "Följ inbjudningstjänstens onboardingMode",
-  "devOptionsInviteAvailabilityForceEnabled": "Tvinga på",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "Visa registreringsinbjudningarnas grindar och hantering lokalt",
-  "devOptionsInviteAvailabilityForceDisabled": "Tvinga av",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "Dölj gränssnittet för registreringsinbjudningar lokalt utan att ändra servern",
-  "devOptionsInviteAvailabilityUseServerToast": "Registreringsinbjudningar följer nu servern",
-  "devOptionsInviteAvailabilityForceEnabledToast": "Registreringsinbjudningar tvingade på",
-  "devOptionsInviteAvailabilityForceDisabledToast": "Registreringsinbjudningar tvingade av",
     "minorAccountReviewParentConsentChecklistAgeBand": "Ett tydligt uttalande om att tonåringen är 13 till 15 år och har tillåtelse att använda Divine",
     "minorAccountReviewUnder13FamilyTitle": "Vad din familj kan göra i stället",
     "minorAccountReviewUnder13FamilyBody": "En förälder eller vårdnadshavare kan ha kontot och sköta postandet – och du får absolut vara med i videorna. Vi vill att familjer får njuta av Divine på det sätt som passar dem.",

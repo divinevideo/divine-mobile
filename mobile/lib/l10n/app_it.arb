@@ -1181,7 +1181,6 @@
     "authInfoAmberTitle": "Amber",
     "authInfoAmberDescription": "Usa l'app signer Amber su Android per gestire le tue chiavi Nostr in modo sicuro.",
     "authCreateAccountTitle": "Crea account",
-    "authBackToInviteCode": "Torna al codice invito",
     "authUseDivineNoBackup": "Usa Divine senza backup",
     "authSkipConfirmTitle": "Un'ultima cosa...",
     "authSkipConfirmKeyCreated": "Sei dentro! Creeremo una chiave sicura che alimenterà il tuo account Divine.",
@@ -1216,17 +1215,6 @@
     "authEmailVerifiedLogin": "Email verificata! Accedi per continuare.",
     "authVerificationLinkExpired": "Questo link di verifica non è più valido.",
     "authVerificationConnectionError": "Impossibile verificare l'email. Controlla la connessione e riprova.",
-    "authWaitlistConfirmTitle": "Sei dentro!",
-    "authWaitlistUpdatesAt": "Ti manderemo aggiornamenti a {email}.\nQuando saranno disponibili altri codici invito, te li invieremo.",
-    "@authWaitlistUpdatesAt": {
-        "description": "Waitlist confirmation message with email",
-        "placeholders": {
-            "email": {
-                "type": "String"
-            }
-        }
-    },
-    "authOk": "OK",
     "authTryAgain": "Riprova",
     "authContactSupport": "Contatta l'assistenza",
     "authCouldNotOpenEmail": "Impossibile aprire {email}",
@@ -1238,15 +1226,6 @@
             }
         }
     },
-    "authAddInviteCode": "Aggiungi il tuo codice invito",
-    "authInviteCodeLabel": "Codice invito",
-    "authEnterYourCode": "Inserisci il tuo codice",
-    "authNext": "Avanti",
-    "authJoinWaitlist": "Entra in lista d'attesa",
-    "authJoinWaitlistTitle": "Entra nella lista d'attesa",
-    "authJoinWaitlistDescription": "Condividi la tua email e ti manderemo aggiornamenti quando si aprirà l'accesso.",
-    "authJoinWaitlistNewsletterOptIn": "Mandatemi ispirazione da Divine",
-    "authInviteAccessHelp": "Aiuto accesso tramite invito",
     "authGeneratingConnection": "Generazione connessione...",
     "authConnectedAuthenticating": "Connesso! Autenticazione...",
     "authConnectionTimedOut": "Connessione scaduta",
@@ -1306,17 +1285,6 @@
     "authVerificationErrorPinLocked": "Troppi tentativi. Tocca Invia di nuovo per ricevere un nuovo codice.",
     "authVerificationErrorPinFailed": "Non siamo riusciti a verificare il codice. Riprova.",
     "authVerificationErrorPinUnavailable": "L'inserimento del codice non è disponibile al momento. Tocca il link nella tua email, o invia di nuovo per riceverne uno nuovo.",
-    "authInviteCodeErrorMalformed": "Inserisci un codice di invito come ABCD-EFGH.",
-    "authInviteCodeErrorNotFound": "Questo codice di invito non sembra valido.",
-    "authInviteCodeErrorAlreadyUsed": "Questo codice di invito è già stato usato o revocato.",
-    "authInviteGateErrorCreatorFull": "Gli inviti di questo creator sono esauriti",
-    "authInviteGateErrorUnavailable": "Questo codice di invito non è disponibile. Iscriviti alla lista d'attesa e ti manderemo un invito appena si libera un posto.",
-    "authInviteGateErrorCheckFailed": "Non siamo riusciti a verificare il codice. Riprova.",
-    "authInviteGateErrorUnknown": "Qualcosa è andato storto. Riprova con il tuo codice di invito.",
-    "authInviteErrorAlreadyUsed": "Quel codice invito non è più disponibile. Torna al tuo codice invito, entra nella lista d'attesa o contatta l'assistenza.",
-    "authInviteErrorInvalid": "Quel codice invito non può essere usato adesso. Torna al tuo codice invito, entra nella lista d'attesa o contatta l'assistenza.",
-    "authInviteErrorTemporary": "Non siamo riusciti a confermare il tuo invito in questo momento. Torna al tuo codice invito e riprova, oppure contatta l'assistenza.",
-    "authInviteErrorUnknown": "Non siamo riusciti ad attivare il tuo invito. Torna al tuo codice invito, entra nella lista d'attesa o contatta l'assistenza.",
     "shareSheetSave": "Salva",
     "shareSheetRemoveFromSaved": "Rimuovi dai salvati",
     "shareSheetSaveToGallery": "Salva in galleria",
@@ -1462,15 +1430,6 @@
     "notificationsFailedToLoad": "Impossibile caricare le notifiche",
     "notificationsRetry": "Riprova",
     "notificationsRefreshError": "Aggiornamento non riuscito — mostro ciò che hai",
-    "notificationsInviteSingular": "Hai 1 invito da condividere con un amico!",
-    "notificationsInvitePlural": "Hai {count} inviti da condividere con gli amici!",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "notificationsVideoUnavailable": "Video non disponibile",
     "feedFailedToLoadVideos": "Impossibile caricare i video",
     "feedRetry": "Riprova",
@@ -2038,7 +1997,6 @@
             }
         }
     },
-    "invitesTitle": "Invita amici",
     "libraryClipsDeletedCount": "{count, plural, =1{1 clip eliminato} other{{count} clip eliminati}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {
@@ -2864,9 +2822,6 @@
     "videoEditorAudioSegmentInstruction": "Seleziona il segmento audio per il tuo video",
     "fullscreenFeedRemovedMessage": "Video rimosso",
     "fullscreenFeedEmptyMessage": "Qui non c’è più niente da riprodurre",
-    "invitesGenerateCardTitle": "{count, plural, =1{1 invito pronto da generare} other{{count} inviti pronti da generare}}",
-    "invitesGenerateCardSubtitle": "Genera un codice quando sei pronto a condividerlo.",
-    "invitesGenerateButtonLabel": "Genera invito",
     "profileAvatarLightboxBarrierLabel": "Chiudi avatar",
     "profileAvatarLightboxCloseSemanticLabel": "Chiudi anteprima avatar",
     "notificationsUnreadPrefix": "Notifica non letta",
@@ -3374,24 +3329,6 @@
   "blueskyStatusUnavailableRetry": "Non siamo riusciti a verificare il tuo handle Divine. Riprova.",
   "blueskySetUpHandle": "Configura",
     "blueskyTemporarilyUnavailable": "La pubblicazione su Bluesky non è momentaneamente disponibile. Riprova.",
-    "invitesNoneAvailable": "Nessun invito disponibile al momento",
-    "invitesShareWithPeople": "Condividi Divine con le persone che conosci",
-    "invitesUsedInvites": "Inviti usati",
-    "invitesShareMessage": "Unisciti a me su Divine! Usa il codice invito {code} per iniziare:\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "Copia invito",
-    "invitesCopied": "Invito copiato!",
-    "invitesShareInvite": "Condividi invito",
-    "invitesShareSubject": "Unisciti a me su Divine",
-    "invitesClaimed": "Riscattato",
-    "invitesCouldNotLoad": "Impossibile caricare gli inviti",
-    "invitesRetry": "Riprova",
     "keyImportInsecureBunkerRelay": "Il relay bunker deve usare wss:// (ws:// è ammesso solo per localhost)",
     "@keyImportInsecureBunkerRelay": {
         "description": "Shown when a pasted bunker:// or nostrconnect:// URL contains a relay parameter that uses cleartext ws:// for a non-loopback host."
@@ -3912,24 +3849,6 @@
     "devOptionsProtectedMinorEnabledToast": "Stato di minore protetto forzato",
     "devOptionsProtectedMinorNonMinorToast": "Stato di minore protetto disattivato",
     "devOptionsProtectedMinorClearedToast": "Forzatura minore protetto azzerata",
-  "devOptionsInviteAvailabilityTitle": "Inviti di registrazione",
-  "devOptionsInviteAvailabilityCurrentLabel": "Stato attuale",
-  "devOptionsInviteAvailabilityServerLoading": "Valore del server: caricamento",
-  "devOptionsInviteAvailabilityServerEnabled": "Valore del server: attivo",
-  "devOptionsInviteAvailabilityServerDisabled": "Valore del server: disattivo",
-  "devOptionsInviteAvailabilityServerUnknown": "Valore del server: sconosciuto",
-  "devOptionsInviteAvailabilityOverrideNone": "Forzatura: usa il valore del server",
-  "devOptionsInviteAvailabilityOverrideEnabled": "Forzatura: imponi attivo",
-  "devOptionsInviteAvailabilityOverrideDisabled": "Forzatura: imponi disattivo",
-  "devOptionsInviteAvailabilityUseServer": "Usa il valore del server",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "Segui l'onboardingMode del servizio inviti",
-  "devOptionsInviteAvailabilityForceEnabled": "Imponi attivo",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "Mostra in locale i blocchi e la gestione degli inviti di registrazione",
-  "devOptionsInviteAvailabilityForceDisabled": "Imponi disattivo",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "Nascondi in locale l'interfaccia degli inviti senza toccare il server",
-  "devOptionsInviteAvailabilityUseServerToast": "Gli inviti di registrazione ora seguono il server",
-  "devOptionsInviteAvailabilityForceEnabledToast": "Inviti di registrazione forzati come attivi",
-  "devOptionsInviteAvailabilityForceDisabledToast": "Inviti di registrazione forzati come disattivi",
     "minorAccountReviewParentConsentChecklistAgeBand": "Una dichiarazione chiara che il ragazzo o la ragazza ha tra 13 e 15 anni e ha il permesso di usare Divine",
     "minorAccountReviewUnder13FamilyTitle": "Cosa può fare la tua famiglia invece",
     "minorAccountReviewUnder13FamilyBody": "Un genitore o tutore può tenere l'account e pubblicare, e tu puoi tranquillamente comparire nei video insieme a loro. Vogliamo che le famiglie si godano Divine nel modo che funziona per loro.",

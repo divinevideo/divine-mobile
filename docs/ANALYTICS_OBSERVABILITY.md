@@ -44,8 +44,7 @@ The reserved Firebase Analytics `user_id` field is the deliberate exception to
 the pubkey rule above. It is the authenticated account's exact 64-character hex
 pubkey, never an npub and never a hash. It is identity metadata, not a custom
 event parameter. Login and restored identity set the same value in Analytics
-and Crashlytics; logout clears both and clears account-scoped invite
-attribution. This is owned by `analyticsIdentitySync` in
+and Crashlytics; logout clears both. This is owned by `analyticsIdentitySync` in
 `mobile/lib/providers/auth_providers.dart`, kept deliberately independent of
 the Zendesk identity sync so the campaign's BigQuery/ClickHouse join cannot be
 broken by a change to the support-desk integration.
@@ -146,15 +145,6 @@ Arm B was previously a "Record a Video" action under the variant name
 retired rather than reused so the two treatments never share a bucket — data
 before and after the swap is not comparable within one variant name.
 
-## Invite Attribution
-
-After the invite service confirms redemption, the normalized code is set as
-the Firebase Analytics user property `invite_code`. Failed redemptions do not
-set it. Any change of authenticated identity clears it, so a second account on
-the device cannot inherit the first account's attribution. Logout is not the
-only such change: an in-place account switch never passes through an
-unauthenticated state.
-
 ## Required Firebase Admin Setup
 
 Complete this before campaign traffic. GA4 stores unregistered parameters but
@@ -162,9 +152,6 @@ does not make them queryable as dimensions retroactively.
 
 1. Create an event-scoped custom dimension named `mode` for event parameter
    `mode`.
-2. Create a user-scoped custom dimension named `invite_code` for user property
-   `invite_code`.
-
 The GA4 reporting identity setting does not gate the BigQuery `user_id` field;
 use BigQuery as the campaign source of truth.
 

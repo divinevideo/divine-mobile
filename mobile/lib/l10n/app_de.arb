@@ -1181,7 +1181,6 @@
     "authInfoAmberTitle": "Amber",
     "authInfoAmberDescription": "Nutze die Amber-Signer-App auf Android, um deine Nostr-Schlüssel sicher zu verwalten.",
     "authCreateAccountTitle": "Konto erstellen",
-    "authBackToInviteCode": "Zurück zum Einladungscode",
     "authUseDivineNoBackup": "Divine ohne Backup verwenden",
     "authSkipConfirmTitle": "Noch eine Sache...",
     "authSkipConfirmKeyCreated": "Du bist drin! Wir erstellen einen sicheren Schlüssel, der dein Divine-Konto antreibt.",
@@ -1216,17 +1215,6 @@
     "authEmailVerifiedLogin": "E-Mail verifiziert! Bitte melde dich an, um fortzufahren.",
     "authVerificationLinkExpired": "Dieser Verifizierungslink ist nicht mehr gültig.",
     "authVerificationConnectionError": "E-Mail konnte nicht verifiziert werden. Bitte prüf deine Verbindung und versuch es nochmal.",
-    "authWaitlistConfirmTitle": "Du bist drin!",
-    "authWaitlistUpdatesAt": "Wir schicken Updates an {email}.\nSobald mehr Einladungscodes verfügbar sind, bekommst du welche.",
-    "@authWaitlistUpdatesAt": {
-        "description": "Waitlist confirmation message with email",
-        "placeholders": {
-            "email": {
-                "type": "String"
-            }
-        }
-    },
-    "authOk": "OK",
     "authTryAgain": "Erneut versuchen",
     "authContactSupport": "Support kontaktieren",
     "authCouldNotOpenEmail": "{email} konnte nicht geöffnet werden",
@@ -1238,15 +1226,6 @@
             }
         }
     },
-    "authAddInviteCode": "Einladungscode hinzufügen",
-    "authInviteCodeLabel": "Einladungscode",
-    "authEnterYourCode": "Gib deinen Code ein",
-    "authNext": "Weiter",
-    "authJoinWaitlist": "Auf Warteliste",
-    "authJoinWaitlistTitle": "Auf die Warteliste",
-    "authJoinWaitlistDescription": "Teile deine E-Mail und wir schicken Updates, sobald Zugang frei wird.",
-    "authJoinWaitlistNewsletterOptIn": "Schick mir Divine-Inspiration",
-    "authInviteAccessHelp": "Hilfe zum Einladungszugang",
     "authGeneratingConnection": "Verbindung wird erstellt...",
     "authConnectedAuthenticating": "Verbunden! Authentifizierung läuft...",
     "authConnectionTimedOut": "Verbindung abgelaufen",
@@ -1306,17 +1285,6 @@
     "authVerificationErrorPinLocked": "Zu viele Versuche. Tippe auf Erneut senden, um einen neuen Code zu bekommen.",
     "authVerificationErrorPinFailed": "Wir konnten diesen Code nicht verifizieren. Bitte versuch es erneut.",
     "authVerificationErrorPinUnavailable": "Die Code-Eingabe ist gerade nicht verfügbar. Tippe auf den Link in deiner E-Mail oder sende erneut, um einen neuen zu bekommen.",
-    "authInviteCodeErrorMalformed": "Gib einen Einladungscode wie ABCD-EFGH ein.",
-    "authInviteCodeErrorNotFound": "Dieser Einladungscode sieht nicht gültig aus.",
-    "authInviteCodeErrorAlreadyUsed": "Dieser Einladungscode wurde bereits verwendet oder widerrufen.",
-    "authInviteGateErrorCreatorFull": "Die Einladungen dieses Creators sind aufgebraucht",
-    "authInviteGateErrorUnavailable": "Dieser Einladungscode ist nicht verfügbar. Trag dich in die Warteliste ein und wir schicken dir eine Einladung, sobald wieder Platz ist.",
-    "authInviteGateErrorCheckFailed": "Wir konnten diesen Code nicht prüfen. Versuch es noch mal.",
-    "authInviteGateErrorUnknown": "Etwas ist schiefgelaufen. Versuch es noch mal mit deinem Einladungscode.",
-    "authInviteErrorAlreadyUsed": "Dieser Einladungscode ist nicht mehr verfügbar. Geh zurück zu deinem Einladungscode, tritt der Warteliste bei oder kontaktier den Support.",
-    "authInviteErrorInvalid": "Dieser Einladungscode kann derzeit nicht verwendet werden. Geh zurück zu deinem Einladungscode, tritt der Warteliste bei oder kontaktier den Support.",
-    "authInviteErrorTemporary": "Wir konnten deine Einladung gerade nicht bestätigen. Geh zurück zu deinem Einladungscode und versuch es nochmal oder kontaktier den Support.",
-    "authInviteErrorUnknown": "Wir konnten deine Einladung nicht aktivieren. Geh zurück zu deinem Einladungscode, tritt der Warteliste bei oder kontaktier den Support.",
     "shareSheetSave": "Speichern",
     "shareSheetRemoveFromSaved": "Lesezeichen entfernen",
     "shareSheetSaveToGallery": "In Galerie speichern",
@@ -1462,15 +1430,6 @@
     "notificationsFailedToLoad": "Benachrichtigungen konnten nicht geladen werden",
     "notificationsRetry": "Erneut versuchen",
     "notificationsRefreshError": "Aktualisierung fehlgeschlagen – Vorhandenes wird angezeigt",
-    "notificationsInviteSingular": "Du hast 1 Einladung, die du mit einem Freund teilen kannst!",
-    "notificationsInvitePlural": "Du hast {count} Einladungen, die du mit Freunden teilen kannst!",
-    "@notificationsInvitePlural": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "notificationsVideoUnavailable": "Video nicht verfügbar",
     "feedFailedToLoadVideos": "Videos konnten nicht geladen werden",
     "feedRetry": "Erneut versuchen",
@@ -2038,7 +1997,6 @@
             }
         }
     },
-    "invitesTitle": "Freunde einladen",
     "libraryClipsDeletedCount": "{count, plural, =1{1 Clip gelöscht} other{{count} Clips gelöscht}}",
     "@libraryClipsDeletedCount": {
         "placeholders": {
@@ -2864,9 +2822,6 @@
     "videoEditorAudioSegmentInstruction": "Wähle den Audiobereich für dein Video aus",
     "fullscreenFeedRemovedMessage": "Video entfernt",
     "fullscreenFeedEmptyMessage": "Hier gibt es nichts mehr abzuspielen",
-    "invitesGenerateCardTitle": "{count, plural, =1{1 Einladung bereit zum Erstellen} other{{count} Einladungen bereit zum Erstellen}}",
-    "invitesGenerateCardSubtitle": "Erstell einen Code, wenn du bereit bist, einen zu teilen.",
-    "invitesGenerateButtonLabel": "Einladung erstellen",
     "profileAvatarLightboxBarrierLabel": "Avatar schließen",
     "profileAvatarLightboxCloseSemanticLabel": "Avatar-Vorschau schließen",
     "notificationsUnreadPrefix": "Ungelesene Benachrichtigung",
@@ -3374,24 +3329,6 @@
   "blueskyStatusUnavailableRetry": "Wir konnten deinen Divine-Handle nicht prüfen. Versuch es erneut.",
   "blueskySetUpHandle": "Einrichten",
     "blueskyTemporarilyUnavailable": "Das Veröffentlichen auf Bluesky ist vorübergehend nicht verfügbar. Bitte versuch es erneut.",
-    "invitesNoneAvailable": "Gerade keine Einladungen verfügbar",
-    "invitesShareWithPeople": "Teil Divine mit Leuten, die du kennst",
-    "invitesUsedInvites": "Eingelöste Einladungen",
-    "invitesShareMessage": "Komm zu mir auf Divine! Nutz den Einladungscode {code}, um loszulegen:\nhttps://divine.video/invite/{code}",
-    "@invitesShareMessage": {
-        "placeholders": {
-            "code": {
-                "type": "String"
-            }
-        }
-    },
-    "invitesCopyInvite": "Einladung kopieren",
-    "invitesCopied": "Einladung kopiert!",
-    "invitesShareInvite": "Einladung teilen",
-    "invitesShareSubject": "Komm zu mir auf Divine",
-    "invitesClaimed": "Eingelöst",
-    "invitesCouldNotLoad": "Einladungen konnten nicht geladen werden",
-    "invitesRetry": "Erneut versuchen",
     "keyImportInsecureBunkerRelay": "Bunker-Relay muss wss:// nutzen (ws:// ist nur für localhost erlaubt)",
     "@keyImportInsecureBunkerRelay": {
         "description": "Shown when a pasted bunker:// or nostrconnect:// URL contains a relay parameter that uses cleartext ws:// for a non-loopback host."
@@ -3912,24 +3849,6 @@
     "devOptionsProtectedMinorEnabledToast": "Status „geschützt, minderjährig“ erzwungen",
     "devOptionsProtectedMinorNonMinorToast": "Status „geschützt, minderjährig“ abgeschaltet",
     "devOptionsProtectedMinorClearedToast": "Override „geschützt, minderjährig“ zurückgesetzt",
-  "devOptionsInviteAvailabilityTitle": "Anmelde-Einladungen",
-  "devOptionsInviteAvailabilityCurrentLabel": "Aktueller Status",
-  "devOptionsInviteAvailabilityServerLoading": "Serverwert: wird geladen",
-  "devOptionsInviteAvailabilityServerEnabled": "Serverwert: aktiviert",
-  "devOptionsInviteAvailabilityServerDisabled": "Serverwert: deaktiviert",
-  "devOptionsInviteAvailabilityServerUnknown": "Serverwert: unbekannt",
-  "devOptionsInviteAvailabilityOverrideNone": "Override: Serverwert verwenden",
-  "devOptionsInviteAvailabilityOverrideEnabled": "Override: aktiviert erzwingen",
-  "devOptionsInviteAvailabilityOverrideDisabled": "Override: deaktiviert erzwingen",
-  "devOptionsInviteAvailabilityUseServer": "Serverwert verwenden",
-  "devOptionsInviteAvailabilityUseServerSubtitle": "Dem onboardingMode des Einladungsdienstes folgen",
-  "devOptionsInviteAvailabilityForceEnabled": "Aktiviert erzwingen",
-  "devOptionsInviteAvailabilityForceEnabledSubtitle": "Einladungs-Gates und -Verwaltung lokal anzeigen",
-  "devOptionsInviteAvailabilityForceDisabled": "Deaktiviert erzwingen",
-  "devOptionsInviteAvailabilityForceDisabledSubtitle": "Einladungs-UI lokal ausblenden, ohne den Server zu ändern",
-  "devOptionsInviteAvailabilityUseServerToast": "Anmelde-Einladungen folgen jetzt dem Server",
-  "devOptionsInviteAvailabilityForceEnabledToast": "Anmelde-Einladungen erzwungen aktiviert",
-  "devOptionsInviteAvailabilityForceDisabledToast": "Anmelde-Einladungen erzwungen deaktiviert",
     "minorAccountReviewParentConsentChecklistAgeBand": "Eine klare Aussage, dass der Teenager 13 bis 15 ist und Divine nutzen darf",
     "minorAccountReviewUnder13FamilyTitle": "Was deine Familie stattdessen tun kann",
     "minorAccountReviewUnder13FamilyBody": "Ein Elternteil oder Erziehungsberechtigter kann das Konto führen und posten – und du darfst natürlich in den Videos dabei sein. Wir wollen, dass Familien Divine so genießen, wie es für sie passt.",

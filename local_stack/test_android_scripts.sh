@@ -121,8 +121,6 @@ chmod +x "${tmp_dir}/bin/emulator"
 PATH="${tmp_dir}/bin:${PATH}"
 assert_eq "Pixel_API_35" "$(first_available_avd_name)" \
   "default AVD should come from emulator -list-avds"
-assert_eq "http://10.0.2.2:43004" "$(android_emulator_invite_server_url)" \
-  "Android emulator invite URL should match the local invite service host port"
 
 cat > "${tmp_dir}/bin/docker" <<'STUB'
 #!/usr/bin/env bash
@@ -171,8 +169,6 @@ env ADB_DEVICES_OUTPUT=$'R58N1234567\tdevice\nemulator-5554\tdevice\n' \
   bash "${SCRIPT_DIR}/run_android_local.sh" >/dev/null 2>"${tmp_dir}/emulator-selection.err"
 assert_contains '-d emulator-5554' "$flutter_args_file" \
   "local Android runner should default to the first emulator instead of a physical device"
-assert_contains '--dart-define=INVITE_SERVER_URL=http://10.0.2.2:43004' "$flutter_args_file" \
-  "local Android runner should pass the Android emulator invite-server URL to Flutter"
 assert_contains 'shell pm clear co.openvine.app.staging' "$adb_args_file" \
   "debug local Android runner should clear staging app data before launching"
 assert_contains 'Clearing persisted app data for co.openvine.app.staging' "${tmp_dir}/emulator-selection.err" \
@@ -267,12 +263,8 @@ assert_contains '--dart-define=DEFAULT_ENV=LOCAL' "${SCRIPT_DIR}/run_android_loc
   "local Android runner should force the app into LOCAL environment"
 assert_contains 'local_stack_has_running_container "$COMPOSE_FILE"' "${SCRIPT_DIR}/run_android_local.sh" \
   "local Android runner should reuse the shared local stack status check"
-assert_contains 'android_emulator_invite_server_url' "${SCRIPT_DIR}/run_android_local.sh" \
-  "local Android runner should reuse the shared Android emulator invite-server URL"
 assert_contains 'local_stack_has_running_container "$COMPOSE_FILE"' "${SCRIPT_DIR}/profile.sh" \
   "profile runner should reuse the shared local stack status check"
-assert_contains 'android_emulator_invite_server_url' "${SCRIPT_DIR}/profile.sh" \
-  "profile runner should reuse the shared Android emulator invite-server URL"
 assert_contains 'PATROL_CLI_VERSION=4.7.0' "${SCRIPT_DIR}/profile.sh" \
   "profile runner should pin patrol_cli to the version paired with the patrol package"
 assert_contains ')" || true' "${SCRIPT_DIR}/profile.sh" \

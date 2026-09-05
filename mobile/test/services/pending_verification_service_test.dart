@@ -107,5 +107,17 @@ void main() {
       expect(pending, isNotNull);
       expect(pending!.ownerPublicKeyHex, isNull);
     });
+
+    test('save removes retired invite-code data', () async {
+      storedValues['pending_verification_invite_code'] = 'ABCD-EFGH';
+
+      await service.save(
+        deviceCode: 'device123',
+        verifier: 'verifier456',
+        email: 'test@example.com',
+      );
+
+      expect(storedValues, isNot(contains('pending_verification_invite_code')));
+    });
   });
 }
