@@ -32,6 +32,7 @@ abstract final class RoutePaths {
   static const explore = '/explore';
   static const followersBase = '/followers';
   static const followingBase = '/following';
+  static const followingNew = '/following/new';
   static const generalSettings = '/general-settings';
   static const hashtagBase = '/hashtag';
   static const inbox = '/inbox';
