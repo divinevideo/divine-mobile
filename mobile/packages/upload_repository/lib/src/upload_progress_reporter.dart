@@ -525,6 +525,7 @@ ${metrics != null ? '- File Size: ${metrics.fileSizeMB} MB\n- Duration: ${metric
     };
   }
 
+  // Preserve values used by existing Crashlytics filters before extraction.
   static String _legacyConnectivityName(UploadConnectivity connectivity) =>
       switch (connectivity) {
         UploadConnectivity.wifi => 'ConnectivityResult.wifi',
