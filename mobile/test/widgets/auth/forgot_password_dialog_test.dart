@@ -23,11 +23,12 @@ void main() {
       String initialEmail = '',
       Future<bool> Function(String email)? onSendResetEmail,
       VoidCallback? onResetAccepted,
+      TargetPlatform? platform,
     }) {
       return MaterialApp.router(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        theme: VineTheme.theme,
+        theme: VineTheme.theme.copyWith(platform: platform),
         routerConfig: GoRouter(
           routes: [
             GoRoute(
@@ -116,6 +117,94 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('keeps the form controls above the keyboard', (tester) async {
+        const viewport = Size(430, 932);
+        const keyboardExtent = 336.0;
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = viewport;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(createTestWidget());
+        await tester.pumpAndSettle();
+        await openDialog(tester);
+
+        await tester.tap(find.byType(TextFormField));
+        tester.view.viewInsets = const FakeViewPadding(
+          bottom: keyboardExtent,
+        );
+        await tester.pumpAndSettle();
+
+        final visibleBottom = viewport.height - keyboardExtent;
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final controls = {
+          'email field': find.byType(TextFormField),
+          'reset action': find.widgetWithText(
+            ElevatedButton,
+            l10n.forgotPasswordSendLink,
+          ),
+        };
+        for (final entry in controls.entries) {
+          expect(entry.value, findsOneWidget);
+          expect(
+            tester.getRect(entry.value).bottom,
+            lessThanOrEqualTo(visibleBottom),
+            reason: '${entry.key} must stay above the keyboard',
+          );
+        }
+      });
+
+      testWidgets('tapping instructional text dismisses field focus', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createTestWidget());
+        await tester.pumpAndSettle();
+        await openDialog(tester);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        final editable = find.byType(EditableText);
+        await tester.tap(editable);
+        await tester.pump();
+        expect(
+          tester.widget<EditableText>(editable).focusNode.hasFocus,
+          isTrue,
+        );
+
+        await tester.tap(find.text(l10n.forgotPasswordDescription));
+        await tester.pump();
+
+        expect(
+          tester.widget<EditableText>(editable).focusNode.hasFocus,
+          isFalse,
+        );
+      });
+
+      testWidgets('dragging the form dismisses field focus on iOS', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createTestWidget(platform: TargetPlatform.iOS));
+        await tester.pumpAndSettle();
+        await openDialog(tester);
+
+        final editable = find.byType(EditableText);
+        await tester.tap(editable);
+        await tester.pump();
+        expect(
+          tester.widget<EditableText>(editable).focusNode.hasFocus,
+          isTrue,
+        );
+
+        await tester.drag(
+          find.byType(SingleChildScrollView),
+          const Offset(0, -80),
+        );
+        await tester.pump();
+
+        expect(
+          tester.widget<EditableText>(editable).focusNode.hasFocus,
+          isFalse,
+        );
+      });
+
       testWidgets('Cancel closes dialog', (tester) async {
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
