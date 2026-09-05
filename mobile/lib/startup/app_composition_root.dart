@@ -83,6 +83,9 @@ class AppCompositionRoot extends ConsumerWidget {
       );
     }
 
+    final oauthClient = ref.watch(oauthClientProvider);
+    final authService = ref.watch(authServiceProvider);
+
     // Wrap with geo-blocking check first, then lifecycle handler
     // The two app-shell badge cubits + their repository-sync listeners live
     // in AppShellBadgeScope so this tree and its test pump the exact same eager
@@ -127,9 +130,10 @@ class AppCompositionRoot extends ConsumerWidget {
               )..add(const CameraPermissionRefresh()),
             ),
             BlocProvider(
+              key: ValueKey((oauthClient, authService)),
               create: (_) => EmailVerificationCubit(
-                oauthClient: ref.read(oauthClientProvider),
-                authService: ref.read(authServiceProvider),
+                oauthClient: oauthClient,
+                authService: authService,
               ),
             ),
             BlocProvider(
