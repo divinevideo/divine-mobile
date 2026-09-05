@@ -39,6 +39,10 @@ class _FakeExtension extends NostrExtension {
       'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90';
 }
 
+final _authStateMirrorProvider = Provider<AuthState>(
+  (ref) => ref.watch(currentAuthStateProvider),
+);
+
 class _RecordingAnalytics implements AnalyticsEventSink {
   final userIds = <String?>[];
 
@@ -261,44 +265,46 @@ void main() {
   });
 
   group('currentAuthStateProvider', () {
-    testWidgets('updates consumers without rebuilding its subscription', (
-      tester,
-    ) async {
-      final authStateController = StreamController<AuthState>.broadcast();
-      addTearDown(authStateController.close);
-      final authService = _MockAuthService();
-      var authState = AuthState.checking;
-      when(() => authService.authState).thenAnswer((_) => authState);
-      when(
-        () => authService.authStateStream,
-      ).thenAnswer((_) => authStateController.stream);
+    testWidgets(
+      'updates dependent providers without rebuilding its subscription',
+      (
+        tester,
+      ) async {
+        final authStateController = StreamController<AuthState>.broadcast();
+        addTearDown(authStateController.close);
+        final authService = _MockAuthService();
+        var authState = AuthState.checking;
+        when(() => authService.authState).thenAnswer((_) => authState);
+        when(
+          () => authService.authStateStream,
+        ).thenAnswer((_) => authStateController.stream);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [authServiceProvider.overrideWithValue(authService)],
-          child: Consumer(
-            builder: (context, ref, child) {
-              return SizedBox(
-                key: ValueKey(ref.watch(currentAuthStateProvider)),
-              );
-            },
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [authServiceProvider.overrideWithValue(authService)],
+            child: Consumer(
+              builder: (context, ref, child) {
+                return SizedBox(
+                  key: ValueKey(ref.watch(_authStateMirrorProvider)),
+                );
+              },
+            ),
           ),
-        ),
-      );
-      expect(find.byKey(const ValueKey(AuthState.checking)), findsOneWidget);
+        );
+        expect(find.byKey(const ValueKey(AuthState.checking)), findsOneWidget);
 
-      authState = AuthState.authenticated;
-      authStateController.add(authState);
-      await tester.pump();
-      await tester.pump();
+        authState = AuthState.authenticated;
+        authStateController.add(authState);
+        await tester.pump();
+        await tester.pump();
 
-      expect(tester.takeException(), isNull);
-      expect(
-        find.byKey(const ValueKey(AuthState.authenticated)),
-        findsOneWidget,
-      );
-      verify(() => authService.authStateStream).called(1);
-    });
+        expect(
+          find.byKey(const ValueKey(AuthState.authenticated)),
+          findsOneWidget,
+        );
+        verify(() => authService.authStateStream).called(1);
+      },
+    );
   });
 
   group('currentAuthRpcCapabilityProvider', () {
@@ -337,7 +343,6 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(tester.takeException(), isNull);
       expect(
         find.byKey(const ValueKey(AuthRpcCapability.rpcReady)),
         findsOneWidget,

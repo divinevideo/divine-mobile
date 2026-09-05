@@ -192,8 +192,7 @@ void main() {
           () => mockAuthService.currentPublicKeyHex,
         ).thenReturn(_ownerA);
 
-        // Invalidating currentAuthStateProvider simulates the
-        // authStateStream listener firing inside currentAuthStateProvider.
+        // Invalidating currentAuthStateProvider simulates an auth-state change.
         container.invalidate(currentAuthStateProvider);
 
         await Future<void>.delayed(Duration.zero);
