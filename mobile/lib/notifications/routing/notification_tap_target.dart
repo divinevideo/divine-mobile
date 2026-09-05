@@ -3,6 +3,7 @@
 
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart' show NIP71VideoKinds, NotificationKind;
+import 'package:openvine/router/route_paths.dart' show RoutePaths;
 import 'package:openvine/services/notification_helpers.dart'
     show parseAddressableId;
 
@@ -142,11 +143,8 @@ NotificationKind? notificationKindFromPushType(String? type) {
 
 /// Returns a safe in-app route for a campaign target, or null when unsupported.
 String? campaignAppRoute({required String? type, required String? value}) {
-  if (type != 'app_route' || value == null || value.isEmpty) return null;
-  if (!value.startsWith('/') || value.startsWith('//')) return null;
-  final uri = Uri.tryParse(value);
-  if (uri == null || uri.hasScheme || uri.hasAuthority) return null;
-  return value;
+  if (type != 'app_route') return null;
+  return value == RoutePaths.followingNew ? value : null;
 }
 
 /// Parses a public curated-list coordinate into an in-app route target.

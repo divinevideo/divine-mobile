@@ -223,6 +223,7 @@ class NotificationRepository {
 
   final Map<NotificationKind?, _NotificationFeed> _feeds = {};
   bool _closed = false;
+  Future<void> _readMutationTail = Future<void>.value();
 
   _NotificationFeed _feedFor(NotificationKind? filter) {
     if (_closed) {
@@ -1101,8 +1102,10 @@ class NotificationRepository {
     }
   }
 
-  void _throwIfClosed() {
-    if (_closed) throw StateError('NotificationRepository is closed');
+  Future<void> _enqueueReadMutation(Future<void> Function() operation) {
+    final result = _readMutationTail.then((_) => operation());
+    _readMutationTail = result.then<void>((_) {}, onError: (_, _) {});
+    return result;
   }
 
   /// Marks specific notifications as read on the server and locally.
@@ -1114,18 +1117,20 @@ class NotificationRepository {
   ///
   /// Rollback is scoped to the feeds the flip actually changed. A newer refresh
   /// supersedes it, while pagination on the same generation keeps its new rows.
-  Future<void> markAsRead(List<String> ids) async {
-    if (ids.isEmpty) return;
+  Future<void> markAsRead(List<String> ids) {
+    if (ids.isEmpty) return Future<void>.value();
+    return _enqueueReadMutation(() => _markAsRead(ids));
+  }
 
+  Future<void> _markAsRead(List<String> ids) async {
+    if (_closed) return;
     final idSet = ids.toSet();
     final itemsBefore = <NotificationItem>[];
     final snapshotsBefore =
         <_NotificationFeed, ({NotificationPage page, int fetchGeneration})>{};
 
     try {
-      _throwIfClosed();
       for (final feed in _liveFeeds.toList()) {
-        _throwIfClosed();
         final page = feed.snapshot.value;
         itemsBefore.addAll(page.items);
         if (!page.items.any((n) => !n.isRead && _matchesMarkReadId(n, idSet))) {
@@ -1176,14 +1181,15 @@ class NotificationRepository {
   ///
   /// As in [markAsRead], only the feeds this call actually flipped are captured
   /// for rollback, and a page that lands while the POST is pending is retained.
-  Future<void> markAllAsRead() async {
+  Future<void> markAllAsRead() => _enqueueReadMutation(_markAllAsRead);
+
+  Future<void> _markAllAsRead() async {
+    if (_closed) return;
     final snapshotsBefore =
         <_NotificationFeed, ({NotificationPage page, int fetchGeneration})>{};
 
     try {
-      _throwIfClosed();
       for (final feed in _liveFeeds.toList()) {
-        _throwIfClosed();
         final page = feed.snapshot.value;
         if (page.items.every((n) => n.isRead)) continue;
         snapshotsBefore[feed] = (

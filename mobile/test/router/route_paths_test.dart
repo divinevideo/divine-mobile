@@ -27,6 +27,7 @@ void main() {
       expect(RoutePaths.explore, equals('/explore'));
       expect(RoutePaths.followersBase, equals('/followers'));
       expect(RoutePaths.followingBase, equals('/following'));
+      expect(RoutePaths.followingNew, equals('/following/new'));
       expect(RoutePaths.generalSettings, equals('/general-settings'));
       expect(RoutePaths.hashtagBase, equals('/hashtag'));
       expect(RoutePaths.inbox, equals('/inbox'));
