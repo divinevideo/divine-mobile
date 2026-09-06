@@ -69,6 +69,18 @@ void main() {
       );
     }
 
+    /// A kind-10003 whose `tags` are given verbatim, so a fixture can express
+    /// the positions and tag names [bookmarkListEvent] cannot — a NIP-01
+    /// author pubkey at index 3, a NIP-10 marker plus pubkey, or NIP-51 list
+    /// metadata such as `title`.
+    Event bookmarkListEventWithTags(
+      List<List<String>> tags, {
+      String content = '',
+      int? createdAt,
+    }) {
+      return Event(pubkey, 10003, tags, content, createdAt: createdAt);
+    }
+
     /// Makes the relay answer a kind-10003 query with [events], in both
     /// reconcile modes.
     void stubRelay({
@@ -109,6 +121,10 @@ void main() {
 
     /// Puts [eventIds] in the SharedPreferences snapshot a service reads at
     /// construction — the state a device has before it reconciles.
+    ///
+    /// Deliberately writes the pre-#7137 shape, with the `relay` and `petname`
+    /// keys the model no longer has: every device that saved a bookmark on an
+    /// older build has a snapshot like this, and it still has to load.
     Future<void> seedCachedBookmarks(List<String> eventIds) async {
       SharedPreferences.setMockInitialValues({
         BookmarksRepository.globalBookmarksStorageKey: jsonEncode([
@@ -1113,25 +1129,32 @@ void main() {
             prefs.getString(BookmarksRepository.globalBookmarksStorageKey)!,
           ),
           [
-            {'type': 'e', 'id': 'video-a', 'relay': null, 'petname': null},
-            {'type': 'e', 'id': 'video-b', 'relay': null, 'petname': null},
+            {'type': 'e', 'id': 'video-a'},
+            {'type': 'e', 'id': 'video-b'},
           ],
         );
       });
 
       test(
-        'a service built after the save still refuses the revision it '
-        'replaced',
+        'a service built after the save republishes the complete source '
+        'shape while the relay is stale',
         () async {
           // The writing surface builds a fresh BookmarksRepository per sheet
           // (#7596), so an in-memory-only watermark is blank again by the
           // next save. That makes the ordinary save / close / save loop
           // reproduce #7163 with no concurrency involved at all.
-          stubRelay(
-            events: [
-              supersededRevision(['video-a']),
+          final ciphertext = await encryptToSelf([
+            ['e', 'private-video'],
+          ]);
+          final staleRevision = bookmarkListEventWithTags(
+            [
+              ['title', 'Reading list'],
+              ['e', 'video-a', 'wss://relay.example', pubkey],
             ],
+            content: ciphertext,
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60,
           );
+          stubRelay(events: [staleRevision]);
 
           final firstSheet = createService();
           expect(
@@ -1140,7 +1163,7 @@ void main() {
             )).succeeded,
             isTrue,
           );
-          expect(signedEventIds(), ['video-a', 'video-b']);
+          expect(signedContent, ciphertext);
 
           // The sheet closes and that instance is dropped. The relay still
           // answers with the revision the save replaced, because `OK` means
@@ -1154,9 +1177,57 @@ void main() {
           );
 
           expect(
-            signedEventIds(),
-            ['video-a', 'video-b', 'video-c'],
-            reason: 'the second sheet must not publish over video-b',
+            signedTags,
+            [
+              ['title', 'Reading list'],
+              ['e', 'video-a', 'wss://relay.example', pubkey],
+              ['e', 'video-b'],
+              ['e', 'video-c'],
+            ],
+            reason:
+                'the cached revision must carry the exact tags it published, '
+                'not only the parsed bookmark ids',
+          );
+          expect(
+            signedContent,
+            ciphertext,
+            reason:
+                'the cached revision must also carry the encrypted private '
+                'half of the replaceable event',
+          );
+        },
+      );
+
+      test(
+        'a legacy cached revision fails closed while the relay is stale',
+        () async {
+          SharedPreferences.setMockInitialValues({
+            BookmarksRepository.globalBookmarksStorageKey: jsonEncode([
+              {'type': 'e', 'id': 'cached'},
+            ]),
+            BookmarksRepository.globalBookmarksRevisionStorageKey: jsonEncode({
+              'createdAt': 2000,
+              'id': 'cached-revision',
+            }),
+          });
+          prefs = await SharedPreferences.getInstance();
+          stubRelay(
+            events: [
+              bookmarkListEvent(['older'], createdAt: 1000),
+            ],
+          );
+          final service = createService();
+
+          final result = await service.toggleVideoInGlobalBookmarks('new-one');
+
+          expect(result.succeeded, isFalse);
+          expect(result.failure, BookmarkToggleFailure.unknown);
+          expect(
+            signedTags,
+            isNull,
+            reason:
+                'an old cache has bookmark ids but not the complete source '
+                'event, so publishing from it would be destructive',
           );
         },
       );
@@ -1947,6 +2018,219 @@ void main() {
       });
     });
 
+    group('tags this client does not model', () {
+      // NIP-51 defines a bookmark item as at most three positions, but NIP-01
+      // puts the author pubkey at `e[3]` and NIP-10 puts a marker there with
+      // the pubkey at `e[4]`. Rebuilding `tags` from parsed items drops
+      // whatever the model does not represent — the whole tag when its name is
+      // outside e/a/t/r (#7134), and every position past the fourth (#7137).
+      // The private half already carries its array verbatim for exactly this
+      // reason; these pin the public half to the same contract.
+
+      const foreignPubkey =
+          '5e70f2977a6121f3d0d9e9b1c0e6d0b8a1c2d3e4f5061728394a5b6c7d8e9f01';
+
+      test('keeps a NIP-10 marker and author pubkey on a five-position '
+          'e tag', () async {
+        final carried = [
+          'e',
+          'keep-me',
+          'wss://relay.example',
+          '',
+          foreignPubkey,
+        ];
+        stubRelay(
+          events: [
+            bookmarkListEventWithTags([
+              ['e', 'already-saved'],
+              carried,
+            ]),
+          ],
+        );
+        final service = createService();
+
+        await service.toggleVideoInGlobalBookmarks('newly-saved');
+
+        expect(
+          signedTags,
+          contains(orderedEquals(carried)),
+          reason:
+              'index 4 is the NIP-10 author pubkey and index 3 its marker; '
+              'rebuilding from a four-position model drops the pubkey and '
+              're-emits the empty marker as a trailing position',
+        );
+      });
+
+      // Passes before the fix as well as after: the four-position shape is the
+      // one the old model happened to round-trip, by reading index 3 into a
+      // field it called `petname`. It is pinned because removing that field is
+      // part of the fix, and 3.66% of production item tags are this shape.
+      test('keeps a NIP-01 author pubkey on a four-position e tag', () async {
+        final carried = ['e', 'keep-me', 'wss://relay.example', foreignPubkey];
+        stubRelay(
+          events: [
+            bookmarkListEventWithTags([carried]),
+          ],
+        );
+        final service = createService();
+
+        await service.toggleVideoInGlobalBookmarks('newly-saved');
+
+        expect(signedTags, contains(orderedEquals(carried)));
+      });
+
+      test('keeps list metadata and tags outside e/a/t/r', () async {
+        final metadata = [
+          ['title', 'Reading list'],
+          ['alt', 'A NIP-51 bookmark list'],
+          ['p', foreignPubkey, 'wss://relay.example'],
+          ['client', 'Primal Web'],
+        ];
+        stubRelay(
+          events: [
+            bookmarkListEventWithTags([
+              ...metadata,
+              ['e', 'already-saved'],
+            ]),
+          ],
+        );
+        final service = createService();
+
+        await service.toggleVideoInGlobalBookmarks('newly-saved');
+
+        for (final tag in metadata) {
+          expect(
+            signedTags,
+            contains(orderedEquals(tag)),
+            reason: 'a ${tag.first} tag is not ours to delete',
+          );
+        }
+      });
+
+      test('mints a minimal tag for a newly added bookmark', () async {
+        stubRelay(
+          events: [
+            bookmarkListEventWithTags([
+              ['title', 'Reading list'],
+            ]),
+          ],
+        );
+        final service = createService();
+
+        await service.toggleVideoInGlobalBookmarks('newly-saved');
+
+        expect(
+          signedTags,
+          equals([
+            ['title', 'Reading list'],
+            ['e', 'newly-saved'],
+          ]),
+          reason:
+              'a bookmark this device is adding has no source tag to preserve, '
+              'so it is written as the two positions NIP-51 requires',
+        );
+      });
+
+      test('removes one item without touching its neighbours', () async {
+        final keep = ['e', 'keep-me', 'wss://relay.example', foreignPubkey];
+        stubRelay(
+          events: [
+            bookmarkListEventWithTags([
+              ['title', 'Reading list'],
+              keep,
+              ['e', 'drop-me', 'wss://relay.example'],
+            ]),
+          ],
+        );
+        final service = createService();
+
+        await service.toggleVideoInGlobalBookmarks('drop-me');
+
+        expect(
+          signedTags,
+          equals([
+            ['title', 'Reading list'],
+            keep,
+          ]),
+        );
+      });
+
+      test('keeps every source tag for a duplicated item', () async {
+        // Duplicate tags can carry different metadata. An unrelated addition
+        // must not choose one writer's shape and destroy the other; removing
+        // the bookmark still removes every source tag through `removeWhere`.
+        stubRelay(
+          events: [
+            bookmarkListEventWithTags([
+              ['e', 'twice'],
+              ['e', 'twice', 'wss://relay.example', foreignPubkey],
+            ]),
+          ],
+        );
+        final service = createService();
+
+        await service.toggleVideoInGlobalBookmarks('newly-saved');
+
+        expect(
+          signedTags,
+          equals([
+            ['e', 'twice'],
+            ['e', 'twice', 'wss://relay.example', foreignPubkey],
+            ['e', 'newly-saved'],
+          ]),
+        );
+      });
+
+      test('keeps a single-element tag', () async {
+        // NIP-70's `["-"]` has no second position, so a rule that only looks
+        // at tag[1] would either drop it or throw on it.
+        stubRelay(
+          events: [
+            bookmarkListEventWithTags([
+              ['-'],
+              ['e', 'already-saved'],
+            ]),
+          ],
+        );
+        final service = createService();
+
+        await service.toggleVideoInGlobalBookmarks('newly-saved');
+
+        expect(signedTags, contains(orderedEquals(['-'])));
+      });
+
+      // Passes before the fix too, trivially: there is nothing carried yet to
+      // forget. It guards the one site the compiler cannot — clearing the
+      // carried array alongside the items when a list is confirmed absent.
+      test('forgets the carried tags once the relay confirms the list is '
+          'gone', () async {
+        stubRelay(
+          events: [
+            bookmarkListEventWithTags([
+              ['title', 'Reading list'],
+              ['e', 'already-saved'],
+            ]),
+          ],
+        );
+        final service = createService();
+        await service.syncGlobalBookmarks();
+
+        // The list is authoritatively absent now — a sign-out and a fresh
+        // account reach this state. Republishing the previous identity's tags
+        // would write one account's list under another's key.
+        stubRelay(events: []);
+
+        await service.toggleVideoInGlobalBookmarks('newly-saved');
+
+        expect(
+          signedTags,
+          equals([
+            ['e', 'newly-saved'],
+          ]),
+        );
+      });
+    });
+
     group('error paths', () {
       /// Syncs a list holding one private item, then swaps in a signer whose
       /// crypto misbehaves. Removal must be refused rather than publishing a
@@ -2270,6 +2554,28 @@ void main() {
           SharedPreferences.setMockInitialValues({
             BookmarksRepository.globalBookmarksRevisionStorageKey:
                 '{"createdAt":"not an int"}',
+          });
+          prefs = await SharedPreferences.getInstance();
+          stubRelay(events: []);
+
+          final service = createService();
+
+          expect(await service.syncGlobalBookmarks(), isTrue);
+        },
+      );
+
+      test(
+        'a cached revision with malformed source tags is dropped',
+        () async {
+          SharedPreferences.setMockInitialValues({
+            BookmarksRepository.globalBookmarksRevisionStorageKey: jsonEncode({
+              'createdAt': 1000,
+              'id': 'cached-revision',
+              'publicTags': [
+                ['e', null],
+              ],
+              'content': '',
+            }),
           });
           prefs = await SharedPreferences.getInstance();
           stubRelay(events: []);
