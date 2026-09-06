@@ -3,6 +3,11 @@
 What the Firebase console's **Network Requests** tab covers, what it deliberately
 does not, and how to keep it that way. Issue: #7122.
 
+Feed-load timing that includes relay WebSocket milestones is reported
+separately through custom traces. See
+[Feed-load performance traces](FEED_LOAD_TRACES.md) before interpreting those
+durations or their `event_count` metric.
+
 ## Why anything had to be built
 
 Firebase Performance auto-instruments network traffic by swizzling the *native*

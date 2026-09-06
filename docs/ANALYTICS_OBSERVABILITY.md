@@ -202,7 +202,9 @@ Use Firebase Analytics events to inspect:
 Use Firebase Performance to inspect:
 
 - network request traces for media/API domains
-- custom traces only when the span represents a real user wait
+- custom traces only when the span represents a real user wait; for
+  `feed_load_*`, filter by `completion` and follow the
+  [feed-load trace semantics](../mobile/docs/FEED_LOAD_TRACES.md)
 
 ## First Dashboard To Build
 
