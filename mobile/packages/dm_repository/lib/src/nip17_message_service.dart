@@ -133,9 +133,9 @@ class NIP17MessageService {
   /// NIP-46) cannot cross a `SendPort`, so they fall back to the
   /// on-main-isolate [_giftWrapBuilder] — already async RPC/IPC, not a block.
   ///
-  /// Any failure of the isolate path (thrown error, null/failed result) falls
-  /// back to the main-isolate builder, mirroring the receive-side decrypt
-  /// offload in DmRepository. See #5391.
+  /// A thrown isolate error falls back to the main-isolate builder, mirroring
+  /// the receive-side decrypt offload in DmRepository. A returned failed slot
+  /// is deterministic local crypto and is not rebuilt. See #5391 and #8534.
   Future<Event?> _buildWrap({
     required Nostr nostr,
     required Event rumorEvent,
@@ -156,11 +156,13 @@ class NIP17MessageService {
         if (result.isSuccess) {
           return Event.fromJson(result.giftWrap!);
         }
-        Log.debug(
+        Log.warning(
           'Isolate gift-wrap build returned failure for rumor '
-          '${rumorEvent.id}: ${result.error}; falling back to main isolate',
+          '${rumorEvent.id}: ${result.error}; not rebuilding on the main '
+          'isolate because it would repeat the same local crypto',
           category: LogCategory.system,
         );
+        return null;
       } on Object catch (e, stackTrace) {
         Log.error(
           'Isolate gift-wrap build threw for rumor ${rumorEvent.id}: $e',
@@ -196,11 +198,18 @@ class NIP17MessageService {
   /// remote signer whose backend supports it — in a single `nip17_wrap_batch`
   /// round trip.
   ///
-  /// Returns `(recipientWrap, selfWrap?)`. When neither batch path applies —
-  /// or either one fails — only the recipient wrap is built here and
+  /// Returns `(recipientWrap, selfWrap?)`. When no batch path applies — or a
+  /// batch attempt is abandoned (it threw, returned the wrong slot count, or
+  /// the server path declined) — only the recipient wrap is built here and
   /// `selfWrap` is `null`; [_publishSelfWrap] then builds the self-wrap
   /// lazily after the recipient publish confirms delivery (avoids an extra
   /// signing round-trip on publish failure).
+  ///
+  /// One case returns a `null` recipient wrap rather than rebuilding: the
+  /// local-isolate batch reporting a failed *recipient* slot. That failure is
+  /// deterministic local crypto, so the caller terminalises the send instead
+  /// of spending a rebuild that would fail the same way. See the comment at
+  /// that branch, and #8534.
   ///
   /// Security: `withPrivateKeyHex((k) => k)` copies the raw private-key hex
   /// out of its scoped callback so it can be serialised across the [compute]
@@ -229,9 +238,13 @@ class NIP17MessageService {
           final r = results[0];
           final s = results[1];
           if (!r.isSuccess) {
-            Log.debug(
+            // Local slot failures are deterministic: both builders derive the
+            // same NIP-44 key from the same recipient pubkey, so rebuilding
+            // repeats the failure. Server slot failures may be transient.
+            Log.warning(
               'Batch gift-wrap: recipient slot failed (${r.error}); '
-              'falling back to main-isolate builder',
+              'the send fails — rebuilding on the main isolate would run the '
+              'same ECDH against the same recipient key and fail identically',
               category: LogCategory.system,
             );
           }
@@ -268,10 +281,12 @@ class NIP17MessageService {
       // trip returns both wraps, replacing the four (`nip44Encrypt` +
       // `signEvent`, per wrap) this path otherwise spends. See #7090.
       //
-      // Deliberately in the `else` arm, never before the isolate check: a
-      // local-key signer whose isolate hop fails still falls through to
-      // [_buildWrap], which signs in-process at zero round trips — reaching
-      // for the network there would be a regression, not a speed-up.
+      // Deliberately in the `else` arm, never before the isolate check: when a
+      // local-key signer's isolate hop is abandoned (it threw, or returned the
+      // wrong slot count) it still falls through to [_buildWrap], which signs
+      // in-process at zero round trips — reaching for the network there would
+      // be a regression, not a speed-up. A failed recipient *slot* does not
+      // reach here at all; it ends the send above (#8534).
       final wraps = await _buildBothWrapsOnServer(
         wrapper: wrapper,
         rumorEvent: rumorEvent,
@@ -279,8 +294,8 @@ class NIP17MessageService {
       );
       if (wraps != null) return wraps;
     }
-    // No batch path applied, or it did not produce a recipient wrap: build
-    // only the recipient wrap. The self-wrap is built lazily by
+    // No batch path applied, or one was abandoned before producing slots:
+    // build only the recipient wrap. The self-wrap is built lazily by
     // _publishSelfWrap after the recipient publish confirms delivery — avoids
     // an extra signing round-trip for remote signers when the publish fails.
     return (

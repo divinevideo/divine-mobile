@@ -2297,14 +2297,59 @@ void main() {
       );
 
       test(
-        'batch builder reports recipient slot failure causes sendRumor to '
-        'return failure',
+        'single-receiver slot failure does not rebuild on the main isolate',
         () async {
+          var mainBuilderCalls = 0;
+          final service = NIP17MessageService(
+            signer: _LocalIsolateSigner(localPrivateKey),
+            senderPublicKey: localPubkey,
+            nostrService: mockNostrClient,
+            giftWrapBuilder: (nostr, rumor, recipient) async {
+              mainBuilderCalls++;
+              return Event(localPubkey, EventKind.giftWrap, [
+                ['p', recipient],
+              ], 'ciphertext');
+            },
+            isolateGiftWrapBatchBuilder: (_) async => const [
+              BuiltGiftWrapResult.failure('deterministic local crypto'),
+            ],
+          );
+
+          final rumor = service.buildRumor(
+            recipientPubkey: _recipientPubkey,
+            content: 'single-slot-failure',
+          );
+          final result = await service.publishSelfWrap(rumorEvent: rumor);
+
+          expect(result.success, isFalse);
+          expect(mainBuilderCalls, equals(0));
+          verifyNever(() => mockNostrClient.publishEvent(any()));
+        },
+      );
+
+      test(
+        'batch builder reports recipient slot failure causes sendRumor to '
+        'return failure without rebuilding on the main isolate',
+        () async {
+          // #8534: the branch deliberately does NOT fall back. Both builders
+          // derive the conversation key from the same recipient pubkey via
+          // `NIP44V2.shareSecret`, so a rebuild fails identically; spending
+          // one is pure cost. The zero-main-builder assertion is the point of
+          // this test — without it, making the branch fall back would leave
+          // it green, which is how the log line and the code disagreed for
+          // two months.
+          // Counting seam calls, not main-builder calls: a fall-through would
+          // reach [_buildWrap], which retries the isolate with ONE receiver
+          // and would succeed against this fake — so `giftWrapBuilder` would
+          // never run and a main-builder counter would read zero in both
+          // worlds. The receiver-count sequence is what distinguishes them.
+          final seamReceiverCounts = <int>[];
           final service = NIP17MessageService(
             signer: _LocalIsolateSigner(localPrivateKey),
             senderPublicKey: localPubkey,
             nostrService: mockNostrClient,
             isolateGiftWrapBatchBuilder: (request) async {
+              seamReceiverCounts.add(request.receiverPublicKeys.length);
               final all = await buildGiftWrapBatch(request);
               if (request.receiverPublicKeys.length == 2) {
                 // Recipient slot fails; self-wrap slot succeeds.
@@ -2327,7 +2372,64 @@ void main() {
           );
 
           expect(result.success, isFalse);
+          expect(
+            seamReceiverCounts,
+            equals([2]),
+            reason:
+                'no per-receiver rebuild may follow a failed recipient slot',
+          );
           verifyNever(() => mockNostrClient.publishEvent(any()));
+        },
+      );
+
+      test(
+        'batch builder returning the wrong slot count DOES rebuild on the '
+        'main isolate',
+        () async {
+          // The contrast to the test above, and the branch whose "falling
+          // back" log is accurate. Unexercised before #8534: the only
+          // empty-list fake in this file sat behind a remote signer and was
+          // never invoked, so nothing pinned that these two adjacent branches
+          // behave differently on purpose.
+          // Fall-through is observable as a SECOND seam call carrying one
+          // receiver: the tail calls [_buildWrap], which prefers the isolate
+          // for a single receiver and only reaches `giftWrapBuilder` if that
+          // also fails. So counting main-builder calls would read zero here
+          // even though the fallback ran — the receiver-count sequence is
+          // what actually proves it.
+          final seamReceiverCounts = <int>[];
+          final service = NIP17MessageService(
+            signer: _LocalIsolateSigner(localPrivateKey),
+            senderPublicKey: localPubkey,
+            nostrService: mockNostrClient,
+            isolateGiftWrapBatchBuilder: (request) async {
+              seamReceiverCounts.add(request.receiverPublicKeys.length);
+              final all = await buildGiftWrapBatch(request);
+              if (request.receiverPublicKeys.length == 2) {
+                // One slot for a two-receiver request: misshapen, so the
+                // batch attempt is abandoned rather than partially trusted.
+                return [all.first];
+              }
+              return all;
+            },
+          );
+
+          final rumor = service.buildRumor(
+            recipientPubkey: _recipientPubkey,
+            content: 'wrong-slot-count',
+          );
+          final result = await service.sendRumor(
+            rumorEvent: rumor,
+            recipientPubkey: _recipientPubkey,
+          );
+
+          expect(result.success, isTrue);
+          expect(seamReceiverCounts.first, equals(2));
+          expect(
+            seamReceiverCounts.skip(1),
+            contains(1),
+            reason: 'the abandoned batch must be retried per-receiver',
+          );
         },
       );
 
