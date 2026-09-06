@@ -35,9 +35,6 @@ Future<PendingUploadStore> _openStore({
     currentNostrPubkey: currentNostrPubkey,
   );
   await store.open();
-  // Guarantee a clean slate even if a prior test left records in the shared
-  // 'pending_uploads' box (mirrors upload_manager_owner_scope_test.dart).
-  await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
   return store;
 }
 
@@ -543,7 +540,6 @@ void main() {
         () async {
           final store = await _openStore();
           addTearDown(store.disposeStore);
-          await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
           await seedTwoAccounts(store);
 
           expect(store.pendingUploads, hasLength(2));
@@ -558,7 +554,6 @@ void main() {
             currentNostrPubkey: _pubkeyA,
           );
           addTearDown(store.disposeStore);
-          await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
           final uploads = await seedTwoAccounts(store);
 
           final visible = store.pendingUploads;
@@ -578,7 +573,6 @@ void main() {
             scopeUploadsToCurrentUser: true,
           );
           addTearDown(store.disposeStore);
-          await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
           await seedTwoAccounts(store);
 
           expect(store.pendingUploads, isEmpty);
@@ -591,7 +585,6 @@ void main() {
           currentNostrPubkey: _pubkeyA,
         );
         addTearDown(store.disposeStore);
-        await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
         await seedTwoAccounts(store);
 
         expect(
@@ -610,7 +603,6 @@ void main() {
           currentNostrPubkey: _pubkeyA,
         );
         addTearDown(store.disposeStore);
-        await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
         await seedTwoAccounts(store);
 
         final stats = store.uploadStats;
@@ -623,7 +615,6 @@ void main() {
           currentNostrPubkey: _pubkeyA,
         );
         addTearDown(store.disposeStore);
-        await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
         final uploads = await seedTwoAccounts(store);
 
         final deleted = await store.deleteAllForOwner(_pubkeyA);
