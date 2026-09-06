@@ -163,7 +163,7 @@ class _ResultsBody extends StatelessWidget {
       builder: (context, state) {
         return switch (state.status) {
           NewMessageSearchStatus.loadingContacts => Center(
-            child: CircularProgressIndicator(
+            child: DivineCircularProgressIndicator(
               color: context.vineColors.accentPositive,
             ),
           ),
@@ -172,7 +172,7 @@ class _ResultsBody extends StatelessWidget {
             emptyMessage: l10n.newMessageNoContacts,
           ),
           NewMessageSearchStatus.searching when state.results.isEmpty => Center(
-            child: CircularProgressIndicator(
+            child: DivineCircularProgressIndicator(
               color: context.vineColors.accentPositive,
             ),
           ),

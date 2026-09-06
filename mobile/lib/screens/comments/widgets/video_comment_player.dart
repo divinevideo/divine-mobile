@@ -192,7 +192,7 @@ class _VideoCommentPlayerState extends State<VideoCommentPlayer>
                   Center(
                     child: SizedBox.square(
                       dimension: 28,
-                      child: CircularProgressIndicator(
+                      child: DivineCircularProgressIndicator(
                         strokeWidth: 2,
                         color: context.vineColors.onSurface,
                       ),

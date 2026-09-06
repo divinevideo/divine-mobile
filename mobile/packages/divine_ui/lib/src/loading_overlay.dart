@@ -1,6 +1,7 @@
 // ABOUTME: Overlay widget that shows a top-edge LinearProgressIndicator
 // ABOUTME: while background content stays visible during a silent refresh.
 
+import 'package:divine_ui/src/loading/divine_progress_indicator.dart';
 import 'package:divine_ui/src/theme/vine_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -49,7 +50,7 @@ class LoadingOverlay extends StatelessWidget {
             child: Align(
               alignment: Alignment.topCenter,
               child: isLoading
-                  ? const LinearProgressIndicator(
+                  ? const DivineLinearProgressIndicator(
                       color: VineTheme.primary,
                       backgroundColor: Colors.transparent,
                     )

@@ -79,28 +79,34 @@ class _AudioWaveformState extends State<AudioWaveform>
     );
 
     _generateBarHeights();
+  }
 
-    if (widget.isPlaying) {
-      _animationController.repeat(reverse: true);
-    }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncAnimation();
   }
 
   @override
   void didUpdateWidget(AudioWaveform oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Handle play/pause state changes
     if (widget.isPlaying != oldWidget.isPlaying) {
-      if (widget.isPlaying) {
-        _animationController.repeat(reverse: true);
-      } else {
-        _animationController.stop();
-      }
+      _syncAnimation();
     }
 
     // Regenerate bar heights if bar count changed
     if (widget.barCount != oldWidget.barCount) {
       _generateBarHeights();
+    }
+  }
+
+  void _syncAnimation() {
+    if (!widget.isPlaying || MediaQuery.disableAnimationsOf(context)) {
+      _animationController.stop();
+      _animationController.value = 0;
+    } else if (!_animationController.isAnimating) {
+      _animationController.repeat(reverse: true);
     }
   }
 

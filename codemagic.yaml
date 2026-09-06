@@ -782,6 +782,39 @@ definitions:
       script: |
         set -e
         export PATH="$PATH:$HOME/.maestro/bin"
+        DIAGNOSTICS_DIR=/tmp/maestro-diagnostics
+        mkdir -p "$DIAGNOSTICS_DIR"
+
+        stop_diagnostics() {
+          exit_code=$?
+          trap - EXIT
+          if [ -n "${APP_LOG_PID:-}" ]; then
+            kill "$APP_LOG_PID" 2>/dev/null || true
+            wait "$APP_LOG_PID" 2>/dev/null || true
+          fi
+          if [ -n "${XCTEST_LOG_PID:-}" ]; then
+            kill "$XCTEST_LOG_PID" 2>/dev/null || true
+            wait "$XCTEST_LOG_PID" 2>/dev/null || true
+          fi
+          exit "$exit_code"
+        }
+        trap stop_diagnostics EXIT
+
+        if [ -n "${MAESTRO_DEVICE_UDID:-}" ]; then
+          xcrun simctl spawn "$MAESTRO_DEVICE_UDID" log stream \
+            --style compact \
+            --level debug \
+            --predicate 'process == "Runner"' \
+            > "$DIAGNOSTICS_DIR/app.log" 2>&1 &
+          APP_LOG_PID=$!
+          xcrun simctl spawn "$MAESTRO_DEVICE_UDID" log stream \
+            --style compact \
+            --level debug \
+            --predicate 'process CONTAINS[c] "xctest" OR subsystem CONTAINS[c] "xctest"' \
+            > "$DIAGNOSTICS_DIR/xctest.log" 2>&1 &
+          XCTEST_LOG_PID=$!
+        fi
+
         # Flow files are passed individually rather than as suites/*.yaml.
         # Maestro reports a suite file as ONE <testcase> named after the suite,
         # with no per-flow detail — so a failure says only "the suite failed"
@@ -1414,6 +1447,7 @@ workflows:
       - ~/.maestro/tests/**/screen-hierarchy/**
       - ~/.maestro/tests/**/logs/maestro.log
       - ~/.maestro/tests/**/commands.json
+      - /tmp/maestro-diagnostics/*.log
 
   e2e-smoke-android:
     name: E2E Smoke Tests (Android)

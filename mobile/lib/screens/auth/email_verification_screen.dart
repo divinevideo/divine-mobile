@@ -687,7 +687,7 @@ class _StatusButton extends StatelessWidget {
           SizedBox(
             width: 20,
             height: 20,
-            child: CircularProgressIndicator(
+            child: DivineCircularProgressIndicator(
               strokeWidth: 2,
               color: VineTheme.vineGreenDark.withValues(alpha: 0.5),
             ),

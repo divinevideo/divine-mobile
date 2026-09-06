@@ -356,7 +356,7 @@ class _OwnerVideoAction extends StatelessWidget {
                 if (isBusy)
                   const SizedBox.square(
                     dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: DivineCircularProgressIndicator(strokeWidth: 2),
                   )
                 else
                   DivineIcon(icon: icon, color: color, size: 18),

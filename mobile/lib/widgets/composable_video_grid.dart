@@ -193,7 +193,7 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
 
     return brokenTrackerAsync.when(
       loading: () => Center(
-        child: CircularProgressIndicator(
+        child: DivineCircularProgressIndicator(
           color: context.vineColors.accentPositive,
         ),
       ),

@@ -767,7 +767,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                         mainAxisSize: MainAxisSize.min,
                         spacing: 16,
                         children: [
-                          const CircularProgressIndicator(
+                          const DivineCircularProgressIndicator(
                             color: VineTheme.vineGreen,
                           ),
                           if (isPreparing)

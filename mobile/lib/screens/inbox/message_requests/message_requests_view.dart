@@ -120,7 +120,7 @@ class _RequestList extends StatelessWidget {
         if (state.status == ConversationListStatus.initial ||
             state.status == ConversationListStatus.loading) {
           return Center(
-            child: CircularProgressIndicator(
+            child: DivineCircularProgressIndicator(
               color: context.vineColors.accentPositive,
             ),
           );
@@ -132,7 +132,7 @@ class _RequestList extends StatelessWidget {
             return Center(
               child: Semantics(
                 label: context.l10n.inboxRestoringMessages,
-                child: CircularProgressIndicator(
+                child: DivineCircularProgressIndicator(
                   color: context.vineColors.accentPositive,
                 ),
               ),

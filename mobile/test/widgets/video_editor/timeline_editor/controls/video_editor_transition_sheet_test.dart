@@ -29,12 +29,19 @@ void main() {
       int overlapMaxMs = 2000,
       int dipMaxMs = 2000,
       bool limitedByNeighbor = false,
+      bool disableAnimations = false,
       ThemeData? theme,
     }) async {
       result = null;
       returned = false;
       await tester.pumpWidget(
         MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(disableAnimations: disableAnimations),
+            child: child!,
+          ),
           theme: theme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -71,6 +78,15 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
     }
+
+    testWidgets('stops preview loops when animations are disabled', (
+      tester,
+    ) async {
+      await openPicker(tester, disableAnimations: true);
+
+      await tester.pumpAndSettle();
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
 
     testWidgets('lists every transition option', (tester) async {
       await openPicker(tester);

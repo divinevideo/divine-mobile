@@ -132,7 +132,7 @@ class _CreateAccountView extends StatelessWidget {
           return Scaffold(
             backgroundColor: context.vineColors.background,
             body: Center(
-              child: CircularProgressIndicator(
+              child: DivineCircularProgressIndicator(
                 color: context.vineColors.accentPositive,
               ),
             ),
@@ -353,7 +353,7 @@ class _SkipButton extends StatelessWidget {
             ? SizedBox(
                 height: 18,
                 width: 18,
-                child: CircularProgressIndicator(
+                child: DivineCircularProgressIndicator(
                   color: context.vineColors.secondaryText,
                   strokeWidth: 2,
                 ),

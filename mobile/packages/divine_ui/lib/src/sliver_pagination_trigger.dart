@@ -1,3 +1,4 @@
+import 'package:divine_ui/src/loading/divine_progress_indicator.dart';
 import 'package:divine_ui/src/theme/vine_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -47,7 +48,7 @@ class SliverPaginationTrigger extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(16),
           child: Center(
-            child: CircularProgressIndicator(
+            child: DivineCircularProgressIndicator(
               color: VineTheme.primary,
               semanticsLabel: 'Loading more results',
             ),
@@ -55,9 +56,7 @@ class SliverPaginationTrigger extends StatelessWidget {
         ),
       );
     }
-    return SliverToBoxAdapter(
-      child: _LoadMoreSentinel(onLoadMore: onLoadMore),
-    );
+    return SliverToBoxAdapter(child: _LoadMoreSentinel(onLoadMore: onLoadMore));
   }
 }
 

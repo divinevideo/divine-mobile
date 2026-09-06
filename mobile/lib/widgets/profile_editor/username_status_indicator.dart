@@ -85,7 +85,7 @@ class _UsernameCheckingIndicator extends StatelessWidget {
           const SizedBox(
             width: 16,
             height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: DivineCircularProgressIndicator(strokeWidth: 2),
           ),
           const SizedBox(width: 8),
           Text(
@@ -418,7 +418,7 @@ class _UsernameReservedDialogState extends State<UsernameReservedDialog> {
               ? SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(
+                  child: DivineCircularProgressIndicator(
                     strokeWidth: 2,
                     color: context.vineColors.primaryText,
                   ),

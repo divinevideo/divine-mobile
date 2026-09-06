@@ -20,7 +20,11 @@ void main() {
 
   const customColor = Color.fromARGB(255, 100, 20, 20);
 
-  Future<void> pumpSheet(WidgetTester tester, {Locale? locale}) async {
+  Future<void> pumpSheet(
+    WidgetTester tester, {
+    Locale? locale,
+    bool disableAnimations = false,
+  }) async {
     tester.view
       ..physicalSize = const Size(1080, 2400)
       ..devicePixelRatio = 1;
@@ -33,6 +37,12 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(disableAnimations: disableAnimations),
+          child: child!,
+        ),
         locale: locale,
         theme: VineTheme.theme,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -60,6 +70,15 @@ void main() {
       );
 
   group('custom color swatch semantics', () {
+    testWidgets('stops preview loops when animations are disabled', (
+      tester,
+    ) async {
+      await pumpSheet(tester, disableAnimations: true);
+
+      await tester.pumpAndSettle();
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+
     testWidgets('custom color swatch exposes RGB semantics', (tester) async {
       await pumpSheet(tester);
 

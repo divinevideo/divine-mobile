@@ -93,7 +93,7 @@ class VideoMetadataUserChip extends ConsumerWidget {
             SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(
+              child: DivineCircularProgressIndicator(
                 strokeWidth: 2,
                 color: context.vineColors.onSurfaceMuted,
               ),

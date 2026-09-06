@@ -20,7 +20,7 @@ class ProfileCacheLoadIndicator extends StatelessWidget {
     return ExcludeSemantics(
       child: SizedBox(
         height: height,
-        child: LinearProgressIndicator(
+        child: DivineLinearProgressIndicator(
           minHeight: height,
           color: context.vineColors.accentPositive,
           backgroundColor: VineTheme.transparent,

@@ -101,7 +101,7 @@ class _ListLoadingView extends StatelessWidget {
         onBackPressed: context.safePop,
       ),
       body: const Center(
-        child: CircularProgressIndicator(color: VineTheme.vineGreen),
+        child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
       ),
     );
   }

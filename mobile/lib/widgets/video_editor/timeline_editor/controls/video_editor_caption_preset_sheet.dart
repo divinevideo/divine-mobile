@@ -115,7 +115,22 @@ class _CaptionPresetPickerViewState extends State<CaptionPresetPickerView>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: _loopMs),
-    )..repeat();
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncAnimation();
+  }
+
+  void _syncAnimation() {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+      _controller.value = 0;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
   }
 
   @override

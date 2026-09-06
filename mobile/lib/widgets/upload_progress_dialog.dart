@@ -80,7 +80,7 @@ class _UploadProgressViewState extends State<_UploadProgressView> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                LinearProgressIndicator(
+                DivineLinearProgressIndicator(
                   value: state.progress,
                   backgroundColor: context.vineColors.card,
                   valueColor: const AlwaysStoppedAnimation<Color>(

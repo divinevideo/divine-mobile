@@ -179,7 +179,7 @@ class _LoginOptionsView extends StatelessWidget {
                 return _SignInContent(state: state);
               }
               return Center(
-                child: CircularProgressIndicator(
+                child: DivineCircularProgressIndicator(
                   color: context.vineColors.accentPositive,
                 ),
               );

@@ -89,7 +89,7 @@ class _ResolvingAppScreen extends StatelessWidget {
             context.safePop(fallback: AppsDirectoryScreen.path),
       ),
       backgroundColor: context.vineColors.background,
-      body: const Center(child: CircularProgressIndicator()),
+      body: const Center(child: DivineCircularProgressIndicator()),
     );
   }
 }

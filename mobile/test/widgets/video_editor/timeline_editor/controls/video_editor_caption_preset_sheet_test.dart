@@ -5,11 +5,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_caption_preset_sheet.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
+
   final l10n = lookupAppLocalizations(const Locale('en'));
 
   group('captionPresetDisplayName', () {

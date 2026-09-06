@@ -74,7 +74,7 @@ class _PendingVideoReplyTileState extends State<PendingVideoReplyTile> {
                   SizedBox(
                     width: 28,
                     height: 28,
-                    child: CircularProgressIndicator(
+                    child: DivineCircularProgressIndicator(
                       strokeWidth: 2,
                       value: (progress ?? 0) > 0 ? progress : null,
                       color: context.vineColors.onSurface,

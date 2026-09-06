@@ -1,4 +1,5 @@
 import 'package:divine_ui/src/icon/divine_icon.dart';
+import 'package:divine_ui/src/loading/divine_progress_indicator.dart';
 import 'package:divine_ui/src/theme/vine_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -86,9 +87,7 @@ class DivineSearchBar extends StatelessWidget {
           style: VineTheme.bodyLargeFont(color: colors.primaryText),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: VineTheme.bodyLargeFont(
-              color: colors.onSurfaceMuted,
-            ),
+            hintStyle: VineTheme.bodyLargeFont(color: colors.onSurfaceMuted),
             filled: true,
             fillColor: colors.iconButton,
             border: OutlineInputBorder(
@@ -125,7 +124,7 @@ class _PrefixIcon extends StatelessWidget {
               height: 24,
               child: Padding(
                 padding: EdgeInsets.all(2),
-                child: CircularProgressIndicator(
+                child: DivineCircularProgressIndicator(
                   color: VineTheme.vineGreen,
                   strokeWidth: 2,
                 ),

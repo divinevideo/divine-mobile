@@ -233,6 +233,29 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
+    testWidgets(
+      'keeps the default loader static when animations are disabled',
+      (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
+            home: const Scaffold(body: CameraPreviewWidget()),
+          ),
+        );
+
+        final indicator = tester.widget<CircularProgressIndicator>(
+          find.byType(CircularProgressIndicator),
+        );
+        expect(indicator.value, 1);
+        await tester.pumpAndSettle();
+      },
+    );
+
     testWidgets('shows custom loading widget when provided', (tester) async {
       await tester.pumpWidget(
         buildTestWidget(

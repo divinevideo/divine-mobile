@@ -58,7 +58,7 @@ class VideoEditorStickerSheet extends StatelessWidget {
                     return switch (state) {
                       VideoEditorStickerInitial() ||
                       VideoEditorStickerLoading() => const SliverToBoxAdapter(
-                        child: Center(child: CircularProgressIndicator()),
+                        child: Center(child: DivineCircularProgressIndicator()),
                       ),
                       VideoEditorStickerLoaded(:final stickers)
                           when stickers.isNotEmpty =>

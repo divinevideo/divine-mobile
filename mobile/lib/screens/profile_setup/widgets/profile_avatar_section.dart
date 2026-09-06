@@ -109,7 +109,7 @@ class _ProfileAvatarSectionState extends ConsumerState<ProfileAvatarSection> {
                           ),
                         ),
                         child: const Center(
-                          child: CircularProgressIndicator(
+                          child: DivineCircularProgressIndicator(
                             color: VineTheme.vineGreen,
                             strokeWidth: 3,
                           ),

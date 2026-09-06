@@ -41,7 +41,7 @@ class InboxNotificationsPage extends ConsumerWidget {
       return ColoredBox(
         color: context.vineColors.background,
         child: const Center(
-          child: CircularProgressIndicator(color: VineTheme.vineGreen),
+          child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
         ),
       );
     }
