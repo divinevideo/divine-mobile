@@ -6,16 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  // Constructed per test: the constructor installs this instance as the
-  // channel's incoming-call handler (last one wins process-wide), so a
-  // file-level instance loses the handler to any sibling suite that reads
-  // BackgroundUploaderPlatform.instance in the merged-isolate bundle.
   late MethodChannelBackgroundUploader platform;
-  const channel = MethodChannel('background_uploader');
+  const channel = MethodChannel('background_uploader_test');
   final calls = <MethodCall>[];
 
   setUp(() {
-    platform = MethodChannelBackgroundUploader();
+    platform = MethodChannelBackgroundUploader(methodChannel: channel);
     calls.clear();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (methodCall) async {
@@ -33,7 +29,8 @@ void main() {
         });
   });
 
-  tearDown(() {
+  tearDown(() async {
+    await platform.dispose();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, null);
   });
@@ -196,6 +193,25 @@ void main() {
           );
 
       expect(await platform.takeBufferedTerminalEvent('running-task'), isNull);
+    });
+
+    test('dispose releases the incoming channel handler', () async {
+      await platform.dispose();
+
+      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .handlePlatformMessage(
+            channel.name,
+            channel.codec.encodeMethodCall(
+              const MethodCall('onUploadEvent', <String, Object?>{
+                'taskId': 'after-dispose',
+                'status': 'completed',
+                'progress': 1.0,
+              }),
+            ),
+            (_) {},
+          );
+
+      expect(await platform.takeBufferedTerminalEvent('after-dispose'), isNull);
     });
   });
 }

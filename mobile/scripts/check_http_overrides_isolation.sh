@@ -17,7 +17,8 @@
 # file runs inside the shared isolate.
 #
 # Reads (HttpOverrides.current) do not match — only assignment to `.global` is
-# flagged. lib/ is out of scope.
+# flagged. The app test tree and every package test tree are covered; lib/ is
+# out of scope.
 #
 # Usage:
 #   bash mobile/scripts/check_http_overrides_isolation.sh
@@ -28,11 +29,19 @@ export LC_ALL=C
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Test roots are separate merged-isolate bundles. A mutation cannot cross a
+# package boundary, but it can still poison later files within that package.
+scan_roots=("$MOBILE_DIR/test")
+for package_test_root in "$MOBILE_DIR"/packages/*/test; do
+  [[ -d "$package_test_root" ]] && scan_roots+=("$package_test_root")
+done
+
 # Files under test/ that ASSIGN HttpOverrides.global (the `= ` token stays on the
 # LHS line under dart format, so a file-level match also covers multi-line RHS
 # forms; the `io.`-prefixed form matches too). `.current` reads and comment
 # mentions do not match.
-assigning=$(grep -rlE "HttpOverrides\.global[[:space:]]*=" "$MOBILE_DIR/test" || true)
+assigning=$(grep -rlE \
+  "HttpOverrides\.global[[:space:]]*=" "${scan_roots[@]}" || true)
 
 # A file counts as "tagged out of the merge" only if it has a real
 # @Tags([... 'skip_very_good_optimization' ...]) LIBRARY annotation — anchored
