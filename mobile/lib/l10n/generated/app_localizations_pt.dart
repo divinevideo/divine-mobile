@@ -7222,9 +7222,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorAudioImportFailed => 'Falha ao importar o áudio.';
 
   @override
-  String get videoIconPlaceholderLabel => 'Vídeo';
-
-  @override
   String get publishErrorNotSignedIn =>
       'Entre na sua conta para publicar vídeos.';
 

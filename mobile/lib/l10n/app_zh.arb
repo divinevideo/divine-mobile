@@ -3758,7 +3758,6 @@
   "uploadFailureSheetTryAgainButton": "再试一次",
   "videoEditorAudioImportAudio": "导入音频",
   "videoEditorAudioImportFailed": "音频导入失败。",
-  "videoIconPlaceholderLabel": "视频",
   "publishErrorNotSignedIn": "请登录后再发布视频。",
   "publishErrorNoRetry": "没有可重试的上传。",
   "publishErrorNoInternet": "没有网络连接。请检查 Wi-Fi 或移动数据后重试。",

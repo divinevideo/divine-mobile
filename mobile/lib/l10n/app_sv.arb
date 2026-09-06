@@ -4304,7 +4304,6 @@
     "uploadFailureSheetTryAgainButton": "Försök igen",
     "videoEditorAudioImportAudio": "Importera ljud",
     "videoEditorAudioImportFailed": "Ljudimporten misslyckades.",
-    "videoIconPlaceholderLabel": "Video",
     "searchFilterPillSemanticLabel": "Filter: {filter}",
     "@searchFilterPillSemanticLabel": {"placeholders": {"filter": {"type": "String"}}},
     "searchNoResultsFound": "Inga resultat hittades för \"{query}\"",

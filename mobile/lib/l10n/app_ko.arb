@@ -3842,7 +3842,6 @@
     "uploadFailureSheetTryAgainButton": "다시 시도",
     "videoEditorAudioImportAudio": "오디오 가져오기",
     "videoEditorAudioImportFailed": "오디오 가져오기에 실패했어요.",
-    "videoIconPlaceholderLabel": "영상",
     "searchFilterPillSemanticLabel": "필터: {filter}",
     "@searchFilterPillSemanticLabel": {"placeholders": {"filter": {"type": "String"}}},
     "searchNoResultsFound": "\"{query}\"에 대한 결과가 없어요",
