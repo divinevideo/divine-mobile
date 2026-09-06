@@ -601,7 +601,7 @@ class RelayPool {
           // relay.getSubscriptions() would return empty after AUTH success.
           relay.saveSubscription(subscription);
           log('🔄 autoSubscribe: sending ${subscription.id} to ${relay.url}');
-          await relay.send(subscription.toJson());
+          await relay.send(subscription.toJson(), skipReconnect: true);
         }
       }
       if (init) {

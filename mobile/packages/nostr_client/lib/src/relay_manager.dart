@@ -472,11 +472,10 @@ class RelayManager {
   /// Aggregate bound on one reconnect sweep.
   ///
   /// Parallelising already bounds a healthy sweep at roughly one connect
-  /// (a 10s handshake timeout plus a 2s orphan close), but nothing above the
-  /// socket layer guarantees a connect honours that: `_tryReconnect` with no
-  /// deadline retries with exponential backoff and can run for minutes. This
-  /// is the outer stop, so a wedged host cannot hold a DM send's inbox lookup
-  /// open indefinitely (#7091).
+  /// (a 10s handshake timeout plus a 2s orphan close). The socket layer also
+  /// bounds each send-path reconnect, while this shorter aggregate stop keeps
+  /// a sweep across multiple hosts from holding a DM send's inbox lookup open
+  /// indefinitely (#7091).
   @visibleForTesting
   static Duration reconnectSweepBudget = const Duration(seconds: 15);
 

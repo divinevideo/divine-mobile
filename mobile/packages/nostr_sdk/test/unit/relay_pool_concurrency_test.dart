@@ -44,6 +44,36 @@ class _MutatingRelay extends Relay {
   }
 }
 
+class _DisconnectingAutoSubscribeRelay extends Relay {
+  _DisconnectingAutoSubscribeRelay(String url) : super(url, RelayStatus(url));
+
+  bool? receivedSkipReconnect;
+
+  @override
+  Future<bool> doConnect() async {
+    relayStatus.connected = ClientConnected.connected;
+    return true;
+  }
+
+  @override
+  Future<void> disconnect() async {
+    relayStatus.connected = ClientConnected.disconnect;
+  }
+
+  @override
+  Future<bool> send(
+    List<dynamic> message, {
+    bool queueIfFailed = true,
+    bool skipReconnect = false,
+    DateTime? deadline,
+  }) async {
+    relayStatus.connected = ClientConnected.disconnect;
+    receivedSkipReconnect = skipReconnect;
+    if (!skipReconnect) return Completer<bool>().future;
+    return false;
+  }
+}
+
 /// A relay that succeeds on send and immediately responds with EOSE.
 class _SucceedingRelay extends Relay {
   _SucceedingRelay(String url) : super(url, RelayStatus(url));
@@ -459,6 +489,24 @@ void main() {
           relay.sentMessages.where((message) => message.first == 'REQ').length,
           greaterThanOrEqualTo(1),
         );
+      },
+    );
+
+    test(
+      'add(autoSubscribe: true) does not reconnect a socket lost after connect',
+      () async {
+        nostr.relayPool.subscribe([
+          Filter(kinds: const [1], limit: 1).toJson(),
+        ], (_) {});
+        final relay = _DisconnectingAutoSubscribeRelay(
+          'wss://disconnected-auto-subscribe.relay',
+        );
+
+        final add = nostr.relayPool.add(relay, autoSubscribe: true);
+        await pumpEventQueue();
+        expect(relay.receivedSkipReconnect, isTrue);
+        expect(await add, isTrue);
+        expect(relay.getSubscriptions(), hasLength(1));
       },
     );
 

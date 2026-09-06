@@ -12,14 +12,17 @@ enum ConnectionState { disconnected, connecting, connected }
 
 /// Configuration for WebSocket connection behavior
 class WebSocketConfig {
-  /// Maximum number of reconnection attempts before giving up
+  /// Maximum number of send-path reconnection attempts before giving up.
   final int maxReconnectAttempts;
 
-  /// Base delay for exponential backoff (doubles each attempt)
+  /// Base delay for send-path reconnect backoff (doubles each attempt).
   final Duration baseReconnectDelay;
 
-  /// Maximum delay between reconnection attempts
+  /// Maximum delay between send-path reconnection attempts.
   final Duration maxReconnectDelay;
+
+  /// Maximum time one send may spend reconnecting when it has no deadline.
+  final Duration reconnectBudget;
 
   /// Timeout for initial connection attempt
   final Duration connectionTimeout;
@@ -46,6 +49,7 @@ class WebSocketConfig {
     this.maxReconnectAttempts = 10,
     this.baseReconnectDelay = const Duration(seconds: 2),
     this.maxReconnectDelay = const Duration(minutes: 5),
+    this.reconnectBudget = const Duration(seconds: 30),
     this.connectionTimeout = const Duration(seconds: 10),
     this.closeTimeout = const Duration(seconds: 2),
     this.heartbeatInterval = const Duration(seconds: 30),
@@ -75,9 +79,9 @@ class DefaultWebSocketChannelFactory implements WebSocketChannelFactory {
 /// Manages a single WebSocket connection with on-demand reconnection and
 /// idle detection.
 ///
-/// Reconnects automatically when:
-/// - Sending a message while disconnected (triggers reconnect attempt)
-/// - Connection is lost while active (stream error/done)
+/// Reconnects on demand when a message is sent while disconnected. A stream
+/// error or closure marks the connection disconnected so the next send can
+/// start that bounded reconnect attempt.
 ///
 /// Idle Detection (heartbeat):
 /// - Tracks when the last message was received
@@ -193,11 +197,13 @@ class WebSocketConnectionManager {
     return _doConnect();
   }
 
-  Future<bool> _doConnect() async {
+  Future<bool> _doConnect({DateTime? deadline}) async {
     if (_disposed) {
       log('Connect refused: $url - manager is disposed');
       return false;
     }
+
+    if (_deadlineExpired(deadline)) return false;
 
     _setState(ConnectionState.connecting);
 
@@ -216,7 +222,9 @@ class WebSocketConnectionManager {
       // IOWebSocketChannel.connect() returns immediately and DNS/TLS
       // failures surface as unhandled async errors in the zone instead
       // of being caught here.
-      await channel.ready.timeout(config.connectionTimeout);
+      final handshakeTimeout = _remainingOr(config.connectionTimeout, deadline);
+      if (handshakeTimeout == Duration.zero) throw TimeoutException('deadline');
+      await channel.ready.timeout(handshakeTimeout);
 
       // A dispose, a disconnect, or a newer connect can all run inside the
       // handshake window, and each of them detaches this channel. Adopting it
@@ -255,7 +263,7 @@ class WebSocketConnectionManager {
       _setState(ConnectionState.disconnected);
       return false;
     } on TimeoutException {
-      log('Connection timed out after ${config.connectionTimeout}');
+      log('Connection timed out before its allowed deadline');
       _emitError('Connection timed out');
       // Clean up the channel that never finished connecting
       await _closeOrphanedChannel(channel);
@@ -458,8 +466,10 @@ class WebSocketConnectionManager {
   // --- Reconnection ---
 
   Future<bool> _tryReconnect({DateTime? deadline}) async {
+    final effectiveDeadline =
+        deadline ?? DateTime.now().add(config.reconnectBudget);
     while (_shouldReconnect && _state == ConnectionState.disconnected) {
-      if (_deadlineExpired(deadline)) return false;
+      if (_deadlineExpired(effectiveDeadline)) return false;
       if (_reconnectAttempts >= config.maxReconnectAttempts) {
         log('Max reconnect attempts reached for $url');
         _emitError('Max reconnect attempts reached');
@@ -478,13 +488,15 @@ class WebSocketConnectionManager {
         'Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts/${config.maxReconnectAttempts})',
       );
 
-      final wait = _remainingOr(delay, deadline);
+      final wait = _remainingOr(delay, effectiveDeadline);
       if (wait == Duration.zero) return false;
       await Future<void>.delayed(wait);
 
-      if (!_shouldReconnect || _deadlineExpired(deadline)) return false;
+      if (!_shouldReconnect || _deadlineExpired(effectiveDeadline)) {
+        return false;
+      }
 
-      final connected = await _doConnect();
+      final connected = await _doConnect(deadline: effectiveDeadline);
       if (connected) return true;
     }
 

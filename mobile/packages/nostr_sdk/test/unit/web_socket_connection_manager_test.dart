@@ -607,6 +607,79 @@ void main() {
     });
 
     group('on-demand reconnection', () {
+      test('send without a deadline stops at the reconnect budget', () async {
+        mockFactory.shouldFail = true;
+        final boundedManager = WebSocketConnectionManager(
+          url: 'wss://test.relay.com',
+          channelFactory: mockFactory,
+          logger: logMessages.add,
+          config: const WebSocketConfig(
+            maxReconnectAttempts: 10,
+            baseReconnectDelay: Duration(milliseconds: 10),
+            maxReconnectDelay: Duration(milliseconds: 100),
+            connectionTimeout: Duration(milliseconds: 500),
+            reconnectBudget: Duration(milliseconds: 25),
+          ),
+        );
+        addTearDown(boundedManager.dispose);
+
+        expect(await boundedManager.send('test'), isFalse);
+        expect(boundedManager.reconnectAttempts, lessThan(10));
+      });
+
+      test('an explicit deadline overrides the reconnect budget', () async {
+        mockFactory.shouldFail = true;
+        final boundedManager = WebSocketConnectionManager(
+          url: 'wss://test.relay.com',
+          channelFactory: mockFactory,
+          logger: logMessages.add,
+          config: const WebSocketConfig(
+            maxReconnectAttempts: 10,
+            baseReconnectDelay: Duration(milliseconds: 10),
+            maxReconnectDelay: Duration(milliseconds: 100),
+            connectionTimeout: Duration(milliseconds: 500),
+            reconnectBudget: Duration(seconds: 1),
+          ),
+        );
+        addTearDown(boundedManager.dispose);
+
+        expect(
+          await boundedManager.send(
+            'test',
+            deadline: DateTime.now().add(const Duration(milliseconds: 25)),
+          ),
+          isFalse,
+        );
+        expect(boundedManager.reconnectAttempts, lessThan(10));
+      });
+
+      test('reconnect budget bounds a pending handshake', () async {
+        final readyGate = Completer<void>();
+        mockFactory.readyGate = readyGate;
+        final boundedManager = WebSocketConnectionManager(
+          url: 'wss://test.relay.com',
+          channelFactory: mockFactory,
+          logger: logMessages.add,
+          config: const WebSocketConfig(
+            maxReconnectAttempts: 10,
+            baseReconnectDelay: Duration(milliseconds: 1),
+            maxReconnectDelay: Duration(milliseconds: 1),
+            connectionTimeout: Duration(seconds: 1),
+            closeTimeout: Duration(milliseconds: 5),
+            reconnectBudget: Duration(milliseconds: 20),
+          ),
+        );
+        addTearDown(boundedManager.dispose);
+
+        expect(await boundedManager.send('test'), isFalse);
+        expect(boundedManager.state, ConnectionState.disconnected);
+
+        readyGate.complete();
+        await Future<void>.delayed(Duration.zero);
+        expect(boundedManager.state, ConnectionState.disconnected);
+        expect(mockFactory.lastChannel!.isClosed, isTrue);
+      });
+
       test('send reconnects when disconnected', () async {
         // Start disconnected
         expect(manager.state, equals(ConnectionState.disconnected));
