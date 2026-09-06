@@ -71,17 +71,19 @@ void main() {
     test('resolves the creator from a valid npub', () {
       final npub = NostrKeyUtils.encodePubKey(creatorPubkey);
       expect(
-        resolveInspiredByCreatorHexes(npub: npub),
+        resolveInspiredByCreatorHexes(npubs: [npub]),
         equals({creatorPubkey}),
       );
     });
 
     test('skips an undecodable npub', () {
       expect(
-        resolveInspiredByCreatorHexes(npub: 'npub1notavalidbech32string'),
+        resolveInspiredByCreatorHexes(
+          npubs: const ['npub1notavalidbech32string'],
+        ),
         isEmpty,
       );
-      expect(resolveInspiredByCreatorHexes(npub: ''), isEmpty);
+      expect(resolveInspiredByCreatorHexes(npubs: const ['']), isEmpty);
       expect(resolveInspiredByCreatorHexes(), isEmpty);
     });
 
@@ -90,7 +92,7 @@ void main() {
       expect(
         resolveInspiredByCreatorHexes(
           addressableId: '34236:$creatorPubkey:some-d-tag',
-          npub: npub,
+          npubs: [npub],
         ),
         equals({creatorPubkey, otherPubkey}),
       );
@@ -101,9 +103,48 @@ void main() {
       expect(
         resolveInspiredByCreatorHexes(
           addressableId: '34236:$creatorPubkey:some-d-tag',
-          npub: npub,
+          npubs: [npub],
         ),
         equals({creatorPubkey}),
+      );
+    });
+  });
+
+  group('withInspiredByContentReference', () {
+    test('names only the first creator, whatever the rest are', () {
+      // The reader's regex matches a single trailing reference, so a second
+      // name in the content would break attribution for every client.
+      final content = withInspiredByContentReference('a caption', const [
+        'npub1first',
+        'npub1second',
+      ]);
+
+      expect(content, equals('a caption\n\nInspired by nostr:npub1first'));
+      expect(content, isNot(contains('npub1second')));
+    });
+
+    test('drops the leading blank line when there is no caption', () {
+      expect(
+        withInspiredByContentReference('', const ['npub1only']),
+        equals('Inspired by nostr:npub1only'),
+      );
+    });
+
+    test('leaves the caption untouched with no creators', () {
+      expect(
+        withInspiredByContentReference('a caption', const []),
+        equals('a caption'),
+      );
+    });
+
+    test('skips blank entries rather than crediting an empty reference', () {
+      expect(
+        withInspiredByContentReference('hi', const ['', '  ', 'npub1real']),
+        equals('hi\n\nInspired by nostr:npub1real'),
+      );
+      expect(
+        withInspiredByContentReference('hi', const ['', '  ']),
+        equals('hi'),
       );
     });
   });
@@ -149,7 +190,7 @@ void main() {
       final tags = buildInspiredByPTags(
         existingTags: const [],
         addressableId: '34236:$creatorPubkey:some-d-tag',
-        npub: npub,
+        npubs: [npub],
         selfPubkey: selfPubkey,
       );
       expect(tags, hasLength(2));

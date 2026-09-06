@@ -61,6 +61,12 @@ class VideoEditorConstants {
   /// Maximum number of collaborators allowed per video.
   static const int maxCollaborators = 5;
 
+  /// Maximum creators one video may credit as "Inspired By".
+  ///
+  /// Matches [maxCollaborators]: both are lists of people the author
+  /// attributes, and both become p-tags on the published event.
+  static const int maxInspiredByCreators = 5;
+
   /// Whether to enforce the tag limit in the UI.
   static const bool enableTagLimit = false;
 

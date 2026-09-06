@@ -75,6 +75,10 @@ VideoEvent _fullVideo() => VideoEvent(
     relayUrl: 'wss://relay.divine.video',
   ),
   inspiredByNpub: 'npub1examplenpubvalue',
+  inspiredByPubkeys: const [
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+  ],
   clipSourceCredits: const [
     ClipSourceCredit(
       authorPubkey: 'abc123',
@@ -155,6 +159,7 @@ const _expectedKeys = <String>{
   'collaboratorPubkeys',
   'inspiredByVideo',
   'inspiredByNpub',
+  'inspiredByPubkeys',
   'clipSourceCredits',
   'textTrackRef',
   'textTrackRefs',
@@ -375,6 +380,7 @@ void main() {
       );
       expect(restored.inspiredByVideo, equals(original.inspiredByVideo));
       expect(restored.inspiredByNpub, equals(original.inspiredByNpub));
+      expect(restored.inspiredByPubkeys, equals(original.inspiredByPubkeys));
       expect(restored.clipSourceCredits, equals(original.clipSourceCredits));
       expect(
         restored.clipSourceCredits.single.addressableId,

@@ -430,7 +430,7 @@ class VideoPublishService {
           mentionedPubkeys: mentionedPubkeys,
           inspiredByAddressableId: draft.inspiredByVideo?.addressableId,
           inspiredByRelayUrl: draft.inspiredByVideo?.relayUrl,
-          inspiredByNpub: draft.inspiredByNpub,
+          inspiredByNpubs: draft.inspiredByNpubs,
           clipSourceCredits: draft.clipSourceCredits,
           selectedAudio: draft.selectedSound,
           audioShareAttribution: draft.audioShareAttribution,

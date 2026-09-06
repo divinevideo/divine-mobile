@@ -5,12 +5,9 @@ import 'package:models/models.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/utils/npub_hex.dart';
 
-/// Marker on Divine inspired-by `p` tags.
-///
-/// Distinct from `'mention'` so the edit flow can own this tag's lifecycle
-/// without touching caption-mention p-tags, and from `'collaborator'` so no
-/// consumer renders the inspired-by creator as a collaborator.
-const inspiredByPTagMarker = 'inspired-by';
+/// Re-exported so the app-layer tag helpers stay the one place call sites
+/// reach for the marker, now that the constant lives with the models.
+export 'package:models/models.dart' show inspiredByPTagMarker;
 
 /// Default relay hint embedded in Divine inspired-by p-tags.
 const String inspiredByPTagRelayHint = AppConstants.defaultRelayUrl;
@@ -24,6 +21,22 @@ List<String> buildInspiredByPTag(String pubkeyHex, {String? relayHint}) {
       ? inspiredByPTagRelayHint
       : relayHint;
   return ['p', pubkeyHex, relay, inspiredByPTagMarker];
+}
+
+/// Appends the NIP-27 content reference crediting the inspired-by creator.
+///
+/// Only the first creator can be named: the parser that reads this back is
+/// anchored to a single trailing `nostr:` reference, so a second one would
+/// break attribution for every reader, including us. The rest are credited by
+/// the `inspired-by` p-tags instead.
+String withInspiredByContentReference(String content, Iterable<String> npubs) {
+  for (final npub in npubs) {
+    final trimmed = npub.trim();
+    if (trimmed.isEmpty) continue;
+    final suffix = '\n\nInspired by nostr:$trimmed';
+    return content.isEmpty ? suffix.trim() : '$content$suffix';
+  }
+  return content;
 }
 
 /// Builds a factual reused-clip credit `p` tag for [pubkeyHex].
@@ -63,7 +76,7 @@ List<List<String>> buildClipSourceCreditATags({
 /// inspiring video; [npub] is the NIP-27 person reference. Both can be
 /// present at publish time because the audio-reuse flow auto-populates the
 /// video reference independently of the person picker, so the result can
-/// contain up to two creators.
+/// contain the video's creator alongside every picked one.
 ///
 /// Malformed coordinates and undecodable npubs are skipped rather than
 /// surfaced — attribution display does not depend on this resolution, and a
@@ -71,7 +84,7 @@ List<List<String>> buildClipSourceCreditATags({
 /// normalized to lowercase hex and deduplicated.
 Set<String> resolveInspiredByCreatorHexes({
   String? addressableId,
-  String? npub,
+  Iterable<String> npubs = const [],
 }) {
   final hexes = <String>{};
 
@@ -84,9 +97,11 @@ Set<String> resolveInspiredByCreatorHexes({
     }
   }
 
-  final decoded = npubToHexOrNull(npub)?.trim().toLowerCase();
-  if (decoded != null && NostrHexUtils.isValidPubkey(decoded)) {
-    hexes.add(decoded);
+  for (final npub in npubs) {
+    final decoded = npubToHexOrNull(npub)?.trim().toLowerCase();
+    if (decoded != null && NostrHexUtils.isValidPubkey(decoded)) {
+      hexes.add(decoded);
+    }
   }
 
   return hexes;
@@ -103,13 +118,13 @@ Set<String> resolveInspiredByCreatorHexes({
 List<List<String>> buildInspiredByPTags({
   required List<List<String>> existingTags,
   String? addressableId,
-  String? npub,
+  Iterable<String> npubs = const [],
   String? relayHint,
   String? selfPubkey,
 }) {
   final hexes = resolveInspiredByCreatorHexes(
     addressableId: addressableId,
-    npub: npub,
+    npubs: npubs,
   );
   if (hexes.isEmpty) return const [];
 

@@ -6,6 +6,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -29,37 +30,50 @@ class VideoMetadataInspiredByInput extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final inspiredByNpub = ref.watch(
-      videoEditorProvider.select((s) => s.inspiredByNpub),
+    final inspiredByNpubs = ref.watch(
+      videoEditorProvider.select((s) => s.inspiredByNpubs),
     );
     final inspiredByVideo = ref.watch(
       videoEditorProvider.select((s) => s.inspiredByVideo),
     );
 
-    final resolvedPubkey =
-        inspiredByVideo?.creatorPubkey ?? npubToHexOrNull(inspiredByNpub);
-    final currentProfile = resolvedPubkey != null
-        ? ref.watch(userProfileReactiveProvider(resolvedPubkey)).value
-        : null;
+    final resolvedPubkeys = <String>[
+      ?inspiredByVideo?.creatorPubkey,
+      for (final npub in inspiredByNpubs) ?npubToHexOrNull(npub),
+    ];
+    final profiles = <UserProfile>[];
+    final names = <String>[];
+    for (final pubkey in resolvedPubkeys) {
+      final profile = ref.watch(userProfileReactiveProvider(pubkey)).value;
+      if (profile != null) profiles.add(profile);
+      // Named even while the profile is still uncached: a credited creator
+      // must never silently disappear from the tile, or the author cannot see
+      // — or undo — who they picked.
+      names.add(
+        profile?.bestDisplayName ?? UserProfile.defaultDisplayNameFor(pubkey),
+      );
+    }
+
     return VideoMetadataSelectionTile(
-      onTap: () => _selectInspiredByPerson(context, ref, currentProfile),
+      onTap: () => _selectInspiredByPeople(context, ref, profiles),
       semanticsLabel: context.l10n.videoMetadataSetInspiredBySemanticLabel,
       labelText: context.l10n.videoMetadataInspiredByLabel,
-      value: currentProfile?.bestDisplayName ?? '',
+      value: names.join(', '),
     );
   }
 
-  Future<void> _selectInspiredByPerson(
+  Future<void> _selectInspiredByPeople(
     BuildContext context,
     WidgetRef ref,
-    UserProfile? currentProfile,
+    List<UserProfile> currentProfiles,
   ) async {
     final result = await showUserPickerSheet(
       context,
       filterMode: UserPickerFilterMode.allUsers,
       autoFocus: true,
       title: context.l10n.videoMetadataInspiredByLabel,
-      initialSelectedProfiles: [?currentProfile],
+      maxCount: VideoEditorConstants.maxInspiredByCreators,
+      initialSelectedProfiles: currentProfiles,
     );
     if (result == null || !context.mounted) return;
 
@@ -68,22 +82,28 @@ class VideoMetadataInspiredByInput extends ConsumerWidget {
       return;
     }
 
-    final profile = result.first;
-
-    // Check if the user has muted us
+    // Someone who muted us cannot be credited, but that is no reason to drop
+    // the others the author picked — skip them and say so once.
     final blocklistRepository = ref.read(contentBlocklistRepositoryProvider);
-    if (blocklistRepository.hasMutedUs(profile.pubkey)) {
+    final creditable = result
+        .where((profile) => !blocklistRepository.hasMutedUs(profile.pubkey))
+        .toList();
+
+    if (creditable.length != result.length) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         DivineSnackbarContainer.snackBar(
           context.l10n.videoMetadataCreatorCannotBeReferencedSnackbar,
         ),
       );
-      return;
     }
 
-    // Convert hex pubkey to npub for NIP-27 content reference
-    final npub = NostrKeyUtils.encodePubKey(profile.pubkey);
-    ref.read(videoEditorProvider.notifier).setInspiredByPerson(npub);
+    if (creditable.isEmpty) return;
+
+    // Convert hex pubkeys to npubs for the NIP-27 content reference.
+    ref.read(videoEditorProvider.notifier).setInspiredByPeople([
+      for (final profile in creditable)
+        NostrKeyUtils.encodePubKey(profile.pubkey),
+    ]);
   }
 }

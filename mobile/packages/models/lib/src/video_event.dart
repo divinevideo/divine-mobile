@@ -230,6 +230,7 @@ class VideoEvent {
     this.collaboratorPubkeys = const [],
     this.inspiredByVideo,
     this.inspiredByNpub,
+    this.inspiredByPubkeys = const [],
     this.clipSourceCredits = const [],
     this.nostrEventTags = const [],
     this.textTrackRef,
@@ -337,6 +338,11 @@ class VideoEvent {
               json['inspiredByVideo'] as Map<String, dynamic>,
             ),
       inspiredByNpub: json['inspiredByNpub'] as String?,
+      inspiredByPubkeys:
+          (json['inspiredByPubkeys'] as List<dynamic>?)
+              ?.whereType<String>()
+              .toList() ??
+          const [],
       clipSourceCredits: ClipSourceCredit.listFromJson(
         json['clipSourceCredits'],
       ),
@@ -403,6 +409,7 @@ class VideoEvent {
     String? addressableDTag;
     final collaboratorPubkeys = <String>[];
     InspiredByInfo? inspiredByVideo;
+    final inspiredByPubkeys = <String>[];
     final clipSourceCredits = <ClipSourceCredit>[];
     final textTrackRefsLocal = <String>[];
     final contentWarningLabels = <String>[];
@@ -631,6 +638,10 @@ class VideoEvent {
             if (role == 'collaborator' &&
                 !collaboratorPubkeys.contains(normalizedPubkey)) {
               collaboratorPubkeys.add(normalizedPubkey);
+            } else if (role == inspiredByPTagMarker) {
+              if (!inspiredByPubkeys.contains(normalizedPubkey)) {
+                inspiredByPubkeys.add(normalizedPubkey);
+              }
             } else if (role == clipSourceCreditTagMarker) {
               _addClipSourceCredit(
                 clipSourceCredits,
@@ -800,6 +811,7 @@ class VideoEvent {
       collaboratorPubkeys: collaboratorPubkeys,
       inspiredByVideo: inspiredByVideo,
       inspiredByNpub: inspiredByNpub,
+      inspiredByPubkeys: inspiredByPubkeys,
       clipSourceCredits: clipSourceCredits,
       nostrEventTags: event.tags
           .map((t) => (t as List).map((e) => e.toString()).toList())
@@ -954,6 +966,13 @@ class VideoEvent {
   /// (Inspired By a person, not a specific video).
   final String? inspiredByNpub;
 
+  /// Every creator credited by an `inspired-by`-marked `p` tag.
+  ///
+  /// The NIP-27 content line names only the first, for clients that render
+  /// inline references; these tags carry the whole set and are what makes
+  /// more than one creator creditable.
+  final List<String> inspiredByPubkeys;
+
   /// Factual credits for clips reused from published videos.
   final List<ClipSourceCredit> clipSourceCredits;
 
@@ -1054,6 +1073,7 @@ class VideoEvent {
       !isVideoReply &&
       (inspiredByVideo != null ||
           inspiredByNpub != null ||
+          inspiredByPubkeys.isNotEmpty ||
           clipSourceCredits.isNotEmpty);
 
   /// Hex pubkey of the primary inspiring creator, resolved from explicit
@@ -1066,7 +1086,10 @@ class VideoEvent {
     if (inspiredByVideo != null) return inspiredByVideo!.creatorPubkey;
     if (inspiredByNpub != null) {
       final hex = Nip19.decode(inspiredByNpub!);
-      return hex.isNotEmpty ? hex : null;
+      if (hex.isNotEmpty) return hex;
+    }
+    if (inspiredByPubkeys.isNotEmpty) {
+      return inspiredByPubkeys.first;
     }
     if (clipSourceCredits.isNotEmpty) {
       return clipSourceCredits.first.authorPubkey;
@@ -1713,6 +1736,7 @@ class VideoEvent {
     List<String>? collaboratorPubkeys,
     InspiredByInfo? inspiredByVideo,
     String? inspiredByNpub,
+    List<String>? inspiredByPubkeys,
     List<ClipSourceCredit>? clipSourceCredits,
     List<List<String>>? nostrEventTags,
     String? textTrackRef,
@@ -1780,6 +1804,7 @@ class VideoEvent {
     collaboratorPubkeys: collaboratorPubkeys ?? this.collaboratorPubkeys,
     inspiredByVideo: inspiredByVideo ?? this.inspiredByVideo,
     inspiredByNpub: inspiredByNpub ?? this.inspiredByNpub,
+    inspiredByPubkeys: inspiredByPubkeys ?? this.inspiredByPubkeys,
     clipSourceCredits: clipSourceCredits ?? this.clipSourceCredits,
     nostrEventTags: nostrEventTags ?? this.nostrEventTags,
     textTrackRef: textTrackRef ?? this.textTrackRef,
@@ -1865,6 +1890,7 @@ class VideoEvent {
     'collaboratorPubkeys': collaboratorPubkeys,
     'inspiredByVideo': inspiredByVideo?.toJson(),
     'inspiredByNpub': inspiredByNpub,
+    'inspiredByPubkeys': inspiredByPubkeys,
     'clipSourceCredits': clipSourceCredits
         .map((credit) => credit.toJson())
         .toList(),

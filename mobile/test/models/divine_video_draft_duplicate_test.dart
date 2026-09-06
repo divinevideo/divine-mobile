@@ -37,7 +37,7 @@ DivineVideoDraft _createDraft() => DivineVideoDraft(
   editorEditingParameters: const {'brightness': 0.5},
   collaboratorPubkeys: const {'pubkey1'},
   inspiredByVideo: const InspiredByInfo(addressableId: '34236:pubkey:dtag'),
-  inspiredByNpub: 'npub_inspired',
+  inspiredByNpubs: const ['npub_inspired'],
   selectedSound: AudioEvent.fromLocalImport(
     id: 'audio_1',
     filePath: '/tmp/sound.m4a',

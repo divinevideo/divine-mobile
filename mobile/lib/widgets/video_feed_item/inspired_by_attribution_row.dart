@@ -85,6 +85,10 @@ class InspiredByAttributionRow extends ConsumerWidget {
         );
       }
     }
+    // Every creator credited by an inspired-by p-tag. The content line names
+    // only the first, so without these the second and later picks would be
+    // published and notified but never shown.
+    video.inspiredByPubkeys.forEach(addPubkey);
     for (final credit in video.clipSourceCredits) {
       addPubkey(credit.authorPubkey);
     }

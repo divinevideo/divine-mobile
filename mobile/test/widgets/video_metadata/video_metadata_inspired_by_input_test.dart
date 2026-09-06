@@ -101,10 +101,7 @@ void main() {
       );
 
       final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(
-        find.text(l10n.videoMetadataInspiredByLabel),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.videoMetadataInspiredByLabel), findsOneWidget);
     });
 
     testWidgets('renders selection tile when no inspiration is set', (
