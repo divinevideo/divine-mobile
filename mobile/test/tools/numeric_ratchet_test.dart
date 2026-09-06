@@ -30,6 +30,9 @@ void main() {
           'PROBE_BASELINE': baseline.path,
           'PROBE_CURRENT': current.path,
           'PROBE_LIB': libPath,
+          'PROBE_BASE_REF': 'HEAD',
+          'PROBE_BASELINE_REPO_PATH':
+              'mobile/scripts/baseline/__probe_nonexistent__.txt',
           if (requireBaselineUpdateOnDecrease)
             'PROBE_REQUIRE_BASELINE_UPDATE_ON_DECREASE': '1',
           if (update) 'UPDATE_BASELINE': '1',
@@ -40,6 +43,22 @@ void main() {
     setUp(() {
       tmp = Directory.systemTemp.createTempSync('numeric_ratchet_test');
       Directory('${tmp.path}/m').createSync(recursive: true);
+      Directory(
+        '${tmp.path}/mobile/scripts/baseline',
+      ).createSync(recursive: true);
+      File(
+        '${tmp.path}/mobile/scripts/baseline/__probe_nonexistent__.txt',
+      ).writeAsStringSync('# probe baseline\na\t5\nb\t3\n');
+      for (final args in [
+        ['init'],
+        ['config', 'user.email', 'test@example.invalid'],
+        ['config', 'user.name', 'Ratchet Test'],
+        ['add', '.'],
+        ['commit', '-m', 'base'],
+      ]) {
+        final result = Process.runSync('git', ['-C', tmp.path, ...args]);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      }
       libPath = File('scripts/lib/numeric_ratchet.sh').absolute.path;
       current = File('${tmp.path}/current.txt');
       baseline = File('${tmp.path}/baseline.txt');
