@@ -2260,7 +2260,7 @@ void main() {
     });
 
     test(
-      'skips following prefetch when cache already exists for the account',
+      'skips following prefetch when an empty cache exists for the account',
       () async {
         var prefetchCalls = 0;
         authService = AuthService(
@@ -2275,9 +2275,9 @@ void main() {
 
         SharedPreferences.setMockInitialValues({
           'authentication_source': 'automatic',
-          'following_list_${testKeyContainer.publicKeyHex}': jsonEncode([
-            'abc123',
-          ]),
+          'following_list_${testKeyContainer.publicKeyHex}': jsonEncode(
+            <String>[],
+          ),
           kKnownAccountsKey: '[]',
         });
 
