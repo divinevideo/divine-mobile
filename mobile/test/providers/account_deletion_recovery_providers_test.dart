@@ -331,7 +331,7 @@ void main() {
     );
 
     test(
-      'submitted monitor waits for the deletion flow to release its receipt',
+      'lost-submit recovery submits from the single app-scoped owner',
       () async {
         const recoverable = AccountDeletionAttempt(
           id: 'attempt-id',
@@ -344,40 +344,69 @@ void main() {
           ),
         ).thenAnswer((_) async => processing);
         when(() => authService.signOut()).thenAnswer((_) async {});
-        final subscription = container.listen(
-          submittedAccountDeletionMonitorProvider,
-          (_, _) {},
-          fireImmediately: true,
-        );
-        addTearDown(subscription.close);
-
         await container
             .read(submittedAccountDeletionAttemptProvider.notifier)
             .record(
               pubkeyHex: pubkey,
               attempt: recoverable,
               vanishEventId: _vanishEventId,
-              submissionOwnedLocally: true,
             );
-        await Future<void>.delayed(Duration.zero);
+        final cubit = container.read(submittedAccountDeletionMonitorProvider);
+        expect(cubit, isNotNull);
+        await cubit!.resume(recoverable);
 
-        expect(subscription.read(), isNull);
-        verifyNever(
-          () => repository.submit(
-            attemptId: any(named: 'attemptId'),
-            vanishEventId: any(named: 'vanishEventId'),
-          ),
-        );
-
-        container
-            .read(submittedAccountDeletionAttemptProvider.notifier)
-            .releaseSubmissionOwnership();
-        await untilCalled(
+        verify(
           () => repository.submit(
             attemptId: recoverable.id,
             vanishEventId: _vanishEventId,
           ),
+        ).called(1);
+        expect(
+          cubit.state.attempt?.status,
+          AccountDeletionAttemptStatus.processing,
         );
+      },
+    );
+
+    test(
+      'cold start lost-submit recovery uses the same owner',
+      () async {
+        const recoverable = AccountDeletionAttempt(
+          id: 'attempt-id',
+          status: AccountDeletionAttemptStatus.recoverable,
+        );
+        when(
+          () => repository.submit(
+            attemptId: recoverable.id,
+            vanishEventId: _vanishEventId,
+          ),
+        ).thenAnswer((_) async => processing);
+        when(() => authService.signOut()).thenAnswer((_) async {});
+        await container
+            .read(submittedAccountDeletionAttemptProvider.notifier)
+            .record(
+              pubkeyHex: pubkey,
+              attempt: recoverable,
+              vanishEventId: _vanishEventId,
+            );
+        final restarted = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(preferences),
+            authServiceProvider.overrideWithValue(authService),
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            currentAuthRpcCapabilityProvider.overrideWithValue(
+              AuthRpcCapability.rpcReady,
+            ),
+            accountDeletionRecoveryRepositoryProvider.overrideWithValue(
+              repository,
+            ),
+          ],
+        );
+        addTearDown(restarted.dispose);
+
+        final cubit = restarted.read(submittedAccountDeletionMonitorProvider);
+        expect(cubit, isNotNull);
+        await cubit!.resume(recoverable);
 
         verify(
           () => repository.submit(

@@ -46,7 +46,6 @@ final class SubmittedAccountDeletionAttempt {
     required this.pubkeyHex,
     required this.attempt,
     required this.vanishEventId,
-    this.submissionOwnedLocally = false,
   });
 
   factory SubmittedAccountDeletionAttempt.fromJson(Map<String, dynamic> json) =>
@@ -62,11 +61,6 @@ final class SubmittedAccountDeletionAttempt {
   final AccountDeletionAttempt attempt;
   final String vanishEventId;
 
-  /// True only while this process's deletion dialog owns submission and cleanup.
-  /// It is deliberately not persisted, so an app restart adopts the receipt.
-  /// Do not invalidate this notifier while that in-process owner is running.
-  final bool submissionOwnedLocally;
-
   Map<String, dynamic> toJson() => {
     'pubkey_hex': pubkeyHex,
     'vanish_event_id': vanishEventId,
@@ -75,13 +69,10 @@ final class SubmittedAccountDeletionAttempt {
 
   SubmittedAccountDeletionAttempt copyWith({
     AccountDeletionAttempt? attempt,
-    bool? submissionOwnedLocally,
   }) => SubmittedAccountDeletionAttempt(
     pubkeyHex: pubkeyHex,
     attempt: attempt ?? this.attempt,
     vanishEventId: vanishEventId,
-    submissionOwnedLocally:
-        submissionOwnedLocally ?? this.submissionOwnedLocally,
   );
 }
 
@@ -141,7 +132,6 @@ class SubmittedAccountDeletionAttemptNotifier
     required String pubkeyHex,
     required AccountDeletionAttempt attempt,
     required String vanishEventId,
-    bool submissionOwnedLocally = false,
   }) async {
     final existing = state;
     if (existing != null && existing.pubkeyHex != pubkeyHex) {
@@ -153,7 +143,6 @@ class SubmittedAccountDeletionAttemptNotifier
       pubkeyHex: pubkeyHex,
       attempt: attempt,
       vanishEventId: vanishEventId,
-      submissionOwnedLocally: submissionOwnedLocally,
     );
     await _persist(receipt);
   }
@@ -170,12 +159,6 @@ class SubmittedAccountDeletionAttemptNotifier
         .setString(_storageKey, jsonEncode(receipt.toJson()));
     if (!saved) throw StateError('Could not persist account deletion receipt');
     state = receipt;
-  }
-
-  void releaseSubmissionOwnership() {
-    final receipt = state;
-    if (receipt == null || !receipt.submissionOwnedLocally) return;
-    state = receipt.copyWith(submissionOwnedLocally: false);
   }
 
   Future<void> clear({required String? expectedPubkeyHex}) async {
@@ -201,13 +184,13 @@ final currentSubmittedAccountDeletionAttemptProvider =
           : null;
     });
 
-/// Keeps a submitted deletion alive independently of the recovery screen.
+/// App-scoped owner for a submitted deletion's receipt polling.
 ///
-/// The selected identity is stable while polling updates the receipt, so the
-/// Cubit is replaced only when the receipt itself changes or is resolved.
+/// Keep-alive so status polling outlives the recovery route. The Cubit is a
+/// UI adapter over this owner: the screen never creates a second submitter.
 final Provider<AccountDeletionRecoveryCubit?>
 submittedAccountDeletionMonitorProvider =
-    Provider.autoDispose<AccountDeletionRecoveryCubit?>((ref) {
+    Provider<AccountDeletionRecoveryCubit?>((ref) {
       final receiptIdentity = ref.watch(
         submittedAccountDeletionAttemptProvider.select(
           (receipt) => receipt == null
@@ -216,11 +199,10 @@ submittedAccountDeletionMonitorProvider =
                   pubkeyHex: receipt.pubkeyHex,
                   attemptId: receipt.attempt.id,
                   vanishEventId: receipt.vanishEventId,
-                  submissionOwnedLocally: receipt.submissionOwnedLocally,
                 ),
         ),
       );
-      if (receiptIdentity == null || receiptIdentity.submissionOwnedLocally) {
+      if (receiptIdentity == null) {
         return null;
       }
 
@@ -262,7 +244,6 @@ submittedAccountDeletionMonitorProvider =
         disposed = true;
         unawaited(cubit.close());
       });
-      unawaited(cubit.resume(receipt.attempt));
       return cubit;
     });
 

@@ -8,9 +8,11 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/owned_divine_username_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/repositories/account_deletion_recovery_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/widgets/delete_account_confirmation.dart';
 import 'package:openvine/widgets/delete_account_dialog.dart';
@@ -108,17 +110,27 @@ Future<void> startAccountDeletionFlow({
         // deletes the Keycast user right after accepting, and a lookup signed
         // through that signer fails, which used to leave the user signed in on
         // the settings screen (#8583).
-        onDeletionSubmitted: (attempt, vanishEventId) => ref
-            .read(submittedAccountDeletionAttemptProvider.notifier)
-            .record(
-              pubkeyHex: pubkey,
-              attempt: attempt,
-              vanishEventId: vanishEventId,
-              submissionOwnedLocally: true,
-            ),
-        onDeletionFlowFinished: ref
-            .read(submittedAccountDeletionAttemptProvider.notifier)
-            .releaseSubmissionOwnership,
+        onDeletionSubmitted: (attempt, vanishEventId) async {
+          await ref
+              .read(submittedAccountDeletionAttemptProvider.notifier)
+              .record(
+                pubkeyHex: pubkey,
+                attempt: attempt,
+                vanishEventId: vanishEventId,
+              );
+          final owner = ref.read(submittedAccountDeletionMonitorProvider);
+          if (owner == null) {
+            throw StateError('Could not start account deletion recovery');
+          }
+          await owner.resume(attempt, signOutWhenProcessing: false);
+          final submittedStatus = owner.state.attempt?.status;
+          if (submittedStatus != AccountDeletionAttemptStatus.processing &&
+              submittedStatus != AccountDeletionAttemptStatus.completed) {
+            throw const AccountDeletionRecoveryException(
+              'Could not submit durable deletion attempt',
+            );
+          }
+        },
       );
       ref.invalidate(currentAccountDeletionAttemptProvider);
     },

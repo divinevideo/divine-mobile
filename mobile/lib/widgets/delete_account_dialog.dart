@@ -9,15 +9,12 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart'
-    show SecureKeyStorageException;
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/repositories/account_deletion_recovery_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/widgets/delete_account_confirmation.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -368,10 +365,8 @@ class _DeletionProgressSheetContent extends StatelessWidget {
 ///    abort with nothing deleted (hard-block). Release is mandatory whenever
 ///    the user owns a name.
 /// 3. Send NIP-62 deletion request (requires working signer)
-/// 4. Submit the deletion to the coordinator, which finalizes the username and
-///    Keycast account; without a username, delete Keycast directly
-/// 5. Sign out and delete local keys
-/// 6. Show success snackbar (router auto-redirects to /welcome)
+/// 4. Record the deletion receipt so the app-scoped owner can submit
+/// 5. Sign out (router auto-redirects; the owner polls until a terminal result)
 ///
 /// If a later step fails after preparation, the user can restore the username.
 /// The server keeps that recovery state across app restarts and reinstalls.
@@ -387,12 +382,10 @@ class _DeletionProgressSheetContent extends StatelessWidget {
 /// [confirmedPubkey] - When set, aborts before any step if the signed-in
 ///   account no longer matches, binding deletion to the confirmed account
 /// [screenName] - Name of the calling screen for logging
-/// [onDeletionSubmitted] - Persists the attempt and vanish event before the
-///   irreversible submit request, then updates it with the coordinator answer.
-///   A lost response is ambiguous, so the caller must keep the user gated from
-///   the receipt rather than returning to normal account use (#8583).
-/// [onDeletionFlowFinished] - Releases the in-process ownership of that receipt
-///   after this flow has finished submitting and cleaning up.
+/// [onDeletionSubmitted] - Persists the attempt and vanish event, then lets the
+///   app-scoped recovery owner submit. A lost response is ambiguous, so the
+///   caller must keep the user gated from the receipt rather than returning to
+///   normal account use (#8583). After this returns, this flow only signs out.
 Future<void> executeAccountDeletion({
   required BuildContext context,
   required AccountDeletionService deletionService,
@@ -403,7 +396,6 @@ Future<void> executeAccountDeletion({
   String screenName = 'AccountDeletion',
   Future<void> Function(AccountDeletionAttempt attempt, String vanishEventId)?
   onDeletionSubmitted,
-  void Function()? onDeletionFlowFinished,
 }) async {
   if (!context.mounted) return;
 
@@ -413,11 +405,8 @@ Future<void> executeAccountDeletion({
 
   // Signing out flips auth state to unauthenticated, which makes the global
   // redirect replace the whole stack with /welcome — tearing down the route
-  // this was called from. Everything needed to report the outcome afterwards
-  // is therefore captured here: the messenger and the view sit above the
-  // Navigator and outlive the redirect, so the confirmation lands on the
-  // destination instead of vanishing with the caller (#6450).
-  final messenger = ScaffoldMessenger.of(context);
+  // this was called from. The view and text direction are captured here so
+  // the screen-reader announcement still lands after that redirect (#6450).
   final view = View.of(context);
   final textDirection = Directionality.of(context);
   // The navigator the sheet is pushed onto, resolved while the caller is
@@ -493,9 +482,6 @@ Future<void> executeAccountDeletion({
 
   // Captured before the first await so the post-sign-out catch can localize
   // without reading BuildContext across an async gap.
-  final keyDeletionWarningText = context.l10n.deleteAccountKeyDeletionWarning;
-  final localDataDeletionFailedText =
-      context.l10n.deleteAccountLocalDataDeletionFailed;
   final accountChangedText = context.l10n.deleteAccountAccountChanged;
   final deletionUnavailableText = context.l10n.deleteAccountDeletionUnavailable;
   final reportBugText = context.l10n.supportReportBug;
@@ -511,9 +497,6 @@ Future<void> executeAccountDeletion({
   final attemptCancelledText = context.l10n.accountDeletionAttemptCancelled;
   final recoveryFailedText = context.l10n.accountDeletionRecoveryFailed;
   final finishingDeletionText = context.l10n.accountDeletionFinishingBody;
-  final deletionSuccessText = context.l10n.deleteAccountSuccess;
-  final deletionSuccessUnverifiedText =
-      context.l10n.deleteAccountSuccessContentUnverified;
 
   AccountDeletionAttempt? deletionAttempt;
   var usernamePrepared = false;
@@ -800,9 +783,18 @@ Future<void> executeAccountDeletion({
         );
         return;
       }
-      AccountDeletionAttempt submitted;
       try {
         await onDeletionSubmitted?.call(attempt, eventId);
+      } on AccountDeletionRecoveryException catch (error) {
+        Log.error(
+          'Could not submit durable deletion attempt',
+          name: screenName,
+          category: LogCategory.auth,
+          error: error,
+        );
+        dismissProgressSheet();
+        showDurableDeletionOutcome(finishingDeletionText, offerCancel: false);
+        return;
       } on Object catch (error) {
         Log.error(
           'Could not persist account deletion receipt',
@@ -816,91 +808,11 @@ Future<void> executeAccountDeletion({
         );
         return;
       }
-      try {
-        submitted = await deletionRecoveryRepository.submit(
-          attemptId: attempt.id,
-          vanishEventId: eventId,
-        );
-        deletionAttempt = submitted;
-        await onDeletionSubmitted?.call(submitted, eventId);
-        if (submitted.status != AccountDeletionAttemptStatus.processing &&
-            submitted.status != AccountDeletionAttemptStatus.completed) {
-          throw AccountDeletionRecoveryException(
-            'Submit returned ${submitted.status.name}',
-          );
-        }
-      } on Object catch (error) {
-        Log.error(
-          'Could not submit durable deletion attempt',
-          name: screenName,
-          category: LogCategory.auth,
-          error: error,
-        );
-        dismissProgressSheet();
-        showDurableDeletionOutcome(finishingDeletionText, offerCancel: false);
-        return;
-      }
 
-      if (submitted.status == AccountDeletionAttemptStatus.processing) {
-        dismissProgressSheet();
-        showDurableDeletionOutcome(finishingDeletionText, offerCancel: false);
-        await authService.signOut();
-        return;
-      }
-
-      // Funnelcake owns Keycast deletion for every submitted attempt, with or
-      // without a username. Mobile must not repeat that terminal operation.
-      if (stopCleanupIfAccountChanged()) return;
-
-      // Sign out, delete local keys, and clear local account data.
-      // Router will automatically redirect to /welcome when auth state
-      // becomes unauthenticated.
-      // signOut may throw SecureKeyStorageException if platform key
-      // deletion failed — the user IS signed out but keys may remain.
-      String? keyDeletionWarning;
-      String? localDataDeletionFailure;
-      try {
-        await authService.signOut(deleteKeys: true, deleteLocalUserData: true);
-      } on SecureKeyStorageException catch (e) {
-        Log.warning(
-          'Key deletion failed during account deletion: $e',
-          name: screenName,
-          category: LogCategory.auth,
-        );
-        keyDeletionWarning = keyDeletionWarningText;
-      } on UserDataCleanupException catch (e) {
-        Log.warning(
-          'Local user data cleanup failed during account deletion: $e',
-          name: screenName,
-          category: LogCategory.auth,
-        );
-        localDataDeletionFailure = localDataDeletionFailedText;
-      }
-
-      // Close loading indicator and show result snackbar. Sign-out has already
-      // redirected to /welcome and taken the calling route with it, so the
-      // outcome is reported through the messenger captured up front — gating
-      // this on `context.mounted` left a completed deletion silent (#6450).
       dismissProgressSheet();
-      // A failed or timed-out relay query may only enumerate cached or partial
-      // content. A capped query or unconfirmed kind-5 batch is incomplete too.
-      // Saying "deletion requests sent" would overstate any of these outcomes.
-      final snackbarText =
-          keyDeletionWarning ??
-          localDataDeletionFailure ??
-          (result.contentQueryFailed || result.contentDeletionIncomplete
-              ? deletionSuccessUnverifiedText
-              : deletionSuccessText);
-      if (messenger.mounted) {
-        messenger.showSnackBar(
-          DivineSnackbarContainer.snackBar(
-            snackbarText,
-            error:
-                keyDeletionWarning != null || localDataDeletionFailure != null,
-          ),
-        );
-      }
-      announceOutcome(snackbarText);
+      showDurableDeletionOutcome(finishingDeletionText, offerCancel: false);
+      await authService.signOut();
+      return;
     } else {
       // Content deletion (NIP-62) failed.
       Log.error(
@@ -917,7 +829,6 @@ Future<void> executeAccountDeletion({
       }
     }
   } finally {
-    onDeletionFlowFinished?.call();
     await cubit.close();
 
     // Ensure the progress sheet is dismissed even if an exception occurred.

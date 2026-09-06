@@ -63,6 +63,7 @@ void main() {
         authService.checkAccountDeletionReadiness,
       ).thenAnswer((_) async => AccountDeletionReadiness.ready);
       when(repository.prepare).thenAnswer((_) async => _recoverable);
+      when(repository.fetchCurrent).thenAnswer((_) async => _processing);
       when(
         () => repository.submit(
           attemptId: any(named: 'attemptId'),
@@ -150,7 +151,8 @@ void main() {
             l10n.deleteAccountDeleteAllContentButton,
           ),
         );
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
 
         final receipt = container.read(
           submittedAccountDeletionAttemptProvider,
@@ -158,7 +160,6 @@ void main() {
         expect(receipt?.pubkeyHex, _pubkeyHex);
         expect(receipt?.attempt, same(_processing));
         expect(receipt?.vanishEventId, 'event-id');
-        expect(receipt?.submissionOwnedLocally, isFalse);
         // The signer is gone the moment the coordinator accepts: the gate must
         // be fed by the record, never by a lookup. Read under real time so a
         // provider that reached the lookup fails here instead of hanging on
@@ -174,6 +175,7 @@ void main() {
         expect(current, same(_processing));
         verifyNever(repository.fetchCurrent);
         verify(authService.signOut).called(1);
+        await container.read(submittedAccountDeletionMonitorProvider)?.close();
       },
     );
 

@@ -77,6 +77,8 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   var _overdueRefreshUsed = false;
   String? _pollBudgetAttemptId;
   DateTime? _pollBudgetStartedAt;
+  var _signOutWhenProcessing = true;
+  Future<void>? _resumeInFlight;
 
   Future<void> load() async {
     final generation = _beginOperation();
@@ -131,7 +133,24 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
   /// user, so the lookup [load] starts with cannot be signed. Polling still
   /// runs from here; a failed poll keeps the known state rather than
   /// replacing it with a lookup failure.
-  Future<void> resume(AccountDeletionAttempt attempt) async {
+  ///
+  /// [signOutWhenProcessing] is true for cold-start recovery. The deletion
+  /// dialog records the receipt, awaits this resume, then signs out itself.
+  Future<void> resume(
+    AccountDeletionAttempt attempt, {
+    bool signOutWhenProcessing = true,
+  }) {
+    _signOutWhenProcessing = signOutWhenProcessing;
+    final inFlight = _resumeInFlight;
+    if (inFlight != null) return inFlight;
+    final started = _resume(attempt);
+    _resumeInFlight = started;
+    return started.whenComplete(() {
+      if (identical(_resumeInFlight, started)) _resumeInFlight = null;
+    });
+  }
+
+  Future<void> _resume(AccountDeletionAttempt attempt) async {
     final generation = _beginOperation();
     if (attempt.status == AccountDeletionAttemptStatus.recoverable &&
         _receiptVanishEventId != null) {
@@ -424,7 +443,11 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
       await _onAttemptUpdated?.call(submitted);
       if (!_isCurrent(generation)) return;
       if (submitted.status == AccountDeletionAttemptStatus.processing) {
-        await _signOutForProcessing(submitted);
+        if (_signOutWhenProcessing) {
+          await _signOutForProcessing(submitted);
+        } else {
+          await _handleAttempt(submitted, generation: generation);
+        }
         return;
       }
       await _handleAttempt(submitted, generation: generation);

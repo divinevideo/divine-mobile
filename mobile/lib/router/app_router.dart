@@ -147,11 +147,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     final after = deletionGateActiveForCurrentAccount(next);
     if (before != after) refreshListenable.refresh();
   });
-  ref.listen(
-    submittedAccountDeletionMonitorProvider,
-    (_, _) {},
-    fireImmediately: true,
-  );
   ref.onDispose(refreshListenable.dispose);
 
   final router = GoRouter(

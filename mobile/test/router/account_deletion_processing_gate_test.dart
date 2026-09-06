@@ -193,8 +193,17 @@ void main() {
     );
 
     testWidgets(
-      'an in-process submission keeps the recovery screen passive',
+      'a recorded receipt shows finishing recovery while the owner submits',
       (tester) async {
+        when(
+          () => deletionRepository.submit(
+            attemptId: _recoverable.id,
+            vanishEventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          ),
+        ).thenAnswer((_) async => _processing);
+        when(
+          deletionRepository.fetchCurrent,
+        ).thenAnswer((_) async => _processing);
         final container = buildContainer();
         await container.read(currentMinorAccountReviewStatusProvider.future);
         await container.read(currentAccountDeletionAttemptProvider.future);
@@ -204,7 +213,6 @@ void main() {
               pubkeyHex: _pubkey,
               attempt: _recoverable,
               vanishEventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-              submissionOwnedLocally: true,
             );
         container.invalidate(currentAccountDeletionAttemptProvider);
         await container.read(currentAccountDeletionAttemptProvider.future);

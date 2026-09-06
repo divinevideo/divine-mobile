@@ -33,11 +33,11 @@ class AccountDeletionRecoveryScreen extends ConsumerWidget {
       submittedAccountDeletionMonitorProvider,
     );
 
-    if (receipt?.submissionOwnedLocally ?? false) {
-      return const _SubmissionInFlightRecoveryView();
-    }
-
     if (receipt != null && submittedMonitor != null) {
+      if (submittedMonitor.state.status ==
+          AccountDeletionRecoveryStatus.initial) {
+        unawaited(submittedMonitor.resume(receipt.attempt));
+      }
       return BlocProvider<AccountDeletionRecoveryCubit>.value(
         value: submittedMonitor,
         child: const AccountDeletionRecoveryView(),
@@ -92,26 +92,6 @@ class AccountDeletionRecoveryScreen extends ConsumerWidget {
       child: const AccountDeletionRecoveryView(),
     );
   }
-}
-
-class _SubmissionInFlightRecoveryView extends StatelessWidget {
-  const _SubmissionInFlightRecoveryView();
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      automaticallyImplyLeading: false,
-      title: Text(context.l10n.accountDeletionRecoveryTitle),
-    ),
-    body: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: _PassiveRecoveryContent(
-          body: context.l10n.accountDeletionFinishingBody,
-        ),
-      ),
-    ),
-  );
 }
 
 class AccountDeletionRecoveryView extends StatelessWidget {
