@@ -1,4 +1,5 @@
 import 'package:divine_ui/src/icon/divine_icon.dart';
+import 'package:divine_ui/src/loading/divine_progress_indicator.dart';
 import 'package:divine_ui/src/theme/vine_theme.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -362,7 +363,7 @@ class _DivineButtonContent extends StatelessWidget {
         if (isLoading)
           SizedBox.square(
             dimension: DivineIcon.scaleSize(context, _iconSize),
-            child: CircularProgressIndicator(
+            child: DivineCircularProgressIndicator(
               strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation<Color>(foregroundColor),
             ),

@@ -125,7 +125,7 @@ class _VideoActionButtonState extends State<VideoActionButton> {
                 if (widget.isLoading)
                   const SizedBox.square(
                     dimension: 24,
-                    child: CircularProgressIndicator(
+                    child: DivineCircularProgressIndicator(
                       strokeWidth: 2,
                       color: VineTheme.whiteText,
                     ),

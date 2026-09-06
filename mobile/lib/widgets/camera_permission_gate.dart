@@ -228,7 +228,7 @@ class _LoadingIndicator extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Center(
-            child: CircularProgressIndicator(
+            child: DivineCircularProgressIndicator(
               color: context.vineColors.accentPositive,
             ),
           ),

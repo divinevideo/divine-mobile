@@ -85,7 +85,7 @@ class RequestPreviewView extends ConsumerWidget {
     // database does not have, reaching this same layout without ever failing.
     if (status == RequestPreviewStatus.loading) {
       return _UnresolvedRequestScaffold(
-        child: CircularProgressIndicator(
+        child: DivineCircularProgressIndicator(
           color: context.vineColors.accentPositive,
         ),
       );

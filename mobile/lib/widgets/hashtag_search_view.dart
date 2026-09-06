@@ -97,7 +97,7 @@ class _HashtagSearchLoadingState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: CircularProgressIndicator(
+      child: DivineCircularProgressIndicator(
         color: context.vineColors.accentPositive,
       ),
     );
@@ -178,7 +178,7 @@ class _HashtagSearchResultsListState extends State<_HashtagSearchResultsList>
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Center(
-                child: CircularProgressIndicator(
+                child: DivineCircularProgressIndicator(
                   color: context.vineColors.accentPositive,
                 ),
               ),

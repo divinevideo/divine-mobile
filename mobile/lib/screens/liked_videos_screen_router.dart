@@ -186,7 +186,9 @@ class _LikedVideosFeedViewState extends ConsumerState<_LikedVideosFeedView> {
           return Scaffold(
             backgroundColor: context.vineColors.background,
             body: const Center(
-              child: CircularProgressIndicator(color: VineTheme.vineGreen),
+              child: DivineCircularProgressIndicator(
+                color: VineTheme.vineGreen,
+              ),
             ),
           );
         }

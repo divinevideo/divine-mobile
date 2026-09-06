@@ -9,6 +9,25 @@ import 'package:openvine/widgets/audio_waveform.dart';
 
 void main() {
   group('AudioWaveform', () {
+    testWidgets('stops its playback loop when animations are disabled', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MediaQuery(
+            data: MediaQueryData(disableAnimations: true),
+            child: Scaffold(
+              body: AudioWaveform(isPlaying: true),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.binding.transientCallbackCount, 0);
+    });
+
     testWidgets('renders with default parameters', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(

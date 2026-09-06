@@ -123,7 +123,7 @@ class _NetworkImage extends StatelessWidget {
       memCacheWidth: cacheWidth,
       memCacheHeight: cacheHeight,
       placeholder: (context, url) =>
-          const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          const Center(child: DivineCircularProgressIndicator(strokeWidth: 2)),
       errorWidget: (_, _, _) => const _ErrorImage(),
     );
   }

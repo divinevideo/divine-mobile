@@ -30,6 +30,7 @@ void main() {
       List<editor.LayerAnimation> initialEnter = const [],
       List<editor.LayerAnimation> initialLeave = const [],
       double viewHeight = 1600,
+      bool disableAnimations = false,
       ThemeData? theme,
     }) async {
       result = null;
@@ -43,6 +44,12 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(
         MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(disableAnimations: disableAnimations),
+            child: child!,
+          ),
           theme: theme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -74,6 +81,15 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
     }
+
+    testWidgets('stops preview loops when animations are disabled', (
+      tester,
+    ) async {
+      await openPicker(tester, disableAnimations: true);
+
+      await tester.pumpAndSettle();
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
 
     testWidgets('lists every animation type', (tester) async {
       await openPicker(tester);

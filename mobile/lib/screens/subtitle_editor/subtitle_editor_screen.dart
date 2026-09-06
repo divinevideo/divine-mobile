@@ -105,7 +105,7 @@ class _SubtitleEditorScreenState extends ConsumerState<SubtitleEditorScreen>
       return Scaffold(
         backgroundColor: context.vineColors.background,
         body: const Center(
-          child: CircularProgressIndicator(color: VineTheme.vineGreen),
+          child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
         ),
       );
     }
@@ -213,7 +213,7 @@ class _Loading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      const Center(child: CircularProgressIndicator());
+      const Center(child: DivineCircularProgressIndicator());
 }
 
 /// Explains why there is nothing to edit, and offers a way forward.

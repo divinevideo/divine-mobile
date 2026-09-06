@@ -261,7 +261,7 @@ class _ActionCircle extends StatelessWidget {
                       // send button in share_sheet_message_input.dart.
                       ? SizedBox.square(
                           dimension: _iconSize,
-                          child: CircularProgressIndicator(
+                          child: DivineCircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
                               iconColor,

@@ -62,7 +62,22 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: _loopMs),
-    )..repeat();
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncAnimation();
+  }
+
+  void _syncAnimation() {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+      _controller.value = 0;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
   }
 
   @override
@@ -424,15 +439,13 @@ class _AnimationRow extends StatelessWidget {
   final CaptionAnimationStyle selected;
   final ValueChanged<CaptionAnimationStyle> onSelected;
 
-  static String _label(
-    AppLocalizations l10n,
-    CaptionAnimationStyle style,
-  ) => switch (style) {
-    CaptionAnimationStyle.none => l10n.videoEditorCaptionsAnimationNone,
-    CaptionAnimationStyle.fade => l10n.videoEditorCaptionsAnimationFade,
-    CaptionAnimationStyle.pop => l10n.videoEditorCaptionsAnimationPop,
-    CaptionAnimationStyle.spring => l10n.videoEditorCaptionsAnimationSpring,
-  };
+  static String _label(AppLocalizations l10n, CaptionAnimationStyle style) =>
+      switch (style) {
+        CaptionAnimationStyle.none => l10n.videoEditorCaptionsAnimationNone,
+        CaptionAnimationStyle.fade => l10n.videoEditorCaptionsAnimationFade,
+        CaptionAnimationStyle.pop => l10n.videoEditorCaptionsAnimationPop,
+        CaptionAnimationStyle.spring => l10n.videoEditorCaptionsAnimationSpring,
+      };
 
   @override
   Widget build(BuildContext context) {

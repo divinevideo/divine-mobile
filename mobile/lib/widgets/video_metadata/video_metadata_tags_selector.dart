@@ -311,7 +311,7 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
             return AnimatedOpacity(
               opacity: isLoading ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 200),
-              child: LinearProgressIndicator(
+              child: DivineLinearProgressIndicator(
                 backgroundColor: Colors.transparent,
                 color: context.vineColors.accentPositive,
                 minHeight: 2,

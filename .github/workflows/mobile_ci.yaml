@@ -410,6 +410,12 @@ jobs:
           # constructor/static-helper forms, so non-password fields and sheets
           # without completion actions do not create noise.
           bash scripts/check_divine_ui_semantic_label_defaults.sh
+      - name: 🌀 Verify progress indicators honor reduced motion
+        run: |
+          # Issue #8681. Raw indeterminate Material indicators repeat forever
+          # even when the platform disables animations, which prevents
+          # XCUITest hierarchy queries from reaching quiescence.
+          bash scripts/check_indeterminate_progress_indicator.sh
       - name: 🔢 Verify countable ARB keys carry ICU plurals (l10n ratchet)
         run: |
           # Issue #3633. Freezes the set of app_en.arb keys that interpolate a

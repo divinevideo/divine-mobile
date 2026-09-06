@@ -201,7 +201,7 @@ class _BrandedLoadingIndicatorState extends State<BrandedLoadingIndicator>
                 width: widget.size,
                 height: widget.size,
                 child: Center(
-                  child: CircularProgressIndicator(
+                  child: DivineCircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(
                       context.vineColors.onSurfaceMuted,

@@ -883,7 +883,7 @@ String buildRoute(RouteContext context) {
 ///       // Show home feed videos
 ///     }
 ///   },
-///   loading: () => CircularProgressIndicator(),
+///   loading: () => DivineCircularProgressIndicator(),
 ///   error: (e, s) => ErrorWidget(e),
 /// );
 /// ```

@@ -192,7 +192,7 @@ class _CloseAppAffordanceState extends State<_CloseAppAffordance> {
         // better off than one held in a session that cannot recover.
         final settled = snapshot.connectionState == ConnectionState.done;
         if (!settled) {
-          return CircularProgressIndicator(
+          return DivineCircularProgressIndicator(
             semanticsLabel: context.l10n.commonLoading,
           );
         }

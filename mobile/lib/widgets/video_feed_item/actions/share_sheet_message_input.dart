@@ -87,7 +87,7 @@ class _SendButton extends StatelessWidget {
         child: isSending
             ? const Padding(
                 padding: EdgeInsets.all(10),
-                child: CircularProgressIndicator(
+                child: DivineCircularProgressIndicator(
                   strokeWidth: 2,
                   color: VineTheme.onPrimary,
                 ),

@@ -196,7 +196,7 @@ class _OwnVideoActionTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
           ),
           child: isBusy
-              ? const CircularProgressIndicator(strokeWidth: 2)
+              ? const DivineCircularProgressIndicator(strokeWidth: 2)
               : DivineIcon(icon: icon, color: actionColor, size: 20),
         ),
         title: Text(

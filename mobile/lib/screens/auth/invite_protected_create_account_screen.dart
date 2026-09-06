@@ -91,7 +91,7 @@ class _InviteGuardLoadingPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: context.vineColors.background,
       body: Center(
-        child: CircularProgressIndicator(
+        child: DivineCircularProgressIndicator(
           color: context.vineColors.accentPositive,
         ),
       ),

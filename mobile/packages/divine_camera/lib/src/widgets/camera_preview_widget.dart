@@ -199,7 +199,7 @@ class _CameraPreviewWidgetState extends State<CameraPreviewWidget> {
           const ColoredBox(
             color: Color(0xFF000000),
             child: Center(
-              child: CircularProgressIndicator(color: Color(0xFFFFFFFF)),
+              child: _CameraLoadingIndicator(),
             ),
           );
     }
@@ -243,6 +243,18 @@ class _CameraPreviewWidgetState extends State<CameraPreviewWidget> {
           ],
         );
       },
+    );
+  }
+}
+
+class _CameraLoadingIndicator extends StatelessWidget {
+  const _CameraLoadingIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return CircularProgressIndicator(
+      value: MediaQuery.disableAnimationsOf(context) ? 1 : null,
+      color: const Color(0xFFFFFFFF),
     );
   }
 }

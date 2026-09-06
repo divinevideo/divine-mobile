@@ -406,7 +406,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(color: VineTheme.vineGreen),
+            const DivineCircularProgressIndicator(color: VineTheme.vineGreen),
             const SizedBox(height: 16),
             Text(
               context.l10n.discoverListsLoading,
@@ -516,7 +516,9 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen>
             return const Padding(
               padding: EdgeInsets.all(16),
               child: Center(
-                child: CircularProgressIndicator(color: VineTheme.vineGreen),
+                child: DivineCircularProgressIndicator(
+                  color: VineTheme.vineGreen,
+                ),
               ),
             );
           }

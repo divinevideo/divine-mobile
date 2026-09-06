@@ -63,7 +63,7 @@ class DraftsTab extends ConsumerWidget {
       builder: (context, state) {
         return switch (state) {
           DraftsLibraryInitial() || DraftsLibraryLoading() => Center(
-            child: CircularProgressIndicator(
+            child: DivineCircularProgressIndicator(
               color: context.vineColors.accentPositive,
             ),
           ),
