@@ -6474,5 +6474,6 @@
   "followUserIndexedSemanticLabel": "Ikut pengguna {index}",
   "unfollowUserIndexedSemanticLabel": "Nyahikut pengguna {index}",
   "supporterTierMonthlyLabel": "{title} — {price} / bulan",
-  "dmReactionAddBlockedByRemoval": "Selesaikan pengalihan keluar reaksi terdahulu sebelum menambah reaksi lain."
+  "dmReactionAddBlockedByRemoval": "Selesaikan pengalihan keluar reaksi terdahulu sebelum menambah reaksi lain.",
+  "updateGentleBanner": "Kemas kini baharu sudah tiba. Lihat sekarang →", "updateModerateTitle": "Terdapat kemas kini sejak semakan terakhir anda", "updateUrgentTitle": "Anda kehilangan pembaikan penting", "updateNotNow": "Bukan sekarang", "updateAction": "Kemas kini", "updateNewIn": "Baharu dalam {version}:", "settingsUpdateAvailable": "Kemas kini tersedia"
 }

@@ -4689,5 +4689,6 @@
     "followUserIndexedSemanticLabel": "Urmărește utilizatorul {index}",
     "unfollowUserIndexedSemanticLabel": "Nu mai urmări utilizatorul {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / lună",
-    "dmReactionAddBlockedByRemoval": "Finalizează eliminarea reacției anterioare înainte de a adăuga alta."
+    "dmReactionAddBlockedByRemoval": "Finalizează eliminarea reacției anterioare înainte de a adăuga alta.",
+    "updateGentleBanner": "A apărut o actualizare nouă. Descoper-o →", "updateModerateTitle": "Există o actualizare de la ultima verificare", "updateUrgentTitle": "Îți lipsesc remedieri importante", "updateNotNow": "Nu acum", "updateAction": "Actualizează", "updateNewIn": "Noutăți în {version}:", "settingsUpdateAvailable": "Actualizare disponibilă"
 }

@@ -12013,4 +12013,27 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner => 'صدر تحديث جديد. ألقِ نظرة عليه ←';
+
+  @override
+  String get updateModerateTitle => 'صدر تحديث منذ آخر مرة تحققت فيها';
+
+  @override
+  String get updateUrgentTitle => 'تفوتك إصلاحات مهمة';
+
+  @override
+  String get updateNotNow => 'ليس الآن';
+
+  @override
+  String get updateAction => 'تحديث';
+
+  @override
+  String updateNewIn(String version) {
+    return 'الجديد في $version:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'يتوفر تحديث';
 }

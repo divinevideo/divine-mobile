@@ -4689,5 +4689,6 @@
     "followUserIndexedSemanticLabel": "متابعة المستخدم {index}",
     "unfollowUserIndexedSemanticLabel": "إلغاء متابعة المستخدم {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / شهريًا",
-    "dmReactionAddBlockedByRemoval": "أكمل إزالة تفاعلك السابق قبل إضافة تفاعل آخر."
+    "dmReactionAddBlockedByRemoval": "أكمل إزالة تفاعلك السابق قبل إضافة تفاعل آخر.",
+    "updateGentleBanner": "صدر تحديث جديد. ألقِ نظرة عليه ←", "updateModerateTitle": "صدر تحديث منذ آخر مرة تحققت فيها", "updateUrgentTitle": "تفوتك إصلاحات مهمة", "updateNotNow": "ليس الآن", "updateAction": "تحديث", "updateNewIn": "الجديد في {version}:", "settingsUpdateAvailable": "يتوفر تحديث"
 }

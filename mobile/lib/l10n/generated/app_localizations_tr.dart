@@ -12023,4 +12023,28 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner => 'Yeni bir güncelleme çıktı. Göz atın →';
+
+  @override
+  String get updateModerateTitle =>
+      'Son kontrolünüzden bu yana bir güncelleme var';
+
+  @override
+  String get updateUrgentTitle => 'Önemli düzeltmeleri kaçırıyorsunuz';
+
+  @override
+  String get updateNotNow => 'Şimdi değil';
+
+  @override
+  String get updateAction => 'Güncelle';
+
+  @override
+  String updateNewIn(String version) {
+    return '$version sürümündeki yenilikler:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'Güncelleme mevcut';
 }

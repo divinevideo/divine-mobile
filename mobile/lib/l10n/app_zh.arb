@@ -6474,5 +6474,6 @@
   "followUserIndexedSemanticLabel": "关注用户 {index}",
   "unfollowUserIndexedSemanticLabel": "取消关注用户 {index}",
   "supporterTierMonthlyLabel": "{title} — {price} / 月",
-  "dmReactionAddBlockedByRemoval": "请先完成移除之前的回应，再添加其他回应。"
+  "dmReactionAddBlockedByRemoval": "请先完成移除之前的回应，再添加其他回应。",
+  "updateGentleBanner": "新版本刚刚上线。去看看 →", "updateModerateTitle": "自上次检查后已有新版本", "updateUrgentTitle": "你缺少重要修复", "updateNotNow": "暂不", "updateAction": "更新", "updateNewIn": "{version} 新增内容：", "settingsUpdateAvailable": "有可用更新"
 }

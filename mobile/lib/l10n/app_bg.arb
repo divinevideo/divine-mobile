@@ -4827,5 +4827,6 @@
     "followUserIndexedSemanticLabel": "Последвай потребителя {index}",
     "unfollowUserIndexedSemanticLabel": "Спри да следваш потребителя {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / месец",
-    "dmReactionAddBlockedByRemoval": "Завършете премахването на предишната си реакция, преди да добавите друга."
+    "dmReactionAddBlockedByRemoval": "Завършете премахването на предишната си реакция, преди да добавите друга.",
+    "updateGentleBanner": "Излезе нова актуализация. Вижте я →", "updateModerateTitle": "Има актуализация от последната ви проверка", "updateUrgentTitle": "Пропускате важни поправки", "updateNotNow": "Не сега", "updateAction": "Актуализиране", "updateNewIn": "Ново във версия {version}:", "settingsUpdateAvailable": "Налична е актуализация"
 }

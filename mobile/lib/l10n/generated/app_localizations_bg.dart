@@ -12217,4 +12217,28 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner => 'Излезе нова актуализация. Вижте я →';
+
+  @override
+  String get updateModerateTitle =>
+      'Има актуализация от последната ви проверка';
+
+  @override
+  String get updateUrgentTitle => 'Пропускате важни поправки';
+
+  @override
+  String get updateNotNow => 'Не сега';
+
+  @override
+  String get updateAction => 'Актуализиране';
+
+  @override
+  String updateNewIn(String version) {
+    return 'Ново във версия $version:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'Налична е актуализация';
 }

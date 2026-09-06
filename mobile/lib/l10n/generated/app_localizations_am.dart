@@ -11781,4 +11781,27 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner => 'አዲስ ዝማኔ ወጥቷል። ይመልከቱት →';
+
+  @override
+  String get updateModerateTitle => 'ካለፈው ጊዜ ጀምሮ አዲስ ዝማኔ አለ';
+
+  @override
+  String get updateUrgentTitle => 'አስፈላጊ ማስተካከያዎች እያመለጡዎት ነው';
+
+  @override
+  String get updateNotNow => 'አሁን አይደለም';
+
+  @override
+  String get updateAction => 'አዘምን';
+
+  @override
+  String updateNewIn(String version) {
+    return 'በ$version አዲስ፦';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'ዝማኔ አለ';
 }

@@ -11510,4 +11510,27 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner => '새 업데이트가 나왔어요. 확인해 보세요 →';
+
+  @override
+  String get updateModerateTitle => '마지막 확인 이후 업데이트가 나왔습니다';
+
+  @override
+  String get updateUrgentTitle => '중요한 수정 사항이 빠져 있습니다';
+
+  @override
+  String get updateNotNow => '나중에';
+
+  @override
+  String get updateAction => '업데이트';
+
+  @override
+  String updateNewIn(String version) {
+    return '$version의 새로운 기능:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => '업데이트 가능';
 }

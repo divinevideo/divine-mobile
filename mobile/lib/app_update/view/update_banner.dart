@@ -3,9 +3,10 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/app_update/app_update.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// A slim dismissible banner shown at the bottom of the home feed
+/// A slim dismissible banner shown above the bottom navigation
 /// when a gentle update is available.
 class UpdateBanner extends StatelessWidget {
   /// Creates an [UpdateBanner].
@@ -49,7 +50,7 @@ class _BannerContent extends StatelessWidget {
             child: GestureDetector(
               onTap: () => _launchUpdate(downloadUrl),
               child: Text(
-                UpdateCopy.gentle,
+                context.l10n.updateGentleBanner,
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium?.copyWith(color: VineTheme.vineGreen),

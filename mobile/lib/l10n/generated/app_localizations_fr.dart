@@ -12274,4 +12274,29 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner =>
+      'Une nouvelle mise à jour vient de sortir. Découvrez-la →';
+
+  @override
+  String get updateModerateTitle =>
+      'Une mise à jour est disponible depuis votre dernière visite';
+
+  @override
+  String get updateUrgentTitle => 'Il vous manque des correctifs importants';
+
+  @override
+  String get updateNotNow => 'Pas maintenant';
+
+  @override
+  String get updateAction => 'Mettre à jour';
+
+  @override
+  String updateNewIn(String version) {
+    return 'Nouveautés de la version $version :';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'Mise à jour disponible';
 }

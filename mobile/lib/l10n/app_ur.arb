@@ -6474,5 +6474,6 @@
   "followUserIndexedSemanticLabel": "صارف کو فالو کریں {index}",
   "unfollowUserIndexedSemanticLabel": "صارف کو ان فالو کریں {index}",
   "supporterTierMonthlyLabel": "{title} — {price} / ماہ",
-  "dmReactionAddBlockedByRemoval": "کوئی دوسرا ردعمل شامل کرنے سے پہلے پچھلا ردعمل ہٹانے کا عمل مکمل کریں۔"
+  "dmReactionAddBlockedByRemoval": "کوئی دوسرا ردعمل شامل کرنے سے پہلے پچھلا ردعمل ہٹانے کا عمل مکمل کریں۔",
+  "updateGentleBanner": "ایک نئی اپ ڈیٹ آ گئی ہے۔ دیکھیں ←", "updateModerateTitle": "آپ کے آخری بار چیک کرنے کے بعد ایک اپ ڈیٹ آئی ہے", "updateUrgentTitle": "آپ اہم اصلاحات سے محروم ہیں", "updateNotNow": "ابھی نہیں", "updateAction": "اپ ڈیٹ کریں", "updateNewIn": "{version} میں نیا:", "settingsUpdateAvailable": "اپ ڈیٹ دستیاب ہے"
 }

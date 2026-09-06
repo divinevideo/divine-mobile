@@ -1,11 +1,14 @@
 // ABOUTME: Widget tests for the shell app bar / bottom nav composition
 // ABOUTME: Previously only reachable by booting the whole app (#3337)
 
+import 'package:app_update_repository/app_update_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:openvine/app_update/app_update.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
@@ -22,20 +25,33 @@ class _MockDmUnreadCountCubit extends MockCubit<int>
 class _MockNotificationBadgeCubit extends MockCubit<int>
     implements NotificationBadgeCubit {}
 
+class _MockAppUpdateBloc extends MockBloc<AppUpdateEvent, AppUpdateState>
+    implements AppUpdateBloc {}
+
 void main() {
   group(ShellChrome, () {
     late MockAuthService mockAuth;
     late _MockDmUnreadCountCubit dmUnreadCubit;
     late _MockNotificationBadgeCubit notifBadgeCubit;
+    late _MockAppUpdateBloc appUpdateBloc;
     late HomeFeedRetapCubit retapCubit;
 
     setUp(() {
       mockAuth = createMockAuthService();
       dmUnreadCubit = _MockDmUnreadCountCubit();
       notifBadgeCubit = _MockNotificationBadgeCubit();
+      appUpdateBloc = _MockAppUpdateBloc();
       retapCubit = HomeFeedRetapCubit();
       whenListen(dmUnreadCubit, const Stream<int>.empty(), initialState: 0);
       whenListen(notifBadgeCubit, const Stream<int>.empty(), initialState: 0);
+      when(() => appUpdateBloc.state).thenReturn(
+        const AppUpdateState(
+          status: AppUpdateStatus.resolved,
+          urgency: UpdateUrgency.gentle,
+          latestVersion: '1.0.21',
+          downloadUrl: DownloadUrls.appStore,
+        ),
+      );
     });
 
     tearDown(() => retapCubit.close());
@@ -47,6 +63,7 @@ void main() {
       RouteContext? routeContext,
       bool showBackButton = false,
       VoidCallback? onBackPressed,
+      int currentIndex = 1,
     }) async {
       await tester.pumpWidget(
         MultiBlocProvider(
@@ -54,6 +71,7 @@ void main() {
             BlocProvider<DmUnreadCountCubit>.value(value: dmUnreadCubit),
             BlocProvider<NotificationBadgeCubit>.value(value: notifBadgeCubit),
             BlocProvider<HomeFeedRetapCubit>.value(value: retapCubit),
+            BlocProvider<AppUpdateBloc>.value(value: appUpdateBloc),
           ],
           child: testProviderScope(
             mockAuthService: mockAuth,
@@ -61,7 +79,7 @@ void main() {
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: ShellChrome(
-                currentIndex: 1,
+                currentIndex: currentIndex,
                 title: title,
                 routeContext: routeContext,
                 suppressAppBar: suppressAppBar,
@@ -105,6 +123,19 @@ void main() {
         await pumpChrome(tester, suppressAppBar: true);
 
         expect(find.byType(VineBottomNav), findsOneWidget);
+      });
+
+      testWidgets('shows an available update on every shell tab', (
+        tester,
+      ) async {
+        for (var index = 0; index < 4; index++) {
+          await pumpChrome(tester, suppressAppBar: true, currentIndex: index);
+
+          expect(
+            find.text('A fresh update just dropped. Check it out →'),
+            findsOneWidget,
+          );
+        }
       });
 
       testWidgets('hides the back button when the route does not want one', (

@@ -3,6 +3,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/app_update/app_update.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -139,13 +140,12 @@ class _UpdateDialog extends StatelessWidget {
       backgroundColor: context.vineColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(
-        isUrgent ? UpdateCopy.urgentTitle : UpdateCopy.moderateTitle,
-        style:
-            Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(
-              color: context.vineColors.primaryText,
-            ),
+        isUrgent
+            ? context.l10n.updateUrgentTitle
+            : context.l10n.updateModerateTitle,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: context.vineColors.primaryText,
+        ),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -153,7 +153,7 @@ class _UpdateDialog extends StatelessWidget {
         children: [
           if (highlights.isNotEmpty) ...[
             Text(
-              UpdateCopy.newIn(latestVersion),
+              context.l10n.updateNewIn(latestVersion),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: context.vineColors.mutedText.withValues(alpha: 0.7),
               ),
@@ -190,7 +190,7 @@ class _UpdateDialog extends StatelessWidget {
             Navigator.of(context).pop();
           },
           child: Text(
-            UpdateCopy.notNow,
+            context.l10n.updateNotNow,
             style: TextStyle(
               color: context.vineColors.mutedText.withValues(alpha: 0.6),
             ),
@@ -204,7 +204,7 @@ class _UpdateDialog extends StatelessWidget {
             }
           },
           style: FilledButton.styleFrom(backgroundColor: VineTheme.vineGreen),
-          child: const Text(UpdateCopy.update),
+          child: Text(context.l10n.updateAction),
         ),
       ],
     );

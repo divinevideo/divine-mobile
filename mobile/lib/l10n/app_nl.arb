@@ -4689,5 +4689,6 @@
     "followUserIndexedSemanticLabel": "Gebruiker volgen {index}",
     "unfollowUserIndexedSemanticLabel": "Gebruiker ontvolgen {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / maand",
-    "dmReactionAddBlockedByRemoval": "Voltooi eerst het verwijderen van je vorige reactie voordat je een andere toevoegt."
+    "dmReactionAddBlockedByRemoval": "Voltooi eerst het verwijderen van je vorige reactie voordat je een andere toevoegt.",
+    "updateGentleBanner": "Er is een nieuwe update. Bekijk hem →", "updateModerateTitle": "Er is een update sinds je laatste controle", "updateUrgentTitle": "Je mist belangrijke oplossingen", "updateNotNow": "Niet nu", "updateAction": "Bijwerken", "updateNewIn": "Nieuw in {version}:", "settingsUpdateAvailable": "Update beschikbaar"
 }

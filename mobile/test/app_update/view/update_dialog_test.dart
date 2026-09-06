@@ -72,10 +72,13 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
-      expect(find.text(UpdateCopy.moderateTitle), findsOneWidget);
+      expect(
+        find.text("There's been an update since you last checked"),
+        findsOneWidget,
+      );
       expect(find.text('New feature'), findsOneWidget);
-      expect(find.text(UpdateCopy.update), findsOneWidget);
-      expect(find.text(UpdateCopy.notNow), findsOneWidget);
+      expect(find.text('Update'), findsOneWidget);
+      expect(find.text('Not now'), findsOneWidget);
     });
 
     testWidgets('shows urgent copy when urgency is urgent', (tester) async {
@@ -96,7 +99,7 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
-      expect(find.text(UpdateCopy.urgentTitle), findsOneWidget);
+      expect(find.text("You're missing important fixes"), findsOneWidget);
     });
 
     testWidgets('Not now button dispatches dismiss', (tester) async {
@@ -115,7 +118,7 @@ void main() {
 
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
-      await tester.tap(find.text(UpdateCopy.notNow));
+      await tester.tap(find.text('Not now'));
 
       verify(() => bloc.add(const AppUpdateDismissed())).called(1);
     });
@@ -142,13 +145,19 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text(UpdateCopy.moderateTitle), findsNothing);
+      expect(
+        find.text("There's been an update since you last checked"),
+        findsNothing,
+      );
 
       // The gate opens and the app — with it, the root Navigator — mounts.
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
-      expect(find.text(UpdateCopy.moderateTitle), findsOneWidget);
+      expect(
+        find.text("There's been an update since you last checked"),
+        findsOneWidget,
+      );
     });
 
     testWidgets('stops waiting when no Navigator ever arrives', (tester) async {
@@ -180,7 +189,10 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
-      expect(find.text(UpdateCopy.moderateTitle), findsNothing);
+      expect(
+        find.text("There's been an update since you last checked"),
+        findsNothing,
+      );
     });
   });
 }

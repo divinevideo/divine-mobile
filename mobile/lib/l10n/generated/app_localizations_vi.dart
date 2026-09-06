@@ -12045,4 +12045,28 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get accountStatusRetry => 'Try again';
+
+  @override
+  String get updateGentleBanner => 'Vừa có bản cập nhật mới. Xem ngay →';
+
+  @override
+  String get updateModerateTitle =>
+      'Đã có bản cập nhật kể từ lần cuối bạn kiểm tra';
+
+  @override
+  String get updateUrgentTitle => 'Bạn đang thiếu các bản sửa lỗi quan trọng';
+
+  @override
+  String get updateNotNow => 'Để sau';
+
+  @override
+  String get updateAction => 'Cập nhật';
+
+  @override
+  String updateNewIn(String version) {
+    return 'Điểm mới trong $version:';
+  }
+
+  @override
+  String get settingsUpdateAvailable => 'Có bản cập nhật';
 }

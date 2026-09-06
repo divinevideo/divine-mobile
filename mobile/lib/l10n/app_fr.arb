@@ -4689,5 +4689,6 @@
     "followUserIndexedSemanticLabel": "Suivre l'utilisateur {index}",
     "unfollowUserIndexedSemanticLabel": "Ne plus suivre l'utilisateur {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / mois",
-    "dmReactionAddBlockedByRemoval": "Terminez de supprimer votre réaction précédente avant d’en ajouter une autre."
+    "dmReactionAddBlockedByRemoval": "Terminez de supprimer votre réaction précédente avant d’en ajouter une autre.",
+    "updateGentleBanner": "Une nouvelle mise à jour vient de sortir. Découvrez-la →", "updateModerateTitle": "Une mise à jour est disponible depuis votre dernière visite", "updateUrgentTitle": "Il vous manque des correctifs importants", "updateNotNow": "Pas maintenant", "updateAction": "Mettre à jour", "updateNewIn": "Nouveautés de la version {version} :", "settingsUpdateAvailable": "Mise à jour disponible"
 }

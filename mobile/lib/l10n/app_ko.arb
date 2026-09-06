@@ -4227,5 +4227,6 @@
     "followUserIndexedSemanticLabel": "사용자 팔로우 {index}",
     "unfollowUserIndexedSemanticLabel": "사용자 팔로우 취소 {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / 월",
-    "dmReactionAddBlockedByRemoval": "다른 반응을 추가하기 전에 이전 반응 삭제를 완료하세요."
+    "dmReactionAddBlockedByRemoval": "다른 반응을 추가하기 전에 이전 반응 삭제를 완료하세요.",
+    "updateGentleBanner": "새 업데이트가 나왔어요. 확인해 보세요 →", "updateModerateTitle": "마지막 확인 이후 업데이트가 나왔습니다", "updateUrgentTitle": "중요한 수정 사항이 빠져 있습니다", "updateNotNow": "나중에", "updateAction": "업데이트", "updateNewIn": "{version}의 새로운 기능:", "settingsUpdateAvailable": "업데이트 가능"
 }

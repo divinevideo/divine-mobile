@@ -4689,5 +4689,6 @@
     "followUserIndexedSemanticLabel": "Kullanıcıyı takip et {index}",
     "unfollowUserIndexedSemanticLabel": "Kullanıcıyı takipten çık {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / ay",
-    "dmReactionAddBlockedByRemoval": "Başka bir tepki eklemeden önce önceki tepkinizi kaldırmayı tamamlayın."
+    "dmReactionAddBlockedByRemoval": "Başka bir tepki eklemeden önce önceki tepkinizi kaldırmayı tamamlayın.",
+    "updateGentleBanner": "Yeni bir güncelleme çıktı. Göz atın →", "updateModerateTitle": "Son kontrolünüzden bu yana bir güncelleme var", "updateUrgentTitle": "Önemli düzeltmeleri kaçırıyorsunuz", "updateNotNow": "Şimdi değil", "updateAction": "Güncelle", "updateNewIn": "{version} sürümündeki yenilikler:", "settingsUpdateAvailable": "Güncelleme mevcut"
 }

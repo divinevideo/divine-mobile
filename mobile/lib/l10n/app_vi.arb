@@ -6474,5 +6474,6 @@
   "followUserIndexedSemanticLabel": "Theo dõi người dùng {index}",
   "unfollowUserIndexedSemanticLabel": "Bỏ theo dõi người dùng {index}",
   "supporterTierMonthlyLabel": "{title} — {price} / tháng",
-  "dmReactionAddBlockedByRemoval": "Hãy hoàn tất việc xóa cảm xúc trước đó trước khi thêm cảm xúc khác."
+  "dmReactionAddBlockedByRemoval": "Hãy hoàn tất việc xóa cảm xúc trước đó trước khi thêm cảm xúc khác.",
+  "updateGentleBanner": "Vừa có bản cập nhật mới. Xem ngay →", "updateModerateTitle": "Đã có bản cập nhật kể từ lần cuối bạn kiểm tra", "updateUrgentTitle": "Bạn đang thiếu các bản sửa lỗi quan trọng", "updateNotNow": "Để sau", "updateAction": "Cập nhật", "updateNewIn": "Điểm mới trong {version}:", "settingsUpdateAvailable": "Có bản cập nhật"
 }

@@ -4689,5 +4689,6 @@
     "followUserIndexedSemanticLabel": "ユーザーをフォロー {index}",
     "unfollowUserIndexedSemanticLabel": "ユーザーのフォローを解除 {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / 月",
-    "dmReactionAddBlockedByRemoval": "別のリアクションを追加する前に、前のリアクションの削除を完了してください。"
+    "dmReactionAddBlockedByRemoval": "別のリアクションを追加する前に、前のリアクションの削除を完了してください。",
+    "updateGentleBanner": "新しいアップデートが公開されました。チェックする →", "updateModerateTitle": "前回の確認後にアップデートが公開されました", "updateUrgentTitle": "重要な修正が適用されていません", "updateNotNow": "後で", "updateAction": "アップデート", "updateNewIn": "{version} の新機能:", "settingsUpdateAvailable": "アップデートがあります"
 }

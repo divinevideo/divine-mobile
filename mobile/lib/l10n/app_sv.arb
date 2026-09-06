@@ -4689,5 +4689,6 @@
     "followUserIndexedSemanticLabel": "Följ användare {index}",
     "unfollowUserIndexedSemanticLabel": "Sluta följa användare {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / månad",
-    "dmReactionAddBlockedByRemoval": "Slutför borttagningen av din tidigare reaktion innan du lägger till en ny."
+    "dmReactionAddBlockedByRemoval": "Slutför borttagningen av din tidigare reaktion innan du lägger till en ny.",
+    "updateGentleBanner": "En ny uppdatering har kommit. Kolla in den →", "updateModerateTitle": "Det finns en uppdatering sedan du kollade senast", "updateUrgentTitle": "Du saknar viktiga korrigeringar", "updateNotNow": "Inte nu", "updateAction": "Uppdatera", "updateNewIn": "Nytt i {version}:", "settingsUpdateAvailable": "Uppdatering tillgänglig"
 }
