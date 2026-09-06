@@ -140,9 +140,8 @@ void startShorebirdStartupUpdate({
 /// Runs the blocking startup sequence, then hands off to `runApp`.
 ///
 /// [errorWidgetBuilder] is injected rather than imported so this library does
-/// not depend on the entry point: the widget renders before any theme exists
-/// and lives beside main(), where its pre-theme raw text styles are accounted
-/// for.
+/// not depend on the widget layer: main() passes the branded surface from
+/// `widgets/global_error_widget.dart`, and a test can pass a stand-in.
 Future<void> startOpenVineApp({
   required ErrorWidgetBuilder errorWidgetBuilder,
   required CrashReportingService crashReporting,
@@ -356,9 +355,9 @@ Future<void> startOpenVineApp({
     }
   };
 
-  // A user-friendly error surface for failures before MaterialApp exists.
-  // The widget itself lives in main.dart, which is where its pre-theme raw
-  // text styles are accounted for.
+  // The surface shown in place of any widget that throws during build, before
+  // or after MaterialApp exists. The FlutterError.onError handler below reports
+  // the failure first; the builder only renders it.
   ErrorWidget.builder = errorWidgetBuilder;
 
   // Handle Flutter framework errors more gracefully
