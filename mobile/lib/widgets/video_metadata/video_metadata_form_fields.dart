@@ -23,6 +23,7 @@ class VideoMetadataFormFields extends ConsumerStatefulWidget {
     this.enableInspiredBy = true,
     this.enableAudioReuse = true,
     this.enableVideoReply = true,
+    this.enableCaptionMentionAutocomplete = true,
   });
 
   final bool enableTags;
@@ -32,6 +33,7 @@ class VideoMetadataFormFields extends ConsumerStatefulWidget {
   final bool enableInspiredBy;
   final bool enableAudioReuse;
   final bool enableVideoReply;
+  final bool enableCaptionMentionAutocomplete;
 
   @override
   ConsumerState<VideoMetadataFormFields> createState() =>
@@ -107,6 +109,8 @@ class _VideoMetadataFormFieldsState
             child: VideoMetadataCaptionField(
               controller: _descriptionController,
               focusNode: _descriptionFocusNode,
+              enableMentionAutocomplete:
+                  widget.enableCaptionMentionAutocomplete,
             ),
           ),
 

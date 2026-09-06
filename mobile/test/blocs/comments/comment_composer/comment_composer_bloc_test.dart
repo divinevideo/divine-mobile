@@ -77,10 +77,10 @@ void main() {
       );
 
       when(
-        () => mockProfileRepository.getCachedProfile(
-          pubkey: any(named: 'pubkey'),
+        () => mockProfileRepository.getCachedProfiles(
+          pubkeys: any(named: 'pubkeys'),
         ),
-      ).thenAnswer((_) async => null);
+      ).thenAnswer((_) async => const <UserProfile>[]);
       when(
         () => mockProfileRepository.searchUsersFromApi(
           query: any(named: 'query'),
@@ -751,17 +751,19 @@ void main() {
         'MentionSearchRequested local tier-1 hit returns suggestion',
         setUp: () {
           when(
-            () => mockProfileRepository.getCachedProfile(
-              pubkey: any(named: 'pubkey'),
+            () => mockProfileRepository.getCachedProfiles(
+              pubkeys: any(named: 'pubkeys'),
             ),
           ).thenAnswer(
-            (_) async => UserProfile(
-              pubkey: validId('author'),
-              name: 'AlicePost',
-              createdAt: DateTime.now(),
-              eventId: 'eid',
-              rawData: const <String, dynamic>{},
-            ),
+            (_) async => [
+              UserProfile(
+                pubkey: validId('author'),
+                name: 'AlicePost',
+                createdAt: DateTime.now(),
+                eventId: 'eid',
+                rawData: const <String, dynamic>{},
+              ),
+            ],
           );
         },
         build: createBloc,

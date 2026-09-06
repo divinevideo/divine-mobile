@@ -24,11 +24,13 @@ class VideoMetadataCaptionField extends ConsumerStatefulWidget {
   const VideoMetadataCaptionField({
     required this.controller,
     required this.focusNode,
+    this.enableMentionAutocomplete = true,
     super.key,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
+  final bool enableMentionAutocomplete;
 
   @override
   ConsumerState<VideoMetadataCaptionField> createState() =>
@@ -48,7 +50,26 @@ class _VideoMetadataCaptionFieldState
   );
 
   @override
+  void initState() {
+    super.initState();
+    widget.focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant VideoMetadataCaptionField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode == widget.focusNode) return;
+    oldWidget.focusNode.removeListener(_handleFocusChange);
+    widget.focusNode.addListener(_handleFocusChange);
+  }
+
+  void _handleFocusChange() {
+    if (!widget.focusNode.hasFocus) _cubit.clear();
+  }
+
+  @override
   void dispose() {
+    widget.focusNode.removeListener(_handleFocusChange);
     _cubit.close();
     super.dispose();
   }
@@ -60,19 +81,26 @@ class _VideoMetadataCaptionFieldState
       child: _CaptionFieldView(
         controller: widget.controller,
         focusNode: widget.focusNode,
+        enableMentionAutocomplete: widget.enableMentionAutocomplete,
       ),
     );
   }
 }
 
 class _CaptionFieldView extends ConsumerWidget {
-  const _CaptionFieldView({required this.controller, required this.focusNode});
+  const _CaptionFieldView({
+    required this.controller,
+    required this.focusNode,
+    required this.enableMentionAutocomplete,
+  });
 
   final TextEditingController controller;
   final FocusNode focusNode;
+  final bool enableMentionAutocomplete;
 
   void _onChanged(BuildContext context, WidgetRef ref, String value) {
     ref.read(videoEditorProvider.notifier).updateMetadata(description: value);
+    if (!enableMentionAutocomplete) return;
     unawaited(
       context.read<CaptionMentionsCubit>().search(
         activeMentionQuery(value, controller.selection.baseOffset),
@@ -92,6 +120,10 @@ class _CaptionFieldView extends ConsumerWidget {
       display: displayName,
     );
     if (insertion == null) return;
+    if (insertion.text.characters.length >
+        VideoEditorConstants.descriptionLimit) {
+      return;
+    }
 
     controller.text = insertion.text;
     controller.selection = TextSelection.collapsed(offset: insertion.selection);
@@ -161,10 +193,11 @@ class _CaptionFieldView extends ConsumerWidget {
             ),
           ],
         ),
-        _CaptionMentionSuggestions(
-          onSelect: (pubkey, displayName) =>
-              _onSuggestionSelected(context, ref, pubkey, displayName),
-        ),
+        if (enableMentionAutocomplete)
+          _CaptionMentionSuggestions(
+            onSelect: (pubkey, displayName) =>
+                _onSuggestionSelected(context, ref, pubkey, displayName),
+          ),
       ],
     );
   }

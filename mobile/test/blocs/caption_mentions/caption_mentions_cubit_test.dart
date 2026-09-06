@@ -35,8 +35,8 @@ void main() {
       ),
     ).thenAnswer((_) async => const <UserProfile>[]);
     when(
-      () => profileRepository.getCachedProfile(pubkey: any(named: 'pubkey')),
-    ).thenAnswer((_) async => null);
+      () => profileRepository.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
+    ).thenAnswer((_) async => const <UserProfile>[]);
   });
 
   group(CaptionMentionsCubit, () {
@@ -45,8 +45,8 @@ void main() {
         'offers followed accounts from cache before any network call',
         () async {
           when(
-            () => profileRepository.getCachedProfile(pubkey: _alice),
-          ).thenAnswer((_) async => _profile(_alice, name: 'OG-AB'));
+            () => profileRepository.getCachedProfiles(pubkeys: [_alice]),
+          ).thenAnswer((_) async => [_profile(_alice, name: 'OG-AB')]);
 
           final cubit = CaptionMentionsCubit(
             profileRepositoryOf: () => profileRepository,
@@ -66,9 +66,10 @@ void main() {
 
       test('backfills from the API when the follow list is thin', () async {
         when(
-          () =>
-              profileRepository.getCachedProfile(pubkey: any(named: 'pubkey')),
-        ).thenAnswer((_) async => null);
+          () => profileRepository.getCachedProfiles(
+            pubkeys: any(named: 'pubkeys'),
+          ),
+        ).thenAnswer((_) async => const <UserProfile>[]);
         when(
           () => profileRepository.searchUsersFromApi(
             query: any(named: 'query'),
@@ -90,8 +91,8 @@ void main() {
 
       test('keeps cached results when the API search throws', () async {
         when(
-          () => profileRepository.getCachedProfile(pubkey: _alice),
-        ).thenAnswer((_) async => _profile(_alice, name: 'OG-AB'));
+          () => profileRepository.getCachedProfiles(pubkeys: [_alice]),
+        ).thenAnswer((_) async => [_profile(_alice, name: 'OG-AB')]);
         when(
           () => profileRepository.searchUsersFromApi(
             query: any(named: 'query'),
@@ -152,8 +153,8 @@ void main() {
 
       test('dismisses the list for an empty or whitespace query', () async {
         when(
-          () => profileRepository.getCachedProfile(pubkey: _alice),
-        ).thenAnswer((_) async => _profile(_alice, name: 'alice'));
+          () => profileRepository.getCachedProfiles(pubkeys: [_alice]),
+        ).thenAnswer((_) async => [_profile(_alice, name: 'alice')]);
 
         final cubit = CaptionMentionsCubit(
           profileRepositoryOf: () => profileRepository,
@@ -195,13 +196,48 @@ void main() {
 
         await expectLater(pending, completes);
       });
+
+      test(
+        'loads candidates in one batch and preserves candidate order',
+        () async {
+          when(
+            () => profileRepository.getCachedProfiles(pubkeys: [_bob, _alice]),
+          ).thenAnswer(
+            (_) async => [
+              _profile(_alice, name: 'user alice'),
+              _profile(_bob, name: 'user bob'),
+            ],
+          );
+
+          final cubit = CaptionMentionsCubit(
+            profileRepositoryOf: () => profileRepository,
+            candidatePubkeys: () => [_bob, _alice, _bob],
+          );
+          addTearDown(cubit.close);
+
+          await cubit.search('user');
+
+          expect(
+            cubit.state.suggestions.map((s) => s.pubkey),
+            equals([_bob, _alice]),
+          );
+          verify(
+            () => profileRepository.getCachedProfiles(pubkeys: [_bob, _alice]),
+          ).called(1);
+          verifyNever(
+            () => profileRepository.getCachedProfile(
+              pubkey: any(named: 'pubkey'),
+            ),
+          );
+        },
+      );
     });
 
     group('clear', () {
       test('empties the suggestions', () async {
         when(
-          () => profileRepository.getCachedProfile(pubkey: _alice),
-        ).thenAnswer((_) async => _profile(_alice, name: 'alice'));
+          () => profileRepository.getCachedProfiles(pubkeys: [_alice]),
+        ).thenAnswer((_) async => [_profile(_alice, name: 'alice')]);
 
         final cubit = CaptionMentionsCubit(
           profileRepositoryOf: () => profileRepository,

@@ -54,8 +54,8 @@ void main() {
 
     profileRepository = _MockProfileRepository();
     when(
-      () => profileRepository.getCachedProfile(pubkey: any(named: 'pubkey')),
-    ).thenAnswer((_) async => _profile(_ogab, 'OG-AB'));
+      () => profileRepository.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
+    ).thenAnswer((_) async => [_profile(_ogab, 'OG-AB')]);
     when(
       () => profileRepository.searchUsersFromApi(
         query: any(named: 'query'),
@@ -70,7 +70,10 @@ void main() {
     focusNode.dispose();
   });
 
-  Future<ProviderContainer> pumpField(WidgetTester tester) async {
+  Future<ProviderContainer> pumpField(
+    WidgetTester tester, {
+    bool enableMentionAutocomplete = true,
+  }) async {
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
@@ -87,9 +90,15 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: VideoMetadataCaptionField(
-              controller: controller,
-              focusNode: focusNode,
+            body: Column(
+              children: [
+                VideoMetadataCaptionField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  enableMentionAutocomplete: enableMentionAutocomplete,
+                ),
+                const TextField(key: Key('other-field')),
+              ],
             ),
           ),
         ),
@@ -109,7 +118,10 @@ void main() {
       ) async {
         await pumpField(tester);
 
-        await tester.enterText(find.byType(TextField), 'dedicated to @OG');
+        await tester.enterText(
+          find.byType(TextField).first,
+          'dedicated to @OG',
+        );
         await tester.pumpAndSettle();
 
         expect(find.byType(MentionOverlay), findsOneWidget);
@@ -121,7 +133,7 @@ void main() {
       testWidgets('shows nothing before an @ is typed', (tester) async {
         await pumpField(tester);
 
-        await tester.enterText(find.byType(TextField), 'dedicated to OG');
+        await tester.enterText(find.byType(TextField).first, 'dedicated to OG');
         await tester.pumpAndSettle();
 
         expect(find.byType(MentionOverlay), findsNothing);
@@ -134,7 +146,10 @@ void main() {
       ) async {
         final container = await pumpField(tester);
 
-        await tester.enterText(find.byType(TextField), 'dedicated to @OG');
+        await tester.enterText(
+          find.byType(TextField).first,
+          'dedicated to @OG',
+        );
         await tester.pumpAndSettle();
         await tester.tap(find.text('OG-AB'));
         await tester.pumpAndSettle();
@@ -163,13 +178,72 @@ void main() {
       ) async {
         await pumpField(tester);
 
-        await tester.enterText(find.byType(TextField), 'dedicated to @OG');
+        await tester.enterText(
+          find.byType(TextField).first,
+          'dedicated to @OG',
+        );
         await tester.pumpAndSettle();
         await tester.tap(find.text('OG-AB'));
         await tester.pumpAndSettle();
 
         expect(find.byType(MentionOverlay), findsNothing);
 
+        await flushAutosaveDebounce(tester);
+      });
+
+      testWidgets('dismisses the list when the caption loses focus', (
+        tester,
+      ) async {
+        await pumpField(tester);
+
+        await tester.enterText(
+          find.byType(TextField).first,
+          'dedicated to @OG',
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(MentionOverlay), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('other-field')));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MentionOverlay), findsNothing);
+        await flushAutosaveDebounce(tester);
+      });
+
+      testWidgets('rejects a picked mention that would exceed the limit', (
+        tester,
+      ) async {
+        final container = await pumpField(tester);
+        final caption = '${List.filled(997, 'a').join()}@OG';
+
+        await tester.enterText(find.byType(TextField).first, caption);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('OG-AB'));
+        await tester.pumpAndSettle();
+
+        expect(controller.text, caption);
+        expect(container.read(videoEditorProvider).description, caption);
+        expect(container.read(videoEditorProvider).captionMentions, isEmpty);
+        await flushAutosaveDebounce(tester);
+      });
+
+      testWidgets('does not search when autocomplete is disabled', (
+        tester,
+      ) async {
+        await pumpField(tester, enableMentionAutocomplete: false);
+
+        await tester.enterText(
+          find.byType(TextField).first,
+          'dedicated to @OG',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MentionOverlay), findsNothing);
+        verifyNever(
+          () => profileRepository.getCachedProfiles(
+            pubkeys: any(named: 'pubkeys'),
+          ),
+        );
         await flushAutosaveDebounce(tester);
       });
     });
