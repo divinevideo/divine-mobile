@@ -9,7 +9,6 @@ import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/services/nip05_verification_service.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 
 import '../helpers/test_provider_overrides.dart';

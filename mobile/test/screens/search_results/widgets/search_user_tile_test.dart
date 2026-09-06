@@ -10,7 +10,6 @@ import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/screens/search_results/widgets/search_user_tile.dart';
-import 'package:openvine/services/nip05_verification_service.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
 

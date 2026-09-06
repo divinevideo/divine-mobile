@@ -10,6 +10,11 @@ import 'package:openvine/services/nip05_verification_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// Re-exported so UI can render a verification badge without reaching
+/// into the service layer for the status type alone.
+export 'package:openvine/services/nip05_verification_service.dart'
+    show Nip05VerificationStatus;
+
 part 'nip05_verification_provider.g.dart';
 
 /// Provider for the NIP-05 verification service singleton

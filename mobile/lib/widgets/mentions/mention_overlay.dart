@@ -8,7 +8,6 @@ import 'package:models/models.dart' show UserProfile;
 import 'package:openvine/mentions/mention_suggestion.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/services/nip05_verification_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 

@@ -9,7 +9,6 @@ lib/screens/auth/invite_protected_create_account_screen.dart
 lib/screens/auth/nostr_connect_screen.dart
 lib/screens/auth/welcome_screen.dart
 lib/screens/comments/widgets/comment_options_modal.dart
-lib/screens/comments/widgets/mention_overlay.dart
 lib/screens/content_filters_screen.dart
 lib/screens/developer_options_screen.dart
 lib/screens/feed/pooled_fullscreen_video_feed_screen.dart
@@ -42,7 +41,6 @@ lib/widgets/find_people_sheet.dart
 lib/widgets/gallery_permission_sheet.dart
 lib/widgets/geo_blocking_gate.dart
 lib/widgets/library/sounds_tab.dart
-lib/widgets/profile/profile_header_widget.dart
 lib/widgets/profile_editor/username_status_indicator.dart
 lib/widgets/report_content_dialog.dart
 lib/widgets/save_original_progress_sheet.dart
