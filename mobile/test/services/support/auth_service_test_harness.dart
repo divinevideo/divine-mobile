@@ -141,6 +141,7 @@ AuthService buildTestAuthService({
   RemoteSignerFactory? remoteSignerFactory,
   AuthUrlLauncher? launchAuthUrl,
   KeycastOAuth? oauthClient,
+  Future<void> Function(String pubkeyHex)? preFetchFollowing,
 }) {
   return AuthService(
     backgroundActivityManager: BackgroundActivityManager(),
@@ -152,6 +153,7 @@ AuthService buildTestAuthService({
     remoteSignerFactory: remoteSignerFactory,
     launchAuthUrl: launchAuthUrl,
     oauthClient: oauthClient,
+    preFetchFollowing: preFetchFollowing,
   );
 }
 

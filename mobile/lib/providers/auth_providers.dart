@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -36,6 +37,7 @@ import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -112,9 +114,7 @@ KeycastOAuth oauthClient(Ref ref) {
 /// process singleton, which hid that this provider was autoDispose.
 @Riverpod(keepAlive: true)
 WebAuthService webAuthService(Ref ref) {
-  final service = WebAuthService(
-    nip07Service: ref.watch(nip07ServiceProvider),
-  );
+  final service = WebAuthService(nip07Service: ref.watch(nip07ServiceProvider));
   ref.onDispose(service.dispose);
   return service;
 }
@@ -171,19 +171,17 @@ AuthService authService(Ref ref) {
           pubkey: pubkeyHex,
           limit: 5000,
         );
-        if (result.pubkeys.isNotEmpty) {
-          final key = FollowingCacheRecord.storageKey(pubkeyHex);
-          await prefs.setString(
-            key,
-            FollowingCacheRecord(pubkeys: result.pubkeys).encode(),
-          );
-          Log.info(
-            'Pre-fetched ${result.pubkeys.length} following for '
-            'router redirect cache',
-            name: 'AuthService',
-            category: LogCategory.auth,
-          );
-        }
+        await persistFollowingCacheForAuthRedirect(
+          prefs: prefs,
+          pubkeyHex: pubkeyHex,
+          pubkeys: result.pubkeys,
+        );
+        Log.info(
+          'Pre-fetched ${result.pubkeys.length} following for '
+          'router redirect cache',
+          name: 'AuthService',
+          category: LogCategory.auth,
+        );
       } finally {
         httpClient.close();
       }
@@ -191,6 +189,23 @@ AuthService authService(Ref ref) {
   );
   ref.onDispose(() => unawaited(authService.dispose()));
   return authService;
+}
+
+/// Persists a successful following response for synchronous route decisions.
+///
+/// An empty list is meaningful: it distinguishes "fetched and follows nobody"
+/// from "not fetched yet", preventing every later login from repeating the
+/// same blocking request.
+@visibleForTesting
+Future<void> persistFollowingCacheForAuthRedirect({
+  required SharedPreferences prefs,
+  required String pubkeyHex,
+  required List<String> pubkeys,
+}) async {
+  await prefs.setString(
+    FollowingCacheRecord.storageKey(pubkeyHex),
+    FollowingCacheRecord(pubkeys: pubkeys).encode(),
+  );
 }
 
 /// Provider that returns current auth state and rebuilds when it changes.

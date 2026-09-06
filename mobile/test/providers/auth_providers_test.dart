@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:analytics/analytics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -14,6 +15,7 @@ import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nip07_service.dart';
 import 'package:openvine/services/nip07_types.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -50,6 +52,43 @@ class _RecordingAnalytics implements AnalyticsEventSink {
 }
 
 void main() {
+  group('persistFollowingCacheForAuthRedirect', () {
+    test('stores a successful empty result as a known-empty record', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await persistFollowingCacheForAuthRedirect(
+        prefs: prefs,
+        pubkeyHex: 'account-pubkey',
+        pubkeys: const [],
+      );
+
+      final encoded = prefs.getString(
+        FollowingCacheRecord.storageKey('account-pubkey'),
+      );
+      expect(encoded, isNotNull);
+      expect(FollowingCacheRecord.decode(encoded!).pubkeys, isEmpty);
+    });
+
+    test('preserves a successful non-empty result', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await persistFollowingCacheForAuthRedirect(
+        prefs: prefs,
+        pubkeyHex: 'account-pubkey',
+        pubkeys: const ['followed-pubkey'],
+      );
+
+      final encoded = prefs.getString(
+        FollowingCacheRecord.storageKey('account-pubkey'),
+      );
+      expect(FollowingCacheRecord.decode(encoded!).pubkeys, [
+        'followed-pubkey',
+      ]);
+    });
+  });
+
   group('flutterSecureStorageProvider', () {
     test('keeps Android secure storage encrypted without reset-on-error', () {
       final container = ProviderContainer();
