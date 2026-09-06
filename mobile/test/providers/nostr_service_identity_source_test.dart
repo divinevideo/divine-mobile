@@ -214,13 +214,13 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(nostrServiceProvider);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       expect(container.read(nostrInitializationInProgressProvider), isTrue);
 
       initialize.complete();
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       expect(container.read(nostrInitializationInProgressProvider), isFalse);
     });
@@ -273,7 +273,7 @@ void main() {
 
       authStream.add(AuthState.authenticating);
       // Let the async listener run.
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       expect(
         factory.callCount,
@@ -289,7 +289,7 @@ void main() {
       when(() => mockAuth.currentIdentity).thenReturn(identityA);
 
       authStream.add(AuthState.authenticated);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       expect(
         factory.callCount,
@@ -308,8 +308,8 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(nostrServiceProvider);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       expect(factory.callCount, equals(1));
       expect(factory.signers.single, isNull);
@@ -341,7 +341,7 @@ void main() {
       when(() => mockAuth.currentIdentity).thenReturn(null);
       when(() => mockAuth.currentPublicKeyHex).thenReturn(null);
       authStream.add(AuthState.unauthenticated);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       expect(
         factory.callCount,
@@ -373,7 +373,7 @@ void main() {
         when(() => mockAuth.currentIdentity).thenReturn(null);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(null);
         authStream.add(AuthState.unauthenticated);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(factory.callCount, equals(2));
         expect(factory.clients.last.hasKeys, isFalse);
 
@@ -383,7 +383,7 @@ void main() {
         when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyB);
         // currentIdentity stays null intentionally.
         authStream.add(AuthState.authenticating);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         expect(
           factory.callCount,
@@ -397,7 +397,7 @@ void main() {
         // Step 3: authenticated with real identity for B.
         when(() => mockAuth.currentIdentity).thenReturn(identityB);
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         expect(factory.callCount, equals(3));
         expect(factory.signers.last, same(identityB));
@@ -425,7 +425,7 @@ void main() {
         when(() => mockAuth.currentIdentity).thenReturn(identityB);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyB);
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         expect(factory.callCount, equals(2));
         expect(
@@ -438,7 +438,7 @@ void main() {
         when(() => mockAuth.currentIdentity).thenReturn(identityC);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyC);
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         expect(
           factory.callCount,
@@ -448,8 +448,8 @@ void main() {
         );
 
         bInitialize.complete();
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(factory.callCount, equals(3));
         expect(factory.clients.last.publicKey, equals(pubkeyC));
@@ -475,8 +475,8 @@ void main() {
         addTearDown(container.dispose);
 
         final oldClient = container.read(nostrServiceProvider);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         final bInitialize = Completer<void>();
         factory.initializeCompleters[pubkeyB] = bInitialize;
@@ -484,8 +484,8 @@ void main() {
         when(() => mockAuth.currentIdentity).thenReturn(identityB);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyB);
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(factory.callCount, equals(2));
         expect(
@@ -509,8 +509,8 @@ void main() {
         );
 
         bInitialize.complete();
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(
           container.read(nostrServiceProvider),
@@ -547,8 +547,8 @@ void main() {
         when(() => mockAuth.currentIdentity).thenReturn(identityB);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyB);
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(
           container.read(nostrSessionProvider),
@@ -565,8 +565,8 @@ void main() {
         );
 
         bInitialize.complete();
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         final readyClient = container.read(nostrServiceProvider);
         expect(
@@ -588,8 +588,8 @@ void main() {
         when(() => mockAuth.currentIdentity).thenReturn(null);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(null);
         authStream.add(AuthState.unauthenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(
           observedReadiness.map((readiness) => readiness.phase),
@@ -617,8 +617,8 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(nostrServiceProvider);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         final bInitialize = Completer<void>();
         factory.initializeCompleters[pubkeyB] = bInitialize;
@@ -626,15 +626,15 @@ void main() {
         when(() => mockAuth.currentIdentity).thenReturn(identityB);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyB);
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         when(() => mockAuth.currentIdentity).thenReturn(identityC);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyC);
         authStream.add(AuthState.authenticated);
         bInitialize.completeError(StateError('B initialize failed'));
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(factory.callCount, equals(3));
         expect(factory.clients.last.publicKey, equals(pubkeyC));
@@ -668,8 +668,8 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(nostrServiceProvider);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
       expect(factory.callCount, equals(1));
 
       final failedBInitialize = Completer<void>();
@@ -678,19 +678,19 @@ void main() {
       when(() => mockAuth.currentIdentity).thenReturn(identityB);
       when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyB);
       authStream.add(AuthState.authenticated);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       expect(factory.callCount, equals(2));
 
       failedBInitialize.completeError(StateError('B initialize failed'));
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       factory.initializeCompleters.remove(pubkeyB);
       authStream.add(AuthState.authenticated);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       expect(
         factory.callCount,
@@ -728,14 +728,14 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(nostrServiceProvider);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
       expect(factory.callCount, equals(1));
 
       failedInitialAInitialize.completeError(
         StateError('initial A initialize failed'),
       );
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       expect(
         container.read(nostrSessionProvider),
@@ -753,9 +753,9 @@ void main() {
 
       factory.initializeCompleters.remove(pubkeyA);
       authStream.add(AuthState.authenticated);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       expect(
         factory.callCount,
@@ -810,7 +810,7 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(nostrServiceProvider);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(
           factory.callCount,
           equals(1),
@@ -824,8 +824,8 @@ void main() {
         when(() => mockAuth.currentIdentity).thenReturn(identityA);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyA);
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(
           factory.callCount,
@@ -844,8 +844,8 @@ void main() {
         // RPC-upgrade nudge: same pubkey re-emitted after the background
         // Keycast upgrade resolves (auth_service.dart:733, unconditional add).
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(
           factory.callCount,
@@ -885,7 +885,7 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(nostrServiceProvider);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(
           factory.callCount,
           equals(1),
@@ -900,8 +900,8 @@ void main() {
         // RPC-upgrade nudge: same pubkey re-emitted while relay connect is
         // still running.
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(
           factory.callCount,
@@ -913,8 +913,8 @@ void main() {
 
         // Completing the gated init lets the ORIGINAL client reach ready.
         gate.complete();
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
         expect(factory.callCount, equals(1));
         expect(
           container.read(nostrSessionProvider).phase,
@@ -937,7 +937,7 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(nostrServiceProvider);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(factory.callCount, equals(1));
 
         // A genuine account switch to B while A's build init is in flight must
@@ -945,8 +945,8 @@ void main() {
         when(() => mockAuth.currentIdentity).thenReturn(identityB);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyB);
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(
           factory.callCount,
@@ -959,7 +959,7 @@ void main() {
 
         // Drain the abandoned A init cleanly.
         gate.complete();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
       },
     );
 
@@ -975,16 +975,16 @@ void main() {
         addTearDown(container.dispose);
 
         final failedClient = container.read(nostrServiceProvider);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(factory.callCount, equals(1));
 
         failedInitialAInitialize.completeError(
           StateError('initial A initialize failed'),
         );
         factory.initializeCompleters.remove(pubkeyA);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(
           factory.callCount,
@@ -1037,9 +1037,9 @@ void main() {
 
         final timedOutClient = container.read(nostrServiceProvider);
         factory.addRelaysCompleters.remove(pubkeyA);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(factory.callCount, equals(2));
         expect(factory.addRelaysPubkeys, equals([pubkeyA, pubkeyA]));
@@ -1101,13 +1101,13 @@ void main() {
         addTearDown(container.dispose);
 
         final initialClient = container.read(nostrServiceProvider);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(factory.callCount, equals(1));
 
         firstFailure.completeError(StateError('first initialize failed'));
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(factory.callCount, equals(2));
         expect(
@@ -1118,9 +1118,9 @@ void main() {
         );
 
         secondFailure.completeError(StateError('second initialize failed'));
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(factory.callCount, equals(3));
         expect(retryAttempts, equals([1, 2]));
@@ -1149,20 +1149,20 @@ void main() {
       addTearDown(container.dispose);
 
       container.read(nostrServiceProvider);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
       failedInitialAInitialize.completeError(
         StateError('initial A initialize failed'),
       );
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       factory.initializeCompleters.remove(pubkeyA);
       when(() => mockAuth.currentIdentity).thenReturn(identityB);
       when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyB);
       authStream.add(AuthState.authenticated);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       expect(factory.callCount, equals(2));
       expect(factory.signers.last, same(identityB));
@@ -1188,15 +1188,15 @@ void main() {
       );
 
       final failedClient = container.read(nostrServiceProvider);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
       failedInitialAInitialize.completeError(
         StateError('initial A initialize failed'),
       );
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       container.dispose();
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       expect(factory.callCount, equals(1));
       verify(failedClient.dispose).called(1);
@@ -1214,21 +1214,21 @@ void main() {
         addTearDown(container.dispose);
 
         final firstAClient = container.read(nostrServiceProvider);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         when(() => mockAuth.currentIdentity).thenReturn(null);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(null);
         authStream.add(AuthState.unauthenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         factory.initializeCompleters.remove(pubkeyA);
         when(() => mockAuth.currentIdentity).thenReturn(identityA);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyA);
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         final currentAClient = container.read(nostrServiceProvider);
         expect(currentAClient, isNot(same(firstAClient)));
@@ -1238,8 +1238,8 @@ void main() {
         );
 
         firstAInitialize.complete();
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(
           container.read(nostrSessionProvider),
@@ -1272,7 +1272,7 @@ void main() {
         addTearDown(container.dispose);
 
         container.read(nostrServiceProvider);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(factory.callCount, equals(1));
         expect(factory.signers.single, isNull);
 
@@ -1280,9 +1280,9 @@ void main() {
         when(() => mockAuth.currentIdentity).thenReturn(identityA);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyA);
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         final readyClient = container.read(nostrServiceProvider);
         expect(
@@ -1302,8 +1302,8 @@ void main() {
         );
 
         initialPlaceholderInitialize.complete();
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(
           container.read(nostrSessionProvider),
@@ -1345,22 +1345,22 @@ void main() {
         addTearDown(container.dispose);
 
         final oldClient = container.read(nostrServiceProvider);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
         final staleRelayCallback = latestRelayCallback!;
 
         when(() => mockAuth.currentIdentity).thenReturn(identityB);
         when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyB);
         authStream.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(container.read(nostrServiceProvider), isNot(same(oldClient)));
 
         const staleRelays = ['wss://stale-relay.example'];
         staleRelayCallback(pubkeyA, staleRelays);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         verifyNever(() => oldClient.addRelays(staleRelays));
       },
@@ -1376,8 +1376,8 @@ void main() {
         addTearDown(container.dispose);
 
         final client = container.read(nostrServiceProvider);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(
           container.read(nostrSessionProvider),
@@ -1392,7 +1392,7 @@ void main() {
         );
 
         container.invalidate(nostrSessionProvider);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         expect(
           container.read(nostrSessionProvider),
@@ -1425,8 +1425,8 @@ void main() {
             container.read(nostrServiceProvider);
             container.dispose();
 
-            await Future<void>.delayed(Duration.zero);
-            await Future<void>.delayed(Duration.zero);
+            await pumpEventQueue(times: 1);
+            await pumpEventQueue(times: 1);
           },
           (error, _) => errors.add(error),
         );
@@ -1461,7 +1461,7 @@ void main() {
           container.read(nostrServiceProvider); // schedules _initializeClient
 
           // Let the scheduled microtask reach `await client.initialize()`.
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue(times: 1);
           expect(
             factory.initializePubkeys,
             contains(pubkeyA),
@@ -1472,8 +1472,8 @@ void main() {
           // Dispose mid-init, then let init resume past the await.
           container.dispose();
           factory.initializeCompleters[pubkeyA]!.complete();
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue(times: 1);
+          await pumpEventQueue(times: 1);
         },
         (error, _) => errors.add(error),
       );
@@ -1504,15 +1504,15 @@ void main() {
           final container = createContainer();
           container.read(nostrServiceProvider);
 
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue(times: 1);
           expect(factory.initializePubkeys, contains(pubkeyA));
 
           container.dispose();
           factory.initializeCompleters[pubkeyA]!.completeError(
             StateError('init failed'),
           );
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue(times: 1);
+          await pumpEventQueue(times: 1);
         },
         (error, _) => errors.add(error),
       );
