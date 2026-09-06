@@ -7220,9 +7220,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorAudioImportFailed => 'Nabigo ang pag-import ng audio.';
 
   @override
-  String get videoIconPlaceholderLabel => 'Video';
-
-  @override
   String get publishErrorNotSignedIn =>
       'Mag-sign in muna para makapag-publish ng video.';
 

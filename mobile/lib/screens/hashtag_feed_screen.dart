@@ -270,7 +270,9 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const CircularProgressIndicator(color: VineTheme.vineGreen),
+                const DivineCircularProgressIndicator(
+                  color: VineTheme.vineGreen,
+                ),
                 const SizedBox(height: 24),
                 Text(
                   context.l10n.hashtagFeedLoadingTitle(widget.hashtag),

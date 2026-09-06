@@ -66,7 +66,7 @@ class CategoriesDiscoveryView extends StatelessWidget {
   Widget build(BuildContext context) {
     final body = switch (state.categoriesStatus) {
       CategoriesStatus.loading => const Center(
-        child: CircularProgressIndicator(),
+        child: DivineCircularProgressIndicator(),
       ),
       CategoriesStatus.error => Center(
         child: Column(

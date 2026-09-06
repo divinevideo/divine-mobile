@@ -54,7 +54,7 @@ class _ProgressBarrier extends StatelessWidget {
       child: ColoredBox(
         color: VineTheme.scrim50,
         child: Center(
-          child: CircularProgressIndicator(
+          child: DivineCircularProgressIndicator(
             color: VineTheme.vineGreen,
             semanticsLabel: context.l10n.commonLoading,
           ),

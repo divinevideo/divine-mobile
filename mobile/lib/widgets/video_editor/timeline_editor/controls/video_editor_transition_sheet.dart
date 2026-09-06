@@ -61,10 +61,7 @@ const _loopMs = 2800;
 /// A transition describes how a clip flows **into the next** clip, so the
 /// boundary is identified by its left clip; the last clip has no internal
 /// boundary — see [editLoopTransition] for its loop-restart wrap.
-Future<void> editClipTransition(
-  BuildContext context,
-  int leftClipIndex,
-) async {
+Future<void> editClipTransition(BuildContext context, int leftClipIndex) async {
   final clips = context.read<ClipEditorBloc>().state.clips;
   if (leftClipIndex < 0 || leftClipIndex >= clips.length - 1) return;
 
@@ -244,11 +241,8 @@ Duration _roomPerSide(List<DivineVideoClip> clips, int leftClipIndex) {
 /// Snaps [ms] down to the slider's step grid and into its valid range, so every
 /// division lands on a clean 0.01s value (an off-grid max makes the slider
 /// interpolate ugly intermediate steps).
-int _snapDurationMs(int ms) =>
-    ((ms ~/ _durationStepMs) * _durationStepMs).clamp(
-      _minDurationMs,
-      _maxDurationMs,
-    );
+int _snapDurationMs(int ms) => ((ms ~/ _durationStepMs) * _durationStepMs)
+    .clamp(_minDurationMs, _maxDurationMs);
 
 /// Stateful picker body: a row of looped transition previews plus duration and
 /// curve controls. Pops `(transition:)` on confirm.
@@ -327,7 +321,22 @@ class _TransitionPickerViewState extends State<TransitionPickerView>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: _loopMs),
-    )..repeat();
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncAnimation();
+  }
+
+  void _syncAnimation() {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+      _controller.value = 0;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
   }
 
   @override
@@ -430,9 +439,7 @@ class _TransitionPickerViewState extends State<TransitionPickerView>
                           ((_currentMaxMs - _minDurationMs) ~/ _durationStepMs)
                               .clamp(1, 1 << 20),
                       onChanged: (value) => setState(
-                        () => _duration = Duration(
-                          milliseconds: value.round(),
-                        ),
+                        () => _duration = Duration(milliseconds: value.round()),
                       ),
                     ),
                   ],

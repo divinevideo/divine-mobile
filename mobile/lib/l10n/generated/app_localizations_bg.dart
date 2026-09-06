@@ -7242,9 +7242,6 @@ class AppLocalizationsBg extends AppLocalizations {
       'Импортирането на звук се провали.';
 
   @override
-  String get videoIconPlaceholderLabel => 'Видео';
-
-  @override
   String get publishErrorNotSignedIn => 'Влез, за да публикуваш видеа.';
 
   @override

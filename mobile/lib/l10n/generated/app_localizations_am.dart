@@ -7004,9 +7004,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorAudioImportFailed => 'ኦዲዮ ማስመጣት አልተሳካም።';
 
   @override
-  String get videoIconPlaceholderLabel => 'ቪዲዮ';
-
-  @override
   String get publishErrorNotSignedIn => 'ቪዲዮዎችን ለማተም እባክዎ ይግቡ።';
 
   @override

@@ -2,6 +2,7 @@
 // ABOUTME: Sets up ConversationBloc from DmRepository for a specific
 // ABOUTME: conversation ID derived from participant pubkeys.
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -112,7 +113,7 @@ class _ConversationPageContent extends ConsumerWidget {
         return switch (state.status) {
           ConversationParticipantsStatus.denied => const _DeniedConversation(),
           ConversationParticipantsStatus.loading => const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(child: DivineCircularProgressIndicator()),
           ),
           ConversationParticipantsStatus.ready => _ConversationBlocScope(
             conversationId: conversationId,

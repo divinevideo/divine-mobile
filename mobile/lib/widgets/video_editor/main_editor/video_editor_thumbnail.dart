@@ -37,7 +37,7 @@ class VideoEditorThumbnail extends ConsumerWidget {
           : SizedBox.fromSize(
               size: contentSize,
               child: Center(
-                child: CircularProgressIndicator(
+                child: DivineCircularProgressIndicator(
                   color: context.vineColors.accentPositive,
                 ),
               ),

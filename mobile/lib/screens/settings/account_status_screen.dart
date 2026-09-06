@@ -106,7 +106,7 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
             // is in flight; not knowing yet is the honest state.
             skipLoadingOnRefresh: false,
             loading: () => publishRestriction == null
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: DivineCircularProgressIndicator())
                 : _StatusBody(kind: publishRestriction),
             // Keep a confirmed restriction through a failed read so its appeal
             // and exit paths survive a bad connection. Without a confirmed

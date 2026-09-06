@@ -144,7 +144,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
           // launch.
           if (state.status == NotificationFeedStatus.initial) {
             return const Center(
-              child: CircularProgressIndicator(color: VineTheme.vineGreen),
+              child: DivineCircularProgressIndicator(
+                color: VineTheme.vineGreen,
+              ),
             );
           }
 
@@ -459,7 +461,7 @@ class _RevalidationBar extends StatelessWidget {
               ? const SizedBox(
                   key: ValueKey('revalidation-bar'),
                   height: _height,
-                  child: LinearProgressIndicator(
+                  child: DivineLinearProgressIndicator(
                     minHeight: _height,
                     color: VineTheme.vineGreen,
                     backgroundColor: VineTheme.transparent,
@@ -586,7 +588,9 @@ class _NotificationList extends StatelessWidget {
           return const Padding(
             padding: EdgeInsets.all(16),
             child: Center(
-              child: CircularProgressIndicator(color: VineTheme.vineGreen),
+              child: DivineCircularProgressIndicator(
+                color: VineTheme.vineGreen,
+              ),
             ),
           );
         }

@@ -788,7 +788,7 @@ class _CompleteButtonState extends State<_CompleteButton> {
           child: SizedBox(
             width: 20,
             height: 20,
-            child: CircularProgressIndicator(
+            child: DivineCircularProgressIndicator(
               strokeWidth: 2,
               color: VineTheme.primary,
               semanticsLabel: widget.semanticLabel,

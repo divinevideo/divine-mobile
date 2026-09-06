@@ -7347,9 +7347,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorAudioImportFailed => 'Importul audio a eșuat.';
 
   @override
-  String get videoIconPlaceholderLabel => 'Videoclip';
-
-  @override
   String get publishErrorNotSignedIn =>
       'Autentifică-te ca să publici videoclipuri.';
 

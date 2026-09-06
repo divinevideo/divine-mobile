@@ -50,7 +50,7 @@ class VideoEngagementListView extends StatelessWidget {
           return switch (state.status) {
             VideoEngagementStatus.initial ||
             VideoEngagementStatus.loading => const Center(
-              child: CircularProgressIndicator(),
+              child: DivineCircularProgressIndicator(),
             ),
             VideoEngagementStatus.success when state.pubkeys.isEmpty =>
               _EngagementEmptyState(type: state.type),

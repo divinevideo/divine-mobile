@@ -206,7 +206,7 @@ class _CategoryGalleryBody extends StatelessWidget {
     switch (state.videosStatus) {
       case CategoriesVideosStatus.initial:
       case CategoriesVideosStatus.loading:
-        return const Center(child: CircularProgressIndicator());
+        return const Center(child: DivineCircularProgressIndicator());
       case CategoriesVideosStatus.error:
         return Center(
           child: Column(

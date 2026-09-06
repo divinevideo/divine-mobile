@@ -312,7 +312,7 @@ class _ActionCard extends StatelessWidget {
       trailing: isBusy
           ? SizedBox.square(
               dimension: DivineIcon.scaleSize(context, 24),
-              child: CircularProgressIndicator(
+              child: DivineCircularProgressIndicator(
                 strokeWidth: 2,
                 semanticsLabel: context.l10n.commonLoading,
                 valueColor: const AlwaysStoppedAnimation<Color>(

@@ -4436,7 +4436,6 @@
     "uploadFailureSheetTryAgainButton": "እንደገና ይሞክሩ",
     "videoEditorAudioImportAudio": "ኦዲዮ አስመጣ",
     "videoEditorAudioImportFailed": "ኦዲዮ ማስመጣት አልተሳካም።",
-    "videoIconPlaceholderLabel": "ቪዲዮ",
     "searchFilterPillSemanticLabel": "ማጣሪያ፡ {filter}",
     "@searchFilterPillSemanticLabel": {"placeholders": {"filter": {"type": "String"}}},
     "searchNoResultsFound": "ለ\"{query}\" ምንም ውጤት አልተገኘም",

@@ -393,7 +393,7 @@ class _MeProfileRedirect extends ConsumerWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         context.go(VideoFeedPage.pathForIndex(0));
       });
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: DivineCircularProgressIndicator());
     }
 
     // Get current user's npub and redirect (preserve grid/feed mode from context)
@@ -414,7 +414,7 @@ class _MeProfileRedirect extends ConsumerWidget {
     });
 
     // Show loading while redirecting
-    return const Center(child: CircularProgressIndicator());
+    return const Center(child: DivineCircularProgressIndicator());
   }
 }
 

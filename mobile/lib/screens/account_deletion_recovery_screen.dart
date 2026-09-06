@@ -163,7 +163,7 @@ class _RecoveryStateContent extends StatelessWidget {
       AccountDeletionRecoveryStatus.completingLocally ||
       AccountDeletionRecoveryStatus.signingOut ||
       AccountDeletionRecoveryStatus.resolved => const Center(
-        child: CircularProgressIndicator(),
+        child: DivineCircularProgressIndicator(),
       ),
       AccountDeletionRecoveryStatus.confirmingSubmission =>
         state.pollingPaused
@@ -257,7 +257,7 @@ class _PassiveRecoveryContent extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     spacing: 24,
     children: [
-      const Center(child: CircularProgressIndicator()),
+      const Center(child: DivineCircularProgressIndicator()),
       Text(
         body,
         textAlign: TextAlign.center,
@@ -279,7 +279,7 @@ class _LoadingRecoveryContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 24,
       children: [
-        const Center(child: CircularProgressIndicator()),
+        const Center(child: DivineCircularProgressIndicator()),
         DivineButton(
           label: context.l10n.accountDeletionSignOut,
           type: DivineButtonType.secondary,

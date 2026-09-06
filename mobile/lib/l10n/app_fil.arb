@@ -3260,7 +3260,6 @@
     "uploadFailureSheetTryAgainButton": "Subukan Ulit",
     "videoEditorAudioImportAudio": "Mag-import ng audio",
     "videoEditorAudioImportFailed": "Nabigo ang pag-import ng audio.",
-    "videoIconPlaceholderLabel": "Video",
     "searchFilterPillSemanticLabel": "Filter: {filter}",
     "@searchFilterPillSemanticLabel": {"placeholders": {"filter": {"type": "String"}}},
     "searchNoResultsFound": "Walang nakitang resulta para sa \"{query}\"",

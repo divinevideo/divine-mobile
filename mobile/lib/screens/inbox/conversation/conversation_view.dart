@@ -897,7 +897,7 @@ class _ConversationContent extends StatelessWidget {
       builder: (context, selected) {
         return switch (selected.status) {
           ConversationStatus.initial || ConversationStatus.loading => Center(
-            child: CircularProgressIndicator(
+            child: DivineCircularProgressIndicator(
               color: context.vineColors.accentPositive,
             ),
           ),

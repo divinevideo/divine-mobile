@@ -121,7 +121,7 @@ class _WatermarkDownloadProgressViewState
                       SizedBox(
                         width: 32,
                         height: 32,
-                        child: CircularProgressIndicator(
+                        child: DivineCircularProgressIndicator(
                           strokeWidth: 3,
                           color: context.vineColors.accentPositive,
                         ),

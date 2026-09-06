@@ -9,6 +9,7 @@ export 'src/emoji/divine_heart_text.dart';
 export 'src/icon/icon.dart';
 export 'src/info_card/info_card.dart';
 export 'src/list_tile/list_tile.dart';
+export 'src/loading/divine_progress_indicator.dart';
 export 'src/loading_overlay.dart';
 export 'src/partial_circle_spinner.dart';
 export 'src/search_bar/search_bar.dart';

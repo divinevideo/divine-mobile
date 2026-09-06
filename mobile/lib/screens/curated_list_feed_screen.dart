@@ -1021,7 +1021,7 @@ class _ListLoadingView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         spacing: 16,
         children: [
-          const CircularProgressIndicator(color: VineTheme.vineGreen),
+          const DivineCircularProgressIndicator(color: VineTheme.vineGreen),
           Text(
             context.l10n.curatedListLoadingVideos,
             style: VineTheme.bodyMediumFont(

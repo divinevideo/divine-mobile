@@ -466,7 +466,7 @@ class _RestoringHistoryIndicator extends StatelessWidget {
           ? Duration.zero
           : const Duration(milliseconds: 200),
       child: isRestoring
-          ? LinearProgressIndicator(
+          ? DivineLinearProgressIndicator(
               minHeight: 2,
               backgroundColor: context.vineColors.surfaceContainerHigh,
               color: context.vineColors.accentPositive,
@@ -707,7 +707,7 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
             SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
-                child: CircularProgressIndicator(
+                child: DivineCircularProgressIndicator(
                   color: context.vineColors.accentPositive,
                 ),
               ),
@@ -931,7 +931,7 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
                 child: SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(
+                  child: DivineCircularProgressIndicator(
                     color: context.vineColors.accentPositive,
                     strokeWidth: 2,
                   ),

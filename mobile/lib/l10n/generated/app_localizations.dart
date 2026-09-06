@@ -12262,12 +12262,6 @@ abstract class AppLocalizations {
   /// **'Audio import failed.'**
   String get videoEditorAudioImportFailed;
 
-  /// No description provided for @videoIconPlaceholderLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Video'**
-  String get videoIconPlaceholderLabel;
-
   /// No description provided for @publishErrorNotSignedIn.
   ///
   /// In en, this message translates to:
