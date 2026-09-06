@@ -63,6 +63,7 @@ void main() {
     ProcessResult runScript({
       required List<String> mergedHeadRefs,
       required List<String> githubCommitShas,
+      List<String> mergedTipShas = const [],
       List<String> args = const [],
     }) {
       return Process.runSync(
@@ -77,6 +78,7 @@ void main() {
           'MERGED_PR_LIMIT': '100000',
           'FAKE_MERGED_HEAD_REFS': mergedHeadRefs.join('\n'),
           'FAKE_GITHUB_COMMIT_SHAS': githubCommitShas.join('\n'),
+          'FAKE_MERGED_TIP_SHAS': mergedTipShas.join('\n'),
           'FAKE_GH_ARGS': ghArgs.path,
         },
       );
@@ -112,8 +114,23 @@ if [ "$1" = "pr" ] && [ "$2" = "list" ]; then
 fi
 
 if [ "$1" = "api" ]; then
-  sha="${*: -1}"
-  sha="${sha##*/}"
+  api_path=""
+  for arg in "$@"; do
+    case "$arg" in repos/*) api_path="$arg" ;; esac
+  done
+  case "$api_path" in
+    */pulls)
+      sha="${api_path%/pulls}"
+      sha="${sha##*/}"
+      if printf '%s\n' "${FAKE_MERGED_TIP_SHAS:-}" | grep -qxF -- "$sha"; then
+        printf '1\n'
+      else
+        printf '0\n'
+      fi
+      exit 0
+      ;;
+  esac
+  sha="${api_path##*/}"
   if printf '%s\n' "${FAKE_GITHUB_COMMIT_SHAS:-}" | grep -qxF -- "$sha"; then
     printf '{}\n'
     exit 0
@@ -131,7 +148,14 @@ exit 2
       git(['init']);
       git(['config', 'user.email', 'test@example.com']);
       git(['config', 'user.name', 'Test User']);
-      write('.gitignore', '.env\nbuild/\n');
+      write(
+        '.gitignore',
+        '.env\n'
+            'build/\n'
+            '.dart_tool/\n'
+            'local.properties\n'
+            '**/GeneratedPluginRegistrant.java\n',
+      );
       write('README.md', 'fixture\n');
       commit('initial');
       git(['branch', '-M', 'main']);
@@ -171,8 +195,8 @@ exit 2
       );
 
       expect(result.exitCode, 0, reason: result.stderr.toString());
-      expect(result.stdout, contains('KEEP-DIRTY'));
-      expect(result.stdout, contains('dirty-worktree'));
+      expect(result.stdout, contains('KEEP-DIRTY     dirty-worktree'));
+      expect(result.stdout, contains('0 likely prunable'));
       expect(File(p.join(worktree.path, '.env')).existsSync(), isTrue);
     });
 
@@ -205,6 +229,120 @@ exit 2
       expect(result.exitCode, 0, reason: result.stderr.toString());
       expect(result.stdout, contains('bash scripts/prune-merged-branches.sh'));
       expect(result.stdout, isNot(contains('Fetching origin')));
+    });
+
+    test('toolchain output in a worktree does not block a merged branch', () {
+      makeBranch('regenerable-worktree', 'merged');
+      final tip = branchTip('regenerable-worktree');
+      final worktree = Directory(p.join(sandbox.path, 'regenerable-worktree'));
+      git(['worktree', 'add', worktree.path, 'regenerable-worktree']);
+      write('build/app.apk', 'binary\n', root: worktree.path);
+      write('.dart_tool/package_config.json', '{}\n', root: worktree.path);
+      write(
+        'android/app/src/main/java/io/flutter/plugins/'
+            'GeneratedPluginRegistrant.java',
+        'generated\n',
+        root: worktree.path,
+      );
+      write('local.properties', 'sdk.dir=/tmp\n', root: worktree.path);
+
+      final result = runScript(
+        mergedHeadRefs: ['regenerable-worktree'],
+        githubCommitShas: [tip],
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout, contains('MERGED-PR      regenerable-worktree'));
+      expect(
+        result.stdout,
+        isNot(contains('KEEP-DIRTY     regenerable-worktree')),
+      );
+      expect(result.stdout, contains('1 likely prunable'));
+    });
+
+    test('an untracked non-ignored file still blocks a merged branch', () {
+      makeBranch('untracked-worktree', 'merged');
+      final tip = branchTip('untracked-worktree');
+      final worktree = Directory(p.join(sandbox.path, 'untracked-worktree'));
+      git(['worktree', 'add', worktree.path, 'untracked-worktree']);
+      write('build/app.apk', 'binary\n', root: worktree.path);
+      write('scratch-notes.md', 'unsaved thinking\n', root: worktree.path);
+
+      final result = runScript(
+        mergedHeadRefs: ['untracked-worktree'],
+        githubCommitShas: [tip],
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout, contains('KEEP-DIRTY     untracked-worktree'));
+      expect(result.stdout, contains('0 likely prunable'));
+    });
+
+    test('reports a review worktree whose tip a merged PR contains', () {
+      makeBranch('pr-8511', 'review checkout');
+      final tip = branchTip('pr-8511');
+      final worktree = Directory(p.join(sandbox.path, 'pr-8511'));
+      git(['worktree', 'add', worktree.path, 'pr-8511']);
+
+      final result = runScript(
+        mergedHeadRefs: ['an-unrelated-head-ref'],
+        githubCommitShas: [tip],
+        mergedTipShas: [tip],
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout, contains('MERGED-TIP     pr-8511'));
+      final args = ghArgs.readAsStringSync();
+      expect(args, contains('merged_at != null'));
+      expect(args, contains('base.ref == "main"'));
+    });
+
+    test('keeps a fresh worktree whose tip is already on main', () {
+      git(['branch', 'fresh-worktree', 'main']);
+      final tip = branchTip('fresh-worktree');
+      final worktree = Directory(p.join(sandbox.path, 'fresh-worktree'));
+      git(['worktree', 'add', worktree.path, 'fresh-worktree']);
+
+      final result = runScript(
+        mergedHeadRefs: const [],
+        githubCommitShas: [tip],
+        mergedTipShas: [tip],
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout, contains('KEEP           fresh-worktree'));
+      expect(result.stdout, contains('0 likely prunable'));
+    });
+
+    test('a tip-matched branch still fails when the tip is not on GitHub', () {
+      makeBranch('pr-9000', 'review checkout');
+      final tip = branchTip('pr-9000');
+      final worktree = Directory(p.join(sandbox.path, 'pr-9000'));
+      git(['worktree', 'add', worktree.path, 'pr-9000']);
+
+      final result = runScript(
+        mergedHeadRefs: const [],
+        githubCommitShas: const [],
+        mergedTipShas: [tip],
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout, contains('KEEP-LOCAL     pr-9000'));
+    });
+
+    test('does not ask about tips for branches that have no worktree', () {
+      makeBranch('no-worktree-branch', 'local');
+      final tip = branchTip('no-worktree-branch');
+
+      final result = runScript(
+        mergedHeadRefs: const [],
+        githubCommitShas: [tip],
+        mergedTipShas: [tip],
+      );
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(result.stdout, contains('KEEP           no-worktree-branch'));
+      expect(ghArgs.readAsStringSync(), isNot(contains('/pulls')));
     });
 
     test('--execute is rejected while deletion lives outside this PR', () {

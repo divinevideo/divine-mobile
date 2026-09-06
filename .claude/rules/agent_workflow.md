@@ -74,12 +74,16 @@ work do not:
   `fix/7606-semantic-tokens` was destroyed exactly this way: unpushed
   local work on a parallel attempt at the same task.
 
-The useful signal is GitHub reporting a same-repo merged PR to `main` with
-that head ref. Everything else is KEEP, and two vetoes apply on top even
-to matched branches: the local branch tip must exist in GitHub's repository
-object database, and the worktree must have no uncommitted or ignored
-files. That keeps branch-name reuse, unpushed commits, and local-only
-worktree files out of the prunable set.
+The useful signals are GitHub reporting a same-repo merged PR to `main` with
+that head ref, or a worktree tip that belongs to a merged PR but is not already
+an ancestor of `main`. The latter identifies review worktrees whose scratch
+branch name never matched the reviewed PR while excluding fresh worktrees
+created at `origin/main`. Two vetoes apply on top: the local branch tip must
+exist in GitHub's repository object database, and the worktree must have no
+uncommitted, untracked, or non-regenerable ignored files. Ignored toolchain
+output such as `build/`, `.dart_tool/`, and generated plugin registrants does
+not veto because tracked inputs can recreate it. This keeps branch-name reuse,
+unpushed commits, and local-only worktree files out of the prunable set.
 
 ### Optional: warn on concurrent sessions in one worktree
 
