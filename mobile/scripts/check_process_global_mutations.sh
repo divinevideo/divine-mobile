@@ -57,11 +57,11 @@
 # Class 3 scans code only, with comments and string-literal bodies removed.
 #
 # Scope: assignment classes inspect only `*_test.dart`; irreversible initializer
-# detection inspects every Dart file under mobile/test. lib/ and packages/*/test
-# (each package has its own merged isolate — issue #5838) remain out of scope.
-# Non-test helpers such as test/test_setup.dart are ignored by assignment
-# detection, while the root flutter_test_config.dart and test/goldens/ are the
-# only allowed homes for loadAppFonts().
+# detection inspects every Dart file under mobile/test and mobile/packages/*/test.
+# Each package runs its own merged isolate, so mutations cannot cross package
+# boundaries but can leak between files within one package. Non-test helpers are
+# ignored by assignment detection. Only the app's root flutter_test_config.dart
+# and test/goldens/ may call loadAppFonts(); package suites have no root harness.
 # HttpOverrides.global keeps its own dedicated STRICT gate (check_http_overrides_isolation.sh)
 # and is intentionally not handled here.
 #
@@ -88,6 +88,10 @@ GLOBALS=(
   'UrlLauncherPlatform\.instance'
   'VideoPlayerPlatform\.instance'
   'FirebasePlatform\.instance'
+  'DivineCameraPlatform\.instance'
+  'DivineQuickActionsPlatform\.instance'
+  'BackgroundUploaderPlatform\.instance'
+  'CaptionGeneratorPlatform\.instance'
   'FlutterError\.onError'
   'Bloc\.observer'
 )
@@ -116,8 +120,18 @@ RESET_TO_DEFAULT_GLOBALS=(
   'InfiniteVideoFeed\.debugIsSupportedOverride:null'
 )
 
-# Scan target — overridable for --selftest; defaults to the app merged-isolate tree.
-SCAN_DIR="${SCAN_DIR:-$MOBILE_DIR/test}"
+# SCAN_DIR remains a single-root override for the synthetic self-tests.
+# Production scans cover the app bundle and every package bundle.
+if [[ -n "${SCAN_DIR:-}" ]]; then
+  SCAN_ROOTS=("$SCAN_DIR")
+  APP_TEST_ROOT="$SCAN_DIR"
+else
+  SCAN_ROOTS=("$MOBILE_DIR/test")
+  for package_test_root in "$MOBILE_DIR"/packages/*/test; do
+    [[ -d "$package_test_root" ]] && SCAN_ROOTS+=("$package_test_root")
+  done
+  APP_TEST_ROOT="$MOBILE_DIR/test"
+fi
 
 is_skip_vgv_tagged() {
   local f="$1" tag_body tag_flat
@@ -131,7 +145,7 @@ run_scan() {
 
   # --- Class 1: capture-restore ---
   for core in "${GLOBALS[@]}"; do
-    files=$(grep -rlE --include='*_test.dart' "$core" "$SCAN_DIR" || true)
+    files=$(grep -rlE --include='*_test.dart' "$core" "${SCAN_ROOTS[@]}" || true)
     for f in $files; do
       body=$(grep -vE '^[[:space:]]*//' "$f" || true)
 
@@ -204,7 +218,7 @@ run_scan() {
   for entry in "${RESET_TO_DEFAULT_GLOBALS[@]}"; do
     core="${entry%%:*}"
     def="${entry##*:}"
-    files=$(grep -rlE --include='*_test.dart' "$core" "$SCAN_DIR" || true)
+    files=$(grep -rlE --include='*_test.dart' "$core" "${SCAN_ROOTS[@]}" || true)
     for f in $files; do
       body=$(grep -vE '^[[:space:]]*//' "$f" || true)
 
@@ -244,7 +258,7 @@ run_scan() {
   # Widening is safe here because dart_code_only.awk has already removed comments
   # and string-literal bodies, which is what made the paren load-bearing before.
   irreversible='(^|[^[:alnum:]_])loadAppFonts([^[:alnum:]_]|$)'
-  files=$(grep -rlE --include='*.dart' "$irreversible" "$SCAN_DIR" || true)
+  files=$(grep -rlE --include='*.dart' "$irreversible" "${SCAN_ROOTS[@]}" || true)
   for f in $files; do
     body=$(awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" "$f" 2>/dev/null || true)
     if ! grep -qE "$irreversible" <<<"$body"; then
@@ -252,7 +266,7 @@ run_scan() {
     fi
     rel="${f#"$MOBILE_DIR"/}"
     case "$f" in
-      "$SCAN_DIR/flutter_test_config.dart"|"$SCAN_DIR/goldens/"*) continue ;;
+      "$APP_TEST_ROOT/flutter_test_config.dart"|"$APP_TEST_ROOT/goldens/"*) continue ;;
     esac
     violations="$violations  $rel  (loadAppFonts) [irreversible initializer]"$'\n'
   done
@@ -321,6 +335,10 @@ void main() {
   Bloc.observer = MyObserver();
   addTearDown(() => Bloc.observer = prior);
 }
+'
+  _case "package-owned singleton install without restore → FAIL" 1 \
+'import "x";
+void main() { DivineCameraPlatform.instance = FakeCameraPlatform(); }
 '
   _case "bare-id install masquerading as restore (snapshot + install, no real restore) → FAIL" 1 \
 'import "x";
