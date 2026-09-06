@@ -379,11 +379,11 @@ final crossposterApiClientProvider = CrossposterApiClientProvider._();
 final class CrossposterApiClientProvider
     extends
         $FunctionalProvider<
-          CrossposterApiClient,
-          CrossposterApiClient,
-          CrossposterApiClient
+          CrosspostingApiClient,
+          CrosspostingApiClient,
+          CrosspostingApiClient
         >
-    with $Provider<CrossposterApiClient> {
+    with $Provider<CrosspostingApiClient> {
   /// Crossposter service client for manual per-video crossposting
   CrossposterApiClientProvider._()
     : super(
@@ -401,26 +401,26 @@ final class CrossposterApiClientProvider
 
   @$internal
   @override
-  $ProviderElement<CrossposterApiClient> $createElement(
+  $ProviderElement<CrosspostingApiClient> $createElement(
     $ProviderPointer pointer,
   ) => $ProviderElement(pointer);
 
   @override
-  CrossposterApiClient create(Ref ref) {
+  CrosspostingApiClient create(Ref ref) {
     return crossposterApiClient(ref);
   }
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(CrossposterApiClient value) {
+  Override overrideWithValue(CrosspostingApiClient value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<CrossposterApiClient>(value),
+      providerOverride: $SyncValueProvider<CrosspostingApiClient>(value),
     );
   }
 }
 
 String _$crossposterApiClientHash() =>
-    r'aa560f29562e64ced8c08c2e203abfa6858cd2ee';
+    r'ddae6805a3d6b7685d8ad5eb0be8e7be756b415a';
 
 /// Audio playback service for sound playback during recording and preview
 ///

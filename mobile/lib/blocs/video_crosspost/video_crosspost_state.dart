@@ -2,7 +2,13 @@
 // ABOUTME: Tracks connections, platform selection, and job polling progress
 
 import 'package:equatable/equatable.dart';
-import 'package:openvine/services/crossposter_api_client.dart';
+import 'package:openvine/services/crossposting_api_client.dart';
+
+// The connection model is part of this state's public surface
+// (VideoCrosspostState.connections), so UI reaches it through the bloc
+// layer rather than importing the service directly.
+export 'package:openvine/services/crossposting_api_client.dart'
+    show CrosspostingConnection;
 
 enum VideoCrosspostStatus {
   initial,
@@ -35,7 +41,7 @@ class VideoCrosspostState extends Equatable {
   });
 
   final VideoCrosspostStatus status;
-  final List<CrossposterConnection> connections;
+  final List<CrosspostingConnection> connections;
   final Set<String> selectedPlatforms;
   final List<CrosspostJob> jobs;
 
@@ -46,17 +52,17 @@ class VideoCrosspostState extends Equatable {
   /// keep processing server-side.
   final bool pollTimedOut;
 
-  List<CrossposterConnection> get connectedConnections =>
+  List<CrosspostingConnection> get connectedConnections =>
       connections.where((c) => c.isConnected).toList();
 
   List<String> get connectedPlatforms =>
-      connectedConnections.map((c) => c.platform).toList();
+      connectedConnections.map((c) => c.platform.wireName).toList();
 
   bool get hasPendingJobs => jobs.any((j) => j.status.isPending);
 
   VideoCrosspostState copyWith({
     VideoCrosspostStatus? status,
-    List<CrossposterConnection>? connections,
+    List<CrosspostingConnection>? connections,
     Set<String>? selectedPlatforms,
     List<CrosspostJob>? jobs,
     VideoCrosspostSubmitError? submitError,

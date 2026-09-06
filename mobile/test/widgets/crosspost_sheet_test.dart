@@ -6,7 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
-import 'package:openvine/services/crossposter_api_client.dart';
+import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
 
 class _MockVideoCrosspostCubit extends MockCubit<VideoCrosspostState>
@@ -18,10 +18,10 @@ void main() {
 
     final l10n = lookupAppLocalizations(const Locale('en'));
 
-    const instagramConnection = CrossposterConnection(
+    const instagramConnection = CrosspostingConnection(
       id: 'conn-1',
-      platform: 'instagram',
-      status: 'connected',
+      platform: CrosspostingPlatform.instagram,
+      status: CrosspostingConnectionStatus.connected,
       externalAccountName: 'divine.creator',
     );
 
