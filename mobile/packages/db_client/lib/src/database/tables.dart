@@ -1172,6 +1172,67 @@ class PersonalReposts extends Table {
   Set<Column> get primaryKey => {addressableId, userPubkey};
 }
 
+/// The signed-in user's own Nostr events, replacing the hand-rolled
+/// `personal_events` / `personal_events_metadata` Hive boxes (#6986).
+///
+/// Deliberately has **no `expire_at` column**. `deleteExpiredEvents` on the
+/// shared [NostrEvents] table removes rows whose `expire_at` IS NULL as well
+/// as past-dated ones, so a personal event stored there would be destroyed on
+/// the next cold start. Keeping this data in its own table means the sweep
+/// cannot reach it by construction, rather than by exclusion logic that has to
+/// stay correct forever.
+///
+/// Retention is decided per row by [retention] and applied on write:
+///
+/// * Replaceable kinds (0, 3, 10000-19999) collapse — writing one deletes the
+///   previous `(pubkey, kind)` row, so contact-list history cannot accumulate.
+///   Before #6986 every follow/unfollow appended a full 42.5 KiB kind-3 row
+///   that was never evicted.
+/// * Everything else is durable and trimmed to the newest rows per owner. The
+///   load-bearing members are the signed-but-unpublished video event that
+///   "Try Again" reuses, and the raw tags `sourceOriginalVideoTags` recovers
+///   before a metadata edit.
+@TableIndex.sql(
+  'CREATE INDEX IF NOT EXISTS idx_personal_events_pubkey_kind_created_at '
+  'ON personal_events (pubkey, kind, created_at DESC)',
+)
+@TableIndex.sql(
+  'CREATE INDEX IF NOT EXISTS idx_personal_events_pubkey_created_at '
+  'ON personal_events (pubkey, created_at DESC)',
+)
+@DataClassName('PersonalEventRow')
+class PersonalEvents extends Table {
+  @override
+  String get tableName => 'personal_events';
+
+  /// The Nostr event id (64-char hex).
+  TextColumn get id => text()();
+
+  /// Author pubkey (64-char hex). Always the signed-in user; the column
+  /// exists so reads are an indexed predicate rather than a post-hoc filter,
+  /// and so one device can hold several accounts' rows without their costs
+  /// leaking into each other.
+  TextColumn get pubkey => text()();
+
+  IntColumn get kind => integer()();
+
+  IntColumn get createdAt => integer().named('created_at')();
+
+  /// JSON-encoded array of tag arrays.
+  TextColumn get tags => text()();
+
+  TextColumn get content => text()();
+
+  TextColumn get sig => text()();
+
+  /// Retention policy applied when this row was written. See
+  /// `PersonalEventRetention` in the DAO.
+  IntColumn get retention => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Durable queue of outgoing NIP-17 direct messages.
 ///
 /// Holds rows for messages that the user has attempted to send but whose

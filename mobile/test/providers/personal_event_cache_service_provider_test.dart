@@ -2,14 +2,15 @@
 // ABOUTME: Ensures late auth initialization flushes queued personal events.
 
 import 'dart:async';
-import 'dart:io';
 
+import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 
@@ -50,26 +51,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group(personalEventCacheServiceProvider, () {
-    late Directory testDir;
+    late AppDatabase database;
     late _MockAuthService authService;
     late StreamController<AuthState> authStateController;
 
-    setUp(() async {
-      // Defend against Hive state leaked by an earlier file in the shared
-      // very_good --optimization isolate: this provider suite and the sibling
-      // service suite (personal_event_cache_service_test.dart) both open boxes
-      // under the same fixed names, so force a clean Hive registry before init
-      // (#5738).
-      try {
-        await Hive.close();
-      } on PathNotFoundException catch (_) {}
-      testDir = await Directory.systemTemp.createTemp(
-        'personal_event_cache_service_provider_test_',
-      );
-      Hive.init(testDir.path);
-
+    setUp(() {
+      database = AppDatabase.test(NativeDatabase.memory());
       authService = _MockAuthService();
       authStateController = StreamController<AuthState>.broadcast();
+      addTearDown(database.close);
+      addTearDown(authStateController.close);
       when(() => authService.authState).thenReturn(AuthState.unauthenticated);
       when(
         () => authService.authStateStream,
@@ -78,31 +69,12 @@ void main() {
       when(() => authService.currentPublicKeyHex).thenReturn(null);
     });
 
-    tearDown(() async {
-      await authStateController.close();
-      // PersonalEventCacheService.dispose() closes its Hive boxes
-      // fire-and-forget (unawaited _closeBox). Drain the event queue so that
-      // close completes before Hive.close() below — otherwise the two race,
-      // corrupt Hive's global box registry, and leak box state into the next
-      // test in the shared very_good --optimization isolate (#5738). Boxes are
-      // opened under fixed global names, so a poisoned registry makes a later
-      // test's openBox return a stale box and its writes silently vanish.
-      await pumpEventQueue();
-      try {
-        await Hive.close();
-      } on PathNotFoundException catch (_) {
-        // Hive may already have removed its lock file during async shutdown.
-      }
-      try {
-        await testDir.delete(recursive: true);
-      } on PathNotFoundException catch (_) {
-        // Lock file may already be gone after Hive.close().
-      }
-    });
-
     ProviderContainer buildContainer() {
       final container = ProviderContainer(
-        overrides: [authServiceProvider.overrideWithValue(authService)],
+        overrides: [
+          authServiceProvider.overrideWithValue(authService),
+          databaseProvider.overrideWithValue(database),
+        ],
       );
       addTearDown(container.dispose);
       return container;
@@ -132,8 +104,8 @@ void main() {
       authStateController.add(AuthState.checking);
     }
 
-    /// Waits on wall-clock time rather than a fixed pump count because the
-    /// condition depends on real Hive file I/O.
+    /// Waits on wall-clock time rather than a fixed pump count because cache
+    /// initialization and persistence complete asynchronously.
     Future<void> waitForPersonalCache(
       String description,
       bool Function() isSatisfied,

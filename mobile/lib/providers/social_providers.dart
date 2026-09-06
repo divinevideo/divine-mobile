@@ -934,6 +934,10 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             () => db.personalRepostsDao.deleteAllForUser(userPubkey),
           );
           await requiredDelete(
+            'personalEvents',
+            () => db.personalEventsDao.deleteAllForOwner(userPubkey),
+          );
+          await requiredDelete(
             'pendingActions',
             () => db.pendingActionsDao.clearAll(userPubkey),
           );

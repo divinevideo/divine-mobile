@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/pending_upload.dart' as hive_model;
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -183,6 +184,41 @@ void main() {
         expect(box.get(a1.id), isNull);
         expect(box.get(a2.id), isNull);
         expect(box.get(b1.id), isNotNull);
+      },
+    );
+
+    test(
+      'destructive cleanup purges only the departing user personal events',
+      () async {
+        Event personalEvent(String pubkey, int createdAt) => Event(
+          pubkey,
+          34236,
+          const [
+            ['d', 'video'],
+          ],
+          '',
+          createdAt: createdAt,
+        )..sig = 'f' * 128;
+
+        await db.personalEventsDao.upsertPersonalEvent(
+          personalEvent(_pubkeyA, 1700000000),
+        );
+        await db.personalEventsDao.upsertPersonalEvent(
+          personalEvent(_pubkeyB, 1700000001),
+        );
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        await subscription.read().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+
+        expect(await db.personalEventsDao.countForOwner(_pubkeyA), 0);
+        expect(await db.personalEventsDao.countForOwner(_pubkeyB), 1);
       },
     );
 

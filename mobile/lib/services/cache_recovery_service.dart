@@ -15,15 +15,22 @@ class CacheRecoveryService {
   static const String _logName = 'CacheRecoveryService';
 
   static const Set<String> _disposableHiveBoxNames = {
-    HiveBoxNames.personalEvents,
-    HiveBoxNames.personalEventsMetadata,
     HiveBoxNames.hashtagStats,
     HiveBoxNames.peopleLists,
   };
 
   /// Clear all app caches and databases to recover from corruption
   /// This works on iOS devices, Android, and desktop platforms
-  static Future<bool> clearAllCaches() async {
+  ///
+  /// [clearPersonalEvents] clears the `personal_events` Drift table. It is a
+  /// callback rather than a box name because #6986 moved that data out of Hive,
+  /// and the database directory is protected wholesale (see
+  /// [_durableDatabaseDirSegments]) — so without an explicit clear the user's
+  /// own events would silently become the one disposable cache that a repair
+  /// wipe cannot reach.
+  static Future<bool> clearAllCaches({
+    Future<void> Function()? clearPersonalEvents,
+  }) async {
     try {
       Log.info(
         '🧹 Starting cache recovery process',
@@ -35,6 +42,21 @@ class CacheRecoveryService {
 
       // 1. Clear all Hive boxes
       clearedItems += await _clearHiveBoxes();
+
+      // 1b. Clear the disposable Drift tables that live inside the protected
+      // database directory.
+      if (clearPersonalEvents != null) {
+        try {
+          await clearPersonalEvents();
+          clearedItems++;
+        } catch (e) {
+          Log.warning(
+            'Failed to clear personal events: $e',
+            name: _logName,
+            category: LogCategory.system,
+          );
+        }
+      }
 
       // 2. Clear app support directory (sandboxed, safe)
       clearedItems += await _clearAppSupportDirectory();

@@ -70,6 +70,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     PendingUploads,
     PersonalReactions,
     PersonalReposts,
+    PersonalEvents,
     PendingActions,
     Nip05Verifications,
     Drafts,
@@ -98,6 +99,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     HashtagStatsDao,
     NotificationsDao,
     PendingUploadsDao,
+    PersonalEventsDao,
     PersonalReactionsDao,
     PersonalRepostsDao,
     PendingActionsDao,
@@ -129,7 +131,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -204,6 +206,13 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 12) {
         await _migrateToV12OwnerScopedDmKeys(m);
+      }
+      if (from < 13) {
+        await m.createTable(personalEvents);
+        // `createTable` does not emit `@TableIndex.sql` indexes, so a fresh
+        // install and an upgraded database would otherwise disagree on the
+        // index set — the same divergence #7040 had to backfill at v7.
+        await _createPersonalEventIndexes();
       }
     },
     beforeOpen: (details) async {
@@ -439,6 +448,23 @@ class AppDatabase extends _$AppDatabase {
       CREATE INDEX IF NOT EXISTS idx_clip_category_owner_pubkey
       ON clip_categories (owner_pubkey)
     ''');
+  }
+
+  /// Creates the `personal_events` indexes (#6986).
+  ///
+  /// Kept beside the table's `@TableIndex.sql` annotations, which Drift uses
+  /// for `createAll()` on a fresh install but not for `createTable()` during
+  /// an upgrade.
+  Future<void> _createPersonalEventIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS '
+      'idx_personal_events_pubkey_kind_created_at '
+      'ON personal_events (pubkey, kind, created_at DESC)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_personal_events_pubkey_created_at '
+      'ON personal_events (pubkey, created_at DESC)',
+    );
   }
 
   /// Creates all indexes consolidated from explicit `List<Index>` getters.

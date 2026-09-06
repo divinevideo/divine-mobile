@@ -22,7 +22,6 @@ nip07_interop_web # noise: web/io shim
 openvine_media_cache
 outgoing_dm_retry_service_reportable_sites # noise: reportable-sites constants
 push_notification_session_coordinator
-social_event_service_base
 social_service # decision: OD-2 keep-vs-delete (#4337)
 subscription_manager
 upload_manager # defer: #4339 oversized-file split

@@ -7,6 +7,8 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/services/cache_recovery_service.dart';
 import 'package:openvine/services/clip_recovery_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/storage_management_service.dart';
@@ -43,5 +45,21 @@ final clipRecoveryServiceProvider = Provider<ClipRecoveryService>((ref) {
     draftsDao: db.draftsDao,
     clipCategoriesDao: db.clipCategoriesDao,
     clipLibrary: ref.watch(clipLibraryServiceProvider),
+  );
+});
+
+/// The repair wipe, with the disposable Drift tables wired in.
+///
+/// `CacheRecoveryService` clears Hive boxes by name and Application Support by
+/// path, and the database directory is protected wholesale — so a table that
+/// holds disposable data has to be cleared explicitly or it becomes the one
+/// cache a repair cannot reach. `personal_events` is that table since #6986.
+///
+/// Lives here rather than at the call site so the Storage screen reaches the
+/// service layer through a provider instead of importing it directly.
+final recoverAllCachesProvider = Provider<Future<bool> Function()>((ref) {
+  final personalEventCache = ref.watch(personalEventCacheServiceProvider);
+  return () => CacheRecoveryService.clearAllCaches(
+    clearPersonalEvents: personalEventCache.clearAllAccounts,
   );
 });
