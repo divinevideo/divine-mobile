@@ -3758,7 +3758,6 @@
   "uploadFailureSheetTryAgainButton": "Thử lại",
   "videoEditorAudioImportAudio": "Nhập âm thanh",
   "videoEditorAudioImportFailed": "Nhập âm thanh thất bại.",
-  "videoIconPlaceholderLabel": "Video",
   "publishErrorNotSignedIn": "Vui lòng đăng nhập để đăng video.",
   "publishErrorNoRetry": "Không có lần tải lên nào để thử lại.",
   "publishErrorNoInternet": "Không có kết nối internet. Kiểm tra Wi-Fi hoặc dữ liệu di động rồi thử lại.",

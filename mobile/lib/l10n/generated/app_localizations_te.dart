@@ -7402,9 +7402,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorAudioImportFailed => 'ఆడియో దిగుమతి విఫలమైంది.';
 
   @override
-  String get videoIconPlaceholderLabel => 'వీడియో';
-
-  @override
   String get publishErrorNotSignedIn =>
       'దయచేసి వీడియోలను ప్రచురించడానికి సైన్ ఇన్ చేయండి.';
 

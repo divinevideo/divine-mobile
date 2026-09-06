@@ -4304,7 +4304,6 @@
     "uploadFailureSheetTryAgainButton": "Opnieuw proberen",
     "videoEditorAudioImportAudio": "Audio importeren",
     "videoEditorAudioImportFailed": "Audio importeren mislukt.",
-    "videoIconPlaceholderLabel": "Video",
     "searchFilterPillSemanticLabel": "Filter: {filter}",
     "@searchFilterPillSemanticLabel": {"placeholders": {"filter": {"type": "String"}}},
     "searchNoResultsFound": "Geen resultaten gevonden voor \"{query}\"",

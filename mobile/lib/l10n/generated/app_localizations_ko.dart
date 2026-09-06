@@ -6820,9 +6820,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorAudioImportFailed => '오디오 가져오기에 실패했어요.';
 
   @override
-  String get videoIconPlaceholderLabel => '영상';
-
-  @override
   String get publishErrorNotSignedIn => '영상을 게시하려면 로그인해주세요.';
 
   @override

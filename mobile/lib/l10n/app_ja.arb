@@ -4304,7 +4304,6 @@
     "uploadFailureSheetTryAgainButton": "もう一回試す",
     "videoEditorAudioImportAudio": "音声をインポート",
     "videoEditorAudioImportFailed": "音声のインポートに失敗したよ。",
-    "videoIconPlaceholderLabel": "動画",
     "searchFilterPillSemanticLabel": "フィルター: {filter}",
     "@searchFilterPillSemanticLabel": {"placeholders": {"filter": {"type": "String"}}},
     "searchNoResultsFound": "「{query}」の結果は見つからなかったよ",

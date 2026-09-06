@@ -7093,9 +7093,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorAudioImportFailed => 'Ses içe aktarma başarısız.';
 
   @override
-  String get videoIconPlaceholderLabel => 'Video';
-
-  @override
   String get publishErrorNotSignedIn =>
       'Video yayınlamak için lütfen giriş yap.';
 

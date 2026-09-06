@@ -4304,7 +4304,6 @@
     "uploadFailureSheetTryAgainButton": "Spróbuj ponownie",
     "videoEditorAudioImportAudio": "Zaimportuj dźwięk",
     "videoEditorAudioImportFailed": "Import dźwięku nie powiódł się.",
-    "videoIconPlaceholderLabel": "Film",
     "searchFilterPillSemanticLabel": "Filtr: {filter}",
     "@searchFilterPillSemanticLabel": {"placeholders": {"filter": {"type": "String"}}},
     "searchNoResultsFound": "Brak wyników dla „{query}”",

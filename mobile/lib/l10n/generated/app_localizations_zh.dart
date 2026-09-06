@@ -6749,9 +6749,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorAudioImportFailed => '音频导入失败。';
 
   @override
-  String get videoIconPlaceholderLabel => '视频';
-
-  @override
   String get publishErrorNotSignedIn => '请登录后再发布视频。';
 
   @override

@@ -4304,7 +4304,6 @@
     "uploadFailureSheetTryAgainButton": "حاول مرّة أخرى",
     "videoEditorAudioImportAudio": "استيراد صوت",
     "videoEditorAudioImportFailed": "فشل استيراد الصوت.",
-    "videoIconPlaceholderLabel": "فيديو",
     "searchFilterPillSemanticLabel": "التصفية: {filter}",
     "@searchFilterPillSemanticLabel": {"placeholders": {"filter": {"type": "String"}}},
     "searchNoResultsFound": "لم يتم العثور على نتائج لـ \"{query}\"",

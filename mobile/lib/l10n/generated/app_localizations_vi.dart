@@ -7140,9 +7140,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorAudioImportFailed => 'Nhập âm thanh thất bại.';
 
   @override
-  String get videoIconPlaceholderLabel => 'Video';
-
-  @override
   String get publishErrorNotSignedIn => 'Vui lòng đăng nhập để đăng video.';
 
   @override

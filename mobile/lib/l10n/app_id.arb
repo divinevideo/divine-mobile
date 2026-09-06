@@ -4304,7 +4304,6 @@
     "uploadFailureSheetTryAgainButton": "Coba Lagi",
     "videoEditorAudioImportAudio": "Impor audio",
     "videoEditorAudioImportFailed": "Impor audio gagal.",
-    "videoIconPlaceholderLabel": "Video",
     "searchFilterPillSemanticLabel": "Filter: {filter}",
     "@searchFilterPillSemanticLabel": {"placeholders": {"filter": {"type": "String"}}},
     "searchNoResultsFound": "Tidak ada hasil untuk \"{query}\"",
