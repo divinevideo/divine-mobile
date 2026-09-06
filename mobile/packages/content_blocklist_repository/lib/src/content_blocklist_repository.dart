@@ -744,7 +744,9 @@ class ContentBlocklistRepository {
   /// the latest own kind 10000 event.
   ///
   /// Returns `true` when the event was accepted by at least one relay.
-  Future<bool> _publishMuteListToNostr() async {
+  Future<bool> _publishMuteListToNostr({
+    Set<String> protectedUnblocks = const <String>{},
+  }) async {
     // Keep every unsuccessful attempt retryable. This is set before the
     // dependency guards too, because block/unblock actions can race startup.
     _muteListPublishPending = true;
@@ -770,7 +772,10 @@ class ContentBlocklistRepository {
     }
 
     try {
-      if (!await _refreshLatestOwnMuteList(nostrClient)) {
+      if (!await _refreshLatestOwnMuteList(
+        nostrClient,
+        protectedUnblocks: protectedUnblocks,
+      )) {
         // Kind 10000 is replaceable: publishing now would replace a list we
         // could not read. Everything only the unread event holds would go
         // with it -- the encrypted private section, every t/word/e mute, and
@@ -784,6 +789,18 @@ class ContentBlocklistRepository {
         );
         return false;
       }
+      var pendingTimestampChanged = false;
+      final latestOwnCreatedAt = _latestOwnMuteListEvent?.createdAt;
+      if (latestOwnCreatedAt != null) {
+        for (final pubkey in protectedUnblocks) {
+          final pendingAt = _pendingUnblocks[pubkey];
+          if (pendingAt != null && pendingAt < latestOwnCreatedAt) {
+            _pendingUnblocks[pubkey] = latestOwnCreatedAt;
+            pendingTimestampChanged = true;
+          }
+        }
+      }
+      if (pendingTimestampChanged) await _savePendingUnblocks();
       final publishShape = _buildMuteListPublishShape();
 
       final event = await signer.createAndSignEvent(
@@ -841,7 +858,10 @@ class ContentBlocklistRepository {
   /// `noRelays` -- which is why the detailed form is used here, with
   /// `requireAllRelaysSettled` so a relay abandoned by the settle window
   /// arrives as a timeout rather than as an empty answer.
-  Future<bool> _refreshLatestOwnMuteList(NostrClient nostrClient) async {
+  Future<bool> _refreshLatestOwnMuteList(
+    NostrClient nostrClient, {
+    Set<String> protectedUnblocks = const <String>{},
+  }) async {
     final ourPubkey = _ourPubkey;
     if (ourPubkey == null) return false;
 
@@ -861,7 +881,10 @@ class ContentBlocklistRepository {
     }
 
     if (newest != null && newest != _latestOwnMuteListEvent) {
-      _applyOwnMuteListEvent(newest);
+      _applyOwnMuteListEvent(
+        newest,
+        protectedUnblocks: protectedUnblocks,
+      );
     }
 
     return !result.timedOut && !result.noRelays;
@@ -918,6 +941,14 @@ class ContentBlocklistRepository {
     _runtimeBlocklist.forEach(addPubkey);
 
     return _MuteListPublishShape(tags: tags, content: source?.content ?? '');
+  }
+
+  bool _latestOwnMuteListCarries(String pubkey) {
+    final source = _latestOwnMuteListEvent;
+    if (source == null) return false;
+    return source.tags.any(
+      (tag) => tag.length >= 2 && tag[0] == 'p' && tag[1] == pubkey,
+    );
   }
 
   /// Whether [pubkey] is still the session identity.
@@ -1198,10 +1229,12 @@ class ContentBlocklistRepository {
   /// Persists to SharedPreferences and publishes the user's kind 10000 mute
   /// list once no matter how many new pubkeys are added. Emits one
   /// [BlocklistChange] per newly-blocked pubkey because downstream feed
-  /// cleanup reacts per author.
+  /// cleanup reacts per author. An idempotent re-block also flushes a pending
+  /// mute-list publish without producing another local change event.
   Future<void> blockUsers(Iterable<String> pubkeys, {String? ourPubkey}) async {
     final selfPubkey = ourPubkey ?? _ourPubkey;
     var skippedSelf = false;
+    var hasEligibleTarget = false;
     final newlyBlocked = <String>[];
     final newlySeveredFollowers = <String>[];
     var retiredPendingUnblock = false;
@@ -1212,11 +1245,12 @@ class ContentBlocklistRepository {
         skippedSelf = true;
         continue;
       }
+      hasEligibleTarget = true;
       if (_runtimeBlocklist.add(pubkey)) {
         newlyBlocked.add(pubkey);
-        retiredPendingUnblock =
-            _pendingUnblocks.remove(pubkey) != null || retiredPendingUnblock;
       }
+      retiredPendingUnblock =
+          _pendingUnblocks.remove(pubkey) != null || retiredPendingUnblock;
       if (!_severedFollowers.contains(pubkey) &&
           !newlySeveredFollowers.contains(pubkey)) {
         newlySeveredFollowers.add(pubkey);
@@ -1231,9 +1265,9 @@ class ContentBlocklistRepository {
       );
     }
 
+    if (retiredPendingUnblock) await _savePendingUnblocks();
     if (newlyBlocked.isNotEmpty) {
       await _saveBlockedUsers();
-      if (retiredPendingUnblock) await _savePendingUnblocks();
       for (final pubkey in newlyBlocked) {
         _emitChange(BlocklistChange(pubkey: pubkey, op: BlocklistOp.blocked));
       }
@@ -1246,6 +1280,9 @@ class ContentBlocklistRepository {
         category: LogCategory.system,
       );
     }
+    if (newlyBlocked.isEmpty && hasEligibleTarget) {
+      await retryPendingMuteListPublish();
+    }
 
     // Track as severed follower so they stay hidden from our followers
     // list even after unblocking (until they explicitly re-follow).
@@ -1255,34 +1292,15 @@ class ContentBlocklistRepository {
     }
   }
 
-  /// Remove a public key from the runtime blocklist
+  /// Stop hiding a public key through this account's own mute list.
   ///
-  /// Persists to SharedPreferences and republishes the updated kind 10000
-  /// mute list to Nostr.
+  /// Removes both Divine-authored blocks and mutes imported from another
+  /// client, then republishes the updated kind 10000 mute list to Nostr.
   /// Awaits the local write so the change survives an immediate app kill.
   /// Note: Cannot remove users from internal blocklist.
   Future<void> unblockUser(String pubkey) async {
-    if (_runtimeBlocklist.contains(pubkey)) {
-      _runtimeBlocklist.remove(pubkey);
-      await _saveBlockedUsers();
-      // Recorded BEFORE the publish, so a withheld or failed publish still
-      // leaves the intent behind for the next launch to act on (#8263).
-      _pendingUnblocks[pubkey] = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      await _savePendingUnblocks();
-      _emitChange(BlocklistChange(pubkey: pubkey, op: BlocklistOp.unblocked));
-      _notifyChanged();
-      // Retirement is not repeated here: a successful publish routes its own
-      // event through [_applyOwnMuteListEvent], which drops the intent
-      // because the list it just wrote no longer carries the tag.
-      await _publishMuteListToNostr();
-
-      Log.info(
-        'Removed user from blocklist: ${pubkeyForLogs(pubkey)}',
-        name: 'ContentBlocklistRepository',
-        category: LogCategory.system,
-      );
-      // coverage:ignore-start
-    } else if (_internalBlocklist.contains(pubkey)) {
+    // coverage:ignore-start
+    if (_internalBlocklist.contains(pubkey)) {
       // Internal blocklist is intentionally empty; this branch is
       // unreachable in production. Retained as a guard in case hardcoded
       // moderation blocks are re-introduced.
@@ -1291,8 +1309,53 @@ class ContentBlocklistRepository {
         name: 'ContentBlocklistRepository',
         category: LogCategory.system,
       );
-      // coverage:ignore-end
+      return;
     }
+    // coverage:ignore-end
+
+    final removedBlock = _runtimeBlocklist.remove(pubkey);
+    final removedMute = _mutedPubkeys.remove(pubkey);
+    final hadPendingUnblock = _pendingUnblocks.containsKey(pubkey);
+    final publishedListCarries = _latestOwnMuteListCarries(pubkey);
+    final hasExplicitUnblock =
+        removedBlock ||
+        removedMute ||
+        hadPendingUnblock ||
+        publishedListCarries;
+
+    if (removedBlock) {
+      await _saveBlockedUsers();
+      _emitChange(BlocklistChange(pubkey: pubkey, op: BlocklistOp.unblocked));
+    }
+    if (removedMute) {
+      await _saveMutedUsers();
+      _emitChange(
+        BlocklistChange(pubkey: pubkey, op: BlocklistOp.unmutedByUs),
+      );
+    }
+    if (removedBlock || removedMute) {
+      _notifyChanged();
+    }
+
+    if (!hasExplicitUnblock) {
+      await retryPendingMuteListPublish();
+      return;
+    }
+
+    // Recorded BEFORE the publish, so a withheld or failed publish still
+    // leaves the intent behind for the next launch to act on (#8263).
+    _pendingUnblocks[pubkey] = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    await _savePendingUnblocks();
+    // Protect this explicit action from a clock-skewed source event fetched
+    // during the mandatory pre-publish refresh. Ordinary later reconciliation
+    // still honours a genuinely newer mute authored by another client.
+    await _publishMuteListToNostr(protectedUnblocks: {pubkey});
+
+    Log.info(
+      'Stopped hiding user: ${pubkeyForLogs(pubkey)}',
+      name: 'ContentBlocklistRepository',
+      category: LogCategory.system,
+    );
   }
 
   /// Get all blocked public keys (for debugging)
@@ -1792,6 +1855,7 @@ class ContentBlocklistRepository {
     bool notify = true,
     bool persist = true,
     bool reconcile = false,
+    Set<String> protectedUnblocks = const <String>{},
   }) {
     final ourPubkey = event.pubkey;
     final createdAt = event.createdAt;
@@ -1829,6 +1893,10 @@ class ContentBlocklistRepository {
     if (_pendingUnblocks.isNotEmpty) {
       final retired = <String>[];
       for (final entry in _pendingUnblocks.entries) {
+        if (protectedUnblocks.contains(entry.key)) {
+          relayMuted.remove(entry.key);
+          continue;
+        }
         if (!relayMuted.contains(entry.key) || entry.value < createdAt) {
           // Either the tag is gone, so the unblock landed, or this list is
           // newer than the unblock and the tag is a fresh mute from another
