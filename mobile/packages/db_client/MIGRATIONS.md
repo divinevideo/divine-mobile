@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 12** (see `app_database.dart`).
+**Version: 13** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -54,13 +54,13 @@ Version 9 adds owner-scoped `removed_conversations` tombstones. Relay history
 at or before the removal timestamp stays suppressed after local DM rows are
 deleted, while a genuinely newer message can reopen the conversation.
 
-Version 12 adds `personal_events`, replacing the hand-rolled `personal_events` /
+Version 13 adds `personal_events`, replacing the hand-rolled `personal_events` /
 `personal_events_metadata` Hive boxes (#6986). It deliberately has no `expire_at`
 column: `deleteExpiredEvents` on the shared `event` table removes rows whose
 `expire_at` IS NULL as well as past-dated ones, so a personal event stored there
 would be destroyed on the next cold start. Retention is decided per row instead —
 replaceable kinds collapse to one row per `(pubkey, kind)`, everything else is
-trimmed to a per-owner cap. The `from < 12` step creates the indexes explicitly,
+trimmed to a per-owner cap. The `from < 13` step creates the indexes explicitly,
 because `createTable` does not emit `@TableIndex.sql` indexes and a fresh install
 would otherwise disagree with an upgraded database — the same divergence v7 had to
 backfill.
