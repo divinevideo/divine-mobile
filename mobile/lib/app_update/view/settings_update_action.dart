@@ -1,3 +1,4 @@
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/app_update/app_update.dart';
@@ -44,9 +45,11 @@ class SettingsUpdateAction extends StatelessWidget {
       },
       builder: (context, downloadUrl) {
         if (downloadUrl == null) return const SizedBox.shrink();
-        return TextButton(
+        return DivineButton(
+          label: context.l10n.settingsUpdateAvailable,
+          type: DivineButtonType.link,
+          size: DivineButtonSize.small,
           onPressed: () => _launchUpdate(downloadUrl),
-          child: Text(context.l10n.settingsUpdateAvailable),
         );
       },
     );
