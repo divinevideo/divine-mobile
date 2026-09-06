@@ -7168,10 +7168,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Je Divine-account is verwijderd. Voor je Nostr-posts zijn verwijderverzoeken verstuurd, maar sommige relays, clients of caches bewaren mogelijk kopieën.';
 
   @override
-  String get deleteAccountSuccessContentUnverified =>
-      'Accountverwijdering aangevraagd. Voor sommige bestaande posts kon de verwijdering niet afzonderlijk worden bevestigd.';
-
-  @override
   String get deleteAccountWarningBody =>
       'Dit stuurt verwijderverzoeken voor je account en content, verwijdert je Divine-account waar mogelijk en meldt je op dit apparaat af. Sommige relays, clients en zoekindexen kunnen kopieën bewaren. Andere aangemelde apparaten blijven actief totdat je daar de sleutels verwijdert.';
 

@@ -6717,9 +6717,6 @@ class AppLocalizationsZh extends AppLocalizations {
       '你的 Divine 账号已删除。我们已为你的 Nostr 帖子发送删除请求，但部分中继、客户端或缓存可能仍会保留副本。';
 
   @override
-  String get deleteAccountSuccessContentUnverified => '账号删除已请求。部分已有帖子无法逐一确认删除。';
-
-  @override
   String get deleteAccountWarningBody =>
       '这会为你的账号和内容发送删除请求，尽可能删除你的 Divine 账号，并在此设备上退出登录。部分中继、客户端和搜索索引可能保留副本。其他已登录设备会保持登录，直到你在那些设备上移除密钥。';
 

@@ -4293,7 +4293,6 @@
     "deleteAccountRemoveKeysTitle": "Rimuovere questo account da questo dispositivo?",
     "deleteAccountServerDeletionFailed": "Le richieste di eliminazione dei tuoi post sono state inviate, ma non siamo riusciti a completare l'eliminazione del tuo account. Riprova tra poco.",
     "deleteAccountSuccess": "Il tuo account Divine è stato eliminato. Sono state inviate richieste di eliminazione per i tuoi post su Nostr, ma alcuni relay, client o cache potrebbero conservarne delle copie.",
-    "deleteAccountSuccessContentUnverified": "Eliminazione dell'account richiesta. Per alcuni post esistenti non è stato possibile confermare l'eliminazione singolarmente.",
     "deleteAccountWarningBody": "Questo invia richieste di eliminazione per il tuo account e i tuoi contenuti, elimina il tuo account Divine quando possibile e ti disconnette su questo dispositivo. Alcuni relay, client e indici di ricerca potrebbero conservare copie. Gli altri dispositivi con l'accesso effettuato restano attivi finché non rimuovi le chiavi lì.",
     "findPeopleNoContacts": "Nessun contatto trovato.\nInizia a seguire persone per vederle qui.",
     "geoBlockedCityLabel": "Città",

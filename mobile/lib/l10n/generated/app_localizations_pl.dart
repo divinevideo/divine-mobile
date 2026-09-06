@@ -7302,10 +7302,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Twoje konto Divine zostało usunięte. Wysłano żądania usunięcia twoich postów w Nostr, ale niektóre przekaźniki, klienty lub pamięci podręczne mogą zachować kopie.';
 
   @override
-  String get deleteAccountSuccessContentUnverified =>
-      'Wysłano żądanie usunięcia konta. Usunięcia niektórych istniejących postów nie udało się potwierdzić osobno.';
-
-  @override
   String get deleteAccountWarningBody =>
       'To wysyła żądania usunięcia twojego konta i treści, usuwa twoje konto Divine, gdy to możliwe, i wylogowuje cię na tym urządzeniu. Niektóre przekaźniki, klienty i indeksy wyszukiwania mogą zachować kopie. Inne zalogowane urządzenia pozostają aktywne, dopóki nie usuniesz na nich kluczy.';
 

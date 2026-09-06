@@ -7230,10 +7230,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ton compte Divine a été supprimé. Des demandes de suppression ont été envoyées pour tes publications Nostr, mais certains relais, clients ou caches peuvent en conserver des copies.';
 
   @override
-  String get deleteAccountSuccessContentUnverified =>
-      'Suppression du compte demandée. La suppression de certaines publications existantes n\'a pas pu être confirmée individuellement.';
-
-  @override
   String get deleteAccountWarningBody =>
       'Ça envoie des demandes de suppression pour ton compte et ton contenu, supprime ton compte Divine quand c\'est possible et te déconnecte sur cet appareil. Certains relays, clients et index de recherche peuvent garder des copies. Les autres appareils connectés restent actifs jusqu\'à ce que tu y retires les clés.';
 

@@ -7313,10 +7313,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Contul tău Divine a fost șters. Au fost trimise cereri de ștergere pentru postările tale Nostr, dar unele relee, aplicații client sau memorii cache pot păstra copii.';
 
   @override
-  String get deleteAccountSuccessContentUnverified =>
-      'Ștergerea contului a fost solicitată. Ștergerea unor postări existente nu a putut fi confirmată individual.';
-
-  @override
   String get deleteAccountWarningBody =>
       'Aceasta trimite cereri de ștergere pentru contul și conținutul tău, șterge contul tău Divine când e posibil și te deconectează pe acest dispozitiv. Unele relay-uri, clienți și indexuri de căutare pot păstra copii. Alte dispozitive conectate rămân active până când elimini cheile de pe ele.';
 

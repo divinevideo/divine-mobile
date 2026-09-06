@@ -6786,10 +6786,6 @@ class AppLocalizationsKo extends AppLocalizations {
       'Divine 계정이 삭제됐어요. Nostr 게시물에 대한 삭제 요청도 전송했지만, 일부 릴레이, 클라이언트 또는 캐시에 사본이 남아 있을 수 있어요.';
 
   @override
-  String get deleteAccountSuccessContentUnverified =>
-      '계정 삭제를 요청했어요. 기존 게시물 중 일부는 개별적으로 삭제를 확인하지 못했어요.';
-
-  @override
   String get deleteAccountWarningBody =>
       '이건 계정과 콘텐츠의 삭제 요청을 보내고, 가능하면 Divine 계정을 삭제하고, 이 기기에서 로그아웃해요. 일부 릴레이, 클라이언트, 검색 색인에는 사본이 남을 수 있어요. 로그인된 다른 기기는 거기서 키를 제거할 때까지 계속 활성 상태예요.';
 

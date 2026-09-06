@@ -6770,10 +6770,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'Divineアカウントは削除されました。Nostrの投稿についても削除リクエストを送信しましたが、一部のリレー、クライアント、キャッシュにはコピーが残る場合があります。';
 
   @override
-  String get deleteAccountSuccessContentUnverified =>
-      'アカウントの削除をリクエストしたよ。既存の投稿の一部は、個別に削除を確認できなかったよ。';
-
-  @override
   String get deleteAccountWarningBody =>
       'これはアカウントとコンテンツの削除リクエストを送信して、可能なら Divine アカウントを削除し、このデバイスからサインアウトするよ。一部のリレーやクライアント、検索インデックスにはコピーが残ることがあるよ。ほかのサインイン中のデバイスは、そこで鍵を削除するまで有効なままだよ。';
 

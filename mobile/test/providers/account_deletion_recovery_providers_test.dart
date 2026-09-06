@@ -369,7 +369,7 @@ void main() {
     );
 
     test(
-      'cold start lost-submit recovery uses the same owner',
+      'cold start lost-submit recovery re-derives one owner from the receipt',
       () async {
         const recoverable = AccountDeletionAttempt(
           id: 'attempt-id',

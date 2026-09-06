@@ -4425,7 +4425,6 @@
     "deleteAccountRemoveKeysTitle": "ይህን መለያ ከዚህ መሣሪያ ማስወገድ?",
     "deleteAccountServerDeletionFailed": "የልጥፎችዎ የመሰረዝ ጥያቄዎች ተልከዋል፣ ነገር ግን መለያዎን መሰረዝ ማጠናቀቅ አልቻልንም። ትንሽ ቆይተው እንደገና ይሞክሩ።",
     "deleteAccountSuccess": "የDivine መለያዎ ተሰርዟል። ለNostr ልጥፎችዎ የስረዛ ጥያቄዎች ተልከዋል፣ ነገር ግን አንዳንድ ሪሌዎች፣ ደንበኞች ወይም መሸጎጫዎች ቅጂዎችን ሊያቆዩ ይችላሉ።",
-    "deleteAccountSuccessContentUnverified": "የመለያ ስረዛ ተጠይቋል። የአንዳንድ ነባር ልጥፎች ስረዛ በተናጠል ማረጋገጥ አልተቻለም።",
     "deleteAccountWarningBody": "ይህ ለመለያዎ እና ለይዘትዎ የመሰረዝ ጥያቄዎችን ይልካል፣ የሚቻል ከሆነ የDivine መለያዎን ይሰርዛል እና ከዚህ መሣሪያ ያስወጣዎታል። አንዳንድ ቅብብሎሾች፣ ደንበኞች እና የፍለጋ ማውጫዎች ቅጂዎችን ሊይዙ ይችላሉ። ሌሎች የገቡ መሣሪያዎች እዚያ ቁልፎችን እስኪያስወግዱ ድረስ ንቁ ሆነው ይቆያሉ።",
     "findPeopleNoContacts": "ምንም እውቂያዎች አልተገኙም።\nእዚህ ለማየት ሰዎችን መከተል ይጀምሩ።",
     "geoBlockedCityLabel": "ከተማ",

@@ -7106,10 +7106,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Tài khoản Divine của bạn đã bị xóa. Yêu cầu xóa các bài đăng Nostr của bạn đã được gửi, nhưng một số relay, ứng dụng khách hoặc bộ nhớ đệm có thể vẫn giữ bản sao.';
 
   @override
-  String get deleteAccountSuccessContentUnverified =>
-      'Đã yêu cầu xóa tài khoản. Không thể xác nhận riêng việc xóa một số bài đăng hiện có.';
-
-  @override
   String get deleteAccountWarningBody =>
       'Thao tác này gửi yêu cầu xóa cho tài khoản và nội dung của bạn, xóa tài khoản Divine của bạn khi có thể, và đăng xuất bạn trên thiết bị này. Một số relay, ứng dụng và chỉ mục tìm kiếm có thể vẫn giữ bản sao. Các thiết bị đã đăng nhập khác vẫn hoạt động cho đến khi bạn gỡ khóa ở đó.';
 

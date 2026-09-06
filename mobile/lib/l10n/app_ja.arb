@@ -4293,7 +4293,6 @@
     "deleteAccountRemoveKeysTitle": "このアカウントをこのデバイスから削除する?",
     "deleteAccountServerDeletionFailed": "投稿の削除リクエストは送ったけど、アカウントの削除を完了できなかったよ。少ししてからもう一回試してね。",
     "deleteAccountSuccess": "Divineアカウントは削除されました。Nostrの投稿についても削除リクエストを送信しましたが、一部のリレー、クライアント、キャッシュにはコピーが残る場合があります。",
-    "deleteAccountSuccessContentUnverified": "アカウントの削除をリクエストしたよ。既存の投稿の一部は、個別に削除を確認できなかったよ。",
     "deleteAccountWarningBody": "これはアカウントとコンテンツの削除リクエストを送信して、可能なら Divine アカウントを削除し、このデバイスからサインアウトするよ。一部のリレーやクライアント、検索インデックスにはコピーが残ることがあるよ。ほかのサインイン中のデバイスは、そこで鍵を削除するまで有効なままだよ。",
     "findPeopleNoContacts": "連絡先が見つからないよ。\n誰かをフォローすると、ここに表示されるよ。",
     "geoBlockedCityLabel": "市区町村",

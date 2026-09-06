@@ -4293,7 +4293,6 @@
     "deleteAccountRemoveKeysTitle": "Hapus akun ini dari perangkat ini?",
     "deleteAccountServerDeletionFailed": "Permintaan penghapusan untuk postinganmu sudah dikirim, tapi kami belum bisa menyelesaikan penghapusan akunmu. Coba lagi sebentar lagi.",
     "deleteAccountSuccess": "Akun Divine-mu telah dihapus. Permintaan penghapusan telah dikirim untuk postingan Nostr-mu, tetapi beberapa relay, klien, atau cache mungkin masih menyimpan salinannya.",
-    "deleteAccountSuccessContentUnverified": "Penghapusan akun sudah diminta. Penghapusan beberapa postingan yang ada tidak bisa dikonfirmasi satu per satu.",
     "deleteAccountWarningBody": "Ini mengirim permintaan penghapusan untuk akun dan kontenmu, menghapus akun Divine-mu jika memungkinkan, dan mengeluarkanmu dari akun di perangkat ini. Beberapa relay, klien, dan indeks pencarian mungkin menyimpan salinan. Perangkat lain yang masih masuk tetap aktif sampai kamu menghapus kuncinya di sana.",
     "findPeopleNoContacts": "Tidak ada kontak ditemukan.\nMulai ikuti orang untuk melihat mereka di sini.",
     "geoBlockedCityLabel": "Kota",

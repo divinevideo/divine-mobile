@@ -7186,10 +7186,6 @@ class AppLocalizationsFil extends AppLocalizations {
       'Na-delete na ang Divine account mo. Naipadala na ang mga request na i-delete ang mga Nostr post mo, pero maaaring may mga relay, client, o cache na nagpapanatili ng mga kopya.';
 
   @override
-  String get deleteAccountSuccessContentUnverified =>
-      'Na-request na ang pag-delete ng account. May ilang existing na post na hindi makumpirma nang isa-isa para sa pag-delete.';
-
-  @override
   String get deleteAccountWarningBody =>
       'Nagpapadala ito ng mga deletion request para sa account at content mo, binubura ang Divine account mo kapag posible, at nila-log out ka sa device na ito. Ang ilang relay, client, at search index ay maaaring may kopya pa rin. Ang iba pang naka-log in na device ay mananatiling aktibo hanggang alisin mo ang mga key doon.';
 

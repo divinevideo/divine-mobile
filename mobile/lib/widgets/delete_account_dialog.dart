@@ -809,6 +809,7 @@ Future<void> executeAccountDeletion({
         return;
       }
 
+      if (stopCleanupIfAccountChanged()) return;
       dismissProgressSheet();
       showDurableDeletionOutcome(finishingDeletionText, offerCancel: false);
       await authService.signOut();

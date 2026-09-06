@@ -140,9 +140,9 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     AccountDeletionAttempt attempt, {
     bool signOutWhenProcessing = true,
   }) {
-    _signOutWhenProcessing = signOutWhenProcessing;
     final inFlight = _resumeInFlight;
     if (inFlight != null) return inFlight;
+    _signOutWhenProcessing = signOutWhenProcessing;
     final started = _resume(attempt);
     _resumeInFlight = started;
     return started.whenComplete(() {

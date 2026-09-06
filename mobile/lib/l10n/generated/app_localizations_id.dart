@@ -7062,10 +7062,6 @@ class AppLocalizationsId extends AppLocalizations {
       'Akun Divine-mu telah dihapus. Permintaan penghapusan telah dikirim untuk postingan Nostr-mu, tetapi beberapa relay, klien, atau cache mungkin masih menyimpan salinannya.';
 
   @override
-  String get deleteAccountSuccessContentUnverified =>
-      'Penghapusan akun sudah diminta. Penghapusan beberapa postingan yang ada tidak bisa dikonfirmasi satu per satu.';
-
-  @override
   String get deleteAccountWarningBody =>
       'Ini mengirim permintaan penghapusan untuk akun dan kontenmu, menghapus akun Divine-mu jika memungkinkan, dan mengeluarkanmu dari akun di perangkat ini. Beberapa relay, klien, dan indeks pencarian mungkin menyimpan salinan. Perangkat lain yang masih masuk tetap aktif sampai kamu menghapus kuncinya di sana.';
 

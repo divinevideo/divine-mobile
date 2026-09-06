@@ -4293,7 +4293,6 @@
     "deleteAccountRemoveKeysTitle": "Retirer ce compte de cet appareil ?",
     "deleteAccountServerDeletionFailed": "Les demandes de suppression de tes publications ont été envoyées, mais on n'a pas pu terminer la suppression de ton compte. Réessaie dans un moment.",
     "deleteAccountSuccess": "Ton compte Divine a été supprimé. Des demandes de suppression ont été envoyées pour tes publications Nostr, mais certains relais, clients ou caches peuvent en conserver des copies.",
-    "deleteAccountSuccessContentUnverified": "Suppression du compte demandée. La suppression de certaines publications existantes n'a pas pu être confirmée individuellement.",
     "deleteAccountWarningBody": "Ça envoie des demandes de suppression pour ton compte et ton contenu, supprime ton compte Divine quand c'est possible et te déconnecte sur cet appareil. Certains relays, clients et index de recherche peuvent garder des copies. Les autres appareils connectés restent actifs jusqu'à ce que tu y retires les clés.",
     "findPeopleNoContacts": "Aucun contact trouvé.\nCommence à suivre des gens pour les voir ici.",
     "geoBlockedCityLabel": "Ville",

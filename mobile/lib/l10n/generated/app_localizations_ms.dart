@@ -7145,10 +7145,6 @@ class AppLocalizationsMs extends AppLocalizations {
       'Akaun Divine anda telah dipadamkan. Permintaan pemadaman telah dihantar untuk siaran Nostr anda, tetapi sesetengah geganti, klien atau cache mungkin menyimpan salinannya.';
 
   @override
-  String get deleteAccountSuccessContentUnverified =>
-      'Pemadaman akaun diminta. Sesetengah siaran sedia ada tidak dapat disahkan secara individu untuk pemadaman.';
-
-  @override
   String get deleteAccountWarningBody =>
       'Ini menghantar permintaan pemadaman untuk akaun dan kandungan anda, memadam akaun Divine anda apabila boleh, dan melog keluar anda pada peranti ini. Sesetengah relay, klien dan indeks carian mungkin menyimpan salinan. Peranti lain yang dilog masuk kekal aktif sehingga anda mengalih keluar kunci di situ.';
 

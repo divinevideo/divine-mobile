@@ -7206,10 +7206,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Tu cuenta de Divine fue eliminada. Se enviaron solicitudes para eliminar tus publicaciones de Nostr, pero algunos relays, clientes o cachés pueden conservar copias.';
 
   @override
-  String get deleteAccountSuccessContentUnverified =>
-      'Eliminación de cuenta solicitada. No se pudo confirmar de forma individual la eliminación de algunas publicaciones existentes.';
-
-  @override
   String get deleteAccountWarningBody =>
       'Esto envía solicitudes de eliminación de tu cuenta y contenido, elimina tu cuenta de Divine cuando es posible y cierra tu sesión en este dispositivo. Algunos relays, clientes e índices de búsqueda pueden conservar copias. Otros dispositivos con la sesión iniciada siguen activos hasta que quites las claves ahí.';
 

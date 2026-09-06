@@ -120,7 +120,9 @@ Future<void> startAccountDeletionFlow({
               );
           final owner = ref.read(submittedAccountDeletionMonitorProvider);
           if (owner == null) {
-            throw StateError('Could not start account deletion recovery');
+            throw const AccountDeletionRecoveryException(
+              'Could not start account deletion recovery',
+            );
           }
           await owner.resume(attempt, signOutWhenProcessing: false);
           final submittedStatus = owner.state.attempt?.status;

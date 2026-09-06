@@ -7240,10 +7240,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your Divine account was deleted. Deletion requests were sent for your Nostr posts, but some relays, clients, or caches may keep copies.';
 
   @override
-  String get deleteAccountSuccessContentUnverified =>
-      'Account deletion requested. Some existing posts could not be individually confirmed for deletion.';
-
-  @override
   String get deleteAccountWarningBody =>
       'This sends deletion requests for your account and content, deletes your Divine account when possible, and signs you out on this device. Some relays, clients, and search indexes may keep copies. Other signed-in devices stay active until you remove the keys there.';
 

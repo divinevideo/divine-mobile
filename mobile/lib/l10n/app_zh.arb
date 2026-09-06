@@ -3721,10 +3721,6 @@
   "@deleteAccountSuccess": {
     "description": "Snackbar after the account deletion flow publishes Nostr deletion requests, deletes the Divine account when applicable, and signs out locally. Do not imply guaranteed deletion from every relay, client, cache, search index, or other signed-in device."
   },
-  "deleteAccountSuccessContentUnverified": "账号删除已请求。部分已有帖子无法逐一确认删除。",
-  "@deleteAccountSuccessContentUnverified": {
-    "description": "Snackbar when the account-wide vanish request was published but the relay query failed or at least one per-item deletion request was not confirmed. Must not imply every existing post was individually requested or confirmed for deletion."
-  },
   "deleteAccountWarningBody": "这会为你的账号和内容发送删除请求，尽可能删除你的 Divine 账号，并在此设备上退出登录。部分中继、客户端和搜索索引可能保留副本。其他已登录设备会保持登录，直到你在那些设备上移除密钥。",
   "@deleteAccountWarningBody": {
     "description": "Warning body in the delete-account confirmation dialog, shown above the type-to-confirm field. Be clear that Nostr deletion is request-based, not a guarantee that every relay, client, cache, search index, or other signed-in device will forget the account."
