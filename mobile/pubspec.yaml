@@ -146,9 +146,10 @@ dependencies:
   # unrelated third-party FFI rewrite — different author, c2pa-rs 0.75.x, no
   # RemoteSigner.) Pinned by immutable commit (tag 0.0.3) so a moved tag cannot
   # silently change the build.
-  # TODO(#6166): moving off this pin needs a differently-named pub package —
+  # Moving off this pin requires a compatible, differently named pub package:
   # guardianproject cannot publish as `c2pa_flutter` (name permanently taken),
-  # so it is a rename plus API migration, not a version-constraint swap.
+  # so this would be a rename plus API migration, not a constraint swap. Both
+  # native layers would remain GitHub-sourced from inside the plugin.
   c2pa_flutter:
     git:
       url: https://github.com/guardianproject/c2pa-flutter.git
