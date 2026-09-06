@@ -915,14 +915,14 @@ class BookmarksRepository {
   ///
   /// Consulting only the public tags is what made a privately-bookmarked video
   /// read as unsaved, and then let a save publish it in the clear (#7136).
-  bool isInGlobalBookmarks(String itemId, String type) {
+  bool _isInGlobalBookmarks(String itemId, String type) {
     bool matches(BookmarkItem item) => item.id == itemId && item.type == type;
     return _globalBookmarks.any(matches) || _privateBookmarks.any(matches);
   }
 
   /// Check if a video event is bookmarked globally
   bool isVideoBookmarkedGlobally(String videoEventId) {
-    return isInGlobalBookmarks(videoEventId, 'e');
+    return _isInGlobalBookmarks(videoEventId, 'e');
   }
 
   // === NOSTR PUBLISHING ===
