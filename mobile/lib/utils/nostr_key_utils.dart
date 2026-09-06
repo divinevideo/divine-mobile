@@ -34,17 +34,11 @@ class NostrKeyUtils {
     return keyIsValid(key);
   }
 
-  /// Check if nsec is valid by attempting to decode it
+  /// Check if nsec has the private-key prefix and decodes to a 32-byte key
   ///
   /// Returns true if the nsec can be successfully decoded, false otherwise
-  static bool isValidNsec(String nsec) {
-    try {
-      Nip19.decode(nsec);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
+  static bool isValidNsec(String nsec) =>
+      Nip19.isPrivateKey(nsec) && Nip19.decode(nsec).length == 64;
 
   /// The full npub for [hexPubkey], or the hex itself when it cannot be
   /// encoded.

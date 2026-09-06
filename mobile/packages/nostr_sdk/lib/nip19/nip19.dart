@@ -2,10 +2,17 @@ import 'dart:developer';
 
 import 'package:bech32/bech32.dart';
 import 'package:hex/hex.dart';
+import 'package:meta/meta.dart';
 
 import 'hrps.dart';
 
 class Nip19 {
+  /// Captures decode diagnostics in tests when set.
+  ///
+  /// Production leaves this null and writes through [log].
+  @visibleForTesting
+  static void Function(String)? debugLogSink;
+
   // static String encodePubKey(String pubkey) {
   //   var data = hex.decode(pubkey);
   //   data = Bech32.convertBits(data, 8, 5, true);
@@ -83,7 +90,8 @@ class Nip19 {
       var data = convertBits(bech32Result.data, 5, 8, false);
       return HEX.encode(data);
     } catch (e) {
-      log("Nip19 decode error ${e.toString()}");
+      // Exception messages may contain sensitive input.
+      (debugLogSink ?? log)('Nip19 decode error: ${e.runtimeType}');
       return "";
     }
   }

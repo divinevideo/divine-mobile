@@ -9,10 +9,10 @@ String generatePrivateKey() => getRandomHexString();
 
 /// Returns the BIP340 public key derived from [privateKey].
 ///
-/// An [ArgumentError] is thrown if [privateKey] is invalid.
+/// An [ArgumentError] is thrown without including [privateKey] if it is invalid.
 String getPublicKey(String privateKey) {
   if (!keyIsValid(privateKey)) {
-    throw ArgumentError.value(privateKey, 'privateKey', 'Invalid key');
+    throw ArgumentError('privateKey: Invalid key (expected 64 hex characters)');
   }
   return schnorr.getPublicKey(privateKey);
 }

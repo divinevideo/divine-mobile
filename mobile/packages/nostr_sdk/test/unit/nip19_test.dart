@@ -5,6 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
 void main() {
+  tearDown(() {
+    Nip19.debugLogSink = null;
+  });
+
   group('NIP-19 Bech32 Encoding Tests', () {
     const testHexPubkey =
         '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
@@ -131,6 +135,28 @@ void main() {
       // decode should handle invalid input gracefully
       final result = Nip19.decode('invalid_bech32');
       expect(result, equals('')); // Should return empty string on error
+    });
+
+    test('does not include mixed-case secret input in decode diagnostics', () {
+      final nsec = Nip19.encodePrivateKey(testHexPrivateKey);
+      final mixedCaseCharacters = nsec.split('');
+      final lowercasePayloadIndex = mixedCaseCharacters.indexWhere(
+        (character) => RegExp('[a-z]').hasMatch(character),
+        5,
+      );
+      mixedCaseCharacters[lowercasePayloadIndex] =
+          mixedCaseCharacters[lowercasePayloadIndex].toUpperCase();
+      final mixedCaseNsec = mixedCaseCharacters.join();
+      final diagnostics = <String>[];
+      Nip19.debugLogSink = diagnostics.add;
+
+      expect(Nip19.decode(mixedCaseNsec), isEmpty);
+      expect(diagnostics, hasLength(1));
+      for (var start = 0; start <= mixedCaseCharacters.length - 20; start++) {
+        final inputFragment = mixedCaseCharacters.skip(start).take(20).join();
+        expect(diagnostics.single, isNot(contains(inputFragment)));
+      }
+      expect(diagnostics.single, contains('MixedCase'));
     });
 
     test('Bech32 end checking functionality', () {
