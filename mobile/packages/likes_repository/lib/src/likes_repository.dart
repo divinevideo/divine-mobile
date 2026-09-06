@@ -2845,14 +2845,24 @@ class LikesRepository {
     );
   }
 
-  /// Clear all local like data.
+  /// Clear all local like data. Does not affect data on relays.
   ///
-  /// Used when logging out or clearing user data.
-  /// Does not affect data on relays.
+  /// Clears the durable store first, so the clear is all-or-nothing: if
+  /// [LikesLocalStorage.clearAll] throws, the in-memory caches are left
+  /// intact, nothing is emitted, and the failure reaches the caller. A clear
+  /// that did not happen is therefore never reported as one.
   ///
-  /// Safe to call after [dispose] -- the cache is still cleared but no
-  /// stream emission is attempted.
+  /// This is deliberately not routed through `_bestEffortLocalStorage`. That
+  /// helper exists so a dead cache cannot block a relay publish; clearing
+  /// publishes nothing, and the thing at risk here is the deletion itself.
+  /// Erasing a signed-out account's rows is handled by the cleanup in
+  /// `social_providers.dart`, which is likewise required to surface failures
+  /// rather than swallow them.
+  ///
+  /// Safe to call after [dispose] -- a successful clear still clears the
+  /// cache, but no stream emission is attempted.
   Future<void> clearCache() async {
+    await _localStorage?.clearAll();
     _likeRecords.clear();
     _likeRecordsByAddressableId.clear();
     _inFlightLikePublishPlaceholders.clear();
@@ -2861,7 +2871,6 @@ class LikesRepository {
     _downvoteRecordsByAddressableId.clear();
     _likeCountCache.clear();
     _likeCountCacheByAddressableId.clear();
-    await _localStorage?.clearAll();
     _emitLikedIds();
     _emitDownvotedIds();
     _isInitialized = false;
@@ -2897,26 +2906,19 @@ class LikesRepository {
   Future<void> _ensureInitialized() async {
     if (_isInitialized) return;
 
+    // Degrade to an in-memory-only cache rather than failing the caller.
+    // Callers are publish paths: an unreadable cache costs a stale
+    // already-liked check, while throwing here costs the Kind 7.
     final localStorage = _localStorage;
     if (localStorage != null) {
-      try {
-        final records = await localStorage.getAllLikeRecords();
+      final records = await _bestEffortLocalStorage(
+        localStorage.getAllLikeRecords,
+        description: 'loading persisted reactions',
+        site: LikesRepositoryReportableSites.ensureInitializedLoadRecords,
+      );
+      if (records != null) {
         records.forEach(_indexLikeRecord);
         _emitLikedIds();
-      } on Object catch (e, stackTrace) {
-        // Degrade to an in-memory-only cache rather than failing the caller.
-        // Callers are publish paths: an unreadable cache costs a stale
-        // already-liked check, while throwing here costs the Kind 7.
-        _reportIfInvariantViolation(
-          e,
-          stackTrace,
-          site: LikesRepositoryReportableSites.ensureInitializedLoadRecords,
-        );
-        Log.warning(
-          'Like cache unavailable; continuing without persisted records: $e',
-          name: 'LikesRepository',
-          category: LogCategory.system,
-        );
       }
     }
     // Latched on both paths: an unreadable database stays unreadable for the

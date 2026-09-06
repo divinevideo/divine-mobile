@@ -58,8 +58,11 @@ abstract class LikesLocalStorage {
   /// Checks if an event is liked.
   Future<bool> isLiked(String targetEventId);
 
-  /// Clears all like records.
+  /// Clears all like records belonging to this storage's account.
   ///
-  /// Used when logging out or resetting local data.
+  /// Throws if the underlying store cannot be opened or the bulk delete
+  /// fails; callers decide whether that is recoverable. Note that erasing a
+  /// signed-out account's rows is done by the cleanup in
+  /// `social_providers.dart`, not through this method.
   Future<void> clearAll();
 }

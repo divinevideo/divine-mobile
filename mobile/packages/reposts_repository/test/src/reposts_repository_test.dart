@@ -2357,6 +2357,43 @@ void main() {
         // after calling close" on the BehaviorSubject.
         await expectLater(repository.clearCache(), completes);
       });
+
+      test('a failing clearAll leaves the in-memory cache intact', () async {
+        // The stub lives here rather than in the shared setUp so the failure
+        // it describes stays adjacent to the test that depends on it.
+        when(
+          () => mockLocalStorage.clearAll(),
+        ).thenThrow(StateError('database is dead'));
+        when(() => mockLocalStorage.getAllRepostRecords()).thenAnswer(
+          (_) async => [
+            RepostRecord(
+              addressableId: testAddressableId,
+              repostEventId: testEventId,
+              originalAuthorPubkey: testAuthorPubkey,
+              createdAt: DateTime.utc(2026),
+            ),
+          ],
+        );
+        final repository = RepostsRepository(
+          nostrClient: mockNostrClient,
+          localStorage: mockLocalStorage,
+        );
+
+        // Pin the baseline: the record is genuinely loaded before we act, so
+        // the assertion after the throw cannot pass on an empty cache.
+        expect(await repository.getRepostedAddressableIds(), {
+          testAddressableId,
+        });
+
+        await expectLater(repository.clearCache(), throwsA(isA<StateError>()));
+
+        // All-or-nothing: the durable store rejected the clear, so the caches
+        // derived from it must still describe what is on disk.
+        expect(repository.isRepostedSync(testAddressableId), isTrue);
+        expect(await repository.getRepostedAddressableIds(), {
+          testAddressableId,
+        });
+      });
     });
 
     group('watchRepostedAddressableIds', () {

@@ -4504,6 +4504,35 @@ void main() {
         // after calling close" on the BehaviorSubject.
         await expectLater(repository.clearCache(), completes);
       });
+
+      test('a failing clearAll leaves the in-memory cache intact', () async {
+        // Stubbed here rather than in the shared setUp so the failure stays
+        // adjacent to the test that depends on it.
+        when(
+          () => mockLocalStorage.clearAll(),
+        ).thenThrow(StateError('database is dead'));
+        when(() => mockLocalStorage.getAllLikeRecords()).thenAnswer(
+          (_) async => [
+            LikeRecord(
+              targetEventId: testEventId,
+              reactionEventId: 'reaction_$testEventId',
+              createdAt: DateTime.utc(2026),
+            ),
+          ],
+        );
+        repository = createRepository();
+
+        // Pin the baseline: the record is genuinely loaded before we act, so
+        // the assertion after the throw cannot pass on an empty cache.
+        expect(await repository.getLikedEventIds(), {testEventId});
+
+        await expectLater(repository.clearCache(), throwsA(isA<StateError>()));
+
+        // All-or-nothing: the durable store rejected the clear, so the caches
+        // derived from it must still describe what is on disk.
+        expect(await repository.getLikedEventIds(), {testEventId});
+        expect(await repository.isLiked(testEventId), isTrue);
+      });
     });
 
     group('watchLikedEventIds', () {
