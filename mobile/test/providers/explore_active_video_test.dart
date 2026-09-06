@@ -103,8 +103,7 @@ void main() {
       expect(isVideo1Active, isFalse);
 
       container.dispose();
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+    });
 
     test('activeVideoIdProvider returns correct video at index 1', () async {
       final container = ProviderContainer(
@@ -161,8 +160,7 @@ void main() {
       expect(isVideo2Active, isFalse);
 
       container.dispose();
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+    });
 
     test(
       'activeVideoIdProvider changes when scrolling from index 0 to 1',
