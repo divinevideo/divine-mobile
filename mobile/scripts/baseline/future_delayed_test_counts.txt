@@ -170,7 +170,6 @@ test/services/zendesk_support_service_test.dart	3
 test/startup/main_startup_registration_test.dart	1
 test/startup/startup_diagnostics_test.dart	9
 test/unit/services/video_event_service_force_refresh_test.dart	4
-test/unit/services/video_event_service_infinite_scroll_test.dart	6
 test/unit/services/video_event_service_reset_resubscribe_test.dart	16
 test/unit/services/video_event_service_subscription_test.dart	2
 test/unit/subscription_manager_tdd_test.dart	2

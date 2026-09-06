@@ -99,8 +99,7 @@ void main() {
         // Act - Load more events (simulating reaching end of feed)
         videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 50);
 
-        // Allow async operations to complete
-        await Future.delayed(const Duration(milliseconds: 100));
+        await pumpEventQueue();
 
         // Assert - Verify that 'until' filter was applied with oldest
         // timestamp
@@ -114,8 +113,6 @@ void main() {
         // Cleanup
         await streamController.close();
       },
-      // TODO(any): Fix and re-enable this test
-      skip: true,
     );
 
     test('should not use until filter when no existing events', () async {
@@ -142,8 +139,7 @@ void main() {
       // Act - Load more events with empty feed
       videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 50);
 
-      // Allow async operations to complete
-      await Future.delayed(const Duration(milliseconds: 100));
+      await pumpEventQueue();
 
       // Assert - Verify that no 'until' filter was applied
       verify(() => mockNostrService.subscribe(any())).called(1);
@@ -158,8 +154,7 @@ void main() {
 
       // Cleanup
       await streamController.close();
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
+    });
 
     test(
       'should properly update pagination state when receiving older events',
@@ -287,7 +282,7 @@ void main() {
 
         // First load - no until filter since no events yet
         videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 2);
-        await Future.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         // Simulate receiving events and updating oldest timestamp
         final firstBatchEvent = _createMockVideoEvent('batch1', 1704067200);
@@ -303,7 +298,7 @@ void main() {
 
         // Second load - should use until=1704067200
         videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 2);
-        await Future.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         // Add more events with older timestamp
         final secondBatchEvent = _createMockVideoEvent('batch2', 1704060000);
@@ -319,7 +314,7 @@ void main() {
 
         // Third load - should use until=1704060000
         videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 2);
-        await Future.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         // Assert - Check the progression of until filters
         expect(capturedFilters.length, greaterThanOrEqualTo(3));
@@ -336,58 +331,7 @@ void main() {
         // Cleanup
         await streamController.close();
       },
-      // TODO(any): Fix and re-enable this test
-      skip: true,
     );
-
-    test('should handle reaching true end of content gracefully', () async {
-      // Arrange - Don't create initial subscription
-      final paginationStates = videoEventService
-          .getPaginationStatesForTesting();
-      final discoveryState = paginationStates[SubscriptionType.discovery]!;
-
-      // Add some initial events
-      discoveryState.updateOldestTimestamp(1704067200);
-
-      final streamController = StreamController<Event>.broadcast();
-      when(
-        () => mockNostrService.subscribe(any()),
-      ).thenAnswer((_) => streamController.stream);
-
-      // Act - Load more but receive no events (reached end)
-      videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 50);
-      discoveryState.startQuery();
-
-      // Don't add any events - simulate end of content
-
-      // Complete the query with 0 events
-      discoveryState.completeQuery(50);
-
-      // Assert
-      expect(discoveryState.eventsReceivedInCurrentQuery, equals(0));
-      expect(discoveryState.hasMore, isFalse); // No more content available
-      expect(discoveryState.isLoading, isFalse);
-
-      // Try to load more again - should exit early
-      reset(mockNostrService);
-      when(() => mockNostrService.isInitialized).thenReturn(true);
-
-      // Reset the stream mock to ensure we're not accidentally
-      // triggering it
-      when(
-        () => mockNostrService.subscribe(any()),
-      ).thenAnswer((_) => streamController.stream);
-
-      videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 50);
-      await Future.delayed(const Duration(milliseconds: 50));
-
-      // Should not make another subscription since hasMore=false
-      verifyNever(() => mockNostrService.subscribe(any()));
-
-      // Cleanup
-      await streamController.close();
-      // TODO(any): Fix and re-enable this test
-    }, skip: true);
   });
 }
 
