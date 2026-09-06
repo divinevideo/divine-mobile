@@ -39,6 +39,14 @@ class _BlurhashDisplayState extends State<BlurhashDisplay> {
   BlurhashData? _blurhashData;
   Future<ui.Image?>? _imageFuture;
 
+  /// The decoded image this state owns. [FutureBuilder] only borrows it; it is
+  /// disposed here once a newer decode lands, and in [dispose].
+  ui.Image? _image;
+
+  /// Bumped per decode and in [dispose], so a decode that lands late disposes
+  /// its own result instead of replacing a newer one.
+  int _decodeGeneration = 0;
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +60,14 @@ class _BlurhashDisplayState extends State<BlurhashDisplay> {
         oldWidget.contentType != widget.contentType) {
       _decodeBlurhash();
     }
+  }
+
+  @override
+  void dispose() {
+    _decodeGeneration++;
+    _image?.dispose();
+    _image = null;
+    super.dispose();
   }
 
   void _decodeBlurhash() {
@@ -69,8 +85,9 @@ class _BlurhashDisplayState extends State<BlurhashDisplay> {
         // rebuilds — otherwise FutureBuilder restarts the decode and re-shows
         // the gradient fallback every time the surrounding tree rebuilds. #4196
         final pixels = data.pixels;
+        final generation = ++_decodeGeneration;
         final imageFuture = pixels != null
-            ? _createImageFromPixels(pixels, data.width, data.height)
+            ? _decodeImage(pixels, data.width, data.height, generation)
             : null;
         setState(() {
           _blurhashData = data;
@@ -155,6 +172,27 @@ class _BlurhashDisplayState extends State<BlurhashDisplay> {
         ),
       ),
     );
+  }
+
+  /// Decodes [pixels] and takes ownership of the result.
+  ///
+  /// A result that lands after a newer decode started, or after [dispose], has
+  /// nothing left to paint it, so it is disposed on the spot.
+  Future<ui.Image?> _decodeImage(
+    Uint8List pixels,
+    int width,
+    int height,
+    int generation,
+  ) async {
+    final image = await _createImageFromPixels(pixels, width, height);
+    if (image == null) return null;
+    if (generation != _decodeGeneration) {
+      image.dispose();
+      return null;
+    }
+    _image?.dispose();
+    _image = image;
+    return image;
   }
 
   Future<ui.Image?> _createImageFromPixels(

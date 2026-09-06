@@ -34,6 +34,9 @@ class WatermarkImageGenerator {
     required String watermarkText,
   }) async {
     final wordmarkImage = await _loadWordmarkImage();
+    ui.Paragraph? textParagraph;
+    ui.Picture? picture;
+    ui.Image? image;
 
     try {
       final recorder = ui.PictureRecorder();
@@ -45,11 +48,7 @@ class WatermarkImageGenerator {
       // Build the single-line watermark text using the resolved identity.
       // Available width = from left margin to right margin
       final maxTextWidth = videoWidth - 2 * _margin;
-      final textParagraph = _buildParagraph(
-        watermarkText,
-        fontSize,
-        maxTextWidth,
-      );
+      textParagraph = _buildParagraph(watermarkText, fontSize, maxTextWidth);
       textParagraph.layout(ui.ParagraphConstraints(width: maxTextWidth));
 
       // Calculate wordmark draw size preserving aspect ratio
@@ -98,8 +97,8 @@ class WatermarkImageGenerator {
       canvas.drawParagraph(textParagraph, ui.Offset(textLeft, textTop));
 
       // Convert to image
-      final picture = recorder.endRecording();
-      final image = await picture.toImage(videoWidth, videoHeight);
+      picture = recorder.endRecording();
+      image = await picture.toImage(videoWidth, videoHeight);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
       if (byteData == null) {
@@ -110,6 +109,11 @@ class WatermarkImageGenerator {
 
       return byteData.buffer.asUint8List();
     } finally {
+      // Every native drawing resource this call created; only the PNG bytes
+      // may outlive it.
+      image?.dispose();
+      picture?.dispose();
+      textParagraph?.dispose();
       wordmarkImage.dispose();
     }
   }
@@ -119,9 +123,12 @@ class WatermarkImageGenerator {
     try {
       final data = await rootBundle.load(_wordmarkAssetPath);
       final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
-      final frame = await codec.getNextFrame();
-      codec.dispose();
-      return frame.image;
+      try {
+        final frame = await codec.getNextFrame();
+        return frame.image;
+      } finally {
+        codec.dispose();
+      }
     } catch (e) {
       throw WatermarkGenerationException('Failed to load wordmark asset: $e');
     }

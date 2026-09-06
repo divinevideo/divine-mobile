@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,8 @@ void main() {
     // A real, decodable blurhash — the decode path under test rejects
     // malformed strings before it ever produces an image.
     const validBlurhash = 'L5H2EC=PM+yV0g-mq.wG9c010J}I';
+    // A second decodable hash, so a widget update actually re-decodes.
+    const otherValidBlurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
 
     testWidgets('keeps decode future stable across parent rebuilds', (
       tester,
@@ -76,5 +79,73 @@ void main() {
       expect(gradient.colors.first.a, closeTo(0.5, 0.01));
       expect(find.byType(Opacity), findsNothing);
     });
+
+    testWidgets('disposes the decoded image when unmounted', (tester) async {
+      await tester.pumpWidget(
+        const SizedBox(
+          width: 100,
+          height: 100,
+          child: BlurhashDisplay(blurhash: validBlurhash),
+        ),
+      );
+      final image = await _decodedImage(tester);
+      expect(image.debugDisposed, isFalse);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      expect(image.debugDisposed, isTrue);
+    });
+
+    testWidgets('disposes the previous image once a new blurhash decodes', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const SizedBox(
+          width: 100,
+          height: 100,
+          child: BlurhashDisplay(blurhash: validBlurhash),
+        ),
+      );
+      final first = await _decodedImage(tester);
+
+      await tester.pumpWidget(
+        const SizedBox(
+          width: 100,
+          height: 100,
+          child: BlurhashDisplay(blurhash: otherValidBlurhash),
+        ),
+      );
+      final second = await _decodedImage(tester);
+
+      expect(second, isNot(same(first)));
+      expect(first.debugDisposed, isTrue);
+      expect(second.debugDisposed, isFalse);
+    });
   });
+}
+
+/// Resolves the image the widget's [FutureBuilder] is waiting on.
+///
+/// The decode hops between the engine and `then` callbacks queued in the test's
+/// fake-async zone. Awaiting the future inside a single `runAsync` therefore
+/// never completes; alternating real event-queue turns with pumps does.
+Future<ui.Image> _decodedImage(WidgetTester tester) async {
+  final future = tester
+      .widget<FutureBuilder<ui.Image?>>(find.byType(FutureBuilder<ui.Image?>))
+      .future!;
+  ui.Image? image;
+  var completed = false;
+  unawaited(
+    future.then((value) {
+      image = value;
+      completed = true;
+    }),
+  );
+  for (var attempt = 0; attempt < 50 && !completed; attempt++) {
+    await tester.runAsync(pumpEventQueue);
+    await tester.pump();
+  }
+  expect(completed, isTrue, reason: 'blurhash decode never completed');
+  expect(image, isNotNull);
+  return image!;
 }

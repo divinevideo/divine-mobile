@@ -102,6 +102,35 @@ void main() {
       _clearAssetMock();
     });
 
+    test('disposes every image it rasterizes', () async {
+      final live = <ui.Image>{};
+      final previousOnCreate = ui.Image.onCreate;
+      final previousOnDispose = ui.Image.onDispose;
+      ui.Image.onCreate = (image) {
+        previousOnCreate?.call(image);
+        live.add(image);
+      };
+      ui.Image.onDispose = (image) {
+        previousOnDispose?.call(image);
+        live.remove(image);
+      };
+      addTearDown(() {
+        ui.Image.onCreate = previousOnCreate;
+        ui.Image.onDispose = previousOnDispose;
+      });
+
+      await WatermarkImageGenerator.generateWatermark(
+        videoWidth: 64,
+        videoHeight: 64,
+        watermarkText: '@divine.video',
+      );
+
+      // The wordmark decode and the full-frame raster are both handles this
+      // call owns; leaving either open keeps its native pixels alive until the
+      // garbage collector finalizes the wrapper.
+      expect(live, isEmpty);
+    });
+
     test('bundled wordmark asset matches the refreshed logo mark', () async {
       final decoded = await _decodeRgba(wordmarkBytes);
       const expectedLogoAspectRatio = 125 / 33;
