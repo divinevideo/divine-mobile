@@ -325,8 +325,8 @@ void main() {
     nostrSession.setReadiness(
       NostrSessionReadiness.nostrReady(pubkey: pubkey, client: nostrClient),
     );
-    await Future<void>.delayed(Duration.zero);
-    await Future<void>.delayed(Duration.zero);
+    await pumpEventQueue(times: 1);
+    await pumpEventQueue(times: 1);
   }
 
   void recordMockDeregistration(
@@ -389,7 +389,7 @@ void main() {
             data: {'title': 'New like', 'body': 'Someone'},
           ),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         verify(
           () => pushService.handleForegroundMessage(const {
@@ -464,17 +464,17 @@ void main() {
         container.read(pushNotificationSyncProvider);
 
         await emitReady(nostrSession, pubkeyA);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         verify(() => messaging.getToken()).called(1);
 
         when(() => authService.currentIdentity).thenReturn(_identity(pubkeyB));
         when(() => authService.currentPublicKeyHex).thenReturn(pubkeyB);
         authStateController.add(AuthState.authenticated);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         tokenCompleter.complete('fcm-token-for-stale-session');
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         verifyNever(
           () => nostrClient.publishEventAwaitOk(
@@ -500,8 +500,8 @@ void main() {
       when(() => authService.currentIdentity).thenReturn(_identity(pubkeyA));
       when(() => authService.currentPublicKeyHex).thenReturn(pubkeyA);
       authStateController.add(AuthState.authenticated);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       verifyNever(
         () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
@@ -842,8 +842,8 @@ void main() {
       nostrSession.setReadiness(
         NostrSessionReadiness.nostrReady(pubkey: pubkeyA, client: nostrClient),
       );
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       verifyNever(
         () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
@@ -884,8 +884,8 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         await beforeSessionTeardownCallback!();
 
@@ -915,15 +915,15 @@ void main() {
       nostrSession.setReadiness(
         NostrSessionReadiness.nostrReady(pubkey: pubkeyA, client: nostrClient),
       );
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       when(() => authService.currentIdentity).thenReturn(null);
       when(() => authService.currentPublicKeyHex).thenReturn(null);
       nostrSession.setReadiness(const NostrSessionReadiness.signedOut());
 
       settingsCompleter.complete(_settings(AuthorizationStatus.authorized));
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       verifyNever(
         () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
@@ -957,8 +957,8 @@ void main() {
         final teardownFuture = beforeSessionTeardownCallback!().timeout(
           const Duration(milliseconds: 100),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         await teardownFuture;
         when(() => authService.currentIdentity).thenReturn(null);
@@ -966,8 +966,8 @@ void main() {
         expect(events, ['deregister $pubkeyA']);
 
         settingsCompleter.complete(_settings(AuthorizationStatus.authorized));
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(events, ['deregister $pubkeyA']);
         verifyNever(
@@ -1015,15 +1015,15 @@ void main() {
             .updatePreferences(prefs);
 
         await emitReady(nostrSession, pubkeyA);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         settingsCompleter.complete(_settings(AuthorizationStatus.authorized));
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
         expect(registerCalls, equals(1));
 
         publishCompleter.complete();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
       },
     );
 
@@ -1051,11 +1051,11 @@ void main() {
         container.read(pushNotificationSyncProvider);
 
         await emitReady(nostrSession, pubkeyA);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(events, ['register $pubkeyA']);
 
         final teardownFuture = beforeSessionTeardownCallback!();
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         expect(events, ['register $pubkeyA']);
 
@@ -1506,9 +1506,9 @@ void main() {
               client: nostrClient,
             ),
           );
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue(times: 1);
+          await pumpEventQueue(times: 1);
+          await pumpEventQueue(times: 1);
         }, (error, stack) => unhandled.add(error));
 
         expect(
@@ -1549,8 +1549,8 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
       }, (error, stack) => unhandled.add(error));
 
       expect(unhandled, isEmpty);
@@ -1588,13 +1588,13 @@ void main() {
               client: nostrClient,
             ),
           );
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue(times: 1);
+          await pumpEventQueue(times: 1);
 
           // Then start sign-out teardown — publishing deregistration throws.
           await beforeSessionTeardownCallback!();
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue(times: 1);
+          await pumpEventQueue(times: 1);
         }, (error, stack) => unhandled.add(error));
 
         expect(unhandled, isEmpty);
@@ -1650,7 +1650,7 @@ void main() {
       when(() => authService.currentIdentity).thenReturn(null);
       when(() => authService.currentPublicKeyHex).thenReturn(null);
       nostrSession.setReadiness(const NostrSessionReadiness.signedOut());
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
 
       await beforeSessionTeardownCallback!();
 
@@ -1680,7 +1680,7 @@ void main() {
         nostrSession.setReadiness(
           const NostrSessionReadiness.identityKnown(pubkey: pubkeyA),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         await beforeSessionTeardownCallback!();
 
@@ -1767,13 +1767,13 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         nostrSession.setReadiness(
           const NostrSessionReadiness.identityKnown(pubkey: pubkeyA),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         await beforeSessionTeardownCallback!();
 
@@ -1858,8 +1858,8 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         when(() => authService.currentIdentity).thenReturn(null);
         when(() => authService.currentPublicKeyHex).thenReturn(null);
@@ -1962,8 +1962,8 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         currentEnvironment = stagingEnvironment;
         container.invalidate(currentEnvironmentProvider);
@@ -1973,13 +1973,13 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         final teardownFuture = coordinator
             .deregisterLastReadyPubkeyAfterAccountSwitch();
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         verify(() => messaging.getToken()).called(1);
         verifyNever(cleanupClient.initialize);
@@ -1993,8 +1993,8 @@ void main() {
 
         container.dispose();
         tokenCompleter.complete('fcm-token');
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         verify(() => signer.signEvent(any())).called(1);
         verify(cleanupClient.initialize).called(1);
@@ -2108,13 +2108,13 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         await beforeSessionTeardownCallback!();
         tokenRefreshController.add('refreshed-token-during-teardown');
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         verifyNever(
           () => authService.createAndSignEvent(
@@ -2242,12 +2242,12 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         tokenRefreshController.add('refreshed-token-during-session');
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
         expect(events, ['registration publish started']);
 
         // The refresh delivered a token, so getToken() now returns it and the
@@ -2255,8 +2255,8 @@ void main() {
         sessionToken = 'refreshed-token-during-session';
 
         final teardownFuture = beforeSessionTeardownCallback!();
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
         expect(events, ['registration publish started']);
 
         registrationPublishCompleter.complete(
@@ -2340,7 +2340,7 @@ void main() {
         expect(container.read(pushNotificationServiceProvider), isNull);
 
         tokenRefreshController.add('refreshed-token');
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
 
         verifyNever(() => nostrClient.signer);
       },
@@ -2662,7 +2662,7 @@ void main() {
         nostrSession.setReadiness(
           const NostrSessionReadiness.identityKnown(pubkey: pubkeyB),
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(preferenceStore.dirtyPreferencesByPubkey[pubkeyA], prefs);
 
         when(() => authService.currentIdentity).thenReturn(_identity(pubkeyA));
@@ -2723,7 +2723,7 @@ void main() {
             .updatePreferences(prefs);
 
         nostrSession.setReadiness(const NostrSessionReadiness.signedOut());
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
         expect(preferenceStore.dirtyPreferencesByPubkey[pubkeyA], prefs);
 
         nostrSession.setReadiness(
@@ -2789,9 +2789,9 @@ void main() {
               client: nostrClient,
             ),
           );
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue(times: 1);
+          await pumpEventQueue(times: 1);
+          await pumpEventQueue(times: 1);
         }, (error, stack) => unhandled.add(error));
 
         expect(unhandled, isEmpty);
@@ -2825,11 +2825,11 @@ void main() {
               .updatePreferences(prefs),
           completes,
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         verify(() => pushService.updatePreferences(prefs)).called(5);
         expect(preferenceStore.dirtyPreferencesByPubkey[pubkeyA], prefs);
@@ -2866,9 +2866,9 @@ void main() {
         await container
             .read(notificationPreferencesServiceProvider)
             .updatePreferences(publishedPrefs);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         verify(() => pushService.updatePreferences(publishedPrefs)).called(1);
         verify(() => pushService.updatePreferences(newerPrefs)).called(1);
@@ -2907,9 +2907,9 @@ void main() {
       await container
           .read(notificationPreferencesServiceProvider)
           .updatePreferences(prefs);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
+      await pumpEventQueue(times: 1);
 
       expect(attempts, equals(2));
       expect(
@@ -2943,9 +2943,9 @@ void main() {
           ),
         );
         container.read(pushNotificationSyncProvider);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(attempts, equals(2));
         expect(
@@ -3088,13 +3088,13 @@ void main() {
             client: nostrClient,
           ),
         );
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         permissionCompleter.complete(_settings(AuthorizationStatus.authorized));
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
+        await pumpEventQueue(times: 1);
 
         expect(requestCount, 1);
         expect(events, ['register $pubkeyB']);
