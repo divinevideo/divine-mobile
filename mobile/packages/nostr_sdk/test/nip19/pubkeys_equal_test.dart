@@ -14,4 +14,14 @@ void main() {
       expect(pubkeysEqual('a1b2', 'a1b3'), isFalse);
     });
   });
+
+  group('containsDistinctPubkeys', () {
+    test('treats differently cased hex as the same key', () {
+      expect(containsDistinctPubkeys(['a1b2', 'A1B2']), isFalse);
+    });
+
+    test('detects a different key', () {
+      expect(containsDistinctPubkeys(['a1b2', 'a1b3']), isTrue);
+    });
+  });
 }

@@ -5,6 +5,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/dm/minor_dm_approval.dart';
 
 /// Resolution status for a conversation's counterparties.
@@ -150,8 +151,9 @@ class ConversationParticipantsCubit extends Cubit<ConversationParticipantsState>
     final conversation = await _dmRepository.getConversation(conversationId);
     if (conversation == null) return const [];
     final userPubkey = _dmRepository.userPubkey;
-    return conversation.participantPubkeys
-        .where((pubkey) => pubkey != userPubkey)
-        .toList();
+    return dmConversationPeerPubkeys(
+      participantPubkeys: conversation.participantPubkeys,
+      currentUserPubkey: userPubkey,
+    );
   }
 }

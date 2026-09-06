@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
+import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/dm/message_requests/message_request_actions_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -179,9 +180,10 @@ class _RequestList extends StatelessWidget {
   }
 
   void _onRequestTapped(BuildContext context, DmConversation conversation) {
-    final otherPubkeys = conversation.participantPubkeys
-        .where((pk) => pk != currentPubkey)
-        .toList();
+    final otherPubkeys = dmConversationPeerPubkeys(
+      participantPubkeys: conversation.participantPubkeys,
+      currentUserPubkey: currentPubkey,
+    );
 
     final extra = conversation.subject == null
         ? otherPubkeys

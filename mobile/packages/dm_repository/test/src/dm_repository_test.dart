@@ -16705,6 +16705,85 @@ void main() {
         expect(result.followed, isEmpty);
         expect(result.requests, isEmpty);
       });
+
+      // A participant set that collapses to the viewer alone is a
+      // self-conversation, which Divine does not support (#8261). It belongs
+      // in neither user-facing list: moving the unusable row from Messages to
+      // Message requests would only relocate the same broken experience.
+      test('self-only participants are hidden from both lists', () {
+        final conv = makeConversation(
+          id: 'conv1',
+          participantPubkeys: [_validPubkeyA],
+        );
+
+        final result = DmRepository.classifyPotentialRequests(
+          [conv],
+          userPubkey: _validPubkeyA,
+          isFollowing: (_) => false,
+        );
+
+        expect(result.followed, isEmpty);
+        expect(result.requests, isEmpty);
+      });
+
+      // `[self, self]` is the shape `_cleanupSelfConversations` targets and
+      // the one a pre-#2824 self-wrap persisted.
+      test('duplicated self participants are hidden from both lists', () {
+        final conv = makeConversation(
+          id: 'conv1',
+          participantPubkeys: [_validPubkeyA, _validPubkeyA],
+        );
+
+        final result = DmRepository.classifyPotentialRequests(
+          [conv],
+          userPubkey: _validPubkeyA,
+          isFollowing: (_) => false,
+        );
+
+        expect(result.followed, isEmpty);
+        expect(result.requests, isEmpty);
+      });
+
+      test('mixed-case duplicated self participants are hidden', () {
+        final conv = makeConversation(
+          id: 'conv1',
+          participantPubkeys: [
+            _validPubkeyA,
+            _validPubkeyA.toUpperCase(),
+          ],
+        );
+
+        final result = DmRepository.classifyPotentialRequests(
+          [conv],
+          userPubkey: _validPubkeyA,
+          isFollowing: (_) => false,
+        );
+
+        expect(result.followed, isEmpty);
+        expect(result.requests, isEmpty);
+      });
+
+      // `validatePubkey` accepts upper-case hex, so the viewer can appear
+      // in a stored participant list under a different casing than
+      // `userPubkey`. An exact `!=` would leave them in `otherPubkeys` and
+      // strand a followed 1:1 peer under Message requests — the #5374
+      // failure mode. Matches `_isSelf`, which compares case-insensitively
+      // for this reason.
+      test('viewer is filtered out regardless of pubkey casing', () {
+        final conv = makeConversation(
+          id: 'conv1',
+          participantPubkeys: [_validPubkeyA.toUpperCase(), _validPubkeyB],
+        );
+
+        final result = DmRepository.classifyPotentialRequests(
+          [conv],
+          userPubkey: _validPubkeyA,
+          isFollowing: (pk) => pk == _validPubkeyB,
+        );
+
+        expect(result.followed, hasLength(1));
+        expect(result.requests, isEmpty);
+      });
     });
 
     group('mergeAndSort', () {

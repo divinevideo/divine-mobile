@@ -5,6 +5,7 @@ import 'package:bloc/bloc.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/dm/minor_dm_approval.dart';
 
 enum RequestPreviewStatus { loading, loaded, error, denied }
@@ -147,8 +148,9 @@ class RequestPreviewCubit extends Cubit<RequestPreviewState> {
     final conversation = await _dmRepository.getConversation(conversationId);
     if (conversation == null) return [];
     final userPubkey = _dmRepository.userPubkey;
-    return conversation.participantPubkeys
-        .where((pk) => pk != userPubkey)
-        .toList();
+    return dmConversationPeerPubkeys(
+      participantPubkeys: conversation.participantPubkeys,
+      currentUserPubkey: userPubkey,
+    );
   }
 }

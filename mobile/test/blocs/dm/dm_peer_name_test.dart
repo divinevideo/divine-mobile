@@ -16,6 +16,33 @@ const _ordinaryPubkey =
     'd4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5';
 
 void main() {
+  group('DM conversation peers', () {
+    const me =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const alice =
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+
+    test('excludes the viewer regardless of hex casing', () {
+      expect(
+        dmConversationPeerPubkeys(
+          participantPubkeys: [me.toUpperCase(), alice],
+          currentUserPubkey: me,
+        ),
+        equals([alice]),
+      );
+    });
+
+    test('selects the peer when the viewer uses different hex casing', () {
+      expect(
+        dmConversationFirstPeer(
+          participantPubkeys: [me.toUpperCase(), alice],
+          currentUserPubkey: me,
+        ),
+        equals(alice),
+      );
+    });
+  });
+
   group(dmPeerName, () {
     group('precedence', () {
       test('vanished outranks every other branch', () {

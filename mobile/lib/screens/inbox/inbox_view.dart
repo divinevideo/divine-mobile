@@ -15,6 +15,7 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/dm/conversation_actions/conversation_actions_cubit.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
 import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
+import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
@@ -560,9 +561,10 @@ class _PinnedSupportRow extends StatelessWidget {
         // reads `extra` as the COUNTERPARTY list, so passing the raw
         // participants opens a conversation with the signed-in user instead
         // of with moderation.
-        conversation.participantPubkeys
-            .where((pk) => pk != currentUserPubkey)
-            .toList(),
+        dmConversationPeerPubkeys(
+          participantPubkeys: conversation.participantPubkeys,
+          currentUserPubkey: currentUserPubkey,
+        ),
       ),
       onLongPress: onLongPress,
     );
@@ -994,9 +996,10 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
       name: 'InboxView',
       category: LogCategory.ui,
     );
-    final otherPubkeys = conversation.participantPubkeys
-        .where((pk) => pk != widget.currentUserPubkey)
-        .toList();
+    final otherPubkeys = dmConversationPeerPubkeys(
+      participantPubkeys: conversation.participantPubkeys,
+      currentUserPubkey: widget.currentUserPubkey,
+    );
 
     _pushConversation(
       context,
@@ -1012,9 +1015,9 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
     DmConversation conversation, {
     String? displayNameOverride,
   }) async {
-    final otherPubkey = conversation.participantPubkeys.firstWhere(
-      (pk) => pk != widget.currentUserPubkey,
-      orElse: () => conversation.participantPubkeys.first,
+    final otherPubkey = dmConversationFirstPeer(
+      participantPubkeys: conversation.participantPubkeys,
+      currentUserPubkey: widget.currentUserPubkey,
     );
 
     // Match [ConversationTile]'s identity chain, so the row and the sheet it

@@ -4,6 +4,31 @@
 
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
+
+/// The conversation participants other than the signed-in viewer.
+///
+/// Nostr hex keys are case-insensitive. Keeping this comparison here prevents
+/// inbox rows, navigation, actions, and search from disagreeing about which
+/// participant is the viewer when stored keys use different casing.
+List<String> dmConversationPeerPubkeys({
+  required List<String> participantPubkeys,
+  required String currentUserPubkey,
+}) => participantPubkeys
+    .where((pubkey) => !pubkeysEqual(pubkey, currentUserPubkey))
+    .toList();
+
+/// The first non-viewer participant, with the historical first-participant
+/// fallback for malformed rows.
+String dmConversationFirstPeer({
+  required List<String> participantPubkeys,
+  required String currentUserPubkey,
+}) =>
+    dmConversationPeerPubkeys(
+      participantPubkeys: participantPubkeys,
+      currentUserPubkey: currentUserPubkey,
+    ).firstOrNull ??
+    participantPubkeys.first;
 
 /// The localized strings [dmPeerName] substitutes for a peer whose own name
 /// must not be shown.
@@ -48,9 +73,10 @@ int dmGroupOtherCount({
   required List<String> participantPubkeys,
   required String currentUserPubkey,
 }) {
-  final peers = participantPubkeys
-      .where((pubkey) => pubkey != currentUserPubkey)
-      .length;
+  final peers = dmConversationPeerPubkeys(
+    participantPubkeys: participantPubkeys,
+    currentUserPubkey: currentUserPubkey,
+  ).length;
   return peers <= 1 ? 0 : peers - 1;
 }
 

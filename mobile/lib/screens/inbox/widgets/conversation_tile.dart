@@ -6,6 +6,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
@@ -62,9 +63,9 @@ class ConversationTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final otherPubkey = conversation.participantPubkeys.firstWhere(
-      (pk) => pk != currentUserPubkey,
-      orElse: () => conversation.participantPubkeys.first,
+    final otherPubkey = dmConversationFirstPeer(
+      participantPubkeys: conversation.participantPubkeys,
+      currentUserPubkey: currentUserPubkey,
     );
 
     final profileAsync = ref.watch(fetchUserProfileProvider(otherPubkey));

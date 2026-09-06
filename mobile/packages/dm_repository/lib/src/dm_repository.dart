@@ -2859,7 +2859,7 @@ class DmRepository {
         // Reject self-conversations (all participants are the same pubkey).
         // Defense-in-depth: should not happen after the self-wrap fix above,
         // but guards against any future code path producing degenerate lists.
-        if (participants.toSet().length < 2) {
+        if (!containsDistinctPubkeys(participants)) {
           await _recordProcessedWrap(
             giftWrapEvent.id,
             ownerPubkey: ownerPubkey,
@@ -7624,6 +7624,19 @@ class DmRepository {
   /// from `participants.length > 2` and overwritten on every upsert, so
   /// it can drift from a row's real participants — which was stranding
   /// followed 1:1 peers under "Message requests" (#5374).
+  ///
+  /// A participant set that collapses to the viewer alone is a
+  /// self-conversation, which Divine does not support (#8261). It is omitted
+  /// from both user-facing lists: moving an unusable row from Messages to
+  /// Message requests would only relocate the same broken experience. #2219
+  /// routed the empty case to the followed list explicitly; #6294 folded that
+  /// branch into `Set.every`'s vacuous truth, leaving the behaviour implicit.
+  /// The diagnostics branch below still records the malformed row.
+  ///
+  /// NIP-17 ingest rejects case-insensitively collapsed participant lists,
+  /// while post-auth maintenance cleans the known legacy `[self, self]`
+  /// shape. Classification remains defensive because older or otherwise
+  /// malformed rows can use a different participant shape.
   static ({List<DmConversation> followed, List<DmConversation> requests})
   classifyPotentialRequests(
     List<DmConversation> potentialRequests, {
@@ -7634,15 +7647,31 @@ class DmRepository {
     final requests = <DmConversation>[];
 
     for (final conversation in potentialRequests) {
+      // Case-insensitive, matching [_isSelf]: `validatePubkey` accepts
+      // upper-case hex, so an exact `!=` would keep the viewer in
+      // `otherPubkeys` under a different casing and strand a followed 1:1
+      // peer under Message requests — the #5374 failure mode.
       final otherPubkeys = conversation.participantPubkeys
-          .where((pk) => pk != userPubkey)
+          .where((pk) => !pubkeysEqual(pk, userPubkey))
           .toSet();
+
+      if (otherPubkeys.isEmpty) {
+        if (_classifyDiagnostics) {
+          Log.debug(
+            'classifyPotentialRequests → hidden self-only conversation: '
+            '${conversation.id}',
+            category: LogCategory.system,
+          );
+        }
+        continue;
+      }
 
       // A conversation whose every (deduplicated) non-self participant is
       // followed is not a request even if the user hasn't replied yet —
       // 1:1 or group alike. Derived from actual participants rather than
       // the stored `isGroup` flag, which can drift from the row's real
       // participants and mis-route followed 1:1 peers to requests (#5374).
+      //
       final allFollowed = otherPubkeys.every(isFollowing);
 
       if (allFollowed) {

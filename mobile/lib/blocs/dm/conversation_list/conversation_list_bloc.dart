@@ -611,9 +611,9 @@ class ConversationListBloc
   }
 
   static String _otherParticipant(DmConversation conversation, String self) {
-    return conversation.participantPubkeys.firstWhere(
-      (pk) => pk != self,
-      orElse: () => conversation.participantPubkeys.first,
+    return dmConversationFirstPeer(
+      participantPubkeys: conversation.participantPubkeys,
+      currentUserPubkey: self,
     );
   }
 
