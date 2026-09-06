@@ -12,13 +12,16 @@ import 'package:flutter/services.dart';
 /// An implementation of [BackgroundUploaderPlatform] that uses method channels.
 class MethodChannelBackgroundUploader extends BackgroundUploaderPlatform {
   /// Constructor that wires the native event callback.
-  MethodChannelBackgroundUploader() {
-    methodChannel.setMethodCallHandler(_handleMethodCall);
+  MethodChannelBackgroundUploader({
+    @visibleForTesting MethodChannel? methodChannel,
+  }) : methodChannel =
+           methodChannel ?? const MethodChannel('background_uploader') {
+    this.methodChannel.setMethodCallHandler(_handleMethodCall);
   }
 
   /// The method channel used to interact with the native platform.
   @visibleForTesting
-  final methodChannel = const MethodChannel('background_uploader');
+  final MethodChannel methodChannel;
 
   final StreamController<BackgroundUploadEvent> _eventController =
       StreamController<BackgroundUploadEvent>.broadcast();
@@ -114,5 +117,12 @@ class MethodChannelBackgroundUploader extends BackgroundUploaderPlatform {
       'activeTaskIds',
     );
     return result ?? const <String>[];
+  }
+
+  /// Releases this instance's channel handler and event stream.
+  @visibleForTesting
+  Future<void> dispose() async {
+    methodChannel.setMethodCallHandler(null);
+    await _eventController.close();
   }
 }

@@ -187,7 +187,10 @@ void main() {
     await DivineCamera.instance.dispose();
   });
 
-  tearDown(() {
+  tearDown(() async {
+    // Dispose while the mock is still installed: disposeCamera() must not hit
+    // the real MethodChannel implementation.
+    await DivineCamera.instance.dispose();
     // Restore the process-global platform singleton so the mock does not
     // leak into later files in the package's merged isolate.
     DivineCameraPlatform.instance = initialPlatform;
