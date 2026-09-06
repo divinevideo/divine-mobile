@@ -8,7 +8,6 @@ import 'dart:async';
 import 'package:cache_sync/cache_sync.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:follow_repository/follow_repository.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:nostr_client/nostr_client.dart'
     show BlockListSigner, SharedPreferencesRelayStorage;
@@ -25,6 +24,7 @@ import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/services/auth/following_cache_seed.dart';
 import 'package:openvine/services/auth/known_accounts_registry.dart';
 import 'package:openvine/services/auth/nostr_connect_coordinator.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
@@ -1302,12 +1302,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         biometricPrompt: biometricPrompt,
       );
 
-      // Set up user session
-      await _setupUserSession(
-        keyContainer,
-        AuthenticationSource.automatic,
-        seedEmptyFollowingCache: true,
-      );
+      await seedEmptyFollowingCache(keyContainer.publicKeyHex);
+      await _setupUserSession(keyContainer, AuthenticationSource.automatic);
 
       Log.info(
         'New secure identity created successfully',
@@ -1418,11 +1414,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     try {
       await _keyStorage.deleteKeys();
       final keyContainer = await _keyStorage.importFromHex(privateKeyHex);
-      await _setupUserSession(
-        keyContainer,
-        AuthenticationSource.automatic,
-        seedEmptyFollowingCache: true,
-      );
+      await seedEmptyFollowingCache(keyContainer.publicKeyHex);
+      await _setupUserSession(keyContainer, AuthenticationSource.automatic);
       await acceptTerms();
 
       Log.info(
@@ -4027,7 +4020,6 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     AuthenticationSource source, {
     bool allowPubkeyOnlyIdentity = false,
     bool claimLegacyRows = true,
-    bool seedEmptyFollowingCache = false,
   }) async {
     Log.info(
       '_setupUserSession: starting — '
@@ -4159,15 +4151,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       // welcome-screen mismatch detection after the next sign-out.
       await prefs.remove(_kSessionRecoveryAnchorKey);
 
-      final followingCacheKey = FollowingCacheRecord.storageKey(
-        keyContainer.publicKeyHex,
-      );
-      if (seedEmptyFollowingCache) {
-        await prefs.setString(
-          followingCacheKey,
-          FollowingCacheRecord(pubkeys: const []).encode(),
-        );
-      }
+      final followingCacheKey = 'following_list_${keyContainer.publicKeyHex}';
       final hasFollowingCache = prefs.containsKey(followingCacheKey);
 
       // Pre-fetch following list from REST API BEFORE setting auth state.
