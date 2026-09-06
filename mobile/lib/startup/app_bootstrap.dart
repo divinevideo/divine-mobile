@@ -414,7 +414,7 @@ Future<void> startOpenVineApp({
           reason: 'Video player disposed race condition',
         ),
       );
-      // Still show the error widget (dark placeholder) but don't report
+      // Present the ErrorWidget.builder surface without reporting this race
       // as fatal.
       FlutterError.presentError(details);
       return;
