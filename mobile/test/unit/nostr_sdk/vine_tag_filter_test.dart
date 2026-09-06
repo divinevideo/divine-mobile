@@ -55,7 +55,7 @@ void main() {
       );
     });
 
-    test('SocialService reaction filters should include vine tag', () {
+    test('reaction filters should include vine tag', () {
       // Create a filter for Kind 7 events (reactions)
       final filter = Filter(
         kinds: [7],

@@ -30,7 +30,6 @@ import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/nip05_verification_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
-import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -38,8 +37,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // Mock classes (public because they are imported by many test files)
 class MockSharedPreferences extends Mock implements SharedPreferences {}
-
-class MockSocialService extends Mock implements SocialService {}
 
 class MockAuthService extends Mock implements AuthService {}
 
@@ -160,16 +157,6 @@ void _stubSessionCleanupRegistration(AuthService mockAuth) {
   when(
     () => mockAuth.registerBeforeSessionTeardownCallback(any()),
   ).thenReturn(() {});
-}
-
-/// Creates a properly stubbed MockSocialService for testing
-MockSocialService createMockSocialService() {
-  final mockSocial = MockSocialService();
-
-  // Stub common methods to return empty results by default
-  when(() => mockSocial.getUserVideoCount(any())).thenAnswer((_) async => 0);
-
-  return mockSocial;
 }
 
 /// Creates a properly stubbed MockNostrClient for testing
@@ -389,7 +376,6 @@ List<dynamic> getStandardTestOverrides({
   SharedPreferences? mockSharedPreferences,
   AuthService? mockAuthService,
   AnalyticsService? analyticsService,
-  SocialService? mockSocialService,
   NostrClient? mockNostrService,
   SubscriptionManager? mockSubscriptionManager,
   BlossomAuthService? mockBlossomAuthService,
@@ -404,7 +390,6 @@ List<dynamic> getStandardTestOverrides({
   if (mockAuthService != null) {
     _stubSessionCleanupRegistration(mockAuth);
   }
-  final mockSocial = mockSocialService ?? createMockSocialService();
   final mockNostr = mockNostrService ?? createMockNostrService();
   final mockSub = mockSubscriptionManager ?? createMockSubscriptionManager();
   final mockBlossom = mockBlossomAuthService ?? createMockBlossomAuthService();
@@ -467,8 +452,6 @@ List<dynamic> getStandardTestOverrides({
     // ONLY override other service providers if explicitly requested
     if (mockAuthService != null)
       authServiceProvider.overrideWithValue(mockAuth),
-    if (mockSocialService != null)
-      socialServiceProvider.overrideWithValue(mockSocial),
     if (mockProfileRepository != null) ...[
       profileRepositoryProvider.overrideWithValue(mockProfile),
       // Display code reads the identity-known-gated handle, not the
@@ -501,7 +484,6 @@ Widget testProviderScope({
   SharedPreferences? mockSharedPreferences,
   AuthService? mockAuthService,
   AnalyticsService? analyticsService,
-  SocialService? mockSocialService,
   NostrClient? mockNostrService,
   SubscriptionManager? mockSubscriptionManager,
   BlossomAuthService? mockBlossomAuthService,
@@ -518,7 +500,6 @@ Widget testProviderScope({
         mockSharedPreferences: mockSharedPreferences,
         mockAuthService: mockAuthService,
         analyticsService: analyticsService,
-        mockSocialService: mockSocialService,
         mockNostrService: mockNostrService,
         mockSubscriptionManager: mockSubscriptionManager,
         mockBlossomAuthService: mockBlossomAuthService,
@@ -566,7 +547,6 @@ Widget testMaterialApp({
   SharedPreferences? mockSharedPreferences,
   AuthService? mockAuthService,
   AnalyticsService? analyticsService,
-  SocialService? mockSocialService,
   NostrClient? mockNostrService,
   SubscriptionManager? mockSubscriptionManager,
   BlossomAuthService? mockBlossomAuthService,
@@ -584,7 +564,6 @@ Widget testMaterialApp({
     mockSharedPreferences: mockSharedPreferences,
     mockAuthService: mockAuthService,
     analyticsService: analyticsService,
-    mockSocialService: mockSocialService,
     mockNostrService: mockNostrService,
     mockSubscriptionManager: mockSubscriptionManager,
     mockBlossomAuthService: mockBlossomAuthService,
