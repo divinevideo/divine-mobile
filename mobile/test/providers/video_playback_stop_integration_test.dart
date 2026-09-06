@@ -152,17 +152,6 @@ void main() {
           equals('explore-video-1'),
         );
 
-        // Verify video 0 is no longer active
-        final isVideo0Active = container.read(
-          isVideoActiveProvider('explore-video-0'),
-        );
-        final isVideo1Active = container.read(
-          isVideoActiveProvider('explore-video-1'),
-        );
-
-        expect(isVideo0Active, isFalse);
-        expect(isVideo1Active, isTrue);
-
         locationController.close();
         container.dispose();
       },
@@ -254,8 +243,6 @@ void main() {
       await pumpEventQueue();
 
       expect(container.read(activeVideoIdProvider), equals('explore-video-0'));
-      expect(container.read(isVideoActiveProvider('explore-video-0')), isTrue);
-      expect(container.read(isVideoActiveProvider('explore-video-1')), isFalse);
 
       // Swipe to explore video 1
       locationController.add(ExploreScreen.pathForIndex(1));
@@ -263,8 +250,6 @@ void main() {
 
       // Active video should change
       expect(container.read(activeVideoIdProvider), equals('explore-video-1'));
-      expect(container.read(isVideoActiveProvider('explore-video-0')), isFalse);
-      expect(container.read(isVideoActiveProvider('explore-video-1')), isTrue);
 
       // Verify we saw both videos in the active video stream
       expect(

@@ -2,7 +2,6 @@
 // ABOUTME: Derives active video ID from URL context, feed state, and app foreground state
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart';
 import 'package:models/models.dart' hide LogCategory;
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
@@ -204,11 +203,3 @@ final activeVideoIdProvider = Provider<String?>((ref) {
 
   return video.stableId;
 });
-
-/// Per-video active state (for efficient VideoFeedItem updates)
-/// Returns true if the given videoId matches the current active video
-final ProviderFamily<bool, String> isVideoActiveProvider =
-    Provider.family<bool, String>((ref, videoId) {
-      final activeVideoId = ref.watch(activeVideoIdProvider);
-      return activeVideoId == videoId;
-    });

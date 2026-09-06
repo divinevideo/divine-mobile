@@ -91,17 +91,6 @@ void main() {
       // Should be the first video
       expect(activeVideoId, equals('explore-video-0'));
 
-      // Verify isVideoActiveProvider works correctly
-      final isVideo0Active = container.read(
-        isVideoActiveProvider('explore-video-0'),
-      );
-      final isVideo1Active = container.read(
-        isVideoActiveProvider('explore-video-1'),
-      );
-
-      expect(isVideo0Active, isTrue);
-      expect(isVideo1Active, isFalse);
-
       container.dispose();
       // TODO(any): Fix and re-enable this test
     }, skip: true);
@@ -144,21 +133,6 @@ void main() {
 
       // Should be the SECOND video (index 1)
       expect(activeVideoId, equals('explore-video-1'));
-
-      // Verify isVideoActiveProvider works correctly
-      final isVideo0Active = container.read(
-        isVideoActiveProvider('explore-video-0'),
-      );
-      final isVideo1Active = container.read(
-        isVideoActiveProvider('explore-video-1'),
-      );
-      final isVideo2Active = container.read(
-        isVideoActiveProvider('explore-video-2'),
-      );
-
-      expect(isVideo0Active, isFalse);
-      expect(isVideo1Active, isTrue);
-      expect(isVideo2Active, isFalse);
 
       container.dispose();
       // TODO(any): Fix and re-enable this test
