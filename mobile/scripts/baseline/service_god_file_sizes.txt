@@ -6,7 +6,7 @@
 # This hard service baseline is authoritative over the broad advisory check for
 # service god-file ceilings.
 # Regenerate after shrinking/removing: UPDATE_BASELINE=1 bash scripts/check_service_god_file_ceiling.sh
-lib/services/auth_service.dart	4539
+lib/services/auth_service.dart	4537
 lib/services/curated_list_service.dart	1847
 lib/services/upload_manager.dart	1958
 lib/services/video_editor/video_editor_render_service.dart	1539

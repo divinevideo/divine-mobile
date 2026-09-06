@@ -314,13 +314,13 @@ jobs:
           if printf '%s\n' "$output" | grep -q '^WARN \[file_size_ceiling\]'; then
             echo "::warning title=File-size ceiling (advisory)::One or more Dart files are newly over 800 lines or grew relative to main. This is advisory and does not block CI — see the step log for the list."
           fi
-      - name: 🎨 Verify raw Icons.* count does not increase (DivineIcon ratchet)
+      - name: 🎨 Verify raw Icons.* count matches its frozen ceiling (DivineIcon ratchet)
         run: |
           # Freezes the deferred raw Material Icons.* residue (#4803) per-file so
           # the migration can only shrink. origin/main provides the base ref for
           # the anti-bypass check; fails closed if it cannot load the baseline.
           bash scripts/check_raw_icons_ceiling.sh
-      - name: 🎨 Verify raw TextStyle( count does not increase (VineTheme ratchet)
+      - name: 🎨 Verify raw TextStyle( count matches its frozen ceiling (VineTheme ratchet)
         run: |
           # Design-system drift ceilings (#6145, epic #4339). Each freezes a
           # per-file count of raw UI patterns under mobile/lib so new drift is
@@ -328,11 +328,11 @@ jobs:
           # the base baseline cannot be loaded. New UI must use the divine_ui /
           # VineTheme sanctioned replacements — see the script headers.
           bash scripts/check_raw_textstyle_ceiling.sh
-      - name: 🎨 Verify raw color count does not increase (VineTheme ratchet)
+      - name: 🎨 Verify raw color count matches its frozen ceiling (VineTheme ratchet)
         run: bash scripts/check_raw_colors_ceiling.sh
-      - name: 🎨 Verify direct Material-button count does not increase (DivineButton ratchet)
+      - name: 🎨 Verify direct Material-button count matches its frozen ceiling (DivineButton ratchet)
         run: bash scripts/check_material_button_ceiling.sh
-      - name: 🎨 Verify raw dialog/bottom-sheet count does not increase (VineBottomSheet ratchet)
+      - name: 🎨 Verify raw dialog/bottom-sheet count matches its frozen ceiling (VineBottomSheet ratchet)
         run: bash scripts/check_raw_dialog_ceiling.sh
       - name: 🎨 Verify no VineTheme.*Font( call omits its color (light-mode ratchet)
         run: bash scripts/check_implicit_font_color_ceiling.sh

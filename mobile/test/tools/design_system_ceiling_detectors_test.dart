@@ -61,6 +61,20 @@ void main() {
     ],
   };
 
+  // Guards that set REQUIRE_BASELINE_UPDATE_ON_DECREASE, so a shrink must be
+  // committed in the same change (#8323). check_implicit_font_color_ceiling.sh
+  // is deliberately absent: it is not part of the design-system family that
+  // opted in, and the else-branch below pins that it stays lenient.
+  // check_raw_icons_ceiling.sh is listed for completeness but is not in the
+  // `ratchets` map above; it has its own suite in raw_icons_ceiling_test.dart.
+  const requiresRelockOnDecrease = <String>{
+    'check_raw_textstyle_ceiling.sh',
+    'check_raw_colors_ceiling.sh',
+    'check_material_button_ceiling.sh',
+    'check_raw_dialog_ceiling.sh',
+    'check_raw_icons_ceiling.sh',
+  };
+
   late Directory tmp;
   late String baselinePath;
 
@@ -150,6 +164,40 @@ void main() {
           expect(res.exitCode, 1);
           expect(res.stdout, contains('GREW past the frozen ceiling'));
         });
+
+        if (requiresRelockOnDecrease.contains(script)) {
+          test('an unlocked shrink fails until the ceiling is relocked', () {
+            libFile('a.dart').writeAsStringSync(
+              '${oneRealMatch[script]}\n${oneRealMatch[script]}\n',
+            );
+            expect(run(script, prefix, update: true).exitCode, 0);
+
+            libFile('a.dart').writeAsStringSync('${oneRealMatch[script]}\n');
+
+            final res = run(script, prefix);
+            expect(res.exitCode, 1);
+            expect(res.stdout, contains('DECREASED below the frozen ceiling'));
+            expect(res.stdout, contains('2 -> 1'));
+            expect(res.stdout, contains('UPDATE_BASELINE=1'));
+
+            // Committing the lower ceiling is what clears it.
+            expect(run(script, prefix, update: true).exitCode, 0);
+            expect(baselineRows().single, endsWith('\t1'));
+            expect(run(script, prefix).exitCode, 0);
+          });
+        } else {
+          test('a shrink stays slack for a guard that has not opted in', () {
+            libFile('a.dart').writeAsStringSync(
+              '${oneRealMatch[script]}\n${oneRealMatch[script]}\n',
+            );
+            expect(run(script, prefix, update: true).exitCode, 0);
+
+            libFile('a.dart').writeAsStringSync('${oneRealMatch[script]}\n');
+
+            final res = run(script, prefix);
+            expect(res.exitCode, 0, reason: res.stdout.toString());
+          });
+        }
       });
     });
 

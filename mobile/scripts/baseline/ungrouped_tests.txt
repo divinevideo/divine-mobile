@@ -17,7 +17,7 @@ test/providers/crossposting_providers_test.dart	1
 test/providers/deep_link_provider_test.dart	1
 test/providers/dm_send_policy_test.dart	6
 test/providers/og_viner_cache_provider_test.dart	2
-test/providers/swap_account_test.dart	7
+test/providers/swap_account_test.dart	6
 test/repositories/crossposting_repository_test.dart	5
 test/router/app_router_test.dart	1
 test/router/app_shell_obscured_test.dart	3

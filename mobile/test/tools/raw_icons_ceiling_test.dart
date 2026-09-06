@@ -10,6 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// without touching the real baseline. The bash script is the source of truth;
 /// this test pins its exit-code contract.
 void main() {
+  // Failure wording below comes from the shared engine in
+  // scripts/lib/numeric_ratchet.sh, which this guard sources (#8323). It is
+  // key-oriented ("NEW key(s)", "no longer emitted") rather than the
+  // file-oriented phrasing the pre-port inline copy used.
   group('raw_icons_ceiling ratchet', () {
     late Directory tmp;
     late String scriptPath;
@@ -111,7 +115,7 @@ void main() {
       writeIcons('uses.dart', 5);
       final res = run();
       expect(res.exitCode, 1);
-      expect(res.stdout, contains('GAINED'));
+      expect(res.stdout, contains('GREW past the frozen ceiling'));
     });
 
     test('fails when a new file introduces raw Icons.*', () {
@@ -121,7 +125,7 @@ void main() {
       writeIcons('newbie.dart', 1);
       final res = run();
       expect(res.exitCode, 1);
-      expect(res.stdout, contains('NEW file'));
+      expect(res.stdout, contains('NEW key(s)'));
     });
 
     test('fails (stale) when a baselined file drops all raw Icons.*', () {
@@ -131,14 +135,34 @@ void main() {
       writeIcons('uses.dart', 0);
       final res = run();
       expect(res.exitCode, 1);
-      expect(res.stdout, contains('no longer use raw Icons'));
+      expect(res.stdout, contains('no longer emitted'));
     });
 
-    test('passes when a file drops some icons but stays above zero', () {
+    // Before #8323 this shape PASSED: a drop that stayed above zero was slack
+    // the guard tolerated, so a migration's win was left unlocked and the file
+    // could silently regrow to its stale ceiling. The guard now requires the
+    // lower ceiling to be committed in the same change.
+    test(
+      'fails when a file drops some icons without relocking the ceiling',
+      () {
+        writeIcons('uses.dart', 5);
+        run(update: true);
+
+        writeIcons('uses.dart', 2);
+        final res = run();
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('DECREASED below the frozen ceiling'));
+        expect(res.stdout, contains('lib/uses.dart\t5 -> 2'));
+        expect(res.stdout, contains('UPDATE_BASELINE=1'));
+      },
+    );
+
+    test('passes once the lower ceiling is committed', () {
       writeIcons('uses.dart', 5);
       run(update: true);
 
       writeIcons('uses.dart', 2);
+      run(update: true);
       final res = run();
       expect(res.exitCode, 0, reason: res.stdout.toString());
       expect(res.stdout, contains('OK [raw_icons_ceiling]'));
@@ -157,7 +181,7 @@ void main() {
         baseRepoPath: 'mobile/test/tools/fixtures/raw_icons_base_sizes.txt',
       );
       expect(res.exitCode, 1);
-      expect(res.stdout, contains('ADDED a file or RAISED a ceiling'));
+      expect(res.stdout, contains('ADDED a key or RAISED a ceiling'));
       expect(res.stdout, contains('+added lib/uses.dart'));
     });
   });
