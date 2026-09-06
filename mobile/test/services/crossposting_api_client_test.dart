@@ -260,17 +260,50 @@ void main() {
           CrosspostingConnectionStatus.connected,
         );
         expect(connections.first.externalAccountName, equals('divine.creator'));
-        expect(
-          connections.first.tokenExpiresAt,
-          equals(
-            DateTime.fromMillisecondsSinceEpoch(
-              1785542400 * 1000,
-              isUtc: true,
-            ),
-          ),
-        );
         expect(connections[1].status, CrosspostingConnectionStatus.needsReauth);
       });
+
+      // The server sends more fields than this client models — tokenExpiresAt,
+      // grantedScopes, createdAt, updatedAt, lastRefreshAt. Reading one it does
+      // not model must never cost the user the connection: _optionalJsonField
+      // throws on a type mismatch and getConnections turns that into a skipped
+      // entry, so a connected account would silently render as "Not connected"
+      // (#7802).
+      test(
+        'keeps a connection carrying server fields it does not model',
+        () async {
+          stubGet(
+            jsonEncode({
+              'connections': [
+                {
+                  'id': 'conn-1',
+                  'platform': 'instagram',
+                  'status': 'connected',
+                  'externalAccountName': 'divine.creator',
+                  // Epoch seconds today; an ISO-8601 string is the shape a
+                  // server-side change would plausibly take.
+                  'tokenExpiresAt': '2026-07-22T00:00:00Z',
+                  'grantedScopes': 'publish',
+                  'lastRefreshAt': null,
+                },
+              ],
+            }),
+          );
+
+          final connections = await client.getConnections();
+
+          expect(connections, hasLength(1));
+          expect(connections.single.id, equals('conn-1'));
+          expect(
+            connections.single.status,
+            CrosspostingConnectionStatus.connected,
+          );
+          expect(
+            connections.single.externalAccountName,
+            equals('divine.creator'),
+          );
+        },
+      );
 
       test('skips connections for unknown server platforms', () async {
         stubGet(

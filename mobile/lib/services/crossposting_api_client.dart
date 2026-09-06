@@ -129,7 +129,6 @@ class CrosspostingConnection extends Equatable {
     required this.status,
     this.externalAccountId,
     this.externalAccountName,
-    this.tokenExpiresAt,
   });
 
   factory CrosspostingConnection.fromJson(
@@ -147,18 +146,6 @@ class CrosspostingConnection extends Equatable {
         json,
         'externalAccountName',
       ),
-      tokenExpiresAt: _parseEpochSeconds(
-        _optionalJsonField<num>(json, 'tokenExpiresAt'),
-      ),
-    );
-  }
-
-  /// The server sends `tokenExpiresAt` as Unix epoch seconds.
-  static DateTime? _parseEpochSeconds(num? value) {
-    if (value == null) return null;
-    return DateTime.fromMillisecondsSinceEpoch(
-      (value * 1000).round(),
-      isUtc: true,
     );
   }
 
@@ -167,7 +154,6 @@ class CrosspostingConnection extends Equatable {
   final CrosspostingConnectionStatus status;
   final String? externalAccountId;
   final String? externalAccountName;
-  final DateTime? tokenExpiresAt;
 
   @override
   List<Object?> get props => [
@@ -176,7 +162,6 @@ class CrosspostingConnection extends Equatable {
     status,
     externalAccountId,
     externalAccountName,
-    tokenExpiresAt,
   ];
 }
 
