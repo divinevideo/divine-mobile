@@ -24,6 +24,7 @@ import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/services/auth/following_cache_seed.dart';
 import 'package:openvine/services/auth/known_accounts_registry.dart';
 import 'package:openvine/services/auth/nostr_connect_coordinator.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
@@ -1301,7 +1302,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         biometricPrompt: biometricPrompt,
       );
 
-      // Set up user session
+      await seedEmptyFollowingCache(keyContainer.publicKeyHex);
       await _setupUserSession(keyContainer, AuthenticationSource.automatic);
 
       Log.info(
@@ -1413,6 +1414,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     try {
       await _keyStorage.deleteKeys();
       final keyContainer = await _keyStorage.importFromHex(privateKeyHex);
+      await seedEmptyFollowingCache(keyContainer.publicKeyHex);
       await _setupUserSession(keyContainer, AuthenticationSource.automatic);
       await acceptTerms();
 

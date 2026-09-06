@@ -7,6 +7,7 @@
 // createNewIdentity and acceptTerms.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show generatePrivateKey;
@@ -36,8 +37,12 @@ void main() {
 
     tearDown(AuthServiceChannelMocks.remove);
 
-    AuthService createAuthService() =>
-        buildTestAuthService(cleanupService: mockCleanupService);
+    AuthService createAuthService({
+      Future<void> Function(String pubkeyHex)? preFetchFollowing,
+    }) => buildTestAuthService(
+      cleanupService: mockCleanupService,
+      preFetchFollowing: preFetchFollowing,
+    );
 
     test('createAnonymousAccount generates an automatic identity and '
         'accepts terms', () async {
@@ -59,6 +64,24 @@ void main() {
       expect(prefs.getBool('age_verified_16_plus'), isTrue);
     });
 
+    test('createAnonymousAccount seeds a known-empty following cache and '
+        'skips the prefetch', () async {
+      var prefetchCalls = 0;
+      final authService = createAuthService(
+        preFetchFollowing: (_) async => prefetchCalls++,
+      );
+      addTearDown(authService.dispose);
+
+      await ignoringDiscoveryErrors(authService.createAnonymousAccount);
+
+      final prefs = await SharedPreferences.getInstance();
+      final pubkey = authService.currentPublicKeyHex!;
+      final encoded = prefs.getString(FollowingCacheRecord.storageKey(pubkey));
+      expect(encoded, isNotNull);
+      expect(FollowingCacheRecord.decode(encoded!).pubkeys, isEmpty);
+      expect(prefetchCalls, 0);
+    });
+
     test('createAnonymousAccountFromKeyContainer imports the provided key '
         'as an automatic identity', () async {
       final privateKeyHex = generatePrivateKey();
@@ -77,6 +100,11 @@ void main() {
         equals(AuthenticationSource.automatic),
       );
       expect(authService.currentPublicKeyHex, equals(expectedPubkey));
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = prefs.getString(
+        FollowingCacheRecord.storageKey(expectedPubkey),
+      );
+      expect(FollowingCacheRecord.decode(encoded!).pubkeys, isEmpty);
     });
 
     test('createAnonymousAccountFromKeyContainer throws for a '
