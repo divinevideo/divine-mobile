@@ -177,7 +177,7 @@ void main() {
       });
 
       test('currentVideo returns null when videos empty', () {
-        const state = FullscreenFeedState(status: FullscreenFeedStatus.ready);
+        final state = FullscreenFeedState(status: FullscreenFeedStatus.ready);
 
         expect(state.currentVideo, isNull);
       });
@@ -193,13 +193,13 @@ void main() {
       });
 
       test('hasVideos returns false when videos empty', () {
-        const state = FullscreenFeedState(status: FullscreenFeedStatus.ready);
+        final state = FullscreenFeedState(status: FullscreenFeedStatus.ready);
 
         expect(state.hasVideos, isFalse);
       });
 
       test('copyWith creates copy with updated values', () {
-        const state = FullscreenFeedState();
+        final state = FullscreenFeedState();
         final video = createTestVideo('video1');
 
         final updated = state.copyWith(
@@ -421,6 +421,16 @@ void main() {
           isNot(updatedState.videoUpdateSignature),
         );
         expect(baseState, isNot(updatedState));
+      });
+
+      test('videoUpdateSignature is memoized and immutable', () {
+        final state = FullscreenFeedState(
+          videos: [createTestVideo('video1')],
+        );
+        final signature = state.videoUpdateSignature;
+
+        expect(identical(signature, state.videoUpdateSignature), isTrue);
+        expect(() => signature.add('changed'), throwsUnsupportedError);
       });
     });
 
@@ -667,7 +677,7 @@ void main() {
       blocTest<FullscreenFeedBloc, FullscreenFeedState>(
         'a later empty emission does not downgrade emptyAfterRemoval',
         build: createBloc,
-        seed: () => const FullscreenFeedState(
+        seed: () => FullscreenFeedState(
           status: FullscreenFeedStatus.emptyAfterRemoval,
         ),
         act: (bloc) async {
@@ -1198,7 +1208,7 @@ void main() {
       blocTest<FullscreenFeedBloc, FullscreenFeedState>(
         'does nothing when already loading more',
         build: () => createBloc(onLoadMore: () {}),
-        seed: () => const FullscreenFeedState(isLoadingMore: true),
+        seed: () => FullscreenFeedState(isLoadingMore: true),
         act: (bloc) => bloc.add(const FullscreenFeedLoadMoreRequested()),
         expect: () => <FullscreenFeedState>[],
       );
@@ -1288,7 +1298,7 @@ void main() {
       blocTest<FullscreenFeedBloc, FullscreenFeedState>(
         'sets index to 0 when videos are empty',
         build: createBloc,
-        seed: () => const FullscreenFeedState(
+        seed: () => FullscreenFeedState(
           status: FullscreenFeedStatus.ready,
           currentIndex: 5,
         ),
@@ -2075,7 +2085,7 @@ void main() {
       blocTest<FullscreenFeedBloc, FullscreenFeedState>(
         'clears pendingSkipTarget when acknowledged',
         build: createBloc,
-        seed: () => const FullscreenFeedState(
+        seed: () => FullscreenFeedState(
           status: FullscreenFeedStatus.ready,
           pendingSkipTarget: 2,
         ),
@@ -2092,8 +2102,7 @@ void main() {
       blocTest<FullscreenFeedBloc, FullscreenFeedState>(
         'no-ops when no pending skip',
         build: createBloc,
-        seed: () =>
-            const FullscreenFeedState(status: FullscreenFeedStatus.ready),
+        seed: () => FullscreenFeedState(status: FullscreenFeedStatus.ready),
         act: (bloc) => bloc.add(const FullscreenFeedSkipAcknowledged()),
         expect: () => <FullscreenFeedState>[],
       );
@@ -2142,29 +2151,29 @@ void main() {
 
     group('props and copyWith for new fields', () {
       test('removedVideoIds default is empty', () {
-        const state = FullscreenFeedState();
+        final state = FullscreenFeedState();
         expect(state.removedVideoIds, isEmpty);
       });
 
       test('pendingSkipTarget default is null', () {
-        const state = FullscreenFeedState();
+        final state = FullscreenFeedState();
         expect(state.pendingSkipTarget, isNull);
       });
 
       test('copyWith updates removedVideoIds', () {
-        const state = FullscreenFeedState();
+        final state = FullscreenFeedState();
         final updated = state.copyWith(removedVideoIds: {'a', 'b'});
         expect(updated.removedVideoIds, equals({'a', 'b'}));
       });
 
       test('copyWith updates pendingSkipTarget', () {
-        const state = FullscreenFeedState();
+        final state = FullscreenFeedState();
         final updated = state.copyWith(pendingSkipTarget: 5);
         expect(updated.pendingSkipTarget, equals(5));
       });
 
       test('copyWith clearPendingSkipTarget resets to null', () {
-        const state = FullscreenFeedState(pendingSkipTarget: 5);
+        final state = FullscreenFeedState(pendingSkipTarget: 5);
         final updated = state.copyWith(clearPendingSkipTarget: true);
         expect(updated.pendingSkipTarget, isNull);
       });

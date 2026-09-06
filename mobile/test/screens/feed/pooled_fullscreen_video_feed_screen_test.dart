@@ -292,7 +292,7 @@ void main() {
       String? sourceDetail,
       VoidCallback? onBack,
     }) {
-      final effectiveState = state ?? const FullscreenFeedState();
+      final effectiveState = state ?? FullscreenFeedState();
       when(() => mockBloc.state).thenReturn(effectiveState);
 
       final content = buildContent(
@@ -584,7 +584,7 @@ void main() {
         tester,
       ) async {
         await tester.pumpWidget(
-          buildSubject(state: const FullscreenFeedState()),
+          buildSubject(state: FullscreenFeedState()),
         );
 
         expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
@@ -597,7 +597,7 @@ void main() {
       ) async {
         await tester.pumpWidget(
           buildSubject(
-            state: const FullscreenFeedState(
+            state: FullscreenFeedState(
               status: FullscreenFeedStatus.ready,
             ),
           ),
@@ -618,7 +618,7 @@ void main() {
         (tester) async {
           await tester.pumpWidget(
             buildSubject(
-              state: const FullscreenFeedState(
+              state: FullscreenFeedState(
                 status: FullscreenFeedStatus.empty,
               ),
               contextTitle: 'Liked',
@@ -641,7 +641,7 @@ void main() {
         tester,
       ) async {
         await tester.pumpWidget(
-          buildSubject(state: const FullscreenFeedState()),
+          buildSubject(state: FullscreenFeedState()),
         );
         expect(
           find.bySemanticsIdentifier(SemanticIds.fullscreenFeedLoading),
@@ -654,7 +654,7 @@ void main() {
 
         await tester.pumpWidget(
           buildSubject(
-            state: const FullscreenFeedState(
+            state: FullscreenFeedState(
               status: FullscreenFeedStatus.empty,
             ),
           ),
@@ -721,7 +721,7 @@ void main() {
         (tester) async {
           await tester.pumpWidget(
             buildSubject(
-              state: const FullscreenFeedState(
+              state: FullscreenFeedState(
                 status: FullscreenFeedStatus.emptyAfterRemoval,
               ),
               contextTitle: 'Saved',
@@ -746,7 +746,7 @@ void main() {
         'empty-state back button lands on the feed when route cannot pop',
         (tester) async {
           when(() => mockBloc.state).thenReturn(
-            const FullscreenFeedState(
+            FullscreenFeedState(
               status: FullscreenFeedStatus.emptyAfterRemoval,
             ),
           );
@@ -1868,7 +1868,7 @@ void main() {
           // Popping the feed while the receipt is visible, then tapping Undo,
           // called `context.read` on the unmounted State — a null-check on the
           // dead element.
-          const initialState = FullscreenFeedState();
+          final initialState = FullscreenFeedState();
           final controller = StreamController<FullscreenFeedState>();
           addTearDown(controller.close);
           when(() => mockBloc.state).thenReturn(initialState);

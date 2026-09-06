@@ -61,7 +61,7 @@ final class FullscreenFeedTuningAction extends Equatable {
 
 /// State for the FullscreenFeedBloc.
 final class FullscreenFeedState extends Equatable {
-  const FullscreenFeedState({
+  FullscreenFeedState({
     this.status = FullscreenFeedStatus.initial,
     this.videos = const [],
     this.currentIndex = 0,
@@ -126,18 +126,21 @@ final class FullscreenFeedState extends Equatable {
 
   /// Metadata-sensitive signature for detecting updates to videos that keep
   /// the same IDs and order but change user-visible fields like loop counts.
-  List<String> get videoUpdateSignature => videos
-      .map(
-        (video) => [
-          video.id,
-          video.stableId,
-          video.videoUrl ?? '',
-          video.thumbnailUrl ?? '',
-          '${video.originalLoops ?? ''}',
-          video.rawTags['views'] ?? '',
-        ].join('|'),
-      )
-      .toList(growable: false);
+  ///
+  /// This is initialized lazily because computing it requires runtime video
+  /// data. Consequently, this state cannot have a const constructor.
+  late final List<String> videoUpdateSignature = List.unmodifiable(
+    videos.map(
+      (video) => [
+        video.id,
+        video.stableId,
+        video.videoUrl ?? '',
+        video.thumbnailUrl ?? '',
+        '${video.originalLoops ?? ''}',
+        video.rawTags['views'] ?? '',
+      ].join('|'),
+    ),
+  );
 
   /// Create a copy with updated values. [pendingSkipTarget] accepts
   /// `null` explicitly via [clearPendingSkipTarget] — the default
