@@ -93,7 +93,6 @@ void main() {
         ),
       );
       await uploadManager.initialize();
-      await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
     });
 
     tearDown(() async {
@@ -167,7 +166,6 @@ void main() {
         ),
       );
       await uploadManager.initialize();
-      await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
 
       var uploadAttempts = 0;
       final firstAttemptFailed = Completer<void>();

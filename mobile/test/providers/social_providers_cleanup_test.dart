@@ -101,9 +101,6 @@ void main() {
         scopeUploadsToCurrentUser: true,
       );
       await uploadManager.initialize();
-      await TestHelpers.ensureBoxEmpty<hive_model.PendingUpload>(
-        'pending_uploads',
-      );
 
       container = ProviderContainer(
         overrides: [

@@ -14,6 +14,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
+import '../helpers/test_helpers.dart';
+
 // Mock PathProviderPlatform for testing
 class MockPathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
@@ -69,23 +71,15 @@ void main() {
   });
 
   tearDown(() async {
-    // Clean up
-    try {
-      PathProviderPlatform.instance = originalPathProviderInstance;
-      // Close all boxes
-      if (Hive.isBoxOpen('pending_uploads')) {
-        await Hive.box('pending_uploads').close();
-      }
-      await Hive.close();
-
-      // Reset helper state
-      UploadInitializationHelper.reset();
-
-      if (testDir.existsSync()) {
-        await testDir.delete(recursive: true);
-      }
-    } catch (e) {
-      // Ignore cleanup errors
+    PathProviderPlatform.instance = originalPathProviderInstance;
+    // `Hive.box('pending_uploads')` is `Hive.box<dynamic>` and throws on this
+    // box, which is opened as Box<PendingUpload> — swallowed, that throw left
+    // the box open for every later test (#6748). cleanupHiveBox resolves the
+    // box by name instead, and resets UploadInitializationHelper's cache.
+    await TestHelpers.cleanupHiveBox('pending_uploads');
+    await Hive.close();
+    if (testDir.existsSync()) {
+      await testDir.delete(recursive: true);
     }
   });
 

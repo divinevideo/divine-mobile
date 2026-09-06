@@ -12,6 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:openvine/widgets/avatar_failure_cache.dart';
 
 import 'helpers/shared_channel_override.dart';
+import 'helpers/shared_hive_box_guard.dart';
 import 'test_setup.dart';
 
 const _runGoldenSetup = bool.fromEnvironment('DIVINE_GOLDEN_TESTS');
@@ -59,6 +60,12 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   // from its canonical handler, and — under DIVINE_STRICT_CHANNELS — blames
   // the perpetrating test. Compliant tests never trip it.
   tearDown(() => healAndBlameSharedChannels(strict: _strictChannels));
+
+  // Hive registers boxes process-globally by name, so a box one suite leaves
+  // open is the same box the next suite gets back from openBox — rows and
+  // backing directory included (#6748). This root tearDown closes and deletes
+  // any shared box a test left open and blames that test.
+  tearDown(healAndBlameSharedHiveBoxes);
 
   // UserAvatar records broken image URLs in a process-global negative cache.
   // In the merged optimizer isolate that state would otherwise leak a failed

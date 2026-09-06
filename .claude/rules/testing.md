@@ -723,6 +723,7 @@ dead letter — the `vgv-tag-gate` CI job enforces this.
 | An irreversible initializer (`loadAppFonts()`) | Not allowed in a suite. The root `flutter_test_config.dart` loads app fonts once before `testMain`, so every merged test measures the same glyphs. There is no inverse, so no teardown can undo a suite-local call — `test/goldens/` is the only other allowed home (`check_process_global_mutations.sh` enforces, hard zero). |
 | `HttpOverrides.global` | Not allowed in a merged test — tag the file `['skip_very_good_optimization', 'integration']` (`check_http_overrides_isolation.sh` enforces). |
 | View config (`tester.view.physicalSize` / `devicePixelRatio` / `setSurfaceSize`) | Pair every override with an `addTearDown` reset (`resetPhysicalSize`, `resetDevicePixelRatio`, `setSurfaceSize(null)`). |
+| Any Hive box in `HiveBoxNames.all` (they are registered process-globally by name) | `await TestHelpers.cleanupHiveBox(name)` in **both** `setUp` and `tearDown`. Never `Hive.box(name).close()` — see the harness below. Enforced by a root `tearDown` that heals and blames. |
 | A service you registered with `BackgroundActivityManager` (`AuthService`, `UploadManager`, `AnalyticsService`) | Dispose the service. All three unregister in `dispose()`. If a test drives a manager directly, keep that exact instance and call `addTearDown(manager.resetForTesting)`. Each provider container owns a separate manager, so constructing a new manager cannot reset the instance under test. |
 
 ### Heal-and-blame harness (the 5 shared channels)
@@ -739,3 +740,34 @@ rather than being healed into someone else's suite; a bare
 `flutter test <file>` leaves it off and heals silently. A static
 `check_shared_channel_overrides.sh` ratchet additionally freezes the set of
 files that raw-install a shared channel, so new ones must use the helper.
+
+### Heal-and-blame harness (shared Hive boxes)
+
+Hive registers a box **process-globally by name**, so the box one suite leaves
+open is the box the next suite gets back from `openBox` — rows and backing
+directory included, regardless of the path it asked for. More than a dozen
+suites open `pending_uploads`, which is why a curated-lists PR that touches no
+upload code could fail on `upload_manager_get_by_path` seeing a row it never
+wrote (#6748).
+
+`flutter_test_config.dart` registers a root `tearDown` that closes and deletes
+every box in `sharedHiveBoxNames` (`test/helpers/shared_hive_box_guard.dart`,
+which is `HiveBoxNames.all`) that a test left open, then `fail()`s that test.
+The hazard is a property of the name being process-global, not of which box it
+is, so the guard covers every box the app owns rather than only the one that
+surfaced it. Unlike the channel harness it blames **unconditionally** rather
+than behind a build flag: a shared box open after a test is never intentional,
+and a single-file run is exactly where the owning suite is still cheap to
+identify.
+
+**Clean up with `TestHelpers.cleanupHiveBox(name)`, never `Hive.box(name)`.**
+`Hive.box(name)` is `Hive.box<dynamic>`, and hive_ce throws
+``HiveError: The box "pending_uploads" is already open and of type
+Box<PendingUpload>`` for any box opened with a concrete value type. Swallowed
+by a bare `catch`, that throw made the shared cleanup helper a silent no-op on
+every open typed box — both the close and the `deleteBoxFromDisk` after it were
+skipped. Measured over the seventeen suites that touch `pending_uploads`, seven
+of them were handing 64 rows forward to whichever suite ran next.
+`cleanupHiveBox` routes through `deleteBoxFromDisk`, which resolves the box by
+name with no type check, and asserts its own postcondition rather than
+swallowing a failure.

@@ -73,7 +73,6 @@ void main() {
         scopeUploadsToCurrentUser: scopeUploadsToCurrentUser,
       );
       await manager.initialize();
-      await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
       return manager;
     }
 
