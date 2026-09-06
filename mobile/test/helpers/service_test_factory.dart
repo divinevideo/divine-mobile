@@ -1,11 +1,9 @@
 // ABOUTME: Factory helper for creating service instances in tests with proper dependencies
-// ABOUTME: Provides consistent setup for VideoEventService and SocialService
+// ABOUTME: Provides consistent setup for VideoEventService
 
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
@@ -24,18 +22,6 @@ VideoEventService createTestVideoEventService({
     subscriptionManager: mockSubscriptionManager,
     crashReporter: const SilentCrashReporter(),
   );
-}
-
-/// Creates a SocialService with mocked dependencies for testing
-SocialService createTestSocialService({
-  required NostrClient mockNostrService,
-  required AuthService mockAuthService,
-}) {
-  // Set up default mock behaviors
-  // Skip mocking subscribeToEvents for simplicity
-  when(() => mockAuthService.isAuthenticated).thenReturn(false);
-
-  return SocialService(mockNostrService, mockAuthService);
 }
 
 /// Sets up common mock behaviors for SubscriptionManager

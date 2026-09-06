@@ -41,7 +41,6 @@ import 'package:openvine/services/outgoing_dm_retry_service.dart';
 import 'package:openvine/services/pending_action_service.dart';
 import 'package:openvine/services/product_event_queue.dart';
 import 'package:openvine/services/profile_save_retry_service.dart';
-import 'package:openvine/services/social_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/view_event_publisher.dart';
 import 'package:openvine/services/view_event_retry_service.dart';
@@ -974,17 +973,6 @@ HashtagService hashtagService(Ref ref) {
   final videoEventService = ref.watch(videoEventServiceProvider);
   final cacheService = ref.watch(hashtagCacheServiceProvider);
   return HashtagService(videoEventService, cacheService);
-}
-
-/// Social service for follow sets (NIP-51 Kind 30000).
-///
-/// Follower count stats have moved to [FollowRepository].
-@Riverpod(keepAlive: true)
-SocialService socialService(Ref ref) {
-  final nostrService = ref.watch(nostrServiceProvider);
-  final authService = ref.watch(authServiceProvider);
-
-  return SocialService(nostrService, authService);
 }
 
 /// Content reporting service for NIP-56 compliance

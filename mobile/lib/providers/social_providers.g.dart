@@ -663,58 +663,6 @@ final class HashtagServiceProvider
 
 String _$hashtagServiceHash() => r'5cd38d3c2e8d78a6f7b74a72b650d79e28938fe4';
 
-/// Social service for follow sets (NIP-51 Kind 30000).
-///
-/// Follower count stats have moved to [FollowRepository].
-
-@ProviderFor(socialService)
-final socialServiceProvider = SocialServiceProvider._();
-
-/// Social service for follow sets (NIP-51 Kind 30000).
-///
-/// Follower count stats have moved to [FollowRepository].
-
-final class SocialServiceProvider
-    extends $FunctionalProvider<SocialService, SocialService, SocialService>
-    with $Provider<SocialService> {
-  /// Social service for follow sets (NIP-51 Kind 30000).
-  ///
-  /// Follower count stats have moved to [FollowRepository].
-  SocialServiceProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'socialServiceProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$socialServiceHash();
-
-  @$internal
-  @override
-  $ProviderElement<SocialService> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  SocialService create(Ref ref) {
-    return socialService(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SocialService value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<SocialService>(value),
-    );
-  }
-}
-
-String _$socialServiceHash() => r'025a0d7f80743f11d040e4867c012397282404b3';
-
 /// Content reporting service for NIP-56 compliance
 
 @ProviderFor(contentReportingService)
