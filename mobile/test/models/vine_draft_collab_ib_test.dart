@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show AspectRatio, InspiredByInfo;
+import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -301,6 +302,50 @@ void main() {
         final restored = DivineVideoDraft.fromJson(json, '/path/to');
 
         expect(restored.inspiredByNpub, equals('npub1testvalue'));
+      });
+
+      test('preserves captionMentions through serialization', () {
+        // The draft is the only thing that survives an app restart, so a pick
+        // the author made before backgrounding has to come back with it.
+        const mention = CaptionMention(
+          display: 'OG-AB',
+          pubkey:
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          start: 3,
+          end: 9,
+        );
+        final original = DivineVideoDraft.create(
+          clips: [_testClip()],
+          title: 'Mention Video',
+          description: 'to @OG-AB',
+          hashtags: const {},
+          selectedApproach: 'native',
+          captionMentions: const [mention],
+        );
+
+        final restored = DivineVideoDraft.fromJson(
+          original.toJson(),
+          '/path/to',
+        );
+
+        expect(restored.captionMentions, equals(const [mention]));
+      });
+
+      test('omits captionMentions from json when there are none', () {
+        final original = DivineVideoDraft.create(
+          clips: [_testClip()],
+          title: 'No Mentions',
+          description: 'plain',
+          hashtags: const {},
+          selectedApproach: 'native',
+        );
+
+        expect(original.toJson().containsKey('captionMentions'), isFalse);
+        expect(
+          DivineVideoDraft.fromJson(original.toJson(), '/p').captionMentions,
+          isEmpty,
+        );
       });
 
       test('preserves contentWarning through serialization', () {

@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show AspectRatio;
 import 'package:openvine/exceptions/video_exceptions.dart';
+import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/pending_upload.dart';
@@ -910,6 +911,70 @@ void main() {
               onEventSigned: any(named: 'onEventSigned'),
               onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
             ),
+          );
+        },
+      );
+
+      test(
+        'passes picked caption mentions through as selected bindings',
+        () async {
+          // The picker exists to disambiguate: without the binding reaching
+          // the resolver, an ambiguous display name produces no p tag at all.
+          _setupSuccessfulPublish(
+            mockAuthService: mockAuthService,
+            mockUploadManager: mockUploadManager,
+            mockDraftService: mockDraftService,
+            mockVideoEventPublisher: mockVideoEventPublisher,
+          );
+          when(
+            () => mockMentionResolutionService.resolveTextMentions(
+              rawText: any(named: 'rawText'),
+              selectedMentions: any(named: 'selectedMentions'),
+              currentUserPubkey: any(named: 'currentUserPubkey'),
+            ),
+          ).thenAnswer(
+            (_) async => const MentionResolutionResult(
+              canonicalText: '',
+              resolvedPubkeys: [descriptionMentionPubkey],
+              unresolvedTokens: [],
+            ),
+          );
+
+          final draft = _createTestDraft(
+            description: 'dedicated to @OG-AB',
+            captionMentions: const [
+              CaptionMention(
+                display: 'OG-AB',
+                pubkey: descriptionMentionPubkey,
+                start: 14,
+                end: 20,
+              ),
+            ],
+          );
+
+          final result = await service.publishVideo(draft: draft);
+          expect(result, isA<PublishSuccess>());
+
+          final captured =
+              verify(
+                    () => mockMentionResolutionService.resolveTextMentions(
+                      rawText: any(named: 'rawText'),
+                      selectedMentions: captureAny(named: 'selectedMentions'),
+                      currentUserPubkey: any(named: 'currentUserPubkey'),
+                    ),
+                  ).captured.single
+                  as List<MentionBinding>;
+
+          expect(
+            captured,
+            equals(const [
+              MentionBinding(
+                display: 'OG-AB',
+                pubkey: descriptionMentionPubkey,
+                start: 14,
+                end: 20,
+              ),
+            ]),
           );
         },
       );
@@ -2902,6 +2967,7 @@ DivineVideoDraft _createTestDraft({
   String description = 'Test description',
   Map<String, dynamic> editorStateHistory = const {},
   Set<String> collaboratorPubkeys = const {},
+  List<CaptionMention> captionMentions = const [],
   Map<String, dynamic>? editorEditingParameters,
   String? proofManifestJson,
   Duration? thumbnailTimestamp,
@@ -2915,6 +2981,7 @@ DivineVideoDraft _createTestDraft({
     id: 'test_draft_id',
     editorStateHistory: editorStateHistory,
     collaboratorPubkeys: collaboratorPubkeys,
+    captionMentions: captionMentions,
     editorEditingParameters: editorEditingParameters,
     proofManifestJson: proofManifestJson,
     thumbnailTimestamp: thumbnailTimestamp,

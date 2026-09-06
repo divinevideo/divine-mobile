@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show AudioEvent, InspiredByInfo;
+import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -287,6 +288,9 @@ void main() {
             addressableId: '34236:$_testPubkey:dtag',
           ),
           inspiredByNpub: _testPubkey,
+          captionMentions: const [
+            CaptionMention(display: 'alice', pubkey: _testPubkey),
+          ],
           selectedSound: AudioEvent(
             id:
                 'snd-1234567890123456789012345678901234'
@@ -330,6 +334,10 @@ void main() {
           'proofManifestJson', // auto-generated, not a user edit
           'editorEditingParameters', // editor internals, not user-facing edit
           'allowAudioReuse', // publishing option, not edit indicator
+          // Implied by 'description': a mention only exists because the
+          // author typed into the caption, which already marks the draft
+          // edited. Checking it again could never flip the result.
+          'captionMentions',
         };
 
         final knownFields = {...checkedFields, ...excludedFields};

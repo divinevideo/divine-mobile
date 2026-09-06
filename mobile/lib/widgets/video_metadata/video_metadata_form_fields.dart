@@ -1,12 +1,11 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_audio_sharing_section.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_caption_field.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_collaborators_input.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_content_warning_selector.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_expiration_selector.dart';
@@ -105,54 +104,9 @@ class _VideoMetadataFormFieldsState
 
           // Description input field
           _InputWrapper(
-            child: Stack(
-              children: [
-                DivineTextField(
-                  controller: _descriptionController,
-                  labelText: context.l10n.videoMetadataDescriptionLabel,
-                  focusNode: _descriptionFocusNode,
-                  keyboardType: .multiline,
-                  textInputAction: .newline,
-                  primaryWhenFilled: true,
-                  minLines: 1,
-                  maxLines: 10,
-                  inputFormatters: [
-                    LengthLimitingTextInputFormatter(
-                      VideoEditorConstants.descriptionLimit,
-                    ),
-                  ],
-                  onChanged: (value) {
-                    ref
-                        .read(videoEditorProvider.notifier)
-                        .updateMetadata(description: value);
-                  },
-                ),
-                Positioned(
-                  // Align the counter to the field's content padding so a
-                  // future tweak to [DivineTextField.defaultContentPadding]
-                  // keeps it in sync. The -1 nudges the baseline up to match
-                  // the floating label.
-                  top: DivineTextField.defaultContentPadding.top - 1,
-                  right: DivineTextField.defaultContentPadding.right,
-                  child: ValueListenableBuilder(
-                    valueListenable: _descriptionController,
-                    builder: (context, value, child) {
-                      return AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: _descriptionController.text.isNotEmpty
-                            ? Text(
-                                '${_descriptionController.text.length}/'
-                                '${VideoEditorConstants.descriptionLimit}',
-                                style: VineTheme.labelSmallFont(
-                                  color: context.vineColors.onSurfaceMuted,
-                                ),
-                              )
-                            : const SizedBox.shrink(),
-                      );
-                    },
-                  ),
-                ),
-              ],
+            child: VideoMetadataCaptionField(
+              controller: _descriptionController,
+              focusNode: _descriptionFocusNode,
             ),
           ),
 
