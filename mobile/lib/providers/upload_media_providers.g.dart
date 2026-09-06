@@ -420,7 +420,7 @@ final class CrossposterApiClientProvider
 }
 
 String _$crossposterApiClientHash() =>
-    r'ddae6805a3d6b7685d8ad5eb0be8e7be756b415a';
+    r'165cb3feea5400f51e48f9ce88a9049d817c78ff';
 
 /// Audio playback service for sound playback during recording and preview
 ///

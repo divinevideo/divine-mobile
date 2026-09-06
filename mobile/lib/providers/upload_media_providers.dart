@@ -360,10 +360,9 @@ BlueskyCrosspostRepository blueskyCrosspostRepository(Ref ref) {
 /// Crossposter service client for manual per-video crossposting
 @riverpod
 CrosspostingApiClient crossposterApiClient(Ref ref) {
-  final oauthClient = ref.watch(oauthClientProvider);
+  final authService = ref.watch(authServiceProvider);
   final client = CrosspostingApiClient(
-    accessTokenReader: () async =>
-        (await oauthClient.getSession())?.accessToken,
+    accessTokenReader: authService.getBoundDivineAccessToken,
     httpClient: ref.watch(instrumentedHttpClientFactoryProvider)(),
   );
   ref.onDispose(client.close);

@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:equatable/equatable.dart';
 import 'package:http/http.dart' as http;
 import 'package:keycast_flutter/keycast_flutter.dart';
+import 'package:openvine/config/app_config.dart';
 import 'package:openvine/models/crosspost_models.dart';
 
 export 'package:openvine/models/crosspost_models.dart';
@@ -233,6 +234,9 @@ class CrosspostingApiException implements Exception {
     return CrosspostingApiErrorKind.generic;
   }
 
+  /// Deliberately omits [message] and [cause]: the message can carry a
+  /// connection URL and the cause a bearer token, and this text reaches logs.
+  /// Pinned by "diagnostic text omits raw messages and transport causes".
   @override
   String toString() =>
       'CrosspostingApiException'
@@ -253,8 +257,10 @@ class CrosspostingApiClient {
        _baseUrl = baseUrl,
        _httpClient = httpClient ?? http.Client();
 
-  /// Production crossposter service.
-  static const defaultBaseUrl = 'https://crossposter.divine.video';
+  /// The crossposter service, overridable per build with `CROSSPOSTER_URL`
+  /// so a local-stack or staging run reaches the same host as the rest of
+  /// the app.
+  static const String defaultBaseUrl = AppConfig.crossposterBaseUrl;
 
   static const Duration _timeout = Duration(seconds: 20);
   static const _allowedReturnUrlHosts = {

@@ -141,6 +141,12 @@ MockAuthService createMockAuthService({
     () => mockAuth.authRpcCapabilityStream,
   ).thenAnswer((_) => const Stream<AuthRpcCapability>.empty());
 
+  // The crossposter client reads its bearer token here, so any widget that
+  // mounts the share sheet reaches it. Unstubbed it returns null rather than a
+  // Future and throws type 'Null' is not a subtype of type 'Future<String?>'
+  // from initState, far from anything about auth.
+  when(mockAuth.getBoundDivineAccessToken).thenAnswer((_) async => null);
+
   // Stub authState and authStateStream so currentAuthStateProvider does not
   // crash with type 'Null' is not a subtype of type 'Stream<AuthState>'
   when(() => mockAuth.authState).thenReturn(authState);
