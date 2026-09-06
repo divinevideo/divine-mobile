@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
-# Maestro copy-drift guard: every English string the Maestro suite asserts or
-# taps is bound to the ARB key it came from in
+# Maestro copy-drift guard: every English string the Maestro suite asserts,
+# taps, or waits for is bound to the ARB key it came from in
 # scripts/baseline/maestro_copy_manifest.txt, and this check fails when the
-# current value of that key in lib/l10n/app_en.arb no longer appears in the
-# bound flow file. Between 2026-03 and 2026-08 the suite silently rotted
-# because copy changes and flow changes live in different files with nothing
-# failing when they diverged; this is the failure that should have fired.
+# current value of that key in lib/l10n/app_en.arb is no longer one of the
+# literals the bound flow file uses. Between 2026-03 and 2026-08 the suite
+# silently rotted because copy changes and flow changes live in different
+# files with nothing failing when they diverged; this is the failure that
+# should have fired.
 #
 # app_en.arb is the ONLY source of truth for English copy. Two failure modes:
-#   DRIFT        — a bound ARB key's current value is absent from the bound
-#                  flow file (copy changed under the suite, or the flow edited
-#                  without regenerating). The message names the key, the flow
-#                  file, and the current ARB value to adopt.
+#   DRIFT        — a bound ARB key's current value is no longer one of the
+#                  literals the bound flow file asserts (copy changed under the
+#                  suite, or the flow edited without regenerating). Literals
+#                  are compared whole, so shortened copy is caught too. The
+#                  message names the key, the flow file, and the current ARB
+#                  value to adopt.
 #   UNREGISTERED — a flow literal exactly matches a non-parameterized ARB
 #                  value but has no manifest binding (new assertion added
 #                  without registering). Regenerate to register it.
@@ -35,10 +38,9 @@
 # bind — that is conservative on purpose, not a gap to close with fuzzy
 # matching.
 #
-# Known v1 limits are tracked in #7213: this guard only binds literals that
-# already match app_en.arb, so already-drifted flow copy remains invisible; it
-# also checks by substring against the extracted file text, so copy shortening
-# can pass until the planned exact-literal inverse check lands.
+# Known v1 limit, tracked in #7213: this guard only binds literals that
+# already match app_en.arb, so already-drifted flow copy remains invisible
+# until the planned inverse literal check lands.
 #
 # Regenerate after an intentional copy change (review the printed diff of
 # added/removed bindings — regeneration re-blesses whatever ARB says today):
@@ -108,6 +110,15 @@ COMMAND_SCALAR = re.compile(
     r"^\s*-\s*(?:assertVisible|assertNotVisible|tapOn|longPressOn):\s*(?P<v>.+?)\s*$"
 )
 TEXT_PROP = re.compile(r"^\s*text:\s*(?P<v>.+?)\s*$")
+# `visible:` / `notVisible:` scalars are the selectors of extendedWaitUntil
+# and runFlow.when. A copy change there does not fail the flow: the wait times
+# out or the conditional branch is silently skipped, so they are copy to guard
+# too. Their map form (`visible:` then `text:` or `id:`) is already covered:
+# TEXT_PROP reads the text and ids are not copy.
+CONDITION_SCALAR = re.compile(
+    r"^\s*(?:visible|notVisible):\s*(?P<v>.+?)\s*$"
+)
+EXTRACTION_PATTERNS = (COMMAND_SCALAR, TEXT_PROP, CONDITION_SCALAR)
 # A YAML block scalar header is `|` or `>` followed by optional chomping
 # (`-`/`+`) and indentation (1-9) indicators, in either order. A header
 # the extractor does not recognise skips the whole block silently, and
@@ -152,7 +163,7 @@ def searchable_flow_text(lines):
 
         line = strip_comment(raw)
         searchable.append(line)
-        for pat in (COMMAND_SCALAR, TEXT_PROP):
+        for pat in EXTRACTION_PATTERNS:
             match = pat.match(line)
             if match and is_block_scalar_header(unquote(match.group("v"))):
                 block_parent_indent = indent
@@ -160,8 +171,8 @@ def searchable_flow_text(lines):
     return norm("\n".join(searchable))
 
 def flow_literals(path):
-    """Literal copy strings a flow asserts or taps. Skips ${...}
-    interpolations (environment values, not copy), inline maps, and
+    """Literal copy strings a flow asserts, taps, or waits for. Skips
+    ${...} interpolations (environment values, not copy), inline maps, and
     selector properties other than text (ids are not copy). Block-scalar
     accessibility labels emit each non-blank line plus any contained multi-line
     ARB value so titles, subtitles, and paragraph copy receive bindings."""
@@ -169,8 +180,7 @@ def flow_literals(path):
 
     def add_literal(value):
         v = unquote(value)
-        if (not v or "${" in v or v.startswith("{") or
-                ":" in v and " " not in v):
+        if not v or "${" in v or v.startswith("{"):
             return
         lits.append(norm(v))
 
@@ -184,7 +194,7 @@ def flow_literals(path):
         index += 1
         if not line.strip():
             continue
-        for pat in (COMMAND_SCALAR, TEXT_PROP):
+        for pat in EXTRACTION_PATTERNS:
             m = pat.match(line)
             if not m:
                 continue
@@ -258,10 +268,12 @@ flows.sort()
 # literal_norm -> {flow_relpath: arb_key_candidates}
 found = {}
 total_literals = set()  # every asserted/tapped literal extracted, bound or not
+literals_by_flow = {}   # flow_relpath -> set of extracted literals
 for fpath in flows:
     rel = os.path.relpath(fpath, mobile_dir)
     for lit in flow_literals(fpath):
         total_literals.add((lit, rel))
+        literals_by_flow.setdefault(rel, set()).add(lit)
         keys = exact_values.get(lit)
         if keys:
             found.setdefault((lit, rel), set()).update(keys)
@@ -363,6 +375,8 @@ def vanished_bindings(old, new):
                 continue
             gone.append((key, rel))
             continue
+        # Substring on purpose: refusing is the safe direction, so a literal
+        # that still appears anywhere in the flow keeps its binding.
         if lit not in text:
             continue  # flow stopped asserting this copy
         if any(k2 != key and (k2, rel) in new and _current_value(k2) == lit
@@ -371,8 +385,8 @@ def vanished_bindings(old, new):
         gone.append((key, rel))
     return gone
 
-HEADER = """# Binding baseline: each English literal the Maestro suite asserts or taps,
-# bound to the app_en.arb key it comes from. Generated by
+HEADER = """# Binding baseline: each English literal the Maestro suite asserts, taps,
+# or waits for, bound to the app_en.arb key it comes from. Generated by
 # scripts/check_maestro_copy_drift.sh. Format:
 #   <arb_key><TAB><flow path relative to mobile/>[<TAB>bound:<literal>]
 #   <arb_key><TAB><flow path relative to mobile/><TAB>rendered:<literal>]
@@ -385,9 +399,8 @@ HEADER = """# Binding baseline: each English literal the Maestro suite asserts o
 # the printed diff — regeneration re-blesses whatever app_en.arb says today.
 # Duplicate values retain the manifest's reviewed key choice. To correct a
 # wrong choice, edit that row to another valid key before regenerating.
-# Known v1 limits are tracked in #7213: already-drifted flow literals do not
-# bind, and substring checking can miss copy shortening until the inverse
-# exact-literal check lands.
+# Known v1 limit, tracked in #7213: already-drifted flow literals do not bind
+# until the inverse literal check lands.
 """
 
 def save_manifest(path, bindings):
@@ -474,14 +487,18 @@ if not os.path.isfile(manifest_path):
 bindings = load_manifest(manifest_path)
 failures = 0
 
-for (key, rel), (rendered, _bound) in sorted(bindings.items()):
+for (key, rel), (rendered, bound) in sorted(bindings.items()):
     fpath = os.path.join(mobile_dir, rel)
     if not os.path.isfile(fpath):
         print(f"❌ DRIFT: bound flow file is missing: {rel} "
               f"(bound to ARB key '{key}')", file=sys.stderr)
         failures += 1
         continue
-    text = _flow_text(rel)
+    # Whole-literal membership, not substring: a shortened ARB value is
+    # still a substring of the longer literal the flow asserts, and Maestro
+    # matches the whole label, so that flow would fail on device while a
+    # substring check stayed green.
+    flow_lits = literals_by_flow.get(rel, set())
 
     if key not in all_keys:
         print(f"❌ DRIFT: ARB key '{key}' no longer exists in "
@@ -530,8 +547,8 @@ for (key, rel), (rendered, _bound) in sorted(bindings.items()):
                   file=sys.stderr)
             failures += 1
             continue
-        if rendered not in text:
-            print(f"❌ DRIFT: {rel} no longer contains the rendered string "
+        if rendered not in flow_lits:
+            print(f"❌ DRIFT: {rel} no longer asserts the rendered string "
                   f"for parameterized ARB key '{key}':\n"
                   f"       expected: {rendered}\n"
                   f"     update the flow, or fix the binding in "
@@ -551,12 +568,16 @@ for (key, rel), (rendered, _bound) in sorted(bindings.items()):
         continue
 
     current = _current_value(key)
-    if current not in text:
+    if current not in flow_lits:
+        still = (f"       flow still asserts: {bound}\n"
+                 if bound in flow_lits else "")
         print(f"❌ DRIFT: copy changed under the Maestro suite.\n"
               f"       ARB key:  {key}\n"
               f"       flow:     {rel}\n"
               f"       ARB now says: {current}\n"
-              f"     That exact string no longer appears in the flow. Update the "
+              f"{still}"
+              f"     That exact string is no longer one of the literals the flow "
+              f"asserts, taps, or waits for. Update the "
               f"flow to the current copy first. If the flow intentionally stopped "
               f"asserting this copy, regenerate with ACCEPT_REMOVALS=1 "
               f"UPDATE_BASELINE=1 bash mobile/scripts/check_maestro_copy_drift.sh "

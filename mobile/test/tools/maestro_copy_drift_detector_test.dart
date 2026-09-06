@@ -304,10 +304,7 @@ void main() {
     });
 
     test('regen preserves a reviewed duplicate-value binding', () {
-      writeArb({
-        'categoryGallerySortNew': 'New',
-        'exploreTabNew': 'New',
-      });
+      writeArb({'categoryGallerySortNew': 'New', 'exploreTabNew': 'New'});
       writeDart(
         'screens/category_gallery.dart',
         'final label = context.l10n.categoryGallerySortNew;\n',
@@ -527,6 +524,129 @@ void main() {
       expect(res.exitCode, 1);
       expect(res.stderr, contains('could not load the manifest'));
       expect(res.stderr, contains('failing closed'));
+    });
+
+    test('extracts a visible: scalar under extendedWaitUntil', () {
+      writeArb({'videoUnlike': 'Unlike video'});
+      writeFlow(
+        'asserts/liked.yaml',
+        '- extendedWaitUntil:\n'
+            '    visible: Unlike video\n'
+            '    timeout: 15000\n'
+            '- extendedWaitUntil:\n'
+            '    visible:\n'
+            '      id: like_button\n'
+            '    timeout: 15000\n',
+      );
+      writeManifest('# generated below\n');
+
+      final regen = run(update: true);
+      final check = run();
+
+      expect(regen.exitCode, 0, reason: regen.stderr.toString());
+      expect(
+        manifest.readAsStringSync(),
+        contains('videoUnlike\te2e/maestro/asserts/liked.yaml'),
+      );
+      expect(check.exitCode, 0, reason: check.stderr.toString());
+      expect(
+        check.stdout,
+        contains('1 bindings verified (of 1 asserted literals extracted)'),
+      );
+    });
+
+    test('extracts a visible: scalar under runFlow.when', () {
+      writeArb({
+        'nostrInfoWhySix': 'Why six seconds?',
+        'nostrInfoGotIt': 'Got it!',
+      });
+      writeFlow(
+        'utils/openRecorder.yaml',
+        '- runFlow:\n'
+            '    when:\n'
+            '      visible: "Why six seconds?"\n'
+            '    commands:\n'
+            '      - tapOn: "Got it!"\n',
+      );
+      writeManifest('# generated below\n');
+
+      final res = run(update: true);
+
+      expect(res.exitCode, 0, reason: res.stderr.toString());
+      expect(
+        manifest.readAsStringSync(),
+        allOf(
+          contains('nostrInfoWhySix\te2e/maestro/utils/openRecorder.yaml'),
+          contains('nostrInfoGotIt\te2e/maestro/utils/openRecorder.yaml'),
+        ),
+      );
+    });
+
+    test('extracts a notVisible: scalar', () {
+      writeArb({'feedLoading': 'Loading...'});
+      writeFlow(
+        'asserts/drained.yaml',
+        '- extendedWaitUntil:\n'
+            '    notVisible: Loading...\n'
+            '    timeout: 5000\n',
+      );
+      writeManifest('# generated below\n');
+
+      final res = run(update: true);
+
+      expect(res.exitCode, 0, reason: res.stderr.toString());
+      expect(
+        manifest.readAsStringSync(),
+        contains('feedLoading\te2e/maestro/asserts/drained.yaml'),
+      );
+    });
+
+    test('binds copy that contains a colon and no space', () {
+      writeArb({'deleteWarningLabel': 'Warning:'});
+      writeFlow('asserts/delete.yaml', '- assertVisible: "Warning:"\n');
+      writeManifest('# generated below\n');
+
+      final res = run(update: true);
+
+      expect(res.exitCode, 0, reason: res.stderr.toString());
+      expect(
+        manifest.readAsStringSync(),
+        contains('deleteWarningLabel\te2e/maestro/asserts/delete.yaml'),
+      );
+    });
+
+    test('fails when ARB copy is shortened under a bound flow', () {
+      writeArb({'authConnectSignerApp': 'Connect with a signer'});
+      writeFlow(
+        'asserts/signIn.yaml',
+        '- assertVisible: Connect with a signer app\n',
+      );
+      writeManifest(
+        'authConnectSignerApp\te2e/maestro/asserts/signIn.yaml'
+        '\tbound:Connect with a signer app\n',
+      );
+
+      final res = run();
+
+      expect(res.exitCode, 1);
+      expect(
+        res.stderr,
+        contains('DRIFT: copy changed under the Maestro suite'),
+      );
+    });
+
+    test('rendered bindings fail when the flow asserts a longer string', () {
+      writeArb({'profileVideoThumbnailLabel': 'Video thumbnail {number}'});
+      writeFlow('tests/searchTags.yaml', '- tapOn: Video thumbnail 12\n');
+      writeManifest(
+        'profileVideoThumbnailLabel\te2e/maestro/tests/searchTags.yaml'
+        '\trendered:Video thumbnail 1\n',
+      );
+
+      final res = run();
+
+      expect(res.exitCode, 1);
+      expect(res.stderr, contains('rendered string'));
     });
   });
 }
