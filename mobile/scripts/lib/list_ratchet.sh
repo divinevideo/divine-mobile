@@ -31,6 +31,9 @@
 #   print_baseline_header()  prints the baseline file header comment block
 #
 # Honours UPDATE_BASELINE=1 to regenerate (preserving any trailing "# reason").
+# A baseline line may also carry `renamed-from: <old-key>` in its trailing
+# comment. This is a reviewable assertion that the new item moved from the old
+# item; it may be removed once the new item is present on the base ref.
 
 set -euo pipefail
 
@@ -148,6 +151,52 @@ run_list_ratchet() {
   case "$base_status" in
     0)
       growth="$(comm -23 <(printf '%s\n' "$baseline") <(printf '%s\n' "$LR_MAIN_BASELINE") | grep -v '^$' || true)"
+      local rename_claims rename_line rename_new rename_old TAB
+      TAB="$(printf '\t')"
+      rename_claims="$(mktemp)"
+      if [[ -f "$BASELINE_FILE" ]]; then
+        awk '
+          /renamed-from:/ {
+            new=$0; sub(/[[:space:]]+#.*/, "", new); old=$0
+            sub(/^.*renamed-from:[[:space:]]*/, "", old); sub(/[;[:space:]].*$/, "", old)
+            if (old == "" || old == $0) print "!MALFORMED!\t" new
+            else print new "\t" old
+          }
+        ' "$BASELINE_FILE" > "$rename_claims"
+      fi
+      while IFS="$TAB" read -r rename_new rename_old; do
+        [[ -z "$rename_new" ]] && continue
+        if [[ "$rename_new" == "!MALFORMED!" ]]; then
+          echo "FAIL [$RATCHET_LABEL]: malformed renamed-from annotation on $rename_old"
+          echo "  -> use '# renamed-from: <old-key>' with a non-empty key"
+          fail=1
+          continue
+        fi
+        if [[ "$(cut -f1 "$rename_claims" | grep -Fxc "$rename_new")" -gt 1 ]]; then
+          echo "FAIL [$RATCHET_LABEL]: duplicate rename claim for new key $rename_new"
+          fail=1
+          continue
+        fi
+        if [[ "$(cut -f2 "$rename_claims" | grep -Fxc "$rename_old")" -gt 1 ]]; then
+          echo "FAIL [$RATCHET_LABEL]: old key $rename_old is claimed more than once"
+          fail=1
+          continue
+        fi
+        if ! grep -Fqx "$rename_old" <<< "$LR_MAIN_BASELINE"; then
+          echo "FAIL [$RATCHET_LABEL]: renamed-from old key is not in ${BASE_REF}: $rename_old"
+          fail=1
+        fi
+        if grep -Fqx "$rename_old" <<< "$baseline"; then
+          echo "FAIL [$RATCHET_LABEL]: renamed-from old key remains in the branch baseline: $rename_old"
+          fail=1
+        fi
+        if grep -Fqx "$rename_old" <<< "$LR_CURRENT"; then
+          echo "FAIL [$RATCHET_LABEL]: renamed-from old key is still emitted: $rename_old"
+          fail=1
+        fi
+        growth="$(printf '%s\n' "$growth" | grep -Fvx "$rename_new" || true)"
+      done < "$rename_claims"
+      rm -f "$rename_claims"
       if [[ -n "$growth" ]]; then
         echo "FAIL [$RATCHET_LABEL]: baseline GREW vs ${BASE_REF} (the ratchet may only shrink):"
         echo "$growth" | sed 's/^/  /'

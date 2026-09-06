@@ -42,6 +42,9 @@
 # baselines have always been able to explain themselves; without it a reason
 # survives only until the next regeneration, which is why no numeric baseline
 # carried one before #3340.
+# A baseline line may also carry `renamed-from: <old-key>` in its trailing
+# comment. This is a reviewable assertion that the new key moved from the old
+# key; it may be removed once the new key is present on the base ref.
 #
 # Honours UPDATE_BASELINE=1 to regenerate. Bash 3.2 compatible (sort/join only).
 
@@ -173,6 +176,56 @@ run_numeric_ratchet() {
       local added raised
       added="$(join -t "$TAB" -v1 "$BASE_F" "$MAIN_F" || true)"
       raised="$(join -t "$TAB" "$BASE_F" "$MAIN_F" | awk -F "$TAB" '$2 > $3 { printf "%s\t%s -> %s\n", $1, $3, $2 }' || true)"
+      local rename_claims rename_line rename_new rename_old old_count new_count
+      rename_claims="$(mktemp)"
+      if [[ -f "$BASELINE_FILE" ]]; then
+        awk -F "$TAB" '
+          /renamed-from:/ {
+            old=$0; sub(/^.*renamed-from:[[:space:]]*/, "", old); sub(/[;[:space:]].*$/, "", old)
+            if (old == "" || old == $0) print "!MALFORMED!\t" $1
+            else print $1 "\t" old
+          }
+        ' "$BASELINE_FILE" > "$rename_claims"
+      fi
+      while IFS="$TAB" read -r rename_new rename_old; do
+        [[ -z "$rename_new" ]] && continue
+        if [[ "$rename_new" == "!MALFORMED!" ]]; then
+          echo "FAIL [$RATCHET_LABEL]: malformed renamed-from annotation on $rename_old"
+          echo "  -> use '# renamed-from: <old-key>' with a non-empty key"
+          fail=1
+          continue
+        fi
+        if [[ "$(cut -f1 "$rename_claims" | grep -Fxc "$rename_new")" -gt 1 ]]; then
+          echo "FAIL [$RATCHET_LABEL]: duplicate rename claim for new key $rename_new"
+          fail=1
+          continue
+        fi
+        if [[ "$(cut -f2 "$rename_claims" | grep -Fxc "$rename_old")" -gt 1 ]]; then
+          echo "FAIL [$RATCHET_LABEL]: old key $rename_old is claimed more than once"
+          fail=1
+          continue
+        fi
+        if ! awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$MAIN_F"; then
+          echo "FAIL [$RATCHET_LABEL]: renamed-from old key is not in ${BASE_REF}: $rename_old"
+          fail=1
+        fi
+        if awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit found }' "$BASE_F"; then
+          echo "FAIL [$RATCHET_LABEL]: renamed-from old key remains in the branch baseline: $rename_old"
+          fail=1
+        fi
+        if awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit found }' "$CUR_F"; then
+          echo "FAIL [$RATCHET_LABEL]: renamed-from old key is still emitted: $rename_old"
+          fail=1
+        fi
+        new_count="$(awk -F "$TAB" -v key="$rename_new" '$1 == key { print $2; exit }' "$BASE_F")"
+        old_count="$(awk -F "$TAB" -v key="$rename_old" '$1 == key { print $2; exit }' "$MAIN_F")"
+        if [[ -z "$old_count" || "$new_count" -gt "$old_count" ]]; then
+          echo "FAIL [$RATCHET_LABEL]: renamed key $rename_new exceeds old ceiling $rename_old"
+          fail=1
+        fi
+        added="$(printf '%s\n' "$added" | awk -F "$TAB" -v key="$rename_new" '$1 != key')"
+      done < "$rename_claims"
+      rm -f "$rename_claims"
       if [[ -n "$added" || -n "$raised" ]]; then
         echo "FAIL [$RATCHET_LABEL]: baseline ADDED a key or RAISED a ceiling vs ${BASE_REF} (may only shrink):"
         [[ -n "$added" ]] && echo "$added" | sed 's/^/  +added /'

@@ -37,8 +37,8 @@ BASE_REF="${SERVICE_GOD_FILE_BASELINE_BASE_REF:-origin/main}"
 ALLOW_NO_BASE="${SERVICE_GOD_FILE_CEILING_ALLOW_NO_BASE:-0}"
 ALLOW_NO_BASE_VAR="SERVICE_GOD_FILE_CEILING_ALLOW_NO_BASE"
 
-NEW_HINT="Do not grow service-layer god files under mobile/lib/services. Extract responsibilities behind repository/client boundaries, or keep the change out of the oversized service file. If this is an in-tree move of a still-oversized service, UPDATE_BASELINE alone cannot approve it; shrink/extract first or complete rename-aware ratchet support. See epic #4338."
-STALE_HINT="A service god-file was removed, renamed, or dropped below the oversized threshold. If this is paired with a NEW key for an in-tree move, UPDATE_BASELINE alone cannot approve the moved oversized service."
+NEW_HINT="Do not grow service-layer god files under mobile/lib/services. Extract responsibilities behind repository/client boundaries, or keep the change out of the oversized service file. For an in-tree move, annotate the new baseline row with '# renamed-from: <old-key>' after reviewing the provenance. See epic #4338."
+STALE_HINT="A service god-file was removed, renamed, or dropped below the oversized threshold. Lock the win by regenerating the baseline."
 FOOTER="Service-layer god-file sizes are frozen and may only decrease. Keep new
 work out of oversized services and continue the UI -> BLoC/Cubit -> Repository
 -> Client extraction path from epic #4338."
