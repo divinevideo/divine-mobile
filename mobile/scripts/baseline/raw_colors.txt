@@ -24,7 +24,7 @@ lib/widgets/blurhash_display.dart	7
 lib/widgets/categories/category_visuals.dart	24
 lib/widgets/categories_tab.dart	1
 lib/widgets/environment_indicator.dart	2
-lib/widgets/global_error_widget.dart	4
+lib/widgets/global_error_widget.dart	3
 lib/widgets/profile/profile_header_media.dart	2
 lib/widgets/profile/profile_videos_grid.dart	1
 lib/widgets/user_avatar.dart	14
