@@ -6,9 +6,13 @@ void main() {
   group('main() ErrorWidget.builder wiring', () {
     test('startOpenVineApp receives buildGlobalErrorWidget', () {
       final source = File('lib/main.dart').readAsStringSync();
+      final code = source
+          .split('\n')
+          .where((line) => !line.trimLeft().startsWith('//'))
+          .join('\n');
 
       expect(
-        source,
+        code,
         contains(RegExp(r'errorWidgetBuilder:\s*buildGlobalErrorWidget')),
         reason:
             'main() must pass buildGlobalErrorWidget into startOpenVineApp. '
@@ -17,7 +21,7 @@ void main() {
             'surface stayed unreachable for seven months (#8647).',
       );
       expect(
-        source,
+        code,
         isNot(contains('startupErrorWidgetBuilder')),
         reason: 'the deleted minimal startup surface must not return',
       );
