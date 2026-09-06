@@ -11,6 +11,7 @@ import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v10.dart' as v10;
 import 'generated/schema_v11.dart' as v11;
 import 'generated/schema_v12.dart' as v12;
+import 'generated/schema_v13.dart' as v13;
 import 'generated/schema_v9.dart' as v9;
 
 void main() {
@@ -22,21 +23,21 @@ void main() {
   });
 
   group('schema validation', () {
-    test('current schema version is 12', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 12);
+    test('current schema version is 13', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 13);
     });
 
-    test('v12 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(12);
+    test('v13 schema is valid and up to date', () async {
+      final schema = await verifier.schemaAt(13);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
       await db.close();
     });
 
-    test('v12 creates personal_events on a v11 database', () async {
-      final schema = await verifier.schemaAt(11);
+    test('v13 creates personal_events on a v12 database', () async {
+      final schema = await verifier.schemaAt(12);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
 
       final rows = await db
           .customSelect(
@@ -49,15 +50,15 @@ void main() {
     });
 
     test(
-      'a v11 database keeps its rows across the v12 upgrade',
+      'a v11 database keeps its rows across the v13 upgrade',
       () async {
         // personal_events is a new table, so nothing is migrated into it. The
         // point of the check is that adding it does not disturb existing data.
         await verifier.testWithDataIntegrity(
           oldVersion: 11,
-          newVersion: 12,
+          newVersion: 13,
           createOld: v11.DatabaseAtV11.new,
-          createNew: v12.DatabaseAtV12.new,
+          createNew: v13.DatabaseAtV13.new,
           openTestedDatabase: AppDatabase.new,
           createItems: (batch, oldDb) => batch.insert(
             oldDb.directMessages,
@@ -89,9 +90,9 @@ void main() {
         // See #8211.
         await verifier.testWithDataIntegrity(
           oldVersion: 10,
-          newVersion: 12,
+          newVersion: 13,
           createOld: v10.DatabaseAtV10.new,
-          createNew: v12.DatabaseAtV12.new,
+          createNew: v13.DatabaseAtV13.new,
           openTestedDatabase: AppDatabase.new,
           createItems: (batch, oldDb) => batch.insert(
             oldDb.directMessages,
@@ -121,9 +122,9 @@ void main() {
         // up every historical row as work. See #8165.
         await verifier.testWithDataIntegrity(
           oldVersion: 9,
-          newVersion: 12,
+          newVersion: 13,
           createOld: v9.DatabaseAtV9.new,
-          createNew: v12.DatabaseAtV12.new,
+          createNew: v13.DatabaseAtV13.new,
           openTestedDatabase: AppDatabase.new,
           createItems: (batch, oldDb) => batch.insert(
             oldDb.directMessages,
@@ -146,10 +147,10 @@ void main() {
       },
     );
 
-    test('v8 schema migrates to v12', () async {
+    test('v8 schema migrates to v13', () async {
       final schema = await verifier.schemaAt(8);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
       const conversationId =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -171,45 +172,45 @@ void main() {
       await db.close();
     });
 
-    test('v7 schema migrates to v12', () async {
+    test('v7 schema migrates to v13', () async {
       final schema = await verifier.schemaAt(7);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
       await db.close();
     });
 
-    test('v6 schema migrates to v12', () async {
+    test('v6 schema migrates to v13', () async {
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
       await db.close();
     });
 
-    test('v5 schema migrates to v12', () async {
+    test('v5 schema migrates to v13', () async {
       final schema = await verifier.schemaAt(5);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
       await db.close();
     });
 
-    test('v3 schema migrates to v12', () async {
+    test('v3 schema migrates to v13', () async {
       final schema = await verifier.schemaAt(3);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
       await db.close();
     });
 
-    test('v2 schema migrates to v12', () async {
+    test('v2 schema migrates to v13', () async {
       final schema = await verifier.schemaAt(2);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
       await db.close();
     });
 
-    test('legacy v1 schema migrates to v12', () async {
+    test('legacy v1 schema migrates to v13', () async {
       final schema = await verifier.schemaAt(1);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
       await db.close();
     });
 
@@ -237,7 +238,7 @@ void main() {
       );
 
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
 
       final rows = await db
           .customSelect(
@@ -260,9 +261,9 @@ void main() {
     test('v2 identity_events rows survive the upgrade unstamped', () async {
       await verifier.testWithDataIntegrity(
         oldVersion: 2,
-        newVersion: 12,
+        newVersion: 13,
         createOld: v2.DatabaseAtV2.new,
-        createNew: v12.DatabaseAtV12.new,
+        createNew: v13.DatabaseAtV13.new,
         openTestedDatabase: AppDatabase.new,
         createItems: (batch, oldDb) => batch.insert(
           oldDb.identityEvents,
@@ -296,7 +297,7 @@ void main() {
         );
 
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 12);
+        await verifier.migrateAndValidate(db, 13);
 
         final migrated = await db.clipsDao.getClipById('clip-1');
         expect(migrated?.id, 'clip-1');
@@ -317,7 +318,7 @@ void main() {
         );
 
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 12);
+        await verifier.migrateAndValidate(db, 13);
 
         final migrated = await db.clipsDao.getClipById('clip-1');
         expect(migrated?.id, 'clip-1');
@@ -330,9 +331,9 @@ void main() {
     test('v6 copies a distinct pre-v5 vine id into the d-tag column', () async {
       await verifier.testWithDataIntegrity(
         oldVersion: 3,
-        newVersion: 12,
+        newVersion: 13,
         createOld: v3.DatabaseAtV3.new,
-        createNew: v12.DatabaseAtV12.new,
+        createNew: v13.DatabaseAtV13.new,
         openTestedDatabase: AppDatabase.new,
         createItems: (batch, oldDb) {
           batch
@@ -397,7 +398,7 @@ void main() {
       );
 
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
 
       final row = await db
           .customSelect(
@@ -452,7 +453,7 @@ void main() {
         );
 
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 12);
+        await verifier.migrateAndValidate(db, 13);
 
         final row = await db
             .customSelect(
@@ -619,7 +620,7 @@ void main() {
 
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 12);
+      await verifier.migrateAndValidate(db, 13);
 
       final rows = await db
           .customSelect("SELECT name FROM sqlite_master WHERE type = 'index'")
