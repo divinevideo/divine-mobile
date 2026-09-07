@@ -13,6 +13,7 @@ class _RequeueingRelay extends Relay {
 
   final List<dynamic> failedMessage;
   final List<List<dynamic>> sentMessages = [];
+  final List<bool> skipReconnectValues = [];
 
   @override
   final bool connectionIsFresh;
@@ -31,6 +32,7 @@ class _RequeueingRelay extends Relay {
     DateTime? deadline,
   }) async {
     sentMessages.add(List<dynamic>.from(message));
+    skipReconnectValues.add(skipReconnect);
 
     if (_messagesEqual(message, failedMessage)) {
       if (queueIfFailed) {
@@ -83,6 +85,7 @@ void main() {
           failedMessage,
         ]);
         expect(relay.pendingMessages, [failedMessage]);
+        expect(relay.skipReconnectValues, everyElement(isTrue));
       },
     );
   });

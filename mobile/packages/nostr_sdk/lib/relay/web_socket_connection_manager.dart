@@ -5,21 +5,55 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:clock/clock.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Connection state for the WebSocket
 enum ConnectionState { disconnected, connecting, connected }
 
+class _ConnectionLimit {
+  _ConnectionLimit.wallClock(this._wallClockDeadline)
+    : _budget = null,
+      _stopwatch = null;
+
+  _ConnectionLimit.monotonic(this._budget)
+    : _wallClockDeadline = null,
+      _stopwatch = (Stopwatch()..start());
+
+  final DateTime? _wallClockDeadline;
+  final Duration? _budget;
+  final Stopwatch? _stopwatch;
+
+  bool get isMonotonic => _stopwatch != null;
+
+  bool get isExpired => remainingOr(Duration.zero) == Duration.zero;
+
+  Duration remainingOr(Duration fallback) {
+    final remaining = switch ((_wallClockDeadline, _budget, _stopwatch)) {
+      (final DateTime deadline, null, null) => deadline.difference(clock.now()),
+      (null, final Duration budget, final Stopwatch stopwatch) =>
+        budget - stopwatch.elapsed,
+      _ => Duration.zero,
+    };
+    if (remaining <= Duration.zero) return Duration.zero;
+    if (fallback == Duration.zero || remaining < fallback) return remaining;
+    return fallback;
+  }
+}
+
 /// Configuration for WebSocket connection behavior
 class WebSocketConfig {
-  /// Maximum number of reconnection attempts before giving up
+  /// Maximum number of reconnection attempts made for one send.
   final int maxReconnectAttempts;
 
-  /// Base delay for exponential backoff (doubles each attempt)
+  /// Base delay for send-path reconnect backoff (doubles each attempt).
   final Duration baseReconnectDelay;
 
-  /// Maximum delay between reconnection attempts
+  /// Maximum delay between reconnection attempts made for one send.
   final Duration maxReconnectDelay;
+
+  /// Maximum time one send may spend reconnecting when it has no deadline.
+  final Duration reconnectBudget;
 
   /// Timeout for initial connection attempt
   final Duration connectionTimeout;
@@ -43,9 +77,10 @@ class WebSocketConfig {
   final Duration idleTimeout;
 
   const WebSocketConfig({
-    this.maxReconnectAttempts = 10,
+    this.maxReconnectAttempts = 4,
     this.baseReconnectDelay = const Duration(seconds: 2),
-    this.maxReconnectDelay = const Duration(minutes: 5),
+    this.maxReconnectDelay = const Duration(seconds: 8),
+    this.reconnectBudget = const Duration(seconds: 30),
     this.connectionTimeout = const Duration(seconds: 10),
     this.closeTimeout = const Duration(seconds: 2),
     this.heartbeatInterval = const Duration(seconds: 30),
@@ -75,9 +110,9 @@ class DefaultWebSocketChannelFactory implements WebSocketChannelFactory {
 /// Manages a single WebSocket connection with on-demand reconnection and
 /// idle detection.
 ///
-/// Reconnects automatically when:
-/// - Sending a message while disconnected (triggers reconnect attempt)
-/// - Connection is lost while active (stream error/done)
+/// Reconnects on demand when a message is sent while disconnected. A stream
+/// error or closure marks the connection disconnected so the next send can
+/// start that bounded reconnect attempt.
 ///
 /// Idle Detection (heartbeat):
 /// - Tracks when the last message was received
@@ -193,19 +228,34 @@ class WebSocketConnectionManager {
     return _doConnect();
   }
 
-  Future<bool> _doConnect() async {
+  Future<bool> _doConnect({_ConnectionLimit? limit}) async {
     if (_disposed) {
       log('Connect refused: $url - manager is disposed');
       return false;
     }
 
+    if (limit?.isExpired ?? false) return false;
+
     _setState(ConnectionState.connecting);
 
     WebSocketChannel? channel;
+    Duration? handshakeTimeout;
     try {
       final uri = Uri.parse(url);
       if (uri.scheme != 'ws' && uri.scheme != 'wss') {
         throw ArgumentError('Invalid WebSocket URL scheme: ${uri.scheme}');
+      }
+
+      // Budget first: a socket created with no time left to await it leaves
+      // `channel.ready` unlistened, so its later failure escapes as an
+      // unhandled zone error — what the `await` below exists to prevent.
+      handshakeTimeout =
+          limit?.remainingOr(config.connectionTimeout) ??
+          config.connectionTimeout;
+      if (handshakeTimeout == Duration.zero) {
+        log('Connect abandoned: $url - no handshake time left');
+        _markDisconnectedIfOwned(channel);
+        return false;
       }
 
       log('Connecting to $url');
@@ -216,7 +266,7 @@ class WebSocketConnectionManager {
       // IOWebSocketChannel.connect() returns immediately and DNS/TLS
       // failures surface as unhandled async errors in the zone instead
       // of being caught here.
-      await channel.ready.timeout(config.connectionTimeout);
+      await channel.ready.timeout(handshakeTimeout);
 
       // A dispose, a disconnect, or a newer connect can all run inside the
       // handshake window, and each of them detaches this channel. Adopting it
@@ -224,7 +274,7 @@ class WebSocketConnectionManager {
       // that no owner can reach — so nothing could ever close either (#7367).
       if (_disposed || !identical(_channel, channel)) {
         log('Discarding socket for $url: its owner went away mid-handshake');
-        await _closeOrphanedChannel(channel);
+        await _closeOrphanedChannel(channel, limit: limit);
         return false;
       }
 
@@ -249,24 +299,29 @@ class WebSocketConnectionManager {
 
       return true;
     } on WebSocketChannelException catch (e) {
-      log('Connection failed (WebSocket): $e');
-      _emitError('Connection failed: $e');
-      _detachChannel(channel);
-      _setState(ConnectionState.disconnected);
+      if (_ownsChannel(channel)) {
+        log('Connection failed (WebSocket): $e');
+        _emitError('Connection failed: $e');
+      }
+      _markDisconnectedIfOwned(channel);
       return false;
     } on TimeoutException {
-      log('Connection timed out after ${config.connectionTimeout}');
-      _emitError('Connection timed out');
+      if (_ownsChannel(channel)) {
+        // Name the budget: it is now min(connectionTimeout, time left), so a
+        // stall and a spent deadline would otherwise log identically.
+        log('Connection timed out after $handshakeTimeout');
+        _emitError('Connection timed out');
+      }
       // Clean up the channel that never finished connecting
-      await _closeOrphanedChannel(channel);
-      _detachChannel(channel);
-      _setState(ConnectionState.disconnected);
+      await _closeOrphanedChannel(channel, limit: limit);
+      _markDisconnectedIfOwned(channel);
       return false;
     } catch (e) {
-      log('Connection failed: $e');
-      _emitError('Connection failed: $e');
-      _detachChannel(channel);
-      _setState(ConnectionState.disconnected);
+      if (_ownsChannel(channel)) {
+        log('Connection failed: $e');
+        _emitError('Connection failed: $e');
+      }
+      _markDisconnectedIfOwned(channel);
       return false;
     }
   }
@@ -280,10 +335,27 @@ class WebSocketConnectionManager {
     if (channel == null || identical(_channel, channel)) _channel = null;
   }
 
+  /// Marks a failed connect disconnected only while it still owns the socket.
+  ///
+  /// An explicit reconnect can replace [_channel] while an older handshake is
+  /// waiting or cleaning up. That older attempt must not disconnect the newer
+  /// owner when it eventually fails.
+  void _markDisconnectedIfOwned(WebSocketChannel? channel) {
+    if (!_ownsChannel(channel)) return;
+    _detachChannel(channel);
+    _setState(ConnectionState.disconnected);
+  }
+
+  bool _ownsChannel(WebSocketChannel? channel) =>
+      channel == null ? _channel == null : identical(_channel, channel);
+
   /// Closes a socket that no longer has an owner.
-  Future<void> _closeOrphanedChannel(WebSocketChannel? channel) async {
+  Future<void> _closeOrphanedChannel(
+    WebSocketChannel? channel, {
+    _ConnectionLimit? limit,
+  }) async {
     if (channel == null) return;
-    await _closeSink(channel, description: 'orphaned channel');
+    await _closeSink(channel, description: 'orphaned channel', limit: limit);
   }
 
   /// Publishes to [errorStream] unless teardown already closed it.
@@ -355,11 +427,36 @@ class WebSocketConnectionManager {
   Future<void> _closeSink(
     WebSocketChannel channel, {
     required String description,
+    _ConnectionLimit? limit,
+  }) async {
+    final closeTimeout =
+        limit?.remainingOr(config.closeTimeout) ?? config.closeTimeout;
+    if (closeTimeout == Duration.zero) {
+      unawaited(
+        _closeSinkWithin(
+          channel,
+          description: description,
+          timeout: config.closeTimeout,
+        ),
+      );
+      return;
+    }
+    await _closeSinkWithin(
+      channel,
+      description: description,
+      timeout: closeTimeout,
+    );
+  }
+
+  Future<void> _closeSinkWithin(
+    WebSocketChannel channel, {
+    required String description,
+    required Duration timeout,
   }) async {
     try {
-      await channel.sink.close().timeout(config.closeTimeout);
+      await channel.sink.close().timeout(timeout);
     } on TimeoutException {
-      log('Timed out closing $description after ${config.closeTimeout}');
+      log('Timed out closing $description after $timeout');
     } catch (e) {
       log('Error closing $description: $e');
     }
@@ -376,7 +473,10 @@ class WebSocketConnectionManager {
     bool skipReconnect = false,
     DateTime? deadline,
   }) async {
-    if (_deadlineExpired(deadline)) return false;
+    final callerLimit = deadline == null
+        ? null
+        : _ConnectionLimit.wallClock(deadline);
+    if (callerLimit?.isExpired ?? false) return false;
 
     // Try to reconnect if disconnected
     if (_state == ConnectionState.disconnected) {
@@ -385,8 +485,8 @@ class WebSocketConnectionManager {
         return false;
       }
       log('Disconnected, attempting reconnect before send');
-      final connected = await _tryReconnect(deadline: deadline);
-      if (_deadlineExpired(deadline)) return false;
+      final connected = await _tryReconnect(callerLimit: callerLimit);
+      if (callerLimit?.isExpired ?? false) return false;
       if (!connected) {
         log('Reconnect failed, cannot send');
         return false;
@@ -396,20 +496,16 @@ class WebSocketConnectionManager {
     // Wait if currently connecting
     if (_state == ConnectionState.connecting) {
       log('Connecting, waiting before send');
-      final connected = await _waitForConnection(deadline: deadline);
-      if (_deadlineExpired(deadline)) return false;
+      final connected = await _waitForConnection(limit: callerLimit);
+      if (callerLimit?.isExpired ?? false) return false;
       if (!connected) {
         log('Connection failed, cannot send');
         return false;
       }
     }
 
-    if (_deadlineExpired(deadline)) return false;
+    if (callerLimit?.isExpired ?? false) return false;
     return _doSend(message);
-  }
-
-  bool _deadlineExpired(DateTime? deadline) {
-    return deadline != null && !DateTime.now().isBefore(deadline);
   }
 
   /// Send a message synchronously (no reconnection attempt).
@@ -436,7 +532,7 @@ class WebSocketConnectionManager {
     bool skipReconnect = false,
     DateTime? deadline,
   }) async {
-    if (_deadlineExpired(deadline)) return false;
+    if (deadline != null && !clock.now().isBefore(deadline)) return false;
 
     final String encoded;
     try {
@@ -457,10 +553,14 @@ class WebSocketConnectionManager {
 
   // --- Reconnection ---
 
-  Future<bool> _tryReconnect({DateTime? deadline}) async {
+  Future<bool> _tryReconnect({_ConnectionLimit? callerLimit}) async {
+    final limit =
+        callerLimit ?? _ConnectionLimit.monotonic(config.reconnectBudget);
+    var attempts = 0;
+    _reconnectAttempts = 0;
     while (_shouldReconnect && _state == ConnectionState.disconnected) {
-      if (_deadlineExpired(deadline)) return false;
-      if (_reconnectAttempts >= config.maxReconnectAttempts) {
+      if (limit.isExpired) return _stopAtReconnectLimit(limit);
+      if (attempts >= config.maxReconnectAttempts) {
         log('Max reconnect attempts reached for $url');
         _emitError('Max reconnect attempts reached');
         return false;
@@ -469,40 +569,55 @@ class WebSocketConnectionManager {
       // Exponential backoff: base * 2^attempts, capped at max
       final delayMs =
           (config.baseReconnectDelay.inMilliseconds *
-                  (1 << _reconnectAttempts.clamp(0, 8)))
+                  (1 << attempts.clamp(0, 8)))
               .clamp(0, config.maxReconnectDelay.inMilliseconds);
       final delay = Duration(milliseconds: delayMs);
 
-      _reconnectAttempts++;
+      final attempt = attempts + 1;
+      final wait = limit.remainingOr(delay);
+      if (wait < delay) {
+        log(
+          'Reconnect budget cannot fit the next backoff for $url; '
+          'stopping before attempt $attempt',
+        );
+        return _stopAtReconnectLimit(limit);
+      }
       log(
-        'Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts/${config.maxReconnectAttempts})',
+        'Reconnecting in ${delay.inSeconds}s '
+        '(attempt $attempt/${config.maxReconnectAttempts})',
       );
-
-      final wait = _remainingOr(delay, deadline);
-      if (wait == Duration.zero) return false;
       await Future<void>.delayed(wait);
 
-      if (!_shouldReconnect || _deadlineExpired(deadline)) return false;
+      if (!_shouldReconnect) return false;
+      if (limit.isExpired) {
+        return _stopAtReconnectLimit(limit);
+      }
 
-      final connected = await _doConnect();
+      // Another sender may have started or completed a handshake during the
+      // backoff. Join that connection instead of creating a competing socket.
+      if (_state == ConnectionState.connected) return true;
+      if (_state == ConnectionState.connecting) {
+        return _waitForConnection(limit: limit);
+      }
+
+      attempts = attempt;
+      _reconnectAttempts = attempt;
+      final connected = await _doConnect(limit: limit);
       if (connected) return true;
     }
 
     return _state == ConnectionState.connected;
   }
 
-  Duration _remainingOr(Duration fallback, DateTime? deadline) {
-    if (deadline == null) return fallback;
-    final remaining = deadline.difference(DateTime.now());
-    if (remaining.isNegative || remaining == Duration.zero) {
-      return Duration.zero;
-    }
-    if (remaining < fallback) return remaining;
-    return fallback;
+  bool _stopAtReconnectLimit(_ConnectionLimit limit) {
+    if (limit.isMonotonic) _emitError('Reconnect budget exhausted');
+    return false;
   }
 
-  Future<bool> _waitForConnection({DateTime? deadline}) async {
-    final waitTimeout = _connectionWaitTimeout(deadline);
+  Future<bool> _waitForConnection({_ConnectionLimit? limit}) async {
+    final waitTimeout =
+        limit?.remainingOr(config.connectionTimeout) ??
+        config.connectionTimeout;
     if (waitTimeout == Duration.zero) return false;
 
     // Wait up to connectionTimeout for connection to complete
@@ -524,6 +639,10 @@ class WebSocketConnectionManager {
       sub.cancel();
       return true;
     }
+    if (_state == ConnectionState.disconnected) {
+      sub.cancel();
+      return false;
+    }
 
     final result = await completer.future.timeout(
       waitTimeout,
@@ -534,16 +653,6 @@ class WebSocketConnectionManager {
     );
 
     return result;
-  }
-
-  Duration _connectionWaitTimeout(DateTime? deadline) {
-    if (deadline == null) return config.connectionTimeout;
-    final remaining = deadline.difference(DateTime.now());
-    if (remaining.isNegative || remaining == Duration.zero) {
-      return Duration.zero;
-    }
-    if (remaining < config.connectionTimeout) return remaining;
-    return config.connectionTimeout;
   }
 
   /// Reset reconnection state, allowing fresh attempts

@@ -590,6 +590,7 @@ class RelayPool {
 
     if (await relay.connect()) {
       if (autoSubscribe) {
+        var replayFailed = false;
         final msg =
             '🔄 autoSubscribe: re-sending ${_subscriptions.length} '
             'subscriptions to ${relay.url}';
@@ -601,7 +602,19 @@ class RelayPool {
           // relay.getSubscriptions() would return empty after AUTH success.
           relay.saveSubscription(subscription);
           log('🔄 autoSubscribe: sending ${subscription.id} to ${relay.url}');
-          await relay.send(subscription.toJson());
+          final sent = await relay.send(
+            subscription.toJson(),
+            skipReconnect: true,
+          );
+          replayFailed = replayFailed || !sent;
+        }
+        if (replayFailed) {
+          relay.relayStatus.onError();
+          log(
+            'autoSubscribe replay failed for ${relay.url}; '
+            'reconnecting once for saved-request replay',
+          );
+          if (!await relay.connect()) return false;
         }
       }
       if (init) {
@@ -726,8 +739,9 @@ class RelayPool {
           !relay.relayStatus.authed) {
         log('🔐 Auth-required query - sending to trigger AUTH challenge');
         relay.saveQuery(subscription);
+        final deadline = DateTime.now().add(perRelaySendTimeout);
         final result = await relay
-            .send(message)
+            .send(message, queueIfFailed: false, deadline: deadline)
             .timeout(perRelaySendTimeout, onTimeout: () => false);
         if (!result) {
           log(
@@ -2034,8 +2048,9 @@ class RelayPool {
         log(
           '🔐 Auth-required subscription - sending to trigger AUTH challenge',
         );
+        final deadline = DateTime.now().add(perRelaySendTimeout);
         final result = await relay
-            .send(message)
+            .send(message, queueIfFailed: false, deadline: deadline)
             .timeout(perRelaySendTimeout, onTimeout: () => false);
         if (result) {
           return true;

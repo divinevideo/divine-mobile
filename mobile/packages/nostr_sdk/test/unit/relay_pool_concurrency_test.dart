@@ -44,6 +44,41 @@ class _MutatingRelay extends Relay {
   }
 }
 
+class _DisconnectingAutoSubscribeRelay extends Relay {
+  _DisconnectingAutoSubscribeRelay(String url) : super(url, RelayStatus(url));
+
+  bool? receivedSkipReconnect;
+  int connectCount = 0;
+  int sendCount = 0;
+
+  @override
+  Future<bool> doConnect() async {
+    connectCount++;
+    relayStatus.connected = ClientConnected.connected;
+    return true;
+  }
+
+  @override
+  Future<void> disconnect() async {
+    relayStatus.connected = ClientConnected.disconnect;
+  }
+
+  @override
+  Future<bool> send(
+    List<dynamic> message, {
+    bool queueIfFailed = true,
+    bool skipReconnect = false,
+    DateTime? deadline,
+  }) async {
+    sendCount++;
+    if (sendCount > 1) return true;
+    relayStatus.connected = ClientConnected.disconnect;
+    receivedSkipReconnect = skipReconnect;
+    if (!skipReconnect) return Completer<bool>().future;
+    return false;
+  }
+}
+
 /// A relay that succeeds on send and immediately responds with EOSE.
 class _SucceedingRelay extends Relay {
   _SucceedingRelay(String url) : super(url, RelayStatus(url));
@@ -459,6 +494,27 @@ void main() {
           relay.sentMessages.where((message) => message.first == 'REQ').length,
           greaterThanOrEqualTo(1),
         );
+      },
+    );
+
+    test(
+      'add(autoSubscribe: true) reconnects a socket lost during replay',
+      () async {
+        nostr.relayPool.subscribe([
+          Filter(kinds: const [1], limit: 1).toJson(),
+        ], (_) {});
+        final relay = _DisconnectingAutoSubscribeRelay(
+          'wss://disconnected-auto-subscribe.relay',
+        );
+
+        final add = nostr.relayPool.add(relay, autoSubscribe: true);
+        await pumpEventQueue();
+        expect(relay.receivedSkipReconnect, isTrue);
+        expect(await add, isTrue);
+        await pumpEventQueue();
+        expect(relay.connectCount, 2);
+        expect(relay.sendCount, greaterThan(1));
+        expect(relay.getSubscriptions(), hasLength(1));
       },
     );
 
