@@ -26,6 +26,7 @@ import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/account_deletion_service.dart';
+import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/cawg_verifier_client.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
@@ -171,7 +172,7 @@ AuthService authService(Ref ref) {
           pubkey: pubkeyHex,
           limit: 5000,
         );
-        await persistFollowingCacheForAuthRedirect(
+        await persistFollowingPrefetchForAuthRedirect(
           prefs: prefs,
           pubkeyHex: pubkeyHex,
           pubkeys: result.pubkeys,
@@ -197,15 +198,18 @@ AuthService authService(Ref ref) {
 /// from "not fetched yet", preventing every later login from repeating the
 /// same blocking request.
 @visibleForTesting
-Future<void> persistFollowingCacheForAuthRedirect({
+Future<void> persistFollowingPrefetchForAuthRedirect({
   required SharedPreferences prefs,
   required String pubkeyHex,
   required List<String> pubkeys,
 }) async {
-  await prefs.setString(
-    FollowingCacheRecord.storageKey(pubkeyHex),
-    FollowingCacheRecord(pubkeys: pubkeys).encode(),
-  );
+  if (pubkeys.isNotEmpty) {
+    await prefs.setString(
+      FollowingCacheRecord.storageKey(pubkeyHex),
+      FollowingCacheRecord(pubkeys: pubkeys).encode(),
+    );
+  }
+  await markFollowingPrefetchComplete(prefs, pubkeyHex);
 }
 
 /// Provider that returns current auth state and rebuilds when it changes.

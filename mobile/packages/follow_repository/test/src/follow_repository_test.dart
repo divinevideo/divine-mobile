@@ -244,6 +244,9 @@ void main() {
       test('loads following list from REST API when cache is empty', () async {
         // No cached data in SharedPreferences or PersonalEventCache
         // But REST API (funnelcake) has the following list
+        SharedPreferences.setMockInitialValues({
+          'following_prefetch_complete_$testCurrentUserPubkey': true,
+        });
         final mockFunnelcakeClient = _MockFunnelcakeApiClient();
         when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
         when(

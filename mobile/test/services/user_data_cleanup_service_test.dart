@@ -139,6 +139,26 @@ void main() {
         expect(prefs.getBool('adult_content_verified_$otherPubkey'), isTrue);
       });
 
+      test('destructive delete purges the following prefetch marker', () async {
+        await prefs.setBool(
+          'following_prefetch_complete_$verificationPubkey',
+          true,
+        );
+
+        await service.deleteAccountData(
+          verificationPubkey,
+          userNpub: 'verification-npub',
+          preserveActiveSession: true,
+        );
+
+        expect(
+          prefs.containsKey(
+            'following_prefetch_complete_$verificationPubkey',
+          ),
+          isFalse,
+        );
+      });
+
       test('account switch preserves scoped verification', () async {
         await prefs.setBool(
           'adult_content_verified_$verificationPubkey',

@@ -8,7 +8,6 @@ import 'dart:async';
 import 'package:cache_sync/cache_sync.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:follow_repository/follow_repository.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:nostr_client/nostr_client.dart'
     show BlockListSigner, SharedPreferencesRelayStorage;
@@ -25,7 +24,7 @@ import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/auth/following_cache_seed.dart';
+import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth/known_accounts_registry.dart';
 import 'package:openvine/services/auth/nostr_connect_coordinator.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
@@ -1303,8 +1302,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         biometricPrompt: biometricPrompt,
       );
 
-      await seedEmptyFollowingCache(keyContainer.publicKeyHex);
-      await _setupUserSession(keyContainer, AuthenticationSource.automatic);
+      await _setupUserSession(
+        keyContainer,
+        AuthenticationSource.automatic,
+        followingKnownEmpty: true,
+      );
 
       Log.info(
         'New secure identity created successfully',
@@ -1336,10 +1338,6 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// Always generates a brand-new keypair. Used by the "Skip for now" flow
   /// on the create-account screen so that each skip produces a distinct
   /// anonymous identity.
-  ///
-  /// The previous identity (if any) remains archived in per-account storage
-  /// and in the known-accounts registry, so the user can switch back to it.
-  ///
   /// Throws if identity creation fails.
   Future<void> createAnonymousAccount() async {
     Log.info(
@@ -1380,9 +1378,6 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   }
 
   /// Create a new anonymous account from a pre-generated key container.
-  ///
-  /// Used by invite-gated signup so the app can consume the invite with the
-  /// new key before persisting it to secure storage.
   Future<void> createAnonymousAccountFromKeyContainer(
     SecureKeyContainer keyContainer,
   ) async {
@@ -1395,13 +1390,17 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       throw Exception('Failed to read generated identity key');
     }
 
-    await createAnonymousAccountFromPrivateKeyHex(privateKeyHex!);
+    await createAnonymousAccountFromPrivateKeyHex(
+      privateKeyHex!,
+      followingKnownEmpty: true,
+    );
   }
 
   /// Create a new anonymous account from a known private key.
   Future<void> createAnonymousAccountFromPrivateKeyHex(
-    String privateKeyHex,
-  ) async {
+    String privateKeyHex, {
+    bool followingKnownEmpty = false,
+  }) async {
     Log.info(
       'createAnonymousAccountFromPrivateKeyHex: starting — '
       'clearing primary key slot',
@@ -1415,8 +1414,11 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     try {
       await _keyStorage.deleteKeys();
       final keyContainer = await _keyStorage.importFromHex(privateKeyHex);
-      await seedEmptyFollowingCache(keyContainer.publicKeyHex);
-      await _setupUserSession(keyContainer, AuthenticationSource.automatic);
+      await _setupUserSession(
+        keyContainer,
+        AuthenticationSource.automatic,
+        followingKnownEmpty: followingKnownEmpty,
+      );
       await acceptTerms();
 
       Log.info(
@@ -4021,6 +4023,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
     AuthenticationSource source, {
     bool allowPubkeyOnlyIdentity = false,
     bool claimLegacyRows = true,
+    bool followingKnownEmpty = false,
   }) async {
     Log.info(
       '_setupUserSession: starting — '
@@ -4146,15 +4149,14 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       // welcome-screen mismatch detection after the next sign-out.
       await prefs.remove(_kSessionRecoveryAnchorKey);
 
-      final followingCacheKey = FollowingCacheRecord.storageKey(pubkeyHex);
-      final hasFollowingCache = prefs.containsKey(followingCacheKey);
+      final hasFollowingCache = await prepareFollowingAuthRedirect(
+        prefs,
+        pubkeyHex,
+        followingKnownEmpty,
+      );
 
       // Pre-fetch following list from REST API BEFORE setting auth state.
-      // The router redirect fires synchronously on auth state change and reads
-      // following_list_{pubkey} from SharedPreferences. If the cache is empty
-      // (identity change cleared it, or first login), the redirect sends the
-      // user to /explore instead of /home. By fetching here, we ensure the
-      // cache is populated before the redirect fires.
+      // Populate redirect state before the synchronous auth-state transition.
       if (_preFetchFollowing != null && !hasFollowingCache) {
         Log.debug(
           '_setupUserSession: pre-fetching following list...',

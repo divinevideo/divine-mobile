@@ -12,6 +12,7 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
+import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nip07_service.dart';
 import 'package:openvine/services/nip07_types.dart';
@@ -52,12 +53,12 @@ class _RecordingAnalytics implements AnalyticsEventSink {
 }
 
 void main() {
-  group('persistFollowingCacheForAuthRedirect', () {
-    test('stores a successful empty result as a known-empty record', () async {
+  group('persistFollowingPrefetchForAuthRedirect', () {
+    test('marks a successful empty result without fabricating data', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
 
-      await persistFollowingCacheForAuthRedirect(
+      await persistFollowingPrefetchForAuthRedirect(
         prefs: prefs,
         pubkeyHex: 'account-pubkey',
         pubkeys: const [],
@@ -66,15 +67,15 @@ void main() {
       final encoded = prefs.getString(
         FollowingCacheRecord.storageKey('account-pubkey'),
       );
-      expect(encoded, isNotNull);
-      expect(FollowingCacheRecord.decode(encoded!).pubkeys, isEmpty);
+      expect(encoded, isNull);
+      expect(hasFollowingPrefetchMarker(prefs, 'account-pubkey'), isTrue);
     });
 
     test('preserves a successful non-empty result', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
 
-      await persistFollowingCacheForAuthRedirect(
+      await persistFollowingPrefetchForAuthRedirect(
         prefs: prefs,
         pubkeyHex: 'account-pubkey',
         pubkeys: const ['followed-pubkey'],
@@ -86,6 +87,7 @@ void main() {
       expect(FollowingCacheRecord.decode(encoded!).pubkeys, [
         'followed-pubkey',
       ]);
+      expect(hasFollowingPrefetchMarker(prefs, 'account-pubkey'), isTrue);
     });
   });
 

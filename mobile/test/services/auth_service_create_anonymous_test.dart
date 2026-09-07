@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show generatePrivateKey;
 import 'package:openvine/models/known_account.dart';
+import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
@@ -64,7 +65,7 @@ void main() {
       expect(prefs.getBool('age_verified_16_plus'), isTrue);
     });
 
-    test('createAnonymousAccount seeds a known-empty following cache and '
+    test('createAnonymousAccount marks following known empty and '
         'skips the prefetch', () async {
       var prefetchCalls = 0;
       final authService = createAuthService(
@@ -77,8 +78,8 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final pubkey = authService.currentPublicKeyHex!;
       final encoded = prefs.getString(FollowingCacheRecord.storageKey(pubkey));
-      expect(encoded, isNotNull);
-      expect(FollowingCacheRecord.decode(encoded!).pubkeys, isEmpty);
+      expect(encoded, isNull);
+      expect(hasFollowingPrefetchMarker(prefs, pubkey), isTrue);
       expect(prefetchCalls, 0);
     });
 
@@ -110,11 +111,7 @@ void main() {
 
       final secondPubkey = second.currentPublicKeyHex!;
       expect(secondPubkey, isNot(equals(firstPubkey)));
-      final encoded = prefs.getString(
-        FollowingCacheRecord.storageKey(secondPubkey),
-      );
-      expect(encoded, isNotNull);
-      expect(FollowingCacheRecord.decode(encoded!).pubkeys, isEmpty);
+      expect(hasFollowingPrefetchMarker(prefs, secondPubkey), isTrue);
       expect(prefetchCalls, 0);
     });
 
@@ -137,11 +134,63 @@ void main() {
       );
       expect(authService.currentPublicKeyHex, equals(expectedPubkey));
       final prefs = await SharedPreferences.getInstance();
-      final encoded = prefs.getString(
-        FollowingCacheRecord.storageKey(expectedPubkey),
-      );
-      expect(FollowingCacheRecord.decode(encoded!).pubkeys, isEmpty);
+      expect(hasFollowingPrefetchMarker(prefs, expectedPubkey), isTrue);
     });
+
+    test(
+      'known private-key import preserves an existing following cache',
+      () async {
+        final privateKeyHex = generatePrivateKey();
+        final pubkey = SecureKeyContainer.fromPrivateKeyHex(
+          privateKeyHex,
+        ).publicKeyHex;
+        final prefs = await SharedPreferences.getInstance();
+        final existing = FollowingCacheRecord(
+          pubkeys: const ['followed-pubkey'],
+          createdAt: 123,
+          eventId: 'event-id',
+        ).encode();
+        await prefs.setString(
+          FollowingCacheRecord.storageKey(pubkey),
+          existing,
+        );
+        await prefs.setString('current_user_pubkey_hex', pubkey);
+        final authService = createAuthService();
+        addTearDown(authService.dispose);
+
+        await ignoringDiscoveryErrors(
+          () => authService.createAnonymousAccountFromPrivateKeyHex(
+            privateKeyHex,
+          ),
+        );
+
+        expect(
+          prefs.getString(FollowingCacheRecord.storageKey(pubkey)),
+          existing,
+        );
+        expect(hasFollowingPrefetchMarker(prefs, pubkey), isFalse);
+      },
+    );
+
+    test(
+      'new-account marker is written after identity-change cleanup',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('current_user_pubkey_hex', 'departing-pubkey');
+        var prefetchCalls = 0;
+        final authService = buildTestAuthService(
+          cleanupService: UserDataCleanupService(prefs),
+          preFetchFollowing: (_) async => prefetchCalls++,
+        );
+        addTearDown(authService.dispose);
+
+        await ignoringDiscoveryErrors(authService.createAnonymousAccount);
+
+        final pubkey = authService.currentPublicKeyHex!;
+        expect(hasFollowingPrefetchMarker(prefs, pubkey), isTrue);
+        expect(prefetchCalls, 0);
+      },
+    );
 
     test('createAnonymousAccountFromKeyContainer throws for a '
         'public-key-only container', () async {

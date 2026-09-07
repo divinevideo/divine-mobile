@@ -91,6 +91,7 @@ class UserDataCleanupService {
   /// redirect logic needs following_list_ at login time before relay responds.
   static const List<String> identityChangePrefixes = [
     'following_list_', // follow cache per pubkey
+    'following_prefetch_complete_', // successful auth prefetch per pubkey
     'relay_discovery_', // relay discovery cache per npub
   ];
 
@@ -198,6 +199,7 @@ class UserDataCleanupService {
       await remove(key);
     }
     await remove('following_list_$userPubkey');
+    await remove('following_prefetch_complete_$userPubkey');
     await remove('relay_discovery_$userNpub');
 
     await onDatabaseCleanup?.call(
