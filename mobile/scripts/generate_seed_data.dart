@@ -1,5 +1,5 @@
-// ABOUTME: Script to generate seed data SQL from relay.divine.video
-// ABOUTME: Fetches Editor's Picks curation list, top videos by loop count, and downloads media files
+// ABOUTME: Script to generate bundled seed data from relay.divine.video.
+// ABOUTME: Fetches Editor's Picks, popular videos, profiles, and metrics.
 //
 // USAGE: dart run scripts/generate_seed_data.dart
 
@@ -13,7 +13,6 @@ const String editorPicksEventId =
 const String relayUrl = 'wss://relay.divine.video';
 const int targetVideoCount = 250;
 const int maxQueryVideos = 1000;
-const int topMediaDownloadCount = 10; // Number of videos/thumbnails to download
 
 Future<void> main() async {
   print('[SEED GEN] Connecting to $relayUrl...');
@@ -100,9 +99,7 @@ Future<void> main() async {
       );
     } else {
       print("[SEED GEN] ⚠️ WARNING: Editor's Picks list not found!");
-      print(
-        '[SEED GEN] Will proceed with only top videos by loop count...',
-      );
+      print('[SEED GEN] Will proceed with only top videos by loop count...');
     }
 
     // Step 2: Fetch Editor's Picks videos (if we have any)
@@ -212,9 +209,7 @@ Future<void> main() async {
 
     final finalVideos = selectedVideos.values.toList();
     print('[SEED GEN] ✅ Selected ${finalVideos.length} total videos');
-    print(
-      "[SEED GEN]    - Editor's Picks: ${editorPicksVideos.length} videos",
-    );
+    print("[SEED GEN]    - Editor's Picks: ${editorPicksVideos.length} videos");
     print(
       '[SEED GEN]    - Popular videos: ${finalVideos.length - editorPicksVideos.length} videos',
     );
@@ -271,42 +266,13 @@ Future<void> main() async {
     print('[SEED GEN] ✅ Generated seed data: ${outputFile.path}');
     print('[SEED GEN]    Videos: ${finalVideos.length}');
     print('[SEED GEN]    Profiles: ${profileEvents.length}');
-    print(
-      '[SEED GEN]    Curation list: ${editorPicksEvent != null ? 1 : 0}',
-    );
+    print('[SEED GEN]    Curation list: ${editorPicksEvent != null ? 1 : 0}');
     print(
       '[SEED GEN]    Total events: ${finalVideos.length + profileEvents.length + (editorPicksEvent != null ? 1 : 0)}',
     );
     print(
       '[SEED GEN]    File size: ${fileSizeMB.toStringAsFixed(2)} MB ($fileSize bytes)',
     );
-
-    // Step 8: Download media files for top videos
-    print(
-      '\n[SEED GEN] Downloading media files for top $topMediaDownloadCount videos...',
-    );
-    final mediaResult = await _downloadMediaFiles(
-      videosWithLoops.take(topMediaDownloadCount).toList(),
-    );
-
-    print('\n[SEED GEN] ✅ Media download complete:');
-    print(
-      '[SEED GEN]    Videos downloaded: ${mediaResult['videosDownloaded']}/${mediaResult['videosAttempted']}',
-    );
-    print(
-      '[SEED GEN]    Thumbnails downloaded: ${mediaResult['thumbnailsDownloaded']}/${mediaResult['thumbnailsAttempted']}',
-    );
-    print(
-      '[SEED GEN]    Total size: ${(mediaResult['totalSize'] / (1024 * 1024)).toStringAsFixed(2)} MB',
-    );
-    if ((mediaResult['failures'] as String).isNotEmpty) {
-      print(
-        '[SEED GEN]    ⚠️ Failed downloads: ${mediaResult['failures'].length}',
-      );
-      for (final failure in mediaResult['failures'] as List<dynamic>) {
-        print('[SEED GEN]       - $failure');
-      }
-    }
 
     await relay.close();
   } catch (e, stack) {
@@ -416,241 +382,6 @@ int? _tagInt(List tags, String tagName) {
     }
   }
   return null;
-}
-
-/// Download media files for top videos
-Future<Map<String, dynamic>> _downloadMediaFiles(
-  List<Map<String, dynamic>> videos,
-) async {
-  final videosDir = Directory('assets/seed_media/videos');
-  final thumbnailsDir = Directory('assets/seed_media/thumbnails');
-
-  // Create directories
-  await videosDir.create(recursive: true);
-  await thumbnailsDir.create(recursive: true);
-
-  final manifestData = {
-    'videos': <Map<String, dynamic>>[],
-    'thumbnails': <Map<String, dynamic>>[],
-    'generatedAt': DateTime.now().toIso8601String(),
-  };
-
-  var videosDownloaded = 0;
-  var thumbnailsDownloaded = 0;
-  var videosAttempted = 0;
-  var thumbnailsAttempted = 0;
-  var totalSize = 0;
-  final failures = <String>[];
-  final httpClient = HttpClient();
-
-  final videosList = manifestData['videos']! as List<Map<String, dynamic>>;
-  final thumbnailsList =
-      manifestData['thumbnails']! as List<Map<String, dynamic>>;
-
-  for (var i = 0; i < videos.length; i++) {
-    final video = videos[i];
-    final eventId = video['id'] as String;
-    final tags = video['tags'] as List;
-
-    print(
-      '[SEED GEN]   Processing video ${i + 1}/${videos.length} ($eventId)...',
-    );
-
-    // Extract video URL and thumbnail from tags
-    String? videoUrl;
-    String? thumbnailUrl;
-
-    for (final tag in tags) {
-      if (tag is! List || tag.isEmpty) continue;
-      final tagName = tag[0].toString();
-
-      // Handle imeta tag: ["imeta", "url", "https://...", "m", "video/mp4", ..., "image", "https://..."]
-      if (tagName == 'imeta') {
-        for (var i = 1; i < tag.length - 1; i++) {
-          if (tag[i].toString() == 'url' && i + 1 < tag.length) {
-            final url = tag[i + 1].toString();
-            if (url.endsWith('.mp4')) {
-              videoUrl = url;
-            }
-          }
-          if (tag[i].toString() == 'image' && i + 1 < tag.length) {
-            thumbnailUrl = tag[i + 1].toString();
-          }
-        }
-      }
-      // Fallback to simple url/thumb tags
-      else if (tagName == 'url' && tag.length >= 2) {
-        final url = tag[1].toString();
-        if (url.endsWith('.mp4')) {
-          videoUrl = url;
-        }
-      } else if ((tagName == 'thumb' || tagName == 'image') &&
-          tag.length >= 2) {
-        thumbnailUrl = tag[1].toString();
-      }
-    }
-
-    // Download video
-    if (videoUrl != null) {
-      videosAttempted++;
-      final videoFile = File('${videosDir.path}/$eventId.mp4');
-
-      if (videoFile.existsSync()) {
-        print(
-          '[SEED GEN]      ✓ Video already exists (${await videoFile.length()} bytes)',
-        );
-        final fileSize = await videoFile.length();
-        totalSize += fileSize;
-        videosDownloaded++;
-        videosList.add({
-          'eventId': eventId,
-          'filename': '$eventId.mp4',
-          'url': videoUrl,
-          'size': fileSize,
-        });
-      } else {
-        try {
-          final downloadResult = await _downloadFile(
-            httpClient,
-            videoUrl,
-            videoFile,
-          );
-          if (downloadResult['success'] == true) {
-            videosDownloaded++;
-            final size = downloadResult['size'] as int;
-            totalSize += size;
-            videosList.add({
-              'eventId': eventId,
-              'filename': '$eventId.mp4',
-              'url': videoUrl,
-              'size': size,
-            });
-            print('[SEED GEN]      ✓ Video downloaded ($size bytes)');
-          } else {
-            failures.add('Video $eventId: ${downloadResult['error']}');
-            print(
-              '[SEED GEN]      ✗ Video download failed: ${downloadResult['error']}',
-            );
-          }
-        } catch (e) {
-          failures.add('Video $eventId: $e');
-          print('[SEED GEN]      ✗ Video download error: $e');
-        }
-      }
-    } else {
-      print('[SEED GEN]      ⚠️ No video URL found');
-    }
-
-    // Download thumbnail
-    if (thumbnailUrl != null) {
-      thumbnailsAttempted++;
-      final ext = thumbnailUrl.endsWith('.jpg')
-          ? 'jpg'
-          : thumbnailUrl.endsWith('.jpeg')
-          ? 'jpeg'
-          : thumbnailUrl.endsWith('.png')
-          ? 'png'
-          : 'jpg';
-      final thumbnailFile = File('${thumbnailsDir.path}/$eventId.$ext');
-
-      if (thumbnailFile.existsSync()) {
-        print(
-          '[SEED GEN]      ✓ Thumbnail already exists (${await thumbnailFile.length()} bytes)',
-        );
-        final fileSize = await thumbnailFile.length();
-        totalSize += fileSize;
-        thumbnailsDownloaded++;
-        thumbnailsList.add({
-          'eventId': eventId,
-          'filename': '$eventId.$ext',
-          'url': thumbnailUrl,
-          'size': fileSize,
-        });
-      } else {
-        try {
-          final downloadResult = await _downloadFile(
-            httpClient,
-            thumbnailUrl,
-            thumbnailFile,
-          );
-          if (downloadResult['success'] == true) {
-            thumbnailsDownloaded++;
-            final size = downloadResult['size'] as int;
-            totalSize += size;
-            thumbnailsList.add({
-              'eventId': eventId,
-              'filename': '$eventId.$ext',
-              'url': thumbnailUrl,
-              'size': size,
-            });
-            print('[SEED GEN]      ✓ Thumbnail downloaded ($size bytes)');
-          } else {
-            failures.add('Thumbnail $eventId: ${downloadResult['error']}');
-            print(
-              '[SEED GEN]      ✗ Thumbnail download failed: ${downloadResult['error']}',
-            );
-          }
-        } catch (e) {
-          failures.add('Thumbnail $eventId: $e');
-          print('[SEED GEN]      ✗ Thumbnail download error: $e');
-        }
-      }
-    } else {
-      print('[SEED GEN]      ⚠️ No thumbnail URL found');
-    }
-  }
-
-  httpClient.close();
-
-  // Write manifest file
-  final manifestFile = File('assets/seed_media/manifest.json');
-  await manifestFile.writeAsString(
-    const JsonEncoder.withIndent('  ').convert(manifestData),
-  );
-  print('[SEED GEN]   ✓ Manifest written to ${manifestFile.path}');
-
-  return {
-    'videosDownloaded': videosDownloaded,
-    'videosAttempted': videosAttempted,
-    'thumbnailsDownloaded': thumbnailsDownloaded,
-    'thumbnailsAttempted': thumbnailsAttempted,
-    'totalSize': totalSize,
-    'failures': failures,
-  };
-}
-
-/// Download a file from URL
-Future<Map<String, dynamic>> _downloadFile(
-  HttpClient client,
-  String url,
-  File outputFile,
-) async {
-  try {
-    final uri = Uri.parse(url);
-    final request = await client.getUrl(uri);
-    final response = await request.close();
-
-    if (response.statusCode != 200) {
-      return {'success': false, 'error': 'HTTP ${response.statusCode}'};
-    }
-
-    final bytes = await response.fold<List<int>>(
-      <int>[],
-      (previous, element) => previous..addAll(element),
-    );
-
-    // Verify file size is reasonable
-    final size = bytes.length;
-    if (size < 100) {
-      return {'success': false, 'error': 'File too small ($size bytes)'};
-    }
-
-    await outputFile.writeAsBytes(bytes);
-
-    return {'success': true, 'size': size};
-  } catch (e) {
-    return {'success': false, 'error': e.toString()};
-  }
 }
 
 /// Simple Nostr relay client using WebSocket

@@ -243,9 +243,8 @@ class ScreenshotDiscoveredLists extends DiscoveredLists {
   void clear() {}
 }
 
-/// Bundled classic-Vine fixtures used as editor timeline clips. The mp4s
-/// and matching thumbnails already ship in the app bundle for seed
-/// playback, so screenshot mode reuses them instead of adding new assets.
+/// Hand-curated classic-Vine fixtures used only as editor timeline clips by
+/// the App Store screenshot pipeline.
 const List<({String video, String thumbnail})> screenshotEditorFixtures = [
   (
     video:

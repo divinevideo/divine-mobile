@@ -44,9 +44,7 @@ class VideoRecorderMobilePreview extends StatelessWidget {
       label: context.l10n.videoRecorderCameraPreviewLabel,
       button: true,
       onTapHint: context.l10n.videoRecorderCameraPreviewFocusHint,
-      onTap: () => bloc.add(
-        const VideoRecorderFocusPointSet(Offset(0.5, 0.5)),
-      ),
+      onTap: () => bloc.add(const VideoRecorderFocusPointSet(Offset(0.5, 0.5))),
       excludeSemantics: true,
       child: preview,
     );
@@ -62,10 +60,7 @@ class _ScreenshotViewfinderStandIn extends StatelessWidget {
   Widget build(BuildContext context) {
     return const SizedBox.expand(
       child: Image(
-        image: AssetImage(
-          'assets/seed_media/thumbnails/'
-          '606486ed7079b4b2614e9ca3e0f46c1c9a4a39d52c90dd25a9e51d1b7cf96b33.jpg',
-        ),
+        image: AssetImage(ScreenshotMode.viewfinderFixture),
         fit: BoxFit.cover,
       ),
     );

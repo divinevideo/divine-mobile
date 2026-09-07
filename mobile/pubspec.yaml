@@ -452,10 +452,14 @@ flutter:
     - assets/loading-brand-sprite.png
     - assets/seed_data/seed_events.json
     - assets/seed_data/classic_viner_profiles.json
-    - assets/seed_media/manifest.json
-    - assets/seed_media/videos/
-    - assets/seed_media/thumbnails/
-    - assets/seed_media/classic_viner_avatars/
+    - assets/seed_media/videos/0cfc8ec503ae05856ec43165bebb7d0d2a3759b2900e38f509b8d08154ef6dc2.mp4
+    - assets/seed_media/videos/606486ed7079b4b2614e9ca3e0f46c1c9a4a39d52c90dd25a9e51d1b7cf96b33.mp4
+    - assets/seed_media/videos/6c7bf42367895238e3bd20b12e95a171e9a37a41e2b9b18b89f228de38e9f827.mp4
+    - assets/seed_media/thumbnails/0cfc8ec503ae05856ec43165bebb7d0d2a3759b2900e38f509b8d08154ef6dc2.jpg
+    - assets/seed_media/thumbnails/606486ed7079b4b2614e9ca3e0f46c1c9a4a39d52c90dd25a9e51d1b7cf96b33.jpg
+    - assets/seed_media/thumbnails/6c7bf42367895238e3bd20b12e95a171e9a37a41e2b9b18b89f228de38e9f827.jpg
+    - assets/seed_media/classic_viner_avatars/brittany-furlan.png
+    - assets/seed_media/classic_viner_avatars/jerome-jarre.png
     - assets/stickers/
     - assets/stickers/i18n/
     - shorebird.yaml

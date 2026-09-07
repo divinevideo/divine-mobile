@@ -32,6 +32,11 @@ abstract class ScreenshotMode {
   static const bool enabled =
       kDebugMode && bool.fromEnvironment('SCREENSHOT_MODE');
 
+  /// Bundled frame shown instead of a live camera viewfinder during captures.
+  static const String viewfinderFixture =
+      'assets/seed_media/thumbnails/'
+      '606486ed7079b4b2614e9ca3e0f46c1c9a4a39d52c90dd25a9e51d1b7cf96b33.jpg';
+
   /// SharedPreferences keys the native `AppDelegate` writes the launch env
   /// into (see `exportScreenshotLaunchConfig`).
   static const String _routeKey = 'screenshot_initial_route';
