@@ -1,3 +1,8 @@
+Status: Historical
+
+> Historical note
+> This captures proposed UI tests for an obsolete video-system rebuild and does not describe the current test suite. It references the removed `VideoCacheService`; trust the current implementation and runnable tests.
+
 # UI Test Specifications for Video System Rebuild
 
 ## ✅ TDD Red Phase Complete - UI Widget Tests

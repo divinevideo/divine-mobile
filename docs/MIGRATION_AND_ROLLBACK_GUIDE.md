@@ -1,3 +1,8 @@
+Status: Historical
+
+> Historical note
+> This records an abandoned video-system migration and is not current implementation guidance. `VideoCacheService` has been removed; trust the current code and focused documentation under `mobile/docs/`.
+
 # Migration and Rollback Guide
 
 ## Overview
