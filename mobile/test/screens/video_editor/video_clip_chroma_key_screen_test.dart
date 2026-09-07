@@ -1,7 +1,10 @@
 // ABOUTME: Pins the green-screen background photo to the camera — the gallery
 // ABOUTME: is how an AI-generated image would get into a Divine video.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,11 +13,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
+import 'package:openvine/blocs/video_editor/chroma_key/chroma_key_editor_cubit.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/screens/video_editor/video_clip_chroma_key_screen.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ChromaKeyDetection, EditorVideo;
 
 import '../../helpers/shared_channel_override.dart';
 
@@ -56,7 +61,10 @@ void main() {
       originalAspectRatio: 9 / 16,
     );
 
-    Future<void> pump(WidgetTester tester) async {
+    Future<void> pump(
+      WidgetTester tester, {
+      required ChromaKeyDetectFn detect,
+    }) async {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
@@ -66,7 +74,7 @@ void main() {
               value: bloc,
               child: VideoClipChromaKeyScreen(
                 clip: clip,
-                detectOnOpen: false,
+                detect: detect,
               ),
             ),
           ),
@@ -75,10 +83,28 @@ void main() {
       await tester.pump();
     }
 
+    testWidgets('starts auto-detect as soon as the screen opens', (
+      tester,
+    ) async {
+      final detection = Completer<ChromaKeyDetection>();
+
+      await pump(tester, detect: (_) => detection.future);
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final autoDetect = tester.widget<DivineButton>(
+        find.widgetWithText(
+          DivineButton,
+          l10n.videoEditorChromaKeyAutoDetect,
+        ),
+      );
+      expect(autoDetect.isLoading, isTrue);
+    });
+
     testWidgets('shoots the background photo instead of opening the gallery', (
       tester,
     ) async {
-      await pump(tester);
+      final detection = Completer<ChromaKeyDetection>();
+      await pump(tester, detect: (_) => detection.future);
 
       final l10n = lookupAppLocalizations(const Locale('en'));
       final imageChip = find.text(l10n.videoEditorChromaKeyBackgroundImage);
