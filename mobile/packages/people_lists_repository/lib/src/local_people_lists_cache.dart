@@ -16,11 +16,39 @@ abstract class _CacheKeys {
   static const String ownerPubkey = 'ownerPubkey';
   static const String list = 'list';
   static const String receivedAtMillis = 'receivedAtMillis';
+  static const String sourceTags = 'sourceTags';
+  static const String sourceContent = 'sourceContent';
   static const String deletedAtMillis = 'deletedAtMillis';
 }
 
 /// Logger name used for cache-level diagnostic log entries.
 const String _logName = 'people_lists_repository.local_cache';
+
+/// A cached display model and, when available, its complete publish source.
+///
+/// Rows written before source preservation have no [sourceTags] or
+/// [sourceContent]. They remain readable for display but must not be used as
+/// the base of a replaceable-event publish.
+class CachedPeopleListRecord {
+  /// Creates a decoded cache record.
+  const CachedPeopleListRecord({
+    required this.list,
+    this.sourceTags,
+    this.sourceContent,
+  });
+
+  /// The display model consumed by repository clients.
+  final UserList list;
+
+  /// Exact ordered tags of the event represented by [list].
+  final List<List<String>>? sourceTags;
+
+  /// Exact content of the event represented by [list].
+  final String? sourceContent;
+
+  /// Whether this record can safely drive a complete replacement publish.
+  bool get hasPublishSource => sourceTags != null && sourceContent != null;
+}
 
 /// Local cache for kind 30000 people lists, scoped by owner pubkey.
 ///
@@ -66,6 +94,24 @@ class LocalPeopleListsCache {
   Future<List<UserList>> readLists({required String ownerPubkey}) async {
     final box = await _box();
     return _collectLists(box, ownerPubkey);
+  }
+
+  /// Returns one non-tombstoned cache record, including its publish source.
+  Future<CachedPeopleListRecord?> readRecord({
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    final box = await _box();
+    final raw = box.get(_listKey(ownerPubkey, listId));
+    if (raw is! Map) return null;
+    final record = _decodeRecord(raw);
+    if (record == null) return null;
+    final tombstoneMillis = _tombstoneMillis(box, ownerPubkey, listId);
+    if (tombstoneMillis != null &&
+        tombstoneMillis >= record.list.updatedAt.millisecondsSinceEpoch) {
+      return null;
+    }
+    return record;
   }
 
   /// Emits the current lists for [ownerPubkey] immediately, then re-emits on
@@ -119,7 +165,14 @@ class LocalPeopleListsCache {
     required String ownerPubkey,
     required UserList list,
     required DateTime receivedAt,
+    List<List<String>>? sourceTags,
+    String? sourceContent,
   }) async {
+    if ((sourceTags == null) != (sourceContent == null)) {
+      throw ArgumentError(
+        'sourceTags and sourceContent must both be present or both be absent',
+      );
+    }
     final box = await _box();
     final tombstoneMillis = _tombstoneMillis(box, ownerPubkey, list.id);
     if (tombstoneMillis != null &&
@@ -130,6 +183,11 @@ class LocalPeopleListsCache {
       _CacheKeys.ownerPubkey: ownerPubkey,
       _CacheKeys.list: list.toJson(),
       _CacheKeys.receivedAtMillis: receivedAt.millisecondsSinceEpoch,
+      if (sourceTags != null)
+        _CacheKeys.sourceTags: [
+          for (final tag in sourceTags) List<String>.of(tag),
+        ],
+      _CacheKeys.sourceContent: ?sourceContent,
     });
   }
 
@@ -174,9 +232,9 @@ class LocalPeopleListsCache {
     final listKey = _listKey(ownerPubkey, listId);
     final existing = box.get(listKey);
     if (existing is Map) {
-      final list = _decodeList(existing);
-      if (list != null &&
-          list.updatedAt.millisecondsSinceEpoch <= deletedMillis) {
+      final record = _decodeRecord(existing);
+      if (record != null &&
+          record.list.updatedAt.millisecondsSinceEpoch <= deletedMillis) {
         await box.delete(listKey);
       }
     }
@@ -219,8 +277,9 @@ class LocalPeopleListsCache {
       if (!_isListKey(key, ownerPubkey)) continue;
       final raw = box.get(key);
       if (raw is! Map) continue;
-      final list = _decodeList(raw);
-      if (list == null) continue;
+      final record = _decodeRecord(raw);
+      if (record == null) continue;
+      final list = record.list;
       final tombstoneMillis = tombstones[list.id];
       if (tombstoneMillis != null &&
           tombstoneMillis >= list.updatedAt.millisecondsSinceEpoch) {
@@ -238,14 +297,15 @@ class LocalPeopleListsCache {
   /// Returns `null` and logs a warning when the record is shaped unexpectedly
   /// or when [UserList.fromJson] throws. A single malformed row must not
   /// poison the whole `readLists`/`watchLists` result.
-  UserList? _decodeList(Map<dynamic, dynamic> record) {
+  CachedPeopleListRecord? _decodeRecord(Map<dynamic, dynamic> record) {
     final raw = record[_CacheKeys.list];
     if (raw is! Map) return null;
+    final UserList list;
     try {
       final json = Map<String, dynamic>.from(
         raw.map((key, value) => MapEntry(key.toString(), value)),
       );
-      return UserList.fromJson(json);
+      list = UserList.fromJson(json);
     } on Object catch (error, stackTrace) {
       Log.error(
         'Dropped malformed people-list record during decode',
@@ -256,6 +316,58 @@ class LocalPeopleListsCache {
       );
       return null;
     }
+
+    try {
+      final rawTags = record[_CacheKeys.sourceTags];
+      final rawContent = record[_CacheKeys.sourceContent];
+      if (rawTags == null && rawContent == null) {
+        return CachedPeopleListRecord(list: list);
+      }
+      if (rawTags is! List || rawContent is! String) {
+        throw const FormatException('Incomplete cached people-list source');
+      }
+      final tags = <List<String>>[];
+      for (final rawTag in rawTags) {
+        if (rawTag is! List || rawTag.any((value) => value is! String)) {
+          throw const FormatException('Invalid cached people-list source tag');
+        }
+        tags.add([for (final value in rawTag) value as String]);
+      }
+      final sourceDTag = _firstNonEmptyTagValue(tags, 'd');
+      if (sourceDTag != list.id) {
+        throw const FormatException(
+          'Cached people-list source does not match its list',
+        );
+      }
+      return CachedPeopleListRecord(
+        list: list,
+        sourceTags: List<List<String>>.unmodifiable(
+          tags.map(List<String>.unmodifiable),
+        ),
+        sourceContent: rawContent,
+      );
+    } on Object catch (error, stackTrace) {
+      Log.error(
+        'Ignored malformed people-list publish source during decode',
+        name: _logName,
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return CachedPeopleListRecord(list: list);
+    }
+  }
+
+  static String? _firstNonEmptyTagValue(
+    List<List<String>> tags,
+    String name,
+  ) {
+    for (final tag in tags) {
+      if (tag.length >= 2 && tag[0] == name && tag[1].isNotEmpty) {
+        return tag[1];
+      }
+    }
+    return null;
   }
 
   int? _tombstoneMillis(Box<dynamic> box, String ownerPubkey, String listId) {

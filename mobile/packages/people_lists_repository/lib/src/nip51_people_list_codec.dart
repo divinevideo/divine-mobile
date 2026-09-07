@@ -20,11 +20,15 @@ class PeopleListEventPayload extends Equatable {
   /// Nostr event kind. Always [Nip51PeopleListCodec.kind] for people lists.
   final int kind;
 
-  /// Ordered tags for the event, including the `d`, `title`, optional
-  /// `description` and `image`, and one `p` tag per member pubkey.
+  /// Ordered tags for the event.
+  ///
+  /// For an existing list this preserves every untouched source tag and all
+  /// of its positions. A new member receives a minimal `p` tag.
   final List<List<String>> tags;
 
-  /// Event content. Always an empty string for NIP-51 follow sets.
+  /// Event content, preserved verbatim from an existing list.
+  ///
+  /// NIP-51 clients may store private list items here as ciphertext.
   final String content;
 
   @override
@@ -61,11 +65,61 @@ abstract final class Nip51PeopleListCodec {
 
   /// Encodes [list] into a [PeopleListEventPayload].
   ///
-  /// The payload always includes `d` and `title` tags. `description` and
-  /// `image` are only added when non-empty after trimming. One `p` tag is
-  /// emitted per non-empty pubkey in [UserList.pubkeys]; pubkeys are never
-  /// truncated.
-  static PeopleListEventPayload encode(UserList list) {
+  /// When [sourceTags] is supplied, the payload is a membership edit over the
+  /// complete source event: non-member tags and surviving `p` tags are kept
+  /// verbatim, removed members lose every matching tag, and new members are
+  /// appended as minimal `p` tags. [sourceContent] is carried through without
+  /// interpretation so private items written by another client survive.
+  ///
+  /// With no source, this creates a new list with `d`, `title`, optional
+  /// metadata, and minimal `p` tags. The source arguments must either both be
+  /// present or both be absent.
+  static PeopleListEventPayload encode(
+    UserList list, {
+    List<List<String>>? sourceTags,
+    String? sourceContent,
+  }) {
+    if ((sourceTags == null) != (sourceContent == null)) {
+      throw ArgumentError(
+        'sourceTags and sourceContent must both be present or both be absent',
+      );
+    }
+    if (sourceTags != null) {
+      if (_firstTagValue(sourceTags, 'd') != list.id) {
+        throw ArgumentError.value(
+          sourceTags,
+          'sourceTags',
+          'must contain the d tag represented by the list',
+        );
+      }
+      final wanted = list.pubkeys.where((pubkey) => pubkey.isNotEmpty).toSet();
+      final sourced = <String>{};
+      final tags = <List<String>>[];
+
+      for (final tag in sourceTags) {
+        if (tag.length < 2 || tag[0] != 'p' || tag[1].isEmpty) {
+          tags.add(List<String>.of(tag));
+          continue;
+        }
+        final pubkey = tag[1];
+        if (wanted.contains(pubkey)) {
+          tags.add(List<String>.of(tag));
+          sourced.add(pubkey);
+        }
+      }
+
+      for (final pubkey in list.pubkeys) {
+        if (pubkey.isNotEmpty && sourced.add(pubkey)) {
+          tags.add(['p', pubkey]);
+        }
+      }
+      return PeopleListEventPayload(
+        kind: kind,
+        tags: tags,
+        content: sourceContent!,
+      );
+    }
+
     final tags = <List<String>>[
       ['d', list.id],
       ['title', list.name],
