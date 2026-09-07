@@ -187,6 +187,11 @@ class VineBottomSheet extends StatelessWidget {
   /// the sheet between sizes (e.g. expand to [maxChildSize] when a form
   /// field is revealed). Has no effect in fixed (`scrollable: false`)
   /// mode.
+  ///
+  /// When [showDragHandle] is omitted, the handle follows [enableDrag]. The
+  /// handle advertises the modal route's drag gesture, so a non-draggable
+  /// sheet does not show an inert affordance by default. Pass an explicit
+  /// value to override this behavior.
   static Future<T?> show<T>({
     required BuildContext context,
     List<Widget>? children,
@@ -204,7 +209,7 @@ class VineBottomSheet extends StatelessWidget {
     Widget? bottomInput,
     bool expanded = true,
     bool showHeaderDivider = true,
-    bool showDragHandle = true,
+    bool? showDragHandle,
     EdgeInsetsGeometry? headerPadding,
     DivineIconButton? headerLeadingAction,
     DivineIconButton? headerTrailingAction,
@@ -246,6 +251,7 @@ class VineBottomSheet extends StatelessWidget {
     // false` would still see the sheet dismissed by barrier taps above the
     // DraggableScrollableSheet's content area.
     final effectiveIsDismissible = isDismissible && tapOutsideToDismiss;
+    final effectiveShowDragHandle = showDragHandle ?? enableDrag;
 
     if (scrollable) {
       // Draggable/scrollable mode
@@ -274,7 +280,7 @@ class VineBottomSheet extends StatelessWidget {
               bottomInput: bottomInput,
               expanded: expanded,
               showHeaderDivider: showHeaderDivider,
-              showDragHandle: showDragHandle,
+              showDragHandle: effectiveShowDragHandle,
               headerPadding: headerPadding,
               headerLeadingAction: headerLeadingAction,
               headerTrailingAction: headerTrailingAction,
@@ -373,7 +379,7 @@ class VineBottomSheet extends StatelessWidget {
             bottomInput: bottomInput,
             expanded: expanded,
             showHeaderDivider: showHeaderDivider,
-            showDragHandle: showDragHandle,
+            showDragHandle: effectiveShowDragHandle,
             headerPadding: headerPadding,
             headerLeadingAction: headerLeadingAction,
             headerTrailingAction: headerTrailingAction,

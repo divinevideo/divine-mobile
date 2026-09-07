@@ -112,7 +112,9 @@ class VineBottomSheetPrompt extends StatelessWidget {
   /// Set both [isDismissible] and [enableDrag] to false for a prompt that
   /// must stay open until the user picks an action — [isDismissible] blocks
   /// barrier taps and [enableDrag] blocks drag-to-dismiss. Setting only one
-  /// leaves the other dismissal path active.
+  /// leaves the other dismissal path active. The drag handle follows
+  /// [enableDrag], so a prompt with dragging disabled does not advertise the
+  /// unavailable gesture.
   static Future<T?> show<T>({
     required BuildContext context,
     required DivineStickerName sticker,

@@ -29,6 +29,15 @@ class _MockBackgroundPublishBloc
     extends MockBloc<BackgroundPublishEvent, BackgroundPublishState>
     implements BackgroundPublishBloc {}
 
+// Matches the unkeyed 64x4 rounded Container the header paints as the drag
+// handle. Asserting the rendered tree, rather than the forwarded
+// showDragHandle flag, is what catches a header that stops honouring it.
+final Finder _dragHandle = find.byWidgetPredicate((widget) {
+  if (widget is! Container) return false;
+  final constraints = widget.constraints;
+  return constraints?.maxWidth == 64 && constraints?.maxHeight == 4;
+});
+
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
   late _MockDivineVideoDraft mockDraft;
@@ -88,6 +97,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.uploadFailureSheetTitle), findsOneWidget);
+        expect(_dragHandle, findsNothing);
       });
 
       testWidgets('localized error message from $PublishError kind', (
