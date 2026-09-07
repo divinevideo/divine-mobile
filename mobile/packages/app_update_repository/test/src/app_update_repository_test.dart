@@ -268,6 +268,33 @@ void main() {
       });
 
       test(
+        'clears the cached update once the check reports no update',
+        () async {
+          SharedPreferences.setMockInitialValues({
+            UpdatePrefsKeys.lastChecked: DateTime.now()
+                .subtract(const Duration(hours: 25))
+                .toIso8601String(),
+            UpdatePrefsKeys.latestVersion: '1.0.8',
+            UpdatePrefsKeys.downloadUrl: DownloadUrls.playStore,
+          });
+          prefs = await SharedPreferences.getInstance();
+          when(
+            () => client.fetchLatestRelease(),
+          ).thenAnswer((_) async => buildInfo());
+
+          final repo = buildRepo(
+            currentVersion: '1.0.8',
+            installSource: InstallSource.playStore,
+          );
+          final result = await repo.checkForUpdate();
+
+          expect(result, equals(const UpdateCheckResult.none()));
+          expect(prefs.getString(UpdatePrefsKeys.latestVersion), isNull);
+          expect(prefs.getString(UpdatePrefsKeys.downloadUrl), isNull);
+        },
+      );
+
+      test(
         'ignores a cached update after the app reaches that version',
         () async {
           SharedPreferences.setMockInitialValues({
