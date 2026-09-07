@@ -3655,6 +3655,11 @@ void main() {
       expect(notifier.deferredFileCleanupForTest, contains(orphan.path));
 
       await notifier.reset(keepAutosavedDraft: true);
+      // The precondition this test exists for: reset's flush is still in
+      // flight here, so the reap below is the one reset started rather than
+      // one onDispose ran. reset(keepAutosavedDraft: true) has no await after
+      // it starts the flush, so it cannot have finished.
+      expect(orphan.existsSync(), isTrue);
       disposeContainer();
       await drainDeferredCleanup(notifier);
 
