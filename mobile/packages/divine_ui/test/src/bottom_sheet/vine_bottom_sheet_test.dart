@@ -1359,6 +1359,10 @@ void main() {
         },
       );
 
+      // Not `enableDrag || scrollable`: the handle sits in the header, which
+      // in scrollable mode is a sibling of the scroll view, so with
+      // enableDrag: false no drag on it reaches DraggableScrollableSheet.
+      // Showing it would restore the #8462 false affordance — see below.
       testWidgets(
         'enableDrag: false hides the drag handle in scrollable mode by default',
         (tester) async {
@@ -1383,6 +1387,43 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(_dragHandle, findsNothing);
+        },
+      );
+
+      // Evidence for the derivation above: force the handle on, then drag it.
+      testWidgets(
+        'a scrollable sheet with enableDrag: false ignores a header drag',
+        (tester) async {
+          var dismissed = false;
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => ElevatedButton(
+                    onPressed: () => VineBottomSheet.show<void>(
+                      context: context,
+                      enableDrag: false,
+                      showDragHandle: true,
+                      title: const Text('Sheet Title'),
+                      onDismiss: () => dismissed = true,
+                      children: const [Text('Body')],
+                    ),
+                    child: const Text('Open Scrollable With Handle'),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          await tester.tap(find.text('Open Scrollable With Handle'));
+          await tester.pumpAndSettle();
+          expect(_dragHandle, findsOneWidget);
+
+          await tester.drag(find.text('Sheet Title'), const Offset(0, 500));
+          await tester.pumpAndSettle();
+
+          expect(dismissed, isFalse);
+          expect(find.text('Body'), findsOneWidget);
         },
       );
 
