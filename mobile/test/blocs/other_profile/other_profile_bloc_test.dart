@@ -70,8 +70,6 @@ void main() {
       mockBlocklistRepository = _MockContentBlocklistRepository();
       mockFollowRepository = _MockFollowRepository();
 
-      when(() => mockBlocklistRepository.canUnblock(any())).thenReturn(false);
-
       when(() => mockFollowRepository.isFollowing(any())).thenReturn(false);
       when(
         () => mockFollowRepository.toggleFollow(any()),
