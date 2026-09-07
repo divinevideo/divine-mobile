@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart'
     show ValueListenable, kIsWeb, visibleForTesting;
 import 'package:flutter/widgets.dart';
 import 'package:infinite_video_feed/src/models/builders.dart';
+import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
 import 'package:infinite_video_feed/src/services/controller_subscriptions.dart';
 import 'package:infinite_video_feed/src/services/derivative_failure_cache.dart';
@@ -370,6 +371,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   // error fires for one of these we evict the cached file so future loads
   // hit the network instead of replaying the corrupt bytes.
   final _loadedFromCache = <int>{};
+  FeedFirstFrameTimer? _activeFirstFrameTimer;
   int _currentIndex = 0;
 
   /// The autoplay-gate answer this widget last acted on for [_currentIndex].
@@ -547,6 +549,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     // coverage:ignore-end
     _subscriptions = ControllerSubscriptions();
 
+    _beginFirstFrameMeasurement(_currentIndex);
     unawaited(_onIndexChanged(_currentIndex));
   }
 
@@ -601,6 +604,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _currentIndex = _clampIndex(widget.initialIndex);
     _lastAppliedGate = null;
     _pagePosition.value = _currentIndex.toDouble();
+    _beginFirstFrameMeasurement(_currentIndex);
 
     _rebuild();
 
@@ -709,12 +713,17 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (_isActive == isActive) return;
     _isActive = isActive;
     if (_isActive) {
+      _beginFirstFrameMeasurement(_currentIndex);
       if (_needsReinitOnActivate) {
         // A full drain dropped the current player while inactive. Re-build the
         // live window from scratch instead of resuming a disposed controller.
         _needsReinitOnActivate = false;
         unawaited(_onIndexChanged(_currentIndex));
         return;
+      }
+      final currentController = _controllers[_currentIndex];
+      if (currentController != null && currentController.isInitialized) {
+        unawaited(_recordFirstFrame(_currentIndex, currentController));
       }
       _resumeCurrentPlaybackIfReady();
       if (widget.releaseNeighboursWhenInactive) {
@@ -891,6 +900,33 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (widget.videos.isEmpty) return;
     await _updatePlayerWindow(index);
     unawaited(_runPrefetch(index));
+  }
+
+  void _beginFirstFrameMeasurement(int index) {
+    if (index < 0 || index >= widget.videos.length || !_isActive) {
+      _activeFirstFrameTimer = null;
+      return;
+    }
+    _activeFirstFrameTimer = FeedFirstFrameMetrics.start(
+      videoId: widget.videos[index].id,
+      index: index,
+    );
+  }
+
+  Future<void> _recordFirstFrame(
+    int index,
+    DivineVideoPlayerController controller,
+  ) async {
+    final timer = _activeFirstFrameTimer;
+    if (timer == null || timer.index != index) return;
+    await controller.firstFrameRendered;
+    if (!mounted ||
+        index != _currentIndex ||
+        !identical(_controllers[index], controller) ||
+        !identical(_activeFirstFrameTimer, timer)) {
+      return;
+    }
+    timer.complete(loadedFromCache: _loadedFromCache.contains(index));
   }
 
   Future<void> _updatePlayerWindow(int index) async {
@@ -1266,6 +1302,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
       if (index == _currentIndex && _isActive) {
         _log('Playing index $index (${video.id})');
+        unawaited(_recordFirstFrame(index, controller));
         await _activateCurrentController(controller, index);
         if (!guardInitOwnership('play')) return;
       }
@@ -1820,6 +1857,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final previousIndex = _currentIndex;
     _log('Page changed: $previousIndex → $index');
     _currentIndex = index;
+    _beginFirstFrameMeasurement(index);
     _lastAppliedGate = null;
 
     _watchdog.stop(previousIndex);
@@ -1844,6 +1882,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (_isActive && _controllers.containsKey(index)) {
       final curr = _controllers[index]!;
       if (curr.isInitialized) {
+        unawaited(_recordFirstFrame(index, curr));
         unawaited(_activateCurrentController(curr, index));
       }
     }

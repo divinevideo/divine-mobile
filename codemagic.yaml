@@ -26,6 +26,8 @@
 #   - Set to YES to upload artifacts to a GitHub Release (for Zapstore / direct distribution)
 #   - Defaults to NO
 #   - Requires GITHUB_TOKEN in "github_credentials" environment variable group
+#   - Feed TTFF additionally requires GHCR_PULL_TOKEN (read:packages PAT) and
+#     GHCR_PULL_USERNAME in the same group for private local-stack images
 # 9 - Android publishing reads the service account from environment variable
 #     group "google_play_credentials":
 #   - GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
@@ -1414,6 +1416,63 @@ workflows:
       - ~/.maestro/tests/**/screen-hierarchy/**
       - ~/.maestro/tests/**/logs/maestro.log
       - ~/.maestro/tests/**/commands.json
+
+  perf-feed-ttff:
+    name: Feed Time to First Frame (Android)
+    working_directory: mobile
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      flutter: 3.44.9
+      java: 17
+      groups:
+        - github_credentials
+      vars:
+        THROTTLE_RATE: 625k
+    cache:
+      cache_paths:
+        - $HOME/.gradle/caches
+        - $HOME/.pub-cache
+    triggering:
+      # Manual while #7504 tracks the Codemagic GitHub app's missing event
+      # subscriptions. The mobile playback team owns this budget and lane.
+      events: []
+    scripts:
+      - *flutter_pub_get
+      - *setup_local_properties
+      - *launch_android_emulator
+      - name: Run feed TTFF budget twice on failure
+        script: |
+          set -euo pipefail
+          if [ -z "${GHCR_PULL_TOKEN:-}" ] || \
+             [ -z "${GHCR_PULL_USERNAME:-}" ]; then
+            echo "ERROR: github_credentials must provide GHCR pull credentials" >&2
+            exit 1
+          fi
+          printf '%s' "$GHCR_PULL_TOKEN" | docker login ghcr.io \
+            --username "$GHCR_PULL_USERNAME" --password-stdin
+          cleanup() {
+            docker compose -f ../local_stack/docker-compose.yml down -v || true
+          }
+          trap cleanup EXIT
+          bash ../local_stack/up.sh --pull=missing
+          set +e
+          bash ../local_stack/profile.sh \
+            integration_test/perf/feed_ttff_test.dart
+          first_exit=$?
+          if [ "$first_exit" -eq 0 ]; then
+            exit 0
+          fi
+          echo "First feed TTFF run failed; repeating once for variance policy" >&2
+          bash ../local_stack/profile.sh \
+            integration_test/perf/feed_ttff_test.dart
+          second_exit=$?
+          set -e
+          exit "$second_exit"
+    artifacts:
+      - test_reports/*.jsonl
+      - build/app/reports/androidTests/**
+      - build/app/outputs/androidTest-results/**
 
   e2e-smoke-android:
     name: E2E Smoke Tests (Android)

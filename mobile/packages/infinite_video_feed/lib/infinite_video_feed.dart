@@ -2,6 +2,7 @@
 library;
 
 export 'src/models/builders.dart';
+export 'src/models/feed_first_frame_metric.dart';
 export 'src/models/video_error_type.dart';
 export 'src/utils/canonical_divine_url.dart' show orderedUniqueSources;
 export 'src/utils/playback_sources.dart' show resolvePlaybackSources;

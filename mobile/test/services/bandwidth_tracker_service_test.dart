@@ -10,6 +10,13 @@ void main() {
       service.clearSamples();
     });
 
+    void recordMbps(double mbps) {
+      service.recordSample(
+        videoSizeBytes: (mbps * 1024 * 1024 / 8).round(),
+        loadTimeMs: 1000,
+      );
+    }
+
     group('averageBandwidth', () {
       test('returns 3.0 Mbps default when no samples', () {
         expect(service.averageBandwidth, equals(3.0));
@@ -47,64 +54,36 @@ void main() {
       });
     });
 
-    group('recordTimeToFirstFrame', () {
-      test('ignores zero or negative TTFF', () {
-        service.recordTimeToFirstFrame(0);
-        service.recordTimeToFirstFrame(-100);
-        expect(service.averageBandwidth, equals(3.0));
-      });
-
-      test('estimates fast connection for low TTFF', () {
-        service.recordTimeToFirstFrame(200); // < 500ms -> 4.0 Mbps
-        expect(service.averageBandwidth, equals(4.0));
-      });
-
-      test('estimates medium connection for moderate TTFF', () {
-        service.recordTimeToFirstFrame(1000); // 500-1500ms -> 2.5 Mbps
-        expect(service.averageBandwidth, equals(2.5));
-      });
-
-      test('estimates slow connection for high TTFF', () {
-        service.recordTimeToFirstFrame(2000); // 1500-3000ms -> 1.5 Mbps
-        expect(service.averageBandwidth, equals(1.5));
-      });
-
-      test('estimates very slow connection for very high TTFF', () {
-        service.recordTimeToFirstFrame(5000); // > 3000ms -> 0.8 Mbps
-        expect(service.averageBandwidth, equals(0.8));
-      });
-    });
-
     group('recommendedQuality', () {
       test('returns high quality for fast connections (>4 Mbps)', () {
-        service.recordTimeToFirstFrame(200); // 4.0 Mbps
+        recordMbps(5);
         expect(service.recommendedQuality, equals(VideoQuality.high));
       });
 
       test('returns medium quality for decent connections (2-4 Mbps)', () {
-        service.recordTimeToFirstFrame(1000); // 2.5 Mbps
+        recordMbps(2.5);
         expect(service.recommendedQuality, equals(VideoQuality.medium));
       });
 
       test('returns low quality for slow connections (<2 Mbps)', () {
-        service.recordTimeToFirstFrame(2000); // 1.5 Mbps
+        recordMbps(1.5);
         expect(service.recommendedQuality, equals(VideoQuality.low));
       });
     });
 
     group('shouldUseHighQuality', () {
       test('returns true for high quality', () {
-        service.recordTimeToFirstFrame(200); // 4.0 Mbps -> high
+        recordMbps(5);
         expect(service.shouldUseHighQuality, isTrue);
       });
 
       test('returns true for medium quality', () {
-        service.recordTimeToFirstFrame(1000); // 2.5 Mbps -> medium
+        recordMbps(2.5);
         expect(service.shouldUseHighQuality, isTrue);
       });
 
       test('returns false for low quality', () {
-        service.recordTimeToFirstFrame(5000); // 0.8 Mbps -> low
+        recordMbps(0.8);
         expect(service.shouldUseHighQuality, isFalse);
       });
     });
@@ -115,7 +94,7 @@ void main() {
       });
 
       test('override takes precedence over measured bandwidth', () async {
-        service.recordTimeToFirstFrame(200); // Would be high
+        recordMbps(5);
         await service.setQualityOverride(VideoQuality.low);
 
         expect(service.recommendedQuality, equals(VideoQuality.low));
@@ -127,7 +106,7 @@ void main() {
 
     group('clearSamples', () {
       test('resets to default bandwidth', () {
-        service.recordTimeToFirstFrame(200); // 4.0 Mbps
+        recordMbps(5);
         expect(service.averageBandwidth, isNot(equals(3.0)));
 
         service.clearSamples();

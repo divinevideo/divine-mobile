@@ -4,6 +4,7 @@ import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
 import 'package:infinite_video_feed/src/widgets/infinite_video_feed.dart';
 import 'package:infinite_video_feed/src/widgets/video_item.dart';
@@ -815,6 +816,52 @@ void main() {
             'isFirstFrameRendered': true,
           });
           await tester.pump();
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      });
+
+      testWidgets('publishes active-video timing on the first native frame', (
+        tester,
+      ) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(
+          playerIds: const <int>[0],
+          firstFrameRenderedOnListen: false,
+        );
+        const videoId =
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        final metricFuture = FeedFirstFrameMetrics.events.firstWhere(
+          (metric) => metric.videoId == videoId,
+        );
+
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo(videoId)],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await harness.sendEvent(0, const <Object?, Object?>{
+            'status': 'ready',
+            'videoWidth': 1280,
+            'videoHeight': 720,
+            'isFirstFrameRendered': true,
+          });
+          await tester.pump();
+
+          final metric = await metricFuture;
+          expect(metric.videoId, videoId);
+          expect(metric.index, 0);
+          expect(metric.loadedFromCache, isFalse);
         } finally {
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
