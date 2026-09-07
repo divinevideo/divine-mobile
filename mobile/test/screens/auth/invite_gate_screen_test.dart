@@ -578,6 +578,7 @@ void main() {
         () => mockInviteApiClient.joinWaitlist(
           contact: 'fan@example.com',
           sourceSlug: 'lele-pons',
+          // The explicit false value is the opt-in behavior under verification.
           // ignore: avoid_redundant_argument_values
           newsletterOptIn: false,
         ),

@@ -518,6 +518,8 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
         if (stale != null) {
           try {
             await transport.repository.cancelOutgoingSend(rumorId: stale);
+            // ArgumentError is the repository's boundary signal for an
+            // absent or account-mismatched queued send.
             // ignore: avoid_catching_errors
           } on ArgumentError {
             // Same ambiguity as recoverFullSend: the row may be gone because
@@ -560,6 +562,8 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
             rumorId: parked,
             resetRetryBudget: true,
           );
+          // ArgumentError is the repository's boundary signal for an
+          // absent or account-mismatched queued send.
           // ignore: avoid_catching_errors
         } on ArgumentError {
           // Ambiguous. `recoverFullSend` throws the same type when the row is

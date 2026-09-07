@@ -44,6 +44,7 @@ final profileVanishedSnapshotProvider = FutureProvider.autoDispose
       return ref.watch(databaseProvider).vanishedProfilesDao.isVanished(pubkey);
     });
 
+// Riverpod's family builder preserves its generated generic type when inferred.
 // ignore: specify_nonobvious_property_types
 final userProfileStatsReactiveProvider =
     StreamProvider.family<ProfileStats?, String>((ref, pubkey) {

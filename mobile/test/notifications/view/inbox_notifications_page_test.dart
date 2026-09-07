@@ -2,6 +2,7 @@
 // ABOUTME: the inbox marks notifications seen once (advances the read
 // ABOUTME: watermark, #4708) and that each tab opens its own filtered feed.
 
+// Fresh widget instances make per-pump fixture ownership explicit.
 // ignore_for_file: prefer_const_constructors
 
 import 'package:badge_repository/badge_repository.dart';

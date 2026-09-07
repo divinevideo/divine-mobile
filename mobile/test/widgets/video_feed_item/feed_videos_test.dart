@@ -269,6 +269,7 @@ extension _RepostsRepoStub on _MockRepostsRepository {
 // Widget builder
 // ---------------------------------------------------------------------------
 
+// The helper combines overrides from two Riverpod provider generations.
 // ignore: strict_raw_type
 List _buildOverrides({
   VideoModerationStatusService? moderationService,

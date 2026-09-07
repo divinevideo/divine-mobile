@@ -51,6 +51,7 @@ void main() {
     });
 
     Widget createTestWidget({
+      // The harness accepts both Riverpod override generations used here.
       // ignore: strict_raw_type
       List overrides = const [],
       bool isPreviewMode = false,

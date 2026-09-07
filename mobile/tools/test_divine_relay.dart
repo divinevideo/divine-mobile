@@ -1,6 +1,7 @@
 // ABOUTME: Direct test of relay.divine.video divine extensions support
 // ABOUTME: Sends REQ with sort and int# filters to verify relay behavior
 
+// This interactive relay probe reports each response directly to its operator.
 // ignore_for_file: avoid_print
 
 import 'dart:convert';
@@ -21,7 +22,7 @@ void main() async {
 
       if (type == 'EVENT') {
         final event = decoded[2];
-        print('📥 EVENT: ${event['id'].substring(0, 8)}');
+        print('📥 EVENT: ${event['id']}');
         print('   Kind: ${event['kind']}');
         print(
           '   Created: ${DateTime.fromMillisecondsSinceEpoch((event['created_at'] as int) * 1000)}',

@@ -17,7 +17,6 @@ analyzer:
     cascade_invocations: ignore
     comment_references: ignore
     discarded_futures: ignore
-    document_ignores: ignore
     inference_failure_on_collection_literal: ignore
     inference_failure_on_function_invocation: ignore
     inference_failure_on_function_return_type: ignore

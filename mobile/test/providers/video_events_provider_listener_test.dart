@@ -111,6 +111,7 @@ void _setupMockDefaults(_MockVideoEventService mock) {
   // Mock ChangeNotifier methods (addListener/removeListener)
   when(() => mock.addListener(any())).thenReturn(null);
   when(() => mock.removeListener(any())).thenReturn(null);
+  // This mock exposes ChangeNotifier listener state to isolate the provider.
   // ignore: invalid_use_of_protected_member
   when(() => mock.hasListeners).thenReturn(false);
 

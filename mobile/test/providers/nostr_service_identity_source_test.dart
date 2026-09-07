@@ -95,6 +95,7 @@ class _RecordingFactory {
       await addRelaysCompleter?.future;
       return 0;
     });
+    // Mocktail needs the closure to capture this mock invocation.
     // ignore: unnecessary_lambdas
     when(() => client.dispose()).thenAnswer((_) => Future<void>.value());
     clients.add(client);

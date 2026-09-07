@@ -182,6 +182,7 @@ void main() {
           () => bloc.add(
             const PeopleListsCreateRequested(
               name: 'Solo',
+              // The explicit empty list is the submitted value under test.
               // ignore: avoid_redundant_argument_values
               initialPubkeys: [],
             ),
@@ -210,6 +211,7 @@ void main() {
           () => bloc.add(
             const PeopleListsCreateRequested(
               name: 'Solo',
+              // The explicit empty list is the submitted value under test.
               // ignore: avoid_redundant_argument_values
               initialPubkeys: [],
             ),

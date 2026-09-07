@@ -73,6 +73,7 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockVideoEventService.discoveryVideos).thenReturn(testVideos);
       when(() => mockVideoEventService.isSubscribed(any())).thenReturn(false);
+      // This mock exposes ChangeNotifier listener state to isolate rendering.
       // ignore: invalid_use_of_protected_member
       when(() => mockVideoEventService.hasListeners).thenReturn(false);
     });

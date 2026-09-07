@@ -2222,6 +2222,7 @@ void main() {
           () => mockCleanupService.clearUserSpecificData(
             reason: 'explicit_logout',
             userPubkey: expectedPubkey,
+            // Explicit false is the account-preservation behavior asserted here.
             // ignore: avoid_redundant_argument_values
             deleteUserData: false,
           ),
@@ -2246,6 +2247,7 @@ void main() {
         () => mockCleanupService.clearUserSpecificData(
           reason: 'explicit_logout',
           userPubkey: expectedPubkey,
+          // Explicit false is the account-preservation behavior asserted here.
           // ignore: avoid_redundant_argument_values
           deleteUserData: false,
         ),

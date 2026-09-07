@@ -31,6 +31,7 @@ class MentionNip05Claim {
   int get hashCode => Object.hash(pubkey, nip05);
 }
 
+// Riverpod's family builder preserves its full generic type when inferred.
 // ignore: specify_nonobvious_property_types
 final mentionNip05VerificationProvider =
     FutureProvider.family<Nip05VerificationStatus, MentionNip05Claim>((
