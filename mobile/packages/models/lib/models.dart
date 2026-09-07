@@ -18,6 +18,7 @@ export 'src/dm_conversation.dart';
 export 'src/dm_message.dart';
 export 'src/dm_reaction.dart';
 export 'src/dm_shared_video_ref.dart';
+export 'src/enqueue_send_result.dart';
 export 'src/feed_type.dart';
 export 'src/hashtag_search_result.dart';
 export 'src/home_feed_response.dart';
