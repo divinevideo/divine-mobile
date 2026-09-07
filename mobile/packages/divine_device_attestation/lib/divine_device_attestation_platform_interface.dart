@@ -3,6 +3,7 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 /// Platform interface for Divine's iOS App Attest integration.
 abstract class DivineDeviceAttestationPlatform extends PlatformInterface {
+  /// Constructs a DivineDeviceAttestationPlatform.
   DivineDeviceAttestationPlatform() : super(token: _token);
 
   static final Object _token = Object();
