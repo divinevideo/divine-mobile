@@ -244,5 +244,43 @@ void main() {
         );
       },
     );
+
+    test(
+      'a persistent export leaves no partial file in the documents directory '
+      'on cancel (#8818)',
+      () async {
+        // The AC names the documents directory specifically. usePersistentStorage
+        // routes the final output there (mocked to tempDir), exercising the
+        // getApplicationDocumentsDirectory() branch rather than the cache path.
+        RenderCancellationRegistry.start(exportTaskId);
+        final plugin = _MockProVideoEditor(
+          resolutions: resolutions,
+          onRender: (task) {
+            if (task.id == exportTaskId) {
+              RenderCancellationRegistry.cancel(exportTaskId);
+            }
+          },
+        );
+        ProVideoEditor.instance = plugin;
+
+        final outputPath = await VideoEditorRenderService.renderVideo(
+          clips: clips,
+          aspectRatio: model.AspectRatio.vertical,
+          taskId: exportTaskId,
+          usePersistentStorage: true,
+        );
+
+        expect(outputPath, isNull);
+        expect(
+          tempDir.listSync().whereType<File>().where(
+            (file) => file.path.endsWith('.mp4'),
+          ),
+          isEmpty,
+          reason:
+              'a cancelled persistent export must not orphan a divine_*.mp4 '
+              'in the documents directory',
+        );
+      },
+    );
   });
 }
