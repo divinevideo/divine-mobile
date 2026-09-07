@@ -196,6 +196,20 @@ void main() {
           expect(bundleCandidatesIn(dir).single, endsWith('/clip.mp4'));
         });
 
+        test('stays three distinct clip pairs', () {
+          expect(screenshotEditorFixtures, hasLength(3));
+          expect(
+            screenshotEditorFixtures.map((fixture) => fixture.video).toSet(),
+            hasLength(3),
+          );
+          expect(
+            screenshotEditorFixtures
+                .map((fixture) => fixture.thumbnail)
+                .toSet(),
+            hasLength(3),
+          );
+        });
+
         test('every referenced media asset exists on disk', () {
           for (final asset in screenshotMediaAssets()) {
             expect(
