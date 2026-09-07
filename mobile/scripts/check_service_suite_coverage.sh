@@ -41,13 +41,27 @@ anchor='- name: 🚀 Run service integration tests'
 anchor_count="$(grep -cF -- "$anchor" "$WORKFLOW" || true)"
 [ "$anchor_count" -eq 1 ] || fail "expected exactly one '$anchor' step, found $anchor_count"
 
-step_tail="$(sed -n "/$anchor/,\$p" "$WORKFLOW")"
-loop_start_count="$(printf '%s\n' "$step_tail" | grep -cE '^[[:space:]]*for suite in \\$' || true)"
-loop_end_count="$(printf '%s\n' "$step_tail" | grep -cE '; do[[:space:]]*$' || true)"
+# The anchored step only, not the rest of the file: a later step whose body
+# happens to contain a shell loop is none of this guard's business. awk matches
+# the anchor as a literal substring, the way the count above does -- feeding it
+# to sed as a regex address would diverge the moment the step is renamed to
+# something containing '.', '[' or '*'.
+step_body="$(awk -v anchor="$anchor" '
+  !inside && index($0, anchor) {
+    inside = 1
+    match($0, /^[ ]*/)
+    indent = RLENGTH
+    next
+  }
+  inside && match($0, /^[ ]*-[ ]/) && index($0, "-") - 1 == indent { inside = 0 }
+  inside
+' "$WORKFLOW")"
+loop_start_count="$(printf '%s\n' "$step_body" | grep -cE '^[[:space:]]*for suite in \\$' || true)"
+loop_end_count="$(printf '%s\n' "$step_body" | grep -cE '; do[[:space:]]*$' || true)"
 [ "$loop_start_count" -eq 1 ] || fail "expected exactly one service-suite loop start, found $loop_start_count"
 [ "$loop_end_count" -eq 1 ] || fail "expected exactly one service-suite loop end, found $loop_end_count"
 
-loop_body="$(printf '%s\n' "$step_tail" | sed -n '/^[[:space:]]*for suite in \\$/,/; do[[:space:]]*$/p')"
+loop_body="$(printf '%s\n' "$step_body" | sed -n '/^[[:space:]]*for suite in \\$/,/; do[[:space:]]*$/p')"
 run_list_raw="$(printf '%s\n' "$loop_body" | grep -oE 'integration_test/e2e/([A-Za-z0-9_]+/)*[A-Za-z0-9_]+_test\.dart' || true)"
 [ -n "$run_list_raw" ] || fail "service-suite loop contains no E2E suite paths"
 

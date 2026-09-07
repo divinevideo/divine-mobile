@@ -248,6 +248,26 @@ $afterLoop
       expect(result.stdout, contains('mentioned_only_test.dart'));
     });
 
+    test('ignores a shell loop in a later, unrelated workflow step', () {
+      writeWorkflow(
+        afterLoop:
+            '      - name: 📊 Summarize results\n'
+            '        run: |\n'
+            '          for f in artifacts/*.log; do\n'
+            '            cat "\$f"\n'
+            '          done\n',
+      );
+
+      final result = run();
+
+      expect(
+        result.exitCode,
+        equals(0),
+        reason: 'stdout=${result.stdout} stderr=${result.stderr}',
+      );
+      expect(result.stdout, contains('no new entries'));
+    });
+
     test('UPDATE_BASELINE preserves reasons for remaining exclusions', () {
       final result = run(update: true);
 
