@@ -1,6 +1,6 @@
-// ABOUTME: Social, foundation, and collaborator Riverpod providers split from app_providers.dart
+// ABOUTME: Foundation, DM-retry, and collaborator Riverpod providers split from app_providers.dart
 // ABOUTME: Final batch (9c) — pendingAction, outgoingDmRetry, analytics, hashtag, draft, clip,
-// ABOUTME: userDataCleanup, social, contentReporting, contentDeletion, collaborator-3
+// ABOUTME: userDataCleanup, contentReporting, contentDeletion, collaborator-3
 
 import 'dart:async';
 
