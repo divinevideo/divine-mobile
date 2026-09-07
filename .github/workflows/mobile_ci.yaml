@@ -151,6 +151,8 @@ jobs:
         run: bash scripts/check_process_global_mutations.sh
       - name: 🧯 Verify integration_test error-handler restores are exception-safe
         run: bash scripts/check_integration_test_error_restore_safety.sh
+      - name: 🧾 Verify every E2E service suite is accounted for
+        run: bash scripts/check_service_suite_coverage.sh
       - name: 🔌 Verify no new raw shared-channel installs (heal-and-blame ratchet)
         run: |
           # LIST ratchet vs origin/main (fails closed if the base baseline can't
