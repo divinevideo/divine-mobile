@@ -129,10 +129,13 @@ void main() {
       // box before deleting tempDir, so neither leaks into the merged VGV
       // optimizer isolate (#5159).
       uploadManager.dispose();
-      await TestHelpers.cleanupHiveBox('pending_uploads');
       PathProviderPlatform.instance = originalPathProviderInstance;
-      if (tempDir.existsSync()) {
-        await tempDir.delete(recursive: true);
+      try {
+        await TestHelpers.cleanupHiveBox('pending_uploads');
+      } finally {
+        if (tempDir.existsSync()) {
+          await tempDir.delete(recursive: true);
+        }
       }
     });
 

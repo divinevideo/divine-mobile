@@ -10,9 +10,7 @@ import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -82,18 +80,6 @@ void main() {
         thumbnailUrl: 'https://media.divine.video/test-video-id-thumb.jpg',
       ),
     );
-    // cleanupHiveBox swallows a failed deleteBoxFromDisk, and initialize()
-    // loads the box into an in-memory list that ensureBoxEmpty does not touch —
-    // so clearing after initialize leaves stale uploads visible through
-    // pendingUploads. Open and clear with a throwaway manager first, then read
-    // the empty box with the one under test so memory matches disk.
-    final boxOpener = UploadManager(
-      backgroundActivityManager: BackgroundActivityManager(),
-      blossomService: mockUploadService,
-    );
-    await boxOpener.initialize();
-    await TestHelpers.ensureBoxEmpty<PendingUpload>('pending_uploads');
-    boxOpener.dispose();
 
     uploadManager = UploadManager(
       backgroundActivityManager: BackgroundActivityManager(),
@@ -108,28 +94,25 @@ void main() {
   });
 
   tearDown(() async {
-    // Clean up after each test using proper async coordination
+    // Restore the process-global mock first. cleanupHiveBox and the temp-dir
+    // delete below can both throw, and this restore used to sit in a finally;
+    // without one, a throw would strand a MockPathProviderPlatform pointing at
+    // a just-deleted directory for every later test in the merged isolate.
+    // cleanupHiveBox resolves the box through Hive's own home path, not
+    // PathProvider, so restoring ahead of it is safe.
+    PathProviderPlatform.instance = originalPathProviderInstance;
+    reset(mockUploadService);
+
+    // Detach the manager from the box first, then close and delete the box so
+    // the next suite in the merged isolate does not inherit these rows (#6748).
+    uploadManager.dispose();
     try {
-      // Dispose the upload manager and wait for completion
-      uploadManager.dispose();
-
-      // Use proper async coordination instead of arbitrary delays
-      await Future.microtask(() {});
-
-      // Close the box if it's still open
-      if (Hive.isBoxOpen('pending_uploads')) {
-        final box = Hive.box('pending_uploads');
-        await box.close();
-      }
+      await TestHelpers.cleanupHiveBox('pending_uploads');
+    } finally {
       if (tempDir.existsSync()) {
         await tempDir.delete(recursive: true);
       }
-    } catch (e) {
-      // Manager or box might already be disposed/closed
-    } finally {
-      PathProviderPlatform.instance = originalPathProviderInstance;
     }
-    reset(mockUploadService);
   });
 
   File createVideoFile(String relativePath, List<int> bytes) {

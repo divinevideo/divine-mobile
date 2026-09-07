@@ -1,12 +1,15 @@
 // ABOUTME: Test helper utilities for creating mock data and testing video system
 // ABOUTME: Provides consistent test data generation and common testing patterns
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:models/models.dart' hide LogCategory, LogLevel;
+import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/services/hive_storage_service.dart';
 import 'package:openvine/services/upload_initialization_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -185,14 +188,26 @@ class TestHelpers {
     return events;
   }
 
-  /// Clean up Hive box to ensure test isolation
-  /// Call this in setUp() BEFORE initializing your manager
+  /// Close and delete a Hive box so the next test starts from an empty one.
   ///
-  /// This ensures proper unit test isolation by:
-  /// - Resetting static state in UploadInitializationHelper
-  /// - Closing any open Hive boxes
-  /// - Deleting the box from disk
-  /// - Clearing ALL data from the box after reopen
+  /// Hive boxes are process-global and several suites share the same name, so
+  /// under `very_good test --optimization` — where the whole suite runs in one
+  /// isolate — a box left behind by one suite is inherited by the next. Call
+  /// this in both `setUp` and `tearDown` for every shared box a suite touches.
+  ///
+  /// Deliberately routed through [HiveInterface.deleteBoxFromDisk], which looks
+  /// the box up by name with **no type check**, closes it, unregisters it from
+  /// `HiveImpl._boxes` — the registry `Hive.isBoxOpen` and `openBox` read, and
+  /// so the one this leak class is about — and deletes the files. Note it does
+  /// not also call `HiveConnect.unregisterBox`, which `close()` does, so the
+  /// first box object opened under each name stays reachable from that static
+  /// for the life of the isolate. Retention is bounded by the ~7 shared names.
+  /// The obvious `Hive.box(boxName).close()` cannot be used: it is
+  /// `Hive.box<dynamic>`, and hive_ce throws
+  /// ``HiveError: The box "x" is already open and of type Box<PendingUpload>``
+  /// for any box opened with a concrete value type. That throw — swallowed by
+  /// a bare `catch` — is what made this helper a silent no-op on every open
+  /// typed box for months (#6748).
   ///
   /// Example usage:
   /// ```dart
@@ -200,21 +215,46 @@ class TestHelpers {
   ///   await TestHelpers.cleanupHiveBox('pending_uploads');
   ///   manager = UploadManager(...);
   ///   await manager.initialize(); // This will create a fresh empty box
-  ///   await TestHelpers.ensureBoxEmpty('pending_uploads'); // Verify it's really empty
   /// });
+  ///
+  /// tearDown(() => TestHelpers.cleanupHiveBox('pending_uploads'));
   /// ```
   static Future<void> cleanupHiveBox(String boxName) async {
-    // Reset static state
-    UploadInitializationHelper.reset();
+    // Only the uploads box has an owner holding cached static state, and only
+    // it may be reset here. reset() runs AsyncScope.cancelAll(), which
+    // completes every in-flight initializeUploadsBox() waiter with
+    // AsyncCancelledException and clears the failure/backoff counters -- so
+    // firing it for an unrelated name (the guard heals any of
+    // HiveBoxNames.all) rejects a concurrent uploads initialization and
+    // discards state a retry test may have deliberately established.
+    if (boxName == HiveBoxNames.pendingUploads) {
+      UploadInitializationHelper.reset();
+    }
 
-    // Close and delete the box
     try {
-      if (Hive.isBoxOpen(boxName)) {
-        await Hive.box(boxName).close();
-      }
       await Hive.deleteBoxFromDisk(boxName);
-    } catch (e) {
-      // Box might not exist, that's fine
+    } on Object catch (error) {
+      // Some suites call cleanup before installing their per-test Hive home.
+      // There cannot be an on-disk box to remove when the backend path is
+      // uninitialized; preserve that valid pre-init no-op without skipping
+      // closed-box deletion once a home exists.
+      final isUninitializedHome =
+          error is ArgumentError &&
+          error.name == 'path' &&
+          error.invalidValue == null;
+      if (isUninitializedHome) return;
+
+      // The suite's temp directory can already be gone. `deleteFromDisk`
+      // unregisters the box before it touches the file, so the box is closed
+      // either way and the postcondition below still holds.
+      if (error is! FileSystemException) rethrow;
+    }
+
+    if (Hive.isBoxOpen(boxName)) {
+      throw StateError(
+        'cleanupHiveBox("$boxName") left the box open. Every later suite in '
+        'the merged isolate now inherits its rows. See #6748.',
+      );
     }
   }
 
@@ -227,16 +267,6 @@ class TestHelpers {
     HiveStorageService.resetForTesting();
     addTearDown(HiveStorageService.resetForTesting);
     await HiveStorageService.initialize();
-  }
-
-  /// Ensure a Hive box is completely empty
-  /// Call this AFTER initialization to verify the box is truly empty
-  static Future<void> ensureBoxEmpty<T>(String boxName) async {
-    if (Hive.isBoxOpen(boxName)) {
-      final box = Hive.box<T>(boxName);
-      // Clear all keys
-      await box.clear();
-    }
   }
 
   /// Generate test data for performance testing
