@@ -39,7 +39,13 @@ class _MockVideosRepository extends Mock implements VideosRepository {}
 class _MockCommentsRepository extends Mock implements CommentsRepository {}
 
 class _MockContentBlocklistRepository extends Mock
-    implements ContentBlocklistRepository {}
+    implements ContentBlocklistRepository {
+  @override
+  bool isBlocked(String pubkey) => false;
+
+  @override
+  bool canUnblock(String pubkey) => false;
+}
 
 /// In-memory [CacheDao] whose writes can be parked, so a test can hold a tab
 /// BLoC in the post-emit snapshot write the way a real disk write does.
@@ -163,7 +169,6 @@ void main() {
       when(
         () => videosRepository.isVideoKnownDeleted(any()),
       ).thenReturn(false);
-      when(() => blocklistRepository.isBlocked(any())).thenReturn(false);
       when(() => blocklistRepository.hasMutedUs(any())).thenReturn(false);
       when(() => blocklistRepository.hasBlockedUs(any())).thenReturn(false);
       whenListen(
