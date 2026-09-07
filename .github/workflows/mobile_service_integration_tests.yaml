@@ -4,23 +4,46 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
-    paths:
-      - "mobile/integration_test/e2e/**"
-      - "mobile/integration_test/helpers/**"
-      - "mobile/lib/services/relay_discovery_service.dart"
-      - "mobile/packages/nostr_sdk/**"
-      - "mobile/packages/nostr_client/**"
-      - "mobile/packages/dm_repository/**"
-      - "mobile/packages/db_client/**"
-      - ".github/workflows/mobile_service_integration_tests.yaml"
+
+# The 13 Linux-runnable suites have two dependency shapes. Eleven have a
+# focused closure across ten packages and five app files. Two widget-level
+# suites import the provider/router graph, which reaches nearly all mobile/lib
+# and mobile/packages production code. A 60-PR sample found those scopes on
+# 37% and 77% of changes respectively; running every suite costs about 14
+# minutes. The changes job therefore selects either suite group (or both), and
+# one service-tests job pays setup cost once. Keep the detector and its tests in
+# sync when suite dependencies change.
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Service Suite Scope
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      focused: ${{ steps.scope.outputs.focused }}
+      app: ${{ steps.scope.outputs.app }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: mobile/scripts/ci/detect_service_suite_scope.sh
+          sparse-checkout-cone-mode: false
+      - name: Detect affected service suites
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: bash mobile/scripts/ci/detect_service_suite_scope.sh
+
   service-tests:
     name: Integration Tests (services)
+    needs: changes
+    if: ${{ needs.changes.outputs.focused == 'true' || needs.changes.outputs.app == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
@@ -61,22 +84,10 @@ jobs:
       # launch never gets a debug connection ("The log reader stopped
       # unexpectedly, or never started"). Each suite passes on its own.
       #
-      # The list is explicit rather than a glob over integration_test/e2e/,
+      # The lists are explicit rather than a glob over integration_test/e2e/,
       # because `service` and "runnable on a Linux CI runner" are different
-      # axes. Every suite in that directory is tagged `service`; these eleven
-      # are the ones this runner can actually execute. The remaining five are
-      # excluded for reasons no workflow change can fix:
-      #
-      #   c2pa_init                         — c2pa_flutter ships android/ and
-      #                                       ios/ only, no desktop impl.
-      #   video_creation_flow               — needs the invite service.
-      #   deleted_video_visible_to_others   — needs the full stack.
-      #   dm_optimistic_survives_watch_race — needs the full stack.
-      #   contact_list_freshness_docker     — needs the full stack. It is the
-      #                                       real-relay twin of
-      #                                       contact_list_freshness, which is
-      #                                       in the list above; run it locally
-      #                                       against local_stack.
+      # axes. The generated-files guard accounts for every suite against these
+      # lists or service_suite_exclusions.txt.
       #
       # local_stack cannot start on a GitHub runner at all:
       # divine-invite-darshan:e2e is a private GHCR package, compose resolves
@@ -84,21 +95,37 @@ jobs:
       # suites below need none of it — they stand up their own in-process relay
       # (integration_test/helpers/fake_relay.dart).
       - name: 🚀 Run service integration tests
+        env:
+          RUN_FOCUSED_SUITES: ${{ needs.changes.outputs.focused }}
+          RUN_APP_SUITES: ${{ needs.changes.outputs.app }}
         run: |
-          for suite in \
-            integration_test/e2e/relay_list_admission_test.dart \
-            integration_test/e2e/dm_inbox_relay_admission_test.dart \
-            integration_test/e2e/dm_self_wrap_inbox_relays_test.dart \
-            integration_test/e2e/reel_reply_retry_double_send_test.dart \
-            integration_test/e2e/block_leaves_kind3_follow_test.dart \
-            integration_test/e2e/contact_list_freshness_test.dart \
-            integration_test/e2e/dm_group_delete_for_everyone_test.dart \
-            integration_test/e2e/dm_reaction_unreadable_inbox_test.dart \
-            integration_test/e2e/dm_deletion_unreadable_inbox_test.dart \
-            integration_test/e2e/dm_group_send_unreadable_inbox_test.dart \
-            integration_test/e2e/dm_group_send_joined_recovery_retry_test.dart \
-            integration_test/e2e/dm_oneway_latch_unlatch_test.dart \
-            integration_test/e2e/dm_history_drain_idle_pool_test.dart; do
+          # SERVICE_SUITE_LIST_START — parsed by check_service_suite_coverage.sh.
+          focused_suites=(
+            integration_test/e2e/relay_list_admission_test.dart
+            integration_test/e2e/dm_inbox_relay_admission_test.dart
+            integration_test/e2e/dm_self_wrap_inbox_relays_test.dart
+            integration_test/e2e/contact_list_freshness_test.dart
+            integration_test/e2e/dm_group_delete_for_everyone_test.dart
+            integration_test/e2e/dm_reaction_unreadable_inbox_test.dart
+            integration_test/e2e/dm_deletion_unreadable_inbox_test.dart
+            integration_test/e2e/dm_group_send_unreadable_inbox_test.dart
+            integration_test/e2e/dm_group_send_joined_recovery_retry_test.dart
+            integration_test/e2e/dm_oneway_latch_unlatch_test.dart
+            integration_test/e2e/dm_history_drain_idle_pool_test.dart
+          )
+          app_suites=(
+            integration_test/e2e/reel_reply_retry_double_send_test.dart
+            integration_test/e2e/block_leaves_kind3_follow_test.dart
+          )
+          # SERVICE_SUITE_LIST_END
+          suites=()
+          if [[ "$RUN_FOCUSED_SUITES" == "true" ]]; then
+            suites+=("${focused_suites[@]}")
+          fi
+          if [[ "$RUN_APP_SUITES" == "true" ]]; then
+            suites+=("${app_suites[@]}")
+          fi
+          for suite in "${suites[@]}"; do
             echo "── $suite"
             xvfb-run -a flutter test "$suite" --tags service -d linux
           done
