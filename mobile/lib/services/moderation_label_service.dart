@@ -100,13 +100,15 @@ class ModerationLabelService {
     int labelerHistoryPageSize = defaultLabelerHistoryPageSize,
     int maxLabelerHistoryPages = defaultMaxLabelerHistoryPages,
     Duration labelerHistoryBudget = defaultLabelerHistoryBudget,
+    Duration tailReconnectDelay = defaultTailReconnectDelay,
   }) : _nostrClient = nostrClient,
        _authService = authService,
        _prefs = sharedPreferences,
        _canQueryRelays = canQueryRelays ?? (() => true),
        _labelerHistoryPageSize = labelerHistoryPageSize,
        _maxLabelerHistoryPages = maxLabelerHistoryPages,
-       _labelerHistoryBudget = labelerHistoryBudget;
+       _labelerHistoryBudget = labelerHistoryBudget,
+       _tailReconnectDelay = tailReconnectDelay;
 
   final NostrClient _nostrClient;
   // ignore: unused_field
@@ -155,6 +157,12 @@ class ModerationLabelService {
   static const Duration defaultLabelerHistoryBudget = Duration(seconds: 30);
 
   final Duration _labelerHistoryBudget;
+
+  /// Delay before re-opening a live tail that dropped, mirroring
+  /// `DmRepository`'s gift-wrap reconnect. #8255.
+  static const Duration defaultTailReconnectDelay = Duration(seconds: 2);
+
+  final Duration _tailReconnectDelay;
 
   /// SharedPreferences key for subscribed labeler pubkeys.
   static const String _subscribedLabelersKey = 'subscribed_labeler_pubkeys';
@@ -265,6 +273,14 @@ class ModerationLabelService {
   /// the relay's stored window does not double-count. Cleared with a labeler's
   /// rows in [_removeLabelsForLabeler]. #8255.
   final Map<String, Set<String>> _appliedLabelEventIds = {};
+
+  /// Newest label timestamp seen per labeler. A reconnect resumes the tail from
+  /// here (dedup absorbs the overlap) rather than from now, so labels published
+  /// during the gap are not missed. #8255.
+  final Map<String, int> _tailWatermark = {};
+
+  /// Pending tail reconnect timers, one per labeler. #8255.
+  final Map<String, Timer> _tailReconnectTimers = {};
 
   /// Whether persisted settings have been loaded.
   bool _loadedPersistedState = false;
@@ -671,18 +687,65 @@ class ModerationLabelService {
   /// the service's per-pubkey state. #8255.
   void _openLiveTail(String pubkey, List<Event> backfilled) {
     if (_disposed) return;
+    _tailWatermark[pubkey] = _tailSince(backfilled);
+    _listenTail(pubkey);
+  }
+
+  /// Open (or reopen) the tail REQ for [pubkey] from its current watermark and
+  /// wire it to reconnect when it drops. #8255.
+  void _listenTail(String pubkey) {
+    if (_disposed) return;
     final stream = _nostrClient.subscribe(
       [
         Filter(
           authors: [pubkey],
           kinds: [NostrEventKinds.label],
-          since: _tailSince(backfilled),
+          since: _tailWatermark[pubkey],
         ),
       ],
       subscriptionId: _labelerTailSubscriptionId(pubkey),
     );
     unawaited(_subscriptions[pubkey]?.cancel());
-    _subscriptions[pubkey] = stream.listen(_processLabelEvent);
+    _subscriptions[pubkey] = stream.listen(
+      (event) => _onTailEvent(pubkey, event),
+      // A relay CLOSED surfaces as onError; a socket/Dart-side close as onDone.
+      // Either way the tail is dead and must be re-opened. #8255.
+      onError: (Object _) => _scheduleTailReconnect(pubkey),
+      onDone: () => _scheduleTailReconnect(pubkey),
+    );
+  }
+
+  void _onTailEvent(String pubkey, dynamic event) {
+    final createdAt = event.createdAt as int;
+    if (createdAt > (_tailWatermark[pubkey] ?? 0)) {
+      _tailWatermark[pubkey] = createdAt;
+    }
+    _processLabelEvent(event);
+  }
+
+  /// Re-open [pubkey]'s tail after a delay, mirroring `DmRepository`'s
+  /// gift-wrap reconnect. Bounded by the number of subscribed/followed labelers
+  /// and cancelled by [_unloadLabeler] / [dispose], so it cannot outlive a
+  /// labeler nothing wants any more. #8255.
+  void _scheduleTailReconnect(String pubkey) {
+    if (_disposed) return;
+    // A labeler that has since been unloaded must not reconnect.
+    if (!_subscribedLabelers.contains(pubkey) &&
+        !_followedLabelers.contains(pubkey)) {
+      return;
+    }
+    unawaited(_subscriptions[pubkey]?.cancel());
+    _subscriptions.remove(pubkey);
+    _tailReconnectTimers[pubkey]?.cancel();
+    _tailReconnectTimers[pubkey] = Timer(_tailReconnectDelay, () {
+      _tailReconnectTimers.remove(pubkey);
+      if (_disposed) return;
+      if (!_subscribedLabelers.contains(pubkey) &&
+          !_followedLabelers.contains(pubkey)) {
+        return;
+      }
+      _listenTail(pubkey);
+    });
   }
 
   /// Where the live tail starts: the newest backfilled label's timestamp, or
@@ -1072,6 +1135,8 @@ class ModerationLabelService {
     // Synchronously, before the first await: a walk in flight has to see this
     // the moment the caller decides the labeler is going away.
     _invalidateLabelerLoad(pubkey);
+    _tailReconnectTimers.remove(pubkey)?.cancel();
+    _tailWatermark.remove(pubkey);
     await _subscriptions[pubkey]?.cancel();
     _subscriptions.remove(pubkey);
     _removePendingLabelerRetry(pubkey);
@@ -1263,6 +1328,10 @@ class ModerationLabelService {
     _relayReadyRetrySubscription = null;
     _labelersAwaitingRelay.clear();
     _hadConnectedRelayWhileWaiting = false;
+    for (final timer in _tailReconnectTimers.values) {
+      timer.cancel();
+    }
+    _tailReconnectTimers.clear();
     for (final sub in _subscriptions.values) {
       sub.cancel();
     }

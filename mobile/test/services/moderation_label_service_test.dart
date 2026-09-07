@@ -96,13 +96,16 @@ void main() {
       (_) => const Stream<Map<String, RelayConnectionStatus>>.empty(),
     );
     // Default: the live tail (#8255) opens after a labeler latches loaded.
-    // Tests that exercise the tail override this with a controllable stream.
+    // A never-closing broadcast stream so the tail stays open (no onDone) and
+    // no reconnect timer is scheduled. Tests that exercise the tail override
+    // this with their own controllable stream.
+    final defaultTail = StreamController<Event>.broadcast();
     when(
       () => mockNostrClient.subscribe(
         any(),
         subscriptionId: any(named: 'subscriptionId'),
       ),
-    ).thenAnswer((_) => const Stream<Event>.empty());
+    ).thenAnswer((_) => defaultTail.stream);
     service = ModerationLabelService(
       nostrClient: mockNostrClient,
       authService: mockAuthService,
@@ -2074,16 +2077,20 @@ void main() {
   });
 
   group('live tail subscription (#8255)', () {
-    Event liveLabel(String id, String targetEventId) => _FakeLabelEvent(
-      pubkey: service.divineModerationPubkeyHex,
-      id: id,
-      createdAt: 1000,
-      tags: [
-        ['L', 'content-warning'],
-        ['l', 'nudity', 'content-warning'],
-        ['e', targetEventId],
-      ],
-    );
+    Event liveLabelFrom(String labeler, String id, String targetEventId) =>
+        _FakeLabelEvent(
+          pubkey: labeler,
+          id: id,
+          createdAt: 1000,
+          tags: [
+            ['L', 'content-warning'],
+            ['l', 'nudity', 'content-warning'],
+            ['e', targetEventId],
+          ],
+        );
+
+    Event liveLabel(String id, String targetEventId) =>
+        liveLabelFrom(service.divineModerationPubkeyHex, id, targetEventId);
 
     void stubCompletedBackfill() {
       when(
@@ -2149,5 +2156,100 @@ void main() {
         expect(service.getContentWarnings('dup_target'), hasLength(1));
       },
     );
+
+    test(
+      'removing a labeler cancels its live tail so later labels do not land',
+      () async {
+        const custom =
+            'a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1';
+        stubCompletedBackfill();
+        final tail = StreamController<Event>.broadcast();
+        addTearDown(tail.close);
+        when(
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
+        ).thenAnswer((_) => tail.stream);
+
+        await service.addLabeler(custom);
+
+        tail.add(liveLabelFrom(custom, 'before_evt', 'before_target'));
+        await pumpEventQueue();
+        expect(service.getContentWarnings('before_target'), hasLength(1));
+
+        await service.removeLabeler(custom);
+
+        // A label published after removal must not reach the maps.
+        tail.add(liveLabelFrom(custom, 'after_evt', 'after_target'));
+        await pumpEventQueue();
+        expect(service.getContentWarnings('after_target'), isEmpty);
+      },
+    );
+
+    test(
+      'a dropped tail stream reconnects so later labels still land',
+      () async {
+        final svc = ModerationLabelService(
+          nostrClient: mockNostrClient,
+          authService: mockAuthService,
+          sharedPreferences: mockPrefs,
+          tailReconnectDelay: Duration.zero,
+        );
+        stubCompletedBackfill();
+        final first = StreamController<Event>.broadcast();
+        final second = StreamController<Event>.broadcast();
+        addTearDown(() {
+          first.close();
+          second.close();
+          svc.dispose();
+        });
+        var calls = 0;
+        when(
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
+        ).thenAnswer((_) {
+          calls++;
+          return calls == 1 ? first.stream : second.stream;
+        });
+
+        const custom =
+            'b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2';
+        await svc.addLabeler(custom);
+        expect(calls, 1);
+
+        // The relay ends the subscription; the Dart stream closes.
+        await first.close();
+        await pumpEventQueue();
+
+        expect(calls, 2, reason: 'the tail should reopen after it drops');
+        second.add(liveLabelFrom(custom, 'post', 'reconnect_tgt'));
+        await pumpEventQueue();
+        expect(svc.getContentWarnings('reconnect_tgt'), hasLength(1));
+      },
+    );
+
+    test('dispose cancels the live tail so no later label lands', () async {
+      const custom =
+          'c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3';
+      stubCompletedBackfill();
+      final tail = StreamController<Event>.broadcast();
+      addTearDown(tail.close);
+      when(
+        () => mockNostrClient.subscribe(
+          any(),
+          subscriptionId: any(named: 'subscriptionId'),
+        ),
+      ).thenAnswer((_) => tail.stream);
+
+      await service.addLabeler(custom);
+      service.dispose();
+
+      tail.add(liveLabelFrom(custom, 'post_dispose', 'disposed_tgt'));
+      await pumpEventQueue();
+      expect(service.getContentWarnings('disposed_tgt'), isEmpty);
+    });
   });
 }
