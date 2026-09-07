@@ -3642,7 +3642,9 @@ void main() {
       expect(
         orphan.existsSync(),
         isFalse,
-        reason: 'session end reaps a deferred file once nothing references it',
+        reason:
+            'session end reaps a deferred file without waiting for container '
+            'teardown',
       );
       expect(notifier.deferredFileCleanupForTest, isEmpty);
     });
