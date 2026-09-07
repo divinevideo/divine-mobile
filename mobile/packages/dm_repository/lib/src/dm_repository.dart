@@ -6171,6 +6171,9 @@ class DmRepository {
   /// a 64-character hex string, if [content] is empty, or if
   /// [recipientPubkeys] is empty.
   ///
+  /// Returns failure results, publishing nothing, when every recipient is the
+  /// sender. One result is returned for each supplied recipient.
+  ///
   /// When an [OutgoingDmsDao] is injected, each per-recipient send
   /// goes through the durable queue with the same atomicity contract
   /// as [sendMessage]: enqueue a `pending`/`pending` row keyed by a
@@ -7634,8 +7637,9 @@ class DmRepository {
     ).map(
       (conversations) => conversations
           .where(
-            (conversation) => conversation.participantPubkeys.any(
-              (pubkey) => !pubkeysEqual(pubkey, owner),
+            (conversation) => !_containsOnlyPubkey(
+              conversation.participantPubkeys,
+              owner,
             ),
           )
           .toList(),
@@ -8407,32 +8411,38 @@ class DmRepository {
   // Helpers
   // -------------------------------------------------------------------------
 
-  /// Removes phantom self-conversations created by the self-wrap bug where
-  /// `_resolveConversationParticipants` produced `[self, self]`.
+  /// Removes phantom self-conversations created by legacy self-wrap bugs or
+  /// malformed participant lists.
   ///
   /// Idempotent — safe to call on every init.
   Future<void> _cleanupSelfConversations() async {
     try {
-      final selfConvId = computeConversationId([_userPubkey, _userPubkey]);
-      final existing = await _conversationsDao.getConversation(
-        selfConvId,
+      final rows = await _conversationsDao.getAllConversations(
         ownerPubkey: _ownerPubkey,
       );
-      if (existing == null) return;
+      final selfConversations = rows.where(
+        (row) => _containsOnlyPubkey(
+          _conversationFromRow(row).participantPubkeys,
+          _userPubkey,
+        ),
+      );
+      if (selfConversations.isEmpty) return;
 
       await _conversationsDao.runInTransaction(() async {
-        await _directMessagesDao.deleteConversationMessages(
-          selfConvId,
-          ownerPubkey: _ownerPubkey,
-        );
-        await _conversationsDao.deleteConversation(
-          selfConvId,
-          ownerPubkey: _ownerPubkey,
-        );
+        for (final conversation in selfConversations) {
+          await _directMessagesDao.deleteConversationMessages(
+            conversation.id,
+            ownerPubkey: _ownerPubkey,
+          );
+          await _conversationsDao.deleteConversation(
+            conversation.id,
+            ownerPubkey: _ownerPubkey,
+          );
+        }
       });
 
       Log.info(
-        'Cleaned up phantom self-conversation',
+        'Cleaned up ${selfConversations.length} phantom self-conversation(s)',
         category: LogCategory.system,
       );
     } on Object catch (e, stackTrace) {
@@ -8444,6 +8454,15 @@ class DmRepository {
       );
     }
   }
+
+  static bool _containsOnlyPubkey(
+    Iterable<String> participantPubkeys,
+    String pubkey,
+  ) =>
+      participantPubkeys.isNotEmpty &&
+      participantPubkeys.every(
+        (participantPubkey) => pubkeysEqual(participantPubkey, pubkey),
+      );
 
   /// Runs post-auth cleanup and migration tasks sequentially so each step
   /// operates on the final state of the previous one.

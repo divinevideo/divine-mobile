@@ -19824,40 +19824,67 @@ void main() {
 
     group('_cleanupSelfConversations', () {
       test(
-        'deletes self-conversation when it exists',
+        'deletes every self-only participant shape case-insensitively',
         () async {
-          final selfConvId = DmRepository.computeConversationId(
+          final participantLists = [
+            [_validPubkeyA],
             [_validPubkeyA, _validPubkeyA],
+            [
+              _validPubkeyA,
+              _validPubkeyA.toUpperCase(),
+              _validPubkeyA,
+            ],
+          ];
+          final selfConversationIds = [
+            for (final participants in participantLists)
+              DmRepository.computeConversationId(participants),
+          ];
+          final peerParticipants = [_validPubkeyA, _validPubkeyB]..sort();
+          final peerConversationId = DmRepository.computeConversationId(
+            peerParticipants,
           );
+          var conversationReads = 0;
 
-          // Stub: self-conversation exists
           when(
-            () => mockConversationsDao.getConversation(
-              selfConvId,
+            () => mockConversationsDao.getAllConversations(
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).thenAnswer(
-            (_) async => ConversationRow(
-              ownerPubkey: '',
-              id: selfConvId,
-              participantPubkeys: jsonEncode([_validPubkeyA, _validPubkeyA]),
-              isGroup: false,
-              isRead: true,
-              currentUserHasSent: false,
-              createdAt: 1700000000,
-            ),
+            (_) async => conversationReads++ == 0
+                ? [
+                    for (var i = 0; i < participantLists.length; i++)
+                      ConversationRow(
+                        ownerPubkey: '',
+                        id: selfConversationIds[i],
+                        participantPubkeys: jsonEncode(participantLists[i]),
+                        isGroup: false,
+                        isRead: true,
+                        currentUserHasSent: false,
+                        createdAt: 1700000000,
+                      ),
+                    ConversationRow(
+                      ownerPubkey: '',
+                      id: peerConversationId,
+                      participantPubkeys: jsonEncode(peerParticipants),
+                      isGroup: false,
+                      isRead: true,
+                      currentUserHasSent: false,
+                      createdAt: 1700000000,
+                    ),
+                  ]
+                : [],
           );
 
           when(
             () => mockDirectMessagesDao.deleteConversationMessages(
-              selfConvId,
+              any(),
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).thenAnswer((_) async => 0);
 
           when(
             () => mockConversationsDao.deleteConversation(
-              selfConvId,
+              any(),
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).thenAnswer((_) async => 1);
@@ -19866,70 +19893,71 @@ void main() {
             () => mockNostrClient.unsubscribe(any()),
           ).thenAnswer((_) async {});
 
-          // Create repo then setCredentials to trigger post-auth
-          // maintenance including _cleanupSelfConversations.
-          DmRepository(
-            nostrClient: mockNostrClient,
-            directMessagesDao: mockDirectMessagesDao,
-            conversationsDao: mockConversationsDao,
-          ).setCredentials(
-            userPubkey: _validPubkeyA,
-            signer: LocalNostrSigner(_validPrivateKey),
-            messageService: mockMessageService,
-          );
+          final repository =
+              DmRepository(
+                nostrClient: mockNostrClient,
+                directMessagesDao: mockDirectMessagesDao,
+                conversationsDao: mockConversationsDao,
+              )..setCredentials(
+                userPubkey: _validPubkeyA,
+                signer: LocalNostrSigner(_validPrivateKey),
+                messageService: mockMessageService,
+              );
 
-          // Give post-auth maintenance time to complete.
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await repository.getConversations();
 
-          verify(
-            () => mockDirectMessagesDao.deleteConversationMessages(
-              selfConvId,
-              ownerPubkey: any(named: 'ownerPubkey'),
-            ),
-          ).called(1);
-
-          verify(
+          for (final conversationId in selfConversationIds) {
+            verify(
+              () => mockDirectMessagesDao.deleteConversationMessages(
+                conversationId,
+                ownerPubkey: _validPubkeyA,
+              ),
+            ).called(1);
+            verify(
+              () => mockConversationsDao.deleteConversation(
+                conversationId,
+                ownerPubkey: _validPubkeyA,
+              ),
+            ).called(1);
+          }
+          verifyNever(
             () => mockConversationsDao.deleteConversation(
-              selfConvId,
+              peerConversationId,
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
-          ).called(1);
+          );
         },
       );
 
       test(
         'no-op when self-conversation does not exist',
         () async {
-          final selfConvId = DmRepository.computeConversationId(
-            [_validPubkeyA, _validPubkeyA],
-          );
-
           when(
-            () => mockConversationsDao.getConversation(
-              selfConvId,
+            () => mockConversationsDao.getAllConversations(
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
-          ).thenAnswer((_) async => null);
+          ).thenAnswer((_) async => []);
 
           when(
             () => mockNostrClient.unsubscribe(any()),
           ).thenAnswer((_) async {});
 
-          DmRepository(
-            nostrClient: mockNostrClient,
-            directMessagesDao: mockDirectMessagesDao,
-            conversationsDao: mockConversationsDao,
-          ).setCredentials(
-            userPubkey: _validPubkeyA,
-            signer: LocalNostrSigner(_validPrivateKey),
-            messageService: mockMessageService,
-          );
+          final repository =
+              DmRepository(
+                nostrClient: mockNostrClient,
+                directMessagesDao: mockDirectMessagesDao,
+                conversationsDao: mockConversationsDao,
+              )..setCredentials(
+                userPubkey: _validPubkeyA,
+                signer: LocalNostrSigner(_validPrivateKey),
+                messageService: mockMessageService,
+              );
 
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await repository.getConversations();
 
           verifyNever(
             () => mockDirectMessagesDao.deleteConversationMessages(
-              selfConvId,
+              any(),
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           );
