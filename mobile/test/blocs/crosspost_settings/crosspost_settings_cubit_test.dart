@@ -12,6 +12,20 @@ import 'package:openvine/services/crosspost_api_client.dart';
 class _MockBlueskyCrosspostRepository extends Mock
     implements BlueskyCrosspostRepository {}
 
+/// Asserts the provisioning poller is armed to fire at [pollInterval].
+///
+/// A bare `pendingTimers, isNotEmpty` also passes for a poller armed at some
+/// other interval, which never fires inside the elapsed window and leaves a
+/// "the poll was suppressed" assertion vacuous.
+void _expectProvisioningPollerArmed(FakeAsync fake, Duration pollInterval) {
+  expect(
+    fake.pendingTimers.where(
+      (timer) => timer.isPeriodic && timer.duration == pollInterval,
+    ),
+    isNotEmpty,
+  );
+}
+
 void main() {
   group(CrosspostSettingsCubit, () {
     late _MockBlueskyCrosspostRepository repository;
@@ -679,9 +693,19 @@ void main() {
               pollInterval: const Duration(milliseconds: 1),
             );
             fake.flushMicrotasks();
+
+            _expectProvisioningPollerArmed(
+              fake,
+              const Duration(milliseconds: 1),
+            );
             fake.elapse(const Duration(milliseconds: 3));
             fake.flushMicrotasks();
 
+            // Without these two, every assertion below is satisfied by the
+            // initial user load even if provisioning polling never runs
+            // (#8806).
+            verify(() => repository.loadKeycastStatus()).called(3);
+            expect(cubit.state.provisioningPollAttempts, 3);
             expect(cubit.state.status, CrosspostSettingsStatus.loaded);
             expect(
               cubit.state.provisioningState,
@@ -746,7 +770,7 @@ void main() {
         });
       });
 
-      test('stale poll result does not overwrite toggle result', () async {
+      test('stale poll result does not overwrite toggle result', () {
         final pollCompleter = Completer<CrosspostStatus>();
         when(() => repository.loadStatus(pubkey: testPubkey)).thenAnswer(
           (_) async => const BlueskyCrosspostAccountStatus(
@@ -772,25 +796,37 @@ void main() {
           ),
         );
 
-        final cubit = buildCubit(pollInterval: const Duration(milliseconds: 1));
-        addTearDown(cubit.close);
-        await Future<void>.delayed(Duration.zero);
-        await Future<void>.delayed(const Duration(milliseconds: 1));
+        fakeAsync((fake) {
+          final cubit = buildCubit(
+            pollInterval: const Duration(milliseconds: 1),
+          );
+          fake.flushMicrotasks();
 
-        await cubit.toggleCrosspost(enabled: false);
-        pollCompleter.complete(
-          const CrosspostStatus(
-            crosspostEnabled: true,
-            provisioningState: AtprotoProvisioningState.pending,
-          ),
-        );
-        await Future<void>.delayed(Duration.zero);
+          _expectProvisioningPollerArmed(
+            fake,
+            const Duration(milliseconds: 1),
+          );
+          fake.elapse(const Duration(milliseconds: 1));
+          fake.flushMicrotasks();
+          verify(() => repository.loadKeycastStatus()).called(1);
 
-        expect(cubit.state.enabled, isFalse);
-        expect(
-          cubit.state.provisioningState,
-          AtprotoProvisioningState.disabled,
-        );
+          unawaited(cubit.toggleCrosspost(enabled: false));
+          fake.flushMicrotasks();
+          pollCompleter.complete(
+            const CrosspostStatus(
+              crosspostEnabled: true,
+              provisioningState: AtprotoProvisioningState.pending,
+            ),
+          );
+          fake.flushMicrotasks();
+
+          expect(cubit.state.enabled, isFalse);
+          expect(
+            cubit.state.provisioningState,
+            AtprotoProvisioningState.disabled,
+          );
+          cubit.close();
+        });
       });
 
       test('poll that fires during toggle does not start', () {
@@ -814,6 +850,13 @@ void main() {
             pollInterval: const Duration(milliseconds: 1),
           );
           fake.flushMicrotasks();
+
+          // The verifyNever below only means anything if a poll would
+          // otherwise have fired inside the elapsed millisecond.
+          _expectProvisioningPollerArmed(
+            fake,
+            const Duration(milliseconds: 1),
+          );
 
           unawaited(cubit.toggleCrosspost(enabled: false));
           fake.flushMicrotasks();

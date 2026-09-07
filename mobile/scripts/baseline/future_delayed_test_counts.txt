@@ -11,7 +11,7 @@ test/blocs/change_email/change_email_cubit_test.dart	1
 test/blocs/clips_library/clips_library_bloc_test.dart	4
 test/blocs/comments/comments_list/comments_list_bloc_test.dart	3
 test/blocs/creator_sync/sound_sync_cubit_test.dart	1
-test/blocs/crosspost_settings/crosspost_settings_cubit_test.dart	26
+test/blocs/crosspost_settings/crosspost_settings_cubit_test.dart	23
 test/blocs/crossposting_settings/crossposting_settings_cubit_test.dart	1
 test/blocs/dm/conversation/conversation_bloc_test.dart	25
 test/blocs/dm/conversation_list/conversation_list_bloc_test.dart	9
