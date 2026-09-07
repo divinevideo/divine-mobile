@@ -44,7 +44,6 @@ commonBack	e2e/maestro/tests/follow.yaml	bound:Back
 commonBack	e2e/maestro/tests/profileNavigation.yaml	bound:Back
 commonCancel	e2e/maestro/asserts/assertEditProfileModal.yaml	bound:Cancel
 commonCancel	e2e/maestro/asserts/assertEditYourProfile.yaml	bound:Cancel
-commonCancel	e2e/maestro/asserts/assertRemoveKeysModal.yaml	bound:Cancel
 commonCancel	e2e/maestro/tests/editProfile.yaml	bound:Cancel
 commonCancel	e2e/maestro/tests/removeKeys.yaml	bound:Cancel
 deleteAccountRemoveKeysConfirm	e2e/maestro/tests/removeKeys.yaml	bound:Remove from device
