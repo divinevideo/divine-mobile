@@ -361,12 +361,16 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
         return const PeopleListPublishResult.failed();
       }
       final persisted = list.copyWith(nostrEventId: sent.event.id);
+      // Cache what was published, not what was handed to publishEvent: the
+      // client rebinds event.tags while applying the NIP-89 client tag, so the
+      // payload never sees it. Storing the payload would pair sourceTags with
+      // a nostrEventId those tags cannot hash to.
       await _cache.putList(
         ownerPubkey: ownerPubkey,
         list: persisted,
         receivedAt: DateTime.now().toUtc(),
-        sourceTags: payload.tags,
-        sourceContent: payload.content,
+        sourceTags: sent.event.tags,
+        sourceContent: sent.event.content,
       );
       return PeopleListPublishResult.submitted(eventId: sent.event.id);
     } on Object catch (error, stackTrace) {

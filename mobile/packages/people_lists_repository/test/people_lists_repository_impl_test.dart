@@ -343,6 +343,80 @@ void main() {
       );
 
       test(
+        'caches the tags the relay actually received, not the pre-publish ones',
+        () async {
+          final client = _MockNostrClient();
+          when(() => client.publicKey).thenReturn(_ownerPubkey);
+          final remote = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'shared-list'],
+              ['alt', 'Keep me'],
+              ['p', _memberA],
+            ],
+            content: 'ciphertext',
+            createdAt: 1000,
+          );
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: [remote], timedOut: false, noRelays: false),
+          );
+          // NostrClient appends the NIP-89 client tag during publish and
+          // rebinds event.tags to a new list, so the caller's pre-publish
+          // payload never observes it. Model that here.
+          when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+            final outgoing = invocation.positionalArguments.first as Event;
+            return PublishSuccess(
+              event: signedEvent(
+                kind: outgoing.kind,
+                tags: [
+                  ...outgoing.tags,
+                  const ['client', 'Divine'],
+                ],
+                content: outgoing.content,
+                createdAt: outgoing.createdAt,
+              ),
+            );
+          });
+          final repository = buildRepository(nostrClient: client);
+
+          expect(
+            (await repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'shared-list',
+              pubkey: _memberB,
+            )).submitted,
+            isTrue,
+          );
+          expect(
+            (await repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'shared-list',
+              pubkey: _memberC,
+            )).submitted,
+            isTrue,
+          );
+
+          final published = verify(
+            () => client.publishEvent(captureAny()),
+          ).captured.cast<Event>();
+          // The second edit is built from the source cached by the first. If
+          // that source were the pre-publish payload, the tag the relay holds
+          // would be missing here and the cached nostrEventId would belong to
+          // an event the cached tags cannot reproduce.
+          expect(
+            published.last.tags,
+            contains(equals(const ['client', 'Divine'])),
+          );
+        },
+      );
+
+      test(
         'publishes a kind 30000 event with a full p tag for new pubkey',
         () async {
           final client = _MockNostrClient();
