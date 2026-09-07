@@ -323,7 +323,13 @@ CategoriesRepository categoriesRepository(Ref ref) {
 /// Provider for ProfileRepository instance
 ///
 /// Creates a ProfileRepository for managing user profiles (Kind 0 metadata).
-/// Requires authentication.
+///
+/// Returns `null` until `nostrSessionProvider` reports
+/// `isReadyForActiveClient` — a keyed [NostrClient] for the active identity,
+/// not merely `AuthState.authenticated`. A signed-in user whose signer is
+/// still warming up gets `null` here, so callers must null-check. Reads that
+/// only need a pubkey should take [profileReadRepositoryProvider] instead,
+/// which is available one phase earlier.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
