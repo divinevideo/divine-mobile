@@ -23,6 +23,8 @@ void main() {
       List<String> suites = const ['included'],
       bool includeAnchor = true,
       String afterLoop = '',
+      String on = 'on:\n  pull_request:\n    branches: [main]\n',
+      String stepCondition = '',
     }) {
       final suiteLines = suites
           .map(
@@ -32,11 +34,13 @@ void main() {
       File(workflowPath)
         ..createSync(recursive: true)
         ..writeAsStringSync('''
+name: Mobile Integration Tests (Services)
+$on
 jobs:
   service-tests:
     steps:
       ${includeAnchor ? '- name: 🚀 Run service integration tests' : '- name: Different step'}
-        run: |
+$stepCondition        run: |
           for suite in \\
 $suiteLines          ; do
             flutter test "\$suite"
@@ -266,6 +270,24 @@ $afterLoop
         reason: 'stdout=${result.stdout} stderr=${result.stderr}',
       );
       expect(result.stdout, contains('no new entries'));
+    });
+
+    test('fails when the suite step is switched off by a condition', () {
+      writeWorkflow(stepCondition: '        if: \${{ false }}\n');
+
+      final result = run();
+
+      expect(result.exitCode, equals(1));
+      expect(result.stderr, contains('conditional'));
+    });
+
+    test('fails when the workflow stops running on pull requests', () {
+      writeWorkflow(on: 'on:\n  workflow_dispatch:\n');
+
+      final result = run();
+
+      expect(result.exitCode, equals(1));
+      expect(result.stderr, contains('pull_request'));
     });
 
     test('UPDATE_BASELINE preserves reasons for remaining exclusions', () {

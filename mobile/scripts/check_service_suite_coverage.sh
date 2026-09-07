@@ -61,6 +61,21 @@ loop_end_count="$(printf '%s\n' "$step_body" | grep -cE '; do[[:space:]]*$' || t
 [ "$loop_start_count" -eq 1 ] || fail "expected exactly one service-suite loop start, found $loop_start_count"
 [ "$loop_end_count" -eq 1 ] || fail "expected exactly one service-suite loop end, found $loop_end_count"
 
+# Accounting for a suite is only worth anything if the step actually runs. A
+# condition on it, or a workflow that no longer fires on pull requests, leaves
+# every suite listed and none of them executed -- green guard, no coverage.
+step_condition="$(printf '%s\n' "$step_body" | grep -E '^[[:space:]]*if:' || true)"
+[ -z "$step_condition" ] || fail "the service-suite step is conditional, so the guard cannot promise the suites run:
+$(printf '%s\n' "$step_condition" | sed 's/^/  /')"
+
+triggers="$(awk '
+  !inside && /^on:/ { inside = 1; print; next }
+  inside && /^[^[:space:]#]/ { inside = 0 }
+  inside
+' "$WORKFLOW")"
+printf '%s\n' "$triggers" | grep -q 'pull_request' \
+  || fail "the service workflow no longer runs on pull_request, so the suites this guard accounts for would not run on a pull request"
+
 loop_body="$(printf '%s\n' "$step_body" | sed -n '/^[[:space:]]*for suite in \\$/,/; do[[:space:]]*$/p')"
 run_list_raw="$(printf '%s\n' "$loop_body" | grep -oE 'integration_test/e2e/([A-Za-z0-9_]+/)*[A-Za-z0-9_]+_test\.dart' || true)"
 [ -n "$run_list_raw" ] || fail "service-suite loop contains no E2E suite paths"
