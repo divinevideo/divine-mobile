@@ -14,7 +14,6 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/invite_availability_providers.dart';
 import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/router/invite_availability_redirects.dart';
-import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
