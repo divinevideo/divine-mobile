@@ -3613,6 +3613,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsAddPeopleRetry => '다시 시도';
 
   @override
+  String get peopleListsLoadFailed =>
+      'Couldn\'t load this list. Check your connection and try again.';
+
+  @override
   String get peopleListsAddButton => '추가';
 
   @override
@@ -4493,6 +4497,17 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String listVideoCount(int count) {
     return '영상 $count개';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '$count member',
+    );
+    return '$_temp0';
   }
 
   @override

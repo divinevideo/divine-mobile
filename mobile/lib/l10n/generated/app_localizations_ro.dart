@@ -3961,6 +3961,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get peopleListsAddPeopleRetry => 'Încearcă din nou';
 
   @override
+  String get peopleListsLoadFailed =>
+      'Couldn\'t load this list. Check your connection and try again.';
+
+  @override
   String get peopleListsAddButton => 'Adaugă';
 
   @override
@@ -4910,6 +4914,17 @@ class AppLocalizationsRo extends AppLocalizations {
       other: '$count de videoclipuri',
       few: '$count videoclipuri',
       one: '1 videoclip',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String listMemberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '$count member',
     );
     return '$_temp0';
   }

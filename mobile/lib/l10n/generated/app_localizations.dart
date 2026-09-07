@@ -6625,6 +6625,12 @@ abstract class AppLocalizations {
   /// **'Try again'**
   String get peopleListsAddPeopleRetry;
 
+  /// No description provided for @peopleListsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this list. Check your connection and try again.'**
+  String get peopleListsLoadFailed;
+
   /// No description provided for @peopleListsAddButton.
   ///
   /// In en, this message translates to:
@@ -8172,6 +8178,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{{count} video} other{{count} videos}}'**
   String listVideoCount(int count);
+
+  /// Screen-reader count spoken for a people-list card, after the list name.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} member} other{{count} members}}'**
+  String listMemberCount(int count);
 
   /// No description provided for @listByAuthorPrefix.
   ///
