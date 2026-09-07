@@ -889,6 +889,61 @@ void main() {
         });
       });
 
+      test('a user reload after the attempt cap restarts polling', () {
+        var loadCount = 0;
+        when(() => repository.loadStatus(pubkey: testPubkey)).thenAnswer((
+          _,
+        ) async {
+          loadCount += 1;
+          return const BlueskyCrosspostAccountStatus(
+            crosspostEnabled: true,
+            username: 'testuser',
+            handle: 'testuser.divine.video',
+            provisioningState: AtprotoProvisioningState.pending,
+            usernameClaimStatus: UsernameClaimStatus.claimed,
+          );
+        });
+        when(() => repository.loadKeycastStatus()).thenAnswer((_) async {
+          loadCount += 1;
+          return const CrosspostStatus(
+            crosspostEnabled: true,
+            provisioningState: AtprotoProvisioningState.pending,
+          );
+        });
+
+        fakeAsync((fake) {
+          final cubit = buildCubit(
+            pollInterval: const Duration(milliseconds: 1),
+            maxProvisioningPollAttempts: 1,
+          );
+          fake.flushMicrotasks();
+          fake.elapse(const Duration(milliseconds: 1));
+          fake.flushMicrotasks();
+
+          expect(cubit.state.provisioningPollAttempts, 1);
+          expect(cubit.state.provisioningPollingTimedOut, isTrue);
+          final cappedCount = loadCount;
+          expect(cappedCount, greaterThan(1));
+
+          fake.elapse(const Duration(milliseconds: 5));
+          fake.flushMicrotasks();
+          expect(loadCount, cappedCount);
+
+          unawaited(cubit.loadStatus());
+          fake.flushMicrotasks();
+
+          expect(cubit.state.provisioningPollAttempts, 0);
+          expect(cubit.state.provisioningPollingTimedOut, isFalse);
+          final postReloadCount = loadCount;
+          expect(postReloadCount, greaterThan(cappedCount));
+
+          fake.elapse(const Duration(milliseconds: 1));
+          fake.flushMicrotasks();
+          expect(loadCount, greaterThan(postReloadCount));
+          cubit.close();
+        });
+      });
+
       test(
         'retryProvisioning re-enables crossposting from failed state',
         () async {
