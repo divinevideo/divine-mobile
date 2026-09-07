@@ -11,7 +11,7 @@ WORKFLOW_FILE="${SERVICE_SUITE_WORKFLOW_FILE:-$REPO_DIR/.github/workflows/mobile
 E2E_DIR="${SERVICE_SUITE_E2E_DIR:-$MOBILE_DIR/integration_test/e2e}"
 SUITE_PATH_ROOT="${SERVICE_SUITE_PATH_ROOT:-$MOBILE_DIR}"
 MANIFEST_FILE="${SERVICE_SUITE_MANIFEST_FILE:-$E2E_DIR/service_suite_exclusions.txt}"
-MANIFEST_REPO_PATH="mobile/integration_test/e2e/service_suite_exclusions.txt"
+MANIFEST_REPO_PATH="${MANIFEST_FILE#"$REPO_DIR"/}"
 BASE_REF="${SERVICE_SUITE_BASE_REF:-origin/main}"
 
 scratch="$(mktemp -d)"
@@ -42,6 +42,33 @@ parse_manifest() {
   ' "$1"
 }
 
+parse_workflow_suites() {
+  awk '
+    /SERVICE_SUITE_LIST_START/ { capture = 1; next }
+    /SERVICE_SUITE_LIST_END/ { capture = 0; next }
+    !capture { next }
+    /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+    /^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=\([[:space:]]*$/ { inside = 1; next }
+    /^[[:space:]]*\)[[:space:]]*$/ { inside = 0; next }
+    {
+      entry = $0
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", entry)
+      if (!inside) {
+        printf "Unexpected line %d between the suite-list markers: %s\n", FNR, entry > "/dev/stderr"
+        invalid = 1
+        next
+      }
+      if (entry !~ /^integration_test\/e2e\/[[:alnum:]_.\/-]+_test\.dart$/) {
+        printf "Unrecognized suite-array entry on line %d: %s\n", FNR, entry > "/dev/stderr"
+        invalid = 1
+        next
+      }
+      print entry
+    }
+    END { exit invalid }
+  ' "$1"
+}
+
 find "$E2E_DIR" -maxdepth 1 -type f -name '*_test.dart' -print \
   | sed "s|^$SUITE_PATH_ROOT/||" \
   | sort > "$scratch/all"
@@ -53,13 +80,7 @@ if [ "$start_markers" -ne 1 ] || [ "$end_markers" -ne 1 ]; then
   exit 1
 fi
 
-awk '
-  /SERVICE_SUITE_LIST_START/ { capture = 1; next }
-  /SERVICE_SUITE_LIST_END/ { capture = 0 }
-  capture
-' "$WORKFLOW_FILE" \
-  | grep -Eo 'integration_test/e2e/[[:alnum:]_./-]+_test\.dart' \
-  | sort > "$scratch/included"
+parse_workflow_suites "$WORKFLOW_FILE" | sort > "$scratch/included"
 
 parse_manifest "$MANIFEST_FILE" | sort > "$scratch/excluded"
 
@@ -99,14 +120,29 @@ if [ -n "$unknown" ]; then
 fi
 
 base_manifest="${SERVICE_SUITE_BASE_MANIFEST:-}"
+skipped_growth=false
 if [ -z "$base_manifest" ]; then
-  if ! git -C "$REPO_DIR" rev-parse --verify "$BASE_REF^{commit}" >/dev/null 2>&1; then
-    echo "FAIL [service_suite_coverage]: cannot resolve base ref $BASE_REF."
-    exit 1
+  if ! git -C "$REPO_DIR" rev-parse --verify --quiet "$BASE_REF^{commit}" >/dev/null 2>&1; then
+    git -C "$REPO_DIR" fetch --quiet --depth=1 origin main 2>/dev/null || true
   fi
-  if git -C "$REPO_DIR" cat-file -e "$BASE_REF:$MANIFEST_REPO_PATH" 2>/dev/null; then
+  if ! git -C "$REPO_DIR" rev-parse --verify --quiet "$BASE_REF^{commit}" >/dev/null 2>&1; then
+    if [ "${SERVICE_SUITE_ALLOW_NO_BASE:-0}" = "1" ]; then
+      echo "NOTE [service_suite_coverage]: $BASE_REF unavailable; skipping the no-growth comparison (SERVICE_SUITE_ALLOW_NO_BASE=1, local opt-out)."
+      skipped_growth=true
+    else
+      echo "FAIL [service_suite_coverage]: cannot resolve base ref $BASE_REF, so the"
+      echo "  no-growth ratchet cannot be verified - failing closed. Ensure $BASE_REF is"
+      echo "  fetched (CI fetches it before this guard); for a local run without a base"
+      echo "  ref, set SERVICE_SUITE_ALLOW_NO_BASE=1."
+      exit 1
+    fi
+  elif git -C "$REPO_DIR" cat-file -e "$BASE_REF:$MANIFEST_REPO_PATH" 2>/dev/null; then
     base_manifest="$scratch/base_manifest"
-    git -C "$REPO_DIR" show "$BASE_REF:$MANIFEST_REPO_PATH" > "$base_manifest"
+    if ! git -C "$REPO_DIR" show "$BASE_REF:$MANIFEST_REPO_PATH" > "$base_manifest" 2>/dev/null; then
+      echo "FAIL [service_suite_coverage]: $MANIFEST_REPO_PATH exists on $BASE_REF but could"
+      echo "  not be read, so the no-growth ratchet cannot be verified - failing closed."
+      exit 1
+    fi
   fi
 fi
 
@@ -118,8 +154,8 @@ if [ -n "$base_manifest" ]; then
     echo "$growth"
     failed=true
   fi
-else
-  echo "NOTE [service_suite_coverage]: introducing the exclusion manifest; skipping the no-growth comparison."
+elif [ "$skipped_growth" != "true" ]; then
+  echo "NOTE [service_suite_coverage]: no exclusion manifest on $BASE_REF yet (introducing the guard); skipping the no-growth comparison."
 fi
 
 if [ "$failed" = "true" ]; then
@@ -128,4 +164,8 @@ fi
 
 included_count="$(wc -l < "$scratch/included_unique" | tr -d '[:space:]')"
 excluded_count="$(wc -l < "$scratch/excluded_unique" | tr -d '[:space:]')"
-echo "OK: all E2E suites accounted for ($included_count included, $excluded_count excluded); exclusion debt did not grow."
+if [ -n "$base_manifest" ]; then
+  echo "OK: all E2E suites accounted for ($included_count included, $excluded_count excluded); exclusion debt did not grow."
+else
+  echo "OK: all E2E suites accounted for ($included_count included, $excluded_count excluded); no-growth comparison skipped."
+fi
