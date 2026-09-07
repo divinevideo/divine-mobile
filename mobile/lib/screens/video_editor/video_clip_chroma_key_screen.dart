@@ -51,6 +51,9 @@ class VideoClipChromaKeyScreen extends StatefulWidget {
   final DivineVideoClip clip;
 
   /// Whether a clip without a key measures itself as soon as the screen opens.
+  ///
+  /// Only a test turns this off, to stay clear of the native decode; the
+  /// measurement itself belongs to [ChromaKeyEditorCubit].
   @visibleForTesting
   final bool detectOnOpen;
 
@@ -84,13 +87,8 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
     _cubit = ChromaKeyEditorCubit(
       video: EditorVideo.file(_previewPath),
       initialChromaKey: widget.clip.chromaKey,
+      detectOnOpen: widget.detectOnOpen,
     );
-    // Measuring beats guessing and costs one thumbnail decode, so a clip
-    // without a key opens with the screen colour already measured. A clip that
-    // has one keeps it: re-measuring would throw the user's tuning away.
-    if (widget.detectOnOpen && widget.clip.chromaKey == null) {
-      unawaited(_cubit.detectFromFootage());
-    }
     unawaited(_initializePlayer());
   }
 

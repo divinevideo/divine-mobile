@@ -1,10 +1,12 @@
 // ABOUTME: Drives the chroma-key screen: key colour, tolerances, background
 // ABOUTME: choice, and the auto-detect measurement.
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -31,16 +33,30 @@ const _initialKey = ClipChromaKey(key: ChromaKey.greenScreen());
 /// Everything here is in-memory: the clip is only updated when the screen is
 /// confirmed, and the key is applied by the renderer at export rather than
 /// baked into the clip's file.
-class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState> {
+class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
+    with CloseGuardedEmit<ChromaKeyEditorState> {
+  /// Starts measuring straight away when the clip arrives without a key.
+  ///
+  /// Set [detectOnOpen] to `false` only to keep a test off the measurement
+  /// path; the screen leaves it on.
   ChromaKeyEditorCubit({
     required EditorVideo video,
     ClipChromaKey? initialChromaKey,
     ChromaKeyDetectFn detect = ChromaKey.detect,
+    bool detectOnOpen = true,
   }) : _video = video,
        _detect = detect,
        super(
          ChromaKeyEditorState(chromaKey: initialChromaKey ?? _initialKey),
-       );
+       ) {
+    // Measuring beats guessing and costs one thumbnail decode, so the screen
+    // opens on a real cutout — or on the reason there isn't one — instead of
+    // an inert panel the user has to know to poke. A clip that already has a
+    // key keeps it: re-measuring would throw the user's tuning away.
+    if (detectOnOpen && initialChromaKey == null) {
+      unawaited(detectFromFootage());
+    }
+  }
 
   static const _logName = 'ChromaKeyEditorCubit';
 
@@ -61,8 +77,7 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState> {
 
     try {
       final detection = await _detect(_video);
-      if (isClosed) return;
-      emit(
+      emitIfOpen(
         state.copyWith(
           chromaKey: ClipChromaKey(
             key: state.chromaKey.key.copyWith(
@@ -83,8 +98,9 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState> {
         category: LogCategory.video,
       );
       addError(error, stackTrace);
-      if (isClosed) return;
-      emit(state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure));
+      emitIfOpen(
+        state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure),
+      );
     } catch (error, stackTrace) {
       // Same split as the bake in `ClipEditorBloc`: a decode or channel failure
       // is expected and stays out of Crashlytics, an invariant violation does
@@ -98,8 +114,9 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState> {
         },
         stackTrace,
       );
-      if (isClosed) return;
-      emit(state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure));
+      emitIfOpen(
+        state.copyWith(detectionStatus: ChromaKeyDetectionStatus.failure),
+      );
     }
   }
 
