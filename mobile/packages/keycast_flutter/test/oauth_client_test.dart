@@ -538,6 +538,37 @@ void main() {
         expect(result.errorDescription, contains('500'));
       });
 
+      test('classifies a 429 without a machine code', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'error': 'Slow down'}), 429);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final (result, _) = await oauth.headlessRegister(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, 'rate_limited');
+        expect(result.errorDescription, 'Slow down');
+      });
+
+      test('classifies a non-JSON 429', () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('rate limited', 429);
+        });
+
+        final oauth = KeycastOAuth(config: config, httpClient: mockClient);
+        final (result, _) = await oauth.headlessRegister(
+          email: 'test@example.com',
+          password: 'password123',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.errorCode, 'rate_limited');
+      });
+
       test('returns error on invalid JSON response', () async {
         final mockClient = MockClient((request) async {
           return http.Response('not valid json {{{', 200);

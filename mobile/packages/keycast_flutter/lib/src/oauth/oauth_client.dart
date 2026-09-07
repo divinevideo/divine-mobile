@@ -413,6 +413,28 @@ class KeycastOAuth {
         );
       }
 
+      // Keycast's register handler does not emit 429 today. Anything in front
+      // of it can, and waiting is the only useful action — do not flatten it.
+      if (response.statusCode == 429) {
+        String? message;
+        try {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          message =
+              json['error'] as String? ??
+              json['error_description'] as String? ??
+              json['message'] as String?;
+        } catch (_) {
+          // Proxy 429s are often non-JSON; status is enough to classify.
+        }
+        return (
+          HeadlessRegisterResult.error(
+            message ?? 'Too many attempts. Please try again later.',
+            code: 'rate_limited',
+          ),
+          verifier,
+        );
+      }
+
       if (response.statusCode >= 500) {
         return (
           HeadlessRegisterResult.error(
