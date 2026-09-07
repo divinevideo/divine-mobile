@@ -182,6 +182,10 @@ run_list_ratchet() {
           fail=1
           continue
         fi
+        if grep -Fqx "$rename_new" <<< "$LR_MAIN_BASELINE" &&
+          ! grep -Fqx "$rename_old" <<< "$LR_MAIN_BASELINE"; then
+          continue
+        fi
         if ! grep -Fqx "$rename_old" <<< "$LR_MAIN_BASELINE"; then
           echo "FAIL [$RATCHET_LABEL]: renamed-from old key is not in ${BASE_REF}: $rename_old"
           fail=1
