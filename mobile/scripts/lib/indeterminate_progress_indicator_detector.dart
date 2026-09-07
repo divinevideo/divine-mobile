@@ -48,11 +48,16 @@ class _IndicatorVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
-    _check(
-      node.constructorName.type.name.lexeme,
-      node.argumentList,
-      node.offset,
-    );
+    // Unresolved, `CircularProgressIndicator.adaptive()` parses as a prefixed
+    // type named `adaptive`, because the leading identifier is equally a class
+    // or an import prefix. Check the prefix too, or every `const`/`new`
+    // adaptive constructor walks past a zero-tolerance guard.
+    final type = node.constructorName.type;
+    _check(type.name.lexeme, node.argumentList, node.offset);
+    final importPrefix = type.importPrefix?.name.lexeme;
+    if (importPrefix != null) {
+      _check(importPrefix, node.argumentList, node.offset);
+    }
     super.visitInstanceCreationExpression(node);
   }
 

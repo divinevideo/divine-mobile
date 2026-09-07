@@ -22,6 +22,36 @@ Widget c() => material.CircularProgressIndicator.adaptive();
       ]);
     });
 
+    test('finds adaptive constructors in every written form', () {
+      // Unresolved, the leading identifier of `CircularProgressIndicator
+      // .adaptive()` is equally a class or an import prefix, so the `const`
+      // and `new` forms parse as a prefixed type named `adaptive`. On iOS
+      // `.adaptive` renders a CupertinoActivityIndicator, which animates
+      // forever and never consults MediaQuery.disableAnimations -- exactly
+      // what this guard exists to keep out.
+      final sites = findIndeterminateProgressIndicatorsInSource('''
+Widget a() => const CircularProgressIndicator.adaptive();
+Widget b() => new CircularProgressIndicator.adaptive();
+Widget c() => CircularProgressIndicator.adaptive();
+Widget d() => const material.CircularProgressIndicator.adaptive();
+''');
+
+      expect(sites.map((site) => site.widget), [
+        'CircularProgressIndicator',
+        'CircularProgressIndicator',
+        'CircularProgressIndicator',
+        'CircularProgressIndicator',
+      ]);
+    });
+
+    test('reports a prefixed indicator exactly once', () {
+      final sites = findIndeterminateProgressIndicatorsInSource(
+        'Widget a() => const material.CircularProgressIndicator();',
+      );
+
+      expect(sites, hasLength(1));
+    });
+
     test('allows raw determinate indicators and Divine wrappers', () {
       final sites = findIndeterminateProgressIndicatorsInSource('''
 Widget a() => CircularProgressIndicator(value: progress);
