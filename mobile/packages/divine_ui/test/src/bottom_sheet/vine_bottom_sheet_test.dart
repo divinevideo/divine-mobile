@@ -7,6 +7,15 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+// Matches the unkeyed 64x4 rounded Container the header paints as the drag
+// handle. Asserting the rendered tree, rather than the forwarded
+// showDragHandle flag, is what catches a header that stops honouring it.
+final Finder _dragHandle = find.byWidgetPredicate((widget) {
+  if (widget is! Container) return false;
+  final constraints = widget.constraints;
+  return constraints?.maxWidth == 64 && constraints?.maxHeight == 4;
+});
+
 void main() {
   group('VineBottomSheet', () {
     testWidgets('renders with required props', (tester) async {
@@ -1346,14 +1355,7 @@ void main() {
           await tester.tap(find.text('Open Fixed Without Handle'));
           await tester.pumpAndSettle();
 
-          expect(
-            tester
-                .widget<VineBottomSheetHeader>(
-                  find.byType(VineBottomSheetHeader),
-                )
-                .showDragHandle,
-            isFalse,
-          );
+          expect(_dragHandle, findsNothing);
         },
       );
 
@@ -1380,14 +1382,7 @@ void main() {
           await tester.tap(find.text('Open Scrollable Without Handle'));
           await tester.pumpAndSettle();
 
-          expect(
-            tester
-                .widget<VineBottomSheetHeader>(
-                  find.byType(VineBottomSheetHeader),
-                )
-                .showDragHandle,
-            isFalse,
-          );
+          expect(_dragHandle, findsNothing);
         },
       );
 
@@ -1416,14 +1411,7 @@ void main() {
           await tester.tap(find.text('Open With Handle'));
           await tester.pumpAndSettle();
 
-          expect(
-            tester
-                .widget<VineBottomSheetHeader>(
-                  find.byType(VineBottomSheetHeader),
-                )
-                .showDragHandle,
-            isTrue,
-          );
+          expect(_dragHandle, findsOneWidget);
         },
       );
 
@@ -1450,14 +1438,7 @@ void main() {
           await tester.tap(find.text('Open Draggable'));
           await tester.pumpAndSettle();
 
-          expect(
-            tester
-                .widget<VineBottomSheetHeader>(
-                  find.byType(VineBottomSheetHeader),
-                )
-                .showDragHandle,
-            isTrue,
-          );
+          expect(_dragHandle, findsOneWidget);
         },
       );
     });

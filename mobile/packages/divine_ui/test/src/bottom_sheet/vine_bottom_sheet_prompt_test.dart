@@ -43,6 +43,15 @@ class _TestAssetBundle extends CachingAssetBundle {
   }
 }
 
+// Matches the unkeyed 64x4 rounded Container the header paints as the drag
+// handle. Asserting the rendered tree, rather than the forwarded
+// showDragHandle flag, is what catches a header that stops honouring it.
+final Finder _dragHandle = find.byWidgetPredicate((widget) {
+  if (widget is! Container) return false;
+  final constraints = widget.constraints;
+  return constraints?.maxWidth == 64 && constraints?.maxHeight == 4;
+});
+
 void main() {
   late _TestAssetBundle bundle;
 
@@ -489,14 +498,7 @@ void main() {
           // a simulated fling inside the scroll body is gesture-arena-flaky.
           final sheet = tester.widget<BottomSheet>(find.byType(BottomSheet));
           expect(sheet.enableDrag, isFalse);
-          expect(
-            tester
-                .widget<VineBottomSheetHeader>(
-                  find.byType(VineBottomSheetHeader),
-                )
-                .showDragHandle,
-            isFalse,
-          );
+          expect(_dragHandle, findsNothing);
         },
       );
     });
