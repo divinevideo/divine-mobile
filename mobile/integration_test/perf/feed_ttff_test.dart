@@ -59,70 +59,72 @@ Future<void> _waitForSamples(
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets(
-    'feed TTFF stays within the 5 Mbps p90 budget',
-    (tester) async {
-      final cache = _MockMediaCacheManager();
-      final download = _MockDownload();
-      when(() => cache.getCachedFileSync(any())).thenReturn(null);
-      when(() => cache.removeCachedFile(any())).thenAnswer((_) async {});
-      when(() => download.file).thenAnswer((_) async => null);
-      when(
-        () => download.result,
-      ).thenAnswer((_) async => const CancellableDownloadResult(file: null));
-      when(() => download.isCancelled).thenReturn(false);
-      when(download.cancel).thenReturn(null);
-      final cancellable = CancellableCacheOperation.fromDownload(download);
-      when(
-        () => cache.cacheFileCancellable(any(), key: any(named: 'key')),
-      ).thenReturn(cancellable);
+  group('feed TTFF', () {
+    testWidgets(
+      'stays within the 5 Mbps p90 budget',
+      (tester) async {
+        final cache = _MockMediaCacheManager();
+        final download = _MockDownload();
+        when(() => cache.getCachedFileSync(any())).thenReturn(null);
+        when(() => cache.removeCachedFile(any())).thenAnswer((_) async {});
+        when(() => download.file).thenAnswer((_) async => null);
+        when(
+          () => download.result,
+        ).thenAnswer((_) async => const CancellableDownloadResult(file: null));
+        when(() => download.isCancelled).thenReturn(false);
+        when(download.cancel).thenReturn(null);
+        final cancellable = CancellableCacheOperation.fromDownload(download);
+        when(
+          () => cache.cacheFileCancellable(any(), key: any(named: 'key')),
+        ).thenReturn(cancellable);
 
-      final samples = <String, FeedFirstFrameMetric>{};
-      final subscription = FeedFirstFrameMetrics.events.listen((metric) {
-        samples.putIfAbsent(metric.videoId, () => metric);
-        // Kept machine-readable for the retained Codemagic log artifact.
-        debugPrint(
-          'FEED_TTFF videoId=${metric.videoId} index=${metric.index} '
-          'durationMs=${metric.duration.inMilliseconds} '
-          'cache=${metric.loadedFromCache ? 'hit' : 'miss'}',
-        );
-      });
-      addTearDown(subscription.cancel);
+        final samples = <String, FeedFirstFrameMetric>{};
+        final subscription = FeedFirstFrameMetrics.events.listen((metric) {
+          samples.putIfAbsent(metric.videoId, () => metric);
+          // Kept machine-readable for the retained Codemagic log artifact.
+          debugPrint(
+            'FEED_TTFF videoId=${metric.videoId} index=${metric.index} '
+            'durationMs=${metric.duration.inMilliseconds} '
+            'cache=${metric.loadedFromCache ? 'hit' : 'miss'}',
+          );
+        });
+        addTearDown(subscription.cancel);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: InfiniteVideoFeed(
-              videos: _videos(),
-              cache: cache,
-              prefetchCount: 0,
-              keepPreviousAlive: false,
-              keepNextAlive: false,
-              preloadGracePeriod: Duration.zero,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: InfiniteVideoFeed(
+                videos: _videos(),
+                cache: cache,
+                prefetchCount: 0,
+                keepPreviousAlive: false,
+                keepNextAlive: false,
+                preloadGracePeriod: Duration.zero,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await _waitForSamples(tester, samples, 1);
-      for (var expected = 2; expected <= feedTtffSampleCount; expected++) {
-        await tester.fling(find.byType(PageView), const Offset(0, -600), 900);
-        await _waitForSamples(tester, samples, expected);
-      }
+        await _waitForSamples(tester, samples, 1);
+        for (var expected = 2; expected <= feedTtffSampleCount; expected++) {
+          await tester.fling(find.byType(PageView), const Offset(0, -600), 900);
+          await _waitForSamples(tester, samples, expected);
+        }
 
-      final measured = samples.values.take(feedTtffSampleCount).toList();
-      final p90 = feedTtffPercentile(measured, percentile: 90);
-      final evidence = formatFeedTtffSamples(measured);
-      debugPrint('$evidence\nFeed TTFF p90=${p90.inMilliseconds}ms');
-      expect(
-        p90,
-        lessThanOrEqualTo(feedTtffP90Budget),
-        reason:
-            '$evidence\n'
-            'p90=${p90.inMilliseconds}ms exceeded '
-            '${feedTtffP90Budget.inMilliseconds}ms',
-      );
-    },
-    timeout: const Timeout(Duration(minutes: 4)),
-  );
+        final measured = samples.values.take(feedTtffSampleCount).toList();
+        final p90 = feedTtffPercentile(measured, percentile: 90);
+        final evidence = formatFeedTtffSamples(measured);
+        debugPrint('$evidence\nFeed TTFF p90=${p90.inMilliseconds}ms');
+        expect(
+          p90,
+          lessThanOrEqualTo(feedTtffP90Budget),
+          reason:
+              '$evidence\n'
+              'p90=${p90.inMilliseconds}ms exceeded '
+              '${feedTtffP90Budget.inMilliseconds}ms',
+        );
+      },
+      timeout: const Timeout(Duration(minutes: 4)),
+    );
+  });
 }
