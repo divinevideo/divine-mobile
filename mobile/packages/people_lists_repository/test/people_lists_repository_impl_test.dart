@@ -50,6 +50,8 @@ const _memberA =
     '2222222222222222222222222222222222222222222222222222222222222222';
 const _memberB =
     '3333333333333333333333333333333333333333333333333333333333333333';
+const _memberC =
+    '5555555555555555555555555555555555555555555555555555555555555555';
 const _blockedOwnerPubkey =
     '4444444444444444444444444444444444444444444444444444444444444444';
 
@@ -225,6 +227,121 @@ void main() {
     });
 
     group('addPubkey', () {
+      test('preserves foreign tags, p-tag positions, and content', () async {
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        final remote = signedEvent(
+          kind: _peopleListKind,
+          tags: const [
+            ['d', 'shared-list'],
+            ['alt', 'Written by another client'],
+            ['p', _memberA, 'wss://relay.example', 'friend'],
+            ['expiration', '2000000000'],
+          ],
+          content: 'nip44-encrypted-private-members',
+          createdAt: 1000,
+        );
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: [remote], timedOut: false, noRelays: false),
+        );
+        when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+          final event = invocation.positionalArguments.first as Event;
+          return PublishSuccess(event: event);
+        });
+        final repository = buildRepository(nostrClient: client);
+
+        final result = await repository.addPubkey(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          pubkey: _memberB,
+        );
+
+        expect(result.status, PeopleListPublishStatus.submitted);
+        final published =
+            verify(() => client.publishEvent(captureAny())).captured.single
+                as Event;
+        expect(published.tags, const [
+          ['d', 'shared-list'],
+          ['alt', 'Written by another client'],
+          ['p', _memberA, 'wss://relay.example', 'friend'],
+          ['expiration', '2000000000'],
+          ['p', _memberB],
+        ]);
+        expect(published.content, 'nip44-encrypted-private-members');
+      });
+
+      test(
+        'a second edit uses the complete source published by the first',
+        () async {
+          final client = _MockNostrClient();
+          when(() => client.publicKey).thenReturn(_ownerPubkey);
+          final staleRemote = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'shared-list'],
+              ['alt', 'Keep me'],
+              ['p', _memberA, 'wss://relay.example'],
+            ],
+            content: 'ciphertext',
+            createdAt: 1000,
+          );
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: [staleRemote],
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+            return PublishSuccess(
+              event: invocation.positionalArguments.first as Event,
+            );
+          });
+          final repository = buildRepository(nostrClient: client);
+
+          expect(
+            (await repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'shared-list',
+              pubkey: _memberB,
+            )).submitted,
+            isTrue,
+          );
+          expect(
+            (await repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: 'shared-list',
+              pubkey: _memberC,
+            )).submitted,
+            isTrue,
+          );
+
+          final published = verify(
+            () => client.publishEvent(captureAny()),
+          ).captured.cast<Event>();
+          expect(published.last.tags, const [
+            ['d', 'shared-list'],
+            ['alt', 'Keep me'],
+            ['p', _memberA, 'wss://relay.example'],
+            ['p', _memberB],
+            ['p', _memberC],
+          ]);
+          expect(published.last.content, 'ciphertext');
+        },
+      );
+
       test(
         'publishes a kind 30000 event with a full p tag for new pubkey',
         () async {
@@ -586,6 +703,52 @@ void main() {
           );
         },
       );
+
+      test(
+        'a legacy cached list without a complete source fails closed',
+        () async {
+          final client = publishingClient();
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          final legacyEvent = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'legacy-list'],
+              ['title', 'Legacy'],
+              ['p', _memberA],
+            ],
+            createdAt: 2000,
+          );
+          await cache.putList(
+            ownerPubkey: _ownerPubkey,
+            list: Nip51PeopleListCodec.decode(legacyEvent)!,
+            receivedAt: DateTime.now().toUtc(),
+          );
+          stubReconcile(
+            client,
+            events: [
+              signedEvent(
+                kind: _peopleListKind,
+                tags: const [
+                  ['d', 'legacy-list'],
+                  ['title', 'Older'],
+                  ['p', _memberA],
+                ],
+                createdAt: 1000,
+              ),
+            ],
+          );
+          final repository = buildRepository(nostrClient: client, cache: cache);
+
+          final result = await repository.addPubkey(
+            ownerPubkey: _ownerPubkey,
+            listId: 'legacy-list',
+            pubkey: _memberB,
+          );
+
+          expect(result.status, PeopleListPublishStatus.failed);
+          verifyNever(() => client.publishEvent(any()));
+        },
+      );
     });
 
     group('deleteList', () {
@@ -690,6 +853,104 @@ void main() {
     });
 
     group('syncOwner', () {
+      test(
+        'stores the newest revision regardless of relay result order',
+        () async {
+          final client = _MockNostrClient();
+          when(() => client.publicKey).thenReturn(_ownerPubkey);
+          final newer = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'Crew'],
+              ['title', 'Newer'],
+              ['p', _memberA],
+              ['p', _memberB],
+            ],
+            createdAt: 2000,
+          );
+          final older = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'Crew'],
+              ['title', 'Older'],
+              ['p', _memberA],
+            ],
+            createdAt: 1000,
+          );
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: [newer, older],
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          final repository = buildRepository(nostrClient: client);
+
+          await repository.syncOwner(ownerPubkey: _ownerPubkey);
+
+          final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
+          expect(stored.single.name, 'Newer');
+          expect(stored.single.pubkeys, const [_memberA, _memberB]);
+        },
+      );
+
+      test('uses the lowest event id when revision timestamps tie', () async {
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        final higherId =
+            signedEvent(
+                kind: _peopleListKind,
+                tags: const [
+                  ['d', 'Crew'],
+                  ['title', 'Higher id'],
+                  ['p', _memberA],
+                ],
+                createdAt: 2000,
+              )
+              ..id =
+                  'ffffffffffffffffffffffffffffffff'
+                  'ffffffffffffffffffffffffffffffff';
+        final lowerId =
+            signedEvent(
+                kind: _peopleListKind,
+                tags: const [
+                  ['d', 'Crew'],
+                  ['title', 'Lower id'],
+                  ['p', _memberB],
+                ],
+                createdAt: 2000,
+              )
+              ..id =
+                  '00000000000000000000000000000000'
+                  '00000000000000000000000000000000';
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: [higherId, lowerId],
+            timedOut: false,
+            noRelays: false,
+          ),
+        );
+        final repository = buildRepository(nostrClient: client);
+
+        await repository.syncOwner(ownerPubkey: _ownerPubkey);
+
+        final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
+        expect(stored.single.name, 'Lower id');
+        expect(stored.single.pubkeys, const [_memberB]);
+      });
+
       test(
         'queries kind 30000 by author and writes decoded lists to cache',
         () async {

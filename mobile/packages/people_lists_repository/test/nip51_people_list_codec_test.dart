@@ -16,6 +16,87 @@ void main() {
         'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
 
     group('encode', () {
+      test('edits members over the complete source event', () {
+        final list = UserList(
+          id: 'punk-friends',
+          name: 'Punk Friends',
+          pubkeys: const [memberPubkeyA, memberPubkeyB],
+          createdAt: DateTime.fromMillisecondsSinceEpoch(1710000000000),
+          updatedAt: DateTime.fromMillisecondsSinceEpoch(1710000000000),
+        );
+        const ciphertext = 'nip44-ciphertext-written-by-another-client';
+
+        final payload = Nip51PeopleListCodec.encode(
+          list,
+          sourceTags: const [
+            ['d', 'punk-friends', 'extra-position'],
+            ['alt', 'Follow set'],
+            ['p', memberPubkeyA, 'wss://relay.example', 'friend'],
+            ['p', memberPubkeyA, 'wss://backup.example'],
+            ['t', 'nostr'],
+          ],
+          sourceContent: ciphertext,
+        );
+
+        expect(payload.tags, const [
+          ['d', 'punk-friends', 'extra-position'],
+          ['alt', 'Follow set'],
+          ['p', memberPubkeyA, 'wss://relay.example', 'friend'],
+          ['p', memberPubkeyA, 'wss://backup.example'],
+          ['t', 'nostr'],
+          ['p', memberPubkeyB],
+        ]);
+        expect(payload.content, ciphertext);
+      });
+
+      test('removes every source tag for a removed member', () {
+        final list = UserList(
+          id: 'punk-friends',
+          name: 'Punk Friends',
+          pubkeys: const [memberPubkeyB],
+          createdAt: DateTime.fromMillisecondsSinceEpoch(1710000000000),
+          updatedAt: DateTime.fromMillisecondsSinceEpoch(1710000000000),
+        );
+
+        final payload = Nip51PeopleListCodec.encode(
+          list,
+          sourceTags: const [
+            ['d', 'punk-friends'],
+            ['p', memberPubkeyA, 'wss://relay.example'],
+            ['p', memberPubkeyA, 'wss://backup.example'],
+            ['p', memberPubkeyB, 'wss://relay.example'],
+          ],
+          sourceContent: '',
+        );
+
+        expect(payload.tags, const [
+          ['d', 'punk-friends'],
+          ['p', memberPubkeyB, 'wss://relay.example'],
+        ]);
+      });
+
+      test('rejects a source for a different addressable list', () {
+        final list = UserList(
+          id: 'punk-friends',
+          name: 'Punk Friends',
+          pubkeys: const [memberPubkeyA],
+          createdAt: DateTime.fromMillisecondsSinceEpoch(1710000000000),
+          updatedAt: DateTime.fromMillisecondsSinceEpoch(1710000000000),
+        );
+
+        expect(
+          () => Nip51PeopleListCodec.encode(
+            list,
+            sourceTags: const [
+              ['d', 'some-other-list'],
+              ['p', memberPubkeyA],
+            ],
+            sourceContent: '',
+          ),
+          throwsArgumentError,
+        );
+      });
+
       test('creates a kind 30000 follow set with all optional tags', () {
         final list = UserList(
           id: 'punk-friends',

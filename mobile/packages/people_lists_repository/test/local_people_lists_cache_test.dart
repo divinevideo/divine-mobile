@@ -199,6 +199,92 @@ void main() {
     });
 
     group('putList', () {
+      test('round-trips the complete publish source', () async {
+        final cache = LocalPeopleListsCache(openBox: makeOpener());
+        final list = _list(
+          id: 'source-list',
+          updatedAt: DateTime.utc(2026, 4, 1),
+        );
+        const sourceTags = [
+          ['d', 'source-list'],
+          ['alt', 'Written elsewhere'],
+          ['p', _memberA, 'wss://relay.example'],
+        ];
+
+        await cache.putList(
+          ownerPubkey: _ownerA,
+          list: list,
+          receivedAt: DateTime.utc(2026, 4, 20),
+          sourceTags: sourceTags,
+          sourceContent: 'encrypted-private-items',
+        );
+
+        final record = await cache.readRecord(
+          ownerPubkey: _ownerA,
+          listId: list.id,
+        );
+        expect(record, isNotNull);
+        expect(record!.list, list);
+        expect(record.sourceTags, sourceTags);
+        expect(record.sourceContent, 'encrypted-private-items');
+        expect(record.hasPublishSource, isTrue);
+      });
+
+      test(
+        'loads a legacy row without treating it as a publish source',
+        () async {
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          final list = _list(
+            id: 'legacy-list',
+            updatedAt: DateTime.utc(2026, 4, 1),
+          );
+
+          await cache.putList(
+            ownerPubkey: _ownerA,
+            list: list,
+            receivedAt: DateTime.utc(2026, 4, 20),
+          );
+
+          final record = await cache.readRecord(
+            ownerPubkey: _ownerA,
+            listId: list.id,
+          );
+          expect(record, isNotNull);
+          expect(record!.list, list);
+          expect(record.hasPublishSource, isFalse);
+        },
+      );
+
+      test('keeps a list readable but rejects its malformed source', () async {
+        final box = await Hive.openBox<dynamic>(
+          'malformed_source_${boxCounter++}',
+          path: tempDir.path,
+        );
+        final list = _list(
+          id: 'malformed-source',
+          updatedAt: DateTime.utc(2026, 4, 1),
+        );
+        await box.put('list:$_ownerA:${list.id}', <String, dynamic>{
+          'ownerPubkey': _ownerA,
+          'list': list.toJson(),
+          'receivedAtMillis': DateTime.utc(2026, 4, 20).millisecondsSinceEpoch,
+          'sourceTags': [
+            ['d', null],
+          ],
+          'sourceContent': '',
+        });
+        final cache = LocalPeopleListsCache(openBox: () async => box);
+
+        expect(await cache.readLists(ownerPubkey: _ownerA), [list]);
+        final record = await cache.readRecord(
+          ownerPubkey: _ownerA,
+          listId: list.id,
+        );
+        expect(record, isNotNull);
+        expect(record!.list, list);
+        expect(record.hasPublishSource, isFalse);
+      });
+
       test('ignores events older than a tombstone', () async {
         final cache = LocalPeopleListsCache(openBox: makeOpener());
 
