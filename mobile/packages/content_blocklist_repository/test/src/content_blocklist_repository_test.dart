@@ -4151,6 +4151,7 @@ void main() {
           stubReadSettled();
 
           final service = ContentBlocklistRepository(prefs: prefs);
+          addTearDown(service.dispose);
           await service.syncBlockListsInBackground(
             mockClient,
             mockSigner,
@@ -4202,7 +4203,7 @@ void main() {
                         content: any(named: 'content'),
                         tags: captureAny(named: 'tags'),
                       ),
-                    ).captured.last
+                    ).captured.single
                     as List<List<String>>;
             expect(tags, isNot(contains(equals(['p', target]))));
           },
@@ -4262,7 +4263,7 @@ void main() {
                         content: any(named: 'content'),
                         tags: captureAny(named: 'tags'),
                       ),
-                    ).captured.last
+                    ).captured.single
                     as List<List<String>>;
             expect(tags, isNot(contains(equals(['p', target]))));
           },
@@ -4292,12 +4293,8 @@ void main() {
                 tags: any(named: 'tags'),
               ),
             );
-            expect(
-              jsonDecode(
-                prefs.getString('pending_unblocks.$ourPubkey') ?? '{}',
-              ),
-              isNot(contains(target)),
-            );
+            expect(prefs.getString('pending_unblocks.$ourPubkey'), isNull);
+            expect(prefs.getString('pending_unblocks'), isNull);
           },
         );
 
@@ -4335,7 +4332,7 @@ void main() {
                         content: any(named: 'content'),
                         tags: captureAny(named: 'tags'),
                       ),
-                    ).captured.last
+                    ).captured.single
                     as List<List<String>>;
             expect(tags, contains(equals(['p', target])));
           },
