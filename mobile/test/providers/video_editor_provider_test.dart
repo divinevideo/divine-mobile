@@ -3505,6 +3505,7 @@ void main() {
     late AppDatabase database;
     late ProviderContainer container;
     late Directory tempDir;
+    late VideoEditorNotifier editorNotifier;
     var containerDisposed = false;
 
     void disposeContainer() {
@@ -3543,16 +3544,28 @@ void main() {
           databaseProvider.overrideWithValue(database),
         ],
       );
+      // Captured here, not in tearDown: a test that disposes the container
+      // itself must still get the drain, and `container.read` throws once the
+      // container is gone.
+      editorNotifier = container.read(videoEditorProvider.notifier);
     });
 
     tearDown(() async {
-      if (!containerDisposed) {
-        final notifier = container.read(videoEditorProvider.notifier);
+      try {
+        // Unconditional: every test needs the deferred cleanup to stop
+        // querying the DAOs before the database closes under it. The old
+        // `if (!containerDisposed)` guard skipped the drain entirely for the
+        // three tests that dispose the container themselves.
         disposeContainer();
-        await notifier.pendingDeferredCleanupForTest;
+        await editorNotifier.pendingDeferredCleanupForTest;
+      } finally {
+        // The drain can throw — the reference check inside
+        // `deleteFilesIfUnreferenced` is unguarded — and an open database or
+        // a leftover temp dir would then outlive this suite in the merged
+        // test isolate.
+        await database.close();
+        if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
       }
-      await database.close();
-      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
     });
 
     // Stubs the next autosave to hand [orphan] to the deferral sink instead of
