@@ -649,7 +649,7 @@ class _StatusIndicator extends StatelessWidget {
           SizedBox(
             width: 20,
             height: 20,
-            child: CircularProgressIndicator(
+            child: DivineCircularProgressIndicator(
               strokeWidth: 2,
               color: context.vineColors.accentPositive,
             ),

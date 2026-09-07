@@ -115,7 +115,24 @@ class _CaptionPresetPickerViewState extends State<CaptionPresetPickerView>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: _loopMs),
-    )..repeat();
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncAnimation();
+  }
+
+  void _syncAnimation() {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+      // Midway through the first cue is its fully visible hold frame. At 0.5
+      // the second cue has only just started and fade-in presets are blank.
+      _controller.value = 0.25;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
   }
 
   @override

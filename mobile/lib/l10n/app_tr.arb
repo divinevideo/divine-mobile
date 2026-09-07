@@ -4304,7 +4304,6 @@
     "uploadFailureSheetTryAgainButton": "Tekrar Dene",
     "videoEditorAudioImportAudio": "Ses içe aktar",
     "videoEditorAudioImportFailed": "Ses içe aktarma başarısız.",
-    "videoIconPlaceholderLabel": "Video",
     "searchFilterPillSemanticLabel": "Filtre: {filter}",
     "@searchFilterPillSemanticLabel": {"placeholders": {"filter": {"type": "String"}}},
     "searchNoResultsFound": "\"{query}\" için sonuç bulunamadı",

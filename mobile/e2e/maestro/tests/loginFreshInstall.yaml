@@ -25,22 +25,15 @@ tags:
 - tapOn: Use Divine with no backup
 - tapOn: Use this device only
 
-- waitForAnimationToEnd
-
-# 3. Signing up now lands on the Home feed, not Explore. The old flow
-# asserted Explore directly and would have "passed" on the bottom-nav
-# Explore button, which is present on every screen -- so navigate
-# explicitly and then assert.
+# 3. Wait for the authenticated shell without waiting for every loading
+# animation. The empty-following redirect normally lands on Explore, but it is
+# cache-derived and deliberately falls back to Home. Retrying the explicit tab
+# selection also absorbs taps swallowed while the shell is still warming up.
 - extendedWaitUntil:
     visible:
       id: "home_tab"
     timeout: 30000
 
-# The Explore switch races the post-signup warm-up: a tap that lands while
-# the shell is still settling is swallowed and the app stays on Home, which
-# then burns the whole 30 s wait inside assertExploreNew. Widening that
-# timeout does not help — the wait is not what failed, the tap is. Retrying
-# the tap against a screen-specific anchor is what makes it deterministic.
 - retry:
     maxRetries: 3
     commands:
@@ -48,4 +41,5 @@ tags:
           id: "explore_tab"
       - assertVisible:
           id: "explore_search_bar"
+
 - runFlow: ../asserts/assertExploreNew.yaml

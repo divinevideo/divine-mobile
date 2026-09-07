@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsRole;
+
 import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_camera/divine_camera_platform_interface.dart';
 import 'package:flutter/material.dart';
@@ -232,6 +234,37 @@ void main() {
       // Should show default loading indicator
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
+
+    testWidgets(
+      'keeps the default loader static when animations are disabled',
+      (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
+            home: const Scaffold(body: CameraPreviewWidget()),
+          ),
+        );
+
+        final indicator = tester.widget<CircularProgressIndicator>(
+          find.byType(CircularProgressIndicator),
+        );
+        expect(indicator.value, 0.75);
+        final semantics = tester.getSemantics(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics &&
+                widget.properties.role == SemanticsRole.loadingSpinner,
+          ),
+        );
+        expect(semantics.getSemanticsData().value, isEmpty);
+        expect(tester.binding.transientCallbackCount, 0);
+      },
+    );
 
     testWidgets('shows custom loading widget when provided', (tester) async {
       await tester.pumpWidget(

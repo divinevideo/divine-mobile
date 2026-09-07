@@ -458,7 +458,7 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView>
         );
       },
       loading: () => const Center(
-        child: CircularProgressIndicator(color: VineTheme.vineGreen),
+        child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
       ),
       error: (error, stack) => Center(
         child: Column(
@@ -613,7 +613,7 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView>
         );
       },
       loading: () => const Center(
-        child: CircularProgressIndicator(color: VineTheme.vineGreen),
+        child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
       ),
       error: (error, stack) => Center(
         child: Text(

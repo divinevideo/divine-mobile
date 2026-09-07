@@ -394,7 +394,7 @@ class _InvitePreviewOverlay extends StatelessWidget {
           child: showLoading
               ? const SizedBox.square(
                   dimension: 32,
-                  child: CircularProgressIndicator(
+                  child: DivineCircularProgressIndicator(
                     strokeWidth: 2,
                     color: VineTheme.primary,
                   ),

@@ -104,6 +104,11 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn('if [ -n "${MAESTRO_DEVICE_UDID:-}" ]; then', maestro)
         self.assertIn('set -- --device "$MAESTRO_DEVICE_UDID"', maestro)
         self.assertIn('maestro "$@" test', maestro)
+        self.assertIn('process == "Runner"', maestro)
+        self.assertIn('subsystem CONTAINS[c] "xctest"', maestro)
+        self.assertEqual(maestro.count("--timeout 20m"), 2)
+        self.assertIn('kill -0 "$APP_LOG_PID"', maestro)
+        self.assertIn('kill -0 "$XCTEST_LOG_PID"', maestro)
 
         workflow = self._resolved_config()["workflows"]["e2e-smoke-ios"]
         self.assertEqual(
@@ -118,6 +123,10 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertLess(
             step_names.index("Install app on iOS Simulator"),
             step_names.index("Run Maestro Smoke Tests"),
+        )
+        self.assertIn(
+            "/tmp/maestro-diagnostics/*.log",
+            workflow["artifacts"],
         )
 
     def test_pod_install_only_targets_the_app_workspace(self) -> None:

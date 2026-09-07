@@ -62,7 +62,7 @@ class _GeoBlockingGateState extends ConsumerState<GeoBlockingGate> {
       return ColoredBox(
         color: context.vineColors.background,
         child: Center(
-          child: CircularProgressIndicator(
+          child: DivineCircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(
               context.vineColors.primaryText,
             ),

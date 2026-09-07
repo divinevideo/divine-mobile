@@ -692,7 +692,7 @@ class _RetractionIndicator extends StatelessWidget {
       // so without a label the state is conveyed to sighted users alone.
       DmRetractionStatus.pending => SizedBox.square(
         dimension: 16,
-        child: CircularProgressIndicator(
+        child: DivineCircularProgressIndicator(
           strokeWidth: 2,
           semanticsLabel: context.l10n.dmDeletePendingLabel,
         ),
@@ -947,7 +947,7 @@ class _VideoLinkPreview extends ConsumerWidget {
           child: SizedBox(
             width: 24,
             height: 24,
-            child: CircularProgressIndicator(
+            child: DivineCircularProgressIndicator(
               strokeWidth: 2,
               color: context.vineColors.accentPositive,
             ),

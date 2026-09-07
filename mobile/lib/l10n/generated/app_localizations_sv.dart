@@ -7164,9 +7164,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorAudioImportFailed => 'Ljudimporten misslyckades.';
 
   @override
-  String get videoIconPlaceholderLabel => 'Video';
-
-  @override
   String get publishErrorNotSignedIn => 'Logga in för att publicera videor.';
 
   @override

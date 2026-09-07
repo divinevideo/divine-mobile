@@ -7337,9 +7337,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorAudioImportFailed => 'Import dźwięku nie powiódł się.';
 
   @override
-  String get videoIconPlaceholderLabel => 'Film';
-
-  @override
   String get publishErrorNotSignedIn => 'Zaloguj się, aby publikować filmy.';
 
   @override

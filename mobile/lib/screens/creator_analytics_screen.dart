@@ -744,7 +744,7 @@ class _BreakdownRow extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 4),
-        LinearProgressIndicator(
+        DivineLinearProgressIndicator(
           value: share,
           minHeight: 8,
           borderRadius: BorderRadius.circular(999),
@@ -1378,7 +1378,7 @@ class _DailyTrendCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: LinearProgressIndicator(
+                          child: DivineLinearProgressIndicator(
                             value: ratio,
                             minHeight: 7,
                             borderRadius: BorderRadius.circular(999),

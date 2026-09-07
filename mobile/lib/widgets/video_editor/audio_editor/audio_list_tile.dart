@@ -116,20 +116,29 @@ class _AudioPlayingIndicatorState extends State<_AudioPlayingIndicator>
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     );
-    if (widget.isPlaying) {
-      _controller.repeat();
-    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncAnimation();
   }
 
   @override
   void didUpdateWidget(_AudioPlayingIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isPlaying != oldWidget.isPlaying) {
-      if (widget.isPlaying) {
+      _syncAnimation();
+    }
+  }
+
+  void _syncAnimation() {
+    if (widget.isPlaying && !MediaQuery.disableAnimationsOf(context)) {
+      if (!_controller.isAnimating) {
         _controller.repeat();
-      } else {
-        _controller.stop();
       }
+    } else {
+      _controller.stop();
     }
   }
 

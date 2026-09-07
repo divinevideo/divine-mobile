@@ -217,5 +217,45 @@ void main() {
         expect(find.textContaining('01:05'), findsOneWidget);
       });
     });
+
+    group('playing indicator motion', () {
+      Widget buildWithMotion({required bool disableAnimations}) {
+        return MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MediaQuery(
+            data: MediaQueryData(disableAnimations: disableAnimations),
+            child: Scaffold(
+              body: AudioListTile(
+                audio: _createTestAudioEvent(),
+                // The indicator is the tile's `trailing`, which only exists
+                // while selected. Without this the tests below pass vacuously.
+                isSelected: true,
+                isPlaying: true,
+                onTap: () {},
+              ),
+            ),
+          ),
+        );
+      }
+
+      testWidgets('animates the bars when motion is allowed', (tester) async {
+        await tester.pumpWidget(buildWithMotion(disableAnimations: false));
+        await tester.pump();
+
+        expect(tester.binding.transientCallbackCount, greaterThan(0));
+      });
+
+      testWidgets('stops the ticker when motion is disabled', (tester) async {
+        // The controller has to actually stop, not merely go unpainted. A
+        // ticker with no listener still schedules frames, so the app never
+        // reaches quiescence and every XCUITest hierarchy query on the audio
+        // editor waits out its timeout.
+        await tester.pumpWidget(buildWithMotion(disableAnimations: true));
+        await tester.pump();
+
+        expect(tester.binding.transientCallbackCount, 0);
+      });
+    });
   });
 }

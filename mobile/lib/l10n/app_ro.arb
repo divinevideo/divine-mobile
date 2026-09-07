@@ -4304,7 +4304,6 @@
     "uploadFailureSheetTryAgainButton": "Încearcă din nou",
     "videoEditorAudioImportAudio": "Importă audio",
     "videoEditorAudioImportFailed": "Importul audio a eșuat.",
-    "videoIconPlaceholderLabel": "Videoclip",
     "searchFilterPillSemanticLabel": "Filtru: {filter}",
     "@searchFilterPillSemanticLabel": {"placeholders": {"filter": {"type": "String"}}},
     "searchNoResultsFound": "Niciun rezultat găsit pentru „{query}”",

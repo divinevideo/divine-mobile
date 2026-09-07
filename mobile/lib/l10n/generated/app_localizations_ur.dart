@@ -7169,9 +7169,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorAudioImportFailed => 'آڈیو درآمد ناکام۔';
 
   @override
-  String get videoIconPlaceholderLabel => 'ویڈیو';
-
-  @override
   String get publishErrorNotSignedIn =>
       'ویڈیوز شائع کرنے کے لیے براہ کرم سائن ان کریں۔';
 

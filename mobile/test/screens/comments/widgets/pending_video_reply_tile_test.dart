@@ -30,7 +30,11 @@ void main() {
 
     setUp(() => publish = _MockPublishBloc());
 
-    Future<void> pumpTile(WidgetTester tester, {required double progress}) {
+    Future<void> pumpTile(
+      WidgetTester tester, {
+      required double progress,
+      bool disableAnimations = false,
+    }) {
       when(() => publish.state).thenReturn(
         BackgroundPublishState(
           uploads: [
@@ -44,6 +48,12 @@ void main() {
       );
       return tester.pumpWidget(
         MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(disableAnimations: disableAnimations),
+            child: child!,
+          ),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -91,6 +101,18 @@ void main() {
         find.byType(CircularProgressIndicator),
       );
       expect(indicator.value, isNull);
+    });
+
+    testWidgets('stays indeterminate and idle with reduced motion', (
+      tester,
+    ) async {
+      await pumpTile(tester, progress: 0, disableAnimations: true);
+
+      final indicator = tester.widget<CircularProgressIndicator>(
+        find.byType(CircularProgressIndicator),
+      );
+      expect(indicator.value, 0.75);
+      expect(tester.binding.transientCallbackCount, 0);
     });
 
     testWidgets('exposes a screen-reader label for the pending row', (

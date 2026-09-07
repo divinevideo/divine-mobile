@@ -30,6 +30,7 @@ void main() {
       List<editor.LayerAnimation> initialEnter = const [],
       List<editor.LayerAnimation> initialLeave = const [],
       double viewHeight = 1600,
+      bool disableAnimations = false,
       ThemeData? theme,
     }) async {
       result = null;
@@ -43,6 +44,12 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(
         MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(disableAnimations: disableAnimations),
+            child: child!,
+          ),
           theme: theme,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -75,6 +82,31 @@ void main() {
       await tester.pump(const Duration(milliseconds: 350));
     }
 
+    testWidgets('stops preview loops when animations are disabled', (
+      tester,
+    ) async {
+      await openPicker(tester, disableAnimations: true);
+
+      await tester.pumpAndSettle();
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+
+    testWidgets('keeps fade previews visible when animations are disabled', (
+      tester,
+    ) async {
+      await openPicker(tester, disableAnimations: true);
+      await tester.tap(find.text(l10n.videoEditorLayerAnimationFade));
+      await tester.pump();
+
+      final visibleFade = find.byWidgetPredicate(
+        (widget) =>
+            widget is Opacity && widget.opacity > 0 && widget.opacity < 1,
+      );
+      expect(visibleFade, findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(tester.binding.transientCallbackCount, 0);
+    });
+
     testWidgets('lists every animation type', (tester) async {
       await openPicker(tester);
 
@@ -105,10 +137,7 @@ void main() {
         l10n.videoEditorLayerAnimationEnter,
       );
       expect(enter.color, colors.controlSelectedFill);
-      expect(
-        (enter.border! as Border).top.color,
-        colors.accentBrand,
-      );
+      expect((enter.border! as Border).top.color, colors.accentBrand);
 
       final leave = _segmentDecoration(
         tester,

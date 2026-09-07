@@ -204,7 +204,7 @@ class _ResultsList extends StatelessWidget {
                 onSelectUser: onSelectUser,
               ),
             UserSearchStatus.loading => Center(
-              child: CircularProgressIndicator(
+              child: DivineCircularProgressIndicator(
                 color: context.vineColors.accentPositive,
               ),
             ),

@@ -268,7 +268,7 @@ class _ClassicVinesContentState extends ConsumerState<_ClassicVinesContent>
                     ? SizedBox(
                         width: 24,
                         height: 24,
-                        child: CircularProgressIndicator(
+                        child: DivineCircularProgressIndicator(
                           strokeWidth: 2,
                           color: context.vineColors.accentPositive,
                         ),
@@ -299,7 +299,7 @@ class _ClassicVideosSliverGrid extends ConsumerWidget {
 
     return brokenTrackerAsync.when(
       loading: () => const SliverToBoxAdapter(
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: DivineCircularProgressIndicator()),
       ),
       error: (_, _) => _buildGrid(context, ref, videos),
       data: (tracker) {

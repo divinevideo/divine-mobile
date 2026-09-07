@@ -372,7 +372,7 @@ class _ClipMedia extends StatelessWidget {
               cacheHeight: cacheHeight,
             ),
           const Center(
-            child: CircularProgressIndicator(color: VineTheme.vineGreen),
+            child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
           ),
         ],
       ),

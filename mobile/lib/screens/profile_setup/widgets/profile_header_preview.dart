@@ -119,7 +119,7 @@ class _BannerBackdrop extends StatelessWidget {
             child: ColoredBox(
               color: VineTheme.backgroundColor.withValues(alpha: 0.6),
               child: const Center(
-                child: CircularProgressIndicator(
+                child: DivineCircularProgressIndicator(
                   color: VineTheme.vineGreen,
                   strokeWidth: 3,
                 ),

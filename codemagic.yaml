@@ -782,6 +782,57 @@ definitions:
       script: |
         set -e
         export PATH="$PATH:$HOME/.maestro/bin"
+        DIAGNOSTICS_DIR=/tmp/maestro-diagnostics
+        mkdir -p "$DIAGNOSTICS_DIR"
+
+        stop_diagnostics() {
+          exit_code=$?
+          trap - EXIT
+          if [ -n "${APP_LOG_PID:-}" ]; then
+            kill "$APP_LOG_PID" 2>/dev/null || true
+            wait "$APP_LOG_PID" 2>/dev/null || true
+          fi
+          if [ -n "${XCTEST_LOG_PID:-}" ]; then
+            kill "$XCTEST_LOG_PID" 2>/dev/null || true
+            wait "$XCTEST_LOG_PID" 2>/dev/null || true
+          fi
+          exit "$exit_code"
+        }
+        trap stop_diagnostics EXIT
+
+        if [ -n "${MAESTRO_DEVICE_UDID:-}" ]; then
+          xcrun simctl spawn "$MAESTRO_DEVICE_UDID" log stream \
+            --style compact \
+            --level debug \
+            --timeout 20m \
+            --predicate 'process == "Runner"' \
+            > "$DIAGNOSTICS_DIR/app.log" 2>&1 &
+          APP_LOG_PID=$!
+          xcrun simctl spawn "$MAESTRO_DEVICE_UDID" log stream \
+            --style compact \
+            --level debug \
+            --timeout 20m \
+            --predicate 'process CONTAINS[c] "xctest" OR subsystem CONTAINS[c] "xctest"' \
+            > "$DIAGNOSTICS_DIR/xctest.log" 2>&1 &
+          XCTEST_LOG_PID=$!
+
+          # A background launch bypasses `set -e`. Verify both streams stayed
+          # alive long enough to start so an error artifact is not mistaken
+          # for an app or XCTest stream that simply emitted no messages.
+          sleep 1
+          if ! kill -0 "$APP_LOG_PID" 2>/dev/null; then
+            wait "$APP_LOG_PID" || true
+            echo "Runner log capture failed to start; see $DIAGNOSTICS_DIR/app.log" >&2
+            exit 1
+          fi
+          if ! kill -0 "$XCTEST_LOG_PID" 2>/dev/null; then
+            wait "$XCTEST_LOG_PID" || true
+            echo "XCTest log capture failed to start; see $DIAGNOSTICS_DIR/xctest.log" >&2
+            exit 1
+          fi
+          echo "Capturing bounded Runner and XCTest logs for up to 20 minutes."
+        fi
+
         # Flow files are passed individually rather than as suites/*.yaml.
         # Maestro reports a suite file as ONE <testcase> named after the suite,
         # with no per-flow detail — so a failure says only "the suite failed"
@@ -1414,6 +1465,7 @@ workflows:
       - ~/.maestro/tests/**/screen-hierarchy/**
       - ~/.maestro/tests/**/logs/maestro.log
       - ~/.maestro/tests/**/commands.json
+      - /tmp/maestro-diagnostics/*.log
 
   e2e-smoke-android:
     name: E2E Smoke Tests (Android)
