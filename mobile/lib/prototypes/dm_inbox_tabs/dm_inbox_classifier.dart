@@ -423,17 +423,62 @@ class DmInboxClassifier {
     required DmMessageSignals messageSignals,
   }) {
     final h = heuristics;
-    final reasons = <DmRiskReason>[];
 
-    // The riskiest unfollowed participant sets the tone for the whole
-    // conversation — a group is only as safe as its least-known member.
     final unknown = others.where((pk) => !isFollowing(pk)).toList();
-    final signals = unknown
-        .map(signalsFor)
-        .fold<DmSenderSignals?>(null, _riskier);
-    if (signals == null) {
-      return reasons;
+    if (unknown.isEmpty) {
+      return const [];
     }
+
+    // A group is only as safe as its least-known member — so "least known"
+    // has to be measured with the weights the verdict actually uses. The
+    // previous rank() read four signals while _scoreSender reads nine and
+    // weights them differently, so the two disagreed whenever the difference
+    // lived in a signal rank() could not see. A room holding a brand-new
+    // account (75 alone) and an established creator (-75 alone) scored -55
+    // and landed in requests, and the panel listed only the creator's
+    // mitigating reasons — explaining a person the user needed no warning
+    // about while the account that earned the risk stayed invisible.
+    var reasons = _scoreSender(unknown.first, signalsFor, messageSignals);
+    var worst = reasons.fold(0, (sum, reason) => sum + reason.points);
+    for (final pubkey in unknown.skip(1)) {
+      final candidate = _scoreSender(pubkey, signalsFor, messageSignals);
+      final total = candidate.fold(0, (sum, reason) => sum + reason.points);
+      if (total > worst) {
+        reasons = candidate;
+        worst = total;
+      }
+    }
+
+    void add(String label, int points) {
+      if (points != 0) {
+        reasons.add(DmRiskReason(label, points));
+      }
+    }
+
+    // Derived from the deduplicated participants, never from
+    // `DmConversation.isGroup`. That column is written from
+    // `participants.length > 2` and rewritten on every upsert, so it drifts
+    // from the row's real participants — #5374 is why
+    // `DmRepository.classifyPotentialRequests` stopped reading it. A drifted
+    // 1:1 was picking up the group weight and a reason line saying it had
+    // been added to a group.
+    if (unknown.length > 1) {
+      add('Added you to a group', h.weightUnknownGroupInvite);
+    }
+
+    return reasons;
+  }
+
+  /// Scores one unfollowed participant. The conversation-wide group weight is
+  /// added by [_score] once, not per sender.
+  List<DmRiskReason> _scoreSender(
+    String pubkey,
+    DmSenderSignals Function(String) signalsFor,
+    DmMessageSignals messageSignals,
+  ) {
+    final h = heuristics;
+    final signals = signalsFor(pubkey);
+    final reasons = <DmRiskReason>[];
 
     void add(String label, int points) {
       if (points != 0) {
@@ -487,29 +532,6 @@ class DmInboxClassifier {
     if (messageSignals.containsMedia) {
       add('First message contains media', h.weightContainsMedia);
     }
-    // Derived from the deduplicated participants, never from
-    // `DmConversation.isGroup`. That column is written from
-    // `participants.length > 2` and rewritten on every upsert, so it drifts
-    // from the row's real participants — #5374 is why
-    // `DmRepository.classifyPotentialRequests` stopped reading it. A drifted
-    // 1:1 was picking up the group weight and a reason line saying it had
-    // been added to a group.
-    if (unknown.length > 1) {
-      add('Added you to a group', h.weightUnknownGroupInvite);
-    }
-
     return reasons;
-  }
-
-  /// Keeps whichever sender looks worse, so a group inherits its weakest link.
-  static DmSenderSignals _riskier(DmSenderSignals? a, DmSenderSignals b) {
-    if (a == null) return b;
-    int rank(DmSenderSignals s) =>
-        s.distinctReporterCount * 10 +
-        s.recentFirstContactCount -
-        s.mutualConnectionCount -
-        (s.followsMe ? 5 : 0) -
-        (s.divineVideoCount > 0 ? 3 : 0);
-    return rank(b) > rank(a) ? b : a;
   }
 }

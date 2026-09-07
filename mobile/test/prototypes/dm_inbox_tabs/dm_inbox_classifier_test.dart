@@ -184,6 +184,99 @@ void main() {
       });
     });
 
+    group('weakest link', () {
+      // The room's verdict must come from whichever unfollowed participant
+      // the scorer itself rates worst, not from a separate ranking formula.
+      const popular = DmSenderSignals(
+        followsMe: true,
+        mutualConnectionCount: 3,
+        divineVideoCount: 40,
+        daysSinceFirstObserved: 400,
+        hasProfileMetadata: true,
+        hasPriorPublicInteraction: true,
+        recentFirstContactCount: 25,
+      );
+      const brandNew = DmSenderSignals(daysSinceFirstObserved: 1);
+
+      int soloScore(DmSenderSignals signals) =>
+          const DmInboxClassifier(officialIdentities: {})
+              .classify(
+                [
+                  DmConversation(
+                    id: 'solo',
+                    participantPubkeys: [_me, _stranger],
+                    isGroup: false,
+                    createdAt: 0,
+                  ),
+                ],
+                userPubkey: _me,
+                isFollowing: (_) => false,
+                signalsFor: (_) => signals,
+              )
+              .verdicts['solo']!
+              .score;
+
+      test('a room inherits its riskiest member, not its best-ranked', () {
+        final establishedAlone = soloScore(popular);
+        final brandNewAlone = soloScore(brandNew);
+        expect(
+          brandNewAlone,
+          greaterThan(establishedAlone),
+          reason: 'the brand-new account is the genuinely riskier member',
+        );
+
+        final verdict = const DmInboxClassifier(officialIdentities: {})
+            .classify(
+              [
+                DmConversation(
+                  id: 'room',
+                  participantPubkeys: [_me, _stranger, _other]..sort(),
+                  isGroup: true,
+                  createdAt: 0,
+                ),
+              ],
+              userPubkey: _me,
+              isFollowing: (_) => false,
+              signalsFor: (pubkey) => pubkey == _stranger ? popular : brandNew,
+            )
+            .verdicts['room']!;
+
+        expect(verdict.bucket, DmInboxBucket.likelySpam);
+        expect(
+          verdict.score,
+          equals(
+            brandNewAlone + const DmSpamHeuristics().weightUnknownGroupInvite,
+          ),
+        );
+      });
+
+      test('the reasons shown belong to the member that set the score', () {
+        final verdict = const DmInboxClassifier(officialIdentities: {})
+            .classify(
+              [
+                DmConversation(
+                  id: 'room',
+                  participantPubkeys: [_me, _stranger, _other]..sort(),
+                  isGroup: true,
+                  createdAt: 0,
+                ),
+              ],
+              userPubkey: _me,
+              isFollowing: (_) => false,
+              signalsFor: (pubkey) => pubkey == _stranger ? popular : brandNew,
+            )
+            .verdicts['room']!;
+
+        final labels = verdict.reasons.map((r) => r.label);
+        expect(labels, contains('New account'));
+        expect(labels, contains('Has not posted on Divine'));
+        // The established creator's mitigations must not describe this room.
+        expect(labels, isNot(contains('Follows you')));
+        expect(labels, isNot(contains('You have interacted before')));
+        expect(labels, isNot(contains('Long-standing account')));
+      });
+    });
+
     group('group invite weight', () {
       test('a 1:1 does not earn the group weight when isGroup has drifted', () {
         // `DmConversation.isGroup` is written from `participants.length > 2`
