@@ -4480,6 +4480,63 @@ void main() {
           },
         );
 
+        test(
+          'persists the block before dropping the intent it contradicts',
+          () async {
+            SharedPreferences.setMockInitialValues(<String, Object>{
+              'blocklist_active_pubkey': ourPubkey,
+              'pending_unblocks.$ourPubkey': jsonEncode({target: 1000}),
+              'block_list_migrated_to_mute_list.$ourPubkey': true,
+              'block_list_retired.$ourPubkey': true,
+            });
+            final prefs = await SharedPreferences.getInstance();
+            stubHealthy();
+            // Withheld throughout, so the seeded intent survives the sync
+            // and is still outstanding when the block arrives.
+            stubReadInconclusive();
+            // Sampled synchronously, the moment the block is announced.
+            final blockedWhenAnnounced = <String?>[];
+            final pendingWhenAnnounced = <String?>[];
+            var sampling = false;
+            final service = ContentBlocklistRepository(
+              prefs: prefs,
+              onChanged: () {
+                if (!sampling) return;
+                blockedWhenAnnounced.add(
+                  prefs.getString('blocked_users_list.$ourPubkey'),
+                );
+                pendingWhenAnnounced.add(
+                  prefs.getString('pending_unblocks.$ourPubkey'),
+                );
+              },
+            );
+            addTearDown(service.dispose);
+            await service.syncBlockListsInBackground(
+              mockClient,
+              mockSigner,
+              ourPubkey,
+            );
+            sampling = true;
+
+            await service.blockUser(target);
+
+            // A kill between the two writes must not leave "no pending
+            // unblock" recorded against a block that never landed: the
+            // relay's surviving `p` tag would then come back as a foreign
+            // mute instead of a block, which no affordance can lift.
+            expect(blockedWhenAnnounced.first, isNotNull);
+            expect(
+              jsonDecode(blockedWhenAnnounced.first!) as List<dynamic>,
+              contains(target),
+            );
+            expect(pendingWhenAnnounced.first, isNotNull);
+            expect(
+              jsonDecode(pendingWhenAnnounced.first!) as Map<String, dynamic>,
+              contains(target),
+            );
+          },
+        );
+
         test('re-blocking is a no-op when no publish is pending', () async {
           SharedPreferences.setMockInitialValues(<String, Object>{
             'blocklist_active_pubkey': ourPubkey,

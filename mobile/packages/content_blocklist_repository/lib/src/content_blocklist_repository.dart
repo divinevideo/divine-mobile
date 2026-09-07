@@ -1269,13 +1269,20 @@ class ContentBlocklistRepository {
       );
     }
 
-    if (retiredPendingUnblock) await _savePendingUnblocks();
     if (newlyBlocked.isNotEmpty) {
       await _saveBlockedUsers();
       for (final pubkey in newlyBlocked) {
         _emitChange(BlocklistChange(pubkey: pubkey, op: BlocklistOp.blocked));
       }
       _notifyChanged();
+    }
+    // Dropped only once the block that contradicts it is durable. A kill in
+    // the other order persists "no pending unblock" against a block that
+    // never landed, so the relay's surviving `p` tag comes back as a foreign
+    // mute rather than a block -- a weaker state, and one no unblock
+    // affordance in the app can reach.
+    if (retiredPendingUnblock) await _savePendingUnblocks();
+    if (newlyBlocked.isNotEmpty) {
       await _publishMuteListToNostr();
 
       Log.debug(
