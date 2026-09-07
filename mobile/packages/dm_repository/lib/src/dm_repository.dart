@@ -6171,6 +6171,9 @@ class DmRepository {
   /// a 64-character hex string, if [content] is empty, or if
   /// [recipientPubkeys] is empty.
   ///
+  /// Returns failure results, publishing nothing, when every recipient is the
+  /// sender. One result is returned for each supplied recipient.
+  ///
   /// When an [OutgoingDmsDao] is injected, each per-recipient send
   /// goes through the durable queue with the same atomicity contract
   /// as [sendMessage]: enqueue a `pending`/`pending` row keyed by a
@@ -6206,6 +6209,31 @@ class DmRepository {
     recipientPubkeys.forEach(validatePubkey);
     if (content.trim().isEmpty) {
       throw ArgumentError.value(content, 'content', 'must not be empty');
+    }
+
+    // Divine does not support a self-addressed conversation (#8351, decided on
+    // #8261). [sendMessage] and the file path already refuse one; this path did
+    // not, so a group whose only recipient was the sender still published a
+    // wrap the app cannot read back — the receive path drops a participant list
+    // that collapses to one pubkey (#2824) — and that nobody can delete, since
+    // funnelcake matches a kind-5 against the wrap's throwaway ephemeral author
+    // rather than the real sender (#8699).
+    //
+    // Returned rather than thrown, and one result per recipient, matching the
+    // send gate below: callers branch on `success` per recipient.
+    //
+    // Only the self-ONLY case is refused. Whether a group send keeps its sender
+    // in the recipient list is an open product decision (#8359), so a group
+    // that also carries real recipients is left exactly as it was. Note
+    // `recipientPubkeys` is non-empty by the guard above, so `every` cannot be
+    // vacuously true here.
+    if (recipientPubkeys.every(_isSelf)) {
+      return [
+        for (final _ in recipientPubkeys)
+          const NIP17SendResult.failure(
+            'refused: a message cannot be addressed to its own sender',
+          ),
+      ];
     }
 
     // Send gate (#176) — group all-or-nothing: a restricted sender (protected
@@ -7584,6 +7612,18 @@ class DmRepository {
   ///
   /// Supports pagination via [limit]. These conversations are never
   /// message requests.
+  ///
+  /// A conversation whose participants collapse to the viewer alone is
+  /// omitted. Divine does not support a conversation with only yourself
+  /// (#8261), and the row is unusable: every caller resolves the counterparty
+  /// by dropping the viewer, so it renders as a chat with yourself, with
+  /// Report, Block and Mute all addressing the viewer's own account.
+  ///
+  /// [classifyPotentialRequests] already drops the same shape, but it only
+  /// ever sees conversations the user has NOT sent to. Legacy self-wrap bugs
+  /// and malformed data can leave an already-sent row on this stream instead.
+  /// Startup maintenance removes known rows; this filter remains as defense in
+  /// depth so the Messages list and unread badge cannot disagree (#4976).
   Stream<List<DmConversation>> watchAcceptedConversations({int? limit}) {
     final owner = _ownerPubkey;
     if (owner == null) return Stream.value(const <DmConversation>[]);
@@ -7592,6 +7632,15 @@ class DmRepository {
         limit: limit,
         ownerPubkey: owner,
       ),
+    ).map(
+      (conversations) => conversations
+          .where(
+            (conversation) => !_containsOnlyPubkey(
+              conversation.participantPubkeys,
+              owner,
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -8360,32 +8409,38 @@ class DmRepository {
   // Helpers
   // -------------------------------------------------------------------------
 
-  /// Removes phantom self-conversations created by the self-wrap bug where
-  /// `_resolveConversationParticipants` produced `[self, self]`.
+  /// Removes phantom self-conversations created by legacy self-wrap bugs or
+  /// malformed participant lists.
   ///
   /// Idempotent — safe to call on every init.
   Future<void> _cleanupSelfConversations() async {
     try {
-      final selfConvId = computeConversationId([_userPubkey, _userPubkey]);
-      final existing = await _conversationsDao.getConversation(
-        selfConvId,
+      final rows = await _conversationsDao.getAllConversations(
         ownerPubkey: _ownerPubkey,
       );
-      if (existing == null) return;
+      final selfConversations = rows.where(
+        (row) => _containsOnlyPubkey(
+          _conversationFromRow(row).participantPubkeys,
+          _userPubkey,
+        ),
+      );
+      if (selfConversations.isEmpty) return;
 
       await _conversationsDao.runInTransaction(() async {
-        await _directMessagesDao.deleteConversationMessages(
-          selfConvId,
-          ownerPubkey: _ownerPubkey,
-        );
-        await _conversationsDao.deleteConversation(
-          selfConvId,
-          ownerPubkey: _ownerPubkey,
-        );
+        for (final conversation in selfConversations) {
+          await _directMessagesDao.deleteConversationMessages(
+            conversation.id,
+            ownerPubkey: _ownerPubkey,
+          );
+          await _conversationsDao.deleteConversation(
+            conversation.id,
+            ownerPubkey: _ownerPubkey,
+          );
+        }
       });
 
       Log.info(
-        'Cleaned up phantom self-conversation',
+        'Cleaned up ${selfConversations.length} phantom self-conversation(s)',
         category: LogCategory.system,
       );
     } on Object catch (e, stackTrace) {
@@ -8397,6 +8452,15 @@ class DmRepository {
       );
     }
   }
+
+  static bool _containsOnlyPubkey(
+    Iterable<String> participantPubkeys,
+    String pubkey,
+  ) =>
+      participantPubkeys.isNotEmpty &&
+      participantPubkeys.every(
+        (participantPubkey) => pubkeysEqual(participantPubkey, pubkey),
+      );
 
   /// Runs post-auth cleanup and migration tasks sequentially so each step
   /// operates on the final state of the previous one.
