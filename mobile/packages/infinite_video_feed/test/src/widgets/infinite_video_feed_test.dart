@@ -1114,9 +1114,11 @@ void main() {
         );
         const videoId =
             '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-        final metricFuture = FeedFirstFrameMetrics.events.firstWhere(
-          (metric) => metric.videoId == videoId,
-        );
+        final metrics = <FeedFirstFrameMetric>[];
+        final subscription = FeedFirstFrameMetrics.events
+            .where((metric) => metric.videoId == videoId)
+            .listen(metrics.add);
+        addTearDown(subscription.cancel);
 
         try {
           await tester.pumpWidget(
@@ -1138,10 +1140,9 @@ void main() {
           });
           await tester.pump();
 
-          final metric = await metricFuture;
-          expect(metric.videoId, videoId);
-          expect(metric.index, 0);
-          expect(metric.loadedFromCache, isFalse);
+          expect(metrics, hasLength(1));
+          expect(metrics.single.index, 0);
+          expect(metrics.single.loadedFromCache, isFalse);
         } finally {
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
