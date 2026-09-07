@@ -17360,6 +17360,89 @@ void main() {
         expect(conversations.first.currentUserHasSent, isTrue);
       });
 
+      // A conversation that contains only the viewer is unusable: every caller
+      // resolves the counterparty by dropping the viewer, so the row renders
+      // as a chat with yourself. #8694 hid these from the request-derived
+      // lists, but an ALREADY-SENT one arrives on this stream instead and was
+      // still shown. A group send addressed only to the sender is what created
+      // them (#8699) — refusing that send stops new ones, and this stops the
+      // ones already on disk from rendering.
+      test('omits a conversation that contains only the viewer', () async {
+        final peerParticipants = [_validPubkeyA, _validPubkeyB]..sort();
+        final peerId = DmRepository.computeConversationId(peerParticipants);
+        final selfId = DmRepository.computeConversationId([
+          _validPubkeyA,
+          _validPubkeyA,
+        ]);
+
+        when(
+          () => mockConversationsDao.watchAcceptedConversations(
+            limit: any(named: 'limit'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer(
+          (_) => Stream.value([
+            ConversationRow(
+              ownerPubkey: '',
+              id: selfId,
+              participantPubkeys: jsonEncode([_validPubkeyA, _validPubkeyA]),
+              isGroup: false,
+              isRead: true,
+              currentUserHasSent: true,
+              createdAt: 1700000000,
+            ),
+            ConversationRow(
+              ownerPubkey: '',
+              id: peerId,
+              participantPubkeys: jsonEncode(peerParticipants),
+              isGroup: false,
+              isRead: true,
+              currentUserHasSent: true,
+              createdAt: 1700000000,
+            ),
+          ]),
+        );
+
+        final repository = createRepository();
+        final conversations = await repository
+            .watchAcceptedConversations()
+            .first;
+
+        expect(conversations, hasLength(1));
+        expect(conversations.single.id, equals(peerId));
+      });
+
+      // Same row shape, viewer stored under a different casing.
+      test('omits a self-only conversation whatever the casing', () async {
+        final selfId = DmRepository.computeConversationId([_validPubkeyA]);
+
+        when(
+          () => mockConversationsDao.watchAcceptedConversations(
+            limit: any(named: 'limit'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer(
+          (_) => Stream.value([
+            ConversationRow(
+              ownerPubkey: '',
+              id: selfId,
+              participantPubkeys: jsonEncode([_validPubkeyA.toUpperCase()]),
+              isGroup: false,
+              isRead: true,
+              currentUserHasSent: true,
+              createdAt: 1700000000,
+            ),
+          ]),
+        );
+
+        final repository = createRepository();
+        final conversations = await repository
+            .watchAcceptedConversations()
+            .first;
+
+        expect(conversations, isEmpty);
+      });
+
       test(
         'uses the conversation row preview as the source of truth',
         () async {

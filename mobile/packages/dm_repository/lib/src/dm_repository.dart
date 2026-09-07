@@ -7609,6 +7609,20 @@ class DmRepository {
   ///
   /// Supports pagination via [limit]. These conversations are never
   /// message requests.
+  ///
+  /// A conversation whose participants collapse to the viewer alone is
+  /// omitted. Divine does not support a conversation with only yourself
+  /// (#8261), and the row is unusable: every caller resolves the counterparty
+  /// by dropping the viewer, so it renders as a chat with yourself, with
+  /// Report, Block and Mute all addressing the viewer's own account.
+  ///
+  /// [classifyPotentialRequests] already drops the same shape, but it only
+  /// ever sees conversations the user has NOT sent to. A row the user HAS
+  /// sent to arrives here instead, which is exactly what a group send
+  /// addressed only to the sender produced before #8699 refused it. Refusing
+  /// the send stops new ones; this stops the ones already on disk from
+  /// rendering. Filtered here rather than in each consumer so the Messages
+  /// list and the unread badge cannot disagree about what exists (#4976).
   Stream<List<DmConversation>> watchAcceptedConversations({int? limit}) {
     final owner = _ownerPubkey;
     if (owner == null) return Stream.value(const <DmConversation>[]);
@@ -7617,6 +7631,14 @@ class DmRepository {
         limit: limit,
         ownerPubkey: owner,
       ),
+    ).map(
+      (conversations) => conversations
+          .where(
+            (conversation) => conversation.participantPubkeys.any(
+              (pubkey) => !pubkeysEqual(pubkey, owner),
+            ),
+          )
+          .toList(),
     );
   }
 
