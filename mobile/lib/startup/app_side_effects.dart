@@ -66,6 +66,7 @@ class AppRootSideEffects extends ConsumerWidget {
     ref.watch(outgoingDmRetryServiceProvider);
     ref.watch(dmReactionRetryServiceProvider);
     ref.watch(viewEventRetryServiceProvider);
+    ref.watch(reportRetryServiceProvider);
     ref.watch(productEventQueueProvider);
     ref.watch(profileSaveRetryServiceProvider);
 

@@ -215,6 +215,62 @@ void main() {
       );
     });
 
+    PendingReport reportFor(String id, String pubkey) => PendingReport(
+      reportId: id,
+      userPubkey: pubkey,
+      eventJson: '{}',
+      zendeskPayload: '{}',
+      createdAt: DateTime.utc(2026),
+    );
+
+    test(
+      'destructive cleanup purges the departing user pending reports (#8053)',
+      () async {
+        await db.pendingReportsDao.enqueue(reportFor('ra', _pubkeyA));
+        await db.pendingReportsDao.enqueue(reportFor('rb', _pubkeyB));
+
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final service = subscription.read();
+
+        expect(service.onDatabaseCleanup, isNotNull);
+        await service.onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+
+        expect(await db.pendingReportsDao.getById('ra'), isNull);
+        expect(
+          await db.pendingReportsDao.getById('rb'),
+          isNotNull,
+          reason: 'only the departing account queue is purged',
+        );
+      },
+    );
+
+    test('non-destructive cleanup preserves pending reports (#8053)', () async {
+      await db.pendingReportsDao.enqueue(reportFor('ra', _pubkeyA));
+
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final service = subscription.read();
+
+      expect(service.onDatabaseCleanup, isNotNull);
+      await service.onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+      expect(
+        await db.pendingReportsDao.getById('ra'),
+        isNotNull,
+        reason: 'a plain switch must not drop an undelivered report',
+      );
+    });
+
     test(
       'database cleanup stops existing dm listener through cycle-safe port',
       () async {

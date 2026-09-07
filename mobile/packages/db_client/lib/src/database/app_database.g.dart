@@ -14602,6 +14602,766 @@ class PendingViewEventsCompanion extends UpdateCompanion<PendingViewEventRow> {
   }
 }
 
+class $PendingReportsTable extends PendingReports
+    with TableInfo<$PendingReportsTable, PendingReportRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PendingReportsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _reportIdMeta = const VerificationMeta(
+    'reportId',
+  );
+  @override
+  late final GeneratedColumn<String> reportId = GeneratedColumn<String>(
+    'report_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _userPubkeyMeta = const VerificationMeta(
+    'userPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> userPubkey = GeneratedColumn<String>(
+    'user_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _eventJsonMeta = const VerificationMeta(
+    'eventJson',
+  );
+  @override
+  late final GeneratedColumn<String> eventJson = GeneratedColumn<String>(
+    'event_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetRelaysMeta = const VerificationMeta(
+    'targetRelays',
+  );
+  @override
+  late final GeneratedColumn<String> targetRelays = GeneratedColumn<String>(
+    'target_relays',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _zendeskPayloadMeta = const VerificationMeta(
+    'zendeskPayload',
+  );
+  @override
+  late final GeneratedColumn<String> zendeskPayload = GeneratedColumn<String>(
+    'zendesk_payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _relayStatusMeta = const VerificationMeta(
+    'relayStatus',
+  );
+  @override
+  late final GeneratedColumn<String> relayStatus = GeneratedColumn<String>(
+    'relay_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _zendeskStatusMeta = const VerificationMeta(
+    'zendeskStatus',
+  );
+  @override
+  late final GeneratedColumn<String> zendeskStatus = GeneratedColumn<String>(
+    'zendesk_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _relayAttemptsMeta = const VerificationMeta(
+    'relayAttempts',
+  );
+  @override
+  late final GeneratedColumn<int> relayAttempts = GeneratedColumn<int>(
+    'relay_attempts',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _zendeskAttemptsMeta = const VerificationMeta(
+    'zendeskAttempts',
+  );
+  @override
+  late final GeneratedColumn<int> zendeskAttempts = GeneratedColumn<int>(
+    'zendesk_attempts',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastAttemptAtMeta = const VerificationMeta(
+    'lastAttemptAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastAttemptAt =
+      GeneratedColumn<DateTime>(
+        'last_attempt_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    reportId,
+    userPubkey,
+    eventJson,
+    targetRelays,
+    zendeskPayload,
+    relayStatus,
+    zendeskStatus,
+    relayAttempts,
+    zendeskAttempts,
+    lastError,
+    lastAttemptAt,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pending_reports';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PendingReportRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('report_id')) {
+      context.handle(
+        _reportIdMeta,
+        reportId.isAcceptableOrUnknown(data['report_id']!, _reportIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reportIdMeta);
+    }
+    if (data.containsKey('user_pubkey')) {
+      context.handle(
+        _userPubkeyMeta,
+        userPubkey.isAcceptableOrUnknown(data['user_pubkey']!, _userPubkeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userPubkeyMeta);
+    }
+    if (data.containsKey('event_json')) {
+      context.handle(
+        _eventJsonMeta,
+        eventJson.isAcceptableOrUnknown(data['event_json']!, _eventJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_eventJsonMeta);
+    }
+    if (data.containsKey('target_relays')) {
+      context.handle(
+        _targetRelaysMeta,
+        targetRelays.isAcceptableOrUnknown(
+          data['target_relays']!,
+          _targetRelaysMeta,
+        ),
+      );
+    }
+    if (data.containsKey('zendesk_payload')) {
+      context.handle(
+        _zendeskPayloadMeta,
+        zendeskPayload.isAcceptableOrUnknown(
+          data['zendesk_payload']!,
+          _zendeskPayloadMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_zendeskPayloadMeta);
+    }
+    if (data.containsKey('relay_status')) {
+      context.handle(
+        _relayStatusMeta,
+        relayStatus.isAcceptableOrUnknown(
+          data['relay_status']!,
+          _relayStatusMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_relayStatusMeta);
+    }
+    if (data.containsKey('zendesk_status')) {
+      context.handle(
+        _zendeskStatusMeta,
+        zendeskStatus.isAcceptableOrUnknown(
+          data['zendesk_status']!,
+          _zendeskStatusMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_zendeskStatusMeta);
+    }
+    if (data.containsKey('relay_attempts')) {
+      context.handle(
+        _relayAttemptsMeta,
+        relayAttempts.isAcceptableOrUnknown(
+          data['relay_attempts']!,
+          _relayAttemptsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('zendesk_attempts')) {
+      context.handle(
+        _zendeskAttemptsMeta,
+        zendeskAttempts.isAcceptableOrUnknown(
+          data['zendesk_attempts']!,
+          _zendeskAttemptsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
+    if (data.containsKey('last_attempt_at')) {
+      context.handle(
+        _lastAttemptAtMeta,
+        lastAttemptAt.isAcceptableOrUnknown(
+          data['last_attempt_at']!,
+          _lastAttemptAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {reportId};
+  @override
+  PendingReportRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PendingReportRow(
+      reportId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}report_id'],
+      )!,
+      userPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_pubkey'],
+      )!,
+      eventJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_json'],
+      )!,
+      targetRelays: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target_relays'],
+      ),
+      zendeskPayload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}zendesk_payload'],
+      )!,
+      relayStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}relay_status'],
+      )!,
+      zendeskStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}zendesk_status'],
+      )!,
+      relayAttempts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}relay_attempts'],
+      )!,
+      zendeskAttempts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}zendesk_attempts'],
+      )!,
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
+      lastAttemptAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_attempt_at'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PendingReportsTable createAlias(String alias) {
+    return $PendingReportsTable(attachedDatabase, alias);
+  }
+}
+
+class PendingReportRow extends DataClass
+    implements Insertable<PendingReportRow> {
+  /// Matches `ContentReport.reportId`; also the Zendesk `external_id` so a
+  /// retry updates the ticket rather than filing a duplicate.
+  final String reportId;
+  final String userPubkey;
+
+  /// The signed kind-1984 (NIP-56) event, serialized. Republished as-is on
+  /// retry: the id is stable, so the relay dedupes rather than double-storing.
+  final String eventJson;
+
+  /// JSON list of target relays for the report, or null for the default set.
+  final String? targetRelays;
+
+  /// JSON of the Zendesk ticket fields, already redacted at enqueue time.
+  final String zendeskPayload;
+
+  /// `pending` | `done` | `deadLetter` (parsed throw-on-unknown).
+  final String relayStatus;
+  final String zendeskStatus;
+  final int relayAttempts;
+  final int zendeskAttempts;
+  final String? lastError;
+  final DateTime? lastAttemptAt;
+  final DateTime createdAt;
+  const PendingReportRow({
+    required this.reportId,
+    required this.userPubkey,
+    required this.eventJson,
+    this.targetRelays,
+    required this.zendeskPayload,
+    required this.relayStatus,
+    required this.zendeskStatus,
+    required this.relayAttempts,
+    required this.zendeskAttempts,
+    this.lastError,
+    this.lastAttemptAt,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['report_id'] = Variable<String>(reportId);
+    map['user_pubkey'] = Variable<String>(userPubkey);
+    map['event_json'] = Variable<String>(eventJson);
+    if (!nullToAbsent || targetRelays != null) {
+      map['target_relays'] = Variable<String>(targetRelays);
+    }
+    map['zendesk_payload'] = Variable<String>(zendeskPayload);
+    map['relay_status'] = Variable<String>(relayStatus);
+    map['zendesk_status'] = Variable<String>(zendeskStatus);
+    map['relay_attempts'] = Variable<int>(relayAttempts);
+    map['zendesk_attempts'] = Variable<int>(zendeskAttempts);
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
+    }
+    if (!nullToAbsent || lastAttemptAt != null) {
+      map['last_attempt_at'] = Variable<DateTime>(lastAttemptAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  PendingReportsCompanion toCompanion(bool nullToAbsent) {
+    return PendingReportsCompanion(
+      reportId: Value(reportId),
+      userPubkey: Value(userPubkey),
+      eventJson: Value(eventJson),
+      targetRelays: targetRelays == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetRelays),
+      zendeskPayload: Value(zendeskPayload),
+      relayStatus: Value(relayStatus),
+      zendeskStatus: Value(zendeskStatus),
+      relayAttempts: Value(relayAttempts),
+      zendeskAttempts: Value(zendeskAttempts),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
+      lastAttemptAt: lastAttemptAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastAttemptAt),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory PendingReportRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PendingReportRow(
+      reportId: serializer.fromJson<String>(json['reportId']),
+      userPubkey: serializer.fromJson<String>(json['userPubkey']),
+      eventJson: serializer.fromJson<String>(json['eventJson']),
+      targetRelays: serializer.fromJson<String?>(json['targetRelays']),
+      zendeskPayload: serializer.fromJson<String>(json['zendeskPayload']),
+      relayStatus: serializer.fromJson<String>(json['relayStatus']),
+      zendeskStatus: serializer.fromJson<String>(json['zendeskStatus']),
+      relayAttempts: serializer.fromJson<int>(json['relayAttempts']),
+      zendeskAttempts: serializer.fromJson<int>(json['zendeskAttempts']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
+      lastAttemptAt: serializer.fromJson<DateTime?>(json['lastAttemptAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'reportId': serializer.toJson<String>(reportId),
+      'userPubkey': serializer.toJson<String>(userPubkey),
+      'eventJson': serializer.toJson<String>(eventJson),
+      'targetRelays': serializer.toJson<String?>(targetRelays),
+      'zendeskPayload': serializer.toJson<String>(zendeskPayload),
+      'relayStatus': serializer.toJson<String>(relayStatus),
+      'zendeskStatus': serializer.toJson<String>(zendeskStatus),
+      'relayAttempts': serializer.toJson<int>(relayAttempts),
+      'zendeskAttempts': serializer.toJson<int>(zendeskAttempts),
+      'lastError': serializer.toJson<String?>(lastError),
+      'lastAttemptAt': serializer.toJson<DateTime?>(lastAttemptAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  PendingReportRow copyWith({
+    String? reportId,
+    String? userPubkey,
+    String? eventJson,
+    Value<String?> targetRelays = const Value.absent(),
+    String? zendeskPayload,
+    String? relayStatus,
+    String? zendeskStatus,
+    int? relayAttempts,
+    int? zendeskAttempts,
+    Value<String?> lastError = const Value.absent(),
+    Value<DateTime?> lastAttemptAt = const Value.absent(),
+    DateTime? createdAt,
+  }) => PendingReportRow(
+    reportId: reportId ?? this.reportId,
+    userPubkey: userPubkey ?? this.userPubkey,
+    eventJson: eventJson ?? this.eventJson,
+    targetRelays: targetRelays.present ? targetRelays.value : this.targetRelays,
+    zendeskPayload: zendeskPayload ?? this.zendeskPayload,
+    relayStatus: relayStatus ?? this.relayStatus,
+    zendeskStatus: zendeskStatus ?? this.zendeskStatus,
+    relayAttempts: relayAttempts ?? this.relayAttempts,
+    zendeskAttempts: zendeskAttempts ?? this.zendeskAttempts,
+    lastError: lastError.present ? lastError.value : this.lastError,
+    lastAttemptAt: lastAttemptAt.present
+        ? lastAttemptAt.value
+        : this.lastAttemptAt,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  PendingReportRow copyWithCompanion(PendingReportsCompanion data) {
+    return PendingReportRow(
+      reportId: data.reportId.present ? data.reportId.value : this.reportId,
+      userPubkey: data.userPubkey.present
+          ? data.userPubkey.value
+          : this.userPubkey,
+      eventJson: data.eventJson.present ? data.eventJson.value : this.eventJson,
+      targetRelays: data.targetRelays.present
+          ? data.targetRelays.value
+          : this.targetRelays,
+      zendeskPayload: data.zendeskPayload.present
+          ? data.zendeskPayload.value
+          : this.zendeskPayload,
+      relayStatus: data.relayStatus.present
+          ? data.relayStatus.value
+          : this.relayStatus,
+      zendeskStatus: data.zendeskStatus.present
+          ? data.zendeskStatus.value
+          : this.zendeskStatus,
+      relayAttempts: data.relayAttempts.present
+          ? data.relayAttempts.value
+          : this.relayAttempts,
+      zendeskAttempts: data.zendeskAttempts.present
+          ? data.zendeskAttempts.value
+          : this.zendeskAttempts,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      lastAttemptAt: data.lastAttemptAt.present
+          ? data.lastAttemptAt.value
+          : this.lastAttemptAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PendingReportRow(')
+          ..write('reportId: $reportId, ')
+          ..write('userPubkey: $userPubkey, ')
+          ..write('eventJson: $eventJson, ')
+          ..write('targetRelays: $targetRelays, ')
+          ..write('zendeskPayload: $zendeskPayload, ')
+          ..write('relayStatus: $relayStatus, ')
+          ..write('zendeskStatus: $zendeskStatus, ')
+          ..write('relayAttempts: $relayAttempts, ')
+          ..write('zendeskAttempts: $zendeskAttempts, ')
+          ..write('lastError: $lastError, ')
+          ..write('lastAttemptAt: $lastAttemptAt, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    reportId,
+    userPubkey,
+    eventJson,
+    targetRelays,
+    zendeskPayload,
+    relayStatus,
+    zendeskStatus,
+    relayAttempts,
+    zendeskAttempts,
+    lastError,
+    lastAttemptAt,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PendingReportRow &&
+          other.reportId == this.reportId &&
+          other.userPubkey == this.userPubkey &&
+          other.eventJson == this.eventJson &&
+          other.targetRelays == this.targetRelays &&
+          other.zendeskPayload == this.zendeskPayload &&
+          other.relayStatus == this.relayStatus &&
+          other.zendeskStatus == this.zendeskStatus &&
+          other.relayAttempts == this.relayAttempts &&
+          other.zendeskAttempts == this.zendeskAttempts &&
+          other.lastError == this.lastError &&
+          other.lastAttemptAt == this.lastAttemptAt &&
+          other.createdAt == this.createdAt);
+}
+
+class PendingReportsCompanion extends UpdateCompanion<PendingReportRow> {
+  final Value<String> reportId;
+  final Value<String> userPubkey;
+  final Value<String> eventJson;
+  final Value<String?> targetRelays;
+  final Value<String> zendeskPayload;
+  final Value<String> relayStatus;
+  final Value<String> zendeskStatus;
+  final Value<int> relayAttempts;
+  final Value<int> zendeskAttempts;
+  final Value<String?> lastError;
+  final Value<DateTime?> lastAttemptAt;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const PendingReportsCompanion({
+    this.reportId = const Value.absent(),
+    this.userPubkey = const Value.absent(),
+    this.eventJson = const Value.absent(),
+    this.targetRelays = const Value.absent(),
+    this.zendeskPayload = const Value.absent(),
+    this.relayStatus = const Value.absent(),
+    this.zendeskStatus = const Value.absent(),
+    this.relayAttempts = const Value.absent(),
+    this.zendeskAttempts = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.lastAttemptAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PendingReportsCompanion.insert({
+    required String reportId,
+    required String userPubkey,
+    required String eventJson,
+    this.targetRelays = const Value.absent(),
+    required String zendeskPayload,
+    required String relayStatus,
+    required String zendeskStatus,
+    this.relayAttempts = const Value.absent(),
+    this.zendeskAttempts = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.lastAttemptAt = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : reportId = Value(reportId),
+       userPubkey = Value(userPubkey),
+       eventJson = Value(eventJson),
+       zendeskPayload = Value(zendeskPayload),
+       relayStatus = Value(relayStatus),
+       zendeskStatus = Value(zendeskStatus),
+       createdAt = Value(createdAt);
+  static Insertable<PendingReportRow> custom({
+    Expression<String>? reportId,
+    Expression<String>? userPubkey,
+    Expression<String>? eventJson,
+    Expression<String>? targetRelays,
+    Expression<String>? zendeskPayload,
+    Expression<String>? relayStatus,
+    Expression<String>? zendeskStatus,
+    Expression<int>? relayAttempts,
+    Expression<int>? zendeskAttempts,
+    Expression<String>? lastError,
+    Expression<DateTime>? lastAttemptAt,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (reportId != null) 'report_id': reportId,
+      if (userPubkey != null) 'user_pubkey': userPubkey,
+      if (eventJson != null) 'event_json': eventJson,
+      if (targetRelays != null) 'target_relays': targetRelays,
+      if (zendeskPayload != null) 'zendesk_payload': zendeskPayload,
+      if (relayStatus != null) 'relay_status': relayStatus,
+      if (zendeskStatus != null) 'zendesk_status': zendeskStatus,
+      if (relayAttempts != null) 'relay_attempts': relayAttempts,
+      if (zendeskAttempts != null) 'zendesk_attempts': zendeskAttempts,
+      if (lastError != null) 'last_error': lastError,
+      if (lastAttemptAt != null) 'last_attempt_at': lastAttemptAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PendingReportsCompanion copyWith({
+    Value<String>? reportId,
+    Value<String>? userPubkey,
+    Value<String>? eventJson,
+    Value<String?>? targetRelays,
+    Value<String>? zendeskPayload,
+    Value<String>? relayStatus,
+    Value<String>? zendeskStatus,
+    Value<int>? relayAttempts,
+    Value<int>? zendeskAttempts,
+    Value<String?>? lastError,
+    Value<DateTime?>? lastAttemptAt,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return PendingReportsCompanion(
+      reportId: reportId ?? this.reportId,
+      userPubkey: userPubkey ?? this.userPubkey,
+      eventJson: eventJson ?? this.eventJson,
+      targetRelays: targetRelays ?? this.targetRelays,
+      zendeskPayload: zendeskPayload ?? this.zendeskPayload,
+      relayStatus: relayStatus ?? this.relayStatus,
+      zendeskStatus: zendeskStatus ?? this.zendeskStatus,
+      relayAttempts: relayAttempts ?? this.relayAttempts,
+      zendeskAttempts: zendeskAttempts ?? this.zendeskAttempts,
+      lastError: lastError ?? this.lastError,
+      lastAttemptAt: lastAttemptAt ?? this.lastAttemptAt,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (reportId.present) {
+      map['report_id'] = Variable<String>(reportId.value);
+    }
+    if (userPubkey.present) {
+      map['user_pubkey'] = Variable<String>(userPubkey.value);
+    }
+    if (eventJson.present) {
+      map['event_json'] = Variable<String>(eventJson.value);
+    }
+    if (targetRelays.present) {
+      map['target_relays'] = Variable<String>(targetRelays.value);
+    }
+    if (zendeskPayload.present) {
+      map['zendesk_payload'] = Variable<String>(zendeskPayload.value);
+    }
+    if (relayStatus.present) {
+      map['relay_status'] = Variable<String>(relayStatus.value);
+    }
+    if (zendeskStatus.present) {
+      map['zendesk_status'] = Variable<String>(zendeskStatus.value);
+    }
+    if (relayAttempts.present) {
+      map['relay_attempts'] = Variable<int>(relayAttempts.value);
+    }
+    if (zendeskAttempts.present) {
+      map['zendesk_attempts'] = Variable<int>(zendeskAttempts.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
+    if (lastAttemptAt.present) {
+      map['last_attempt_at'] = Variable<DateTime>(lastAttemptAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PendingReportsCompanion(')
+          ..write('reportId: $reportId, ')
+          ..write('userPubkey: $userPubkey, ')
+          ..write('eventJson: $eventJson, ')
+          ..write('targetRelays: $targetRelays, ')
+          ..write('zendeskPayload: $zendeskPayload, ')
+          ..write('relayStatus: $relayStatus, ')
+          ..write('zendeskStatus: $zendeskStatus, ')
+          ..write('relayAttempts: $relayAttempts, ')
+          ..write('zendeskAttempts: $zendeskAttempts, ')
+          ..write('lastError: $lastError, ')
+          ..write('lastAttemptAt: $lastAttemptAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PendingProductEventsTable extends PendingProductEvents
     with TableInfo<$PendingProductEventsTable, PendingProductEventRow> {
   @override
@@ -18088,6 +18848,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $OutgoingDmsTable outgoingDms = $OutgoingDmsTable(this);
   late final $PendingViewEventsTable pendingViewEvents =
       $PendingViewEventsTable(this);
+  late final $PendingReportsTable pendingReports = $PendingReportsTable(this);
   late final $PendingProductEventsTable pendingProductEvents =
       $PendingProductEventsTable(this);
   late final $PendingGiftWrapsTable pendingGiftWraps = $PendingGiftWrapsTable(
@@ -18218,6 +18979,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final PendingViewEventsDao pendingViewEventsDao = PendingViewEventsDao(
     this as AppDatabase,
   );
+  late final PendingReportsDao pendingReportsDao = PendingReportsDao(
+    this as AppDatabase,
+  );
   late final PendingProductEventsDao pendingProductEventsDao =
       PendingProductEventsDao(this as AppDatabase);
   late final PendingGiftWrapsDao pendingGiftWrapsDao = PendingGiftWrapsDao(
@@ -18262,6 +19026,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     conversations,
     outgoingDms,
     pendingViewEvents,
+    pendingReports,
     pendingProductEvents,
     pendingGiftWraps,
     processedGiftWraps,
@@ -24935,6 +25700,361 @@ typedef $$PendingViewEventsTableProcessedTableManager =
       PendingViewEventRow,
       PrefetchHooks Function()
     >;
+typedef $$PendingReportsTableCreateCompanionBuilder =
+    PendingReportsCompanion Function({
+      required String reportId,
+      required String userPubkey,
+      required String eventJson,
+      Value<String?> targetRelays,
+      required String zendeskPayload,
+      required String relayStatus,
+      required String zendeskStatus,
+      Value<int> relayAttempts,
+      Value<int> zendeskAttempts,
+      Value<String?> lastError,
+      Value<DateTime?> lastAttemptAt,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$PendingReportsTableUpdateCompanionBuilder =
+    PendingReportsCompanion Function({
+      Value<String> reportId,
+      Value<String> userPubkey,
+      Value<String> eventJson,
+      Value<String?> targetRelays,
+      Value<String> zendeskPayload,
+      Value<String> relayStatus,
+      Value<String> zendeskStatus,
+      Value<int> relayAttempts,
+      Value<int> zendeskAttempts,
+      Value<String?> lastError,
+      Value<DateTime?> lastAttemptAt,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$PendingReportsTableFilterComposer
+    extends Composer<_$AppDatabase, $PendingReportsTable> {
+  $$PendingReportsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get reportId => $composableBuilder(
+    column: $table.reportId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userPubkey => $composableBuilder(
+    column: $table.userPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get eventJson => $composableBuilder(
+    column: $table.eventJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get targetRelays => $composableBuilder(
+    column: $table.targetRelays,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get zendeskPayload => $composableBuilder(
+    column: $table.zendeskPayload,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get relayStatus => $composableBuilder(
+    column: $table.relayStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get zendeskStatus => $composableBuilder(
+    column: $table.zendeskStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get relayAttempts => $composableBuilder(
+    column: $table.relayAttempts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get zendeskAttempts => $composableBuilder(
+    column: $table.zendeskAttempts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastAttemptAt => $composableBuilder(
+    column: $table.lastAttemptAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PendingReportsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PendingReportsTable> {
+  $$PendingReportsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get reportId => $composableBuilder(
+    column: $table.reportId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userPubkey => $composableBuilder(
+    column: $table.userPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get eventJson => $composableBuilder(
+    column: $table.eventJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get targetRelays => $composableBuilder(
+    column: $table.targetRelays,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get zendeskPayload => $composableBuilder(
+    column: $table.zendeskPayload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get relayStatus => $composableBuilder(
+    column: $table.relayStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get zendeskStatus => $composableBuilder(
+    column: $table.zendeskStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get relayAttempts => $composableBuilder(
+    column: $table.relayAttempts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get zendeskAttempts => $composableBuilder(
+    column: $table.zendeskAttempts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastAttemptAt => $composableBuilder(
+    column: $table.lastAttemptAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PendingReportsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PendingReportsTable> {
+  $$PendingReportsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get reportId =>
+      $composableBuilder(column: $table.reportId, builder: (column) => column);
+
+  GeneratedColumn<String> get userPubkey => $composableBuilder(
+    column: $table.userPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get eventJson =>
+      $composableBuilder(column: $table.eventJson, builder: (column) => column);
+
+  GeneratedColumn<String> get targetRelays => $composableBuilder(
+    column: $table.targetRelays,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get zendeskPayload => $composableBuilder(
+    column: $table.zendeskPayload,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get relayStatus => $composableBuilder(
+    column: $table.relayStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get zendeskStatus => $composableBuilder(
+    column: $table.zendeskStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get relayAttempts => $composableBuilder(
+    column: $table.relayAttempts,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get zendeskAttempts => $composableBuilder(
+    column: $table.zendeskAttempts,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastAttemptAt => $composableBuilder(
+    column: $table.lastAttemptAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$PendingReportsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PendingReportsTable,
+          PendingReportRow,
+          $$PendingReportsTableFilterComposer,
+          $$PendingReportsTableOrderingComposer,
+          $$PendingReportsTableAnnotationComposer,
+          $$PendingReportsTableCreateCompanionBuilder,
+          $$PendingReportsTableUpdateCompanionBuilder,
+          (
+            PendingReportRow,
+            BaseReferences<
+              _$AppDatabase,
+              $PendingReportsTable,
+              PendingReportRow
+            >,
+          ),
+          PendingReportRow,
+          PrefetchHooks Function()
+        > {
+  $$PendingReportsTableTableManager(
+    _$AppDatabase db,
+    $PendingReportsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PendingReportsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PendingReportsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PendingReportsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> reportId = const Value.absent(),
+                Value<String> userPubkey = const Value.absent(),
+                Value<String> eventJson = const Value.absent(),
+                Value<String?> targetRelays = const Value.absent(),
+                Value<String> zendeskPayload = const Value.absent(),
+                Value<String> relayStatus = const Value.absent(),
+                Value<String> zendeskStatus = const Value.absent(),
+                Value<int> relayAttempts = const Value.absent(),
+                Value<int> zendeskAttempts = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<DateTime?> lastAttemptAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PendingReportsCompanion(
+                reportId: reportId,
+                userPubkey: userPubkey,
+                eventJson: eventJson,
+                targetRelays: targetRelays,
+                zendeskPayload: zendeskPayload,
+                relayStatus: relayStatus,
+                zendeskStatus: zendeskStatus,
+                relayAttempts: relayAttempts,
+                zendeskAttempts: zendeskAttempts,
+                lastError: lastError,
+                lastAttemptAt: lastAttemptAt,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String reportId,
+                required String userPubkey,
+                required String eventJson,
+                Value<String?> targetRelays = const Value.absent(),
+                required String zendeskPayload,
+                required String relayStatus,
+                required String zendeskStatus,
+                Value<int> relayAttempts = const Value.absent(),
+                Value<int> zendeskAttempts = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<DateTime?> lastAttemptAt = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => PendingReportsCompanion.insert(
+                reportId: reportId,
+                userPubkey: userPubkey,
+                eventJson: eventJson,
+                targetRelays: targetRelays,
+                zendeskPayload: zendeskPayload,
+                relayStatus: relayStatus,
+                zendeskStatus: zendeskStatus,
+                relayAttempts: relayAttempts,
+                zendeskAttempts: zendeskAttempts,
+                lastError: lastError,
+                lastAttemptAt: lastAttemptAt,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PendingReportsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PendingReportsTable,
+      PendingReportRow,
+      $$PendingReportsTableFilterComposer,
+      $$PendingReportsTableOrderingComposer,
+      $$PendingReportsTableAnnotationComposer,
+      $$PendingReportsTableCreateCompanionBuilder,
+      $$PendingReportsTableUpdateCompanionBuilder,
+      (
+        PendingReportRow,
+        BaseReferences<_$AppDatabase, $PendingReportsTable, PendingReportRow>,
+      ),
+      PendingReportRow,
+      PrefetchHooks Function()
+    >;
 typedef $$PendingProductEventsTableCreateCompanionBuilder =
     PendingProductEventsCompanion Function({
       required String id,
@@ -26897,6 +28017,8 @@ class $AppDatabaseManager {
       $$OutgoingDmsTableTableManager(_db, _db.outgoingDms);
   $$PendingViewEventsTableTableManager get pendingViewEvents =>
       $$PendingViewEventsTableTableManager(_db, _db.pendingViewEvents);
+  $$PendingReportsTableTableManager get pendingReports =>
+      $$PendingReportsTableTableManager(_db, _db.pendingReports);
   $$PendingProductEventsTableTableManager get pendingProductEvents =>
       $$PendingProductEventsTableTableManager(_db, _db.pendingProductEvents);
   $$PendingGiftWrapsTableTableManager get pendingGiftWraps =>

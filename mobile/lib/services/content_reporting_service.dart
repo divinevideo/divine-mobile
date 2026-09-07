@@ -1,8 +1,10 @@
 // ABOUTME: Content reporting service for user-generated content violations
 // ABOUTME: Implements NIP-56 reporting events (kind 1984) for Apple compliance and community-driven moderation
 
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:db_client/db_client.dart';
 import 'package:meta/meta.dart';
 import 'package:models/models.dart' hide LogCategory;
 import 'package:nostr_client/nostr_client.dart';
@@ -11,6 +13,7 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_moderation_types.dart';
+import 'package:openvine/services/report_retry_service.dart';
 import 'package:openvine/services/video_moderation_status_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -139,22 +142,43 @@ class ContentReport {
 
 /// Service for reporting inappropriate content
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
-class ContentReportingService {
+class ContentReportingService implements ReportChannelDriver {
   ContentReportingService({
     required NostrClient nostrService,
     required AuthService authService,
     required SharedPreferences prefs,
     required String moderationRelayUrl,
+    PendingReportsDao? pendingReportsDao,
   }) : _nostrService = nostrService,
        _authService = authService,
        _prefs = prefs,
-       _moderationRelayUrl = moderationRelayUrl {
+       _moderationRelayUrl = moderationRelayUrl,
+       _pendingReportsDao = pendingReportsDao {
     _loadReportHistory();
   }
   final NostrClient _nostrService;
   final AuthService _authService;
   final SharedPreferences _prefs;
   final String _moderationRelayUrl;
+
+  /// Durable outbox for the relay + Zendesk channels. When wired, a channel
+  /// that fails the inline drive is retried by `ReportRetryService` instead of
+  /// dead-lettered. When null (some tests), reporting falls back to a one-shot
+  /// inline drive with the same delivery outcome. #8053.
+  final PendingReportsDao? _pendingReportsDao;
+
+  /// In-flight Zendesk POSTs, keyed by report id. The inline first drive and a
+  /// background sweep can both pick up the same freshly-enqueued row and file
+  /// its ticket concurrently; Zendesk does not dedup, so without this they
+  /// would create two tickets. Coalescing by report id makes concurrent
+  /// callers share one POST. #8053.
+  ///
+  /// This only dedups because the inline path and the sweep's driver are the
+  /// SAME instance (the keepAlive `reportRetryServiceProvider` pins this
+  /// service alive as its driver). If that ever changes so they use different
+  /// instances, this map no longer coordinates them and the coalescing breaks.
+  final Map<String, Future<bool>> _zendeskInFlight = {};
+
   static const String reportsStorageKey = 'content_reports_history';
 
   final List<ContentReport> _reportHistory = [];
@@ -275,29 +299,10 @@ class ContentReportingService {
         return ReportResult.failure('Failed to create report event');
       }
 
-      final sentEvent = await _nostrService.publishEvent(
-        reportEvent,
-        targetRelays: _targetRelaysForReport(sourceRelay),
-      );
-      // Always continue to local save regardless of publish outcome.
-      final failureReason = sentEvent.failureReason;
-      final relayAccepted = failureReason == null;
-      if (!relayAccepted) {
-        Log.error(
-          'Failed to publish NIP-56 report: $failureReason',
-          name: 'ContentReportingService',
-          category: LogCategory.system,
-        );
-      } else {
-        Log.info(
-          'Report published to relays',
-          name: 'ContentReportingService',
-          category: LogCategory.system,
-        );
-      }
-
-      // Create Zendesk ticket silently for moderation tracking
-      final zendeskFiled = await _createZendeskTicket(
+      // Build the redacted Zendesk payload once so the inline drive and any
+      // retry send an identical ticket.
+      final targetRelays = _targetRelaysForReport(sourceRelay);
+      final zendeskPayload = _buildZendeskPayload(
         reportId: reportId,
         eventId: eventId,
         authorPubkey: authorPubkey,
@@ -305,6 +310,70 @@ class ContentReportingService {
         details: safeDetails,
         additionalContext: safeAdditionalContext,
       );
+
+      // Enqueue a durable row so a channel that fails now is retried by
+      // ReportRetryService rather than lost. The moderation DM keeps its own
+      // outbox and is not enqueued here. #8053.
+      // The durable queue is enrichment, not the primary path: every DAO call
+      // below is best-effort and must never change the delivery outcome the
+      // caller sees. A DB failure degrades to the pre-queue one-shot send
+      // rather than blocking a (possibly child-safety) report.
+      final dao = _pendingReportsDao;
+      final reporter = reporterPubkey;
+      var queued = false;
+      if (dao != null && reporter != null) {
+        try {
+          await dao.enqueue(
+            PendingReport(
+              reportId: reportId,
+              userPubkey: reporter,
+              eventJson: jsonEncode(reportEvent.toJson()),
+              targetRelays: jsonEncode(targetRelays),
+              zendeskPayload: jsonEncode(zendeskPayload),
+              createdAt: DateTime.now(),
+            ),
+          );
+          queued = true;
+        } catch (e) {
+          Log.error(
+            'Failed to enqueue pending report $reportId; delivering without '
+            'the durable queue: $e',
+            name: 'ContentReportingService',
+            category: LogCategory.system,
+          );
+        }
+      }
+
+      // Optimistic delivery: once the report is durably queued, return right
+      // away and drive the channels in the background — an immediate best-effort
+      // attempt here, then ReportRetryService on later foregrounds. A caller
+      // with no durable queue (legacy) falls back to a one-shot inline attempt
+      // so its result still reflects whether anything reached a channel. #8053.
+      final ReportDelivery delivery;
+      if (queued && dao != null) {
+        unawaited(_driveReportChannelsOnce(reportId));
+        delivery = ReportDelivery.reached;
+      } else {
+        final relayAccepted = await _publishReportEvent(
+          reportEvent,
+          targetRelays,
+        );
+        final zendeskFiled = await _fileZendeskTicket(
+          zendeskPayload,
+          externalId: reportId,
+        );
+        delivery = (relayAccepted || zendeskFiled)
+            ? ReportDelivery.reached
+            : ReportDelivery.localOnly;
+        if (delivery == ReportDelivery.localOnly) {
+          Log.error(
+            'Report $reportId reached no channel: relay and Zendesk both '
+            'failed and there is no durable queue to retry them.',
+            name: 'ContentReportingService',
+            category: LogCategory.system,
+          );
+        }
+      }
 
       // Save report to local history
       final report = ContentReport(
@@ -323,23 +392,6 @@ class ContentReportingService {
 
       _reportHistory.add(report);
       await _saveReportHistory();
-
-      // The report is recorded either way, but only an off-device channel
-      // makes it visible to moderation. Treat the two as a disjunction: a
-      // filed Zendesk ticket means a human has the report even when every
-      // relay refused it, and vice versa.
-      final delivery = (relayAccepted || zendeskFiled)
-          ? ReportDelivery.reached
-          : ReportDelivery.localOnly;
-      if (delivery == ReportDelivery.localOnly) {
-        Log.error(
-          'Report $reportId reached no channel: relay and Zendesk both '
-          'failed. Local history is never replayed, so it is lost unless '
-          'the user submits again.',
-          name: 'ContentReportingService',
-          category: LogCategory.system,
-        );
-      }
 
       Log.debug(
         'Content report submitted: $reportId',
@@ -667,57 +719,85 @@ class ContentReportingService {
   ///
   /// Returns whether the ticket was actually created. A failure here never
   /// fails the report, but it does count against [ReportDelivery].
-  Future<bool> _createZendeskTicket({
+  /// Builds the redacted Zendesk ticket fields for a report. Stored in the
+  /// durable queue and rebuilt into a ticket on each delivery attempt.
+  Map<String, dynamic> _buildZendeskPayload({
     required String reportId,
     required String eventId,
     required String authorPubkey,
     required ContentFilterReason reason,
     required String details,
     String? additionalContext,
+  }) {
+    // Format ticket description with NIP-56 report details.
+    final description = StringBuffer();
+    description.writeln('Content Report - NIP-56');
+    description.writeln();
+    description.writeln('Report ID: $reportId');
+    description.writeln('Event ID: $eventId');
+    description.writeln('Author Pubkey: $authorPubkey');
+    description.writeln();
+    description.writeln('Violation Type: ${reason.name}');
+    description.writeln();
+    description.writeln('Reporter Details:');
+    // Per-field, before assembly: redaction spans lines, so sanitizing the
+    // finished blob lets one reporter field erase the ones after it.
+    description.writeln(sanitizeDiagnosticText(details));
+
+    if (additionalContext != null) {
+      description.writeln();
+      description.writeln('Additional Context:');
+      description.writeln(sanitizeDiagnosticText(additionalContext));
+    }
+
+    description.writeln();
+    description.writeln('---');
+    description.writeln('Reported via Divine mobile app');
+    description.writeln('NIP-56 Nostr event created: $eventId');
+
+    return {
+      'subject': 'Content Report: ${reason.name}',
+      'description': description.toString(),
+      'tags': ['mobile', 'content-report', 'nip-56', reason.name.toLowerCase()],
+    };
+  }
+
+  /// Files a Zendesk ticket from a stored payload, coalescing concurrent calls
+  /// for the same [externalId] onto one POST so an inline drive and a sweep
+  /// cannot double-file. [externalId] also tags the ticket for best-effort
+  /// dedup of a lost-ACK retry (#8053). Never throws; a failure returns false.
+  Future<bool> _fileZendeskTicket(
+    Map<String, dynamic> payload, {
+    required String externalId,
+  }) {
+    final existing = _zendeskInFlight[externalId];
+    if (existing != null) return existing;
+    final future = _fileZendeskTicketInner(payload, externalId: externalId);
+    _zendeskInFlight[externalId] = future;
+    return future.whenComplete(() => _zendeskInFlight.remove(externalId));
+  }
+
+  Future<bool> _fileZendeskTicketInner(
+    Map<String, dynamic> payload, {
+    required String externalId,
   }) async {
     try {
-      // Format ticket description with NIP-56 report details
-      final description = StringBuffer();
-      description.writeln('Content Report - NIP-56');
-      description.writeln();
-      description.writeln('Report ID: $reportId');
-      description.writeln('Event ID: $eventId');
-      description.writeln('Author Pubkey: $authorPubkey');
-      description.writeln();
-      description.writeln('Violation Type: ${reason.name}');
-      description.writeln();
-      description.writeln('Reporter Details:');
-      // Per-field, before assembly: redaction spans lines, so sanitizing the
-      // finished blob lets one reporter field erase the ones after it.
-      description.writeln(sanitizeDiagnosticText(details));
-
-      if (additionalContext != null) {
-        description.writeln();
-        description.writeln('Additional Context:');
-        description.writeln(sanitizeDiagnosticText(additionalContext));
-      }
-
-      description.writeln();
-      description.writeln('---');
-      description.writeln('Reported via Divine mobile app');
-      description.writeln('NIP-56 Nostr event created: $eventId');
-
-      // Create Zendesk ticket silently
       final success = await ZendeskSupportService.createTicket(
-        subject: 'Content Report: ${reason.name}',
-        description: description.toString(),
-        tags: ['mobile', 'content-report', 'nip-56', reason.name.toLowerCase()],
+        subject: payload['subject'] as String,
+        description: payload['description'] as String,
+        tags: (payload['tags'] as List).cast<String>(),
+        externalId: externalId,
       );
 
       if (success) {
         Log.info(
-          'Zendesk ticket created for report: $reportId',
+          'Zendesk ticket created for report: $externalId',
           name: 'ContentReportingService',
           category: LogCategory.system,
         );
       } else {
         Log.warning(
-          'Failed to create Zendesk ticket for report: $reportId',
+          'Failed to create Zendesk ticket for report: $externalId',
           name: 'ContentReportingService',
           category: LogCategory.system,
         );
@@ -731,6 +811,149 @@ class ContentReportingService {
       );
       // Don't fail the report if Zendesk ticket creation fails
       return false;
+    }
+  }
+
+  /// Publishes the signed kind-1984 report event. Returns whether the relay
+  /// accepted it. Republishing the same stored event is idempotent by id.
+  Future<bool> _publishReportEvent(
+    Event event,
+    List<String> targetRelays,
+  ) async {
+    final sentEvent = await _nostrService.publishEvent(
+      event,
+      targetRelays: targetRelays,
+    );
+    final failureReason = sentEvent.failureReason;
+    final relayAccepted = failureReason == null;
+    if (!relayAccepted) {
+      Log.error(
+        'Failed to publish NIP-56 report: $failureReason',
+        name: 'ContentReportingService',
+        category: LogCategory.system,
+      );
+    } else {
+      Log.info(
+        'Report published to relays',
+        name: 'ContentReportingService',
+        category: LogCategory.system,
+      );
+    }
+    return relayAccepted;
+  }
+
+  Future<void> _recordDriveOutcome(
+    PendingReportsDao dao,
+    String reportId,
+    ReportChannel channel,
+    bool delivered,
+  ) async {
+    // Best-effort bookkeeping: never let a queue write change the delivery
+    // outcome already returned to the caller. The sweep reconciles from the
+    // persisted row if this fails.
+    try {
+      if (delivered) {
+        await dao.markChannelDone(reportId: reportId, channel: channel);
+      } else {
+        await dao.recordChannelFailure(
+          reportId: reportId,
+          channel: channel,
+          error: '${channel.name} delivery failed on first attempt',
+        );
+      }
+    } catch (e) {
+      Log.warning(
+        'Failed to record $reportId ${channel.name} drive outcome: $e',
+        name: 'ContentReportingService',
+        category: LogCategory.system,
+      );
+    }
+  }
+
+  /// Best-effort first delivery attempt for a freshly-enqueued report, run
+  /// unawaited by [reportContent] so the confirmation is not blocked on the
+  /// network. Whatever fails stays queued for [ReportRetryService]'s sweep.
+  /// #8053.
+  Future<void> _driveReportChannelsOnce(String reportId) async {
+    final dao = _pendingReportsDao;
+    if (dao == null) return;
+
+    PendingReport? row;
+    try {
+      row = await dao.getById(reportId);
+    } catch (e) {
+      Log.warning(
+        'Failed to load report $reportId for its first drive: $e',
+        name: 'ContentReportingService',
+        category: LogCategory.system,
+      );
+      return;
+    }
+    if (row == null) return;
+
+    if (row.relayStatus == PendingReportChannelStatus.pending) {
+      await _recordDriveOutcome(
+        dao,
+        reportId,
+        ReportChannel.relay,
+        await _tryDeliver(row, ReportChannel.relay),
+      );
+    }
+    if (row.zendeskStatus == PendingReportChannelStatus.pending) {
+      await _recordDriveOutcome(
+        dao,
+        reportId,
+        ReportChannel.zendesk,
+        await _tryDeliver(row, ReportChannel.zendesk),
+      );
+    }
+
+    // A fully delivered report need not linger in the queue.
+    try {
+      final updated = await dao.getById(reportId);
+      if (updated != null &&
+          updated.relayStatus == PendingReportChannelStatus.done &&
+          updated.zendeskStatus == PendingReportChannelStatus.done) {
+        await dao.deleteById(reportId);
+      }
+    } catch (_) {
+      // Best-effort cleanup; the sweep will drop a both-done row later.
+    }
+  }
+
+  Future<bool> _tryDeliver(PendingReport row, ReportChannel channel) async {
+    try {
+      return await deliverReportChannel(row, channel);
+    } catch (e) {
+      Log.warning(
+        'Report ${row.reportId} ${channel.name} first-drive threw: $e',
+        name: 'ContentReportingService',
+        category: LogCategory.system,
+      );
+      return false;
+    }
+  }
+
+  /// [ReportChannelDriver]: drives one channel of a queued report for the
+  /// background retry sweep, from the row's stored event / payload.
+  @override
+  Future<bool> deliverReportChannel(
+    PendingReport report,
+    ReportChannel channel,
+  ) async {
+    switch (channel) {
+      case ReportChannel.relay:
+        final event = Event.fromJson(
+          jsonDecode(report.eventJson) as Map<String, dynamic>,
+        );
+        final relays = report.targetRelays == null
+            ? _targetRelaysForReport(null)
+            : (jsonDecode(report.targetRelays!) as List).cast<String>();
+        return _publishReportEvent(event, relays);
+      case ReportChannel.zendesk:
+        final payload =
+            jsonDecode(report.zendeskPayload) as Map<String, dynamic>;
+        return _fileZendeskTicket(payload, externalId: report.reportId);
     }
   }
 
