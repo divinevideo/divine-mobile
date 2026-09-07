@@ -1443,6 +1443,7 @@ void main() {
       'wrong key leaves an encrypted hot journal byte-for-byte intact',
       () async {
         _createHotJournalFixture(dbPath, key: validKey);
+        _expectReadOnlyRollback(dbPath);
         final databaseBefore = File(dbPath).readAsBytesSync();
         final journalBefore = File('$dbPath-journal').readAsBytesSync();
         const wrongKey =
@@ -1465,6 +1466,7 @@ void main() {
       'wrong key leaves a spilled-schema journal byte-for-byte intact',
       () async {
         _createSpilledSchemaHotJournalFixture(dbPath, key: validKey);
+        _expectReadOnlyRollback(dbPath);
         final databaseBefore = File(dbPath).readAsBytesSync();
         final journalBefore = File('$dbPath-journal').readAsBytesSync();
         const wrongKey =

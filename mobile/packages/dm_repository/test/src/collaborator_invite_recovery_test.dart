@@ -419,6 +419,16 @@ void main() {
 
     test('parseCollaboratorInviteRumor rejects non-invite rumor tags', () {
       expect(
+        parseCollaboratorInviteRumorTags([
+          [
+            CollaboratorInviteTags.markerName,
+            CollaboratorInviteTags.markerValue,
+          ],
+          [CollaboratorInviteTags.address, _videoAddress],
+        ]),
+        isNotNull,
+      );
+      expect(
         parseCollaboratorInviteRumor(
           Event(_ownerPubkey, 14, const [], 'invite'),
         ),
@@ -456,6 +466,17 @@ void main() {
     });
 
     test('parseCollaboratorInviteRumor rejects mismatched creator pubkey', () {
+      expect(
+        parseCollaboratorInviteRumorTags([
+          [
+            CollaboratorInviteTags.markerName,
+            CollaboratorInviteTags.markerValue,
+          ],
+          [CollaboratorInviteTags.address, _videoAddress],
+          [CollaboratorInviteTags.pubkey, _ownerPubkey],
+        ]),
+        isNotNull,
+      );
       final metadata = parseCollaboratorInviteRumorTags([
         [CollaboratorInviteTags.markerName, CollaboratorInviteTags.markerValue],
         [CollaboratorInviteTags.address, _videoAddress],
@@ -483,6 +504,21 @@ void main() {
     );
 
     test('parseCollaboratorInviteRumor rejects non-collaborator role', () {
+      expect(
+        parseCollaboratorInviteRumorTags([
+          [
+            CollaboratorInviteTags.markerName,
+            CollaboratorInviteTags.markerValue,
+          ],
+          [CollaboratorInviteTags.address, _videoAddress],
+          [CollaboratorInviteTags.pubkey, _ownerPubkey],
+          [
+            CollaboratorInviteTags.role,
+            CollaboratorInviteTags.collaboratorRole,
+          ],
+        ]),
+        isNotNull,
+      );
       final metadata = parseCollaboratorInviteRumorTags([
         [CollaboratorInviteTags.markerName, CollaboratorInviteTags.markerValue],
         [CollaboratorInviteTags.address, _videoAddress],
