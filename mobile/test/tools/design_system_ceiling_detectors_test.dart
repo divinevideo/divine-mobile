@@ -385,22 +385,22 @@ final t = """
     });
 
     test('optionally preserves literals only inside real Tags annotations', () {
+      const tag =
+          'skip_very_good_'
+          'optimization';
       final out = filter(
         '''
 @Tags([
-  'skip_very_good_optimization',
+  '$tag',
 ])
-final message = '@Tags(["skip_very_good_optimization"])';
-/* @Tags(['skip_very_good_optimization']) */
+final message = '@Tags(["$tag"])';
+/* @Tags(['$tag']) */
 ''',
         preserveTagLiterals: true,
       );
 
-      expect(out, contains("'skip_very_good_optimization'"));
-      expect(
-        'skip_very_good_optimization'.allMatches(out),
-        hasLength(1),
-      );
+      expect(out, contains("'$tag'"));
+      expect(tag.allMatches(out), hasLength(1));
     });
   });
 }
