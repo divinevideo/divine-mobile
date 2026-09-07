@@ -27,6 +27,13 @@ recapturing (e.g. after editing caption copy), run
 
 The `screenshots` lane verifies step 1 ran (it checks `Generated.xcconfig`
 for the `SCREENSHOT_MODE` define) and fails fast with instructions if not.
+The `DivineUITests` scheme uses the `Debug-DivineUITests` build configuration,
+which is also the Flutter asset flavor that bundles the screenshot-only videos
+and thumbnails.
+
+A flavorless `flutter run --dart-define=SCREENSHOT_MODE=true` does not bundle
+those fixtures. For manual screenshot-mode debugging, select the
+`DivineUITests` scheme in Xcode so the app is built with its fixture flavor.
 
 Output lands in `mobile/ios/fastlane/screenshots/<locale>/` - raw captures
 as `<device>-<name>.png`, framed + captioned versions as
@@ -49,6 +56,9 @@ bundle exec fastlane frame     # re-frame existing captures (fast)
   `lib/config/screenshot_mode.dart`) is compile-time false outside debug
   builds; the Fastfile verifies the define is present before capture, and
   no screenshot affordance ships in Release.
+- The `Debug-DivineUITests` configuration lets Flutter infer the
+  `DivineUITests` asset flavor from the scheme build. Production and ordinary
+  debug builds therefore omit the screenshot-only videos and thumbnails.
 - On launch, screenshot mode creates a **throwaway Nostr account**
   (fresh key, terms auto-accepted) and follows a fixed set of well-known
   creators (see `ScreenshotModeService.creatorPubkeysHex`) so the share
