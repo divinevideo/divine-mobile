@@ -170,9 +170,16 @@ measure. Filter to a single completion value first. In particular, `cache` and
 `first_relay_event` describe different work and are not directly comparable.
 
 Treat `cancelled` and `disposed` as abandonment outcomes. Treat `error`,
-`done`, and `setup_error` as unsuccessful terminal outcomes. Their durations
-are useful for diagnosing and counting incomplete loads, but should not be
-mixed into successful-load latency percentiles.
+`done`, and `setup_error` as unsuccessful terminal outcomes. Count all five;
+none of them belongs in successful-load latency percentiles.
+
+Their *durations* split, though. `cancelled`, `error`, `done` and `setup_error`
+are reported where the load ends, so the duration is the load's own and is
+worth reading. `disposed` is reported by `dispose()` sweeping whatever is still
+pending, and its provider is `keepAlive`, so that fires at container
+teardown — the duration is "from this load's start until the app tore down",
+bounded by session length rather than by anything about the load. Chart
+`disposed` as a count, never as a latency.
 
 ## What `event_count` counts
 
