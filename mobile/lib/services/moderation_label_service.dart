@@ -354,8 +354,13 @@ class ModerationLabelService {
       }
       // A short page means the relay has no older labels — history is complete.
       if (!morePossible) break;
-      // A full page that added nothing new can only be the boundary repeating;
-      // advancing `until` again would spin, so stop with what we have.
+      // A full page that added nothing new means the cursor cannot advance:
+      // either the relay ignored `until`, or the whole page shares one
+      // created_at that already fills a page (more labels at that second than a
+      // page holds). Advancing again would spin, so stop. The same-timestamp
+      // case degrades to the newest page for that second — deterministic and
+      // bounded — because standard NIP filters expose no sub-second cursor to
+      // page within it.
       if (newThisPage == 0) break;
 
       // `until` is inclusive, so the oldest event reappears on the next page and
