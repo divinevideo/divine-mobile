@@ -21,6 +21,7 @@ Future<void> navigateToCreateAccount(WidgetTester tester) async {
     reason: 'Welcome screen should show "${_en.authCreateNewAccount}"',
   );
   await tester.tap(createButton);
+  await tester.pumpAndSettle(const Duration(seconds: 1));
 
   // Wait for the invite guard to resolve and show the create account form.
   // The InviteProtectedCreateAccountScreen fetches config asynchronously.
@@ -73,15 +74,15 @@ Future<void> registerNewUser(
   );
 
   await tester.enterText(textFields.at(0), email);
-  await tester.pump();
+  await tester.pumpAndSettle();
   await tester.enterText(textFields.at(1), password);
-  await tester.pump();
+  await tester.pumpAndSettle();
   await tester.enterText(textFields.at(2), confirmPassword ?? password);
-  await tester.pump();
+  await tester.pumpAndSettle();
 
   // Dismiss keyboard
   await tester.tapAt(const Offset(10, 100));
-  await tester.pump();
+  await tester.pumpAndSettle();
 
   // Submit — use widgetWithText to avoid matching the page title
   final submitButton = find.widgetWithText(

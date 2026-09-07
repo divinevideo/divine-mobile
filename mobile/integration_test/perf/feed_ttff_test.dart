@@ -1,149 +1,128 @@
-// ABOUTME: Enforces fullscreen-feed first-frame latency under a 5 Mbps network
-// ABOUTME: Samples native first-frame events instead of fixed waits or log scraping
+// ABOUTME: Enforces fullscreen-feed first-frame latency on the native player.
+// ABOUTME: Uses local rate-limited video fixtures without auth or backend state.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
-import 'package:openvine/main.dart' as app;
-import 'package:patrol/patrol.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:media_cache/media_cache.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 
-import '../helpers/db_helpers.dart';
-import '../helpers/http_helpers.dart';
-import '../helpers/navigation_helpers.dart';
-import '../helpers/patrol_semantics.dart';
-import '../helpers/test_setup.dart';
 import 'feed_ttff_budget.dart';
 
-Future<bool> _waitForSampleCount(
+const _baseUrl = String.fromEnvironment(
+  'FEED_TTFF_BASE_URL',
+  defaultValue: 'http://127.0.0.1:8765',
+);
+
+const _fixtureNames = <String>[
+  '0cfc8ec503ae05856ec43165bebb7d0d2a3759b2900e38f509b8d08154ef6dc2.mp4',
+  '606486ed7079b4b2614e9ca3e0f46c1c9a4a39d52c90dd25a9e51d1b7cf96b33.mp4',
+  '6c7bf42367895238e3bd20b12e95a171e9a37a41e2b9b18b89f228de38e9f827.mp4',
+];
+
+class _MockMediaCacheManager extends Mock implements MediaCacheManager {}
+
+class _MockDownload extends Mock implements CancellableDownload {}
+
+List<VideoEvent> _videos() => List.generate(feedTtffSampleCount, (index) {
+  final id = index.toRadixString(16).padLeft(64, '0');
+  return VideoEvent(
+    id: id,
+    pubkey: '1'.padLeft(64, '1'),
+    createdAt: index,
+    content: '',
+    timestamp: DateTime.utc(2026),
+    videoUrl:
+        '$_baseUrl/${_fixtureNames[index % _fixtureNames.length]}'
+        '?sample=$index',
+  );
+});
+
+Future<void> _waitForSamples(
   WidgetTester tester,
   Map<String, FeedFirstFrameMetric> samples,
-  int count, {
-  int maxSeconds = 15,
-}) async {
-  for (var i = 0; i < maxSeconds * 4; i++) {
-    await tester.pump(const Duration(milliseconds: 250));
-    if (samples.length >= count) return true;
+  int count,
+) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 15));
+  while (samples.length < count && DateTime.now().isBefore(deadline)) {
+    await tester.pump(const Duration(milliseconds: 100));
   }
-  return false;
+  expect(
+    samples.length,
+    greaterThanOrEqualTo(count),
+    reason: 'No native first-frame metric for sample $count',
+  );
 }
 
 void main() {
-  ignorePlatformSemanticsHandle();
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  group('time to first frame', () {
-    patrolTest(
-      'feed TTFF stays within the 5 Mbps p90 budget',
-      ($) async {
-        final tester = $.tester;
-        final samplesByVideoId = <String, FeedFirstFrameMetric>{};
-        final metricSubscription = FeedFirstFrameMetrics.events.listen((
-          metric,
-        ) {
-          samplesByVideoId.putIfAbsent(metric.videoId, () => metric);
-          logPhase(
-            'perf: ttff videoId=${metric.videoId} index=${metric.index} '
-            'durationMs=${metric.duration.inMilliseconds} '
-            'cache=${metric.loadedFromCache ? 'hit' : 'miss'}',
-          );
-        });
-        addTearDown(metricSubscription.cancel);
+  testWidgets(
+    'feed TTFF stays within the 5 Mbps p90 budget',
+    (tester) async {
+      final cache = _MockMediaCacheManager();
+      final download = _MockDownload();
+      when(() => cache.getCachedFileSync(any())).thenReturn(null);
+      when(() => cache.removeCachedFile(any())).thenAnswer((_) async {});
+      when(() => download.file).thenAnswer((_) async => null);
+      when(
+        () => download.result,
+      ).thenAnswer((_) async => const CancellableDownloadResult(file: null));
+      when(() => download.isCancelled).thenReturn(false);
+      when(download.cancel).thenReturn(null);
+      final cancellable = CancellableCacheOperation.fromDownload(download);
+      when(
+        () => cache.cacheFileCancellable(any(), key: any(named: 'key')),
+      ).thenReturn(cancellable);
 
-        final originalOnError = suppressSetStateErrors();
-        addTearDown(() => restoreErrorHandler(originalOnError));
-        final originalErrorBuilder = saveErrorWidgetBuilder();
-        addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));
-
-        logPhase('perf: launch_start');
-        launchAppGuarded(app.main);
-        logPhase('perf: launch_returned');
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        logPhase('perf: welcome_wait_start');
-        final welcomeLoaded = await waitForText(
-          tester,
-          l10n.authCreateNewAccount,
-          maxSeconds: 30,
+      final samples = <String, FeedFirstFrameMetric>{};
+      final subscription = FeedFirstFrameMetrics.events.listen((metric) {
+        samples.putIfAbsent(metric.videoId, () => metric);
+        // Kept machine-readable for the retained Codemagic log artifact.
+        debugPrint(
+          'FEED_TTFF videoId=${metric.videoId} index=${metric.index} '
+          'durationMs=${metric.duration.inMilliseconds} '
+          'cache=${metric.loadedFromCache ? 'hit' : 'miss'}',
         );
-        expect(
-          welcomeLoaded,
-          isTrue,
-          reason: 'Welcome screen did not load within 30s',
-        );
+      });
+      addTearDown(subscription.cancel);
 
-        logPhase('perf: register_start');
-        await navigateToCreateAccount(tester);
-        final email = 'perf-${DateTime.now().millisecondsSinceEpoch}@test.com';
-        await registerNewUser(tester, email, 'TestPass123!');
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: InfiniteVideoFeed(
+              videos: _videos(),
+              cache: cache,
+              prefetchCount: 0,
+              keepPreviousAlive: false,
+              keepNextAlive: false,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        ),
+      );
 
-        logPhase('perf: verify_email');
-        final token = await getVerificationToken(email);
-        await callVerifyEmail(token);
+      await _waitForSamples(tester, samples, 1);
+      for (var expected = 2; expected <= feedTtffSampleCount; expected++) {
+        await tester.fling(find.byType(PageView), const Offset(0, -600), 900);
+        await _waitForSamples(tester, samples, expected);
+      }
 
-        logPhase('perf: wait_for_feed');
-        final feedLoaded = await waitForText(
-          tester,
-          l10n.feedModeForYou,
-          maxSeconds: 30,
-        );
-        expect(
-          feedLoaded,
-          isTrue,
-          reason: 'Feed did not load within 30s after email verification',
-        );
-
-        final firstSampleArrived = await _waitForSampleCount(
-          tester,
-          samplesByVideoId,
-          1,
-        );
-        expect(
-          firstSampleArrived,
-          isTrue,
-          reason: 'The first feed video never rendered a native frame',
-        );
-
-        while (samplesByVideoId.length < feedTtffSampleCount) {
-          final expectedCount = samplesByVideoId.length + 1;
-          logPhase('perf: scroll_for_sample_$expectedCount');
-          final size = tester.view.physicalSize / tester.view.devicePixelRatio;
-          await tester.flingFrom(
-            Offset(size.width / 2, size.height * 0.8),
-            Offset(0, -size.height * 0.6),
-            800,
-          );
-          final sampleArrived = await _waitForSampleCount(
-            tester,
-            samplesByVideoId,
-            expectedCount,
-          );
-          expect(
-            sampleArrived,
-            isTrue,
-            reason:
-                'No first-frame metric arrived for feed sample '
-                '$expectedCount of $feedTtffSampleCount',
-          );
-        }
-
-        final samples = samplesByVideoId.values
-            .take(feedTtffSampleCount)
-            .toList();
-        final p90 = feedTtffPercentile(samples, percentile: 90);
-        final evidence = formatFeedTtffSamples(samples);
-        logPhase('$evidence\nFeed TTFF p90=${p90.inMilliseconds}ms');
-        expect(
-          p90,
-          lessThanOrEqualTo(feedTtffP90Budget),
-          reason:
-              '$evidence\n'
-              'p90=${p90.inMilliseconds}ms exceeded '
-              '${feedTtffP90Budget.inMilliseconds}ms',
-        );
-
-        restoreErrorWidgetBuilder(originalErrorBuilder);
-        drainAsyncErrors(tester);
-      },
-      timeout: const Timeout(Duration(minutes: 8)),
-    );
-  });
+      final measured = samples.values.take(feedTtffSampleCount).toList();
+      final p90 = feedTtffPercentile(measured, percentile: 90);
+      final evidence = formatFeedTtffSamples(measured);
+      debugPrint('$evidence\nFeed TTFF p90=${p90.inMilliseconds}ms');
+      expect(
+        p90,
+        lessThanOrEqualTo(feedTtffP90Budget),
+        reason:
+            '$evidence\n'
+            'p90=${p90.inMilliseconds}ms exceeded '
+            '${feedTtffP90Budget.inMilliseconds}ms',
+      );
+    },
+    timeout: const Timeout(Duration(minutes: 4)),
+  );
 }

@@ -1453,60 +1453,65 @@ workflows:
   perf-feed-ttff:
     name: Feed Time to First Frame (Android)
     working_directory: mobile
-    max_build_duration: 60
+    max_build_duration: 20
     instance_type: linux_x2
     environment:
       flutter: 3.44.9
       java: 17
-      groups:
-        - github_credentials
-      vars:
-        THROTTLE_RATE: 625k
     cache:
       cache_paths:
         - $HOME/.gradle/caches
         - $HOME/.pub-cache
     triggering:
-      # Manual while #7504 tracks the Codemagic GitHub app's missing event
-      # subscriptions. The mobile playback team owns this budget and lane.
-      events: []
+      # #7504 tracks reconnecting the Codemagic webhook. Once connected, this
+      # non-blocking lane runs only for PRs that can affect feed playback.
+      events:
+        - pull_request
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+          source: false
+      cancel_previous_builds: true
+    when:
+      changeset:
+        includes:
+          - codemagic.yaml
+          - mobile/integration_test/perf/
+          - mobile/lib/widgets/video_feed_item/
+          - mobile/packages/divine_video_player/
+          - mobile/packages/infinite_video_feed/
+          - mobile/packages/media_cache/
     scripts:
       - *flutter_pub_get
       - *setup_local_properties
       - *launch_android_emulator
-      - name: Run feed TTFF budget twice on failure
+      - name: Run deterministic feed TTFF budget
         script: |
           set -euo pipefail
-          if [ -z "${GHCR_PULL_TOKEN:-}" ] || \
-             [ -z "${GHCR_PULL_USERNAME:-}" ]; then
-            echo "ERROR: github_credentials must provide GHCR pull credentials" >&2
-            exit 1
-          fi
-          printf '%s' "$GHCR_PULL_TOKEN" | docker login ghcr.io \
-            --username "$GHCR_PULL_USERNAME" --password-stdin
+          mkdir -p test_reports
           cleanup() {
-            docker compose -f ../local_stack/docker-compose.yml down -v || true
+            kill "$FIXTURE_SERVER_PID" 2>/dev/null || true
           }
           trap cleanup EXIT
-          bash ../local_stack/setup.sh
-          bash ../local_stack/up.sh --pull=missing
-          set +e
-          bash ../local_stack/profile.sh \
-            integration_test/perf/feed_ttff_test.dart
-          first_exit=$?
-          if [ "$first_exit" -eq 0 ]; then
-            exit 0
-          fi
-          echo "First feed TTFF run failed; repeating once for variance policy" >&2
-          bash ../local_stack/profile.sh \
-            integration_test/perf/feed_ttff_test.dart
-          second_exit=$?
-          set -e
-          exit "$second_exit"
+          python3 scripts/ci/serve_ttff_fixtures.py \
+            --directory assets/seed_media/videos \
+            --rate 625000 > test_reports/feed_ttff_fixture_server.log 2>&1 &
+          FIXTURE_SERVER_PID=$!
+          until curl --fail --silent --range 0-0 \
+            http://127.0.0.1:8765/0cfc8ec503ae05856ec43165bebb7d0d2a3759b2900e38f509b8d08154ef6dc2.mp4 \
+            >/dev/null; do
+            kill -0 "$FIXTURE_SERVER_PID"
+            sleep 1
+          done
+          adb reverse tcp:8765 tcp:8765
+          DEVICE_ID=$(adb get-serialno)
+          flutter test integration_test/perf/feed_ttff_test.dart \
+            -d "$DEVICE_ID" \
+            --dart-define=FEED_TTFF_BASE_URL=http://127.0.0.1:8765 \
+            --machine | tee test_reports/feed_ttff.jsonl
     artifacts:
       - test_reports/*.jsonl
-      - build/app/reports/androidTests/**
-      - build/app/outputs/androidTest-results/**
+      - test_reports/feed_ttff_fixture_server.log
 
   e2e-smoke-android:
     name: E2E Smoke Tests (Android)

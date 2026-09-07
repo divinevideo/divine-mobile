@@ -170,30 +170,32 @@ through `FeedFirstFrameMetrics.events` and logged under the stable
 
 The enforced performance protocol is:
 
-- Android emulator backed by `local_stack/`.
-- Blossom traffic throttled to `625k` bytes per second (5 Mbps).
-- The ten incompressible seeded feed videos supplied by the local stack.
+- Android emulator running the production native player widget.
+- Repository-owned MP4 fixtures served over HTTP at 625,000 bytes per second
+  (5 Mbps), with byte-range support and caching disabled.
+- Ten distinct feed activations cycling through the immutable fixtures.
 - One sample per distinct active video, including the initially visible item.
 - Nearest-rank p90 of the ten activation-to-first-frame durations.
 - A 5,000 ms p90 ceiling.
-- Two consecutive failing runs constitute a regression. The CI lane retries
-  the complete test once and fails only when both executions fail.
 
 This is a native decode measurement and therefore does not run in the Linux
 service-test lane. The dedicated `perf-feed-ttff` Codemagic workflow uses the
-fixed `linux_x2` Android runner and is manually triggered while the Codemagic
-GitHub event integration tracked by #7504 remains unavailable. It is owned by
-the mobile playback team. Every run retains the merged JSONL timelines and
-Patrol reports; assertion failures also print the per-video table and p90.
-The `github_credentials` Codemagic group must provide secure
-`GHCR_PULL_TOKEN` (a PAT with `read:packages`) and its
-`GHCR_PULL_USERNAME`, because the invite fixture image is private.
+fixed `linux_x2` Android runner for pull requests that touch feed playback,
+player, cache, performance-test, or Codemagic configuration. Documentation-only
+and unrelated application changes do not start it. The lane stays non-blocking
+while #7504 tracks reconnecting the Codemagic GitHub webhook, and is owned by
+the mobile playback team. Every run retains the JSONL timeline and fixture
+server log; assertion failures also print the per-video table and p90. The
+harness has no account, backend, Docker, or secret dependency.
 
 Run the same protocol locally from `mobile/`:
 
 ```bash
-THROTTLE_RATE=625k mise run local_up
-THROTTLE_RATE=625k mise run e2e_test integration_test/perf/feed_ttff_test.dart
+python3 scripts/ci/serve_ttff_fixtures.py \
+  --directory assets/seed_media/videos --rate 625000
+adb reverse tcp:8765 tcp:8765
+flutter test integration_test/perf/feed_ttff_test.dart -d "$(adb get-serialno)" \
+  --dart-define=FEED_TTFF_BASE_URL=http://127.0.0.1:8765
 ```
 
 Do not adjust the ceiling from a single run. Re-baseline only after at least 30
