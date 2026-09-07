@@ -23,7 +23,13 @@ import '../../helpers/accessibility_guidelines.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockContentBlocklistRepository extends Mock
-    implements ContentBlocklistRepository {}
+    implements ContentBlocklistRepository {
+  @override
+  bool isBlocked(String pubkey) => false;
+
+  @override
+  bool canUnblock(String pubkey) => false;
+}
 
 class _MockNotifySubscriptionsRepository extends Mock
     implements NotifySubscriptionsRepository {}
@@ -73,7 +79,6 @@ void main() {
 
     when(() => nostrClient.publicKey).thenReturn(viewerPubkey);
 
-    when(() => blocklistRepository.canUnblock(any())).thenReturn(false);
     when(() => blocklistRepository.hasBlockedUs(any())).thenReturn(false);
     when(
       () => blocklistRepository.currentState,
