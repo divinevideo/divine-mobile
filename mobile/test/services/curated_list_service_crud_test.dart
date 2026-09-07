@@ -946,9 +946,15 @@ void main() {
           ) async {
             publishCount++;
             if (publishCount == 1) {
+              // The signer follows the account. Re-stubbing only the auth
+              // pubkey models auth != signer, which sealItemTags rejects
+              // outright, so the fixture would not be a real switch.
               when(
                 () => mockAuth.currentPublicKeyHex,
               ).thenReturn(scenario.nextOwner);
+              when(
+                mockSigner.getPublicKey,
+              ).thenAnswer((_) async => scenario.nextOwner);
             }
             return _accepted(invocation.positionalArguments[0] as Event);
           });
