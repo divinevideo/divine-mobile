@@ -1,6 +1,7 @@
 // ABOUTME: Widget tests for the Settings information architecture.
 // ABOUTME: Verifies General Settings and Content & Safety replace split content/moderation rows.
 
+import 'package:app_update_repository/app_update_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
@@ -11,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/app_update/app_update.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -40,6 +42,9 @@ import '../../helpers/scroll.dart';
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockLocaleCubit extends MockCubit<LocaleState> implements LocaleCubit {}
+
+class _MockAppUpdateBloc extends MockBloc<AppUpdateEvent, AppUpdateState>
+    implements AppUpdateBloc {}
 
 class _MockAudioSharingPreferenceService extends Mock
     implements AudioSharingPreferenceService {}
@@ -78,6 +83,7 @@ void main() {
   late SharedPreferences sharedPreferences;
   late _MockAuthService authService;
   late _MockLocaleCubit localeCubit;
+  late _MockAppUpdateBloc appUpdateBloc;
   late _MockAudioSharingPreferenceService audioSharingService;
   late _MockLanguagePreferenceService languageService;
   late _MockAccountLabelService accountLabelService;
@@ -94,6 +100,7 @@ void main() {
     sharedPreferences = await SharedPreferences.getInstance();
     authService = _MockAuthService();
     localeCubit = _MockLocaleCubit();
+    appUpdateBloc = _MockAppUpdateBloc();
     audioSharingService = _MockAudioSharingPreferenceService();
     languageService = _MockLanguagePreferenceService();
     accountLabelService = _MockAccountLabelService();
@@ -106,6 +113,13 @@ void main() {
     divineHostFilterService = DivineHostFilterService(sharedPreferences);
 
     when(() => localeCubit.state).thenReturn(const LocaleState());
+    when(() => appUpdateBloc.state).thenReturn(
+      const AppUpdateState(
+        status: AppUpdateStatus.resolved,
+        latestVersion: '1.0.22',
+        downloadUrl: DownloadUrls.appStore,
+      ),
+    );
     when(() => authService.isAuthenticated).thenReturn(false);
     when(() => authService.isRegistered).thenReturn(false);
     when(() => authService.isAnonymous).thenReturn(false);
@@ -188,7 +202,13 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: VineTheme.theme,
-        home: BlocProvider<LocaleCubit>.value(value: localeCubit, child: child),
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider<LocaleCubit>.value(value: localeCubit),
+            BlocProvider<AppUpdateBloc>.value(value: appUpdateBloc),
+          ],
+          child: child,
+        ),
       ),
     );
   }
@@ -220,6 +240,13 @@ void main() {
       expect(find.text('Content Preferences'), findsNothing);
       expect(find.text('Moderation Controls'), findsNothing);
       expect(find.text('Bluesky Publishing'), findsNothing);
+
+      await tester.scrollUntilVisible(
+        find.text('Update available'),
+        300,
+        scrollable: find.byType(Scrollable),
+      );
+      expect(find.text('Update available'), findsOneWidget);
     });
   });
 
@@ -391,9 +418,7 @@ void main() {
 
     testWidgets(
       'Content Filters constrains menu content width on wide screens',
-      (
-        tester,
-      ) async {
+      (tester) async {
         tester.view.physicalSize = const Size(900, 1200);
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);

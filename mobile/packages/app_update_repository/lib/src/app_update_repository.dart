@@ -12,6 +12,12 @@ abstract class UpdatePrefsKeys {
 
   /// Key for the last-checked timestamp.
   static const lastChecked = 'update_last_checked';
+
+  /// Key for the latest version found during the last successful check.
+  static const latestVersion = 'update_latest_version';
+
+  /// Key for the store URL resolved during the last successful check.
+  static const downloadUrl = 'update_download_url';
 }
 
 /// Cooldown before showing the moderate dialog again after dismissal.
@@ -63,7 +69,7 @@ class AppUpdateRepository {
     if (lastCheckedAt != null &&
         DateTime.now().difference(lastCheckedAt) <
             AppVersionConstants.cacheTtl) {
-      return null;
+      return _restoreCachedUpdate();
     }
 
     final AppVersionInfo info;
@@ -79,6 +85,7 @@ class AppUpdateRepository {
     );
 
     if (!isOlderThan(_currentVersion, info.latestVersion)) {
+      await _clearCachedUpdate();
       return const UpdateCheckResult.none();
     }
 
@@ -87,6 +94,11 @@ class AppUpdateRepository {
     final rawUrgency = _determineUrgency(info, age);
     final urgency = _applyDismissalRules(rawUrgency, info.latestVersion);
 
+    await Future.wait([
+      _prefs.setString(UpdatePrefsKeys.latestVersion, info.latestVersion),
+      _prefs.setString(UpdatePrefsKeys.downloadUrl, downloadUrl),
+    ]);
+
     return UpdateCheckResult(
       urgency: urgency,
       downloadUrl: downloadUrl,
@@ -94,6 +106,31 @@ class AppUpdateRepository {
       releaseHighlights: info.releaseHighlights,
       releaseNotesUrl: info.releaseNotesUrl,
     );
+  }
+
+  Future<UpdateCheckResult?> _restoreCachedUpdate() async {
+    final latestVersion = _prefs.getString(UpdatePrefsKeys.latestVersion);
+    final downloadUrl = _prefs.getString(UpdatePrefsKeys.downloadUrl);
+    if (latestVersion == null || downloadUrl == null) return null;
+    if (!isOlderThan(_currentVersion, latestVersion)) {
+      await _clearCachedUpdate();
+      return null;
+    }
+
+    // The cache keeps Settings useful between network checks without replaying
+    // a transient banner or dialog on every app launch.
+    return UpdateCheckResult(
+      urgency: UpdateUrgency.none,
+      downloadUrl: downloadUrl,
+      latestVersion: latestVersion,
+    );
+  }
+
+  Future<void> _clearCachedUpdate() async {
+    await Future.wait([
+      _prefs.remove(UpdatePrefsKeys.latestVersion),
+      _prefs.remove(UpdatePrefsKeys.downloadUrl),
+    ]);
   }
 
   /// Records that the user dismissed the nudge for [version].

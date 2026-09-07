@@ -74,10 +74,8 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
-      expect(
-        find.text(l10n.updateModerateTitle),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.updateModerateTitle), findsOneWidget);
+      expect(find.text(l10n.updateNewIn('1.0.8')), findsOneWidget);
       expect(find.text('New feature'), findsOneWidget);
       expect(find.text(l10n.updateAction), findsOneWidget);
       expect(find.text(l10n.updateNotNow), findsOneWidget);
@@ -147,19 +145,13 @@ void main() {
       );
       await tester.pump();
 
-      expect(
-        find.text(l10n.updateModerateTitle),
-        findsNothing,
-      );
+      expect(find.text(l10n.updateModerateTitle), findsNothing);
 
       // The gate opens and the app — with it, the root Navigator — mounts.
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
-      expect(
-        find.text(l10n.updateModerateTitle),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.updateModerateTitle), findsOneWidget);
     });
 
     testWidgets('stops waiting when no Navigator ever arrives', (tester) async {
@@ -191,10 +183,7 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
-      expect(
-        find.text(l10n.updateModerateTitle),
-        findsNothing,
-      );
+      expect(find.text(l10n.updateModerateTitle), findsNothing);
     });
   });
 }
