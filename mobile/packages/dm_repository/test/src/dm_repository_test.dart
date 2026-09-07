@@ -17363,10 +17363,9 @@ void main() {
       // A conversation that contains only the viewer is unusable: every caller
       // resolves the counterparty by dropping the viewer, so the row renders
       // as a chat with yourself. #8694 hid these from the request-derived
-      // lists, but an ALREADY-SENT one arrives on this stream instead and was
-      // still shown. A group send addressed only to the sender is what created
-      // them (#8699) — refusing that send stops new ones, and this stops the
-      // ones already on disk from rendering.
+      // lists, but an ALREADY-SENT legacy or malformed row arrives on this
+      // stream instead. Startup maintenance removes known rows; this remains
+      // as defense in depth for rows that reach the stream later.
       test('omits a conversation that contains only the viewer', () async {
         final peerParticipants = [_validPubkeyA, _validPubkeyB]..sort();
         final peerId = DmRepository.computeConversationId(peerParticipants);
