@@ -113,6 +113,7 @@ class NostrSettingsScreen extends ConsumerWidget {
                   iconColor: context.vineColors.accentPositive,
                   title: context.l10n.nostrSettingsKeyManagement,
                   subtitle: context.l10n.nostrSettingsKeyManagementSubtitle,
+                  semanticIdentifier: SemanticIds.settingsKeyManagementRow,
                   onTap: () => context.push(KeyManagementScreen.path),
                 ),
                 const _ClientAttributionToggle(),

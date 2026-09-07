@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/authentication_source.dart';
@@ -187,6 +188,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
             label: context.l10n.keyManagementCopyNsec,
             leadingIcon: DivineIconName.copy,
             expanded: true,
+            semanticIdentifier: SemanticIds.keyManagementCopyNsecButton,
             onPressed: _isProcessing ? null : () => _exportKey(context),
           ),
         ] else if (showKeycastRemoteSigningInfo)

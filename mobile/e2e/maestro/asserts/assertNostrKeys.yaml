@@ -21,4 +21,5 @@ appId: co.openvine.app.staging
     Backup Your Key
     Save your private key (nsec) to use your account in other Nostr apps.
     Never share your nsec with anyone!
-- assertVisible: Copy My Private Key (nsec)
+- assertVisible:
+    id: "copy_nsec_button"

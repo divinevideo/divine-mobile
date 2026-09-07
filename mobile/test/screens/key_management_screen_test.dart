@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/key_management_screen.dart';
@@ -164,6 +165,13 @@ void main() {
 
         expect(
           find.text(l10n.keyManagementCopyNsec, skipOffstage: false),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsIdentifier(
+            SemanticIds.keyManagementCopyNsecButton,
+            skipOffstage: false,
+          ),
           findsOneWidget,
         );
         expect(

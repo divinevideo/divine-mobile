@@ -1,3 +1,8 @@
 appId: co.openvine.app.staging
 ---
-- assertVisible: Private key copied to the clipboard!
+- extendedWaitUntil:
+    visible: |-
+      Private key copied to clipboard!
+
+      Store it somewhere safe.
+    timeout: 30000

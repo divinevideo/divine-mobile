@@ -10,6 +10,7 @@ import 'package:models/models.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart'
     show SecureKeyStorageException;
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
@@ -131,6 +132,17 @@ void main() {
 
       expect(find.text(l10n.nostrSettingsMoveAccount), findsOneWidget);
       expect(find.text(l10n.nostrSettingsMoveAccountSubtitle), findsOneWidget);
+    });
+
+    testWidgets('exposes a stable key management row identifier', (
+      tester,
+    ) async {
+      await pumpSubject(tester);
+
+      expect(
+        find.bySemanticsIdentifier(SemanticIds.settingsKeyManagementRow),
+        findsOneWidget,
+      );
     });
 
     testWidgets('hides account portability tile when signed out', (
