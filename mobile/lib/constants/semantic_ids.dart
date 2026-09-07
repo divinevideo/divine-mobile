@@ -158,6 +158,32 @@ abstract class SemanticIds {
   static const String profileEditButton = 'edit_profile_button';
   static const String profileBackButton = 'profile_back_button';
   static const String profileMoreButton = 'profile_more_button';
+  static const String profileUnfollowAction = 'profile_unfollow_action';
+
+  /// The profile header's Follow button, in its not-following state.
+  ///
+  /// The unfollow journey proves it worked by watching this button come back,
+  /// and matching its label instead would bind the flow to translated copy on
+  /// any non-English device. The following state is icon-only and already
+  /// carries its own semantic label, so only this half needs an id.
+  static const String profileFollowAction = 'profile_follow_action';
+
+  static const String settingsExperimentalFeaturesRow =
+      'experimental_features_tile';
+  static const String settingsAccountSwitchAction = 'account_switch_action';
+
+  /// "Add another account" row at the foot of the account-switcher sheet.
+  ///
+  /// This is the only control in the switcher that ends the current session,
+  /// so it anchors the account-switching E2E journey. It cannot be addressed
+  /// by label: with a single known account the header button behind the sheet
+  /// renders the identical `settingsAddAnotherAccount` string, and a modal
+  /// bottom sheet does not remove the screen beneath it from the semantics
+  /// tree — so a text match finds two nodes and takes the wrong one.
+  static const String settingsAddAccountAction = 'add_account_action';
+
+  static const String featureFlagAccountSwitching =
+      'feature_flag_account_switching';
 
   /// Profile content tabs. The bar is icon-only and its tab count varies by
   /// profile (6 on the own profile, 5 on another user's), so tests address a

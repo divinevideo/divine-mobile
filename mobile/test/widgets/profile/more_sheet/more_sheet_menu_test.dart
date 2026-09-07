@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_menu.dart';
 
@@ -71,9 +72,7 @@ void main() {
     testWidgets('hides Unblock when onBlockTap is null and blocked', (
       tester,
     ) async {
-      await tester.pumpWidget(
-        buildSubject(blockable: false, isBlocked: true),
-      );
+      await tester.pumpWidget(buildSubject(blockable: false, isBlocked: true));
 
       expect(
         find.text(l10n.profileUnblockDisplayName(displayName)),
@@ -97,6 +96,27 @@ void main() {
         find.text(l10n.profileUnfollowDisplayName(displayName)),
         findsOneWidget,
       );
+      expect(
+        find.bySemanticsIdentifier(SemanticIds.profileUnfollowAction),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('drives Unfollow through its automation id', (tester) async {
+      // The E2E flow taps this anchor rather than the localized label, so the
+      // identifier has to sit on the node that carries the gesture. Asserting
+      // it merely exists stays green even if it drifts onto an inert wrapper.
+      var unfollowed = 0;
+      await tester.pumpWidget(
+        buildSubject(isFollowing: true, onUnfollow: () => unfollowed++),
+      );
+
+      await tester.tap(
+        find.bySemanticsIdentifier(SemanticIds.profileUnfollowAction),
+      );
+      await tester.pump();
+
+      expect(unfollowed, 1);
     });
 
     testWidgets('renders Unblock label when blocked', (tester) async {

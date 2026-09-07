@@ -19,6 +19,7 @@ import 'package:models/models.dart' as models;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
@@ -279,12 +280,17 @@ void main() {
     );
   }
 
-  Future<AppLocalizations> pumpAndTapSwitch(WidgetTester tester) async {
+  /// Pumps Settings on a surface tall enough for the account header.
+  Future<void> pumpSettings(WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(wrap(const SettingsScreen()));
     await tester.pumpAndSettle();
+  }
+
+  Future<AppLocalizations> pumpAndTapSwitch(WidgetTester tester) async {
+    await pumpSettings(tester);
 
     final l10n = AppLocalizations.of(
       tester.element(find.byType(SettingsScreen)),
@@ -295,6 +301,17 @@ void main() {
   }
 
   group('switching to another account', () {
+    testWidgets('exposes the account switch action to automation', (
+      tester,
+    ) async {
+      await pumpSettings(tester);
+
+      expect(
+        find.bySemanticsIdentifier(SemanticIds.settingsAccountSwitchAction),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('warns about an in-flight upload before switching', (
       tester,
     ) async {
@@ -515,6 +532,39 @@ void main() {
   });
 
   group('the account picker', () {
+    testWidgets('drives the add-account tile through its automation id', (
+      tester,
+    ) async {
+      // The E2E account-switching journey reaches the welcome screen only
+      // through this tile, and it cannot address it by label: with one known
+      // account the header button renders the identical
+      // `settingsAddAnotherAccount` string, which is why the sibling tests
+      // above need `.last`. Tapping the identifier is what proves the anchor
+      // sits on the node that carries the gesture, not on an inert wrapper.
+      when(() => authService.signOut()).thenAnswer((_) async {});
+      seedPublishState(
+        BackgroundPublishState(
+          uploads: [
+            BackgroundUpload(
+              draft: draftWithId('d1'),
+              result: null,
+              progress: 0,
+            ),
+          ],
+        ),
+      );
+
+      final l10n = await pumpAndTapSwitch(tester);
+      await tester.tap(find.text(l10n.settingsSwitchAnyway));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.bySemanticsIdentifier(SemanticIds.settingsAddAccountAction),
+      );
+      await tester.pumpAndSettle();
+
+      verify(() => publishBloc.parkInFlight()).called(1);
+    });
+
     testWidgets('adding an account parks the in-flight uploads', (
       tester,
     ) async {

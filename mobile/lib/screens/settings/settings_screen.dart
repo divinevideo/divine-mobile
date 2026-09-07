@@ -491,6 +491,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   title: context.l10n.settingsExperimentalFeatures,
                   subtitle: context.l10n.settingsExperimentalFeaturesSubtitle,
+                  semanticIdentifier:
+                      SemanticIds.settingsExperimentalFeaturesRow,
                   onTap: () => context.push(FeatureFlagScreen.path),
                 ),
                 if (isDeveloperMode) ...[
@@ -546,6 +548,7 @@ class _AccountHeader extends StatelessWidget {
                 Semantics(
                   button: true,
                   label: buttonLabel,
+                  identifier: SemanticIds.settingsAccountSwitchAction,
                   child: InkWell(
                     onTap: onSwitchAccount,
                     borderRadius: BorderRadius.circular(16),
@@ -894,6 +897,7 @@ class _AddAccountTile extends StatelessWidget {
     return Semantics(
       button: true,
       label: context.l10n.settingsAddAnotherAccount,
+      identifier: SemanticIds.settingsAddAccountAction,
       child: InkWell(
         onTap: onTap,
         child: ConstrainedBox(

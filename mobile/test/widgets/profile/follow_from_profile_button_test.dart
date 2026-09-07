@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/others_followers/others_followers_bloc.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/widgets/profile/follow_from_profile_button.dart';
 
@@ -120,6 +121,12 @@ void main() {
 
         expect(find.text('Follow'), findsOneWidget);
         expect(find.byType(DivineButton), findsOneWidget);
+        // The unfollow E2E journey watches this button reappear, and does it
+        // by id so the assertion survives a non-English device.
+        expect(
+          find.bySemanticsIdentifier(SemanticIds.profileFollowAction),
+          findsOneWidget,
+        );
       });
 
       testWidgets('shows icon-only DivineButton when following', (

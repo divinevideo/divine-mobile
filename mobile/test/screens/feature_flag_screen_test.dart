@@ -1,10 +1,13 @@
 // ABOUTME: Tests for FeatureFlagScreen settings and management interface
 // ABOUTME: Validates screen behavior, flag toggling, and override indicators
 
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
@@ -93,6 +96,45 @@ void main() {
         findsNothing,
       );
       expect(find.text(FeatureFlag.feedTuning.displayName), findsNothing);
+    });
+
+    testWidgets('drives the account-switching flag through its automation id', (
+      tester,
+    ) async {
+      // The E2E flow both taps this anchor and reads its on/off state back,
+      // so asserting the identifier merely exists is not enough: the node it
+      // resolves to has to carry the tap action and the toggled flag. An
+      // identifier stranded on a wrapper above Card's own semantics boundary
+      // satisfies `findsOneWidget` and neither of those.
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(buildSubject());
+      await initializeFeatureFlags(tester);
+
+      final anchor = find.bySemanticsIdentifier(
+        SemanticIds.featureFlagAccountSwitching,
+      );
+      expect(anchor, findsOneWidget);
+
+      expect(
+        tester.getSemantics(anchor).flagsCollection.isToggled,
+        Tristate.isFalse,
+      );
+
+      await tester.tap(anchor);
+      await tester.pumpAndSettle();
+
+      verify(
+        () =>
+            mockPrefs.setBool('ff_${FeatureFlag.accountSwitching.name}', true),
+      ).called(1);
+      expect(
+        tester.getSemantics(anchor).flagsCollection.isToggled,
+        Tristate.isTrue,
+      );
     });
 
     testWidgets('shows internal flags when developer mode is on', (

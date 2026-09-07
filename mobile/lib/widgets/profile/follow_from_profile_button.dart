@@ -9,6 +9,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/others_followers/others_followers_bloc.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -257,6 +258,7 @@ class _FollowButton extends StatelessWidget {
       size: .small,
       leadingIcon: DivineIconName.userPlus,
       label: context.l10n.profileFollowLabel,
+      semanticIdentifier: SemanticIds.profileFollowAction,
     );
   }
 }

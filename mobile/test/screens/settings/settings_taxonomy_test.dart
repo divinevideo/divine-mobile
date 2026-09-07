@@ -14,6 +14,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/app_update/app_update.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
@@ -270,6 +271,25 @@ void main() {
       );
       expect(find.text(l10n.settingsPrivacyTitle), findsOneWidget);
       expect(find.text(l10n.settingsPrivacySubtitle), findsOneWidget);
+    });
+
+    testWidgets('exposes the Experimental Features row to automation', (
+      tester,
+    ) async {
+      // The E2E account-switching journey enters the feature-flag screen
+      // through this row. It sits far enough down the hub that whether it is
+      // laid out at all depends on the surface height, so scroll to it rather
+      // than assuming a viewport tall enough to build it.
+      await setStandardSurface(tester);
+      await tester.pumpWidget(wrap(const SettingsScreen()));
+      await tester.pumpAndSettle();
+
+      final row = find.bySemanticsIdentifier(
+        SemanticIds.settingsExperimentalFeaturesRow,
+      );
+      await scrollUntilTappable(tester, row, 200);
+
+      expect(row, findsOneWidget);
     });
   });
 
