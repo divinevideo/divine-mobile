@@ -263,6 +263,22 @@ run_numeric_ratchet
         expect(res.stdout, contains('malformed renamed-from annotation'));
       });
 
+      test('ignores a comment line that documents the annotation', () {
+        // print_baseline_header output is part of the file the claim scan
+        // reads, so a header explaining the annotation must not parse as one.
+        baseline.writeAsStringSync(
+          '# probe baseline\n'
+          '# A row may carry "# renamed-from: <old-key>" provenance.\n'
+          'a\t5\n'
+          'b\t3\n',
+        );
+        writeCurrent('a\t5\nb\t3\n');
+
+        final res = run();
+
+        expect(res.exitCode, 0, reason: res.stdout.toString());
+      });
+
       test(
         'accepts preserved provenance after the rename reaches the base',
         () {

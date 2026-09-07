@@ -180,6 +180,7 @@ run_numeric_ratchet() {
       rename_claims="$(mktemp)"
       if [[ -f "$BASELINE_FILE" ]]; then
         awk -F "$TAB" '
+          /^[[:space:]]*#/ { next }
           /renamed-from:/ {
             old=$0; sub(/^.*renamed-from:[[:space:]]*/, "", old); sub(/[;[:space:]].*$/, "", old)
             if (old == "" || old == $0) print "!MALFORMED!\t" $1
