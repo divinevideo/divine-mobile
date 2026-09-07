@@ -100,8 +100,9 @@ class ModerationLabelService {
   /// query is a full scan that silently truncates past that cap and grows
   /// without limit. Bounding each round-trip and paging backward keeps every
   /// query small enough to settle inside the load timeout — a single query's
-  /// breadth is a contributing cause of #8214's timeouts — and makes
-  /// truncation impossible rather than silent. #8252.
+  /// breadth is a contributing cause of #8214's timeouts — and removes the
+  /// silent truncation, save for the un-pageable remainder of a single second
+  /// that alone holds more than a page of labels. #8252.
   static const int defaultLabelerHistoryPageSize = 500;
 
   final int _labelerHistoryPageSize;
@@ -354,23 +355,33 @@ class ModerationLabelService {
       }
       // A short page means the relay has no older labels — history is complete.
       if (!morePossible) break;
-      // A full page that added nothing new means the cursor cannot advance:
-      // either the relay ignored `until`, or the whole page shares one
-      // created_at that already fills a page (more labels at that second than a
-      // page holds). Advancing again would spin, so stop. The same-timestamp
-      // case degrades to the newest page for that second — deterministic and
-      // bounded — because standard NIP filters expose no sub-second cursor to
-      // page within it.
-      if (newThisPage == 0) break;
 
       // `until` is inclusive, so the oldest event reappears on the next page and
       // is dropped by `seenIds`. Paging past the boundary this way is lossless
-      // across created_at ties, where a `oldest - 1` cursor would skip events
-      // that share the boundary timestamp.
-      until = page.fold<int>(
+      // across created_at ties, where an `oldest - 1` cursor would skip events
+      // that share the boundary second.
+      final oldest = page.fold<int>(
         page.first.createdAt,
-        (oldest, event) => event.createdAt < oldest ? event.createdAt : oldest,
+        (lowest, event) => event.createdAt < lowest ? event.createdAt : lowest,
       );
+
+      if (newThisPage == 0) {
+        // Nothing new came back and the cursor is stuck. If the whole page sits
+        // on a single second equal to the cursor, that second alone holds a
+        // full page of labels — step one second past it to reach any older
+        // history, since a NIP filter has no sub-second cursor to page within
+        // it. Only the un-pageable remainder at that exact second (labels beyond
+        // a page sharing one created_at) is dropped. Any other empty result
+        // means the relay is ignoring `until` (the page carries events newer
+        // than the cursor), so stop rather than spin.
+        if (until != null && page.every((event) => event.createdAt == until)) {
+          until = until - 1;
+          continue;
+        }
+        break;
+      }
+
+      until = oldest;
     }
 
     return (events: collected, timedOut: false, noRelays: false);

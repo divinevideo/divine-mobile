@@ -1723,6 +1723,54 @@ void main() {
           ).called(4);
         },
       );
+
+      test(
+        'pages past a second that fills a whole page so older history still '
+        'loads',
+        () async {
+          final paged = pagedService(2);
+          // Second 90 holds a full page (b, c) with older history (d@80)
+          // behind it. A relay that honours `until` + `limit` newest-first
+          // must not let that dense second wall off the older label.
+          final history = <_FakeLabelEvent>[
+            labelEvent('id_a', 100, 'target_a'),
+            labelEvent('id_b', 90, 'target_b'),
+            labelEvent('id_c', 90, 'target_c'),
+            labelEvent('id_d', 80, 'target_d'),
+          ];
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final until = (invocation.positionalArguments.first as List<Filter>)
+                .single
+                .until;
+            final matching =
+                history
+                    .where((e) => until == null || e.createdAt <= until)
+                    .toList()
+                  ..sort((x, y) => y.createdAt.compareTo(x.createdAt));
+            return (
+              events: matching.take(2).toList(),
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await paged.subscribeToLabeler(labeler);
+
+          expect(paged.getContentWarnings('target_a'), hasLength(1));
+          expect(paged.getContentWarnings('target_b'), hasLength(1));
+          expect(paged.getContentWarnings('target_c'), hasLength(1));
+          expect(
+            paged.getContentWarnings('target_d'),
+            hasLength(1),
+            reason: 'a full page at one second must not wall off older history',
+          );
+        },
+      );
     });
   });
 }
