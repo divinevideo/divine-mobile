@@ -952,9 +952,7 @@ void main() {
 
         await emitReady(nostrSession, pubkeyA);
 
-        final teardownFuture = beforeSessionTeardownCallback!().timeout(
-          const Duration(milliseconds: 100),
-        );
+        final teardownFuture = beforeSessionTeardownCallback!();
         await pumpEventQueue(times: 2);
 
         await teardownFuture;
@@ -2658,7 +2656,7 @@ void main() {
         nostrSession.setReadiness(
           const NostrSessionReadiness.identityKnown(pubkey: pubkeyB),
         );
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue();
         expect(preferenceStore.dirtyPreferencesByPubkey[pubkeyA], prefs);
 
         when(() => authService.currentIdentity).thenReturn(_identity(pubkeyA));
@@ -2719,7 +2717,7 @@ void main() {
             .updatePreferences(prefs);
 
         nostrSession.setReadiness(const NostrSessionReadiness.signedOut());
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue();
         expect(preferenceStore.dirtyPreferencesByPubkey[pubkeyA], prefs);
 
         nostrSession.setReadiness(

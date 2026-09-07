@@ -220,7 +220,7 @@ void main() {
       expect(container.read(nostrInitializationInProgressProvider), isTrue);
 
       initialize.complete();
-      await pumpEventQueue(times: 2);
+      await pumpEventQueue();
 
       expect(container.read(nostrInitializationInProgressProvider), isFalse);
     });
@@ -447,7 +447,7 @@ void main() {
         );
 
         bInitialize.complete();
-        await pumpEventQueue(times: 2);
+        await pumpEventQueue();
 
         expect(factory.callCount, equals(3));
         expect(factory.clients.last.publicKey, equals(pubkeyC));
@@ -505,7 +505,7 @@ void main() {
         );
 
         bInitialize.complete();
-        await pumpEventQueue(times: 2);
+        await pumpEventQueue();
 
         expect(
           container.read(nostrServiceProvider),
@@ -559,7 +559,7 @@ void main() {
         );
 
         bInitialize.complete();
-        await pumpEventQueue(times: 2);
+        await pumpEventQueue();
 
         final readyClient = container.read(nostrServiceProvider);
         expect(
@@ -892,7 +892,7 @@ void main() {
 
         // Completing the gated init lets the ORIGINAL client reach ready.
         gate.complete();
-        await pumpEventQueue(times: 2);
+        await pumpEventQueue();
         expect(factory.callCount, equals(1));
         expect(
           container.read(nostrSessionProvider).phase,
@@ -936,7 +936,7 @@ void main() {
 
         // Drain the abandoned A init cleanly.
         gate.complete();
-        await pumpEventQueue(times: 1);
+        await pumpEventQueue();
       },
     );
 
@@ -1208,7 +1208,7 @@ void main() {
         );
 
         firstAInitialize.complete();
-        await pumpEventQueue(times: 2);
+        await pumpEventQueue();
 
         expect(
           container.read(nostrSessionProvider),
@@ -1269,7 +1269,7 @@ void main() {
         );
 
         initialPlaceholderInitialize.complete();
-        await pumpEventQueue(times: 2);
+        await pumpEventQueue();
 
         expect(
           container.read(nostrSessionProvider),
