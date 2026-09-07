@@ -11,6 +11,8 @@ class _MockAppUpdateBloc extends MockBloc<AppUpdateEvent, AppUpdateState>
     implements AppUpdateBloc {}
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
+
   group(SettingsUpdateAction, () {
     late _MockAppUpdateBloc bloc;
 
@@ -38,7 +40,7 @@ void main() {
 
       await tester.pumpWidget(buildSubject());
 
-      expect(find.text('Update available'), findsNothing);
+      expect(find.text(l10n.settingsUpdateAvailable), findsNothing);
     });
 
     testWidgets('is hidden outside the app-level update scope', (tester) async {
@@ -50,7 +52,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Update available'), findsNothing);
+      expect(find.text(l10n.settingsUpdateAvailable), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
@@ -66,7 +68,7 @@ void main() {
 
       await tester.pumpWidget(buildSubject());
 
-      expect(find.text('Update available'), findsNothing);
+      expect(find.text(l10n.settingsUpdateAvailable), findsNothing);
     });
 
     testWidgets('remains visible after the transient nudge is dismissed', (
@@ -82,7 +84,7 @@ void main() {
 
       await tester.pumpWidget(buildSubject());
 
-      expect(find.text('Update available'), findsOneWidget);
+      expect(find.text(l10n.settingsUpdateAvailable), findsOneWidget);
     });
 
     testWidgets('opens the resolved store URL', (tester) async {
@@ -99,7 +101,7 @@ void main() {
       await tester.pumpWidget(
         buildSubject(launchUpdate: (uri) async => launchedUri = uri),
       );
-      await tester.tap(find.text('Update available'));
+      await tester.tap(find.text(l10n.settingsUpdateAvailable));
       await tester.pump();
 
       expect(launchedUri, Uri.parse(DownloadUrls.appStore));

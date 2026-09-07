@@ -15,6 +15,8 @@ Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
+
   group(UpdateBanner, () {
     late _MockAppUpdateBloc bloc;
 
@@ -41,7 +43,7 @@ void main() {
       await tester.pumpWidget(buildSubject());
 
       expect(
-        find.text('A fresh update just dropped. Check it out →'),
+        find.text(l10n.updateGentleBanner),
         findsNothing,
       );
     });
@@ -58,7 +60,7 @@ void main() {
       await tester.pumpWidget(buildSubject());
 
       expect(
-        find.text('A fresh update just dropped. Check it out →'),
+        find.text(l10n.updateGentleBanner),
         findsOneWidget,
       );
     });
@@ -90,7 +92,7 @@ void main() {
       await tester.pumpWidget(buildSubject());
 
       expect(
-        find.text('A fresh update just dropped. Check it out →'),
+        find.text(l10n.updateGentleBanner),
         findsNothing,
       );
     });

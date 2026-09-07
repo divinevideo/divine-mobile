@@ -29,6 +29,8 @@ class _MockAppUpdateBloc extends MockBloc<AppUpdateEvent, AppUpdateState>
     implements AppUpdateBloc {}
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
+
   group(ShellChrome, () {
     late MockAuthService mockAuth;
     late _MockDmUnreadCountCubit dmUnreadCubit;
@@ -132,7 +134,7 @@ void main() {
           await pumpChrome(tester, suppressAppBar: true, currentIndex: index);
 
           expect(
-            find.text('A fresh update just dropped. Check it out →'),
+            find.text(l10n.updateGentleBanner),
             findsOneWidget,
           );
         }

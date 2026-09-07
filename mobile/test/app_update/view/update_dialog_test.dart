@@ -14,6 +14,8 @@ class _MockAppUpdateBloc extends MockBloc<AppUpdateEvent, AppUpdateState>
     implements AppUpdateBloc {}
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
+
   group(UpdateDialogListener, () {
     late _MockAppUpdateBloc bloc;
 
@@ -73,12 +75,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text("There's been an update since you last checked"),
+        find.text(l10n.updateModerateTitle),
         findsOneWidget,
       );
       expect(find.text('New feature'), findsOneWidget);
-      expect(find.text('Update'), findsOneWidget);
-      expect(find.text('Not now'), findsOneWidget);
+      expect(find.text(l10n.updateAction), findsOneWidget);
+      expect(find.text(l10n.updateNotNow), findsOneWidget);
     });
 
     testWidgets('shows urgent copy when urgency is urgent', (tester) async {
@@ -99,7 +101,7 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
-      expect(find.text("You're missing important fixes"), findsOneWidget);
+      expect(find.text(l10n.updateUrgentTitle), findsOneWidget);
     });
 
     testWidgets('Not now button dispatches dismiss', (tester) async {
@@ -118,7 +120,7 @@ void main() {
 
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Not now'));
+      await tester.tap(find.text(l10n.updateNotNow));
 
       verify(() => bloc.add(const AppUpdateDismissed())).called(1);
     });
@@ -146,7 +148,7 @@ void main() {
       await tester.pump();
 
       expect(
-        find.text("There's been an update since you last checked"),
+        find.text(l10n.updateModerateTitle),
         findsNothing,
       );
 
@@ -155,7 +157,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text("There's been an update since you last checked"),
+        find.text(l10n.updateModerateTitle),
         findsOneWidget,
       );
     });
@@ -190,7 +192,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text("There's been an update since you last checked"),
+        find.text(l10n.updateModerateTitle),
         findsNothing,
       );
     });
