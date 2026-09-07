@@ -5,7 +5,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// The guard ships 27 fixture cases behind `--selftest`, and until this test
+/// The guard ships 40 fixture cases behind `--selftest`, and until this test
 /// existed nothing in the repository ran them: the flag appears in no workflow,
 /// no mise task, no git hook, and no Codex config, so CI invoked the scanner
 /// bare. A later edit to GLOBALS, to the snapshot/restore regexes, or to the
@@ -19,17 +19,46 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('check_process_global_mutations --selftest', () {
     late ProcessResult result;
+    late String sourceScriptPath;
+    late String sourceFilterPath;
+
+    ({Directory root, String scriptPath}) copyGuard({
+      bool includeFilter = true,
+    }) {
+      final root = Directory.systemTemp.createTempSync(
+        'process_global_mutations_test',
+      );
+      final scriptsDirectory = Directory('${root.path}/mobile/scripts')
+        ..createSync(recursive: true);
+      final scriptPath =
+          '${scriptsDirectory.path}/check_process_global_mutations.sh';
+      File(sourceScriptPath).copySync(scriptPath);
+      if (includeFilter) {
+        final filterDirectory = Directory('${scriptsDirectory.path}/lib')
+          ..createSync(recursive: true);
+        File(
+          sourceFilterPath,
+        ).copySync('${filterDirectory.path}/dart_code_only.awk');
+      }
+      return (root: root, scriptPath: scriptPath);
+    }
 
     setUpAll(() {
-      final scriptPath = File(
+      sourceScriptPath = File(
         'scripts/check_process_global_mutations.sh',
-      ).absolute;
+      ).absolute.path;
+      sourceFilterPath = File('scripts/lib/dart_code_only.awk').absolute.path;
       expect(
-        scriptPath.existsSync(),
+        File(sourceScriptPath).existsSync(),
         isTrue,
-        reason: 'guard script must exist at ${scriptPath.path}',
+        reason: 'guard script must exist at $sourceScriptPath',
       );
-      result = Process.runSync('bash', [scriptPath.path, '--selftest']);
+      expect(
+        File(sourceFilterPath).existsSync(),
+        isTrue,
+        reason: 'code-only filter must exist at $sourceFilterPath',
+      );
+      result = Process.runSync('bash', [sourceScriptPath, '--selftest']);
     });
 
     test('every fixture case still produces its expected exit code', () {
@@ -52,7 +81,69 @@ void main() {
       // Shrink guard: deleting cases would make the assertion above pass
       // vacuously. Raise this number when cases are added; lower it only
       // deliberately, in the same change that removes one.
-      expect(passingCases, greaterThanOrEqualTo(27));
+      expect(passingCases, greaterThanOrEqualTo(40));
+    });
+
+    test('removing a detection class turns the self-test red', () {
+      final sandbox = copyGuard();
+      addTearDown(() => sandbox.root.deleteSync(recursive: true));
+      final script = File(sandbox.scriptPath);
+      final original = script.readAsStringSync();
+      final mutated = original.replaceFirst("  'Bloc\\.observer'\n", '');
+      expect(mutated, isNot(equals(original)));
+      script.writeAsStringSync(mutated);
+
+      final mutationResult = Process.runSync('bash', [
+        sandbox.scriptPath,
+        '--selftest',
+      ]);
+
+      expect(mutationResult.exitCode, equals(1));
+      expect(
+        mutationResult.stdout,
+        contains('capture-restore leaker (Bloc.observer install, no restore)'),
+      );
+      expect(mutationResult.stdout, contains('FAIL (got 0, want 1)'));
+    });
+
+    test('fails closed when the code-only filter is missing', () {
+      final sandbox = copyGuard(includeFilter: false);
+      addTearDown(() => sandbox.root.deleteSync(recursive: true));
+      Directory('${sandbox.root.path}/mobile/test').createSync(recursive: true);
+
+      final missingFilterResult = Process.runSync('bash', [sandbox.scriptPath]);
+
+      expect(missingFilterResult.exitCode, equals(1));
+      expect(
+        missingFilterResult.stderr,
+        contains('Dart code-only filter is unavailable'),
+      );
+    });
+
+    test('production scan includes package test trees', () {
+      final sandbox = copyGuard();
+      addTearDown(() => sandbox.root.deleteSync(recursive: true));
+      Directory('${sandbox.root.path}/mobile/test').createSync(recursive: true);
+      final packageTest = File(
+        '${sandbox.root.path}/mobile/packages/example/test/leak_test.dart',
+      )..createSync(recursive: true);
+      packageTest.writeAsStringSync('''
+void main() {
+  Bloc.observer = MyObserver();
+}
+''');
+
+      final packageResult = Process.runSync('bash', [sandbox.scriptPath]);
+
+      expect(packageResult.exitCode, equals(1));
+      expect(
+        packageResult.stdout,
+        contains('packages/example/test/leak_test.dart'),
+      );
+      expect(
+        packageResult.stdout,
+        contains('(Bloc.observer) [capture-restore]'),
+      );
     });
   });
 }

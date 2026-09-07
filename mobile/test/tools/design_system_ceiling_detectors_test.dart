@@ -334,11 +334,16 @@ final p = showLicensePage(context: c);
 
   group('dart_code_only.awk', () {
     // Runs the shared filter over [source] and returns its output.
-    String filter(String source) {
+    String filter(String source, {bool preserveTagLiterals = false}) {
       final f = File('${tmp.path}/lib/in.dart')..writeAsStringSync(source);
       final res = Process.runSync(
         'awk',
-        ['-f', File('scripts/lib/dart_code_only.awk').absolute.path, f.path],
+        [
+          if (preserveTagLiterals) ...['-v', 'preserve_tag_literals=1'],
+          '-f',
+          File('scripts/lib/dart_code_only.awk').absolute.path,
+          f.path,
+        ],
       );
       expect(res.exitCode, 0, reason: res.stderr.toString());
       return res.stdout as String;
@@ -377,6 +382,25 @@ final t = """
     test('strips nested block comments', () {
       final out = filter('/* outer /* inner TextStyle( */ still comment */\n');
       expect(out, isNot(contains('TextStyle(')));
+    });
+
+    test('optionally preserves literals only inside real Tags annotations', () {
+      final out = filter(
+        '''
+@Tags([
+  'skip_very_good_optimization',
+])
+final message = '@Tags(["skip_very_good_optimization"])';
+/* @Tags(['skip_very_good_optimization']) */
+''',
+        preserveTagLiterals: true,
+      );
+
+      expect(out, contains("'skip_very_good_optimization'"));
+      expect(
+        'skip_very_good_optimization'.allMatches(out),
+        hasLength(1),
+      );
     });
   });
 }
