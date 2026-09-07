@@ -83,13 +83,19 @@ void main() {
       expect(prefetchCalls, 0);
     });
 
-    test('createAnonymousAccount keeps the seeded cache when a real '
-        'UserDataCleanupService runs after a sign-out', () async {
+    test('createAnonymousAccount keeps its marker when a real '
+        'UserDataCleanupService sweeps the outgoing account', () async {
       // The mocked cleanup service above answers shouldClearDataForUser with
-      // false, so it can never sweep following_list_ keys. That is the one
-      // thing standing between the seed and the pre-fetch it exists to skip,
-      // so pin it against the real collaborator on the state a device is
-      // actually in when someone signs out and creates another account.
+      // false, so it can never sweep following_prefetch_complete_ keys. That
+      // sweep is the one thing standing between the marker and the pre-fetch
+      // it exists to skip, so drive the real collaborator through the state
+      // that triggers it: another account is still the stored identity, which
+      // is what an account switch leaves behind.
+      //
+      // Signing out first does not reproduce it — that clears
+      // current_user_pubkey_hex, so the incoming account reads as the same
+      // identity and nothing is swept. The marker has to be written after the
+      // sweep, and only this shape can tell whether it is.
       final prefs = await SharedPreferences.getInstance();
       var prefetchCalls = 0;
       final first = buildTestAuthService(
@@ -98,7 +104,6 @@ void main() {
       );
       await ignoringDiscoveryErrors(first.createAnonymousAccount);
       final firstPubkey = first.currentPublicKeyHex!;
-      await ignoringDiscoveryErrors(first.signOut);
       await first.dispose();
 
       final second = buildTestAuthService(
@@ -111,6 +116,11 @@ void main() {
 
       final secondPubkey = second.currentPublicKeyHex!;
       expect(secondPubkey, isNot(equals(firstPubkey)));
+      expect(
+        hasFollowingPrefetchMarker(prefs, firstPubkey),
+        isFalse,
+        reason: 'the outgoing account must still be swept',
+      );
       expect(hasFollowingPrefetchMarker(prefs, secondPubkey), isTrue);
       expect(prefetchCalls, 0);
     });
