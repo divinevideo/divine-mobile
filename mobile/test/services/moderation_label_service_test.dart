@@ -2124,5 +2124,30 @@ void main() {
         expect(warnings.first.labelValue, 'nudity');
       },
     );
+
+    test(
+      'the same tail event arriving twice produces one label row (dedup)',
+      () async {
+        // A re-issued REQ across a reconnect replays the relay's stored window,
+        // so the same kind-1985 event arrives again. It must not double-count.
+        stubCompletedBackfill();
+        final tail = StreamController<Event>.broadcast();
+        addTearDown(tail.close);
+        when(
+          () => mockNostrClient.subscribe(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+          ),
+        ).thenAnswer((_) => tail.stream);
+
+        await service.subscribeToLabeler(service.divineModerationPubkeyHex);
+
+        tail.add(liveLabel('dup_evt', 'dup_target'));
+        tail.add(liveLabel('dup_evt', 'dup_target'));
+        await pumpEventQueue();
+
+        expect(service.getContentWarnings('dup_target'), hasLength(1));
+      },
+    );
   });
 }

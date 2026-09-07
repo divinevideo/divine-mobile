@@ -261,6 +261,11 @@ class ModerationLabelService {
   /// Active subscriptions.
   final Map<String, StreamSubscription<dynamic>> _subscriptions = {};
 
+  /// Label event ids already applied per labeler, so a reconnect that replays
+  /// the relay's stored window does not double-count. Cleared with a labeler's
+  /// rows in [_removeLabelsForLabeler]. #8255.
+  final Map<String, Set<String>> _appliedLabelEventIds = {};
+
   /// Whether persisted settings have been loaded.
   bool _loadedPersistedState = false;
   Future<void>? _loadPersistedStateFuture;
@@ -864,6 +869,18 @@ class ModerationLabelService {
     try {
       final tags = event.tags as List<dynamic>;
       final labelerPubkey = event.pubkey as String;
+      final eventId = event.id as String;
+
+      // A reconnect replays the relay's stored window, so the same label event
+      // arrives again; apply each label event at most once per labeler. Empty
+      // ids come only from test fakes on the single-shot backfill path; real
+      // wire events always carry one, so skipping dedup for them is safe. #8255.
+      if (eventId.isNotEmpty &&
+          !_appliedLabelEventIds
+              .putIfAbsent(labelerPubkey, () => <String>{})
+              .add(eventId)) {
+        return;
+      }
 
       final namespaces = <String>{};
       final labels = <_PendingModerationLabel>[];
@@ -1072,6 +1089,9 @@ class ModerationLabelService {
   }
 
   void _removeLabelsForLabeler(String pubkey) {
+    // Drop the dedup set too: the backfill removes then reprocesses a labeler's
+    // rows, so its events must be allowed to apply again. #8255.
+    _appliedLabelEventIds.remove(pubkey);
     _labelsByEventId.forEach((_, labels) {
       labels.removeWhere((l) => l.labelerPubkey == pubkey);
     });
