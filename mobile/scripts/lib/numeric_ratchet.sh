@@ -189,7 +189,21 @@ run_numeric_ratchet() {
             if (old == "" || old == $0) print "!MALFORMED!\t" $1
             else print $1 "\t" old
           }
-        ' "$BASELINE_FILE" > "$rename_claims"
+        ' "$BASELINE_FILE" \
+          | awk -F "$TAB" -v main_f="$MAIN_F" '
+              # Drop settled claims before validation, not inside the loop.
+              # Once the rename is on the base ref the claim grants nothing,
+              # but leaving it in the set let it reserve its old key forever:
+              # the duplicate checks counted it, so a later legitimate rename
+              # reusing that name was rejected as a duplicate claim.
+              BEGIN {
+                while ((getline line < main_f) > 0) {
+                  split(line, f, "\t"); settled[f[1]] = 1
+                }
+              }
+              $1 == "!MALFORMED!" { print; next }
+              !($1 in settled)
+            ' > "$rename_claims"
       fi
       while IFS="$TAB" read -r rename_new rename_old; do
         [[ -z "$rename_new" ]] && continue
@@ -207,13 +221,6 @@ run_numeric_ratchet() {
         if [[ "$(cut -f2 "$rename_claims" | grep -Fxc "$rename_old")" -gt 1 ]]; then
           echo "FAIL [$RATCHET_LABEL]: old key $rename_old is claimed more than once"
           fail=1
-          continue
-        fi
-        # Settled: the new key is already on the base ref, so it cannot be in
-        # `added` and the claim grants nothing. Validating a settled claim only
-        # invents failures — a later key that reuses the old name would trip
-        # "old key remains" on a branch that changed neither file.
-        if awk -F "$TAB" -v key="$rename_new" '$1 == key { found=1 } END { exit !found }' "$MAIN_F"; then
           continue
         fi
         if ! awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$MAIN_F"; then

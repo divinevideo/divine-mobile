@@ -346,6 +346,28 @@ run_numeric_ratchet
         expect(res.exitCode, 0, reason: res.stdout.toString());
       });
 
+      test('lets a later rename reuse a settled claim\'s old key', () {
+        // The rename landed long ago and the annotation was kept (AGENTS.md
+        // says it may be removed, not must). A settled claim grants nothing,
+        // but it was still counted by the duplicate checks, so it reserved the
+        // old key forever and failed the next legitimate rename onto it.
+        commitBaseBaseline(
+          '# probe baseline\na\t5\nb\t3\nc\t4 # renamed-from: a\n',
+        );
+        baseline.writeAsStringSync(
+          '# probe baseline\n'
+          'b\t3\n'
+          'c\t4 # renamed-from: a\n'
+          'd\t5 # renamed-from: a\n',
+        );
+        writeCurrent('b\t3\nc\t4\nd\t5\n');
+
+        final res = run();
+
+        expect(res.exitCode, 0, reason: res.stdout.toString());
+        expect(res.stdout, isNot(contains('claimed more than once')));
+      });
+
       test('ignores a comment line that documents the annotation', () {
         // print_baseline_header output is part of the file the claim scan
         // reads, so a header explaining the annotation must not parse as one.
