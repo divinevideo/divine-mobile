@@ -32,7 +32,6 @@ export 'nip46/nostr_connect_session.dart';
 export 'nip46/nostr_remote_signer.dart';
 export 'nip46/nostr_remote_signer_info.dart';
 export 'nip47/nwc_info.dart';
-export 'nip51/bookmarks.dart';
 export 'nip51/follow_set.dart';
 // Platform-specific (conditionally exported)
 export 'nip55/android_nostr_signer.dart';
