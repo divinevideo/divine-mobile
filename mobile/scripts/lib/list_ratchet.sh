@@ -29,6 +29,9 @@
 #   FOOTER               closing guidance printed on any failure
 #   emit_current()       prints the current sorted-unique list (one item/line)
 #   print_baseline_header()  prints the baseline file header comment block
+# Optional:
+#   filter_baseline_growth() reads proposed growth entries from stdin and emits
+#                            only entries that should remain failures.
 #
 # Honours UPDATE_BASELINE=1 to regenerate (preserving any trailing "# reason").
 
@@ -148,6 +151,9 @@ run_list_ratchet() {
   case "$base_status" in
     0)
       growth="$(comm -23 <(printf '%s\n' "$baseline") <(printf '%s\n' "$LR_MAIN_BASELINE") | grep -v '^$' || true)"
+      if declare -F filter_baseline_growth >/dev/null; then
+        growth="$(printf '%s\n' "$growth" | filter_baseline_growth)"
+      fi
       if [[ -n "$growth" ]]; then
         echo "FAIL [$RATCHET_LABEL]: baseline GREW vs ${BASE_REF} (the ratchet may only shrink):"
         echo "$growth" | sed 's/^/  /'
