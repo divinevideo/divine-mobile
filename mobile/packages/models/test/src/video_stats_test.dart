@@ -187,11 +187,7 @@ void main() {
             'content': 'Description',
             'tags': [
               ['d', 'video-1'],
-              [
-                'imeta',
-                'url https://example.com/video.mp4',
-                'size 480000',
-              ],
+              ['imeta', 'url https://example.com/video.mp4', 'size 480000'],
               ['size', '640000'],
             ],
           },
@@ -2187,6 +2183,59 @@ void main() {
         );
 
         expect(stats1, isNot(equals(stats2)));
+      });
+    });
+
+    group('archive audio reuse authority', () {
+      Map<String, dynamic> response({
+        Object? verifiedArchive,
+        Object? rolloutEnabled,
+      }) => {
+        'id': 'a' * 64,
+        'pubkey': 'b' * 64,
+        'created_at': 1700000000,
+        'kind': 34236,
+        'd_tag': 'archive-video',
+        'title': 'Archive video',
+        'video_url': 'https://example.com/video.mp4',
+        'verified_archive': verifiedArchive,
+        'archive_audio_reuse_enabled': rolloutEnabled,
+      };
+
+      test('parses typed Funnelcake authority fields', () {
+        final video = VideoStats.fromJson(
+          response(verifiedArchive: true, rolloutEnabled: true),
+        ).toVideoEvent();
+
+        expect(video.isVerifiedArchive, isTrue);
+        expect(video.archiveAudioReuseEnabled, isTrue);
+      });
+
+      test('fails closed for absent or malformed authority fields', () {
+        final absent = VideoStats.fromJson(response()).toVideoEvent();
+        final malformed = VideoStats.fromJson(
+          response(verifiedArchive: 'true', rolloutEnabled: 1),
+        ).toVideoEvent();
+
+        expect(absent.isVerifiedArchive, isFalse);
+        expect(absent.archiveAudioReuseEnabled, isFalse);
+        expect(malformed.isVerifiedArchive, isFalse);
+        expect(malformed.archiveAudioReuseEnabled, isFalse);
+      });
+
+      test('ignores Nostr tags that spoof the authority fields', () {
+        final json = response();
+        json['event'] = {
+          ...json,
+          'tags': [
+            ['verified_archive', 'true'],
+            ['archive_audio_reuse_enabled', 'true'],
+          ],
+        };
+        final video = VideoStats.fromJson(json).toVideoEvent();
+
+        expect(video.isVerifiedArchive, isFalse);
+        expect(video.archiveAudioReuseEnabled, isFalse);
       });
     });
 

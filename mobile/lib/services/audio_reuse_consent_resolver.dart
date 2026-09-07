@@ -41,7 +41,7 @@ class AudioReuseConsentResolver {
       // source is never older than its own sound.
       final source = matching.first;
       if (source.createdAt < sound.createdAt) return false;
-      return source.allowAudioReuse;
+      return originalSoundReuseTerms(source) ?? false;
     } catch (error) {
       // Fail closed, but leave a trace — otherwise "why is reuse blocked?" is
       // unanswerable from a bug report.

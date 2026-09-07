@@ -105,6 +105,8 @@ VideoEvent _fullVideo() => VideoEvent(
     version: 1,
     checks: const {'proofmode_present': true},
   ),
+  isVerifiedArchive: true,
+  archiveAudioReuseEnabled: true,
   eventKind: 34236,
   sourceRelay: 'wss://relay.divine.video',
 );
@@ -162,6 +164,8 @@ const _expectedKeys = <String>{
   'contentWarningLabels',
   'moderationLabels',
   'proofSummary',
+  'isVerifiedArchive',
+  'archiveAudioReuseEnabled',
   'eventKind',
   'sourceRelay',
 };
@@ -391,6 +395,8 @@ void main() {
         equals(original.contentWarningLabels),
       );
       expect(restored.proofSummary, equals(original.proofSummary));
+      expect(restored.isVerifiedArchive, isTrue);
+      expect(restored.archiveAudioReuseEnabled, isTrue);
     });
 
     test('hydrates addressableDTag from rawTags for older cache entries', () {

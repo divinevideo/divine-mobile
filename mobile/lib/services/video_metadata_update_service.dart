@@ -413,9 +413,7 @@ class VideoMetadataUpdateService {
         ]);
       }
 
-      if (editorState.allowAudioReuse) {
-        tags.add(['allow_audio_reuse', 'true']);
-      }
+      tags.add(['allow_audio_reuse', editorState.allowAudioReuse.toString()]);
 
       tags.addAll(preservedTags);
       tags.addAll(

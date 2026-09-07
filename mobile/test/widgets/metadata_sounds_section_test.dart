@@ -66,7 +66,8 @@ void main() {
 
     VideoEvent createVideoWithoutAudio({
       String? authorName,
-      bool allowAudioReuse = false,
+      bool? allowAudioReuse,
+      bool isVerifiedArchive = false,
       InspiredByInfo? inspiredBy,
     }) {
       final now = DateTime.now();
@@ -80,9 +81,12 @@ void main() {
         title: 'Test Video',
         authorName: authorName,
         inspiredByVideo: inspiredBy,
-        rawTags: allowAudioReuse
-            ? const {'allow_audio_reuse': 'true'}
-            : const {},
+        rawTags: {
+          if (allowAudioReuse case final allowed?)
+            'allow_audio_reuse': allowed.toString(),
+        },
+        isVerifiedArchive: isVerifiedArchive,
+        archiveAudioReuseEnabled: isVerifiedArchive,
       );
     }
 
@@ -306,7 +310,7 @@ void main() {
 
     group('Original sound reuse gating', () {
       testWidgets(
-        'is display-only (no chevron) when the creator disabled audio reuse',
+        'is display-only (no chevron) when audio reuse is unspecified',
         (tester) async {
           final video = createVideoWithoutAudio();
 
@@ -369,8 +373,35 @@ void main() {
         expect(_divineIcon(DivineIconName.caretRight), findsOneWidget);
       });
 
+      testWidgets('shows chevron for a legacy-policy verified archive', (
+        tester,
+      ) async {
+        final video = createVideoWithoutAudio(isVerifiedArchive: true);
+
+        await tester.pumpWidget(buildTestWidget(video: video));
+        await tester.pumpAndSettle();
+
+        expect(_divineIcon(DivineIconName.caretRight), findsOneWidget);
+      });
+
+      testWidgets('honors an explicit decline on a classic Vine', (
+        tester,
+      ) async {
+        final video = createVideoWithoutAudio(
+          allowAudioReuse: false,
+          isVerifiedArchive: true,
+        );
+
+        await tester.pumpWidget(
+          buildTestWidget(video: video, viewerPubkey: testPubkey),
+        );
+        await tester.pumpAndSettle();
+
+        expect(_divineIcon(DivineIconName.caretRight), findsOneWidget);
+      });
+
       testWidgets(
-        'shows chevron for the creator viewing their own video with reuse off',
+        'shows chevron for the creator viewing their own unmarked video',
         (tester) async {
           final video = createVideoWithoutAudio();
 
@@ -382,6 +413,21 @@ void main() {
           expect(_divineIcon(DivineIconName.caretRight), findsOneWidget);
         },
       );
+
+      testWidgets('shows chevron for the creator despite a malformed marker', (
+        tester,
+      ) async {
+        final video = createVideoWithoutAudio().copyWith(
+          rawTags: const {'allow_audio_reuse': 'TRUE'},
+        );
+
+        await tester.pumpWidget(
+          buildTestWidget(video: video, viewerPubkey: testPubkey),
+        );
+        await tester.pumpAndSettle();
+
+        expect(_divineIcon(DivineIconName.caretRight), findsOneWidget);
+      });
     });
 
     group('Reused sound fallback', () {
@@ -439,36 +485,35 @@ void main() {
         },
       );
 
-      testWidgets(
-        'is display-only when the reused source cannot be resolved',
-        (tester) async {
-          // hasAudioReference + unresolved source: the referenced creator's
-          // reuse consent is unconfirmable, so the row credits them but offers
-          // no reuse affordance (fail closed).
-          await tester.pumpWidget(
-            ProviderScope(
-              overrides: [
-                soundByIdProvider(
-                  testAudioEventId,
-                ).overrideWith((ref) async => null),
-              ],
-              child: MaterialApp(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                theme: VineTheme.theme,
-                home: Scaffold(
-                  backgroundColor: Colors.black,
-                  body: MetadataSoundsSection(video: reusedVideo()),
-                ),
+      testWidgets('is display-only when the reused source cannot be resolved', (
+        tester,
+      ) async {
+        // hasAudioReference + unresolved source: the referenced creator's
+        // reuse consent is unconfirmable, so the row credits them but offers
+        // no reuse affordance (fail closed).
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              soundByIdProvider(
+                testAudioEventId,
+              ).overrideWith((ref) async => null),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: VineTheme.theme,
+              home: Scaffold(
+                backgroundColor: Colors.black,
+                body: MetadataSoundsSection(video: reusedVideo()),
               ),
             ),
-          );
-          await tester.pumpAndSettle();
+          ),
+        );
+        await tester.pumpAndSettle();
 
-          expect(find.text('Original sound'), findsOneWidget);
-          expect(_divineIcon(DivineIconName.caretRight), findsNothing);
-        },
-      );
+        expect(find.text('Original sound'), findsOneWidget);
+        expect(_divineIcon(DivineIconName.caretRight), findsNothing);
+      });
 
       testWidgets(
         'tapping a resolved reused sound opens the detail (no dead-end)',

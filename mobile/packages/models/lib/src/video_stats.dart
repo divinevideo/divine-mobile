@@ -51,6 +51,8 @@ class VideoStats {
     this.categories = const [],
     this.collaboratorPubkeys = const [],
     this.proofSummary,
+    this.isVerifiedArchive = false,
+    this.archiveAudioReuseEnabled = false,
     List<String> moderationLabels = const [],
     @Deprecated('Use moderationLabels') List<String>? contentLabels,
   }) : moderationLabels = contentLabels ?? moderationLabels;
@@ -364,7 +366,8 @@ class VideoStats {
       statsData['embedded_reposts'] ?? json['embedded_reposts'],
     );
 
-    // Parse platform from Funnelcake (server-controlled, not user-settable).
+    // Preserve the compatibility label when present. This is descriptive
+    // metadata only: Nostr events can supply it, so it is not provenance.
     // "vine" indicates a genuine Vine archive import.
     final platform =
         json['platform']?.toString() ?? eventData['platform']?.toString();
@@ -438,6 +441,8 @@ class VideoStats {
       textTrackContent: textTrackContent,
       moderationLabels: moderationLabels,
       proofSummary: proofSummary,
+      isVerifiedArchive: json['verified_archive'] == true,
+      archiveAudioReuseEnabled: json['archive_audio_reuse_enabled'] == true,
     );
   }
 
@@ -563,6 +568,17 @@ class VideoStats {
   /// Compact backend-computed proof verification result for list/feed cards.
   final ProofVerificationSummary? proofSummary;
 
+  /// Whether Funnelcake matched this exact event to its verified archive.
+  ///
+  /// This server-derived classification does not express creator consent.
+  final bool isVerifiedArchive;
+
+  /// Whether Funnelcake currently enables Divine's legacy archive audio policy.
+  ///
+  /// Combined with [isVerifiedArchive], this permits presumed reuse when no
+  /// creator preference is recorded. Explicit opt-outs remain authoritative.
+  final bool archiveAudioReuseEnabled;
+
   /// Deprecated alias for [moderationLabels].
   @Deprecated('Use moderationLabels')
   List<String> get contentLabels => moderationLabels;
@@ -643,6 +659,8 @@ class VideoStats {
       collaboratorPubkeys: collaboratorPubkeys,
       moderationLabels: moderationLabels,
       proofSummary: proofSummary,
+      isVerifiedArchive: isVerifiedArchive,
+      archiveAudioReuseEnabled: archiveAudioReuseEnabled,
       nostrEventTags: eventTags,
       rawTags: {
         ...rawTags,

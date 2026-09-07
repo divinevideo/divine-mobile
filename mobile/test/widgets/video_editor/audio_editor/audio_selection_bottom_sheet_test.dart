@@ -73,6 +73,8 @@ void main() {
       List<VineSound> bundledSounds = const [],
       AudioPlaybackService? audioService,
       String? viewerPubkey,
+      AudioEvent? consentSound,
+      bool? consentResult,
     }) {
       final savedSoundsBloc = _MockSavedSoundsBloc();
       when(() => savedSoundsBloc.state).thenReturn(
@@ -102,6 +104,10 @@ void main() {
             soundLibraryServiceProvider.overrideWith(
               (_) async => _FakeSoundLibraryService(bundledSounds),
             ),
+            if (consentSound != null && consentResult != null)
+              audioReuseConsentProvider(
+                consentSound,
+              ).overrideWith((ref) => Future.value(consentResult)),
             if (trendingSoundsAsync != null)
               trendingSoundsProvider.overrideWith(
                 () => _FakeTrendingSounds(trendingSoundsAsync),
@@ -259,6 +265,42 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(AudioEditorSelectionOverlay), findsNothing);
+      });
+
+      testWidgets('selects a legacy-policy verified archive original sound', (
+        tester,
+      ) async {
+        final classicVideo = VideoEvent(
+          id: 'a' * 64,
+          pubkey: 'b' * 64,
+          createdAt: 1704067200,
+          content: '',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
+          videoUrl: 'https://example.com/classic.mp4',
+          isVerifiedArchive: true,
+          archiveAudioReuseEnabled: true,
+        );
+        final classicSound = AudioEvent.fromVideoOriginalSound(
+          classicVideo,
+          creatorName: 'Classic Creator',
+        );
+
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data([classicSound]),
+            consentSound: classicSound,
+            consentResult: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryCommunity));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Original sound - Classic Creator'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AudioEditorSelectionOverlay), findsOneWidget);
       });
 
       testWidgets('collapses repeated reuse-blocked toasts into one', (
