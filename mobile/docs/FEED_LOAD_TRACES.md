@@ -1,5 +1,10 @@
 # Feed-load performance traces
 
+Status: Current
+Validated against: `mobile/lib/services/video_event_service.dart`,
+`mobile/lib/services/feed_load_trace.dart`, and
+`mobile/lib/services/performance_monitoring_service.dart` on 2026-09-07.
+
 The `feed_load_*` custom traces measure how long a newly created feed load
 takes to reach its first terminal milestone. They cover the cache lookup and
 the relay subscription as one operation. They do not measure only relay
