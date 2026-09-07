@@ -17411,6 +17411,39 @@ void main() {
         expect(conversations.single.id, equals(peerId));
       });
 
+      // A row with no participants at all is not merely unusable, it
+      // crashes: every caller resolves the counterparty through
+      // `dmConversationFirstPeer`, which falls back to
+      // `participantPubkeys.first` and throws `StateError` on an empty
+      // list. It must not reach the list either.
+      test('omits a conversation with no participants at all', () async {
+        when(
+          () => mockConversationsDao.watchAcceptedConversations(
+            limit: any(named: 'limit'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer(
+          (_) => Stream.value([
+            ConversationRow(
+              ownerPubkey: '',
+              id: 'empty-participants',
+              participantPubkeys: jsonEncode(const <String>[]),
+              isGroup: false,
+              isRead: true,
+              currentUserHasSent: true,
+              createdAt: 1700000000,
+            ),
+          ]),
+        );
+
+        final repository = createRepository();
+        final conversations = await repository
+            .watchAcceptedConversations()
+            .first;
+
+        expect(conversations, isEmpty);
+      });
+
       // Same row shape, viewer stored under a different casing.
       test('omits a self-only conversation whatever the casing', () async {
         final selfId = DmRepository.computeConversationId([_validPubkeyA]);

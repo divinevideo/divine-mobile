@@ -7635,10 +7635,8 @@ class DmRepository {
     ).map(
       (conversations) => conversations
           .where(
-            (conversation) => !_containsOnlyPubkey(
-              conversation.participantPubkeys,
-              owner,
-            ),
+            (conversation) =>
+                _hasCounterparty(conversation.participantPubkeys, owner),
           )
           .toList(),
     );
@@ -8453,6 +8451,13 @@ class DmRepository {
     }
   }
 
+  /// Whether [participantPubkeys] is exactly [pubkey], repeated or not.
+  ///
+  /// Requires at least one entry: an empty list is a shape this cannot
+  /// identify, and [_cleanupSelfConversations] deletes what this matches, so
+  /// it must not match a row whose participants failed to parse. The display
+  /// side asks [_hasCounterparty] instead, which is not destructive and can
+  /// hide the empty shape safely.
   static bool _containsOnlyPubkey(
     Iterable<String> participantPubkeys,
     String pubkey,
@@ -8461,6 +8466,20 @@ class DmRepository {
       participantPubkeys.every(
         (participantPubkey) => pubkeysEqual(participantPubkey, pubkey),
       );
+
+  /// Whether the conversation has someone in it other than [viewer].
+  ///
+  /// False for a self-only list AND for an empty one. The empty case is the
+  /// reason this is not `!_containsOnlyPubkey(...)`: a row with no
+  /// participants does not merely render as a chat with yourself, it throws —
+  /// every caller resolves the counterparty through `dmConversationFirstPeer`,
+  /// which falls back to `participantPubkeys.first`.
+  static bool _hasCounterparty(
+    Iterable<String> participantPubkeys,
+    String viewer,
+  ) => participantPubkeys.any(
+    (participantPubkey) => !pubkeysEqual(participantPubkey, viewer),
+  );
 
   /// Runs post-auth cleanup and migration tasks sequentially so each step
   /// operates on the final state of the previous one.
