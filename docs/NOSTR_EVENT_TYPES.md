@@ -39,7 +39,7 @@ This document outlines the required Nostr event types (kinds) that Divine uses f
 **Purpose:** Share/repost existing video content while preserving original attribution
 
 **Implementation:**
-- `SocialService.repostEvent()` creates Kind 16 events
+- `RepostsRepository` creates and queries Kind 16 events
 - `VideoEventService` processes Kind 16 events and fetches original content
 - `VideoFeedProvider` displays reposts with "Reposted by" indicator
 
@@ -109,27 +109,28 @@ This document outlines the required Nostr event types (kinds) that Divine uses f
 **Used for:** Comments on videos
 
 **Implementation:**
-- `SocialService.postComment()` creates Kind 1 events with video references
+- `CommentsRepository` creates Kind 1 events with video references
 - Comments reference parent video with `e` tags
 
 ### Kind 3 - Contact Lists (NIP-02)  
 **Used for:** Follow/following relationships
 
 **Implementation:**
-- `SocialService.followUser()` and `unfollowUser()` manage Kind 3 events
+- `FollowRepository` manages Kind 3 events
 - Used for social graph and feed filtering
 
 ### Kind 5 - Deletion Events (NIP-09)
 **Used for:** Unlike functionality, content removal
 
 **Implementation:**
-- `SocialService._publishUnlike()` creates Kind 5 events to delete reactions
+- `LikesRepository` creates Kind 5 events to delete reactions;
+  `RepostsRepository` does the same to undo a repost
 
 ### Kind 7 - Reactions (NIP-25)
 **Used for:** Like/heart reactions on videos
 
 **Implementation:**
-- `SocialService.toggleLike()` creates Kind 7 events with "+" content
+- `LikesRepository` creates Kind 7 events with "+" content (and "-" for downvotes)
 - Used for engagement metrics
 
 ## Event Subscription Requirements
@@ -152,20 +153,20 @@ final filter = Filter(
 );
 ```
 
-### SocialService Subscriptions
+### Social Subscriptions
 ```dart
 // Multiple subscriptions needed for full social functionality:
 
-// 1. User reactions
+// 1. User reactions - LikesRepository
 Filter(kinds: [7], authors: [currentUserPubkey])
 
-// 2. User follow list  
+// 2. User follow list - FollowRepository
 Filter(kinds: [3], authors: [currentUserPubkey])
 
-// 3. Comments on videos
+// 3. Comments on videos - CommentsRepository
 Filter(kinds: [1], e: [videoEventId])
 
-// 4. Follower counts
+// 4. Follower counts - FollowRepository
 Filter(kinds: [3], p: [targetPubkey])
 ```
 
