@@ -103,31 +103,36 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     final events = result.events;
     if (events.isEmpty) return conclusive;
 
-    // Index existing lists by id so we can skip stale relay echoes whose
-    // createdAt is older than the locally-stored updatedAt. The cache alone
-    // cannot make this decision because it compares against tombstones, not
-    // against the current list's updatedAt.
-    final existing = await _cache.readLists(ownerPubkey: ownerPubkey);
-    final existingById = <String, UserList>{
-      for (final list in existing) list.id: list,
-    };
-
-    final receivedAt = DateTime.now().toUtc();
+    final newestByListId = <String, ({Event event, UserList list})>{};
     for (final event in events) {
       final list = Nip51PeopleListCodec.decode(event);
       if (list == null) continue;
-      final current = existingById[list.id];
-      // list.updatedAt is derived from the relay event's created_at by
-      // Nip51PeopleListCodec, so comparing it against the cached list's
-      // updatedAt correctly detects stale relay echoes. If the codec ever
-      // stops sourcing updatedAt from created_at, revisit this guard.
-      if (current != null && current.updatedAt.isAfter(list.updatedAt)) {
+      final candidate = (event: event, list: list);
+      final selected = newestByListId[list.id];
+      if (selected == null || _isNewerRevision(candidate, selected)) {
+        newestByListId[list.id] = candidate;
+      }
+    }
+
+    final receivedAt = DateTime.now().toUtc();
+    for (final candidate in newestByListId.values) {
+      final event = candidate.event;
+      final list = candidate.list;
+      // Read the record rather than the list: whether the cached row carries a
+      // publish source decides whether a relay revision may replace it.
+      final current = await _cache.readRecord(
+        ownerPubkey: ownerPubkey,
+        listId: list.id,
+      );
+      if (current != null && !_shouldReplaceCached(current, list)) {
         continue;
       }
       await _cache.putList(
         ownerPubkey: ownerPubkey,
         list: list,
         receivedAt: receivedAt,
+        sourceTags: event.tags,
+        sourceContent: event.content,
       );
     }
     return conclusive;
@@ -164,18 +169,27 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     if (!await _reconcileOwner(ownerPubkey)) {
       return const PeopleListPublishResult.failed();
     }
-    final existing = await _findList(ownerPubkey: ownerPubkey, listId: listId);
-    if (existing == null) {
+    final record = await _findList(ownerPubkey: ownerPubkey, listId: listId);
+    if (record == null) {
       return const PeopleListPublishResult.failed();
     }
+    final existing = record.list;
     if (existing.pubkeys.contains(pubkey)) {
       return const PeopleListPublishResult.noop();
+    }
+    if (!record.hasPublishSource) {
+      return const PeopleListPublishResult.failed();
     }
     final updated = existing.copyWith(
       pubkeys: [...existing.pubkeys, pubkey],
       updatedAt: DateTime.now().toUtc(),
     );
-    return _publishListReplacement(ownerPubkey: ownerPubkey, list: updated);
+    return _publishListReplacement(
+      ownerPubkey: ownerPubkey,
+      list: updated,
+      sourceTags: record.sourceTags,
+      sourceContent: record.sourceContent,
+    );
   }
 
   @override
@@ -188,18 +202,27 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     if (!await _reconcileOwner(ownerPubkey)) {
       return const PeopleListPublishResult.failed();
     }
-    final existing = await _findList(ownerPubkey: ownerPubkey, listId: listId);
-    if (existing == null) {
+    final record = await _findList(ownerPubkey: ownerPubkey, listId: listId);
+    if (record == null) {
       return const PeopleListPublishResult.failed();
     }
+    final existing = record.list;
     if (!existing.pubkeys.contains(pubkey)) {
       return const PeopleListPublishResult.noop();
+    }
+    if (!record.hasPublishSource) {
+      return const PeopleListPublishResult.failed();
     }
     final updated = existing.copyWith(
       pubkeys: existing.pubkeys.where((p) => p != pubkey).toList(),
       updatedAt: DateTime.now().toUtc(),
     );
-    return _publishListReplacement(ownerPubkey: ownerPubkey, list: updated);
+    return _publishListReplacement(
+      ownerPubkey: ownerPubkey,
+      list: updated,
+      sourceTags: record.sourceTags,
+      sourceContent: record.sourceContent,
+    );
   }
 
   @override
@@ -301,8 +324,14 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   Future<PeopleListPublishResult> _publishListReplacement({
     required String ownerPubkey,
     required UserList list,
+    List<List<String>>? sourceTags,
+    String? sourceContent,
   }) async {
-    final payload = Nip51PeopleListCodec.encode(list);
+    final payload = Nip51PeopleListCodec.encode(
+      list,
+      sourceTags: sourceTags,
+      sourceContent: sourceContent,
+    );
     final event = Event(
       ownerPubkey,
       payload.kind,
@@ -320,6 +349,8 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
         ownerPubkey: ownerPubkey,
         list: persisted,
         receivedAt: DateTime.now().toUtc(),
+        sourceTags: payload.tags,
+        sourceContent: payload.content,
       );
       return PeopleListPublishResult.submitted(eventId: sent.event.id);
     } on Object catch (error, stackTrace) {
@@ -334,15 +365,53 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     }
   }
 
-  Future<UserList?> _findList({
+  Future<CachedPeopleListRecord?> _findList({
     required String ownerPubkey,
     required String listId,
-  }) async {
-    final lists = await _cache.readLists(ownerPubkey: ownerPubkey);
-    for (final list in lists) {
-      if (list.id == listId) return list;
+  }) => _cache.readRecord(ownerPubkey: ownerPubkey, listId: listId);
+
+  /// Whether relay revision [incoming] should replace cached record [current].
+  ///
+  /// [UserList.updatedAt] is derived from the relay event's `created_at` by
+  /// [Nip51PeopleListCodec], so comparing the two normally detects a stale
+  /// relay echo. If the codec ever stops sourcing `updatedAt` from
+  /// `created_at`, revisit this guard.
+  ///
+  /// A row written before this repository preserved publish sources is the
+  /// exception. Its `updatedAt` is the millisecond `DateTime.now()` the
+  /// publish stamped, so it always reads as newer than the second-resolution
+  /// `created_at` of the very event it came from — and with no source tags it
+  /// can never drive another membership edit. A matching `nostrEventId` proves
+  /// the relay holds that same event, so adopting it loses nothing and is what
+  /// keeps the list editable.
+  static bool _shouldReplaceCached(
+    CachedPeopleListRecord current,
+    UserList incoming,
+  ) {
+    final cached = current.list;
+    if (cached.updatedAt.isAfter(incoming.updatedAt)) {
+      return !current.hasPublishSource &&
+          cached.nostrEventId != null &&
+          cached.nostrEventId == incoming.nostrEventId;
     }
-    return null;
+    if (cached.updatedAt == incoming.updatedAt &&
+        cached.nostrEventId != null &&
+        cached.nostrEventId != incoming.nostrEventId &&
+        cached.nostrEventId!.compareTo(incoming.nostrEventId ?? '') < 0) {
+      return false;
+    }
+    return true;
+  }
+
+  static bool _isNewerRevision(
+    ({Event event, UserList list}) candidate,
+    ({Event event, UserList list}) selected,
+  ) {
+    final createdAtComparison = candidate.event.createdAt.compareTo(
+      selected.event.createdAt,
+    );
+    if (createdAtComparison != 0) return createdAtComparison > 0;
+    return candidate.event.id.compareTo(selected.event.id) < 0;
   }
 
   /// Generates a NIP-33 `d`-tag list identifier from [instant].
