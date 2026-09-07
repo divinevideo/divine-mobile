@@ -51,7 +51,17 @@ void main() {
       addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));
 
       launchAppGuarded(app.main);
-      await tester.pumpAndSettle(const Duration(seconds: 3));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final welcomeLoaded = await waitForText(
+        tester,
+        l10n.authCreateNewAccount,
+        maxSeconds: 30,
+      );
+      expect(
+        welcomeLoaded,
+        isTrue,
+        reason: 'Welcome screen did not load within 30s',
+      );
 
       logPhase('perf: register_start');
       await navigateToCreateAccount(tester);
@@ -62,7 +72,6 @@ void main() {
       final token = await getVerificationToken(email);
       await callVerifyEmail(token);
 
-      final l10n = lookupAppLocalizations(const Locale('en'));
       logPhase('perf: wait_for_feed');
       final feedLoaded = await waitForText(
         tester,
