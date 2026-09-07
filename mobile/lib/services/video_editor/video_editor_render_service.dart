@@ -15,6 +15,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/video_editor/clip_normalization_models.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
@@ -29,152 +30,6 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 export 'package:openvine/services/video_editor/video_render_failures.dart';
-
-/// Result of normalizing clips to a target aspect ratio.
-class _NormalizationResult {
-  const _NormalizationResult({
-    required this.segments,
-    required this.tempFilePaths,
-    this.globalTransform,
-  });
-
-  /// The video segments ready for concatenation.
-  final List<VideoSegment> segments;
-
-  /// Paths to temporary files that should be cleaned up after rendering.
-  final List<String> tempFilePaths;
-
-  /// Global crop transform to apply during concatenation (if all clips match).
-  final _CropParameters? globalTransform;
-}
-
-/// Analysis result for a single clip.
-class _ClipAnalysisEntry {
-  const _ClipAnalysisEntry({
-    required this.clip,
-    required this.resolution,
-    required this.cropParams,
-  });
-
-  final DivineVideoClip clip;
-  final Size resolution;
-  final _CropParameters cropParams;
-}
-
-/// Analysis of all clips for optimal rendering strategy.
-class _ClipAnalysis {
-  const _ClipAnalysis({required this.entries});
-
-  final List<_ClipAnalysisEntry> entries;
-
-  /// True if all clips have identical crop parameters.
-  bool get allSameCropParams {
-    if (entries.isEmpty) return true;
-    final first = entries.first.cropParams;
-    return entries.every(
-      (e) =>
-          e.cropParams.x == first.x &&
-          e.cropParams.y == first.y &&
-          e.cropParams.width == first.width &&
-          e.cropParams.height == first.height,
-    );
-  }
-}
-
-/// Crop parameters for aspect ratio transformation.
-class _CropParameters {
-  const _CropParameters({
-    required this.x,
-    required this.y,
-    required this.width,
-    required this.height,
-  });
-
-  /// Creates crop parameters for the given aspect ratio.
-  factory _CropParameters.forAspectRatio({
-    required Size resolution,
-    required model.AspectRatio aspectRatio,
-  }) {
-    return switch (aspectRatio) {
-      model.AspectRatio.square => _CropParameters.squareCrop(resolution),
-      model.AspectRatio.vertical => _CropParameters.verticalCrop(resolution),
-    };
-  }
-
-  /// Creates crop parameters from a resolution for a centered square crop.
-  factory _CropParameters.squareCrop(Size resolution) {
-    final minDimension = resolution.width < resolution.height
-        ? resolution.width
-        : resolution.height;
-
-    return _CropParameters(
-      x: ((resolution.width - minDimension) / 2).round(),
-      y: ((resolution.height - minDimension) / 2).round(),
-      width: minDimension.round(),
-      height: minDimension.round(),
-    );
-  }
-
-  /// Creates crop parameters from a resolution for a centered 9:16 vertical crop.
-  factory _CropParameters.verticalCrop(Size resolution) {
-    final inputAspectRatio = resolution.width / resolution.height;
-    const targetRatio = 9.0 / 16.0;
-
-    final double cropX;
-    final double cropY;
-    final double cropWidth;
-    final double cropHeight;
-
-    if (inputAspectRatio > targetRatio) {
-      // Input is wider than 9:16 - crop width, keep height
-      cropHeight = resolution.height;
-      cropWidth = cropHeight * targetRatio;
-      cropX = (resolution.width - cropWidth) / 2;
-      cropY = 0;
-    } else {
-      // Input is taller than 9:16 - keep width, crop height
-      cropWidth = resolution.width;
-      cropHeight = cropWidth / targetRatio;
-      cropX = 0;
-      cropY = (resolution.height - cropHeight) / 2;
-    }
-
-    return _CropParameters(
-      x: cropX.round(),
-      y: cropY.round(),
-      width: cropWidth.round(),
-      height: cropHeight.round(),
-    );
-  }
-
-  /// Horizontal offset for cropping.
-  final int x;
-
-  /// Vertical offset for cropping.
-  final int y;
-
-  /// Width of the cropped area.
-  final int width;
-
-  /// Height of the cropped area.
-  final int height;
-
-  /// Whether cropping is needed based on the original resolution.
-  bool needsCropping(Size resolution) {
-    return x != 0 ||
-        y != 0 ||
-        width != resolution.width.round() ||
-        height != resolution.height.round();
-  }
-
-  /// Converts to [ExportTransform] for video rendering.
-  ExportTransform toExportTransform() {
-    return ExportTransform(x: x, y: y, width: width, height: height);
-  }
-
-  @override
-  String toString() => '($x, $y, ${width}x$height)';
-}
 
 class _RenderProgressTracker {
   _RenderProgressTracker({
@@ -772,19 +627,22 @@ class VideoEditorRenderService {
         await clip.processingCompleter?.future;
       }
 
+      final effectiveTaskId = taskId ?? clips.first.id;
+
       // Intermediate normalized clips always go to cache (they get deleted)
       final result = await _normalizeClipsToAspectRatio(
         clips: clips,
         aspectRatio: aspectRatio ?? clips.first.targetAspectRatio,
         cacheDir: cacheDir,
         parameters: parameters,
+        taskId: effectiveTaskId,
       );
       tempFilePaths = result.tempFilePaths;
 
       final outputPath = await _concatenateSegments(
         clips: clips,
         segments: result.segments,
-        taskId: taskId ?? clips.first.id,
+        taskId: effectiveTaskId,
         outputDir: outputDir,
         globalTransform: result.globalTransform,
         aspectRatio: aspectRatio ?? clips.first.targetAspectRatio,
@@ -911,7 +769,7 @@ class VideoEditorRenderService {
   }) async {
     metadata ??= await ProVideoEditor.instance.getMetadata(video);
     final resolution = metadata.resolution;
-    final cropParams = _CropParameters.forAspectRatio(
+    final cropParams = CropParameters.forAspectRatio(
       resolution: resolution,
       aspectRatio: aspectRatio,
     );
@@ -964,11 +822,15 @@ class VideoEditorRenderService {
   /// - Only pre-rendering clips that differ from the majority
   ///
   /// Returns video segments ready for concatenation and temp file paths for cleanup.
-  static Future<_NormalizationResult> _normalizeClipsToAspectRatio({
+  ///
+  /// [taskId] is the export's own id — the one a user cancel targets — so this
+  /// pass can stop between clips instead of rendering the whole set (#7833).
+  static Future<NormalizationResult> _normalizeClipsToAspectRatio({
     required List<DivineVideoClip> clips,
     required model.AspectRatio aspectRatio,
     required Directory cacheDir,
     required CompleteParameters? parameters,
+    required String taskId,
   }) async {
     // Analyze all clips first to determine the optimal rendering strategy
     final clipAnalysis = await _analyzeClips(clips, aspectRatio);
@@ -986,7 +848,7 @@ class VideoEditorRenderService {
         name: _logName,
         category: .video,
       );
-      return _NormalizationResult(
+      return NormalizationResult(
         segments: clips
             .map(
               (c) => VideoSegment(
@@ -1020,6 +882,7 @@ class VideoEditorRenderService {
     final tempFilePaths = <String>[];
 
     for (int i = 0; i < clips.length; i++) {
+      _throwIfCancellationRequested(taskId);
       final entry = clipAnalysis.entries[i];
       final needsCrop = entry.cropParams.needsCropping(entry.resolution);
 
@@ -1050,6 +913,7 @@ class VideoEditorRenderService {
           cropParams: entry.cropParams,
           tempDir: cacheDir,
           parameters: parameters,
+          ownerTaskId: taskId,
         );
         tempFilePaths.add(normalizedPath);
         segments.add(
@@ -1061,30 +925,30 @@ class VideoEditorRenderService {
       }
     }
 
-    return _NormalizationResult(
+    return NormalizationResult(
       segments: segments,
       tempFilePaths: tempFilePaths,
     );
   }
 
   /// Analyzes all clips to determine their crop parameters.
-  static Future<_ClipAnalysis> _analyzeClips(
+  static Future<ClipAnalysis> _analyzeClips(
     List<DivineVideoClip> clips,
     model.AspectRatio aspectRatio,
   ) async {
-    final entries = <_ClipAnalysisEntry>[];
+    final entries = <ClipAnalysisEntry>[];
 
     for (final clip in clips) {
       final metaData = await ProVideoEditor.instance.getMetadata(
         clip.requireVideo,
       );
       final resolution = metaData.resolution;
-      final cropParams = _CropParameters.forAspectRatio(
+      final cropParams = CropParameters.forAspectRatio(
         resolution: resolution,
         aspectRatio: aspectRatio,
       );
       entries.add(
-        _ClipAnalysisEntry(
+        ClipAnalysisEntry(
           clip: clip,
           resolution: resolution,
           cropParams: cropParams,
@@ -1092,16 +956,17 @@ class VideoEditorRenderService {
       );
     }
 
-    return _ClipAnalysis(entries: entries);
+    return ClipAnalysis(entries: entries);
   }
 
   /// Renders a single clip with crop transform to normalize its aspect ratio.
   static Future<String> _renderNormalizedClip({
     required DivineVideoClip clip,
     required int index,
-    required _CropParameters cropParams,
+    required CropParameters cropParams,
     required Directory tempDir,
     required CompleteParameters? parameters,
+    required String ownerTaskId,
   }) async {
     final outputPath = path.join(
       tempDir.path,
@@ -1135,6 +1000,7 @@ class VideoEditorRenderService {
     await renderWithEncoderFallback(
       baseTask: task,
       encode: (attemptTask) => _cancelAndRender(outputPath, attemptTask),
+      ownerTaskId: ownerTaskId,
     );
 
     Log.debug(
@@ -1162,7 +1028,7 @@ class VideoEditorRenderService {
     required CompleteParameters? parameters,
     required model.AspectRatio aspectRatio,
     required Duration? maxOutputDuration,
-    _CropParameters? globalTransform,
+    CropParameters? globalTransform,
   }) async {
     final outputPath = path.join(
       outputDir.path,
@@ -1279,11 +1145,17 @@ class VideoEditorRenderService {
   ///
   /// The happy path pays no extra latency: the first attempt runs immediately
   /// and only failures incur a settle.
+  ///
+  /// [ownerTaskId] names the export this render belongs to, for passes that
+  /// render under an id of their own. A user cancel targets the export's id,
+  /// so without it a retry fires after the settle and finishes work nobody is
+  /// waiting for any more (#7833).
   @visibleForTesting
   static Future<void> renderWithEncoderFallback({
     required VideoRenderData baseTask,
     required Future<void> Function(VideoRenderData task) encode,
     model.AspectRatio? fallbackAspectRatio,
+    String? ownerTaskId,
     Duration settleDelay = VideoEditorConstants.encoderRetrySettleDelay,
   }) async {
     const fallbackQuality = VideoEditorConstants.encoderFallbackQuality;
@@ -1314,10 +1186,10 @@ class VideoEditorRenderService {
         if (attempt.settle > Duration.zero) {
           await Future<void>.delayed(attempt.settle);
         }
-        _throwIfCancellationRequested(baseTask.id);
+        _throwIfCancellationRequested(baseTask.id, ownerTaskId);
         try {
           await encode(attempt.task);
-          _throwIfCancellationRequested(baseTask.id);
+          _throwIfCancellationRequested(baseTask.id, ownerTaskId);
           return;
         } on RenderEncoderException catch (e) {
           final isLast = i == attempts.length - 1;
@@ -1338,8 +1210,22 @@ class VideoEditorRenderService {
     }
   }
 
-  static void _throwIfCancellationRequested(String taskId) {
-    if (RenderCancellationRegistry.consumeCancellation(taskId)) {
+  /// Throws [RenderCanceledException] when a cancel is pending for [taskId]
+  /// or for [ownerTaskId], consuming the request.
+  ///
+  /// Intermediate passes render under their own ids, so a user cancel — which
+  /// targets the export's id — is invisible to them unless they also consult
+  /// the owner.
+  static void _throwIfCancellationRequested(
+    String taskId, [
+    String? ownerTaskId,
+  ]) {
+    final cancelled = RenderCancellationRegistry.consumeCancellation(taskId);
+    final ownerCancelled =
+        ownerTaskId != null &&
+        ownerTaskId != taskId &&
+        RenderCancellationRegistry.consumeCancellation(ownerTaskId);
+    if (cancelled || ownerCancelled) {
       throw const RenderCanceledException();
     }
   }

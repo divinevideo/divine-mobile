@@ -269,13 +269,17 @@ void main() {
     final fallbackResolution = VideoEditorConstants.encoderFallbackQuality
         .resolutionForAspectRatio(aspectRatio);
 
-    VideoRenderData baseTask() => VideoRenderData(
-      id: 'render-task',
+    VideoRenderData baseTask({
+      String id = 'render-task',
+      bool trimToCommonTrackEnd = false,
+    }) => VideoRenderData(
+      id: id,
       videoSegments: [
         VideoSegment(
           video: EditorVideo.file('${Directory.systemTemp.path}/a.mp4'),
         ),
       ],
+      trimToCommonTrackEnd: trimToCommonTrackEnd,
       qualityConfig: VideoQualityConfig.custom(
         bitrate: VideoEditorConstants.quality.bitrate,
         resolution: baseResolution,
@@ -531,6 +535,88 @@ void main() {
         async.elapse(const Duration(milliseconds: 1));
         expect(harness.calls, hasLength(3));
       });
+    });
+
+    // An intermediate pass (clip normalization) renders under an id of its
+    // own, while the user's Cancel targets the export's id. Without
+    // [ownerTaskId] the retry loop cannot see that cancel at all, so it
+    // settles, retries, and finishes work nobody is waiting for (#7833/#7834).
+    test("honors the owning export's cancellation during the settle "
+        'window', () {
+      fakeAsync((async) {
+        const settle = VideoEditorConstants.encoderRetrySettleDelay;
+        final harness = flakyEncoder(failuresBeforeSuccess: 1);
+        // renderVideoToClip owns this generation in production.
+        final ownerToken = RenderCancellationRegistry.start('export-task');
+        Object? caught;
+
+        unawaited(
+          VideoEditorRenderService.renderWithEncoderFallback(
+            baseTask: baseTask(id: 'clip-a_normalized'),
+            encode: harness.encode,
+            ownerTaskId: 'export-task',
+          ).catchError((Object error) {
+            caught = error;
+          }),
+        );
+
+        async.flushMicrotasks();
+        expect(harness.calls, hasLength(1));
+
+        RenderCancellationRegistry.cancel('export-task');
+
+        async.elapse(settle);
+        async.flushMicrotasks();
+
+        expect(caught, isA<RenderCanceledException>());
+        expect(harness.calls, hasLength(1));
+        RenderCancellationRegistry.finish('export-task', ownerToken);
+      });
+    });
+
+    test('stops after the running attempt when the owning export is '
+        'cancelled', () async {
+      final ownerToken = RenderCancellationRegistry.start('export-task');
+      var calls = 0;
+
+      await expectLater(
+        VideoEditorRenderService.renderWithEncoderFallback(
+          baseTask: baseTask(id: 'clip-a_normalized'),
+          encode: (_) async {
+            calls++;
+            RenderCancellationRegistry.cancel('export-task');
+          },
+          ownerTaskId: 'export-task',
+          settleDelay: Duration.zero,
+        ),
+        throwsA(isA<RenderCanceledException>()),
+      );
+
+      expect(calls, 1);
+      RenderCancellationRegistry.finish('export-task', ownerToken);
+    });
+
+    // The reduced-resolution attempt is rebuilt with copyWith. Rebuilding it
+    // with the constructor instead would silently reset every field the
+    // rebuild does not name — trimToCommonTrackEnd among them, which is what
+    // keeps the audio/video seam closed (#7788).
+    test('carries non-quality task fields into the reduced-resolution '
+        'attempt', () async {
+      final harness = flakyEncoder(failuresBeforeSuccess: 2);
+
+      await VideoEditorRenderService.renderWithEncoderFallback(
+        baseTask: baseTask(trimToCommonTrackEnd: true),
+        encode: harness.encode,
+        fallbackAspectRatio: aspectRatio,
+        settleDelay: Duration.zero,
+      );
+
+      expect(harness.calls, hasLength(3));
+      expect(
+        harness.calls.map((t) => t.trimToCommonTrackEnd),
+        everyElement(isTrue),
+      );
+      expect(harness.calls[2].qualityConfig?.resolution, fallbackResolution);
     });
   });
 
