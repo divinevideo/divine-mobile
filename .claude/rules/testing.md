@@ -488,7 +488,7 @@ The enforced bar differs by architectural layer. There is deliberately no repo-w
 
 | Layer | Bar |
 |-------|-----|
-| Client / Repository (`mobile/packages/*`) | Hard percentage gate. The VeryGood package workflow defaults to **100%** unless a package lowers `min_coverage` in its own `.github/workflows/<pkg>.yaml`. Keep it green; the locked floor may only ratchet up deliberately. |
+| Client / Repository (`mobile/packages/*`) | Hard percentage gate. The VeryGood package workflow defaults to **100%** unless a package lowers `min_coverage` in its own `.github/workflows/` entry. Keep it green; the locked floor may only ratchet up deliberately. |
 | BLoC / Cubit | Held high. `blocTest` is cheap and the logic is pure — treat it close to package-grade, not UI-grade. |
 | Widgets / UI (`mobile/lib`) | **Behavior + golden, not a line-percentage chase.** No absolute threshold; the floor is a meaningful test alongside every change, plus the untested-services ratchet below. |
 
@@ -572,7 +572,10 @@ value decreased from `origin/main`. It does not raise a floor automatically to
 the package's measured coverage. Raising a floor remains a deliberate,
 reviewed change:
 
-1. Update `min_coverage` in `.github/workflows/<pkg>.yaml`.
+1. Update `min_coverage` in the package's workflow. The guard accepts
+   `.github/workflows/<pkg>.yaml`, `<pkg>.yml`, `<pkg>_ci.yaml` and
+   `<pkg>_ci.yml` — `cache_sync` and `divine_ui`, both named above, use
+   the `.yml` form.
 2. Regenerate and commit the baseline:
 
    ```bash
