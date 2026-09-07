@@ -5,8 +5,9 @@
 # Mobile CI's `Tests` job is the workflow's critical path. `very_good test
 # --optimization` collapses every untagged test file into a single
 # .test_optimizer.dart suite — one process — so `--concurrency=4` has nothing
-# left to schedule once the 18 skip_very_good_optimization files are done, and
-# the bulk of the run is single-core on a 4-vCPU runner.
+# left to schedule once the skip_very_good_optimization files are done (the
+# count is tracked in test/vgv_tag_baseline.txt), and the bulk of the run is
+# single-core on a 4-vCPU runner.
 #
 # very_good has no "run this subset" flag, so the shard is selected by removing
 # the other shards' *_test.dart files from the checkout before very_good scans
