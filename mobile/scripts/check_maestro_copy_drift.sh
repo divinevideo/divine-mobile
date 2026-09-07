@@ -657,10 +657,14 @@ for (key, rel), (rendered, bound) in sorted(bindings.items()):
                 # ICU plural/select branches contain nested braces, so the
                 # simple placeholder splitter below cannot identify one
                 # selected branch. Require every word rendered by the flow to
-                # occur in the template; exact flow membership below still
-                # protects the complete rendered string.
+                # occur as a whole word in the template — a substring test lets
+                # a stale branch pass when a sibling shares its stem (e.g. a
+                # rendered "video" hiding behind "videos"). Exact flow
+                # membership below still protects the complete rendered string.
                 rendered_words = re.findall(r"[A-Za-z]+", rendered)
-                segs = [word for word in rendered_words if word not in template]
+                template_words = set(re.findall(r"[A-Za-z]+", template))
+                segs = [word for word in rendered_words
+                        if word not in template_words]
                 missing = segs[0] if segs else None
             else:
                 segs = [norm(s) for s in re.split(r"\{[^}]*\}", template)

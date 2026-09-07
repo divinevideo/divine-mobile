@@ -832,5 +832,24 @@ void main() {
       expect(res.stderr, contains('ADDED WAIVER'));
       expect(res.stderr, contains('Search.*'));
     });
+
+    test('rejects a stale plural branch masked by a sibling word stem', () {
+      writeArb({
+        'videoCount':
+            '{count, plural, =0{No videos yet} =1{1 clip} '
+            'other{{count} videos}}',
+      });
+      writeFlow('asserts/menu.yaml', '- assertVisible: 1 video\n');
+      writeManifest(
+        'videoCount\te2e/maestro/asserts/menu.yaml\trendered:1 video\n',
+      );
+
+      // The =1 branch renders "1 clip"; "1 video" is stale. A substring test
+      // would pass it because "video" is inside the sibling "videos".
+      final res = run();
+
+      expect(res.exitCode, 1);
+      expect(res.stderr, contains('DRIFT'));
+    });
   });
 }
