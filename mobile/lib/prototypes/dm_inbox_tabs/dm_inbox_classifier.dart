@@ -289,9 +289,12 @@ class DmInboxClassification {
 ///
 /// Ordering is deliberate and each step is a hard short-circuit:
 ///
-/// 1. **Official** — any participant is a canonical official pubkey. Wins over
-///    everything, including a risk score that would otherwise flag it, because
-///    Divine Support must be able to reach an account about a report.
+/// 1. **Official** — *every* participant is a canonical official pubkey. Wins
+///    over everything, including a risk score that would otherwise flag it,
+///    because Divine Support must be able to reach an account about a report.
+///    `every`, not `any`: a NIP-17 room is just its `pubkey` + `p` tag set,
+///    so `any` would let a stranger p-tag a published official pubkey into a
+///    room and inherit the badge.
 /// 2. **Inbox (consented)** — the user has replied, so consent is established.
 /// 3. **Inbox (followed)** — every deduplicated non-self participant is
 ///    followed. `every`, not `first`, so a stranger p-tagged into a group
@@ -368,10 +371,7 @@ class DmInboxClassifier {
     required DmSenderSignals Function(String) signalsFor,
     required DmMessageSignals messageSignals,
   }) {
-    DivineOfficialIdentity? officialIdentity;
-    for (final pubkey in others) {
-      officialIdentity ??= officialIdentities[pubkey];
-    }
+    final officialIdentity = _officialIdentityFor(others);
     if (officialIdentity != null) {
       return DmVerdict(
         bucket: DmInboxBucket.official,
@@ -414,6 +414,33 @@ class DmInboxClassifier {
       score: score,
       reasons: reasons,
     );
+  }
+
+  /// The identity to show when *every* non-self participant is in the signed
+  /// registry, or null when any of them is not.
+  ///
+  /// `every`, not `any`, for the same reason the follow rule below uses it. A
+  /// NIP-17 room is defined by its `pubkey` + `p` tag set, the NIP has no
+  /// invitations and no admins, and an official pubkey has to be published
+  /// for the tab to mean anything — so any sender can p-tag Divine Support
+  /// into a room with a victim at no cost. Trusting a single participant
+  /// handed that room the Official badge, `isBlockable: false`, and content
+  /// rendered unconcealed, which inverts the one guarantee the tab exists to
+  /// make. It is also the epic's "a group does not inherit trust from one
+  /// participant".
+  ///
+  /// When a room holds several official identities the least blockable one
+  /// wins: the user cannot block an operational account out of the room, so
+  /// claiming otherwise would overstate what they can do.
+  DivineOfficialIdentity? _officialIdentityFor(Set<String> others) {
+    if (others.isEmpty) return null;
+    DivineOfficialIdentity? selected;
+    for (final pubkey in others) {
+      final identity = officialIdentities[pubkey];
+      if (identity == null) return null;
+      if (selected == null || !identity.isBlockable) selected = identity;
+    }
+    return selected;
   }
 
   List<DmRiskReason> _score({

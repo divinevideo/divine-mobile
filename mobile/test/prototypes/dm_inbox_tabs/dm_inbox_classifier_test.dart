@@ -184,6 +184,67 @@ void main() {
       });
     });
 
+    group('official promotion', () {
+      const registry = {
+        _hq: DivineOfficialIdentity(
+          kind: DivineIdentityKind.operationalAccount,
+          label: 'Official account',
+        ),
+        _teamMember: DivineOfficialIdentity(
+          kind: DivineIdentityKind.teamMember,
+          label: 'Divine team',
+        ),
+      };
+      const spammer = DmSenderSignals(
+        daysSinceFirstObserved: 0,
+        recentFirstContactCount: 240,
+        distinctReporterCount: 31,
+      );
+
+      DmVerdict classifyRoom(List<String> others) =>
+          const DmInboxClassifier(officialIdentities: registry)
+              .classify(
+                [
+                  DmConversation(
+                    id: 'room',
+                    participantPubkeys: [_me, ...others]..sort(),
+                    isGroup: others.length > 1,
+                    createdAt: 0,
+                  ),
+                ],
+                userPubkey: _me,
+                isFollowing: (_) => false,
+                signalsFor: (_) => spammer,
+              )
+              .verdicts['room']!;
+
+      test('a 1:1 from an official account is official', () {
+        final verdict = classifyRoom([_hq]);
+
+        expect(verdict.bucket, DmInboxBucket.official);
+        expect(verdict.officialIdentity!.isBlockable, isFalse);
+      });
+
+      test('a stranger cannot reach Official by p-tagging one in', () {
+        // A NIP-17 room is its pubkey + p tag set, with no invitations and no
+        // admins, and official pubkeys are published — so this room costs an
+        // attacker nothing to build.
+        final verdict = classifyRoom([_hq, _stranger]);
+
+        expect(verdict.bucket, DmInboxBucket.likelySpam);
+        expect(verdict.officialIdentity, isNull);
+      });
+
+      test('a room of only official identities is still official', () {
+        final verdict = classifyRoom([_hq, _teamMember]);
+
+        expect(verdict.bucket, DmInboxBucket.official);
+        // The operational account cannot be blocked out of the room, so the
+        // row must not claim it can.
+        expect(verdict.officialIdentity!.isBlockable, isFalse);
+      });
+    });
+
     group('weakest link', () {
       // The room's verdict must come from whichever unfollowed participant
       // the scorer itself rates worst, not from a separate ranking formula.
@@ -355,6 +416,10 @@ String _key(String seed) {
   }
   return buffer.toString().substring(0, 64);
 }
+
+const _hq = 'divinehqdivinehqdivinehqdivinehqdivinehqdivinehqdivinehqdivinehq';
+const _teamMember =
+    'lizteamlizteamlizteamlizteamlizteamlizteamlizteamlizteamlizteaml';
 
 final _me = _key('9a');
 final _stranger = _key('7f');
