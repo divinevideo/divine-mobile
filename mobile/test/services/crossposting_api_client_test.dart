@@ -1134,6 +1134,24 @@ void main() {
       }
 
       group('createCrossposts', () {
+        test('rejects an empty success body instead of completing no jobs', () {
+          stubPost('');
+
+          expect(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+            throwsA(
+              isA<CrosspostingApiException>().having(
+                (e) => e.code,
+                'code',
+                equals('malformed_response'),
+              ),
+            ),
+          );
+        });
+
         test('POSTs the platform list and parses jobs', () async {
           stubPost(
             jsonEncode({

@@ -467,6 +467,7 @@ class CrosspostingApiClient {
       'POST',
       '/videos/${Uri.encodeComponent(eventId)}/crossposts',
       body: {'platforms': platforms},
+      allowEmpty: false,
     );
     return _parseJobs(json);
   }
@@ -502,6 +503,7 @@ class CrosspostingApiClient {
     String method,
     String path, {
     Map<String, dynamic>? body,
+    bool allowEmpty = true,
   }) async {
     final headers = await _authHeaders();
     final uri = Uri.parse('$_baseUrl$path');
@@ -516,7 +518,7 @@ class CrosspostingApiClient {
       'DELETE' => _request(() => _httpClient.delete(uri, headers: headers)),
       _ => throw ArgumentError.value(method, 'method'),
     };
-    return _decode(response, allowEmpty: true);
+    return _decode(response, allowEmpty: allowEmpty);
   }
 
   Future<http.Response> _request(
