@@ -4493,37 +4493,26 @@ class DmRepository {
     );
   }
 
-  /// Send a text message to a 1:1 conversation.
-  ///
-  /// Throws [StateError] if the repository has not been initialized.
-  /// Throws [ArgumentError] if [recipientPubkey] is not a 64-character
-  /// hex string or if [content] is empty.
-  ///
-  /// Returns a failure result, publishing nothing, when [recipientPubkey] is
-  /// the sender — see the refusal below.
-  ///
-  /// Returns [NIP17SendResult.tooLong], publishing nothing and leaving no
-  /// queue row, when the built rumor exceeds [maxDmRumorBytes].
-  ///
-  /// When an [OutgoingDmsDao] is injected, the send goes through the
-  /// durable queue: build the rumor, enqueue a `pending`/`pending` row
-  /// keyed by the rumor's id, publish, then transition the queue row
-  /// by wrap outcome:
-  ///
-  /// - Full NIP-17 delivery (`selfWrapPublished == true`): delete the
-  ///   queue row in the same transaction that inserts `direct_messages`.
-  /// - Partial delivery (`selfWrapPublished == false`): keep the row,
-  ///   mark the recipient wrap `sent`, and mark the self-wrap `failed`
-  ///   so only the missing self-wrap is retried later.
-  /// - Recipient publish failure: mark both wraps `failed` and leave
-  ///   the row queued for replay.
-  @useResult
-  Future<NIP17SendResult> sendMessage({
+  /// The guards, rumor build, and durable enqueue shared by [sendMessage] and
+  /// [enqueueSend] — everything up to and including parking the `outgoing_dms`
+  /// row, but NOT the publish. Returns a terminal [NIP17SendResult] in
+  /// `refusal` (self-send / policy block / oversized) or the built rumor and
+  /// its derived send context. #8053.
+  Future<
+    ({
+      NIP17SendResult? refusal,
+      Event? rumor,
+      String? conversationId,
+      String? sendBatchId,
+      List<List<String>>? rumorTags,
+      List<String>? participants,
+    })
+  >
+  _prepareAndEnqueueSend({
     required String recipientPubkey,
     required String content,
     String? replyToId,
     List<List<String>> additionalTags = const [],
-    bool skipNip04Fallback = false,
   }) async {
     _assertInitialized();
     validatePubkey(recipientPubkey);
@@ -4546,8 +4535,15 @@ class DmRepository {
     // author funnelcake matches a kind-5 against, so the real sender is never
     // authorized to delete it.
     if (_isSelf(recipientPubkey)) {
-      return const NIP17SendResult.failure(
-        'refused: a message cannot be addressed to its own sender',
+      return (
+        refusal: const NIP17SendResult.failure(
+          'refused: a message cannot be addressed to its own sender',
+        ),
+        rumor: null,
+        conversationId: null,
+        sendBatchId: null,
+        rumorTags: null,
+        participants: null,
       );
     }
 
@@ -4556,8 +4552,15 @@ class DmRepository {
     // covers the drain replay); this earlier check avoids storing a queue row
     // that would only ever re-fail the gate.
     if (!await _messageService!.canSendTo(recipientPubkey)) {
-      return const NIP17SendResult.blocked(
-        'blocked: recipient not permitted by send policy',
+      return (
+        refusal: const NIP17SendResult.blocked(
+          'blocked: recipient not permitted by send policy',
+        ),
+        rumor: null,
+        conversationId: null,
+        sendBatchId: null,
+        rumorTags: null,
+        participants: null,
       );
     }
 
@@ -4606,7 +4609,16 @@ class DmRepository {
     );
 
     final oversized = _refuseIfOversized(rumor);
-    if (oversized != null) return oversized;
+    if (oversized != null) {
+      return (
+        refusal: oversized,
+        rumor: null,
+        conversationId: null,
+        sendBatchId: null,
+        rumorTags: null,
+        participants: null,
+      );
+    }
 
     // Enqueue before publish so an app crash mid-send leaves a
     // recoverable trace. No-op when the queue dao isn't wired in
@@ -4635,6 +4647,96 @@ class DmRepository {
         ),
       );
     }
+
+    return (
+      refusal: null,
+      rumor: rumor,
+      conversationId: conversationId,
+      sendBatchId: sendBatchId,
+      rumorTags: rumorTags,
+      participants: participants,
+    );
+  }
+
+  /// Enqueues a NIP-17 DM durably WITHOUT publishing it, returning the parked
+  /// rumor id so a caller can await only the fast local write and drive
+  /// delivery afterward (via [recoverFullSend] or the retry sweep). The
+  /// optimistic counterpart of [sendMessage]. #8053.
+  ///
+  /// Coalescing (#6610): a caller that wants to try the same report DM again
+  /// must re-drive the returned [EnqueueSendResult.queuedRumorId] with
+  /// [recoverFullSend], never call [enqueueSend] again — a second call mints a
+  /// fresh rumor and a second durable row, so the sweep and the retry each
+  /// deliver a copy.
+  @useResult
+  Future<EnqueueSendResult> enqueueSend({
+    required String recipientPubkey,
+    required String content,
+    String? replyToId,
+    List<List<String>> additionalTags = const [],
+  }) async {
+    final prep = await _prepareAndEnqueueSend(
+      recipientPubkey: recipientPubkey,
+      content: content,
+      replyToId: replyToId,
+      additionalTags: additionalTags,
+    );
+    final refusal = prep.refusal;
+    if (refusal != null) {
+      final message = refusal.error ?? 'send refused';
+      if (refusal.blocked) return EnqueueSendResult.blocked(message);
+      if (refusal.tooLong) return EnqueueSendResult.tooLong(message);
+      return EnqueueSendResult.refused(message);
+    }
+    return EnqueueSendResult.enqueued(prep.rumor!.id);
+  }
+
+  /// Send a text message to a 1:1 conversation.
+  ///
+  /// Throws [StateError] if the repository has not been initialized.
+  /// Throws [ArgumentError] if [recipientPubkey] is not a 64-character
+  /// hex string or if [content] is empty.
+  ///
+  /// Returns a failure result, publishing nothing, when [recipientPubkey] is
+  /// the sender — see the refusal below.
+  ///
+  /// Returns [NIP17SendResult.tooLong], publishing nothing and leaving no
+  /// queue row, when the built rumor exceeds [maxDmRumorBytes].
+  ///
+  /// When an [OutgoingDmsDao] is injected, the send goes through the
+  /// durable queue: build the rumor, enqueue a `pending`/`pending` row
+  /// keyed by the rumor's id, publish, then transition the queue row
+  /// by wrap outcome:
+  ///
+  /// - Full NIP-17 delivery (`selfWrapPublished == true`): delete the
+  ///   queue row in the same transaction that inserts `direct_messages`.
+  /// - Partial delivery (`selfWrapPublished == false`): keep the row,
+  ///   mark the recipient wrap `sent`, and mark the self-wrap `failed`
+  ///   so only the missing self-wrap is retried later.
+  /// - Recipient publish failure: mark both wraps `failed` and leave
+  ///   the row queued for replay.
+  @useResult
+  Future<NIP17SendResult> sendMessage({
+    required String recipientPubkey,
+    required String content,
+    String? replyToId,
+    List<List<String>> additionalTags = const [],
+    bool skipNip04Fallback = false,
+  }) async {
+    final prep = await _prepareAndEnqueueSend(
+      recipientPubkey: recipientPubkey,
+      content: content,
+      replyToId: replyToId,
+      additionalTags: additionalTags,
+    );
+    final refusal = prep.refusal;
+    if (refusal != null) return refusal;
+    final rumor = prep.rumor!;
+    final conversationId = prep.conversationId!;
+    final sendBatchId = prep.sendBatchId!;
+    final rumorTags = prep.rumorTags!;
+    final participants = prep.participants!;
+    final outgoingDao = _outgoingDmsDao;
 
     // Route the gift wrap to the recipient's NIP-17 DM inbox relays
     // (kind 10050) when they advertise one; null falls back to the
