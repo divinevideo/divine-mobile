@@ -419,19 +419,14 @@ class DmInboxClassifier {
   /// The identity to show when *every* non-self participant is in the signed
   /// registry, or null when any of them is not.
   ///
-  /// `every`, not `any`, for the same reason the follow rule below uses it. A
-  /// NIP-17 room is defined by its `pubkey` + `p` tag set, the NIP has no
-  /// invitations and no admins, and an official pubkey has to be published
-  /// for the tab to mean anything — so any sender can p-tag Divine Support
-  /// into a room with a victim at no cost. Trusting a single participant
-  /// handed that room the Official badge, `isBlockable: false`, and content
-  /// rendered unconcealed, which inverts the one guarantee the tab exists to
-  /// make. It is also the epic's "a group does not inherit trust from one
-  /// participant".
+  /// `every`, not `any`: a NIP-17 room is defined by its `pubkey` + `p` tag
+  /// set, the NIP has no invitations and no admins, and official pubkeys are
+  /// published — so any sender can p-tag one into a room with a victim and,
+  /// under `any`, inherit the badge, `isBlockable: false`, and unconcealed
+  /// content.
   ///
-  /// When a room holds several official identities the least blockable one
-  /// wins: the user cannot block an operational account out of the room, so
-  /// claiming otherwise would overstate what they can do.
+  /// Several official identities: the least blockable one wins, since the
+  /// user cannot block an operational account out of the room.
   DivineOfficialIdentity? _officialIdentityFor(Set<String> others) {
     if (others.isEmpty) return null;
     DivineOfficialIdentity? selected;
@@ -456,15 +451,9 @@ class DmInboxClassifier {
       return const [];
     }
 
-    // A group is only as safe as its least-known member — so "least known"
-    // has to be measured with the weights the verdict actually uses. The
-    // previous rank() read four signals while _scoreSender reads nine and
-    // weights them differently, so the two disagreed whenever the difference
-    // lived in a signal rank() could not see. A room holding a brand-new
-    // account (75 alone) and an established creator (-75 alone) scored -55
-    // and landed in requests, and the panel listed only the creator's
-    // mitigating reasons — explaining a person the user needed no warning
-    // about while the account that earned the risk stayed invisible.
+    // A room is only as safe as its least-known member, measured with the
+    // same weights the verdict uses — so the reason trail and the score
+    // always describe the same person.
     var reasons = _scoreSender(unknown.first, signalsFor, messageSignals);
     var worst = reasons.fold(0, (sum, reason) => sum + reason.points);
     for (final pubkey in unknown.skip(1)) {
@@ -482,13 +471,8 @@ class DmInboxClassifier {
       }
     }
 
-    // Derived from the deduplicated participants, never from
-    // `DmConversation.isGroup`. That column is written from
-    // `participants.length > 2` and rewritten on every upsert, so it drifts
-    // from the row's real participants — #5374 is why
-    // `DmRepository.classifyPotentialRequests` stopped reading it. A drifted
-    // 1:1 was picking up the group weight and a reason line saying it had
-    // been added to a group.
+    // From the participants, never `DmConversation.isGroup` — that column is
+    // rewritten on every upsert and drifts (#5374).
     if (unknown.length > 1) {
       add('Added you to a group', h.weightUnknownGroupInvite);
     }
