@@ -60,13 +60,20 @@ class FeatureFlagScreen extends ConsumerWidget {
               final flag = visibleFlags[index];
               final isEnabled = state[flag] ?? false;
 
-              return Semantics(
-                identifier: flag == FeatureFlag.accountSwitching
-                    ? SemanticIds.featureFlagAccountSwitching
-                    : null,
-                child: Card(
-                  clipBehavior: .hardEdge,
-                  margin: const .only(bottom: 12.0),
+              // `Card` is its own semantics container, so an identifier
+              // wrapped around it lands on an empty node above that boundary
+              // -- automation can neither read the flag's state from it nor
+              // tap anything but its bounds centre. Inside the Card the
+              // identifier merges with the tile, which carries both the tap
+              // and (via `toggled`) the on/off state the E2E flow asserts.
+              return Card(
+                clipBehavior: .hardEdge,
+                margin: const .only(bottom: 12.0),
+                child: Semantics(
+                  identifier: flag == FeatureFlag.accountSwitching
+                      ? SemanticIds.featureFlagAccountSwitching
+                      : null,
+                  toggled: isEnabled,
                   child: ListTile(
                     contentPadding: const .fromLTRB(16, 0, 12, 0),
                     title: Text(
