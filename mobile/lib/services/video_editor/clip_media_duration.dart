@@ -29,6 +29,11 @@ const Duration minCommonTrackEnd = VideoEditorSplitService.minClipDuration;
 ///
 /// Returns `null` when there is nothing to correct — no audio track, tracks
 /// already ending together, or a shortfall beyond [clipTrackEndTolerance].
+///
+/// This is the only place the mismatch is corrected for export. The native
+/// renderer's own `trimToCommonTrackEnd` is deliberately left off, because it
+/// trims after the editor has authored every time anchor against the
+/// un-trimmed length. See `docs/VIDEO_TRACK_END_MISMATCH.md`.
 Duration? commonTrackEnd(VideoMetadata metadata) {
   final audioDuration = metadata.audioDuration;
   if (audioDuration == null) return null;
