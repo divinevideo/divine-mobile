@@ -16,7 +16,6 @@ import 'package:nostr_sdk/event.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/auth_rpc_capability.dart';
-import 'package:openvine/models/known_account.dart';
 import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
@@ -129,8 +128,6 @@ MockAuthService createMockAuthService({
     () => mockAuth.isAuthenticated,
   ).thenReturn(authState == AuthState.authenticated);
   when(() => mockAuth.canExportLocalNsec).thenReturn(false);
-  when(() => mockAuth.isAnonymous).thenReturn(false);
-  when(() => mockAuth.hasExpiredOAuthSession).thenReturn(false);
   when(
     () => mockAuth.authenticationSource,
   ).thenReturn(AuthenticationSource.none);
@@ -156,8 +153,6 @@ MockAuthService createMockAuthService({
   when(
     () => mockAuth.authStateStream,
   ).thenAnswer((_) => const Stream<AuthState>.empty());
-  when(mockAuth.getKnownAccounts).thenAnswer((_) async => <KnownAccount>[]);
-  when(mockAuth.getSessionRecoveryAnchorNpub).thenAnswer((_) async => null);
   _stubSessionCleanupRegistration(mockAuth);
 
   return mockAuth;
@@ -180,14 +175,6 @@ MockNostrClient createMockNostrService() {
   when(() => mockNostr.hasKeys).thenReturn(false);
   when(() => mockNostr.connectedRelayCount).thenReturn(1);
   when(() => mockNostr.configuredRelays).thenReturn(<String>[]);
-  when(
-    () => mockNostr.relayStatuses,
-  ).thenReturn(<String, RelayConnectionStatus>{});
-  when(
-    () => mockNostr.relayStatusStream,
-  ).thenAnswer(
-    (_) => const Stream<Map<String, RelayConnectionStatus>>.empty(),
-  );
 
   // Stub subscribe() to return empty stream (never null) so
   // SubscriptionManager batch fetch does not get
