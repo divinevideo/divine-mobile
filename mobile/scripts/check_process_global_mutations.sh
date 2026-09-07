@@ -49,12 +49,12 @@
 #      harness, before `testMain`, or in the isolated golden tree. Calling one
 #      from an ordinary merged suite makes every later test order-dependent.
 #
-# Detection is textual for all three classes. For the first two, it cannot prove
-# the restore is reachable or lives in a tearDown (an inline end-of-body reset
-# satisfies the check but not a mid-test throw). The snapshot+restore /
-# reset-to-default pair is the canonical fix; the tag is the escape hatch for
-# tests that legitimately cannot restore (real plugin / integration tests).
-# Class 3 scans code only, with comments and string-literal bodies removed.
+# Detection is textual for all three classes, after comments and string-literal
+# bodies are removed by dart_code_only.awk. It cannot prove the restore is
+# reachable or lives in a tearDown (an inline end-of-body reset satisfies the
+# check but not a mid-test throw). The snapshot+restore / reset-to-default pair
+# is the canonical fix; the tag is the escape hatch for tests that legitimately
+# cannot restore (real plugin / integration tests).
 #
 # Scope: assignment classes inspect only `*_test.dart`; irreversible initializer
 # detection inspects every Dart file under mobile/test and mobile/packages/*/test.
@@ -138,7 +138,7 @@ fi
 
 is_skip_vgv_tagged() {
   local f="$1" tag_body tag_flat
-  tag_body=$(grep -vE '^[[:space:]]*//' "$f" || true)
+  tag_body=$(awk -v preserve_tag_literals=1 -f "$SCRIPT_DIR/lib/dart_code_only.awk" "$f")
   tag_flat=$(tr -d '[:space:]' <<<"$tag_body")
   grep -qE "@Tags\(\[[^]]*['\"]skip_very_good_optimization['\"]" <<<"$tag_flat"
 }
@@ -146,11 +146,22 @@ is_skip_vgv_tagged() {
 run_scan() {
   local violations="" core files f body def
 
+  # All classification depends on this filter. Validate it against a known code
+  # line before scanning, so a missing, invalid, or silently empty filter cannot
+  # turn every source body into an empty, apparently compliant file. Testing on
+  # empty input would miss a filter that loads but emits nothing.
+  local probe
+  probe=$(printf 'code_only_probe = 0;\n' | awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" 2>/dev/null || true)
+  if [[ "$probe" != *code_only_probe* ]]; then
+    echo "FAIL [process_global_mutations]: Dart code-only filter is unavailable or produced no output" >&2
+    return 1
+  fi
+
   # --- Class 1: capture-restore ---
   for core in "${GLOBALS[@]}"; do
     files=$(grep -rlE --include='*_test.dart' "$core" "${SCAN_ROOTS[@]}" || true)
     for f in $files; do
-      body=$(grep -vE '^[[:space:]]*//' "$f" || true)
+      body=$(awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" "$f")
 
       # A real ASSIGNMENT (install or restore): (<prefix>.)?CORE = , not == / =>.
       if ! grep -qE "(^|[^A-Za-z0-9_.])([A-Za-z_][A-Za-z0-9_]*\.)?${core}[[:space:]]*=([^=>]|$)" <<<"$body"; then
@@ -223,7 +234,7 @@ run_scan() {
     def="${entry##*:}"
     files=$(grep -rlE --include='*_test.dart' "$core" "${SCAN_ROOTS[@]}" || true)
     for f in $files; do
-      body=$(grep -vE '^[[:space:]]*//' "$f" || true)
+      body=$(awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" "$f")
 
       if ! grep -qE "(^|[^A-Za-z0-9_.])([A-Za-z_][A-Za-z0-9_]*\.)?${core}[[:space:]]*=([^=>]|$)" <<<"$body"; then
         continue
@@ -263,7 +274,7 @@ run_scan() {
   irreversible='(^|[^[:alnum:]_])loadAppFonts([^[:alnum:]_]|$)'
   files=$(grep -rlE --include='*.dart' "$irreversible" "${SCAN_ROOTS[@]}" || true)
   for f in $files; do
-    body=$(awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" "$f" 2>/dev/null || true)
+    body=$(awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" "$f")
     if ! grep -qE "$irreversible" <<<"$body"; then
       continue
     fi
@@ -468,6 +479,89 @@ void main() {
   // debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
   // Bloc.observer = MyObserver();
 }
+'
+  _case "capture-restore install inside a block comment → PASS" 0 \
+'import "x";
+void main() {
+  /* Bloc.observer = MyObserver(); */
+}
+'
+  _case "capture-restore install inside a string → PASS" 0 \
+'import "x";
+void main() {
+  final message = "Bloc.observer = MyObserver();";
+}
+'
+  _case "capture-restore install inside a trailing comment → PASS" 0 \
+'import "x";
+void main() { final value = 1; // Bloc.observer = MyObserver();
+}
+'
+  _case "capture-restore install inside a raw string → PASS" 0 \
+"import 'x';
+void main() {
+  final message = r'Bloc.observer = MyObserver();';
+}
+"
+  _case "capture-restore leak with restore only in a string → FAIL" 1 \
+'import "x";
+void main() {
+  final prior = Bloc.observer;
+  Bloc.observer = MyObserver();
+  final message = "Bloc.observer = prior;";
+}
+'
+  _case "capture-restore leak with restore only in a trailing comment → FAIL" 1 \
+'import "x";
+void main() {
+  final prior = Bloc.observer;
+  Bloc.observer = MyObserver(); // Bloc.observer = prior;
+}
+'
+  _case "capture-restore leak with capture and restore only in a block comment → FAIL" 1 \
+'import "x";
+void main() {
+  Bloc.observer = MyObserver();
+  /*
+  final prior = Bloc.observer;
+  addTearDown(() => Bloc.observer = prior);
+  */
+}
+'
+  _case "reset-to-default install inside a string → PASS" 0 \
+'import "x";
+void main() {
+  final message = "debugDefaultTargetPlatformOverride = TargetPlatform.iOS;";
+}
+'
+  _case "reset-to-default leak with reset only in a string → FAIL" 1 \
+'import "x";
+void main() {
+  debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+  final message = "debugDefaultTargetPlatformOverride = null;";
+}
+'
+  _case "reset-to-default leak with reset only in a trailing comment → FAIL" 1 \
+'import "x";
+void main() {
+  debugDefaultTargetPlatformOverride = TargetPlatform.iOS; // debugDefaultTargetPlatformOverride = null;
+}
+'
+  _case "optimization tag inside a string does not exempt a leak → FAIL" 1 \
+'import "x";
+void main() {
+  final message = """@Tags(["skip_very_good_optimization"])""";
+  Bloc.observer = MyObserver();
+}
+'
+  _case "optimization tag inside a block comment does not exempt a leak → FAIL" 1 \
+'/* @Tags(["skip_very_good_optimization"]) */
+import "x";
+void main() { Bloc.observer = MyObserver(); }
+'
+  _case "optimization tag inside a trailing comment does not exempt a leak → FAIL" 1 \
+'import "x"; // @Tags(["skip_very_good_optimization"])
+void main() { Bloc.observer = MyObserver(); }
 '
   _case "lone default assignment (= null only, no install) → PASS" 0 \
 'import "x";
