@@ -134,8 +134,6 @@ class HeadlessLoginResult {
       case 'INVALID_EMAIL':
         return KeycastLoginFailure.invalidEmail;
       case 'TOO_MANY_ATTEMPTS':
-      case 'RATE_LIMITED':
-      case 'rate_limited':
         return KeycastLoginFailure.rateLimited;
       case 'timeout':
       case 'connection_error':
