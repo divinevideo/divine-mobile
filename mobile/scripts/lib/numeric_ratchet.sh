@@ -176,7 +176,7 @@ run_numeric_ratchet() {
       local added raised
       added="$(join -t "$TAB" -v1 "$BASE_F" "$MAIN_F" || true)"
       raised="$(join -t "$TAB" "$BASE_F" "$MAIN_F" | awk -F "$TAB" '$2 > $3 { printf "%s\t%s -> %s\n", $1, $3, $2 }' || true)"
-      local rename_claims rename_line rename_new rename_old old_count new_count
+      local rename_claims rename_new rename_old old_count new_count claim_ok
       rename_claims="$(mktemp)"
       if [[ -f "$BASELINE_FILE" ]]; then
         awk -F "$TAB" '
@@ -223,17 +223,37 @@ run_numeric_ratchet() {
           fail=1
           continue
         fi
+        claim_ok=1
         if ! awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$MAIN_F"; then
           echo "FAIL [$RATCHET_LABEL]: renamed-from old key is not in ${BASE_REF}: $rename_old"
+          echo "  -> $NEW_HINT"
           fail=1
+          # Nothing below can say anything true about a key that is not there:
+          # the ceiling comparison used to fire a second time and assert the
+          # new key exceeded a ceiling the old key never had.
+          continue
         fi
         if awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$BASE_F"; then
           echo "FAIL [$RATCHET_LABEL]: renamed-from old key remains in the branch baseline: $rename_old"
+          echo "  -> $NEW_HINT"
           fail=1
+          claim_ok=0
         fi
         if awk -F "$TAB" -v key="$rename_old" '$1 == key { found=1 } END { exit !found }' "$CUR_F"; then
           echo "FAIL [$RATCHET_LABEL]: renamed-from old key is still emitted: $rename_old"
+          echo "  -> $NEW_HINT"
           fail=1
+          claim_ok=0
+        fi
+        # The ceiling lookup below reads the FIRST row for the key, while the
+        # `added` subtraction removes EVERY row with it -- so one annotation
+        # could carry a second, un-annotated row for the same key past the
+        # report entirely.
+        if [[ "$(awk -F "$TAB" -v key="$rename_new" '$1 == key { n++ } END { print n+0 }' "$BASE_F")" -gt 1 ]]; then
+          echo "FAIL [$RATCHET_LABEL]: renamed key $rename_new appears more than once in the baseline"
+          echo "  -> $NEW_HINT"
+          fail=1
+          claim_ok=0
         fi
         new_count="$(awk -F "$TAB" -v key="$rename_new" '$1 == key { print $2; exit }' "$BASE_F")"
         old_count="$(awk -F "$TAB" -v key="$rename_old" '$1 == key { print $2; exit }' "$MAIN_F")"
@@ -249,12 +269,19 @@ run_numeric_ratchet() {
           echo "  ${BASE_REF} $rename_old: ${old_count:-<missing>}"
           echo "  -> $NEW_HINT"
           fail=1
+          claim_ok=0
         elif [[ "$new_count" -gt "$old_count" ]]; then
           echo "FAIL [$RATCHET_LABEL]: renamed key $rename_new exceeds old ceiling $rename_old (was $old_count -> now $new_count)"
           echo "  -> $NEW_HINT"
           fail=1
+          claim_ok=0
         fi
-        added="$(printf '%s\n' "$added" | awk -F "$TAB" -v key="$rename_new" '$1 != key')"
+        # Only a claim that actually validated may consume its baseline row.
+        # Subtracting unconditionally told the operator the annotation was
+        # wrong while hiding which row was unapproved.
+        if [[ "$claim_ok" -eq 1 ]]; then
+          added="$(printf '%s\n' "$added" | awk -F "$TAB" -v key="$rename_new" '$1 != key')"
+        fi
       done < "$rename_claims"
       rm -f "$rename_claims"
       if [[ -n "$added" || -n "$raised" ]]; then

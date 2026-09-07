@@ -286,6 +286,54 @@ run_numeric_ratchet
         expect(res.stdout, contains('old key is still emitted'));
       });
 
+      test('does not invent a ceiling failure for an absent old key', () {
+        // `-z "$old_count"` was folded into the ceiling condition, so a claim
+        // naming a key that is not on the base ref produced a second,
+        // factually wrong line about a ceiling that never existed.
+        baseline.writeAsStringSync(
+          '# probe baseline\na\t5\nc\t4 # renamed-from: ghost\n',
+        );
+        writeCurrent('a\t5\nc\t4\n');
+
+        final res = run();
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('old key is not in HEAD'));
+        expect(res.stdout, isNot(contains('exceeds old ceiling')));
+        expect(res.stdout, isNot(contains('non-numeric ceiling')));
+      });
+
+      test('still names the unapproved row when a claim fails', () {
+        // The `added` subtraction ran even for a claim that just failed
+        // validation, so the operator was told the annotation was wrong and
+        // never told which baseline row was unapproved.
+        baseline.writeAsStringSync(
+          '# probe baseline\na\t5\nb\t3\nc\t4 # renamed-from: a\n',
+        );
+        writeCurrent('a\t5\nb\t3\nc\t4\n');
+
+        final res = run();
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('old key remains'));
+        expect(res.stdout, contains('+added'));
+      });
+
+      test('rejects a second un-annotated row for the renamed key', () {
+        // The ceiling lookup reads the first row for the key; the `added`
+        // subtraction removed every row with it. One annotation therefore
+        // carried a duplicate, un-annotated row past the report.
+        baseline.writeAsStringSync(
+          '# probe baseline\nb\t3\nc\t9\nc\t4 # renamed-from: a\n',
+        );
+        writeCurrent('b\t3\nc\t4\n');
+
+        final res = run();
+
+        expect(res.exitCode, 1, reason: res.stdout.toString());
+        expect(res.stdout, contains('appears more than once'));
+      });
+
       test('rejects duplicate claims for a new or old key', () {
         baseline.writeAsStringSync(
           '# probe baseline\n'
