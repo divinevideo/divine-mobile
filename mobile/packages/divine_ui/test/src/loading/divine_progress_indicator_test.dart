@@ -174,8 +174,33 @@ void main() {
       final semantics = tester.getSemantics(find.bySemanticsLabel('Loading'));
       expect(semantics.getSemanticsData().value, isEmpty);
       expect(semantics.getSemanticsData().role, SemanticsRole.loadingSpinner);
-      expect(find.byType(ClipRRect), findsOneWidget);
+      // No radius resolves under the app theme, and the SDK clips only when
+      // one does — rounding the frozen bar would make it differ from the
+      // animated one it stands in for.
+      expect(find.byType(ClipRRect), findsNothing);
       expect(tester.binding.transientCallbackCount, 0);
+    });
+
+    testWidgets('restores the clip a resolved border radius asks for', (
+      tester,
+    ) async {
+      const borderRadius = BorderRadius.all(Radius.circular(3));
+
+      await tester.pumpWidget(
+        subject(
+          disableAnimations: true,
+          child: const DivineLinearProgressIndicator(
+            borderRadius: borderRadius,
+          ),
+        ),
+      );
+
+      // The SDK applies this clip itself only while the value is null, so the
+      // frozen bar has to carry it instead.
+      expect(
+        tester.widget<ClipRRect>(find.byType(ClipRRect)).borderRadius,
+        borderRadius,
+      );
     });
 
     testWidgets('forwards determinate configuration', (tester) async {

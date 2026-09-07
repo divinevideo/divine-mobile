@@ -168,22 +168,19 @@ class DivineLinearProgressIndicator extends StatelessWidget {
     );
     if (!freezeIndeterminate) return indicator;
 
-    final theme = Theme.of(context);
+    // The SDK clips the bar only when a radius actually resolves, and its
+    // `year2023` defaults supply none — so a hardcoded fallback would round
+    // the frozen bar's ends where the animated one is square.
     final effectiveBorderRadius =
-        borderRadius ??
-        ProgressIndicatorTheme.of(context).borderRadius ??
-        (theme.useMaterial3
-            ? const BorderRadius.all(Radius.circular(2))
-            : BorderRadius.zero);
+        borderRadius ?? ProgressIndicatorTheme.of(context).borderRadius;
     return Semantics(
       label: semanticsLabel,
       value: semanticsValue,
       role: SemanticsRole.loadingSpinner,
       child: ExcludeSemantics(
-        child: ClipRRect(
-          borderRadius: effectiveBorderRadius,
-          child: indicator,
-        ),
+        child: effectiveBorderRadius == null
+            ? indicator
+            : ClipRRect(borderRadius: effectiveBorderRadius, child: indicator),
       ),
     );
   }
