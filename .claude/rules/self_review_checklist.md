@@ -218,9 +218,11 @@ Testing:
   `localizationsDelegates: AppLocalizations.localizationsDelegates` and
   `supportedLocales: AppLocalizations.supportedLocales` on its
   `MaterialApp`.
-- [ ] New public method on a strict-coverage package (currently
-  `mobile/packages/divine_ui`) has a matching test **in the same PR**.
-  See [`testing.md`](testing.md#strict-coverage-packages).
+- [ ] New public method on a strict-coverage package has a matching test
+  **in the same PR**. 30 of the 58 packages under `mobile/packages/` gate
+  at 100%, not just `divine_ui` — see
+  [`testing.md`](testing.md#strict-coverage-packages) for the list and the
+  command that regenerates it.
 - [ ] Every test you add can FAIL. No `expect(true, isTrue)`, no test body
   that asserts nothing it controls. Frozen at zero by
   `check_placeholder_tests.sh` (#3340) — a construction smoke test asserts
