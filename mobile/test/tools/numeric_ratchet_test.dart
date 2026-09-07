@@ -18,6 +18,19 @@ void main() {
 
     void writeCurrent(String body) => current.writeAsStringSync(body);
 
+    void commitBaseBaseline(String body) {
+      File(
+        '${tmp.path}/mobile/scripts/baseline/__probe_nonexistent__.txt',
+      ).writeAsStringSync(body);
+      for (final args in [
+        ['add', '.'],
+        ['commit', '-m', 'update base baseline'],
+      ]) {
+        final result = Process.runSync('git', ['-C', tmp.path, ...args]);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      }
+    }
+
     ProcessResult run({
       bool update = false,
       bool requireBaselineUpdateOnDecrease = false,
@@ -30,6 +43,9 @@ void main() {
           'PROBE_BASELINE': baseline.path,
           'PROBE_CURRENT': current.path,
           'PROBE_LIB': libPath,
+          'PROBE_BASE_REF': 'HEAD',
+          'PROBE_BASELINE_REPO_PATH':
+              'mobile/scripts/baseline/__probe_nonexistent__.txt',
           if (requireBaselineUpdateOnDecrease)
             'PROBE_REQUIRE_BASELINE_UPDATE_ON_DECREASE': '1',
           if (update) 'UPDATE_BASELINE': '1',
@@ -40,6 +56,22 @@ void main() {
     setUp(() {
       tmp = Directory.systemTemp.createTempSync('numeric_ratchet_test');
       Directory('${tmp.path}/m').createSync(recursive: true);
+      Directory(
+        '${tmp.path}/mobile/scripts/baseline',
+      ).createSync(recursive: true);
+      File(
+        '${tmp.path}/mobile/scripts/baseline/__probe_nonexistent__.txt',
+      ).writeAsStringSync('# probe baseline\na\t5\nb\t3\n');
+      for (final args in [
+        ['init'],
+        ['config', 'user.email', 'test@example.invalid'],
+        ['config', 'user.name', 'Ratchet Test'],
+        ['add', '.'],
+        ['commit', '-m', 'base'],
+      ]) {
+        final result = Process.runSync('git', ['-C', tmp.path, ...args]);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      }
       libPath = File('scripts/lib/numeric_ratchet.sh').absolute.path;
       current = File('${tmp.path}/current.txt');
       baseline = File('${tmp.path}/baseline.txt');
@@ -134,6 +166,116 @@ run_numeric_ratchet
       expect(res.exitCode, 1);
       expect(res.stdout, contains('DECREASED'));
       expect(res.stdout, contains('a\t5 -> 4'));
+    });
+
+    group('renamed-from provenance', () {
+      test('allows a pending rename that preserves the old ceiling', () {
+        baseline.writeAsStringSync(
+          '# probe baseline\nb\t3\nc\t4 # renamed-from: a\n',
+        );
+        writeCurrent('b\t3\nc\t4\n');
+
+        final res = run();
+
+        expect(res.exitCode, 0, reason: res.stdout.toString());
+      });
+
+      test('rejects a renamed key above the old ceiling', () {
+        baseline.writeAsStringSync(
+          '# probe baseline\nb\t3\nc\t6 # renamed-from: a\n',
+        );
+        writeCurrent('b\t3\nc\t6\n');
+
+        final res = run();
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('exceeds old ceiling'));
+      });
+
+      test('rejects a claim whose old key is absent from the base', () {
+        baseline.writeAsStringSync(
+          '# probe baseline\na\t5\nc\t3 # renamed-from: missing\n',
+        );
+        writeCurrent('a\t5\nc\t3\n');
+
+        final res = run();
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('old key is not in HEAD'));
+      });
+
+      test('rejects a claim while the old key remains', () {
+        baseline.writeAsStringSync(
+          '# probe baseline\na\t5\nb\t3\nc\t4 # renamed-from: a\n',
+        );
+        writeCurrent('a\t5\nb\t3\nc\t4\n');
+
+        final res = run();
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('old key remains'));
+        expect(res.stdout, contains('old key is still emitted'));
+      });
+
+      test('rejects duplicate claims for a new or old key', () {
+        baseline.writeAsStringSync(
+          '# probe baseline\n'
+          'a\t5\n'
+          'b\t3\n'
+          'c\t4 # renamed-from: a\n'
+          'c\t4 # renamed-from: b\n',
+        );
+        writeCurrent('a\t5\nb\t3\nc\t4\n');
+
+        final duplicateNew = run();
+
+        expect(duplicateNew.exitCode, 1);
+        expect(
+          duplicateNew.stdout,
+          contains('duplicate rename claim for new key c'),
+        );
+
+        baseline.writeAsStringSync(
+          '# probe baseline\n'
+          'b\t3\n'
+          'c\t4 # renamed-from: a\n'
+          'd\t2 # renamed-from: a\n',
+        );
+        writeCurrent('b\t3\nc\t4\nd\t2\n');
+        final duplicateOld = run();
+
+        expect(duplicateOld.exitCode, 1);
+        expect(
+          duplicateOld.stdout,
+          contains('old key a is claimed more than once'),
+        );
+      });
+
+      test('rejects an empty renamed-from key', () {
+        baseline.writeAsStringSync(
+          '# probe baseline\na\t5\nb\t3\nc\t2 # renamed-from:\n',
+        );
+        writeCurrent('a\t5\nb\t3\nc\t2\n');
+
+        final res = run();
+
+        expect(res.exitCode, 1);
+        expect(res.stdout, contains('malformed renamed-from annotation'));
+      });
+
+      test(
+        'accepts preserved provenance after the rename reaches the base',
+        () {
+          const renamed = '# probe baseline\nb\t3\nc\t4 # renamed-from: a\n';
+          commitBaseBaseline(renamed);
+          baseline.writeAsStringSync(renamed);
+          writeCurrent('b\t3\nc\t4\n');
+
+          final res = run();
+
+          expect(res.exitCode, 0, reason: res.stdout.toString());
+        },
+      );
     });
 
     group('trailing "# reason" comments', () {
