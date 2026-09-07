@@ -260,6 +260,22 @@ bool isOwnProfileLocation(String location, String currentUserHex) {
       routeIdentifiesUser(route.npub, currentUserHex);
 }
 
+/// Whether [context] is [currentUserHex]'s own profile *grid*.
+///
+/// Video mode keeps the shell's app bar even on your own profile, so a
+/// non-null `videoIndex` is deliberately not an own-profile grid.
+///
+/// One owner for a decision two layers make: the profile screen wraps the
+/// grid in its own scaffold, and the shell suppresses its app bar for it.
+/// When those two disagree, your own profile renders inside a stranger's
+/// chrome in the same frame — which is what `routeIdentifiesUser` exists to
+/// prevent, and why this predicate is not inlined at either site.
+bool isOwnProfileGridRoute(RouteContext? context, String? currentUserHex) =>
+    context != null &&
+    context.type == RouteType.profile &&
+    context.videoIndex == null &&
+    routeIdentifiesUser(context.npub, currentUserHex);
+
 /// Parse a URL path only when its route family is explicitly modeled.
 ///
 /// This is the route normalizer's fail-closed entry point: unknown or

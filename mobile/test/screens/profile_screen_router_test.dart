@@ -25,13 +25,16 @@ import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/profile/blocked_user_screen.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
+import '../helpers/test_pubkeys.dart';
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
@@ -100,6 +103,9 @@ const _npub = 'npub1424242424242424242424242424242424242424242424242424qamrcaj';
 /// does not match the profile's, so the two must describe one identity.
 const _authorPubkeyHex =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+/// A second real identity, for the "not yours" case.
+final String _otherNpub = NostrKeyUtils.encodePubKey(syntheticOtherTestPubkey);
 
 void main() {
   final now = DateTime.now();
@@ -450,6 +456,92 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('feed'), findsOneWidget);
+    });
+  });
+
+  // A sibling group, deliberately not nested inside the feed group above:
+  // that group's setUp registers 19 stubs, which stay uncounted by the
+  // shared-setUp ratchet only while it has no descendant groups.
+  group('own-profile grid detection', () {
+    late _MockContentBlocklistRepository blocklistRepository;
+
+    setUp(() {
+      blocklistRepository = _MockContentBlocklistRepository();
+      // The scaffold decision is made in ProfileScreenRouter.build, before and
+      // independently of the profile body. Reporting the subject as blocking
+      // the viewer stops the body at BlockedUserScreen, so these tests need
+      // none of the videos/profile provider stack the body would otherwise
+      // build — without touching the branch under test.
+      when(() => blocklistRepository.hasBlockedUs(any())).thenReturn(true);
+      when(() => blocklistRepository.hasMutedUs(any())).thenReturn(false);
+    });
+
+    /// Pumps the grid route (no video index) for [segment], signed in as
+    /// [_authorPubkeyHex].
+    Future<void> pumpGridRoute(WidgetTester tester, String segment) async {
+      final location = ProfileScreenRouter.pathForNpub(segment);
+      final router = GoRouter(
+        initialLocation: location,
+        routes: [
+          GoRoute(
+            path: ProfileScreenRouter.pathWithNpub,
+            builder: (_, _) => const ProfileScreenRouter(),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        testProviderScope(
+          mockAuthService: createMockAuthService(
+            authState: AuthState.authenticated,
+            currentPublicKeyHex: _authorPubkeyHex,
+          ),
+          additionalOverrides: [
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              blocklistRepository,
+            ),
+            routerLocationStreamProvider.overrideWithValue(
+              Stream.value(location),
+            ),
+          ],
+          child: MaterialApp.router(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    // `/profile/<hex>` is a documented deep-link form, and the app only ever
+    // emits npub — so the hex form arrives from shared links and is never
+    // dogfooded. Before #6655 the screen compared the raw segment against the
+    // signed-in npub, and rendered your own profile without its scaffold.
+    testWidgets('a bare-hex link to your own profile is yours', (tester) async {
+      await pumpGridRoute(tester, _authorPubkeyHex);
+
+      expect(find.byType(BlockedUserScreen), findsOneWidget);
+      expect(find.byType(ProfileScaffold), findsOneWidget);
+    });
+
+    testWidgets('an npub link to your own profile is yours', (tester) async {
+      await pumpGridRoute(tester, _npub);
+
+      expect(find.byType(BlockedUserScreen), findsOneWidget);
+      expect(find.byType(ProfileScaffold), findsOneWidget);
+    });
+
+    testWidgets("another user's profile is not yours", (tester) async {
+      // A real, decodable identity: a malformed segment would pass this by
+      // failing to normalize rather than by being compared and rejected.
+      await pumpGridRoute(tester, _otherNpub);
+
+      // Positive control: the body really did render, so findsNothing below
+      // means the scaffold was not chosen — not that the tree failed to build.
+      expect(find.byType(BlockedUserScreen), findsOneWidget);
+      expect(find.byType(ProfileScaffold), findsNothing);
     });
   });
 }

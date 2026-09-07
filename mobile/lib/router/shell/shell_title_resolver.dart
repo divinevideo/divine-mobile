@@ -72,16 +72,11 @@ bool shellShowsBackButton({
       context.type == RouteType.notifications &&
       context.videoIndex != null &&
       context.videoIndex != 0;
-  final isOtherUserProfile =
+  final isProfileWithShellAppBar =
       context.type == RouteType.profile &&
-      !routeIdentifiesUser(context.npub, currentUserHex);
-  final isProfileVideo =
-      context.type == RouteType.profile && context.videoIndex != null;
+      !isOwnProfileGridRoute(context, currentUserHex);
 
-  return isExploreVideo ||
-      isNotificationVideo ||
-      isOtherUserProfile ||
-      isProfileVideo;
+  return isExploreVideo || isNotificationVideo || isProfileWithShellAppBar;
 }
 
 /// Whether the shell suppresses its own app bar for [context].
@@ -108,8 +103,5 @@ bool shellSuppressesAppBar({
   if (isExploreGrid) return true;
 
   // Video mode uses the app bar even on the viewer's own profile.
-  return context != null &&
-      context.type == RouteType.profile &&
-      context.videoIndex == null &&
-      routeIdentifiesUser(context.npub, currentUserHex);
+  return isOwnProfileGridRoute(context, currentUserHex);
 }

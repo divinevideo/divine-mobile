@@ -101,10 +101,10 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
 
     // Check if this is own profile grid view (needs own scaffold)
     final currentUserHex = ref.read(authServiceProvider).currentPublicKeyHex;
-    final isOwnProfileGrid =
-        routeContext.type == RouteType.profile &&
-        routeContext.videoIndex == null && // Video mode uses shell
-        routeIdentifiesUser(routeContext.npub, currentUserHex);
+    final isOwnProfileGrid = isOwnProfileGridRoute(
+      routeContext,
+      currentUserHex,
+    );
 
     final content = _ProfileContentView(
       routeContext: routeContext,
@@ -133,7 +133,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
         // stats, and video grid degrade to skeletons while MyProfileBloc is
         // absent — instead of a separate loading view. Once the identity
         // resolves, the BlocProvider below mounts and the layout fills in.
-        return _ProfileScaffold(body: content);
+        return ProfileScaffold(body: content);
       }
 
       return BlocProvider<MyProfileBloc>(
@@ -146,7 +146,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
               )
               ..add(const MyProfileSubscriptionRequested())
               ..add(const MyProfileFetchRequested()),
-        child: _ProfileScaffold(body: content),
+        child: ProfileScaffold(body: content),
       );
     }
 
@@ -268,9 +268,17 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
   }
 }
 
-class _ProfileScaffold extends StatelessWidget {
-  const _ProfileScaffold({required this.body});
+/// The scaffold the own-profile grid renders inside, and nothing else does.
+///
+/// Public only so a test can assert the screen took the own-profile branch by
+/// finding the real widget, rather than re-implementing the predicate and
+/// proving nothing about the screen.
+@visibleForTesting
+class ProfileScaffold extends StatelessWidget {
+  /// Creates the own-profile grid's scaffold around [body].
+  const ProfileScaffold({required this.body, super.key});
 
+  /// The profile content this scaffold wraps.
   final Widget body;
 
   @override
