@@ -329,9 +329,10 @@ class AudioEvent {
           ? Duration(milliseconds: json['endTimeMs'] as int)
           : null,
       anchorClipId: json['anchorClipId'] as String?,
-      // Persisted events without a consent field predate the reuse policy.
+      // Persisted events without a terms field predate the reuse policy.
       // Treat them as unknown and let the source-video resolver decide;
-      // defaulting to true would silently grant remix permission.
+      // archive compatibility is a provisional Divine policy grant, not an
+      // affirmative creator-consent record, and must be verified again.
       allowsReuse: json['allowsReuse'] as bool? ?? false,
       hasExplicitReuseConsent:
           json['hasExplicitReuseConsent'] as bool? ?? false,

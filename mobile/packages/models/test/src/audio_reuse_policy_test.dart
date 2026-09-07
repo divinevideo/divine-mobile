@@ -58,7 +58,7 @@ void main() {
       });
     }
 
-    test('grants enabled compatibility for an unmarked verified archive', () {
+    test('applies enabled legacy policy to an unmarked verified archive', () {
       expect(originalSoundReuseTerms(video(isVerifiedArchive: true)), isTrue);
     });
 
