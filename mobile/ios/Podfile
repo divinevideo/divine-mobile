@@ -12,6 +12,7 @@ install! 'cocoapods', :warn_for_unused_master_specs_repo => false
 
 project 'Runner', {
   'Debug' => :debug,
+  'Debug-DivineUITests' => :debug,
   'Profile' => :release,
   'Release' => :release,
 }

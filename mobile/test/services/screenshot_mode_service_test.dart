@@ -14,6 +14,8 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/screenshot_mode_service.dart';
 import 'package:yaml/yaml.dart';
 
+const _classicVinerAvatarDirectory = 'assets/seed_media/classic_viner_avatars';
+
 class _MockAuthService extends Mock implements AuthService {}
 
 /// Files under [dir] that could legitimately be declared as bundled assets.
@@ -28,6 +30,27 @@ Set<String> bundleCandidatesIn(Directory dir) => dir
     .map((file) => file.path.replaceAll(Platform.pathSeparator, '/'))
     .where((path) => !path.split('/').last.startsWith('.'))
     .toSet();
+
+Map<String, Set<String>> declaredFlutterAssets() {
+  final pubspec = loadYaml(File('pubspec.yaml').readAsStringSync()) as YamlMap;
+  final assets = (pubspec['flutter'] as YamlMap)['assets'] as YamlList;
+  final declarations = <String, Set<String>>{};
+
+  for (final asset in assets) {
+    switch (asset) {
+      case final String path:
+        declarations[path] = {};
+      case final YamlMap entry:
+        declarations[entry['path'] as String] = {
+          for (final flavor in entry['flavors'] as YamlList) flavor as String,
+        };
+      default:
+        throw FormatException('Unsupported Flutter asset declaration: $asset');
+    }
+  }
+
+  return declarations;
+}
 
 void main() {
   group(ScreenshotModeService, () {
@@ -220,13 +243,8 @@ void main() {
           }
         });
 
-        test('every seed-media file is bundled explicitly', () {
-          final pubspec =
-              loadYaml(File('pubspec.yaml').readAsStringSync()) as YamlMap;
-          final flutterAssets =
-              (pubspec['flutter'] as YamlMap)['assets'] as YamlList;
-          final declaredSeedMedia = flutterAssets
-              .cast<String>()
+        test('every seed-media file is declared explicitly', () {
+          final declaredSeedMedia = declaredFlutterAssets().keys
               .where((asset) => asset.startsWith('assets/seed_media/'))
               .toSet();
           final seedMediaOnDisk = bundleCandidatesIn(
@@ -241,6 +259,57 @@ void main() {
                 'removals cannot silently change the app bundle',
           );
         });
+
+        test('production bundles contain only classic-profile avatars', () {
+          final productionSeedMedia = declaredFlutterAssets().entries
+              .where(
+                (entry) =>
+                    entry.key.startsWith('assets/seed_media/') &&
+                    entry.value.isEmpty,
+              )
+              .map((entry) => entry.key)
+              .toSet();
+
+          expect(
+            productionSeedMedia,
+            equals({
+              '$_classicVinerAvatarDirectory/brittany-furlan.png',
+              '$_classicVinerAvatarDirectory/jerome-jarre.png',
+            }),
+          );
+        });
+
+        test('screenshot fixtures are bundled only for DivineUITests', () {
+          final declarations = declaredFlutterAssets();
+
+          for (final asset in screenshotMediaAssets()) {
+            expect(
+              declarations[asset],
+              equals({'DivineUITests'}),
+              reason: '$asset must be exclusive to screenshot capture builds',
+            );
+          }
+        });
+
+        test(
+          'DivineUITests scheme selects its fixture build configuration',
+          () {
+            final scheme = File(
+              'ios/Runner.xcodeproj/xcshareddata/xcschemes/'
+              'DivineUITests.xcscheme',
+            ).readAsStringSync();
+
+            expect(
+              RegExp(
+                'buildConfiguration = "Debug-DivineUITests"',
+              ).allMatches(scheme),
+              hasLength(3),
+              reason:
+                  'the test, launch, and analyze actions must select the '
+                  'Flutter asset flavor that includes screenshot fixtures',
+            );
+          },
+        );
       });
     });
   });
