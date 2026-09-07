@@ -1,10 +1,15 @@
 // ABOUTME: Tests for NIP-19 bech32 encoding and decoding functionality
 // ABOUTME: Validates npub, nsec, and note encoding/decoding works correctly
 
+import 'package:bech32/bech32.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
 void main() {
+  tearDown(() {
+    Nip19.debugLogSink = null;
+  });
+
   group('NIP-19 Bech32 Encoding Tests', () {
     const testHexPubkey =
         '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
@@ -34,6 +39,21 @@ void main() {
       expect(nsec, startsWith('nsec1'));
       expect(nsec.length, greaterThan(50));
       expect(Nip19.isPrivateKey(nsec), isTrue);
+    });
+
+    test('accepts a uniformly uppercase nsec', () {
+      final uppercaseNsec = Nip19.encodePrivateKey(
+        testHexPrivateKey,
+      ).toUpperCase();
+
+      expect(Nip19.isPrivateKey(uppercaseNsec), isTrue);
+    });
+
+    test('rejects a valid payload encoded under a forged nsec HRP', () {
+      final words = Nip19.convertBits(List<int>.filled(32, 0x67), 8, 5, true);
+      final forgedNsec = Bech32Encoder().convert(Bech32('nsec1abc', words));
+
+      expect(Nip19.isPrivateKey(forgedNsec), isFalse);
     });
 
     test('Decode nsec back to hex', () {
@@ -79,6 +99,7 @@ void main() {
 
       expect(Nip19.isPubkey('nsec1...'), isFalse); // Wrong prefix
       expect(Nip19.isPrivateKey('npub1...'), isFalse); // Wrong prefix
+      expect(Nip19.isPrivateKey('nsec1...'), isFalse); // Invalid bech32
     });
 
     test('Encoding different hex strings produces different results', () {
@@ -131,6 +152,36 @@ void main() {
       // decode should handle invalid input gracefully
       final result = Nip19.decode('invalid_bech32');
       expect(result, equals('')); // Should return empty string on error
+    });
+
+    test('does not include mixed-case secret input in decode diagnostics', () {
+      final nsec = Nip19.encodePrivateKey(testHexPrivateKey);
+      final mixedCaseCharacters = nsec.split('');
+      final lowercaseLetter = RegExp('[a-z]');
+      final lowercasePayloadIndex = mixedCaseCharacters.indexWhere(
+        lowercaseLetter.hasMatch,
+        5,
+      );
+      expect(lowercasePayloadIndex, isNonNegative);
+      mixedCaseCharacters[lowercasePayloadIndex] =
+          mixedCaseCharacters[lowercasePayloadIndex].toUpperCase();
+      final mixedCaseNsec = mixedCaseCharacters.join();
+      final diagnostics = <String>[];
+      Nip19.debugLogSink = diagnostics.add;
+
+      expect(Nip19.decode(mixedCaseNsec), isEmpty);
+      expect(diagnostics, hasLength(1));
+      expect(diagnostics.single, isNot(contains(mixedCaseNsec)));
+      expect(diagnostics.single, isNot(contains('nsec1')));
+      expect(diagnostics.single, isNot(contains(testHexPrivateKey)));
+      var comparedFragments = 0;
+      for (var start = 0; start <= mixedCaseCharacters.length - 20; start++) {
+        final inputFragment = mixedCaseCharacters.skip(start).take(20).join();
+        expect(diagnostics.single, isNot(contains(inputFragment)));
+        comparedFragments++;
+      }
+      expect(comparedFragments, greaterThan(0));
+      expect(diagnostics.single, contains('MixedCase'));
     });
 
     test('Bech32 end checking functionality', () {

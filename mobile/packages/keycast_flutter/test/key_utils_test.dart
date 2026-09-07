@@ -27,6 +27,20 @@ void main() {
             'npub180cvv07tjdrrgpa0j7j7tmnyl2yr6yr7l8j4s3evf6u64th6gkwsyjh6w6';
         expect(KeyUtils.parseNsec(npub), isNull);
       });
+
+      test('returns null for a forged nsec HRP', () {
+        const forgedNsec =
+            'nsec1abc1vankwem8vankwem8vankwem8vankwem8vankwem8vankwem8vanspqs76t';
+
+        expect(KeyUtils.parseNsec(forgedNsec), isNull);
+      });
+
+      test('decodes a uniformly uppercase nsec', () {
+        const uppercaseNsec =
+            'NSEC1VL029MGPSPEDVA04G90VLTKH6FVH240ZQTV9K0T9AF8935KE9LAQSNLFE5';
+
+        expect(KeyUtils.parseNsec(uppercaseNsec), isNotNull);
+      });
     });
 
     group('derivePublicKey', () {

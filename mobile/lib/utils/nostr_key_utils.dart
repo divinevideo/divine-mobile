@@ -34,17 +34,11 @@ class NostrKeyUtils {
     return keyIsValid(key);
   }
 
-  /// Check if nsec is valid by attempting to decode it
+  /// Whether [nsec] has the `nsec` HRP and carries a 32-byte key.
   ///
-  /// Returns true if the nsec can be successfully decoded, false otherwise
-  static bool isValidNsec(String nsec) {
-    try {
-      Nip19.decode(nsec);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
+  /// Uniformly uppercase bech32 is valid. Mixed case, another HRP, malformed
+  /// bech32, and payloads other than 32 bytes are invalid.
+  static bool isValidNsec(String nsec) => Nip19.isPrivateKey(nsec);
 
   /// The full npub for [hexPubkey], or the hex itself when it cannot be
   /// encoded.

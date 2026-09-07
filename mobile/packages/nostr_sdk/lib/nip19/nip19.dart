@@ -2,10 +2,17 @@ import 'dart:developer';
 
 import 'package:bech32/bech32.dart';
 import 'package:hex/hex.dart';
+import 'package:meta/meta.dart';
 
 import 'hrps.dart';
 
 class Nip19 {
+  /// Captures decode diagnostics in tests when set.
+  ///
+  /// Production leaves this null and writes through [log].
+  @visibleForTesting
+  static void Function(String)? debugLogSink;
+
   // static String encodePubKey(String pubkey) {
   //   var data = hex.decode(pubkey);
   //   data = Bech32.convertBits(data, 8, 5, true);
@@ -83,7 +90,14 @@ class Nip19 {
       var data = convertBits(bech32Result.data, 5, 8, false);
       return HEX.encode(data);
     } catch (e) {
-      log("Nip19 decode error ${e.toString()}");
+      // Exception messages may contain sensitive input.
+      final message = 'Nip19 decode error: ${e.runtimeType}';
+      final sink = debugLogSink;
+      if (sink != null) {
+        sink(message);
+      } else {
+        log(message);
+      }
       return "";
     }
   }
@@ -98,7 +112,14 @@ class Nip19 {
   }
 
   static bool isPrivateKey(String str) {
-    return isKey(Hrps.privateKey, str);
+    try {
+      final bech32Result = Bech32Decoder().convert(str);
+      if (bech32Result.hrp != Hrps.privateKey) return false;
+
+      return convertBits(bech32Result.data, 5, 8, false).length == 32;
+    } catch (_) {
+      return false;
+    }
   }
 
   static String encodePrivateKey(String privateKey) {

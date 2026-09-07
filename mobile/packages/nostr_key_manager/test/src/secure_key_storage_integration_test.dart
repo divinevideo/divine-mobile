@@ -76,6 +76,28 @@ void main() {
       );
     });
 
+    test('importFromNsec rejects a forged nsec HRP', () async {
+      await storageService.initialize();
+      const forgedNsec =
+          'nsec1abc1vankwem8vankwem8vankwem8vankwem8vankwem8vankwem8vanspqs76t';
+
+      expect(
+        () => storageService.importFromNsec(forgedNsec),
+        throwsA(isA<SecureKeyStorageException>()),
+      );
+    });
+
+    test('importFromNsec accepts a uniformly uppercase nsec', () async {
+      await storageService.initialize();
+      const uppercaseNsec =
+          'NSEC1VL029MGPSPEDVA04G90VLTKH6FVH240ZQTV9K0T9AF8935KE9LAQSNLFE5';
+
+      final imported = await storageService.importFromNsec(uppercaseNsec);
+
+      expect(imported.publicKeyHex, isNotEmpty);
+      imported.dispose();
+    });
+
     test('should delete keys securely', () async {
       // Arrange
       await storageService.initialize();
