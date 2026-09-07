@@ -184,6 +184,23 @@ $afterLoop
       expect(result.stderr, contains('both the workflow and exclusion'));
     });
 
+    test('UPDATE_BASELINE retires an exclusion the workflow now runs', () {
+      writeWorkflow(suites: ['included', 'excluded']);
+
+      final update = run(update: true);
+
+      expect(
+        update.exitCode,
+        equals(0),
+        reason: 'stdout=${update.stdout} stderr=${update.stderr}',
+      );
+      expect(
+        File(baselinePath).readAsStringSync(),
+        isNot(contains('excluded_test.dart')),
+      );
+      expect(run().exitCode, equals(0));
+    });
+
     test('fails when the workflow anchor is missing', () {
       writeWorkflow(includeAnchor: false);
 

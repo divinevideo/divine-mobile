@@ -72,8 +72,15 @@ $(printf '%s\n' "$duplicate_exclusions" | sed 's/^/  /')"
 MANIFEST_PATHS="$(printf '%s\n' "$manifest_paths" | grep -v '^$' | sort -u || true)"
 
 overlap="$(comm -12 <(printf '%s\n' "$RUN_LIST") <(printf '%s\n' "$MANIFEST_PATHS") | grep -v '^$' || true)"
-[ -z "$overlap" ] || fail "suite path(s) appear in both the workflow and exclusion manifest:
-$(printf '%s\n' "$overlap" | sed 's/^/  /')"
+# Regenerating is how an exclusion is retired: the suite has just been added to
+# the workflow loop, so it drops out of emit_current and the rewritten manifest
+# resolves the overlap by itself. Only a plain run treats it as a contradiction.
+if [ "${UPDATE_BASELINE:-0}" != "1" ]; then
+  [ -z "$overlap" ] || fail "suite path(s) appear in both the workflow and exclusion manifest:
+$(printf '%s\n' "$overlap" | sed 's/^/  /')
+  -> If the workflow now runs it, retire the exclusion by regenerating:
+     UPDATE_BASELINE=1 bash mobile/scripts/check_service_suite_coverage.sh"
+fi
 
 emit_current() {
   find "$E2E_DIR" -maxdepth 1 -type f -name '*_test.dart' -print \
